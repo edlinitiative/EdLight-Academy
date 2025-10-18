@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ring: 0 0 0 3px rgba(10, 102, 194, 0.3);
+}
+
+.btn {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-ed-blue text-white font-medium hover:bg-ed-blueDark transition shadow-soft;
+}
+.btn-outline {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-ed-blue text-ed-blue font-medium hover:bg-ed-blueLight transition;
+}
+.card {
+  @apply bg-white rounded-2xl shadow-soft border border-ed-gray200;
+}
+.section {
+  @apply py-16;
+}
+.container {
+  @apply max-w-7xl mx-auto px-4;
+}
+.badge {
+  @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-ed-blueLight text-ed-blue;
+}
+input, select, textarea {
+  @apply rounded-xl border border-ed-gray300 focus:outline-none focus:ring-2 focus:ring-ed-blue/40 focus:border-ed-blue;
+}
