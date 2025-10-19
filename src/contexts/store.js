@@ -17,7 +17,9 @@ const useStore = create(
       // UI state
       currentCourse: null,
       showAuthModal: false,
+      showUserDropdown: false,
       showCourseModal: false,
+      activeTab: 'signin',
       
       // Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -46,7 +48,10 @@ const useStore = create(
         
       setCurrentCourse: (course) => set({ currentCourse: course }),
       toggleAuthModal: () => set((state) => ({ showAuthModal: !state.showAuthModal })),
+      toggleUserDropdown: () => set((state) => ({ showUserDropdown: !state.showUserDropdown })),
+      setShowUserDropdown: (show) => set({ showUserDropdown: show }),
       toggleCourseModal: () => set((state) => ({ showCourseModal: !state.showCourseModal })),
+      setActiveTab: (tab) => set({ activeTab: tab }),
       
       logout: () => set({
         user: null,

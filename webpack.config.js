@@ -49,19 +49,19 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',
-      favicon: './public/assets/logo.png'
+      favicon: './public_original/assets/logo.png'
     }),
     new MiniCssExtractPlugin({
-      filename: 'styles.[contenthash].css'
+      filename: 'css/[name].[contenthash].css'
     }),
     new CopyWebpackPlugin({
       patterns: [
         { 
-          from: 'public/data',
+          from: 'public_original/data',
           to: 'data'
         },
         {
-          from: 'public/assets',
+          from: 'public_original/assets',
           to: 'assets'
         }
       ]

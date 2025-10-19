@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { App } from './App';
+import App from './App';
+import './index.css';
 import { initI18n } from './utils/i18n';
 
 // Initialize internationalization
