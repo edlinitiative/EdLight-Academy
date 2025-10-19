@@ -4,7 +4,6 @@
   "private": true,
   "dependencies": {
     "@babel/runtime": "^7.22.15",
-    "@perseus/renderer": "^18.0.0",
     "@tanstack/react-query": "^4.35.3",
     "axios": "^1.5.0",
     "i18next": "^23.5.1",
