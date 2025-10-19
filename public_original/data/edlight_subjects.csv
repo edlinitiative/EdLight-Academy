@@ -1,0 +1,5 @@
+id,name,level,code,color,icon
+CHEM,Chemistry,NS I,CHEM-NSI,#0A66C2,beaker
+PHYS,Physics,NS I,PHYS-NSI,#0A66C2,atom
+MATH,Mathematics,NS I,MATH-NSI,#0A66C2,calculator
+ECON,Economics,NS I,ECON-NSI,#0A66C2,chart
