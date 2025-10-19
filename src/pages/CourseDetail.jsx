@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useTracking';
 import { useAppData } from '../hooks/useData';
-import { QuizComponent } from '../Components/Quiz';
+import { QuizComponent } from '../components/Quiz';
 import useStore from '../contexts/store';
 
 export default function CourseDetail() {

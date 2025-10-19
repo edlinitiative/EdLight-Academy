@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useTracking';
 import { useAppData } from '../hooks/useData';
-import { CourseCard, CourseModal } from '../Components/Course';
+import { CourseCard, CourseModal } from '../components/Course';
 import useStore from '../contexts/store';
 
 export default function Courses() {
