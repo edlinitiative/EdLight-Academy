@@ -1,0 +1,55 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EdLight Academy</title>
+  <link rel="icon" href="assets/logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container bar">
+      <a class="logo" href="#">
+        <img src="assets/logo.png" alt="EdLight Logo" />
+        <span>EdLight Academy</span>
+      </a>
+      <div class="actions">
+        <a class="btn-outline btn-sm" href="#catalog">Browse Courses</a>
+        <a class="btn btn-sm" href="#signup">Sign up</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="container">
+      <div class="badge">Kreyòl + Français • NS Levels</div>
+      <h1>Learning that meets Haiti where it is — and lifts students higher.</h1>
+      <p>Physics, Chemistry, Math, and Economics — short video lessons, practice quizzes, and progress tracking. All in one place.</p>
+      <div class="flex gap-2">
+        <a class="btn" href="#catalog">Start exploring</a>
+        <a class="btn-outline" href="data/edlight_subjects.csv" target="_blank">Download sample data</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container section" id="catalog">
+    <h2 class="text-3xl font-extrabold mb-4">Course Catalog</h2>
+    <div id="course-catalog" class="grid"></div>
+    <div id="quiz-drawer"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="container flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <img src="assets/logo.png" alt="" style="width:24px;height:24px">
+        <span>© 2025 EdLight Academy</span>
+      </div>
+      <a href="https://github.com/" target="_blank" class="text-sm">GitHub</a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
