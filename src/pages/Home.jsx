@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../hooks/useTracking';
 import { useAppData } from '../hooks/useData';
-import { CourseCard } from '../components/Course';
+import { CourseCard } from '../Components/Course';
 import useStore from '../contexts/store';
 
 export default function Home() {
