@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Layout } from './components/Layout';
+import { Layout } from './Components/Layout';
 
 // Lazy-loaded pages
 const Home = React.lazy(() => import('./pages/Home'));
