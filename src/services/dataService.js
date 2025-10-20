@@ -57,13 +57,51 @@ const transformDataToCourses = (subjects, videos, quizzes) => {
       'ECON': 'Economics'
     };
 
+    // Level formatting (NSI -> NS I, etc.)
+    const levelFormatted = level ? level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
+    
+    // Create polished course titles based on subject and level
+    const courseTitles = {
+      'CHEM-NSI': 'Introduction to Chemistry',
+      'CHEM-NSII': 'General Chemistry',
+      'CHEM-NSIII': 'Advanced Chemistry',
+      'CHEM-NSIV': 'Organic & Physical Chemistry',
+      'PHYS-NSII': 'Introduction to Physics',
+      'PHYS-NSIII': 'Classical Physics',
+      'PHYS-NSIV': 'Modern Physics & Thermodynamics',
+      'MATH-NSI': 'Foundations of Mathematics',
+      'MATH-NSII': 'Intermediate Mathematics',
+      'MATH-NSIII': 'Advanced Mathematics & Calculus',
+      'ECON-NSI': 'Introduction to Economics'
+    };
+
+    // Create detailed descriptions
+    const courseDescriptions = {
+      'CHEM-NSI': 'Master the fundamentals of chemistry, including matter, energy, chemical reactions, and the periodic table. Perfect for beginners.',
+      'CHEM-NSII': 'Explore chemical bonding, stoichiometry, solutions, and acids & bases. Build upon your foundational knowledge.',
+      'CHEM-NSIII': 'Dive into thermodynamics, chemical equilibrium, electrochemistry, and advanced reaction mechanisms.',
+      'CHEM-NSIV': 'Study organic chemistry, hydrocarbons, functional groups, and physical chemistry principles at an advanced level.',
+      'PHYS-NSII': 'Learn the basics of motion, forces, energy, and simple machines. Develop your understanding of the physical world.',
+      'PHYS-NSIII': 'Study mechanics, Newton\'s laws, work and energy, waves, optics, and electricity fundamentals.',
+      'PHYS-NSIV': 'Master electromagnetic induction, modern physics concepts, nuclear physics, and thermodynamics.',
+      'MATH-NSI': 'Build strong mathematical foundations with algebra, geometry, basic trigonometry, and problem-solving skills.',
+      'MATH-NSII': 'Advance your skills in functions, equations, coordinate geometry, and analytical methods.',
+      'MATH-NSIII': 'Master advanced topics including calculus, derivatives, integrals, and complex problem solving.',
+      'ECON-NSI': 'Understand economic principles, supply and demand, market systems, and basic economic theories relevant to Haiti.'
+    };
+
+    const baseName = subjectNames[baseSubject] || baseSubject;
+    const courseTitle = courseTitles[subjectCode] || `${baseName} - ${levelFormatted}`;
+    const courseDescription = courseDescriptions[subjectCode] || 
+      `Comprehensive ${baseName} curriculum for ${levelFormatted} students following the Haitian national education standards.`;
+
     return {
       id: subjectCode,
       code: subjectCode,
-      name: subjectInfo?.name || subjectNames[baseSubject] || baseSubject,
+      name: courseTitle,
       level: level || 'NSI',
       subject: baseSubject,
-      description: `Comprehensive ${subjectNames[baseSubject] || baseSubject} course for ${level || 'NS I'}`,
+      description: courseDescription,
       thumbnail: subjectInfo?.icon || 'book',
       color: subjectInfo?.color || '#0A66C2',
       videoCount: subjectVideos.length,
