@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
 
 export function CourseCard({ course, onPreview }) {
   const { enrolledCourses, progress, isAuthenticated } = useStore();
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
+  const navigate = useNavigate();
 
   const subjectNames = {
     CHEM: 'Chemistry',
@@ -40,7 +42,8 @@ export function CourseCard({ course, onPreview }) {
       useStore.getState().toggleAuthModal();
       return;
     }
-    // TODO: Navigate to course content when lessons page exists
+    // Navigate to the course detail page
+    navigate(`/courses/${course.id}`);
   };
 
   const progressHeadline = isEnrolled
@@ -91,6 +94,7 @@ export function CourseCard({ course, onPreview }) {
 
 export function CourseModal({ course, onClose, onEnroll }) {
   const { isAuthenticated, enrolledCourses } = useStore();
+  const navigate = useNavigate();
   const isEnrolled = enrolledCourses.some(c => c.id === course?.id);
 
   if (!course) return null;
@@ -175,10 +179,22 @@ export function CourseModal({ course, onClose, onEnroll }) {
         <footer className="course-modal__footer">
           {isEnrolled ? (
             <>
-              <button className="button button--light button--pill" onClick={onClose}>
+              <button
+                className="button button--light button--pill"
+                onClick={() => {
+                  onClose();
+                  navigate(`/courses/${course.id}`);
+                }}
+              >
                 Continue Learning
               </button>
-              <button className="button button--ghost button--pill" onClick={onClose}>
+              <button
+                className="button button--ghost button--pill"
+                onClick={() => {
+                  onClose();
+                  navigate('/dashboard');
+                }}
+              >
                 View Dashboard
               </button>
             </>
