@@ -46,34 +46,39 @@ export function AuthModal({ onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Welcome to EdLight</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+      <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="auth-modal__header">
+          <h2 className="auth-modal__title">Welcome to EdLight</h2>
+          <button className="auth-modal__close" onClick={onClose} aria-label="Close">
+            X
+          </button>
         </div>
 
-        <div className="tabs">
+        <div className="auth-modal__tabs">
           <button 
-            className={["tab", activeTab === 'signin' ? 'active' : ''].join(' ')}
+            className={["auth-modal__tab", activeTab === 'signin' ? 'auth-modal__tab--active' : ''].join(' ')}
             onClick={() => setActiveTab('signin')}
+            type="button"
           >
             Sign In
           </button>
           <button 
-            className={["tab", activeTab === 'signup' ? 'active' : ''].join(' ')}
+            className={["auth-modal__tab", activeTab === 'signup' ? 'auth-modal__tab--active' : ''].join(' ')}
             onClick={() => setActiveTab('signup')}
+            type="button"
           >
-            Sign Up
+            Create Account
           </button>
         </div>
 
         <form onSubmit={handleSubmit}>
           {activeTab === 'signup' && (
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
+            <div className="form-field">
+              <label className="form-label" htmlFor="auth-name">Full Name</label>
               <input
+                id="auth-name"
                 type="text"
-                className="input-field"
+                className="form-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your full name"
@@ -81,11 +86,12 @@ export function AuthModal({ onClose }) {
             </div>
           )}
 
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
+          <div className="form-field">
+            <label className="form-label" htmlFor="auth-email">Email Address</label>
             <input
+              id="auth-email"
               type="email"
-              className="input-field"
+              className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
@@ -93,11 +99,12 @@ export function AuthModal({ onClose }) {
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
+          <div className="form-field">
+            <label className="form-label" htmlFor="auth-password">Password</label>
             <input
+              id="auth-password"
               type="password"
-              className="input-field"
+              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
@@ -105,15 +112,15 @@ export function AuthModal({ onClose }) {
             />
           </div>
 
-          {error && <div className="error-message">⚠️ {error}</div>}
-          {success && <div className="success-message">✓ {success}</div>}
+          {error && <div className="form-message form-message--error">{error}</div>}
+          {success && <div className="form-message form-message--success">{success}</div>}
 
-          <button type="submit" className="btn" style={{ width: '100%', marginTop: '1rem' }}>
+          <button type="submit" className="button button--primary button--pill" style={{ width: '100%', marginTop: '0.75rem' }}>
             {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <p className="text-small text-gray" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+        <p className="form-footnote">
           {activeTab === 'signin' 
             ? "Don't have an account? Sign up now!"
             : "Already have an account? Sign in instead!"}
@@ -125,13 +132,13 @@ export function AuthModal({ onClose }) {
 
 export function UserDropdown({ user, onLogout }) {
   return (
-    <div className="dropdown-menu">
-      <div className="dropdown-item" style={{ pointerEvents: 'none' }}>
+    <div className="dropdown__menu">
+      <div className="dropdown__item dropdown__item--muted">
         <strong>{user.name}</strong>
-        <div className="text-small text-gray">{user.email}</div>
+        <span className="text-muted" style={{ fontSize: '0.85rem' }}>{user.email}</span>
       </div>
-      <div className="dropdown-divider" />
-      <button className="dropdown-item" onClick={onLogout}>
+      <div className="dropdown__divider" />
+      <button className="dropdown__item" onClick={onLogout}>
         Sign Out
       </button>
     </div>

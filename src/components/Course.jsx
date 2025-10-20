@@ -4,62 +4,119 @@ import useStore from '../contexts/store';
 export function CourseCard({ course, onPreview }) {
   const { enrolledCourses, progress, isAuthenticated } = useStore();
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
-  const courseProgress = progress[course.id] || { completed: 0, total: course.modules };
-  const progressPercent = Math.round((courseProgress.completed / courseProgress.total) * 100);
+
+  const subjectNames = {
+    CHEM: 'Chemistry',
+    PHYS: 'Physics',
+    MATH: 'Mathematics',
+    ECON: 'Economics'
+  };
+
+  const units = course.modules || [];
+  const lessonsCount = units.reduce((sum, unit) => sum + (unit.lessons?.length || 0), 0);
+  const fallbackTotal = lessonsCount || units.length || course.videoCount || 1;
+  const courseProgress = progress[course.id] || { completed: 0, total: fallbackTotal };
+  const completed = courseProgress.completed || 0;
+  const total = courseProgress.total || fallbackTotal || 1;
+  const rawPercent = total ? Math.round((completed / total) * 100) : 0;
+  const progressPercent = Number.isFinite(rawPercent) && rawPercent >= 0 ? Math.min(100, rawPercent) : 0;
+
+  const formatDuration = (minutes) => {
+    const totalMinutes = parseInt(minutes, 10) || 0;
+    if (!totalMinutes) return 'Self-paced';
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    if (hours && mins) return `${hours} hr${hours > 1 ? 's' : ''} ${mins} min`;
+    if (hours) return `${hours} hr${hours > 1 ? 's' : ''}`;
+    return `${mins} min`;
+  };
+
+  const levelLabel = course.level ? course.level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
+  const subjectLabel = subjectNames[course.subject] || course.subject;
+  const durationLabel = formatDuration(course.duration);
 
   const handleStart = () => {
     if (!isAuthenticated) {
       useStore.getState().toggleAuthModal();
       return;
     }
-    // TODO: Navigate to course content
+    // TODO: Navigate to course content when lessons page exists
   };
 
-  return (
-    <div className="card course-card-hover" style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <span className="badge">{course.badge}</span>
-        {isEnrolled && <span className="enrollment-badge">Enrolled</span>}
-        <span className="text-small text-gray">{course.level}</span>
-      </div>
-      
-      <h3>{course.title}</h3>
-      <p className="text-gray" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
-        {course.description}
-      </p>
-      
-      {isEnrolled && (
-        <div style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-            <span className="text-small">{progressPercent}% Complete</span>
-            <span className="text-small text-gray">
-              {courseProgress.completed}/{courseProgress.total} Modules
-            </span>
-          </div>
-          <div className="progress-bar">
-            <div 
-              className="progress-fill" 
-              style={{ width: progressPercent + '%' }}
-            />
-          </div>
-        </div>
-      )}
+  const progressHeadline = isEnrolled
+    ? `${progressPercent}% complete`
+    : `${lessonsCount || course.videoCount} lessons • ${durationLabel}`;
 
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn" onClick={handleStart}>
-          {isEnrolled ? 'Continue' : 'Start'}
-        </button>
-        <button className="btn-outline" onClick={() => onPreview(course)}>
-          Preview
-        </button>
+  const progressCaption = isEnrolled
+    ? `${completed}/${total} lessons completed`
+    : 'Guided path with quizzes and mastery checks';
+
+  return (
+    <article className="course-card">
+      <div className="course-card__head">
+        <span className="course-card__badge">{subjectLabel} · {levelLabel}</span>
+        {isEnrolled && <span className="chip chip--success">Enrolled</span>}
       </div>
-    </div>
+
+      <h3 className="course-card__title">{course.name}</h3>
+      <p className="course-card__description">{course.description}</p>
+
+      <div className="course-card__meta">
+        <span className="course-meta__item"><strong>{units.length}</strong> units</span>
+        <span className="course-meta__item"><strong>{lessonsCount || course.videoCount}</strong> lessons</span>
+        <span className="course-meta__item"><strong>{durationLabel}</strong></span>
+      </div>
+
+      <div className="course-card__footer">
+        <div className="course-progress">
+          <span>{progressHeadline}</span>
+          <div className="progress-bar">
+            <span className="progress-bar__fill" style={{ width: `${isEnrolled ? progressPercent : 12}%` }} />
+          </div>
+          <span className="text-muted" style={{ fontSize: '0.8rem' }}>{progressCaption}</span>
+        </div>
+
+        <div className="course-card__actions">
+          <button className="button button--primary button--pill" onClick={handleStart}>
+            {isEnrolled ? 'Continue' : 'Start Course'}
+          </button>
+          <button className="course-card__cta" onClick={() => onPreview(course)}>
+            Course Details →
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }
 
 export function CourseModal({ course, onClose, onEnroll }) {
   const { isAuthenticated, enrolledCourses } = useStore();
   const isEnrolled = enrolledCourses.some(c => c.id === course?.id);
+
+  if (!course) return null;
+
+  const units = course.modules || [];
+  const lessonsCount = units.reduce((sum, unit) => sum + (unit.lessons?.length || 0), 0);
+
+  const subjectNames = {
+    CHEM: 'Chemistry',
+    PHYS: 'Physics',
+    MATH: 'Mathematics',
+    ECON: 'Economics'
+  };
+
+  const levelLabel = course.level ? course.level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
+  const subjectLabel = subjectNames[course.subject] || course.subject;
+
+  const formatDuration = (minutes) => {
+    const totalMinutes = parseInt(minutes, 10) || 0;
+    if (!totalMinutes) return 'Self-paced';
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    if (hours && mins) return `${hours} hr${hours > 1 ? 's' : ''} ${mins} min`;
+    if (hours) return `${hours} hr${hours > 1 ? 's' : ''}`;
+    return `${mins} min`;
+  };
 
   const handleEnroll = () => {
     if (!isAuthenticated) {
@@ -69,70 +126,74 @@ export function CourseModal({ course, onClose, onEnroll }) {
     onEnroll(course);
   };
 
-  if (!course) return null;
-
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
+      <article className="course-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="course-modal__header">
           <div>
-            <span className="badge" style={{ marginBottom: '0.5rem' }}>{course.badge}</span>
-            <h2>{course.title}</h2>
-            <p className="text-gray">Level: {course.level}</p>
+            <span className="chip chip--ghost">{subjectLabel} · {levelLabel}</span>
+            <h2 className="course-modal__title">{course.name}</h2>
           </div>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
+          <button className="course-modal__close" onClick={onClose} aria-label="Close">
+            X
+          </button>
+        </header>
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <p style={{ marginBottom: '1rem', lineHeight: '1.8' }}>{course.fullDescription}</p>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1.5rem' }}>
-            <div>
-              <h4>Duration</h4>
-              <p className="text-gray">{course.duration}</p>
-            </div>
-            <div>
-              <h4>Modules</h4>
-              <p className="text-gray">{course.modules} modules</p>
-            </div>
-            <div>
-              <h4>Students</h4>
-              <p className="text-gray">{course.students.toLocaleString()}</p>
-            </div>
-            <div>
-              <h4>Rating</h4>
-              <p className="text-gray">⭐ {course.rating}/5.0</p>
-            </div>
+        <section className="course-modal__meta">
+          <div className="course-modal__meta-item">
+            <span>Duration</span>
+            <strong>{formatDuration(course.duration)}</strong>
           </div>
+          <div className="course-modal__meta-item">
+            <span>Units</span>
+            <strong>{units.length}</strong>
+          </div>
+          <div className="course-modal__meta-item">
+            <span>Lessons</span>
+            <strong>{lessonsCount || course.videoCount}</strong>
+          </div>
+          <div className="course-modal__meta-item">
+            <span>Instructor</span>
+            <strong>{course.instructor}</strong>
+          </div>
+        </section>
 
-          <div style={{ marginTop: '1.5rem' }}>
-            <h4>Instructor</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.5rem' }}>
-              <div className="user-avatar" style={{ fontSize: '1rem' }}>
-                {course.instructor.split(' ').map(n => n[0]).join('')}
-              </div>
+        <p className="course-modal__descriptor">{course.description}</p>
+
+        <section className="course-modal__syllabus">
+          {units.map((unit) => (
+            <div key={unit.id} className="syllabus-item">
               <div>
-                <p>{course.instructor}</p>
-                <p className="text-small text-gray">Course Instructor</p>
+                <strong>{unit.title}</strong>
+                <span>{unit.lessons?.length || 0} lessons</span>
               </div>
+              <span className="text-muted" style={{ fontSize: '0.85rem' }}>Aligned to NS standards</span>
             </div>
-          </div>
-        </div>
+          ))}
+        </section>
 
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <footer className="course-modal__footer">
           {isEnrolled ? (
             <>
-              <button className="btn" onClick={onClose}>Continue Learning</button>
-              <button className="btn-outline" onClick={onClose}>View Resources</button>
+              <button className="button button--light button--pill" onClick={onClose}>
+                Continue Learning
+              </button>
+              <button className="button button--ghost button--pill" onClick={onClose}>
+                View Dashboard
+              </button>
             </>
           ) : (
             <>
-              <button className="btn" onClick={handleEnroll}>Enroll Now</button>
-              <button className="btn-outline" onClick={onClose}>Maybe Later</button>
+              <button className="button button--primary button--pill" onClick={handleEnroll}>
+                Enroll Now
+              </button>
+              <button className="button button--ghost button--pill" onClick={onClose}>
+                Maybe Later
+              </button>
             </>
           )}
-        </div>
-      </div>
+        </footer>
+      </article>
     </div>
   );
 }

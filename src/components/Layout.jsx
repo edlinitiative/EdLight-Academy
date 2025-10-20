@@ -9,9 +9,9 @@ export function Layout() {
   const { showAuthModal, toggleAuthModal } = useStore();
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="app-shell">
       <Navbar />
-      <main style={{ flex: 1 }}>
+      <main className="app-shell__main">
         <Outlet />
       </main>
       <Footer />

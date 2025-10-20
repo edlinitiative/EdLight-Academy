@@ -9,82 +9,102 @@ export default function Home() {
   const { data, isLoading } = useAppData();
   const { toggleAuthModal, isAuthenticated } = useStore();
   
-  // Featured courses (first 6)
   const featuredCourses = data?.courses?.slice(0, 6) || [];
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="loading-spinner" />
-      </div>
+      <section className="section">
+        <div className="container" style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+          <div className="loading-spinner" />
+        </div>
+      </section>
     );
   }
 
   return (
     <>
-      <section className="hero-section">
-        <div className="container grid grid-2" style={{ alignItems: 'center' }}>
-          <div>
-            <div className="badge mb-4">Physics • Chemistry • Math • Economics</div>
-            <h1>Learning that meets Haiti where it is — and lifts students higher.</h1>
-            <p className="text-gray text-lg mt-4 mb-8">
-              Short video lessons, practice quizzes, and progress tracking. All in one place.
+      <section className="hero">
+        <div className="container grid grid--hero">
+          <div className="hero__content">
+            <span className="hero__badge">Physics · Chemistry · Mathematics · Economics</span>
+            <h1 className="hero__title">
+              A modern learning hub built for <span>Haiti’s NS classrooms</span>.
+            </h1>
+            <p className="hero__description">
+              Watch concise video lessons, practice with instant-feedback quizzes, and track your progress across every NS level — all in one place.
             </p>
-            
-            <div className="flex gap-4">
+
+            <div className="hero__actions">
               <button 
-                className="btn"
-                onClick={() => isAuthenticated ? navigate('/dashboard') : toggleAuthModal()}
+                className="button button--primary button--pill"
+                onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}
               >
                 Start Learning
               </button>
               <button 
-                className="btn-outline"
+                className="button button--ghost button--pill"
                 onClick={() => navigate('/courses')}
               >
                 Browse Courses
               </button>
             </div>
 
-            <div className="stats-grid mt-12">
-              <div>
-                <div className="stat-number">1,000+</div>
-                <div className="stat-label">Students</div>
+            <div className="hero-card">
+              <div className="hero-card__header">
+                <span className="hero-card__badge">Live Academy Snapshot</span>
+                <span className="chip chip--success">92% mastery rate</span>
               </div>
-              <div>
-                <div className="stat-number">40+</div>
-                <div className="stat-label">Video Lessons</div>
-              </div>
-              <div>
-                <div className="stat-number">200+</div>
-                <div className="stat-label">Practice Quizzes</div>
+              <div className="hero-card__metric">
+                <div className="hero-card__metric-item">
+                  <h4>1,200+</h4>
+                  <p>Active learners this term</p>
+                </div>
+                <div className="hero-card__metric-item">
+                  <h4>200+</h4>
+                  <p>Micro-quizzes to check understanding</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="card" style={{ padding: '1.5rem' }}>
-            <img 
-              src="/assets/logo.png" 
-              alt="EdLight Academy"
-              className="hero-image"
-            />
+          <div className="hero-visual">
+            <div className="hero-visual__grid">
+              <div className="hero-visual__row">
+                <span>Guided Learning Paths</span>
+                <small>Structured units that mirror the Haitian curriculum.</small>
+              </div>
+              <div className="hero-visual__row">
+                <span>Dual-Language Support</span>
+                <small>Content in English with context for Kreyòl and French classrooms.</small>
+              </div>
+              <div className="hero-visual__row">
+                <span>Real-Time Progress</span>
+                <small>Track mastery across every lesson and quiz attempt.</small>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="section">
         <div className="container">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">Featured Courses</h2>
-            <button 
-              className="btn-outline"
-              onClick={() => navigate('/courses')}
-            >
-              View All Courses
-            </button>
+          <div className="page-header">
+            <div>
+              <span className="page-header__eyebrow">Featured this week</span>
+              <h2>Jump into a course hand-picked for momentum</h2>
+              <p className="text-muted">Preview the latest learning paths crafted by Haitian educators.</p>
+            </div>
+            <div className="page-header__actions">
+              <button 
+                className="button button--ghost button--pill"
+                onClick={() => navigate('/courses')}
+              >
+                View Full Catalog
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-3 gap-6">
+          <div className="grid grid--courses">
             {featuredCourses.map(course => (
               <CourseCard
                 key={course.id}

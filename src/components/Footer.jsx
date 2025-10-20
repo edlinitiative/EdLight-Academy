@@ -30,17 +30,27 @@ export function Footer() {
 
   return (
     <footer className="footer">
-      <div className="container">
-        <div className="footer-grid">
+      <div className="container footer__inner">
+        <div className="footer__top">
+          <div>
+            <Link to="/" className="logo" style={{ marginBottom: '1rem', display: 'inline-flex' }}>
+              <span className="logo__mark">E</span>
+              <span>EdLight Academy</span>
+            </Link>
+            <p className="footer__brand-copy">
+              A community-built platform helping Haiti’s NS students master STEM subjects through modern, bilingual resources.
+            </p>
+          </div>
+
           {Object.entries(footerLinks).map(([key, section]) => (
             <div key={key}>
-              <h4 className="text-lg font-semibold mb-4">{section.title}</h4>
-              <nav className="flex flex-col gap-2">
+              <h4 className="footer__column-title">{section.title}</h4>
+              <nav className="flex flex-col">
                 {section.links.map(link => (
                   <Link 
                     key={link.to}
                     to={link.to}
-                    className="footer-link"
+                    className="footer__link"
                   >
                     {link.label}
                   </Link>
@@ -50,31 +60,24 @@ export function Footer() {
           ))}
 
           <div>
-            <h4 className="text-lg font-semibold mb-4">
-              Follow Us
-            </h4>
-            <div className="flex gap-4">
-              <a href="https://twitter.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer-link">
+            <h4 className="footer__column-title">Stay connected</h4>
+            <div className="flex" style={{ gap: '0.75rem' }}>
+              <a href="https://twitter.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__link">
                 Twitter
               </a>
-              <a href="https://facebook.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer-link">
+              <a href="https://facebook.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__link">
                 Facebook
               </a>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-gray-200">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <img src="/assets/logo.png" alt="" style={{ width: '24px', height: '24px' }} />
-              <span>© 2025 EdLight Academy</span>
-            </div>
-            <div className="flex gap-4">
-              <a href="https://github.com/edlinitiative" target="_blank" rel="noopener noreferrer" className="text-sm footer-link">
-                GitHub
-              </a>
-            </div>
+        <div className="footer__bottom">
+          <span>© {new Date().getFullYear()} EdLight Academy. Crafted for Haitian learners.</span>
+          <div className="flex" style={{ gap: '0.75rem' }}>
+            <a href="https://github.com/edlinitiative" target="_blank" rel="noopener noreferrer" className="footer__link">
+              GitHub
+            </a>
           </div>
         </div>
       </div>

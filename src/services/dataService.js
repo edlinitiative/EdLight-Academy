@@ -51,49 +51,36 @@ const transformDataToCourses = (subjects, videos, quizzes) => {
 
     // Subject name mapping
     const subjectNames = {
-      'CHEM': 'Chemistry',
-      'PHYS': 'Physics',
-      'MATH': 'Mathematics',
-      'ECON': 'Economics'
+      CHEM: 'Chemistry',
+      PHYS: 'Physics',
+      MATH: 'Mathematics',
+      ECON: 'Economics'
     };
 
     // Level formatting (NSI -> NS I, etc.)
     const levelFormatted = level ? level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
-    
-    // Create polished course titles based on subject and level
-    const courseTitles = {
-      'CHEM-NSI': 'Introduction to Chemistry',
-      'CHEM-NSII': 'General Chemistry',
-      'CHEM-NSIII': 'Advanced Chemistry',
-      'CHEM-NSIV': 'Organic & Physical Chemistry',
-      'PHYS-NSII': 'Introduction to Physics',
-      'PHYS-NSIII': 'Classical Physics',
-      'PHYS-NSIV': 'Modern Physics & Thermodynamics',
-      'MATH-NSI': 'Foundations of Mathematics',
-      'MATH-NSII': 'Intermediate Mathematics',
-      'MATH-NSIII': 'Advanced Mathematics & Calculus',
-      'ECON-NSI': 'Introduction to Economics'
-    };
 
-    // Create detailed descriptions
-    const courseDescriptions = {
-      'CHEM-NSI': 'Master the fundamentals of chemistry, including matter, energy, chemical reactions, and the periodic table. Perfect for beginners.',
-      'CHEM-NSII': 'Explore chemical bonding, stoichiometry, solutions, and acids & bases. Build upon your foundational knowledge.',
-      'CHEM-NSIII': 'Dive into thermodynamics, chemical equilibrium, electrochemistry, and advanced reaction mechanisms.',
-      'CHEM-NSIV': 'Study organic chemistry, hydrocarbons, functional groups, and physical chemistry principles at an advanced level.',
-      'PHYS-NSII': 'Learn the basics of motion, forces, energy, and simple machines. Develop your understanding of the physical world.',
-      'PHYS-NSIII': 'Study mechanics, Newton\'s laws, work and energy, waves, optics, and electricity fundamentals.',
-      'PHYS-NSIV': 'Master electromagnetic induction, modern physics concepts, nuclear physics, and thermodynamics.',
-      'MATH-NSI': 'Build strong mathematical foundations with algebra, geometry, basic trigonometry, and problem-solving skills.',
-      'MATH-NSII': 'Advance your skills in functions, equations, coordinate geometry, and analytical methods.',
-      'MATH-NSIII': 'Master advanced topics including calculus, derivatives, integrals, and complex problem solving.',
-      'ECON-NSI': 'Understand economic principles, supply and demand, market systems, and basic economic theories relevant to Haiti.'
-    };
-
+    // Simple, catalog-friendly course naming
     const baseName = subjectNames[baseSubject] || baseSubject;
-    const courseTitle = courseTitles[subjectCode] || `${baseName} - ${levelFormatted}`;
-    const courseDescription = courseDescriptions[subjectCode] || 
-      `Comprehensive ${baseName} curriculum for ${levelFormatted} students following the Haitian national education standards.`;
+    const courseTitle = `${baseName} - ${levelFormatted}`;
+
+    // Short descriptions used in the catalog
+    const courseDescriptions = {
+      'CHEM-NSI': 'Build a strong chemistry foundation with everyday examples and core lab concepts.',
+      'CHEM-NSII': 'Deepen your chemistry skills with bonding, reactions, and solution chemistry practice.',
+      'CHEM-NSIII': 'Tackle equilibrium, thermodynamics, and electrochemistry with problem-focused lessons.',
+      'CHEM-NSIV': 'Explore advanced organic topics and physical chemistry questions for exam readiness.',
+      'PHYS-NSII': 'Understand motion, forces, and energy through real-world investigations.',
+      'PHYS-NSIII': 'Master mechanics, waves, and electricity with step-by-step explanations.',
+      'PHYS-NSIV': 'Connect modern physics ideas with thermodynamics and practical experiments.',
+      'MATH-NSI': 'Review algebra and geometry essentials while growing confident problem-solving habits.',
+      'MATH-NSII': 'Strengthen functions and trigonometry skills with guided examples.',
+      'MATH-NSIII': 'Practice calculus and advanced problem sets designed for NS III learners.',
+      'ECON-NSI': 'Learn key economic principles and how markets shape daily life in Haiti.'
+    };
+
+    const courseDescription = courseDescriptions[subjectCode]
+      || `${baseName} concepts tailored for ${levelFormatted} students with quick practice sets.`;
 
     return {
       id: subjectCode,

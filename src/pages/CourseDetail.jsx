@@ -11,9 +11,31 @@ export default function CourseDetail() {
   const [activeModule, setActiveModule] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const { isAuthenticated, enrolledCourses } = useStore();
-  
-  const course = data?.courses?.find(c => c.id === courseId);
-  const isEnrolled = enrolledCourses.some(c => c.id === courseId);
+
+  const course = data?.courses?.find((c) => c.id === courseId);
+  const isEnrolled = enrolledCourses.some((c) => c.id === courseId);
+  const modules = course?.modules ?? [];
+  const activeModuleData = modules[activeModule] ?? null;
+  const activeDescription = activeModuleData?.description
+    ?? activeModuleData?.objective
+    ?? activeModuleData?.lessons?.[0]?.objectives
+    ?? course?.description
+    ?? '';
+  const primaryVideo = activeModuleData?.videoUrl || activeModuleData?.lessons?.[0]?.videoUrl || course?.trailerUrl || '';
+  const lessonBreakdown = Array.isArray(activeModuleData?.lessons) ? activeModuleData.lessons : [];
+  const allQuizzes = data?.quizzes ?? [];
+  const moduleIdentifiers = [
+    ...lessonBreakdown.map((lesson) => lesson.id).filter(Boolean),
+    activeModuleData?.videoId,
+    activeModuleData?.id,
+  ].filter(Boolean);
+  const moduleQuiz = activeModuleData?.quiz
+    || allQuizzes.find(
+      (quizItem) =>
+        moduleIdentifiers.includes(quizItem.video_id)
+        || moduleIdentifiers.includes(quizItem.quiz_id)
+    );
+  const hasQuiz = Boolean(moduleQuiz);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -21,10 +43,28 @@ export default function CourseDetail() {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    setActiveModule(0);
+  }, [courseId]);
+
+  useEffect(() => {
+    if (modules.length > 0 && activeModule >= modules.length) {
+      setActiveModule(0);
+    }
+  }, [modules.length, activeModule]);
+
+  useEffect(() => {
+    setShowQuiz(false);
+  }, [activeModule]);
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="loading-spinner" />
+      <div className="section">
+        <div className="container">
+          <div className="card card--centered card--loading">
+            <div className="loading-spinner" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -33,11 +73,10 @@ export default function CourseDetail() {
     return (
       <div className="section">
         <div className="container">
-          <div className="card p-8 text-center">
-            <h2 className="text-xl font-bold mb-4">
-              This course is not available
-            </h2>
-            <button className="btn" onClick={() => navigate('/courses')}>
+          <div className="card card--message">
+            <h2 className="section__title">This course is not available</h2>
+            <p className="text-muted">We couldn&apos;t find the course you were looking for.</p>
+            <button className="button button--primary button--pill" onClick={() => navigate('/courses')}>
               Return to Course List
             </button>
           </div>
@@ -49,57 +88,101 @@ export default function CourseDetail() {
   return (
     <div className="section">
       <div className="container">
-        <div className="grid grid-3 gap-6">
-          {/* Main Content */}
-          <div className="col-span-2">
-            <div className="card p-6 mb-6">
-              <div className="aspect-video mb-4 bg-gray-100 rounded-lg">
-                {/* Video player would go here */}
-                <iframe
-                  src={course.modules[activeModule].videoUrl}
-                  title={course.modules[activeModule].title}
-                  className="w-full h-full rounded-lg"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+        <div className="course-detail__layout">
+          <div className="course-detail__column">
+            <article className="lesson-card">
+              <div className="lesson-card__media">
+                {primaryVideo ? (
+                  <iframe
+                    src={primaryVideo}
+                    title={activeModuleData?.title || course.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="lesson-card__placeholder">
+                    Video content will appear here once available.
+                  </div>
+                )}
               </div>
 
-              <h1 className="text-2xl font-bold mb-2">{course.modules[activeModule].title}</h1>
-              <p className="text-gray">{course.modules[activeModule].description}</p>
+              <header className="lesson-card__header">
+                <h1 className="lesson-card__title">{activeModuleData?.title ?? course.title}</h1>
+                {activeDescription && <p className="text-muted">{activeDescription}</p>}
+              </header>
 
-              <div className="flex justify-between items-center mt-6">
-                <div className="flex gap-2">
+              <div className="lesson-card__nav">
+                <div className="lesson-card__nav-group">
                   <button
-                    className="btn-outline btn-sm"
-                    disabled={activeModule === 0}
-                    onClick={() => setActiveModule(m => m - 1)}
+                    className="button button--ghost button--sm"
+                    disabled={modules.length === 0 || activeModule === 0}
+                    onClick={() => {
+                      if (modules.length === 0) return;
+                      setActiveModule((m) => Math.max(0, m - 1));
+                    }}
                   >
                     Previous
                   </button>
                   <button
-                    className="btn-outline btn-sm"
-                    disabled={activeModule === course.modules.length - 1}
-                    onClick={() => setActiveModule(m => m + 1)}
+                    className="button button--ghost button--sm"
+                    disabled={modules.length === 0 || activeModule === modules.length - 1}
+                    onClick={() => {
+                      if (modules.length === 0) return;
+                      setActiveModule((m) => Math.min(modules.length - 1, m + 1));
+                    }}
                   >
                     Next
                   </button>
                 </div>
 
-                <button
-                  className="btn btn-sm"
-                  onClick={() => setShowQuiz(true)}
-                >
-                  Take Quiz
-                </button>
+                {hasQuiz && (
+                  <button
+                    className="button button--primary button--sm"
+                    onClick={() => setShowQuiz(true)}
+                  >
+                    Take Quiz
+                  </button>
+                )}
               </div>
-            </div>
 
-            {showQuiz && (
+              {lessonBreakdown.length > 0 && (
+                <div className="lesson-card__lessons">
+                  <div className="lesson-card__lessons-header">
+                    <span className="lesson-card__lessons-title">Lesson Breakdown</span>
+                    <span className="text-muted lesson-card__lessons-count">
+                      {lessonBreakdown.length} lesson{lessonBreakdown.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
+                  <div className="lesson-card__lesson-list">
+                    {lessonBreakdown.map((lesson, idx) => (
+                      <div key={lesson.id ?? idx} className="lesson-card__lesson-item">
+                        <div className="lesson-card__lesson-meta">
+                          <span className="lesson-card__lesson-index">{idx + 1}</span>
+                          <div>
+                            <p className="lesson-card__lesson-title">{lesson.title}</p>
+                            {lesson.objectives && (
+                              <p className="lesson-card__lesson-objective text-muted">
+                                {lesson.objectives}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {lesson.duration && (
+                          <span className="lesson-card__lesson-duration">{lesson.duration} min</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </article>
+
+            {showQuiz && hasQuiz && (
               <QuizComponent
-                quiz={course.modules[activeModule].quiz}
+                quiz={moduleQuiz}
                 onComplete={(isCorrect) => {
-                  if (isCorrect && activeModule < course.modules.length - 1) {
-                    setActiveModule(m => m + 1);
+                  if (isCorrect && activeModule < modules.length - 1) {
+                    setActiveModule((m) => Math.min(modules.length - 1, m + 1));
                   }
                   setShowQuiz(false);
                 }}
@@ -107,44 +190,48 @@ export default function CourseDetail() {
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="col-span-1">
-            <div className="card p-6">
-              <h3 className="text-xl font-bold mb-4">
-                Course Content
-              </h3>
-              
-              <div className="space-y-2">
-                {course.modules.map((module, idx) => (
-                  <button
-                    key={idx}
-                    className={`w-full text-left p-3 rounded-lg transition-colors ${
-                      idx === activeModule
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setActiveModule(idx)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                        idx === activeModule
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100'
-                      }`}>
-                        {idx + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{module.title}</div>
-                        <div className="text-sm text-gray">
-                          {module.duration} min
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+          <aside className="lesson-sidebar">
+            <div>
+              <h3 className="lesson-sidebar__heading">Course Content</h3>
+              <p className="text-muted lesson-sidebar__description">
+                {isEnrolled
+                  ? 'Track your progress across each module and revisit lessons anytime.'
+                  : 'Preview the modules covered in this course. Enroll to unlock full lessons.'}
+              </p>
             </div>
-          </div>
+
+            <div className="lesson-list">
+              {modules.length > 0 ? (
+                modules.map((module, idx) => (
+                  <button
+                    key={module.id ?? idx}
+                    className={`lesson-list__item ${idx === activeModule ? 'lesson-list__item--active' : ''}`}
+                    onClick={() => setActiveModule(idx)}
+                    type="button"
+                  >
+                    <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
+                    <span className="lesson-list__meta">
+                      <span className="lesson-list__title">{module.title}</span>
+                      <span className="lesson-list__duration">
+                        {module.duration
+                          ? `${module.duration} min`
+                          : module.readingTime
+                            ? `${module.readingTime} min read`
+                            : module.lessons?.length
+                              ? `${module.lessons.length} lesson${module.lessons.length === 1 ? '' : 's'}`
+                              : 'Coming soon'}
+                      </span>
+                    </span>
+                    {idx === activeModule && <span className="chip chip--ghost">Current</span>}
+                  </button>
+                ))
+              ) : (
+                <div className="lesson-list__empty">
+                  Modules for this course will appear here shortly.
+                </div>
+              )}
+            </div>
+          </aside>
         </div>
       </div>
     </div>

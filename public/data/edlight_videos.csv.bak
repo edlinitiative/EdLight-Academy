@@ -1,0 +1,4 @@
+id,subject_code,unit_no,unit_title,lesson_no,video_title,learning_objectives,language,duration_min,video_url,thumbnail_url,tags
+CHEM-NSI-U1-L1,CHEM-NSI,1,Entwodiksyon a Chimi,1,Ki sa ki Chimi? Definisyon ak Istwa,Define chemistry; history,Kreyòl+Français,8,https://example.com/chem.mp4,,intro
+PHYS-NSI-U2-L1,PHYS-NSI,2,Mezi ak Inite,1,Sistèm Entènasyonal Inite yo (SI),Identify SI base units,Kreyòl+Français,7,https://example.com/phys.mp4,,measurement
+MATH-NSI-U1-L3,MATH-NSI,1,Arithmetic: Real Numbers,3,Valè Absoli ak Konparezon,Absolute value; order,Kreyòl+Français,9,https://example.com/math.mp4,,numbers

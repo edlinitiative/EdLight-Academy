@@ -1,10 +1,11 @@
 import React, { useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
 import { UserDropdown } from './Auth';
 
 export function Navbar() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const dropdownRef = useRef(null);
   const { 
     isAuthenticated, 
@@ -33,37 +34,49 @@ export function Navbar() {
     navigate('/');
   };
 
+  const isActive = (path) => {
+    if (path === '/') {
+      return pathname === '/';
+    }
+    return pathname.startsWith(path);
+  };
+
   return (
     <header className="navbar">
-      <div className="container nav-container">
+      <div className="container navbar__inner">
         <Link to="/" className="logo">
-          <div className="logo-box">E</div>
-          <span style={{ fontWeight: '600', fontSize: '1.125rem' }}>EdLight Academy</span>
+          <span className="logo__mark">E</span>
+          <span>EdLight Academy</span>
         </Link>
 
         <nav className="nav-links">
-          <Link to="/courses" className="nav-link">Courses</Link>
-          <Link to="/quizzes" className="nav-link">Quizzes</Link>
-          <Link to="/about" className="nav-link">About</Link>
+          <Link to="/courses" className={['nav-link', isActive('/courses') ? 'active' : ''].join(' ')}>
+            Courses
+          </Link>
+          <Link to="/quizzes" className={['nav-link', isActive('/quizzes') ? 'active' : ''].join(' ')}>
+            Quizzes
+          </Link>
+          <Link to="/about" className={['nav-link', isActive('/about') ? 'active' : ''].join(' ')}>
+            About
+          </Link>
         </nav>
         
-        <div className="user-menu" ref={dropdownRef}>
+        <div className="nav-actions">
           {isAuthenticated ? (
             <>
-              <div className="relative">
+              <button 
+                className="button button--ghost button--pill"
+                onClick={() => navigate('/dashboard')}
+              >
+                Dashboard
+              </button>
+
+              <div className="dropdown" ref={dropdownRef}>
                 <button 
-                  className="btn-outline btn-sm"
-                  onClick={() => navigate('/dashboard')}
-                >
-                  Dashboard
-                </button>
-              </div>
-              
-              <div className="relative">
-                <button 
-                  className="user-avatar"
+                  className="avatar"
                   onClick={() => toggleUserDropdown()}
-                  style={{ cursor: 'pointer' }}
+                  aria-haspopup="true"
+                  aria-expanded={showUserDropdown}
                 >
                   {user.name.split(' ').map(n => n[0]).join('')}
                 </button>
@@ -73,23 +86,23 @@ export function Navbar() {
               </div>
             </>
           ) : (
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <>
               <button 
-                className="btn-outline btn-sm"
+                className="button button--ghost button--pill"
                 onClick={() => useStore.getState().toggleAuthModal()}
               >
                 Sign In
               </button>
               <button 
-                className="btn btn-sm"
+                className="button button--primary button--pill"
                 onClick={() => {
                   useStore.getState().toggleAuthModal();
                   useStore.getState().setActiveTab('signup');
                 }}
               >
-                Sign Up
+                Create Account
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
