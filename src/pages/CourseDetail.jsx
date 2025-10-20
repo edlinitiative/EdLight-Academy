@@ -113,7 +113,7 @@ export default function CourseDetail() {
                 {primaryVideo ? (
                   <iframe
                     src={primaryVideo}
-                    title={activeModuleData?.title || course.title}
+                    title={activeLessonData?.title || activeModuleData?.title || course.title}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
@@ -125,8 +125,16 @@ export default function CourseDetail() {
               </div>
 
               <header className="lesson-card__header">
+                <span className="chip chip--ghost">Chapter {activeModule + 1}</span>
                 <h1 className="lesson-card__title">{activeModuleData?.title ?? course.title}</h1>
-                {activeDescription && <p className="text-muted">{activeDescription}</p>}
+                {activeLessonData && (
+                  <p className="text-muted" style={{ marginTop: '0.25rem' }}>
+                    <strong>Subchapter {activeModule + 1}.{activeLesson + 1}:</strong> {activeLessonData.title}
+                  </p>
+                )}
+                {activeDescription && (
+                  <p className="text-muted" style={{ marginTop: '0.25rem' }}>{activeDescription}</p>
+                )}
               </header>
 
               <div className="lesson-card__nav">
@@ -184,43 +192,6 @@ export default function CourseDetail() {
                   </button>
                 )}
               </div>
-
-              {lessonBreakdown.length > 0 && (
-                <div className="lesson-card__lessons">
-                  <div className="lesson-card__lessons-header">
-                    <span className="lesson-card__lessons-title">Lesson Breakdown</span>
-                    <span className="text-muted lesson-card__lessons-count">
-                      {lessonBreakdown.length} lesson{lessonBreakdown.length === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  <div className="lesson-card__lesson-list">
-                    {lessonBreakdown.map((lesson, idx) => (
-                      <button
-                        key={lesson.id ?? idx}
-                        type="button"
-                        className={`lesson-card__lesson-item ${idx === activeLesson ? 'lesson-list__item--active' : ''}`}
-                        onClick={() => setActiveLesson(idx)}
-                      >
-                        <div className="lesson-card__lesson-meta">
-                          <span className="lesson-card__lesson-index">{idx + 1}</span>
-                          <div>
-                            <p className="lesson-card__lesson-title">{lesson.title}</p>
-                            {lesson.objectives && (
-                              <p className="lesson-card__lesson-objective text-muted">
-                                {lesson.objectives}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {lesson.duration && (
-                          <span className="lesson-card__lesson-duration">{lesson.duration} min</span>
-                        )}
-                        {idx === activeLesson && <span className="chip chip--ghost">Current</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </article>
 
             {showQuiz && hasQuiz && (
@@ -248,29 +219,66 @@ export default function CourseDetail() {
 
             <div className="lesson-list">
               {modules.length > 0 ? (
-                modules.map((module, idx) => (
-                  <button
-                    key={module.id ?? idx}
-                    className={`lesson-list__item ${idx === activeModule ? 'lesson-list__item--active' : ''}`}
-                    onClick={() => setActiveModule(idx)}
-                    type="button"
-                  >
-                    <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
-                    <span className="lesson-list__meta">
-                      <span className="lesson-list__title">{module.title}</span>
-                      <span className="lesson-list__duration">
-                        {module.duration
-                          ? `${module.duration} min`
-                          : module.readingTime
-                            ? `${module.readingTime} min read`
-                            : module.lessons?.length
-                              ? `${module.lessons.length} lesson${module.lessons.length === 1 ? '' : 's'}`
-                              : 'Coming soon'}
-                      </span>
-                    </span>
-                    {idx === activeModule && <span className="chip chip--ghost">Current</span>}
-                  </button>
-                ))
+                modules.map((module, idx) => {
+                  const isActiveModule = idx === activeModule;
+                  const hasLessons = Array.isArray(module.lessons) && module.lessons.length > 0;
+                  const isExpanded = isActiveModule || (hasLessons && idx < activeModule);
+                  return (
+                    <div key={module.id ?? idx} className="lesson-list__group">
+                      <button
+                        className={`lesson-list__item ${isActiveModule ? 'lesson-list__item--active' : ''}`}
+                        onClick={() => {
+                          // toggle expand by selecting the module; keep lesson index as 0
+                          setActiveModule(idx);
+                        }}
+                        type="button"
+                      >
+                        <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
+                        <span className="lesson-list__meta">
+                          <span className="lesson-list__title">{module.title}</span>
+                          <span className="lesson-list__duration">
+                            {module.duration
+                              ? `${module.duration} min`
+                              : module.readingTime
+                                ? `${module.readingTime} min read`
+                                : module.lessons?.length
+                                  ? `${module.lessons.length} lesson${module.lessons.length === 1 ? '' : 's'}`
+                                  : 'Coming soon'}
+                          </span>
+                        </span>
+                        {isActiveModule && <span className="chip chip--ghost">Current</span>}
+                      </button>
+
+                      {isExpanded && hasLessons && (
+                        <div className="lesson-list__children" style={{ marginLeft: '2.75rem' }}>
+                          {module.lessons.map((lsn, lidx) => {
+                            const isActiveLesson = isActiveModule && lidx === activeLesson;
+                            return (
+                              <button
+                                key={lsn.id ?? `${idx}-${lidx}`}
+                                type="button"
+                                className={`lesson-list__item ${isActiveLesson ? 'lesson-list__item--active' : ''}`}
+                                onClick={() => {
+                                  setActiveModule(idx);
+                                  setActiveLesson(lidx);
+                                }}
+                              >
+                                <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}.{String(lidx + 1).padStart(2, '0')}</span>
+                                <span className="lesson-list__meta">
+                                  <span className="lesson-list__title">{lsn.title}</span>
+                                  <span className="lesson-list__duration">
+                                    {lsn.duration ? `${lsn.duration} min` : (lsn.readingTime ? `${lsn.readingTime} min read` : '')}
+                                  </span>
+                                </span>
+                                {isActiveLesson && <span className="chip chip--ghost">Current</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="lesson-list__empty">
                   Modules for this course will appear here shortly.
