@@ -773,8 +773,8 @@ main {
 /* Course Detail */
 .course-detail__layout {
 	display: grid;
-	gap: clamp(1.5rem, 4vw, 2.4rem);
-	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+	gap: clamp(1rem, 3vw, 1.8rem);
+	grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
 }
 
 .course-detail__column {
@@ -787,9 +787,9 @@ main {
 	border-radius: var(--radius-lg);
 	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
-	padding: clamp(1.6rem, 3vw, 2.1rem);
+	padding: clamp(1.2rem, 2.5vw, 1.6rem);
 	display: grid;
-	gap: 1.5rem;
+	gap: 1rem;
 }
 
 .lesson-card__media {
@@ -809,6 +809,13 @@ main {
 	border: none;
 }
 
+/* Ensure the video doesn't get excessively tall on large screens */
+@media (min-width: 1200px) {
+  .lesson-card__media {
+    max-height: 520px;
+  }
+}
+
 .lesson-card__placeholder {
 	display: grid;
 	place-items: center;
@@ -824,7 +831,7 @@ main {
 }
 
 .lesson-card__title {
-	font-size: clamp(1.4rem, 3vw, 1.75rem);
+	font-size: clamp(1.3rem, 2.6vw, 1.6rem);
 	font-weight: 700;
 }
 

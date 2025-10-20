@@ -125,11 +125,10 @@ export default function CourseDetail() {
               </div>
 
               <header className="lesson-card__header">
-                <span className="chip chip--ghost">Chapter {activeModule + 1}</span>
                 <h1 className="lesson-card__title">{activeModuleData?.title ?? course.name}</h1>
                 {activeLessonData && (
-                  <p className="text-muted" style={{ marginTop: '0.25rem' }}>
-                    <strong>Subchapter {activeModule + 1}.{activeLesson + 1}:</strong> {activeLessonData.title}
+                  <p className="text-muted" style={{ marginTop: '0.25rem', fontWeight: 600 }}>
+                    {activeLessonData.title}
                   </p>
                 )}
                 {activeDescription && (
