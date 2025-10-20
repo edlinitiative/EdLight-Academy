@@ -267,7 +267,7 @@ export default function CourseDetail() {
                       </button>
 
                       {isExpanded && hasLessons && (
-                        <div className="lesson-list__children" style={{ marginLeft: '2.75rem' }}>
+                        <div className="lesson-list__children">
                           {module.lessons.map((lsn, lidx) => {
                             const isActiveLesson = isActiveModule && lidx === activeLesson;
                             return (

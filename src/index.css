@@ -774,7 +774,7 @@ main {
 .course-detail__layout {
 	display: grid;
 	gap: clamp(0.9rem, 2.5vw, 1.6rem);
-	grid-template-columns: minmax(0, 2.1fr) minmax(240px, 0.9fr);
+	grid-template-columns: minmax(0, 2.3fr) minmax(220px, 0.75fr);
 }
 
 .course-detail__column {
@@ -937,9 +937,20 @@ main {
 	font-size: 0.9rem;
 }
 
+.lesson-sidebar {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+}
+
 .lesson-list {
 	display: grid;
 	gap: 0.5rem;
+	overflow-y: auto;
+	flex: 1;
 }
 
 .lesson-list__item {
@@ -959,6 +970,14 @@ main {
 	border-color: rgba(10, 102, 194, 0.32);
 	background: rgba(10, 102, 194, 0.12);
 	transform: translateX(2px);
+}
+
+.lesson-list__children {
+	margin-left: 2.4rem; /* keep indentation compact */
+	height: 200px; /* uniform dropdown height for all modules */
+	overflow-y: auto;
+	display: grid;
+	gap: 0.4rem;
 }
 
 .lesson-list__index {
