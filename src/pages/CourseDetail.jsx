@@ -11,6 +11,7 @@ export default function CourseDetail() {
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [expandedModules, setExpandedModules] = useState(() => new Set([0]));
   const { isAuthenticated, enrolledCourses } = useStore();
 
   const course = data?.courses?.find((c) => c.id === courseId);
@@ -57,6 +58,7 @@ export default function CourseDetail() {
   useEffect(() => {
     setActiveModule(0);
     setActiveLesson(0);
+    setExpandedModules(new Set([0]));
   }, [courseId]);
 
   useEffect(() => {
@@ -69,6 +71,11 @@ export default function CourseDetail() {
     // reset lesson to the first when switching modules
     setActiveLesson(0);
     setShowQuiz(false);
+    setExpandedModules((prev) => {
+      const next = new Set(prev);
+      next.add(activeModule);
+      return next;
+    });
   }, [activeModule]);
 
   useEffect(() => {
@@ -109,6 +116,10 @@ export default function CourseDetail() {
         <div className="course-detail__layout">
           <div className="course-detail__column">
             <article className="lesson-card">
+              <header className="lesson-card__header">
+                <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
+              </header>
+
               <div className="lesson-card__media">
                 {primaryVideo ? (
                   <iframe
@@ -124,17 +135,11 @@ export default function CourseDetail() {
                 )}
               </div>
 
-              <header className="lesson-card__header">
-                <h1 className="lesson-card__title">{activeModuleData?.title ?? course.name}</h1>
-                {activeLessonData && (
-                  <p className="text-muted" style={{ marginTop: '0.25rem', fontWeight: 600 }}>
-                    {activeLessonData.title}
-                  </p>
-                )}
-                {activeDescription && (
-                  <p className="text-muted" style={{ marginTop: '0.25rem' }}>{activeDescription}</p>
-                )}
-              </header>
+              {activeDescription && (
+                <div className="text-muted" style={{ marginTop: '-0.25rem' }}>
+                  {activeDescription}
+                </div>
+              )}
 
               <div className="lesson-card__nav">
                 <div className="lesson-card__nav-group">
@@ -221,14 +226,27 @@ export default function CourseDetail() {
                 modules.map((module, idx) => {
                   const isActiveModule = idx === activeModule;
                   const hasLessons = Array.isArray(module.lessons) && module.lessons.length > 0;
-                  const isExpanded = isActiveModule || (hasLessons && idx < activeModule);
+                  const isExpanded = expandedModules.has(idx);
                   return (
                     <div key={module.id ?? idx} className="lesson-list__group">
                       <button
                         className={`lesson-list__item ${isActiveModule ? 'lesson-list__item--active' : ''}`}
                         onClick={() => {
-                          // toggle expand by selecting the module; keep lesson index as 0
-                          setActiveModule(idx);
+                          if (isActiveModule) {
+                            setExpandedModules((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(idx)) next.delete(idx); else next.add(idx);
+                              return next;
+                            });
+                          } else {
+                            setActiveModule(idx);
+                            setActiveLesson(0);
+                            setExpandedModules((prev) => {
+                              const next = new Set(prev);
+                              next.add(idx);
+                              return next;
+                            });
+                          }
                         }}
                         type="button"
                       >
