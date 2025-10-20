@@ -113,7 +113,7 @@ export default function CourseDetail() {
                 {primaryVideo ? (
                   <iframe
                     src={primaryVideo}
-                    title={activeLessonData?.title || activeModuleData?.title || course.title}
+                    title={activeLessonData?.title || activeModuleData?.title || course.name}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
@@ -126,7 +126,7 @@ export default function CourseDetail() {
 
               <header className="lesson-card__header">
                 <span className="chip chip--ghost">Chapter {activeModule + 1}</span>
-                <h1 className="lesson-card__title">{activeModuleData?.title ?? course.title}</h1>
+                <h1 className="lesson-card__title">{activeModuleData?.title ?? course.name}</h1>
                 {activeLessonData && (
                   <p className="text-muted" style={{ marginTop: '0.25rem' }}>
                     <strong>Subchapter {activeModule + 1}.{activeLesson + 1}:</strong> {activeLessonData.title}
