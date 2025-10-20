@@ -107,7 +107,7 @@ main {
 
 /* Layout */
 .container {
-	width: min(1120px, 92vw);
+	width: min(1480px, 98vw);
 	margin: 0 auto;
 }
 
@@ -774,7 +774,7 @@ main {
 .course-detail__layout {
 	display: grid;
 	gap: clamp(0.9rem, 2.5vw, 1.6rem);
-	grid-template-columns: minmax(0, 2.3fr) minmax(220px, 0.75fr);
+	grid-template-columns: minmax(0, 2.6fr) minmax(240px, 0.8fr);
 }
 
 .course-detail__column {
