@@ -1,51 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../hooks/useTracking';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { currentLanguage } = useLanguage();
   const { data, isLoading } = useAppData();
-  const { user, enrolledCourses, progress, quizAttempts } = useStore();
-
-  const texts = {
-    welcome: {
-      ht: `Byenveni, ${user?.name}!`,
-      fr: `Bienvenue, ${user?.name}!`
-    },
-    overview: {
-      ht: 'Apèsi Pwogrè ou',
-      fr: 'Aperçu de vos progrès'
-    },
-    enrolledCourses: {
-      ht: 'Kou Enskri yo',
-      fr: 'Cours inscrits'
-    },
-    recentActivity: {
-      ht: 'Aktivite Resan',
-      fr: 'Activité récente'
-    },
-    stats: {
-      coursesInProgress: {
-        ht: 'Kou an pwogrè',
-        fr: 'Cours en cours'
-      },
-      quizzesTaken: {
-        ht: 'Egzèsis fèt',
-        fr: 'Exercices effectués'
-      },
-      avgScore: {
-        ht: 'Mwayèn nòt',
-        fr: 'Note moyenne'
-      }
-    },
-    empty: {
-      ht: 'Pa gen kou enskri. Eksplore katalòg la pou kòmanse!',
-      fr: 'Aucun cours inscrit. Explorez le catalogue pour commencer!'
-    }
-  };
+  const { user, enrolledCourses, progress, quizAttempts} = useStore();
 
   if (isLoading) {
     return (
@@ -67,27 +28,27 @@ export default function Dashboard() {
   return (
     <div className="section">
       <div className="container">
-        <h1 className="text-3xl font-bold mb-8">{texts.welcome[currentLanguage]}</h1>
+        <h1 className="text-3xl font-bold mb-8">Welcome, {user?.name}!</h1>
 
         {/* Statistics Cards */}
         <div className="grid grid-3 gap-6 mb-8">
           <div className="card p-6">
-            <h3 className="text-lg text-gray mb-2">{texts.stats.coursesInProgress[currentLanguage]}</h3>
+            <h3 className="text-lg text-gray mb-2">Courses in Progress</h3>
             <div className="text-3xl font-bold">{coursesInProgress}</div>
           </div>
           <div className="card p-6">
-            <h3 className="text-lg text-gray mb-2">{texts.stats.quizzesTaken[currentLanguage]}</h3>
+            <h3 className="text-lg text-gray mb-2">Quizzes Taken</h3>
             <div className="text-3xl font-bold">{quizCount}</div>
           </div>
           <div className="card p-6">
-            <h3 className="text-lg text-gray mb-2">{texts.stats.avgScore[currentLanguage]}</h3>
+            <h3 className="text-lg text-gray mb-2">Average Score</h3>
             <div className="text-3xl font-bold">{Math.round(avgScore * 100)}%</div>
           </div>
         </div>
 
         {/* Enrolled Courses */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">{texts.enrolledCourses[currentLanguage]}</h2>
+          <h2 className="text-2xl font-bold mb-4">Enrolled Courses</h2>
           
           {enrolledCourses.length > 0 ? (
             <div className="grid grid-2 gap-6">
@@ -107,15 +68,15 @@ export default function Dashboard() {
                         className="btn-outline btn-sm"
                         onClick={() => navigate(`/courses/${course.id}`)}
                       >
-                        {currentLanguage === 'ht' ? 'Kontinye' : 'Continuer'}
+                        Continue
                       </button>
                     </div>
                     
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span>{progressPercent}% {currentLanguage === 'ht' ? 'konplete' : 'complété'}</span>
+                        <span>{progressPercent}% complete</span>
                         <span className="text-gray">
-                          {courseProgress.completed}/{courseProgress.total} {currentLanguage === 'ht' ? 'modil' : 'modules'}
+                          {courseProgress.completed}/{courseProgress.total} modules
                         </span>
                       </div>
                       <div className="progress-bar">
@@ -131,12 +92,12 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="card p-8 text-center">
-              <p className="text-gray mb-4">{texts.empty[currentLanguage]}</p>
+              <p className="text-gray mb-4">No enrolled courses. Explore the catalog to get started!</p>
               <button 
                 className="btn"
                 onClick={() => navigate('/courses')}
               >
-                {currentLanguage === 'ht' ? 'Eksplore Kou yo' : 'Explorer les Cours'}
+                Explore Courses
               </button>
             </div>
           )}
@@ -144,7 +105,7 @@ export default function Dashboard() {
 
         {/* Recent Activity */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">{texts.recentActivity[currentLanguage]}</h2>
+          <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
           <div className="card p-6">
             {Object.entries(quizAttempts)
               .flatMap(([quizId, attempts]) => 
@@ -166,10 +127,7 @@ export default function Dashboard() {
                     <p className="font-medium">{activity.quiz?.question}</p>
                     <p className="text-sm text-gray">
                       {new Date(activity.date).toLocaleDateString()} - 
-                      {activity.score === 1 
-                        ? (currentLanguage === 'ht' ? ' Korèk' : ' Correct')
-                        : (currentLanguage === 'ht' ? ' Pa korèk' : ' Incorrect')
-                      }
+                      {activity.score === 1 ? ' Correct' : ' Incorrect'}
                     </p>
                   </div>
                 </div>

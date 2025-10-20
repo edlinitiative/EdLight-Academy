@@ -7,7 +7,7 @@ const useStore = create(
       // User state
       user: null,
       isAuthenticated: false,
-      language: 'ht', // Default to Haitian Creole
+      language: 'en', // Default to English
       
       // Course progress
       enrolledCourses: [],

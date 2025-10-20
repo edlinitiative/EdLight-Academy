@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useLanguage } from '../hooks/useTracking';
 import { useAppData } from '../hooks/useData';
 import { QuizComponent } from '../components/Quiz';
 import useStore from '../contexts/store';
@@ -8,7 +7,6 @@ import useStore from '../contexts/store';
 export default function CourseDetail() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { currentLanguage } = useLanguage();
   const { data, isLoading } = useAppData();
   const [activeModule, setActiveModule] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -37,10 +35,10 @@ export default function CourseDetail() {
         <div className="container">
           <div className="card p-8 text-center">
             <h2 className="text-xl font-bold mb-4">
-              {currentLanguage === 'ht' ? 'Kou sa a pa disponib' : 'Ce cours n\'est pas disponible'}
+              This course is not available
             </h2>
             <button className="btn" onClick={() => navigate('/courses')}>
-              {currentLanguage === 'ht' ? 'Retounen nan lis kou yo' : 'Retourner à la liste des cours'}
+              Return to Course List
             </button>
           </div>
         </div>
@@ -76,14 +74,14 @@ export default function CourseDetail() {
                     disabled={activeModule === 0}
                     onClick={() => setActiveModule(m => m - 1)}
                   >
-                    {currentLanguage === 'ht' ? 'Anvan' : 'Précédent'}
+                    Previous
                   </button>
                   <button
                     className="btn-outline btn-sm"
                     disabled={activeModule === course.modules.length - 1}
                     onClick={() => setActiveModule(m => m + 1)}
                   >
-                    {currentLanguage === 'ht' ? 'Aprè' : 'Suivant'}
+                    Next
                   </button>
                 </div>
 
@@ -91,7 +89,7 @@ export default function CourseDetail() {
                   className="btn btn-sm"
                   onClick={() => setShowQuiz(true)}
                 >
-                  {currentLanguage === 'ht' ? 'Fè Egzèsis' : 'Faire l\'exercice'}
+                  Take Quiz
                 </button>
               </div>
             </div>
@@ -113,7 +111,7 @@ export default function CourseDetail() {
           <div className="col-span-1">
             <div className="card p-6">
               <h3 className="text-xl font-bold mb-4">
-                {currentLanguage === 'ht' ? 'Kontni Kou a' : 'Contenu du Cours'}
+                Course Content
               </h3>
               
               <div className="space-y-2">

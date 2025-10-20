@@ -1,40 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../hooks/useTracking';
 import { useAppData } from '../hooks/useData';
 import { CourseCard, CourseModal } from '../components/Course';
 import useStore from '../contexts/store';
 
 export default function Courses() {
   const navigate = useNavigate();
-  const { currentLanguage } = useLanguage();
   const { data, isLoading } = useAppData();
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [filter, setFilter] = useState('all');
   const { enrolledCourses, isAuthenticated } = useStore();
   
-  const texts = {
-    title: {
-      ht: 'Katalòg Kou yo',
-      fr: 'Catalogue des Cours'
-    },
-    filters: {
-      all: { ht: 'Tout', fr: 'Tous' },
-      enrolled: { ht: 'Kou mwen yo', fr: 'Mes cours' },
-      NSI: 'NS I',
-      NSII: 'NS II',
-      NSIII: 'NS III'
-    },
-    subjects: {
-      MATH: { ht: 'Matematik', fr: 'Mathématiques' },
-      PHYS: { ht: 'Fizik', fr: 'Physique' },
-      CHEM: { ht: 'Chimi', fr: 'Chimie' },
-      ECON: { ht: 'Ekonomi', fr: 'Économie' }
-    },
-    noResults: {
-      ht: 'Pa gen kou ki koresponn ak filtè sa yo',
-      fr: 'Aucun cours ne correspond à ces filtres'
-    }
+  const filterLabels = {
+    all: 'All',
+    enrolled: 'My Courses',
+    NSI: 'NS I',
+    NSII: 'NS II',
+    NSIII: 'NS III'
+  };
+  
+  const subjectLabels = {
+    MATH: 'Mathematics',
+    PHYS: 'Physics',
+    CHEM: 'Chemistry',
+    ECON: 'Economics'
   };
 
   if (isLoading) {
@@ -71,16 +60,16 @@ export default function Courses() {
     <div className="section">
       <div className="container">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">{texts.title[currentLanguage]}</h1>
+          <h1 className="text-3xl font-bold">Course Catalog</h1>
           
           <div className="flex gap-2">
-            {Object.entries(texts.filters).map(([key, label]) => (
+            {Object.entries(filterLabels).map(([key, label]) => (
               <button
                 key={key}
                 className={`btn-sm ${filter === key ? 'btn' : 'btn-outline'}`}
                 onClick={() => setFilter(key)}
               >
-                {typeof label === 'string' ? label : label[currentLanguage]}
+                {label}
               </button>
             ))}
           </div>
@@ -98,7 +87,7 @@ export default function Courses() {
           </div>
         ) : (
           <div className="card p-8 text-center">
-            <p className="text-gray">{texts.noResults[currentLanguage]}</p>
+            <p className="text-gray">No courses match these filters</p>
           </div>
         )}
       </div>

@@ -1,32 +1,29 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../hooks/useTracking';
 
 export function Footer() {
-  const { currentLanguage } = useLanguage();
-  
   const footerLinks = {
     platform: {
-      title: currentLanguage === 'ht' ? 'Platfòm' : 'Plateforme',
+      title: 'Platform',
       links: [
-        { to: '/about', label: currentLanguage === 'ht' ? 'Apropo' : 'À propos' },
-        { to: '/courses', label: currentLanguage === 'ht' ? 'Kou yo' : 'Cours' },
-        { to: '/quizzes', label: currentLanguage === 'ht' ? 'Egzèsis' : 'Exercices' }
+        { to: '/about', label: 'About' },
+        { to: '/courses', label: 'Courses' },
+        { to: '/quizzes', label: 'Quizzes' }
       ]
     },
     resources: {
-      title: currentLanguage === 'ht' ? 'Resous' : 'Ressources',
+      title: 'Resources',
       links: [
-        { to: '/help', label: currentLanguage === 'ht' ? 'Èd' : 'Aide' },
+        { to: '/help', label: 'Help' },
         { to: '/faq', label: 'FAQ' },
-        { to: '/contact', label: currentLanguage === 'ht' ? 'Kontakte nou' : 'Contactez-nous' }
+        { to: '/contact', label: 'Contact Us' }
       ]
     },
     legal: {
-      title: currentLanguage === 'ht' ? 'Legal' : 'Légal',
+      title: 'Legal',
       links: [
-        { to: '/privacy', label: currentLanguage === 'ht' ? 'Konfidansyalite' : 'Confidentialité' },
-        { to: '/terms', label: currentLanguage === 'ht' ? 'Tèm yo' : "Conditions d'utilisation" }
+        { to: '/privacy', label: 'Privacy' },
+        { to: '/terms', label: 'Terms of Use' }
       ]
     }
   };
@@ -54,7 +51,7 @@ export function Footer() {
 
           <div>
             <h4 className="text-lg font-semibold mb-4">
-              {currentLanguage === 'ht' ? 'Swiv nou' : 'Suivez-nous'}
+              Follow Us
             </h4>
             <div className="flex gap-4">
               <a href="https://twitter.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer-link">
