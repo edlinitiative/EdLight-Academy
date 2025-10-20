@@ -45,7 +45,7 @@ export function Navbar() {
     <header className="navbar">
       <div className="container navbar__inner">
         <Link to="/" className="logo">
-          <span className="logo__mark">E</span>
+          <img src="/assets/logo.png" alt="EdLight Academy" className="logo__image" />
           <span>EdLight Academy</span>
         </Link>
 
