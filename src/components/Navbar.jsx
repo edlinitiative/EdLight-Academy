@@ -1,13 +1,11 @@
 import React, { useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
-import { useLanguage } from '../hooks/useTracking';
 import { UserDropdown } from './Auth';
 
 export function Navbar() {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
-  const { currentLanguage, toggleLanguage } = useLanguage();
   const { 
     isAuthenticated, 
     user, 
@@ -44,22 +42,9 @@ export function Navbar() {
         </Link>
 
         <nav className="nav-links">
-          <Link to="/courses" className="nav-link">
-            {currentLanguage === 'ht' ? 'Kou yo' : 'Cours'}
-          </Link>
-          <Link to="/quizzes" className="nav-link">
-            {currentLanguage === 'ht' ? 'Egzèsis' : 'Exercices'}
-          </Link>
-          <Link to="/about" className="nav-link">
-            {currentLanguage === 'ht' ? 'Apropo' : 'À propos'}
-          </Link>
-          <button 
-            onClick={toggleLanguage}
-            className="btn-outline btn-sm"
-            style={{ padding: '0.25rem 0.75rem' }}
-          >
-            {currentLanguage === 'ht' ? 'FR' : 'KR'}
-          </button>
+          <Link to="/courses" className="nav-link">Courses</Link>
+          <Link to="/quizzes" className="nav-link">Quizzes</Link>
+          <Link to="/about" className="nav-link">About</Link>
         </nav>
         
         <div className="user-menu" ref={dropdownRef}>
@@ -70,7 +55,7 @@ export function Navbar() {
                   className="btn-outline btn-sm"
                   onClick={() => navigate('/dashboard')}
                 >
-                  {currentLanguage === 'ht' ? 'Pwogre' : 'Progrès'}
+                  Dashboard
                 </button>
               </div>
               
@@ -93,7 +78,7 @@ export function Navbar() {
                 className="btn-outline btn-sm"
                 onClick={() => useStore.getState().toggleAuthModal()}
               >
-                {currentLanguage === 'ht' ? 'Konekte' : 'Connexion'}
+                Sign In
               </button>
               <button 
                 className="btn btn-sm"
@@ -102,7 +87,7 @@ export function Navbar() {
                   useStore.getState().setActiveTab('signup');
                 }}
               >
-                {currentLanguage === 'ht' ? 'Enskri' : "S'inscrire"}
+                Sign Up
               </button>
             </div>
           )}

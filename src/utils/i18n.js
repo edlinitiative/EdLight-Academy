@@ -2,116 +2,59 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
 const resources = {
-  ht: {
+  en: {
     translation: {
       common: {
-        loading: 'Chajman...',
-        error: 'Gen yon erè ki pase',
-        close: 'Fèmen',
-        save: 'Sove',
-        cancel: 'Anile',
-        delete: 'Siprime',
-        edit: 'Modifye',
-        next: 'Pwochen',
-        previous: 'Anvan',
-        search: 'Chèche',
-        all: 'Tout',
-        none: 'Okenn',
-        required: 'Obligatwa'
+        loading: 'Loading...',
+        error: 'An error occurred',
+        close: 'Close',
+        save: 'Save',
+        cancel: 'Cancel',
+        delete: 'Delete',
+        edit: 'Edit',
+        next: 'Next',
+        previous: 'Previous',
+        search: 'Search',
+        all: 'All',
+        none: 'None',
+        required: 'Required'
       },
       auth: {
-        signIn: 'Konekte',
-        signUp: 'Enskri',
-        signOut: 'Dekonekte',
-        email: 'Imèl',
-        password: 'Modpas',
-        fullName: 'Non Konplè',
-        forgotPassword: 'Ou bliye modpas ou?',
-        noAccount: 'Ou pa gen yon kont?',
-        hasAccount: 'Ou gen yon kont deja?'
-      },
-      courses: {
-        catalog: 'Katalòg Kou yo',
-        myCourses: 'Kou mwen yo',
-        start: 'Kòmanse',
-        continue: 'Kontinye',
-        preview: 'Apèsi',
-        enroll: 'Enskri',
-        enrolled: 'Enskri',
-        progress: 'Pwogrè',
-        completed: 'Konplete',
-        modules: 'Modil yo',
-        duration: 'Dire',
-        instructor: 'Pwofesè',
-        students: 'Elèv yo',
-        rating: 'Evalyasyon'
-      },
-      quizzes: {
-        start: 'Kòmanse Egzèsis',
-        check: 'Verifye Repons',
-        correct: 'Korèk!',
-        incorrect: 'Pa korèk, eseye ankò',
-        hint: 'Èd',
-        explanation: 'Eksplikasyon',
-        tryAgain: 'Eseye Ankò',
-        submit: 'Soumèt',
-        score: 'Nòt'
-      }
-    }
-  },
-  fr: {
-    translation: {
-      common: {
-        loading: 'Chargement...',
-        error: 'Une erreur est survenue',
-        close: 'Fermer',
-        save: 'Enregistrer',
-        cancel: 'Annuler',
-        delete: 'Supprimer',
-        edit: 'Modifier',
-        next: 'Suivant',
-        previous: 'Précédent',
-        search: 'Rechercher',
-        all: 'Tous',
-        none: 'Aucun',
-        required: 'Obligatoire'
-      },
-      auth: {
-        signIn: 'Se connecter',
-        signUp: 'S\'inscrire',
-        signOut: 'Se déconnecter',
+        signIn: 'Sign In',
+        signUp: 'Sign Up',
+        signOut: 'Sign Out',
         email: 'Email',
-        password: 'Mot de passe',
-        fullName: 'Nom complet',
-        forgotPassword: 'Mot de passe oublié?',
-        noAccount: 'Pas de compte?',
-        hasAccount: 'Déjà un compte?'
+        password: 'Password',
+        fullName: 'Full Name',
+        forgotPassword: 'Forgot Password?',
+        noAccount: "Don't have an account?",
+        hasAccount: 'Already have an account?'
       },
       courses: {
-        catalog: 'Catalogue des cours',
-        myCourses: 'Mes cours',
-        start: 'Commencer',
-        continue: 'Continuer',
-        preview: 'Aperçu',
-        enroll: 'S\'inscrire',
-        enrolled: 'Inscrit',
-        progress: 'Progrès',
-        completed: 'Terminé',
+        catalog: 'Course Catalog',
+        myCourses: 'My Courses',
+        start: 'Start',
+        continue: 'Continue',
+        preview: 'Preview',
+        enroll: 'Enroll',
+        enrolled: 'Enrolled',
+        progress: 'Progress',
+        completed: 'Completed',
         modules: 'Modules',
-        duration: 'Durée',
-        instructor: 'Instructeur',
-        students: 'Étudiants',
-        rating: 'Note'
+        duration: 'Duration',
+        instructor: 'Instructor',
+        students: 'Students',
+        rating: 'Rating'
       },
       quizzes: {
-        start: 'Commencer l\'exercice',
-        check: 'Vérifier la réponse',
+        start: 'Start Quiz',
+        check: 'Check Answer',
         correct: 'Correct!',
-        incorrect: 'Incorrect, essayez encore',
-        hint: 'Indice',
-        explanation: 'Explication',
-        tryAgain: 'Réessayer',
-        submit: 'Soumettre',
+        incorrect: 'Incorrect, try again',
+        hint: 'Hint',
+        explanation: 'Explanation',
+        tryAgain: 'Try Again',
+        submit: 'Submit',
         score: 'Score'
       }
     }
@@ -123,8 +66,8 @@ export function initI18n() {
     .use(initReactI18next)
     .init({
       resources,
-      lng: 'ht', // default language
-      fallbackLng: 'fr',
+      lng: 'en', // default language
+      fallbackLng: 'en',
       interpolation: {
         escapeValue: false
       }

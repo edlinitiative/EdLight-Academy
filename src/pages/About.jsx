@@ -1,132 +1,71 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLanguage } from '../hooks/useTracking';
 
 export default function About() {
   const navigate = useNavigate();
-  const { currentLanguage } = useLanguage();
 
-  const texts = {
-    mission: {
-      title: {
-        ht: 'Misyon nou',
-        fr: 'Notre mission'
-      },
-      content: {
-        ht: 'EdLight ap travay pou rann edikasyon kalite aksesib pou tout elèv Ayisyen. Nou kwè ke chak moun ta dwe gen aksè a bon jan edikasyon, kèlkeswa kote yo ye.',
-        fr: 'EdLight travaille à rendre une éducation de qualité accessible à tous les étudiants haïtiens. Nous croyons que chacun devrait avoir accès à une bonne éducation, où qu\'il se trouve.'
-      }
-    },
-    approach: {
-      title: {
-        ht: 'Metòd nou',
-        fr: 'Notre approche'
-      },
-      points: [
-        {
-          ht: 'Videyo kout ak konsèp klè',
-          fr: 'Vidéos courtes avec des concepts clairs'
-        },
-        {
-          ht: 'Egzèsis pratik pou chak leson',
-          fr: 'Exercices pratiques pour chaque leçon'
-        },
-        {
-          ht: 'Swivi pwogrè pèsonalize',
-          fr: 'Suivi des progrès personnalisé'
-        },
-        {
-          ht: 'Kontni nan lang Kreyòl ak Fransè',
-          fr: 'Contenu en Créole et en Français'
-        }
-      ]
-    },
-    stats: [
-      {
-        number: '1,000+',
-        label: {
-          ht: 'Elèv aktif',
-          fr: 'Étudiants actifs'
-        }
-      },
-      {
-        number: '40+',
-        label: {
-          ht: 'Videyo leson',
-          fr: 'Vidéos de cours'
-        }
-      },
-      {
-        number: '200+',
-        label: {
-          ht: 'Egzèsis pratik',
-          fr: 'Exercices pratiques'
-        }
-      },
-      {
-        number: '4',
-        label: {
-          ht: 'Matyè prensipal',
-          fr: 'Matières principales'
-        }
-      }
-    ],
-    team: {
-      title: {
-        ht: 'Ekip nou',
-        fr: 'Notre équipe'
-      },
-      description: {
-        ht: 'Nou se yon ekip pwofesè, edikatè, ak devlopè ki gen pasyon pou edikasyon.',
-        fr: 'Nous sommes une équipe de professeurs, d\'éducateurs et de développeurs passionnés par l\'éducation.'
-      }
-    },
-    cta: {
-      title: {
-        ht: 'Prè pou w kòmanse?',
-        fr: 'Prêt à commencer?'
-      },
-      button: {
-        ht: 'Eksplore kou yo',
-        fr: 'Explorer les cours'
-      }
-    }
-  };
+  const missionPoints = [
+    'Short videos with clear concepts',
+    'Practice exercises for each lesson',
+    'Personalized progress tracking',
+    'Content in Kreyòl and French (coming soon)'
+  ];
+
+  const stats = [
+    { number: '1,000+', label: 'Active Students' },
+    { number: '40+', label: 'Video Lessons' },
+    { number: '200+', label: 'Practice Exercises' },
+    { number: '4', label: 'Core Subjects' }
+  ];
 
   return (
     <div className="section">
       <div className="container">
         {/* Mission Section */}
-        <section className="text-center mb-16">
-          <h1 className="text-4xl font-bold mb-6">{texts.mission.title[currentLanguage]}</h1>
-          <p className="text-xl text-gray max-w-3xl mx-auto">
-            {texts.mission.content[currentLanguage]}
+        <section className="text-center mb-16" style={{ marginBottom: '4rem' }}>
+          <h1 className="text-4xl font-bold mb-6" style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>
+            Our Mission
+          </h1>
+          <p className="text-xl text-gray" style={{ fontSize: '1.25rem', maxWidth: '48rem', margin: '0 auto' }}>
+            EdLight is working to make quality education accessible to all Haitian students. 
+            We believe that everyone should have access to good education, wherever they are.
           </p>
         </section>
 
         {/* Stats Section */}
-        <section className="grid grid-4 gap-8 mb-16">
-          {texts.stats.map((stat, idx) => (
-            <div key={idx} className="card p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{stat.number}</div>
-              <div className="text-gray">{stat.label[currentLanguage]}</div>
+        <section className="stats-grid mb-16" style={{ marginBottom: '4rem' }}>
+          {stats.map((stat, idx) => (
+            <div key={idx} className="card p-6 text-center" style={{ padding: '1.5rem' }}>
+              <div className="stat-number">{stat.number}</div>
+              <div className="stat-label">{stat.label}</div>
             </div>
           ))}
         </section>
 
         {/* Approach Section */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-8 text-center">
-            {texts.approach.title[currentLanguage]}
+        <section className="mb-16" style={{ marginBottom: '4rem' }}>
+          <h2 className="text-3xl font-bold mb-8 text-center" style={{ fontSize: '2rem', marginBottom: '2rem' }}>
+            Our Approach
           </h2>
           <div className="grid grid-2 gap-8">
-            {texts.approach.points.map((point, idx) => (
-              <div key={idx} className="card p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+            {missionPoints.map((point, idx) => (
+              <div key={idx} className="card p-6" style={{ padding: '1.5rem' }}>
+                <div className="flex items-center gap-4" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{
+                    width: '3rem',
+                    height: '3rem',
+                    borderRadius: '50%',
+                    background: '#E6F1FB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#0A66C2',
+                    fontWeight: 'bold',
+                    fontSize: '1.25rem'
+                  }}>
                     {idx + 1}
                   </div>
-                  <div className="text-lg">{point[currentLanguage]}</div>
+                  <div style={{ fontSize: '1.125rem' }}>{point}</div>
                 </div>
               </div>
             ))}
@@ -134,26 +73,26 @@ export default function About() {
         </section>
 
         {/* Team Section */}
-        <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-4 text-center">
-            {texts.team.title[currentLanguage]}
+        <section className="mb-16" style={{ marginBottom: '4rem' }}>
+          <h2 className="text-3xl font-bold mb-4 text-center" style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+            Our Team
           </h2>
-          <p className="text-xl text-gray text-center mb-8">
-            {texts.team.description[currentLanguage]}
+          <p className="text-xl text-gray text-center mb-8" style={{ fontSize: '1.125rem', marginBottom: '2rem' }}>
+            We are a team of teachers, educators, and developers passionate about education.
           </p>
-          <div className="grid grid-3 gap-8">
-            {/* Add team member cards here */}
-          </div>
         </section>
 
         {/* CTA Section */}
-        <section className="card p-12 text-center">
-          <h2 className="text-3xl font-bold mb-6">{texts.cta.title[currentLanguage]}</h2>
+        <section className="card p-12 text-center" style={{ padding: '3rem' }}>
+          <h2 className="text-3xl font-bold mb-6" style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>
+            Ready to Get Started?
+          </h2>
           <button 
-            className="btn btn-lg"
+            className="btn"
             onClick={() => navigate('/courses')}
+            style={{ padding: '0.75rem 2rem', fontSize: '1.125rem' }}
           >
-            {texts.cta.button[currentLanguage]}
+            Explore Courses
           </button>
         </section>
       </div>
