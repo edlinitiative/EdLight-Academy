@@ -11,8 +11,8 @@ export default function Home() {
   const { data, isLoading } = useAppData();
   const { toggleAuthModal, isAuthenticated } = useStore();
   
-  // Featured courses (first 3)
-  const featuredCourses = data?.courses?.slice(0, 3) || [];
+  // Featured courses (first 6)
+  const featuredCourses = data?.courses?.slice(0, 6) || [];
 
   const texts = {
     hero: {
