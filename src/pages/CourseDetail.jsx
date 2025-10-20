@@ -9,6 +9,7 @@ export default function CourseDetail() {
   const navigate = useNavigate();
   const { data, isLoading } = useAppData();
   const [activeModule, setActiveModule] = useState(0);
+  const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const { isAuthenticated, enrolledCourses } = useStore();
 
@@ -16,15 +17,25 @@ export default function CourseDetail() {
   const isEnrolled = enrolledCourses.some((c) => c.id === courseId);
   const modules = course?.modules ?? [];
   const activeModuleData = modules[activeModule] ?? null;
-  const activeDescription = activeModuleData?.description
+  const lessonBreakdown = Array.isArray(activeModuleData?.lessons) ? activeModuleData.lessons : [];
+  const activeLessonData = lessonBreakdown[activeLesson] ?? null;
+  const activeDescription =
+    activeLessonData?.objectives
+    ?? activeLessonData?.description
+    ?? activeModuleData?.description
     ?? activeModuleData?.objective
-    ?? activeModuleData?.lessons?.[0]?.objectives
     ?? course?.description
     ?? '';
-  const primaryVideo = activeModuleData?.videoUrl || activeModuleData?.lessons?.[0]?.videoUrl || course?.trailerUrl || '';
-  const lessonBreakdown = Array.isArray(activeModuleData?.lessons) ? activeModuleData.lessons : [];
+  const primaryVideo =
+    activeLessonData?.videoUrl
+    || activeModuleData?.videoUrl
+    || lessonBreakdown?.[0]?.videoUrl
+    || course?.trailerUrl
+    || '';
   const allQuizzes = data?.quizzes ?? [];
   const moduleIdentifiers = [
+    activeLessonData?.id,
+    activeLessonData?.videoId,
     ...lessonBreakdown.map((lesson) => lesson.id).filter(Boolean),
     activeModuleData?.videoId,
     activeModuleData?.id,
@@ -45,6 +56,7 @@ export default function CourseDetail() {
 
   useEffect(() => {
     setActiveModule(0);
+    setActiveLesson(0);
   }, [courseId]);
 
   useEffect(() => {
@@ -54,8 +66,14 @@ export default function CourseDetail() {
   }, [modules.length, activeModule]);
 
   useEffect(() => {
+    // reset lesson to the first when switching modules
+    setActiveLesson(0);
     setShowQuiz(false);
   }, [activeModule]);
+
+  useEffect(() => {
+    setShowQuiz(false);
+  }, [activeLesson]);
 
   if (isLoading) {
     return (
@@ -115,20 +133,42 @@ export default function CourseDetail() {
                 <div className="lesson-card__nav-group">
                   <button
                     className="button button--ghost button--sm"
-                    disabled={modules.length === 0 || activeModule === 0}
+                    disabled={modules.length === 0 || (activeModule === 0 && activeLesson === 0)}
                     onClick={() => {
                       if (modules.length === 0) return;
-                      setActiveModule((m) => Math.max(0, m - 1));
+                      const currentLessons = Array.isArray(lessonBreakdown) ? lessonBreakdown : [];
+                      if (currentLessons.length > 0 && activeLesson > 0) {
+                        setActiveLesson((l) => Math.max(0, l - 1));
+                      } else if (activeModule > 0) {
+                        const prevModuleIndex = activeModule - 1;
+                        const prevLessons = Array.isArray(modules[prevModuleIndex]?.lessons)
+                          ? modules[prevModuleIndex].lessons
+                          : [];
+                        setActiveModule(prevModuleIndex);
+                        setActiveLesson(Math.max(0, prevLessons.length - 1));
+                      }
                     }}
                   >
                     Previous
                   </button>
                   <button
                     className="button button--ghost button--sm"
-                    disabled={modules.length === 0 || activeModule === modules.length - 1}
+                    disabled={
+                      modules.length === 0 || (
+                        activeModule === modules.length - 1 && (
+                          !Array.isArray(lessonBreakdown) || activeLesson >= (lessonBreakdown.length - 1)
+                        )
+                      )
+                    }
                     onClick={() => {
                       if (modules.length === 0) return;
-                      setActiveModule((m) => Math.min(modules.length - 1, m + 1));
+                      const currentLessons = Array.isArray(lessonBreakdown) ? lessonBreakdown : [];
+                      if (currentLessons.length > 0 && activeLesson < currentLessons.length - 1) {
+                        setActiveLesson((l) => l + 1);
+                      } else if (activeModule < modules.length - 1) {
+                        setActiveModule((m) => m + 1);
+                        setActiveLesson(0);
+                      }
                     }}
                   >
                     Next
@@ -155,7 +195,12 @@ export default function CourseDetail() {
                   </div>
                   <div className="lesson-card__lesson-list">
                     {lessonBreakdown.map((lesson, idx) => (
-                      <div key={lesson.id ?? idx} className="lesson-card__lesson-item">
+                      <button
+                        key={lesson.id ?? idx}
+                        type="button"
+                        className={`lesson-card__lesson-item ${idx === activeLesson ? 'lesson-list__item--active' : ''}`}
+                        onClick={() => setActiveLesson(idx)}
+                      >
                         <div className="lesson-card__lesson-meta">
                           <span className="lesson-card__lesson-index">{idx + 1}</span>
                           <div>
@@ -170,7 +215,8 @@ export default function CourseDetail() {
                         {lesson.duration && (
                           <span className="lesson-card__lesson-duration">{lesson.duration} min</span>
                         )}
-                      </div>
+                        {idx === activeLesson && <span className="chip chip--ghost">Current</span>}
+                      </button>
                     ))}
                   </div>
                 </div>
