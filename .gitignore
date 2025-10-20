@@ -9,6 +9,10 @@
 # production
 /build
 /dist
+/public/js
+/public/css
+/public/*.html
+/public/*.png
 
 # misc
 .DS_Store
