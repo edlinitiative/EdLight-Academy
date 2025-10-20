@@ -1,5 +1,12 @@
 id,name,level,code,color,icon
-CHEM,Chemistry,NS I,CHEM-NSI,#0A66C2,beaker
-PHYS,Physics,NS I,PHYS-NSI,#0A66C2,atom
-MATH,Mathematics,NS I,MATH-NSI,#0A66C2,calculator
-ECON,Economics,NS I,ECON-NSI,#0A66C2,chart
+CHEM-NSI,Chemistry,NS I,CHEM-NSI,#10B981,beaker
+CHEM-NSII,Chemistry,NS II,CHEM-NSII,#10B981,beaker
+CHEM-NSIII,Chemistry,NS III,CHEM-NSIII,#10B981,beaker
+CHEM-NSIV,Chemistry,NS IV,CHEM-NSIV,#10B981,beaker
+PHYS-NSII,Physics,NS II,PHYS-NSII,#3B82F6,atom
+PHYS-NSIII,Physics,NS III,PHYS-NSIII,#3B82F6,atom
+PHYS-NSIV,Physics,NS IV,PHYS-NSIV,#3B82F6,atom
+MATH-NSI,Mathematics,NS I,MATH-NSI,#8B5CF6,calculator
+MATH-NSII,Mathematics,NS II,MATH-NSII,#8B5CF6,calculator
+MATH-NSIII,Mathematics,NS III,MATH-NSIII,#8B5CF6,calculator
+ECON-NSI,Economics,NS I,ECON-NSI,#F59E0B,chart
