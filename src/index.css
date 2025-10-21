@@ -947,19 +947,21 @@ main {
 }
 
 .lesson-sidebar {
-  position: sticky;
-  top: 1rem;
-  align-self: start;
-  max-height: calc(100vh - 2rem);
-  display: flex;
-  flex-direction: column;
+	position: sticky;
+	/* keep below the sticky navbar; adjust if navbar height changes */
+	top: 80px;
+	align-self: start;
+	/* fit within viewport height accounting for navbar offset */
+	max-height: calc(100vh - 96px);
+	display: flex;
+	flex-direction: column;
 }
 
 .lesson-list {
 	display: grid;
 	gap: 0.5rem;
-	overflow-y: auto;
-	flex: 1;
+	overflow-y: auto; /* list scrolls within sticky sidebar */
+	flex: 1 1 auto;
 }
 
 .lesson-list__item {
