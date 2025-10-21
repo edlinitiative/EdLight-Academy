@@ -9,22 +9,24 @@ const PERSEUS_VERSIONS = [
   '67.3.3',
 ];
 
+function prox(url) {
+  return `/proxy?url=${encodeURIComponent(url)}`;
+}
+
 const CDN_TEMPLATES = [
-  // jsDelivr
-  (v) => ({
-    js: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.min.js`,
-    css: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`,
-  }),
-  // unpkg (min first)
-  (v) => ({
-    js: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.min.js`,
-    css: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`,
-  }),
-  // unpkg (non-min as ultimate fallback)
-  (v) => ({
-    js: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.js`,
-    css: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`,
-  }),
+  // jsDelivr variants
+  (v) => ({ js: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.min.js`), css: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  (v) => ({ js: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.js`), css: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  (v) => ({ js: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus-standalone.min.js`), css: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  (v) => ({ js: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus-standalone.js`), css: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  // unpkg variants
+  (v) => ({ js: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.min.js`), css: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  (v) => ({ js: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.js`), css: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  (v) => ({ js: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus-standalone.min.js`), css: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  (v) => ({ js: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus-standalone.js`), css: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`) }),
+  // As a final fallback, try direct CDNs (no proxy)
+  (v) => ({ js: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.min.js`, css: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css` }),
+  (v) => ({ js: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.min.js`, css: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css` }),
 ];
 
 const KATEX_CSS = `https://unpkg.com/katex@0.16.9/dist/katex.min.css`;
@@ -56,23 +58,28 @@ function loadScriptOnce(src) {
 
 async function tryLoadFrom({ js, css }) {
   await Promise.all([
-    loadCssOnce(KATEX_CSS),
+    loadCssOnce(prox(KATEX_CSS)),
     loadCssOnce(css),
   ]);
   // Ensure KaTeX is available before Perseus initializes math rendering
   try {
-    await loadScriptOnce(KATEX_JS);
+    await loadScriptOnce(prox(KATEX_JS));
   } catch (e) {
     console.warn('[Perseus] KaTeX JS failed to load (continuing):', KATEX_JS, e);
   }
   console.info('[Perseus] Loading', js);
   await loadScriptOnce(js);
   const started = Date.now();
-  const timeoutMs = 8000; // give more time on slower networks
+  const timeoutMs = 12000; // give even more time on slower networks
   while (!window.Perseus?.ItemRenderer && Date.now() - started < timeoutMs) {
     await new Promise((r) => setTimeout(r, 50));
   }
-  return Boolean(window.Perseus?.ItemRenderer);
+  const has = Boolean(window.Perseus?.ItemRenderer || window.Perseus?.default?.ItemRenderer);
+  if (has) {
+    const keys = Object.keys(window.Perseus || {});
+    console.info('[Perseus] Available keys on global:', keys);
+  }
+  return has;
 }
 
 function resolvePerseusGlobal() {
