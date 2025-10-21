@@ -80,7 +80,7 @@ export function CourseCard({ course, onPreview }) {
         </div>
 
         <div className="course-card__actions">
-          <button className="button button--primary button--pill button--sm" onClick={handleStart}>
+          <button className="button button--primary button--pill" onClick={handleStart}>
             {isEnrolled ? 'Continue' : 'Start Course'}
           </button>
           <button className="course-card__cta" onClick={() => onPreview(course)}>

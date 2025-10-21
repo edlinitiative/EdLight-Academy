@@ -612,11 +612,10 @@ main {
 
 .course-card__actions {
 	display: flex;
-	align-items: center;
-	flex-wrap: nowrap; /* keep buttons on one line */
-	white-space: nowrap; /* prevent "Course Details →" from breaking */
-	gap: 0.6rem;
-	flex: 0 0 auto; /* don't grow */
+	align-items: flex-start;
+	flex-direction: column; /* stack Start above Details */
+	gap: 0.5rem;
+	flex: 0 0 auto;
 }
 
 .course-progress {
@@ -624,8 +623,6 @@ main {
 	gap: 0.3rem;
 	font-size: 0.8rem;
 	color: var(--text-500);
-	flex: 1 1 auto;
-	min-width: 0; /* allow shrinking so actions fit */
 }
 
 .progress-bar {
@@ -647,7 +644,7 @@ main {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
-	padding: 0.55rem 0.95rem;
+	padding: 0.45rem 0.85rem; /* slightly tighter to avoid a larger look when stacked */
 	border-radius: 999px;
 	background: rgba(10, 102, 194, 0.14);
 	color: var(--primary-600);
@@ -1775,15 +1772,11 @@ main {
 		grid-template-columns: 1fr;
 	}
 
-	/* Keep course footer in a row so actions stay on the right */
-	.course-card__footer {
-		flex-direction: row;
-		align-items: center;
-	}
-
-	.course-card__actions {
-		flex-wrap: nowrap;
-	}
+		/* On mobile, stack footer content vertically for clarity */
+		.course-card__footer {
+			flex-direction: column;
+			align-items: flex-start;
+		}
 
 	.hero-visual__row {
 		flex-direction: column;
