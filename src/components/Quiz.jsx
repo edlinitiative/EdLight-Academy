@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import useStore from '../contexts/store';
+import PerseusQuiz from './PerseusQuiz';
 
 export function QuizComponent({ quiz, onComplete }) {
   const [answer, setAnswer] = useState('');
   const [showHint, setShowHint] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [wasCorrect, setWasCorrect] = useState(null);
+  const [aiItem, setAiItem] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { recordQuizAttempt } = useStore();
 
   const normalize = (value) => (value ?? '').toString().trim().toLowerCase();
@@ -43,6 +46,7 @@ export function QuizComponent({ quiz, onComplete }) {
     setShowHint(0);
     setIsSubmitted(false);
     setWasCorrect(null);
+    setAiItem(null);
   }, [quizId]);
 
   const handleSubmit = () => {
@@ -79,6 +83,24 @@ export function QuizComponent({ quiz, onComplete }) {
     return wasCorrect
       ? <span className="chip chip--success">✓ Correct</span>
       : <span className="chip chip--danger">Try Again</span>;
+  };
+
+  const generateAIPractice = async () => {
+    try {
+      setIsGenerating(true);
+      setAiItem(null);
+      const res = await fetch('/api/generate-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: quiz?.topic || quiz?.subject || 'math', level: quiz?.level || 'NS' })
+      });
+      const data = await res.json();
+      if (data?.item) setAiItem(data.item);
+    } catch (e) {
+      console.error('AI generation failed', e);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (!hasRawQuiz) {
@@ -163,11 +185,26 @@ export function QuizComponent({ quiz, onComplete }) {
             Need a Hint?
           </button>
         )}
+        <button
+          type="button"
+          onClick={generateAIPractice}
+          className="button button--ghost button--sm"
+          disabled={isGenerating}
+        >
+          {isGenerating ? 'Generating…' : 'AI Practice (Perseus)'}
+        </button>
       </div>
 
       {isSubmitted && (
         <div className="quiz-card__explanation">
           <strong>Explanation:</strong> {explanationText || 'Great effort! Review the solution above before moving on.'}
+        </div>
+      )}
+
+      {aiItem && (
+        <div style={{ marginTop: '1rem' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>Practice Question</h4>
+          <PerseusQuiz item={aiItem} />
         </div>
       )}
     </div>
