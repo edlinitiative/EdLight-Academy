@@ -978,7 +978,7 @@ main {
 }
 
 .lesson-list__children {
-	margin-left: 2.4rem; /* keep indentation compact */
+	margin-left: 1.4rem; /* closer so 1.1 gap mirrors 01 gap */
 	height: 200px; /* uniform dropdown height for all modules */
 	overflow-y: auto;
 	display: grid;
@@ -1000,13 +1000,15 @@ main {
 
 /* Subchapter rows: use compact index badge without circle to prevent overflow and keep left alignment clean */
 .lesson-list__children .lesson-list__index {
-  width: auto;
-  height: auto;
-  border-radius: 6px;
-  background: transparent;
-  padding: 0 2px;
-  color: var(--text-500);
-  flex: 0 0 auto;
+	width: 28px;
+	height: 28px;
+	border-radius: 6px;
+	background: transparent;
+	padding: 0;
+	color: var(--text-500);
+	display: grid;
+	place-items: center;
+	flex: 0 0 28px; /* match top-level index width */
 }
 
 .lesson-list__meta {
@@ -1045,7 +1047,7 @@ main {
 }
 
 .lesson-list__children {
-	margin-left: 2rem;
+	margin-left: 1.4rem;
 }
 
 /* Prevent chips from causing height differences */
