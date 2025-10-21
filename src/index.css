@@ -980,11 +980,12 @@ main {
 
 .lesson-list__children {
 	margin-left: 1.4rem; /* closer so 1.1 gap mirrors 01 gap */
-	height: 200px; /* uniform dropdown height for all modules */
+	max-height: 200px; /* allow content-sized height up to a scroll threshold */
 	overflow-y: auto;
 	display: grid;
 	gap: 0.5rem; /* match chapter spacing */
 	align-content: start; /* do not stretch items to fill height */
+	margin-top: 0.5rem; /* same gap between chapter and first subchapter */
 }
 
 .lesson-list__index {
