@@ -213,14 +213,12 @@ export default function CourseDetail() {
                 }}
               />
             )}
+            <Comments
+              threadKey={threadKey}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={() => useStore.getState().toggleAuthModal()}
+            />
           </div>
-
-          {/* Comments under the video and navigation */}
-          <Comments
-            threadKey={threadKey}
-            isAuthenticated={isAuthenticated}
-            onRequireAuth={() => useStore.getState().toggleAuthModal()}
-          />
 
           <aside className="lesson-sidebar">
             <div>
