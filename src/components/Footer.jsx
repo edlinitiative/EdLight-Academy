@@ -33,8 +33,8 @@ export function Footer() {
       <div className="container footer__inner">
         <div className="footer__top">
           <div>
-            <Link to="/" className="logo" style={{ marginBottom: '1rem', display: 'inline-flex' }}>
-              <span className="logo__mark">E</span>
+            <Link to="/" className="logo footer__logo" aria-label="EdLight Academy home">
+              <img src="/assets/logo.png" alt="" className="logo__image" />
               <span>EdLight Academy</span>
             </Link>
             <p className="footer__brand-copy">
@@ -61,11 +61,11 @@ export function Footer() {
 
           <div>
             <h4 className="footer__column-title">Stay connected</h4>
-            <div className="flex" style={{ gap: '0.75rem' }}>
-              <a href="https://twitter.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__link">
+            <div className="footer__social">
+              <a href="https://twitter.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__social-link" aria-label="EdLight on Twitter">
                 Twitter
               </a>
-              <a href="https://facebook.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__link">
+              <a href="https://facebook.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__social-link" aria-label="EdLight on Facebook">
                 Facebook
               </a>
             </div>

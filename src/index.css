@@ -1358,6 +1358,13 @@ main {
 	font-size: 0.95rem;
 }
 
+.footer__logo {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.6rem;
+	margin-bottom: 0.75rem;
+}
+
 .footer__column-title {
 	font-size: 1rem;
 	font-weight: 600;
@@ -1388,6 +1395,26 @@ main {
 	padding-top: clamp(1.5rem, 4vw, 2.5rem);
 	color: var(--text-300);
 	font-size: 0.85rem;
+}
+
+.footer__social {
+	display: flex;
+	gap: 0.6rem;
+}
+
+.footer__social-link {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.35rem 0.65rem;
+	border-radius: 999px;
+	background: rgba(10, 102, 194, 0.08);
+	color: var(--primary-600);
+	font-weight: 600;
+	font-size: 0.85rem;
+}
+
+.footer__social-link:hover {
+	background: rgba(10, 102, 194, 0.14);
 }
 
 .filter-group {
