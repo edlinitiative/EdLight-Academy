@@ -57,9 +57,10 @@ function loadScriptOnce(src) {
 }
 
 async function tryLoadFrom({ js, css }) {
+  // Load CSS directly from CDN so relative font URLs in CSS resolve correctly
   await Promise.all([
-    loadCssOnce(prox(KATEX_CSS)),
-    loadCssOnce(css),
+    loadCssOnce(KATEX_CSS),
+    loadCssOnce(css.startsWith('/proxy') ? css.replace('/proxy?url=', '') : css),
   ]);
   // Ensure KaTeX is available before Perseus initializes math rendering
   try {
