@@ -1,12 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const PERSEUS_VERSION = '71.2.3';
-const ASSETS = {
-  // Use unpkg build artifacts, which expose a browser global window.Perseus
-  katexCss: `https://unpkg.com/katex@0.16.9/dist/katex.min.css`,
-  perseusCss: `https://unpkg.com/@khanacademy/perseus@${PERSEUS_VERSION}/build/perseus.css`,
-  perseusJs: `https://unpkg.com/@khanacademy/perseus@${PERSEUS_VERSION}/build/perseus.js`,
-};
+// Try a small matrix of CDN + versions to maximize odds of finding a build
+const PERSEUS_VERSIONS = [
+  '71.2.3',
+  '71.0.0',
+  '70.3.0',
+  '68.4.1',
+  '67.3.3',
+];
+
+const CDN_TEMPLATES = [
+  // jsDelivr
+  (v) => ({
+    js: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.min.js`,
+    css: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`,
+  }),
+  // unpkg (min first)
+  (v) => ({
+    js: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.min.js`,
+    css: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`,
+  }),
+  // unpkg (non-min as ultimate fallback)
+  (v) => ({
+    js: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.js`,
+    css: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`,
+  }),
+];
+
+const KATEX_CSS = `https://unpkg.com/katex@0.16.9/dist/katex.min.css`;
+const KATEX_JS = `https://unpkg.com/katex@0.16.9/dist/katex.min.js`;
 
 function loadCssOnce(href) {
   return new Promise((resolve) => {
@@ -32,18 +54,51 @@ function loadScriptOnce(src) {
   });
 }
 
-async function ensurePerseusLoaded() {
-  if (window.Perseus?.ItemRenderer) return;
+async function tryLoadFrom({ js, css }) {
   await Promise.all([
-    loadCssOnce(ASSETS.katexCss),
-    loadCssOnce(ASSETS.perseusCss),
+    loadCssOnce(KATEX_CSS),
+    loadCssOnce(css),
   ]);
-  await loadScriptOnce(ASSETS.perseusJs);
-  // Poll briefly for the global to attach
+  // Ensure KaTeX is available before Perseus initializes math rendering
+  try {
+    await loadScriptOnce(KATEX_JS);
+  } catch (e) {
+    console.warn('[Perseus] KaTeX JS failed to load (continuing):', KATEX_JS, e);
+  }
+  console.info('[Perseus] Loading', js);
+  await loadScriptOnce(js);
   const started = Date.now();
-  while (!window.Perseus?.ItemRenderer && Date.now() - started < 2000) {
+  const timeoutMs = 8000; // give more time on slower networks
+  while (!window.Perseus?.ItemRenderer && Date.now() - started < timeoutMs) {
     await new Promise((r) => setTimeout(r, 50));
   }
+  return Boolean(window.Perseus?.ItemRenderer);
+}
+
+function resolvePerseusGlobal() {
+  if (window.Perseus?.ItemRenderer) return window.Perseus;
+  if (window.Perseus?.default?.ItemRenderer) return window.Perseus.default;
+  return null;
+}
+
+async function ensurePerseusLoaded() {
+  if (resolvePerseusGlobal()) return { ok: true, source: 'cached' };
+  let lastErr;
+  for (const v of PERSEUS_VERSIONS) {
+    for (const tmpl of CDN_TEMPLATES) {
+      const candidate = tmpl(v);
+      try {
+        const ok = await tryLoadFrom(candidate);
+        if (ok) return { ok: true, source: candidate.js };
+        // If loaded but still no ItemRenderer, continue trying others
+        console.warn('[Perseus] Loaded but ItemRenderer missing, trying next candidate', candidate.js);
+      } catch (e) {
+        lastErr = e;
+        console.warn('[Perseus] Failed to load candidate', candidate.js, e);
+      }
+    }
+  }
+  return { ok: false, error: lastErr };
 }
 
 export default function PerseusQuiz({ item, onScore }) {
@@ -56,13 +111,14 @@ export default function PerseusQuiz({ item, onScore }) {
     let cancelled = false;
     (async () => {
       try {
-        await ensurePerseusLoaded();
+        const res = await ensurePerseusLoaded();
         if (cancelled) return;
-        if (window.Perseus?.ItemRenderer) {
+        if (res.ok && resolvePerseusGlobal()) {
           setReady(true);
         } else {
-          console.error('Perseus global not found after script load:', ASSETS.perseusJs);
-          setError('Interactive renderer unavailable.');
+          console.error('Perseus global not found after script load. Tried multiple sources/versions.', res);
+          // Provide some quick diagnostics to the user in a non-technical way
+          setError('Interactive renderer unavailable. Please check your network or try again.');
         }
       } catch (e) {
         console.error('Failed to load Perseus assets', e);
@@ -73,10 +129,11 @@ export default function PerseusQuiz({ item, onScore }) {
   }, []);
 
   useEffect(() => {
-    if (!ready || !containerRef.current || !item || !window.Perseus?.ItemRenderer) return;
+  const perseus = resolvePerseusGlobal();
+  if (!ready || !containerRef.current || !item || !perseus?.ItemRenderer) return;
     const mountNode = containerRef.current;
     mountNode.innerHTML = '';
-    const { ItemRenderer } = window.Perseus;
+  const { ItemRenderer } = perseus;
     const apiOptions = { readOnly: false, customKeypad: false, staticRender: false };
     rendererRef.current = ItemRenderer.mountItem(item, mountNode, apiOptions);
     return () => {
