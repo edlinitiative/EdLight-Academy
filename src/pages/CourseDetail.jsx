@@ -230,7 +230,7 @@ export default function CourseDetail() {
                   return (
                     <div key={module.id ?? idx} className="lesson-list__group">
                       <button
-                        className={`lesson-list__item ${isActiveModule ? 'lesson-list__item--active' : ''}`}
+                        className={`lesson-list__item ${isActiveModule ? 'lesson-list__item--active' : ''} ${isExpanded ? 'is-expanded' : ''}`}
                         onClick={() => {
                           if (isActiveModule) {
                             setExpandedModules((prev) => {
@@ -263,6 +263,9 @@ export default function CourseDetail() {
                                   : 'Coming soon'}
                           </span>
                         </span>
+                        <span className="lesson-list__chevron" aria-hidden>
+                          ▸
+                        </span>
                         {isActiveModule && <span className="chip chip--ghost">Current</span>}
                       </button>
 
@@ -280,7 +283,7 @@ export default function CourseDetail() {
                                   setActiveLesson(lidx);
                                 }}
                               >
-                                <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}.{String(lidx + 1).padStart(2, '0')}</span>
+                                <span className="lesson-list__index">{idx + 1}.{lidx + 1}</span>
                                 <span className="lesson-list__meta">
                                   <span className="lesson-list__title">{lsn.title}</span>
                                   <span className="lesson-list__duration">

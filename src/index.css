@@ -959,7 +959,7 @@ main {
 .lesson-list__item {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	gap: 0.6rem;
 	padding: 0.6rem 0.8rem;
 	border-radius: 12px;
@@ -1018,6 +1018,20 @@ main {
 	color: var(--text-500);
 	flex: 0 0 auto;
 	white-space: nowrap;
+}
+
+.lesson-list__chevron {
+	margin-left: auto;
+	color: var(--text-500);
+	transition: transform 0.2s ease;
+}
+
+.is-expanded .lesson-list__chevron {
+	transform: rotate(90deg);
+}
+
+.lesson-list__children {
+	margin-left: 2rem;
 }
 
 .lesson-list__empty {
