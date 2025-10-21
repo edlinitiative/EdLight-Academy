@@ -66,16 +66,19 @@ export default function Dashboard() {
 
         <div className="grid grid--metrics">
           <div className="metric-card">
+            <div className="metric-card__icon" aria-hidden>📚</div>
             <span className="metric-card__eyebrow">Courses in progress</span>
             <span className="metric-card__value">{coursesInProgress}</span>
             <span className="metric-card__caption">Stay consistent to unlock mastery badges.</span>
           </div>
           <div className="metric-card">
+            <div className="metric-card__icon" aria-hidden>✅</div>
             <span className="metric-card__eyebrow">Quizzes completed</span>
             <span className="metric-card__value">{quizzesTaken}</span>
             <span className="metric-card__caption">Practice makes perfect — keep the streak alive.</span>
           </div>
           <div className="metric-card">
+            <div className="metric-card__icon" aria-hidden>🎯</div>
             <span className="metric-card__eyebrow">Average score</span>
             <span className="metric-card__value">{avgScore}%</span>
             <span className="metric-card__caption">Aim for 85%+ to unlock advanced lessons.</span>
@@ -109,7 +112,7 @@ export default function Dashboard() {
                         <div className="progress-bar">
                           <span className="progress-bar__fill" style={{ width: `${courseProgress.percent}%` }} />
                         </div>
-                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                        <span className="text-muted text-xs">
                           {courseProgress.completed}/{courseProgress.total} lessons finished
                         </span>
                       </div>
@@ -159,10 +162,8 @@ export default function Dashboard() {
                 return (
                   <div key={`${activity.quizId}-${index}`} className="activity-item">
                     <div className="activity-item__meta">
-                      <span>{activity.quiz?.question || 'Quiz question'}</span>
-                      <span className="text-muted" style={{ fontSize: '0.85rem' }}>
-                        {new Date(activity.date).toLocaleDateString()}
-                      </span>
+                      <span className="activity-item__question">{activity.quiz?.question || 'Quiz question'}</span>
+                      <span className="activity-item__date">{new Date(activity.date).toLocaleDateString()}</span>
                     </div>
                     <span className={[
                       'activity-item__tag',
