@@ -837,6 +837,12 @@ main {
 	text-overflow: ellipsis;
 }
 
+.lesson-card__description {
+	margin-top: 0.25rem;
+	line-height: 1.6;
+	white-space: normal; /* allow wrapping to multiple lines */
+}
+
 .lesson-card__nav {
 	display: flex;
 	justify-content: space-between;

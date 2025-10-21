@@ -136,9 +136,9 @@ export default function CourseDetail() {
               </div>
 
               {activeDescription && (
-                <div className="text-muted" style={{ marginTop: '-0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <p className="lesson-card__description text-muted">
                   {activeDescription}
-                </div>
+                </p>
               )}
 
               <div className="lesson-card__nav">
