@@ -961,6 +961,7 @@ main {
 	display: grid;
 	gap: 0.5rem;
 	overflow-y: auto; /* list scrolls within sticky sidebar */
+	overflow-x: hidden; /* prevent horizontal scrollbar */
 	flex: 1 1 auto;
 }
 
@@ -972,6 +973,7 @@ main {
 	/* Uniform height across all rows */
 	height: 36px;
 	padding: 0 0.8rem;
+	width: 100%; /* prevent overflow causing horizontal scroll */
 	border-radius: 12px;
 	border: 1px solid rgba(10, 102, 194, 0.1);
 	background: rgba(255, 255, 255, 0.7);
@@ -990,6 +992,7 @@ main {
 	margin-left: 1.4rem; /* closer so 1.1 gap mirrors 01 gap */
 	max-height: 200px; /* allow content-sized height up to a scroll threshold */
 	overflow-y: auto;
+	overflow-x: hidden; /* prevent horizontal scrollbar */
 	display: grid;
 	gap: 0.5rem; /* match chapter spacing */
 	align-content: start; /* do not stretch items to fill height */
@@ -1028,6 +1031,7 @@ main {
 	gap: 0.5rem;
 	flex: 1 1 auto;
 	min-width: 0; /* allow ellipsis */
+	overflow: hidden; /* contain children widths */
 }
 
 .lesson-list__title {
@@ -1054,6 +1058,7 @@ main {
 	margin-left: auto;
 	color: var(--text-500);
 	transition: transform 0.2s ease;
+	flex: 0 0 auto;
 }
 
 .is-expanded .lesson-list__chevron {
@@ -1073,6 +1078,7 @@ main {
 	padding: 0 8px;
 	display: inline-flex;
 	align-items: center;
+	flex: 0 0 auto; /* don’t stretch and push content width */
 }
 
 .lesson-list__empty {
