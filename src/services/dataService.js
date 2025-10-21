@@ -6,23 +6,45 @@ import { loadCSV } from '../utils/csvParser';
 // Otherwise, if splitters like " - ", "/", or "|" exist, choose the ASCII segment.
 const extractEnglishTitle = (title) => {
   if (!title || typeof title !== 'string') return title;
-  const trimmed = title.trim();
-  const paren = trimmed.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  // normalize unicode dashes to hyphen
+  const normalized = title.replace(/[\u2012-\u2015]/g, '-').trim();
+
+  // Helper checks
+  const isAscii = (s) => typeof s === 'string' && /^[\x20-\x7E]+$/.test(s);
+  const score = (s) => {
+    if (!s) return 0;
+    const len = s.length;
+    const vowels = (s.match(/[aeiouAEIOU]/g) || []).length;
+    const spaces = (s.match(/\s/g) || []).length;
+    return (isAscii(s) ? 10 : 0) + len + vowels * 2 + spaces; // prefer readable English-ish
+  };
+
+  // Case 1: Parentheses variant (prefer inside if looks English)
+  const paren = normalized.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
   if (paren) {
     const before = paren[1].trim();
     const inside = paren[2].trim();
-    const isAscii = (s) => /^[\x20-\x7E]+$/.test(s);
-    if (isAscii(inside)) return inside;
-    if (isAscii(before)) return before;
-    return inside;
+    // prefer inside if it's ASCII or simply better scored
+    return (isAscii(inside) || score(inside) >= score(before)) ? inside : before;
   }
-  const parts = trimmed.split(/\s*[\/-|]\s*/);
+
+  // Case 2: Delimiter-separated bilingual titles
+  const parts = normalized.split(/\s*[\-|/|\|]\s*/).filter(Boolean);
   if (parts.length > 1) {
-    const isAscii = (s) => /^[\x20-\x7E]+$/.test(s);
-    const english = parts.find((p) => isAscii(p));
-    if (english) return english.trim();
+    // choose segment with highest score; tie-break by longest
+    const best = parts.reduce((best, cur) => {
+      const cand = cur.trim();
+      const s = score(cand);
+      if (!best || s > best.s || (s === best.s && cand.length > best.val.length)) {
+        return { val: cand, s };
+      }
+      return best;
+    }, null);
+    if (best && best.val && best.val !== '-' && best.val !== '–') return best.val.trim();
   }
-  return trimmed;
+
+  // Fallback: return normalized without lone dash
+  return normalized === '-' ? title.trim() : normalized;
 };
 
 const DATA_URLS = {
