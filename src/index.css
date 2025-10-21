@@ -343,7 +343,7 @@ main {
 	position: relative;
 	border-radius: var(--radius-lg);
 	padding: clamp(1.4rem, 3vw, 1.9rem);
-	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(233, 236, 254, 0.85));
+	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 251, 0.85));
 	box-shadow: var(--shadow-md);
 	overflow: hidden;
 }
@@ -353,7 +353,7 @@ main {
 	position: absolute;
 	inset: auto -30% -40% -10%;
 	height: 260px;
-	background: radial-gradient(circle, rgba(10, 102, 194, 0.35) 0%, transparent 60%);
+	background: radial-gradient(circle, rgba(10, 102, 194, 0.28) 0%, transparent 60%);
 }
 
 .hero-visual__grid {
@@ -497,6 +497,9 @@ main {
 	border: 1px solid rgba(10, 102, 194, 0.18);
 	box-shadow: var(--shadow-sm);
 }
+.metric-card {
+	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(219, 239, 255, 0.68));
+}
 .metric-card__icon {
 	font-size: 1.25rem;
 	color: var(--primary-600);
@@ -527,6 +530,7 @@ main {
 .metric-card__caption {
 	color: rgba(15, 23, 42, 0.65);
 	font-size: 0.9rem;
+	margin-top: 0.1rem;
 }
 
 .text-xs { font-size: 0.8rem; }
@@ -549,7 +553,7 @@ main {
 	gap: 1.4rem;
 	padding: clamp(1.6rem, 3vw, 1.9rem);
 	border-radius: var(--radius-lg);
-	background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(238, 241, 255, 0.65));
+	background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 251, 0.65));
 	border: 1px solid rgba(10, 102, 194, 0.1);
 	box-shadow: var(--shadow-sm);
 	overflow: hidden;
@@ -1276,7 +1280,7 @@ main {
 .dashboard-section {
 	padding: clamp(1.6rem, 3vw, 2.1rem);
 	border-radius: var(--radius-lg);
-	background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(238, 241, 255, 0.72));
+	background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 251, 0.72));
 	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
 	display: grid;
