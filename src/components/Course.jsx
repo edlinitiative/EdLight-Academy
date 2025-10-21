@@ -165,13 +165,19 @@ export function CourseModal({ course, onClose, onEnroll }) {
         <p className="course-modal__descriptor">{course.description}</p>
 
         <section className="course-modal__syllabus">
-          {units.map((unit) => (
+          {units.map((unit, idx) => (
             <div key={unit.id} className="syllabus-item">
-              <div>
-                <strong>{unit.title}</strong>
-                <span>{unit.lessons?.length || 0} lessons</span>
+              <div className="syllabus-item__left">
+                <span className="syllabus-item__index">{String(idx + 1).padStart(2, '0')}</span>
+                <div className="syllabus-item__meta">
+                  <strong className="syllabus-item__title">{unit.title}</strong>
+                  <span className="syllabus-item__subtitle">{unit.lessons?.length || 0} lessons</span>
+                </div>
               </div>
-              <span className="text-muted" style={{ fontSize: '0.85rem' }}>Aligned to NS standards</span>
+              <div className="syllabus-item__right">
+                <span className="text-muted syllabus-item__note">Aligned to NS standards</span>
+                <span className="syllabus-item__chevron" aria-hidden>›</span>
+              </div>
             </div>
           ))}
         </section>
