@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const PERSEUS_VERSION = '71.2.3';
 const ASSETS = {
-  katexCss: `https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css`,
-  perseusCss: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${PERSEUS_VERSION}/dist/perseus.css`,
-  perseusJs: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${PERSEUS_VERSION}/dist/perseus.js`,
+  // Use unpkg build artifacts, which expose a browser global window.Perseus
+  katexCss: `https://unpkg.com/katex@0.16.9/dist/katex.min.css`,
+  perseusCss: `https://unpkg.com/@khanacademy/perseus@${PERSEUS_VERSION}/build/perseus.css`,
+  perseusJs: `https://unpkg.com/@khanacademy/perseus@${PERSEUS_VERSION}/build/perseus.js`,
 };
 
 function loadCssOnce(href) {
@@ -38,6 +39,11 @@ async function ensurePerseusLoaded() {
     loadCssOnce(ASSETS.perseusCss),
   ]);
   await loadScriptOnce(ASSETS.perseusJs);
+  // Poll briefly for the global to attach
+  const started = Date.now();
+  while (!window.Perseus?.ItemRenderer && Date.now() - started < 2000) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
 }
 
 export default function PerseusQuiz({ item, onScore }) {
@@ -52,9 +58,14 @@ export default function PerseusQuiz({ item, onScore }) {
       try {
         await ensurePerseusLoaded();
         if (cancelled) return;
-        setReady(true);
+        if (window.Perseus?.ItemRenderer) {
+          setReady(true);
+        } else {
+          console.error('Perseus global not found after script load:', ASSETS.perseusJs);
+          setError('Interactive renderer unavailable.');
+        }
       } catch (e) {
-        console.error('Failed to load Perseus', e);
+        console.error('Failed to load Perseus assets', e);
         setError('Interactive renderer unavailable.');
       }
     })();
