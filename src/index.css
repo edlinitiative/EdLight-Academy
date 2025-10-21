@@ -832,6 +832,9 @@ main {
 .lesson-card__title {
 	font-size: clamp(1.3rem, 2.6vw, 1.6rem);
 	font-weight: 700;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .lesson-card__nav {
@@ -993,19 +996,28 @@ main {
 }
 
 .lesson-list__meta {
-	display: grid;
-	gap: 0.2rem;
-	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex: 1 1 auto;
+	min-width: 0; /* allow ellipsis */
 }
 
 .lesson-list__title {
 	font-weight: 600;
 	font-size: 0.95rem;
+	flex: 1 1 auto;
+	min-width: 0; /* allow ellipsis */
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .lesson-list__duration {
 	font-size: 0.75rem;
 	color: var(--text-500);
+	flex: 0 0 auto;
+	white-space: nowrap;
 }
 
 .lesson-list__empty {

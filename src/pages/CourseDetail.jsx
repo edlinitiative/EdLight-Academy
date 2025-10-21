@@ -136,7 +136,7 @@ export default function CourseDetail() {
               </div>
 
               {activeDescription && (
-                <div className="text-muted" style={{ marginTop: '-0.25rem' }}>
+                <div className="text-muted" style={{ marginTop: '-0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {activeDescription}
                 </div>
               )}
