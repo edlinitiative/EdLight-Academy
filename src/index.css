@@ -993,6 +993,7 @@ main {
 	font-weight: 600;
 	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
+	flex: 0 0 28px; /* ensure left alignment consistency */
 }
 
 .lesson-list__meta {

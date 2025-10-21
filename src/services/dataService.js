@@ -1,5 +1,30 @@
 import { loadCSV } from '../utils/csvParser';
 
+// Prefer the English portion of a bilingual title when present.
+// Heuristic: if the title contains parentheses, and the inner text looks ASCII,
+// treat the inner as English (e.g., "Divizyon Chimi (Branches of Chemistry)" -> "Branches of Chemistry").
+// Otherwise, if splitters like " - ", "/", or "|" exist, choose the ASCII segment.
+const extractEnglishTitle = (title) => {
+  if (!title || typeof title !== 'string') return title;
+  const trimmed = title.trim();
+  const paren = trimmed.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (paren) {
+    const before = paren[1].trim();
+    const inside = paren[2].trim();
+    const isAscii = (s) => /^[\x20-\x7E]+$/.test(s);
+    if (isAscii(inside)) return inside;
+    if (isAscii(before)) return before;
+    return inside;
+  }
+  const parts = trimmed.split(/\s*[\/-|]\s*/);
+  if (parts.length > 1) {
+    const isAscii = (s) => /^[\x20-\x7E]+$/.test(s);
+    const english = parts.find((p) => isAscii(p));
+    if (english) return english.trim();
+  }
+  return trimmed;
+};
+
 const DATA_URLS = {
   subjects: '/data/edlight_subjects.csv',
   videos: '/data/edlight_videos.csv',
@@ -35,13 +60,13 @@ const transformDataToCourses = (subjects, videos, quizzes) => {
       if (!acc[unitKey]) {
         acc[unitKey] = {
           id: unitKey,
-          title: video.unit_title,
+          title: extractEnglishTitle(video.unit_title),
           lessons: []
         };
       }
       acc[unitKey].lessons.push({
         id: video.id,
-        title: video.video_title,
+        title: extractEnglishTitle(video.video_title),
         videoUrl: video.video_url,
         duration: video.duration_min,
         objectives: video.learning_objectives
