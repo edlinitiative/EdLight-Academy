@@ -983,7 +983,7 @@ main {
 	height: 200px; /* uniform dropdown height for all modules */
 	overflow-y: auto;
 	display: grid;
-	gap: 0.4rem;
+	gap: 0.2rem; /* tighter spacing between subchapter buttons */
 }
 
 .lesson-list__index {
