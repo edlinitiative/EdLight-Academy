@@ -53,6 +53,29 @@ export default function CourseDetail() {
   // Stable thread key per visible video (falls back to module id when needed)
   const threadKey = `comments:${courseId}:${activeLessonData?.id || activeModuleData?.id || 'module'}`;
 
+  // Helpers to navigate across lessons and modules (skip empty modules)
+  const getModuleLessons = (idx) => (Array.isArray(modules[idx]?.lessons) ? modules[idx].lessons : []);
+  const findPrevTarget = (mIdx, lIdx) => {
+    const curLessons = getModuleLessons(mIdx);
+    if (curLessons.length > 0 && lIdx > 0) return { module: mIdx, lesson: lIdx - 1 };
+    for (let m = mIdx - 1; m >= 0; m--) {
+      const lessons = getModuleLessons(m);
+      if (lessons.length > 0) return { module: m, lesson: lessons.length - 1 };
+    }
+    return null;
+  };
+  const findNextTarget = (mIdx, lIdx) => {
+    const curLessons = getModuleLessons(mIdx);
+    if (curLessons.length > 0 && lIdx < curLessons.length - 1) return { module: mIdx, lesson: lIdx + 1 };
+    for (let m = mIdx + 1; m < modules.length; m++) {
+      const lessons = getModuleLessons(m);
+      if (lessons.length > 0) return { module: m, lesson: 0 };
+    }
+    return null;
+  };
+  const prevTarget = findPrevTarget(activeModule, activeLesson);
+  const nextTarget = findNextTarget(activeModule, activeLesson);
+
   useEffect(() => {
     if (!isAuthenticated) {
       useStore.getState().toggleAuthModal();
@@ -147,48 +170,28 @@ export default function CourseDetail() {
 
               <div className="lesson-card__nav">
                 <div className="lesson-card__nav-group">
-                  <button
-                    className="button button--ghost button--sm"
-                    disabled={modules.length === 0 || (activeModule === 0 && activeLesson === 0)}
-                    onClick={() => {
-                      if (modules.length === 0) return;
-                      const currentLessons = Array.isArray(lessonBreakdown) ? lessonBreakdown : [];
-                      if (currentLessons.length > 0 && activeLesson > 0) {
-                        setActiveLesson((l) => Math.max(0, l - 1));
-                      } else if (activeModule > 0) {
-                        const prevModuleIndex = activeModule - 1;
-                        const prevLessons = Array.isArray(modules[prevModuleIndex]?.lessons)
-                          ? modules[prevModuleIndex].lessons
-                          : [];
-                        setActiveModule(prevModuleIndex);
-                        setActiveLesson(Math.max(0, prevLessons.length - 1));
-                      }
-                    }}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    className="button button--ghost button--sm"
-                    disabled={
-                      modules.length === 0 || (
-                        activeModule === modules.length - 1 && (
-                          !Array.isArray(lessonBreakdown) || activeLesson >= (lessonBreakdown.length - 1)
-                        )
-                      )
-                    }
-                    onClick={() => {
-                      if (modules.length === 0) return;
-                      const currentLessons = Array.isArray(lessonBreakdown) ? lessonBreakdown : [];
-                      if (currentLessons.length > 0 && activeLesson < currentLessons.length - 1) {
-                        setActiveLesson((l) => l + 1);
-                      } else if (activeModule < modules.length - 1) {
-                        setActiveModule((m) => m + 1);
-                        setActiveLesson(0);
-                      }
-                    }}
-                  >
-                    Next
-                  </button>
+                  {prevTarget && (
+                    <button
+                      className="button button--ghost button--sm"
+                      onClick={() => {
+                        setActiveModule(prevTarget.module);
+                        setActiveLesson(prevTarget.lesson);
+                      }}
+                    >
+                      Previous
+                    </button>
+                  )}
+                  {nextTarget && (
+                    <button
+                      className="button button--ghost button--sm"
+                      onClick={() => {
+                        setActiveModule(nextTarget.module);
+                        setActiveLesson(nextTarget.lesson);
+                      }}
+                    >
+                      Next
+                    </button>
+                  )}
                 </div>
 
                 {hasQuiz && (
