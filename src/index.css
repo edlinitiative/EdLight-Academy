@@ -967,6 +967,8 @@ main {
 	background: rgba(255, 255, 255, 0.7);
 	cursor: pointer;
 	transition: border 0.2s ease, background 0.2s ease, transform 0.2s ease;
+	min-height: 36px;
+	flex-wrap: nowrap;
 }
 
 .lesson-list__item--active {
@@ -994,6 +996,17 @@ main {
 	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 	flex: 0 0 28px; /* ensure left alignment consistency */
+}
+
+/* Subchapter rows: use compact index badge without circle to prevent overflow and keep left alignment clean */
+.lesson-list__children .lesson-list__index {
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0 2px;
+  color: var(--text-500);
+  flex: 0 0 auto;
 }
 
 .lesson-list__meta {
@@ -1033,6 +1046,11 @@ main {
 
 .lesson-list__children {
 	margin-left: 2rem;
+}
+
+/* Prevent chips from causing height differences */
+.lesson-list__item .chip {
+	white-space: nowrap;
 }
 
 .lesson-list__empty {
