@@ -1,4 +1,5 @@
 import { loadCSV } from '../utils/csvParser';
+import { loadQuizBankSafe, indexQuizBank } from './quizBank';
 
 // Prefer the English portion of a bilingual title when present.
 // Heuristic: if the title contains parentheses, and the inner text looks ASCII,
@@ -154,16 +155,18 @@ const transformDataToCourses = (subjects, videos, quizzes) => {
  */
 export const loadAppData = async () => {
   try {
-    const [subjects, videos, quizzes] = await Promise.all([
+    const [subjects, videos, quizzes, quizBankRows] = await Promise.all([
       loadCSV(DATA_URLS.subjects),
       loadCSV(DATA_URLS.videos),
       loadCSV(DATA_URLS.quizzes),
+      loadQuizBankSafe(),
     ]);
     
     // Transform data into courses
     const courses = transformDataToCourses(subjects, videos, quizzes);
+    const quizBankIndex = indexQuizBank(quizBankRows);
     
-    return { subjects, videos, quizzes, courses };
+    return { subjects, videos, quizzes, courses, quizBank: { rows: quizBankRows, ...quizBankIndex } };
   } catch (err) {
     console.error('Failed to load application data:', err);
     throw err;

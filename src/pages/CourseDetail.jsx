@@ -208,6 +208,8 @@ export default function CourseDetail() {
             {showQuiz && hasQuiz && (
               <QuizComponent
                 quiz={moduleQuiz}
+                subjectCode={course?.id}
+                unitId={activeModuleData?.id}
                 onComplete={(isCorrect) => {
                   if (isCorrect && activeModule < modules.length - 1) {
                     setActiveModule((m) => Math.min(modules.length - 1, m + 1));

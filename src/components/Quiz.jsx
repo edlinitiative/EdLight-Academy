@@ -2,14 +2,18 @@ import React, { useEffect, useState } from 'react';
 import useStore from '../contexts/store';
 import PerseusQuiz from './PerseusQuiz';
 
-export function QuizComponent({ quiz, onComplete }) {
+export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
   const [answer, setAnswer] = useState('');
   const [showHint, setShowHint] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [wasCorrect, setWasCorrect] = useState(null);
   const [aiItem, setAiItem] = useState(null);
+  const [bankItem, setBankItem] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingBank, setIsLoadingBank] = useState(false);
   const { recordQuizAttempt } = useStore();
+  const { data: appData } = require('../hooks/useData').useAppData();
+  const quizBank = appData?.quizBank;
 
   const normalize = (value) => (value ?? '').toString().trim().toLowerCase();
   const hasRawQuiz = Boolean(quiz);
@@ -47,6 +51,7 @@ export function QuizComponent({ quiz, onComplete }) {
     setIsSubmitted(false);
     setWasCorrect(null);
     setAiItem(null);
+    setBankItem(null);
   }, [quizId]);
 
   const handleSubmit = () => {
@@ -100,6 +105,34 @@ export function QuizComponent({ quiz, onComplete }) {
       console.error('AI generation failed', e);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const generateCurriculumPractice = async () => {
+    try {
+      setIsLoadingBank(true);
+      setBankItem(null);
+      // Determine subject and unit to pull from bank
+      const subj = subjectCode || quiz?.subject_code || '';
+      const unit = unitId || (quiz?.unit_no ? `U${quiz.unit_no}` : null) || null;
+      if (!quizBank || !quizBank.byUnit || !subj || !unit) {
+        console.warn('[Quiz] Missing quiz bank context or indices', { hasBank: !!quizBank, subj, unit });
+        setIsLoadingBank(false);
+        return;
+      }
+      const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
+      const row = pickRandomQuestion(quizBank.byUnit, subj, unit);
+      if (!row) {
+        console.warn('[Quiz] No bank questions for', subj, unit);
+        setIsLoadingBank(false);
+        return;
+      }
+      const item = toPerseusItemFromRow(row);
+      setBankItem(item);
+    } catch (e) {
+      console.error('Curriculum practice failed', e);
+    } finally {
+      setIsLoadingBank(false);
     }
   };
 
@@ -193,6 +226,14 @@ export function QuizComponent({ quiz, onComplete }) {
         >
           {isGenerating ? 'Generating…' : 'AI Practice (Perseus)'}
         </button>
+        <button
+          type="button"
+          onClick={generateCurriculumPractice}
+          className="button button--ghost button--sm"
+          disabled={isLoadingBank}
+        >
+          {isLoadingBank ? 'Loading…' : 'Curriculum Practice'}
+        </button>
       </div>
 
       {isSubmitted && (
@@ -205,6 +246,12 @@ export function QuizComponent({ quiz, onComplete }) {
         <div style={{ marginTop: '1rem' }}>
           <h4 style={{ marginBottom: '0.5rem' }}>Practice Question</h4>
           <PerseusQuiz item={aiItem} />
+        </div>
+      )}
+      {bankItem && (
+        <div style={{ marginTop: '1rem' }}>
+          <h4 style={{ marginBottom: '0.5rem' }}>Curriculum Practice</h4>
+          <PerseusQuiz item={bankItem} />
         </div>
       )}
     </div>

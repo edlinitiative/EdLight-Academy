@@ -56,6 +56,13 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
+        // Allow copying CSVs from both public_original/data (canonical) and public/data (uploaded extras)
+        // If duplicates exist, later entries overwrite earlier ones.
+        {
+          from: 'public/data',
+          to: 'data',
+          noErrorOnMissing: true,
+        },
         { 
           from: 'public_original/data',
           to: 'data'
