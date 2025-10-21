@@ -984,6 +984,7 @@ main {
 	overflow-y: auto;
 	display: grid;
 	gap: 0.5rem; /* match chapter spacing */
+	align-content: start; /* do not stretch items to fill height */
 }
 
 .lesson-list__index {
