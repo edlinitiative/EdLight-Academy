@@ -4,11 +4,6 @@
   "devCommand": "npm start",
   "installCommand": "npm install",
   "framework": null,
-  "functions": {
-    "api/**/*.{js,ts}": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     {
