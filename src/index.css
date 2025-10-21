@@ -1617,6 +1617,74 @@ main {
 	font-size: 0.95rem;
 }
 
+/* Comments */
+.comments {
+	display: grid;
+	gap: 1rem;
+}
+
+.comments__form textarea {
+	background: rgba(255, 255, 255, 0.9);
+}
+
+.comments__list {
+	display: grid;
+	gap: 0.9rem;
+}
+
+.comment {
+	display: grid;
+	grid-template-columns: 32px 1fr;
+	gap: 0.8rem;
+}
+
+.comment--reply {
+	margin-top: 0.6rem;
+}
+
+.comment__avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	display: grid;
+	place-items: center;
+	background: rgba(10, 102, 194, 0.12);
+	color: var(--primary-600);
+	font-size: 0.9rem;
+}
+
+.comment__body {
+	display: grid;
+	gap: 0.35rem;
+}
+
+.comment__meta {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 0.9rem;
+}
+
+.comment__text {
+	white-space: pre-wrap;
+}
+
+.comment__actions {
+	margin-top: 0.25rem;
+}
+
+.comment__replies {
+	display: grid;
+	gap: 0.6rem;
+	margin-top: 0.4rem;
+}
+
+.comment__reply-form {
+	margin-top: 0.6rem;
+	display: grid;
+	gap: 0.5rem;
+}
+
 .quiz-page {
 	display: grid;
 	gap: 1.6rem;

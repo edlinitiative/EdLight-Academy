@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import { QuizComponent } from '../components/Quiz';
+import Comments from '../components/Comments';
 import useStore from '../contexts/store';
 
 export default function CourseDetail() {
@@ -48,6 +49,9 @@ export default function CourseDetail() {
         || moduleIdentifiers.includes(quizItem.quiz_id)
     );
   const hasQuiz = Boolean(moduleQuiz);
+
+  // Stable thread key per visible video (falls back to module id when needed)
+  const threadKey = `comments:${courseId}:${activeLessonData?.id || activeModuleData?.id || 'module'}`;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -210,6 +214,13 @@ export default function CourseDetail() {
               />
             )}
           </div>
+
+          {/* Comments under the video and navigation */}
+          <Comments
+            threadKey={threadKey}
+            isAuthenticated={isAuthenticated}
+            onRequireAuth={() => useStore.getState().toggleAuthModal()}
+          />
 
           <aside className="lesson-sidebar">
             <div>
