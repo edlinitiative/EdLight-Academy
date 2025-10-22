@@ -15,6 +15,7 @@ const FAQ = React.lazy(() => import('./pages/FAQ'));
 const Help = React.lazy(() => import('./pages/Help'));
 const Privacy = React.lazy(() => import('./pages/Privacy'));
 const Terms = React.lazy(() => import('./pages/Terms'));
+const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -48,6 +49,7 @@ export default function App() {
               <Route path="help" element={<Help />} />
               <Route path="privacy" element={<Privacy />} />
               <Route path="terms" element={<Terms />} />
+              <Route path="auth/google/callback" element={<AuthCallback />} />
             </Route>
           </Routes>
         </Suspense>

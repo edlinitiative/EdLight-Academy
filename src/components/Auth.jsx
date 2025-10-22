@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import useStore from '../contexts/store';
-import { GOOGLE_CLIENT_ID } from '../config';
+import { startGoogleOAuth } from '../services/googleOAuth';
 
 export function AuthModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('signin');
@@ -9,12 +9,6 @@ export function AuthModal({ onClose }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [hasClientId, setHasClientId] = useState(() => {
-    const runtime = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || '';
-    return Boolean(runtime || GOOGLE_CLIENT_ID);
-  });
-  const [googleReady, setGoogleReady] = useState(false);
-  const initDoneRef = useRef(false);
   const [googleError, setGoogleError] = useState('');
   
   const setUser = useStore(state => state.setUser);
@@ -31,73 +25,7 @@ export function AuthModal({ onClose }) {
     }
   }
 
-  useEffect(() => {
-    // Ensure the Google Identity script is present; if not, inject it dynamically
-    const ensureScript = () => {
-      const existing = document.getElementById('google-identity-services');
-      if (!existing) {
-        const s = document.createElement('script');
-        s.id = 'google-identity-services';
-        s.src = 'https://accounts.google.com/gsi/client';
-        s.async = true;
-        s.defer = true;
-        document.head.appendChild(s);
-      }
-    };
-    ensureScript();
-
-    // Poll for the Google Identity library to load (since the script is async)
-    let attempts = 0;
-    const maxAttempts = 40; // ~10s at 250ms
-    const interval = setInterval(() => {
-      if (initDoneRef.current) {
-        clearInterval(interval);
-        return;
-      }
-      const g = window.google && window.google.accounts && window.google.accounts.id;
-      const runtimeClientId = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID || '';
-      if (g && runtimeClientId && googleBtnRef.current) {
-        try {
-          g.initialize({
-            client_id: runtimeClientId,
-            callback: (response) => {
-              const data = decodeJwt(response.credential);
-              if (data) {
-                const profile = {
-                  name: data.name || 'Student',
-                  email: data.email || '',
-                  picture: data.picture || ''
-                };
-                setUser(profile);
-                onClose();
-              }
-            },
-          });
-          g.renderButton(googleBtnRef.current, {
-            theme: 'outline',
-            size: 'large',
-            shape: 'pill',
-            text: 'continue_with',
-            width: 320,
-          });
-          initDoneRef.current = true;
-          setHasClientId(true);
-          setGoogleReady(true);
-          clearInterval(interval);
-        } catch (e) {
-          // keep trying; likely rendering target not ready yet
-        }
-      }
-      attempts += 1;
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-          setGoogleError('Unable to load Google Sign-In. It may be blocked by a network filter, ad blocker, or Content Security Policy.');
-        }
-      }
-    }, 250);
-    return () => clearInterval(interval);
-  }, [googleBtnRef, setUser, onClose]);
+  // No GIS dependency: we trigger OAuth 2.0 with PKCE on click
 
   // In case the inline script sets the client ID slightly after mount, re-check shortly to avoid false warning
   useEffect(() => {
@@ -178,16 +106,23 @@ export function AuthModal({ onClose }) {
 
         {/* Google Sign-In */}
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
-          {hasClientId && !googleReady && !googleError && (
-            <small className="text-muted">Loading Google sign-in…</small>
-          )}
-          {!hasClientId && !googleBtnRef.current?.childElementCount && !googleError && (
-            <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
-          )}
-          {googleError && (
-            <small className="text-danger">{googleError}</small>
-          )}
+          <button
+            type="button"
+            className="button button--secondary button--pill"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+            onClick={async () => {
+              try {
+                setGoogleError('');
+                await startGoogleOAuth();
+              } catch (e) {
+                setGoogleError(e.message);
+              }
+            }}
+          >
+            <img src="/assets/logo.png" alt="G" width={18} height={18} />
+            Continue with Google
+          </button>
+          {googleError && (<small className="text-danger">{googleError}</small>)}
         </div>
 
         <form onSubmit={handleSubmit}>
