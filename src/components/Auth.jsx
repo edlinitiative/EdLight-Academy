@@ -13,6 +13,8 @@ export function AuthModal({ onClose }) {
     const runtime = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || '';
     return Boolean(runtime || GOOGLE_CLIENT_ID);
   });
+  const [googleReady, setGoogleReady] = useState(false);
+  const initDoneRef = useRef(false);
   
   const setUser = useStore(state => state.setUser);
   const googleBtnRef = useRef(null);
@@ -29,35 +31,54 @@ export function AuthModal({ onClose }) {
   }
 
   useEffect(() => {
-    // Render Google button if library is available and client ID is configured
-    const g = window.google && window.google.accounts && window.google.accounts.id;
-    const runtimeClientId = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID || '';
-    if (g && runtimeClientId && googleBtnRef.current) {
-      g.initialize({
-        client_id: runtimeClientId,
-        callback: (response) => {
-          const data = decodeJwt(response.credential);
-          if (data) {
-            const profile = {
-              name: data.name || 'Student',
-              email: data.email || '',
-              picture: data.picture || ''
-            };
-            setUser(profile);
-            onClose();
-          }
-        },
-      });
-      try {
-        g.renderButton(googleBtnRef.current, {
-          theme: 'outline',
-          size: 'large',
-          shape: 'pill',
-          text: 'continue_with',
-          width: 320,
-        });
-      } catch {}
-    }
+    // Poll for the Google Identity library to load (since the script is async)
+    let attempts = 0;
+    const maxAttempts = 40; // ~10s at 250ms
+    const interval = setInterval(() => {
+      if (initDoneRef.current) {
+        clearInterval(interval);
+        return;
+      }
+      const g = window.google && window.google.accounts && window.google.accounts.id;
+      const runtimeClientId = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID || '';
+      if (g && runtimeClientId && googleBtnRef.current) {
+        try {
+          g.initialize({
+            client_id: runtimeClientId,
+            callback: (response) => {
+              const data = decodeJwt(response.credential);
+              if (data) {
+                const profile = {
+                  name: data.name || 'Student',
+                  email: data.email || '',
+                  picture: data.picture || ''
+                };
+                setUser(profile);
+                onClose();
+              }
+            },
+          });
+          g.renderButton(googleBtnRef.current, {
+            theme: 'outline',
+            size: 'large',
+            shape: 'pill',
+            text: 'continue_with',
+            width: 320,
+          });
+          initDoneRef.current = true;
+          setHasClientId(true);
+          setGoogleReady(true);
+          clearInterval(interval);
+        } catch (e) {
+          // keep trying; likely rendering target not ready yet
+        }
+      }
+      attempts += 1;
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+      }
+    }, 250);
+    return () => clearInterval(interval);
   }, [googleBtnRef, setUser, onClose]);
 
   // In case the inline script sets the client ID slightly after mount, re-check shortly to avoid false warning
@@ -140,6 +161,9 @@ export function AuthModal({ onClose }) {
         {/* Google Sign-In */}
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
+          {hasClientId && !googleReady && (
+            <small className="text-muted">Loading Google sign-in…</small>
+          )}
           {!hasClientId && !googleBtnRef.current?.childElementCount && (
             <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
           )}
