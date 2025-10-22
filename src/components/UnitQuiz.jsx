@@ -19,13 +19,8 @@ export default function UnitQuiz({ subjectCode, unitId, onClose }) {
     if (!quizBank || !subjectCode || !unitId) return [];
     const key = `${subjectCode}|${unitId}`;
     const unitRows = (quizBank.byUnit?.[key] || []).slice();
-    // Fallback: top up from subject-level if fewer than TOTAL
-    let pool = unitRows.slice();
-    if (pool.length < TOTAL) {
-      const extras = (quizBank.bySubject?.[subjectCode] || []).filter((r) => !pool.includes(r));
-      pool = pool.concat(extras);
-    }
-    return shuffle(pool).slice(0, TOTAL);
+    // Strictly unit-only selection, cap at 10
+    return shuffle(unitRows).slice(0, TOTAL);
   }, [quizBank, subjectCode, unitId]);
 
   const items = useMemo(() => {

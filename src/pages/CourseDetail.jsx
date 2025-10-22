@@ -194,14 +194,7 @@ export default function CourseDetail() {
                     Practice
                   </button>
                 )}
-                {hasQuiz && (
-                  <button
-                    className="button button--ghost button--sm"
-                    onClick={() => setShowUnitQuiz(true)}
-                  >
-                    Start 10-Question Quiz
-                  </button>
-                )}
+                {/* The Unit Quiz entry now lives in the course content list below */}
               </div>
             </article>
 
@@ -310,6 +303,24 @@ export default function CourseDetail() {
                               </button>
                             );
                           })}
+                          {/* Unit Quiz entry after the last subchapter */}
+                          <button
+                            key={`${module.id}-unit-quiz`}
+                            type="button"
+                            className={`lesson-list__item ${isActiveModule && showUnitQuiz ? 'lesson-list__item--active' : ''}`}
+                            onClick={() => {
+                              setActiveModule(idx);
+                              setShowQuiz(false);
+                              setShowUnitQuiz(true);
+                            }}
+                          >
+                            <span className="lesson-list__index">{idx + 1}.{module.lessons.length + 1}</span>
+                            <span className="lesson-list__meta">
+                              <span className="lesson-list__title">Unit Quiz — 10 Questions</span>
+                              <span className="lesson-list__duration">Practice</span>
+                            </span>
+                            {isActiveModule && showUnitQuiz && <span className="chip chip--ghost">Current</span>}
+                          </button>
                         </div>
                       )}
                     </div>
