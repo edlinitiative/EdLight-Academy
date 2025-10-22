@@ -490,6 +490,19 @@ main {
 	min-height: 320px;
 }
 
+.card--compact {
+	padding: 1rem;
+}
+
+.card__title {
+	margin: 0 0 0.5rem;
+}
+
+.list--bulleted {
+	margin: 0;
+	padding-left: 1.2rem;
+}
+
 .metric-card {
 	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(209, 213, 255, 0.65));
 	border-radius: var(--radius-lg);
@@ -1790,6 +1803,42 @@ main {
 	background: rgba(10, 102, 194, 0.08);
 	border: 1px solid rgba(10, 102, 194, 0.16);
 	font-size: 0.95rem;
+}
+
+/* Practice (Quizzes) page layout */
+.practice-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+	gap: 1rem;
+}
+
+.practice-main {
+	min-width: 0; /* prevent overflow */
+}
+
+.practice-aside {
+	display: grid;
+	gap: 0.75rem;
+	position: sticky;
+	top: 88px; /* beneath navbar */
+}
+
+@media (max-width: 900px) {
+	.practice-layout {
+		grid-template-columns: 1fr;
+	}
+	.practice-aside {
+		position: static;
+		top: auto;
+	}
+}
+
+.quiz-status {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem 0.5rem;
+	align-items: center;
+	margin-bottom: 0.25rem;
 }
 
 /* Comments */

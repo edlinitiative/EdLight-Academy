@@ -1,7 +1,7 @@
 import React from 'react';
 import { QuizComponent } from '../components/Quiz';
 
-// Simplified Quizzes page: curriculum practice only (Course/Grade/Unit)
+// Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
   return (
     <section className="section">
@@ -14,25 +14,27 @@ const Quizzes = () => {
           </div>
         </div>
 
-        <div className="quiz-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '1rem' }}>
-          <div>
+        <div className="practice-layout">
+          <div className="practice-main">
             <QuizComponent />
           </div>
-          <aside>
-            <div className="card" style={{ padding: '1rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem' }}>How practice works</h3>
-              <ul className="text-muted" style={{ margin: 0, paddingLeft: '1.2rem' }}>
+          <aside className="practice-aside">
+            <div className="card card--compact">
+              <h3 className="card__title">How practice works</h3>
+              <ul className="text-muted list--bulleted">
                 <li>Three tries per question</li>
                 <li>New hint after each incorrect try</li>
-                <li>See the correct answer and explanation after the third try</li>
-                <li>Math formats are supported</li>
+                <li>Reveal the correct answer and explanation after the third try</li>
+                <li>Math formatting is supported</li>
               </ul>
             </div>
-            <div className="card" style={{ padding: '1rem', marginTop: '0.75rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem' }}>Tips</h3>
-              <p className="text-muted" style={{ margin: 0 }}>
-                Not seeing questions for a unit? Try another unit for the same course, or switch grades. We’re adding new practice every week.
-              </p>
+            <div className="card card--compact">
+              <h3 className="card__title">Tips</h3>
+              <ul className="text-muted list--bulleted">
+                <li>If a unit has few questions, try another unit in the same course.</li>
+                <li>Switch grades (NS I–IV) to broaden topics.</li>
+                <li>We add new practice weekly—check back often.</li>
+              </ul>
             </div>
           </aside>
         </div>

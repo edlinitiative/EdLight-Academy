@@ -126,7 +126,7 @@ export function QuizComponent({ onComplete, subjectCode, unitId, videoId }) {
         </div>
       </header>
 
-      <div className="quiz-selectors" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+      <div className="quiz-selectors" style={{ marginBottom: '0.75rem' }}>
         <div>
           <label className="label">Course</label>
           <select className="input-field" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
@@ -152,6 +152,26 @@ export function QuizComponent({ onComplete, subjectCode, unitId, videoId }) {
           </select>
         </div>
       </div>
+
+      {/* Selection summary and availability */}
+      {quizBank && (
+        <div className="quiz-status">
+          {subjectBase && level && (
+            <span className="chip">{subjectOptions.find(o => o.value === subjectBase)?.label || subjectBase} · {level.replace(/^NS(.*)$/i, 'NS $1')}</span>
+          )}
+          {unit && (
+            <span className="chip chip--ghost">{unitOptions.find(o => o.value === unit)?.label || unit}</span>
+          )}
+          {(() => {
+            const courseCode = subjectBase && level ? `${subjectBase}-${level}` : '';
+            const unitKey = unit ? `${courseCode}|${unit}` : '';
+            const unitCount = (quizBank.byUnit && unitKey && quizBank.byUnit[unitKey]?.length) || 0;
+            const subjCount = (quizBank.bySubject && courseCode && quizBank.bySubject[courseCode]?.length) || 0;
+            const count = unitCount || subjCount || 0;
+            return <span className="chip chip--success">{count} question{count === 1 ? '' : 's'} available</span>;
+          })()}
+        </div>
+      )}
 
       <div className="quiz-card__controls">
         <button
