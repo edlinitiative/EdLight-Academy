@@ -73,7 +73,7 @@ export default function DirectBankQuiz({ item, onScore }) {
     let isCorrect = false;
     if (item.kind === 'mcq' || item.kind === 'tf') {
       if (selected === null) return;
-      isCorrect = Number(selected) === Number(item.correctIndex);
+      isCorrect = selected === item.correctIndex;
     } else {
       const norm = (s) => String(s || '').trim().toLowerCase();
       isCorrect = norm(textAns) === norm(item.correctText);
@@ -130,8 +130,8 @@ export default function DirectBankQuiz({ item, onScore }) {
                 type="radio"
                 name="bank-answer"
                 value={idx}
-                checked={Number(selected) === Number(idx)}
-                onChange={(e) => setSelected(Number(e.target.value))}
+                checked={selected === idx}
+                onChange={() => setSelected(idx)}
                 disabled={submitted}
               />
               <span dangerouslySetInnerHTML={renderWithKatex(label, katexReady)} />
