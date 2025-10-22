@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import { QuizComponent } from '../components/Quiz';
+import UnitQuiz from '../components/UnitQuiz';
 import Comments from '../components/Comments';
 import useStore from '../contexts/store';
 
@@ -13,6 +14,7 @@ export default function CourseDetail() {
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [expandedModules, setExpandedModules] = useState(() => new Set([0]));
+  const [showUnitQuiz, setShowUnitQuiz] = useState(false);
   const { isAuthenticated, enrolledCourses } = useStore();
 
   const course = data?.courses?.find((c) => c.id === courseId);
@@ -85,7 +87,8 @@ export default function CourseDetail() {
   useEffect(() => {
     // reset lesson to the first when switching modules
     setActiveLesson(0);
-    setShowQuiz(false);
+  setShowQuiz(false);
+  setShowUnitQuiz(false);
     setExpandedModules((prev) => {
       const next = new Set(prev);
       next.add(activeModule);
@@ -94,7 +97,8 @@ export default function CourseDetail() {
   }, [activeModule]);
 
   useEffect(() => {
-    setShowQuiz(false);
+  setShowQuiz(false);
+  setShowUnitQuiz(false);
   }, [activeLesson]);
 
   if (isLoading) {
@@ -190,6 +194,14 @@ export default function CourseDetail() {
                     Practice
                   </button>
                 )}
+                {hasQuiz && (
+                  <button
+                    className="button button--ghost button--sm"
+                    onClick={() => setShowUnitQuiz(true)}
+                  >
+                    Start 10-Question Quiz
+                  </button>
+                )}
               </div>
             </article>
 
@@ -199,6 +211,13 @@ export default function CourseDetail() {
                 unitId={activeModuleData?.id}
                 videoId={activeLessonData?.id}
                 onComplete={() => setShowQuiz(false)}
+              />
+            )}
+            {showUnitQuiz && hasQuiz && (
+              <UnitQuiz
+                subjectCode={course?.id}
+                unitId={activeModuleData?.id}
+                onClose={() => setShowUnitQuiz(false)}
               />
             )}
             <Comments
