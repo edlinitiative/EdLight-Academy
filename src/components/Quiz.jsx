@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import useStore from '../contexts/store';
 import PerseusQuiz from './PerseusQuiz';
 
-export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
+export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }) {
   const [answer, setAnswer] = useState('');
   const [showHint, setShowHint] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -124,9 +124,15 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
         setBankMessage('No curriculum practice available yet.');
         return;
       }
-  const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
+      const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
       let row = null;
-      if (subj) {
+      // Best: exact video match when available
+      if (quizBank.byVideoId && videoId) {
+        const arr = quizBank.byVideoId[videoId] || [];
+        if (arr.length > 0) row = arr[Math.floor(Math.random() * arr.length)];
+      }
+      // Next: subject+unit
+      if (!row && subj) {
         row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
       }
       // Fallback: any row from the bank if subject-based lookup failed

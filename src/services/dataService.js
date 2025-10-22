@@ -1,5 +1,5 @@
 import { loadCSV } from '../utils/csvParser';
-import { loadQuizBankSafe, indexQuizBank } from './quizBank';
+import { loadQuizBankSafe, normalizeAndIndexQuizBank } from './quizBank';
 
 // Prefer the English portion of a bilingual title when present.
 // Heuristic: if the title contains parentheses, and the inner text looks ASCII,
@@ -163,10 +163,10 @@ export const loadAppData = async () => {
     ]);
     
     // Transform data into courses
-    const courses = transformDataToCourses(subjects, videos, quizzes);
-    const quizBankIndex = indexQuizBank(quizBankRows);
+  const courses = transformDataToCourses(subjects, videos, quizzes);
+  const quizBank = normalizeAndIndexQuizBank(quizBankRows, videos);
     
-    return { subjects, videos, quizzes, courses, quizBank: { rows: quizBankRows, ...quizBankIndex } };
+  return { subjects, videos, quizzes, courses, quizBank };
   } catch (err) {
     console.error('Failed to load application data:', err);
     throw err;

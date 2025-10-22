@@ -180,6 +180,129 @@ export function indexQuizBank(rows) {
   return { byUnit, bySubject };
 }
 
+// Helper: basic string normalize for fuzzy title match
+const norm = (s) => String(s || '')
+  .toLowerCase()
+  .replace(/[\u2012-\u2015]/g, '-')
+  .replace(/[^a-z0-9\s-]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+function matchVideoForRow(row, videos) {
+  if (!Array.isArray(videos) || videos.length === 0) return null;
+  const subjCode = (() => {
+    const fromRow = String(row.subject_code || '').trim();
+    if (fromRow) return fromRow;
+    const subjLevelCode = (() => {
+      const derive = (() => {
+        const t = String(row.subject || '').trim();
+        const lvl = String(row.level || '').trim();
+        if (!t || !lvl) return '';
+        const base = t.toLowerCase().includes('chem') || t.toLowerCase().includes('chim') ? 'CHEM'
+          : t.toLowerCase().includes('phys') ? 'PHYS'
+          : t.toLowerCase().includes('math') ? 'MATH'
+          : t.toLowerCase().includes('econ') ? 'ECON'
+          : t.toUpperCase();
+        const roman = lvl.toUpperCase().match(/NS\s*(IV|III|II|I)\b/);
+        const digit = lvl.toUpperCase().match(/NS\s*(\d)\b/);
+        const compact = lvl.toUpperCase().match(/NS(IV|III|II|I)\b/);
+        const ns = roman ? `NS${roman[1]}` : (digit ? `NS${'I'.repeat(parseInt(digit[1], 10))}` : (compact ? `NS${compact[1]}` : 'NSI'));
+        return `${base}-${ns}`;
+      })();
+      return derive;
+    })();
+    return subjLevelCode;
+  })();
+
+  const unitNo = (() => {
+    // Try explicit numeric first
+    const raw = (row.unit_no || row.unit_number || row.unit || '').toString();
+    const m = raw.match(/\b(\d{1,2})\b/);
+    if (m) return m[1];
+    const m2 = raw.match(/U\s*(\d{1,2})/i);
+    if (m2) return m2[1];
+    return '';
+  })();
+
+  // Try to match by video title when subject code present but unit missing
+  const rowTitle = norm(row.video_title || row.question || '');
+  const candidates = videos.filter(v => !subjCode || v.subject_code === subjCode);
+  let best = null;
+  for (const v of candidates) {
+    if (!v.video_title) continue;
+    const vt = norm(v.video_title);
+    if (!vt || !rowTitle) continue;
+    // Simple contains in either direction
+    if (vt.includes(rowTitle) || rowTitle.includes(vt)) {
+      best = v;
+      break;
+    }
+  }
+  if (best) {
+    return { video: best, subject_code: best.subject_code, unit_no: String(best.unit_no || '').trim() };
+  }
+  if (subjCode && unitNo) {
+    // fallback to first video with that subject/unit
+    const v = candidates.find(v => String(v.unit_no) === String(unitNo));
+    if (v) return { video: v, subject_code: v.subject_code, unit_no: String(v.unit_no) };
+  }
+  return null;
+}
+
+export function normalizeAndIndexQuizBank(rows, videos = []) {
+  const rowsNorm = rows.map((r) => {
+    const subjectCode = (() => {
+      const code = (r.subject_code || r.course_code || '').toString().trim();
+      if (code) return code;
+      // derive
+      const base = String(r.subject || '').toLowerCase();
+      const subj = base.includes('chem') || base.includes('chim') ? 'CHEM'
+        : base.includes('phys') ? 'PHYS'
+        : base.includes('math') ? 'MATH'
+        : base.includes('econ') ? 'ECON'
+        : (r.subject || '').toString().toUpperCase();
+      const lvl = String(r.level || '').toUpperCase();
+      const roman = lvl.match(/NS\s*(IV|III|II|I)\b/);
+      const digit = lvl.match(/NS\s*(\d)\b/);
+      const compact = lvl.match(/NS(IV|III|II|I)\b/);
+      const ns = roman ? `NS${roman[1]}` : (digit ? `NS${'I'.repeat(parseInt(digit[1], 10))}` : (compact ? `NS${compact[1]}` : 'NSI'));
+      return `${subj}-${ns}`;
+    })();
+    let unitNo = (() => {
+      const raw = (r.unit_no || r.unit_number || r.unit || '').toString();
+      const m = raw.match(/\b(\d{1,2})\b/);
+      if (m) return m[1];
+      const m2 = raw.match(/U\s*(\d{1,2})/i);
+      if (m2) return m2[1];
+      return '';
+    })();
+    let videoId = '';
+    const mv = matchVideoForRow(r, videos);
+    if (mv) {
+      videoId = mv.video?.id || '';
+      if (!unitNo && mv.unit_no) unitNo = mv.unit_no;
+    }
+    return { ...r, subject_code_norm: subjectCode, unit_no_norm: unitNo, unit_id_norm: unitNo ? `U${unitNo}` : '', video_id_match: videoId };
+  });
+
+  const byUnit = {};
+  const bySubject = {};
+  const byVideoId = {};
+  for (const r of rowsNorm) {
+    if (r.subject_code_norm) {
+      (bySubject[r.subject_code_norm] = bySubject[r.subject_code_norm] || []).push(r);
+      if (r.unit_no_norm) {
+        const key = `${r.subject_code_norm}|U${r.unit_no_norm}`;
+        (byUnit[key] = byUnit[key] || []).push(r);
+      }
+    }
+    if (r.video_id_match) {
+      (byVideoId[r.video_id_match] = byVideoId[r.video_id_match] || []).push(r);
+    }
+  }
+  return { rows: rowsNorm, byUnit, bySubject, byVideoId };
+}
+
 export function pickRandomQuestion(indexByUnit, subjectCode, unitId, indexBySubject) {
   // Try exact unit match first
   const key = `${subjectCode}|${unitId}`; // unitId like 'U1'
