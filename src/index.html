@@ -9,7 +9,10 @@
   <!-- Google Identity Services for Sign-In -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- Optional: set your Google Client ID at runtime without rebuilding -->
-  <!-- <script>window.EDLIGHT_GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';</script> -->
+  <script>
+    // Set by build to enable Google Sign-In; safe to expose (not a secret)
+    window.EDLIGHT_GOOGLE_CLIENT_ID = '1049470868081-16speff0hcok8ru87b11b2ah2egeo0u6.apps.googleusercontent.com';
+  </script>
 </head>
 <body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
