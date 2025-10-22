@@ -1810,6 +1810,7 @@ main {
 	display: grid;
 	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
 	gap: 1rem;
+	align-items: start; /* prevent sidebar from stretching to tallest column */
 }
 
 .practice-main {
@@ -1821,6 +1822,7 @@ main {
 	gap: 0.75rem;
 	position: sticky;
 	top: 88px; /* beneath navbar */
+	align-self: start; /* keep aside sized to its content */
 }
 
 @media (max-width: 900px) {
