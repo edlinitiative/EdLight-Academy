@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import { CourseCard } from '../components/Course';
@@ -8,6 +8,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { data, isLoading } = useAppData();
   const { toggleAuthModal, isAuthenticated } = useStore();
+  const [heroSrc, setHeroSrc] = useState('/assets/student-hero.jpg');
   
   const featuredCourses = data?.courses?.slice(0, 6) || [];
 
@@ -68,9 +69,14 @@ export default function Home() {
           <div className="hero-visual">
             <img
               className="hero-visual__image"
-              src="/assets/student-hero.svg"
+              src={heroSrc}
               alt="High school student learning on a laptop"
               loading="eager"
+              onError={(e) => {
+                if (heroSrc !== '/assets/student-hero.svg') {
+                  setHeroSrc('/assets/student-hero.svg');
+                }
+              }}
             />
             <div className="hero-visual__grid" style={{ marginTop: '1rem' }}>
               <div className="hero-visual__row">
