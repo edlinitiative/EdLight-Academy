@@ -30,7 +30,7 @@ export default function Home() {
             <span className="hero__badge">Physics · Chemistry · Mathematics · Economics</span>
             <h1 className="hero__title">Learn with <span>EdLight Academy</span></h1>
             <p className="hero__description">
-              Watch concise video lessons, practice with instant-feedback quizzes, and track your progress across every NS level — all in one place.
+              World-class courses, practice problems, and interactive quizzes — designed specifically for Haitian students to excel in academics and beyond.
             </p>
 
             <div className="hero__actions">
