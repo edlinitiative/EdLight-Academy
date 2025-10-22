@@ -34,21 +34,9 @@ export default function CourseDetail() {
     || lessonBreakdown?.[0]?.videoUrl
     || course?.trailerUrl
     || '';
-  const allQuizzes = data?.quizzes ?? [];
-  const moduleIdentifiers = [
-    activeLessonData?.id,
-    activeLessonData?.videoId,
-    ...lessonBreakdown.map((lesson) => lesson.id).filter(Boolean),
-    activeModuleData?.videoId,
-    activeModuleData?.id,
-  ].filter(Boolean);
-  const moduleQuiz = activeModuleData?.quiz
-    || allQuizzes.find(
-      (quizItem) =>
-        moduleIdentifiers.includes(quizItem.video_id)
-        || moduleIdentifiers.includes(quizItem.quiz_id)
-    );
-  const hasQuiz = Boolean(moduleQuiz);
+  // Curriculum practice is always available (subject to data availability),
+  // so enable Practice regardless of legacy per-video quizzes.
+  const hasQuiz = true;
 
   // Stable thread key per visible video (falls back to module id when needed)
   const threadKey = `comments:${courseId}:${activeLessonData?.id || activeModuleData?.id || 'module'}`;
@@ -199,24 +187,18 @@ export default function CourseDetail() {
                     className="button button--primary button--sm"
                     onClick={() => setShowQuiz(true)}
                   >
-                    Take Quiz
+                    Practice
                   </button>
                 )}
               </div>
             </article>
 
-              {showQuiz && hasQuiz && (
+            {showQuiz && hasQuiz && (
               <QuizComponent
-                quiz={moduleQuiz}
                 subjectCode={course?.id}
                 unitId={activeModuleData?.id}
-                  videoId={activeLessonData?.id}
-                onComplete={(isCorrect) => {
-                  if (isCorrect && activeModule < modules.length - 1) {
-                    setActiveModule((m) => Math.min(modules.length - 1, m + 1));
-                  }
-                  setShowQuiz(false);
-                }}
+                videoId={activeLessonData?.id}
+                onComplete={() => setShowQuiz(false)}
               />
             )}
             <Comments

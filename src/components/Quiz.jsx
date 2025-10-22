@@ -1,164 +1,115 @@
-import React, { useEffect, useState } from 'react';
-import useStore from '../contexts/store';
-import PerseusQuiz from './PerseusQuiz';
+import React, { useEffect, useMemo, useState } from 'react';
 import DirectBankQuiz from './DirectBankQuiz';
 
-export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }) {
-  const [answer, setAnswer] = useState('');
-  const [showHint, setShowHint] = useState(0);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [wasCorrect, setWasCorrect] = useState(null);
-  const [aiItem, setAiItem] = useState(null);
-  const [bankItem, setBankItem] = useState(null); // kept for Perseus path
-  const [bankDirectItem, setBankDirectItem] = useState(null); // direct-render path
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoadingBank, setIsLoadingBank] = useState(false);
-  const [bankMessage, setBankMessage] = useState('');
-  const { recordQuizAttempt } = useStore();
+// Curriculum-only quiz component. If subjectCode/unitId are provided, uses those.
+// Otherwise, shows selectors for Course (subject), Grade (level), and Unit.
+export function QuizComponent({ onComplete, subjectCode, unitId, videoId }) {
   const { data: appData } = require('../hooks/useData').useAppData();
   const quizBank = appData?.quizBank;
+  const courses = appData?.courses || [];
 
-  const normalize = (value) => (value ?? '').toString().trim().toLowerCase();
-  const hasRawQuiz = Boolean(quiz);
-  const hints = hasRawQuiz ? quiz.hints : [];
-  const hasHints = Array.isArray(hints) && hints.length > 0;
-  const quizId = hasRawQuiz ? (quiz.id || quiz.quiz_id || quiz.video_id || 'quiz') : null;
-  const correctAnswer = hasRawQuiz
-    ? (quiz.correct_answer || quiz.correctAnswer || quiz.correct_option || quiz.correctOption || '')
-    : '';
-  const questionText = hasRawQuiz ? (quiz.question || quiz.prompt || '') : '';
-  const explanationText = hasRawQuiz ? (quiz.explanation || quiz.feedback || '') : '';
+  // Derive initial selection from props or default to first available
+  const initialCourseCode = useMemo(() => subjectCode || courses[0]?.id || '', [subjectCode, courses]);
+  const parseCourseCode = (code) => {
+    const [subj, lvl] = (code || '').split('-');
+    return { subj: subj || '', lvl: lvl || '' };
+  };
+  const { subj: initSubj, lvl: initLvl } = parseCourseCode(initialCourseCode);
+  const [subjectBase, setSubjectBase] = useState(initSubj);
+  const [level, setLevel] = useState(initLvl);
+  const [unit, setUnit] = useState(unitId || '');
+  const [bankDirectItem, setBankDirectItem] = useState(null);
+  const [bankMessage, setBankMessage] = useState('');
+  const [isLoadingBank, setIsLoadingBank] = useState(false);
 
-  const optionEntries = hasRawQuiz && Array.isArray(quiz.options) && quiz.options.length > 0
-    ? quiz.options.map((opt, idx) => ({
-        value: opt.value || opt.id || String.fromCharCode(65 + idx),
-        label: opt.label || opt.text || opt.value || '',
-      }))
-    : ['a', 'b', 'c', 'd']
-        .map((key, idx) => {
-          const label = quiz?.[`option_${key}`] || quiz?.[`option_${key.toUpperCase()}`];
-          if (!label) return null;
-          return {
-            value: (quiz?.[`option_${key}_value`] || quiz?.[`option_${key.toUpperCase()}_value`] || key).toString().toUpperCase(),
-            label,
-            index: idx,
-          };
-        })
-        .filter(Boolean);
+  // Options for selectors
+  const subjectOptions = useMemo(() => {
+    const uniq = new Map();
+    for (const c of courses) {
+      uniq.set(c.subject, c.subject);
+    }
+    // Map internal subjects to friendly labels
+    const friendly = { CHEM: 'Chemistry', PHYS: 'Physics', MATH: 'Mathematics', ECON: 'Economics' };
+    return Array.from(uniq.values()).map((s) => ({ value: s, label: friendly[s] || s }));
+  }, [courses]);
 
-  const hasAnswer = normalize(answer).length > 0;
+  const levelOptions = useMemo(() => {
+    const lvls = new Set(
+      courses.filter((c) => c.subject === subjectBase).map((c) => c.level)
+    );
+    // Ensure NSI default if empty
+    const ordered = ['NSI', 'NSII', 'NSIII', 'NSIV'];
+    const list = Array.from(lvls);
+    list.sort((a, b) => ordered.indexOf(a) - ordered.indexOf(b));
+    return list.map((l) => ({ value: l, label: l.replace(/^NS(.*)$/i, 'NS $1') }));
+  }, [courses, subjectBase]);
+
+  const courseCode = subjectBase && level ? `${subjectBase}-${level}` : '';
+  const unitOptions = useMemo(() => {
+    const course = courses.find((c) => c.id === courseCode);
+    const items = (course?.modules || []).map((m) => ({ value: m.id, label: m.title || m.id }));
+    return items;
+  }, [courses, courseCode]);
 
   useEffect(() => {
-    setAnswer('');
-    setShowHint(0);
-    setIsSubmitted(false);
-    setWasCorrect(null);
-    setAiItem(null);
-    setBankItem(null);
-    setBankDirectItem(null);
-    setBankMessage('');
-  }, [quizId]);
-
-  const handleSubmit = () => {
-    if (!hasAnswer) return;
-    const isCorrect = normalize(answer) === normalize(correctAnswer);
-    const attempt = {
-      date: new Date(),
-      score: isCorrect ? 1 : 0,
-      answer
-    };
-
-    if (quizId) {
-      recordQuizAttempt(quizId, attempt);
+    // When subject changes, pick first available level
+    if (!levelOptions.find((o) => o.value === level)?.value) {
+      setLevel(levelOptions[0]?.value || '');
     }
-    setIsSubmitted(true);
-    setWasCorrect(isCorrect);
-    
-    if (onComplete) {
-      onComplete(isCorrect);
-    }
-  };
+  }, [subjectBase, levelOptions, level]);
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSubmit();
+  useEffect(() => {
+    // When course changes, default to first unit if not provided
+    if (!unitOptions.find((o) => o.value === unit)?.value) {
+      setUnit(unitOptions[0]?.value || '');
     }
-  };
+  }, [courseCode, unitOptions, unit]);
 
-  const renderStatusChip = () => {
-    if (!isSubmitted) {
-      return <span className="chip chip--ghost">Not answered</span>;
+  useEffect(() => {
+    // If props provided subject/unit, sync into selectors on mount
+    if (subjectCode) {
+      const { subj, lvl } = parseCourseCode(subjectCode);
+      if (subj) setSubjectBase(subj);
+      if (lvl) setLevel(lvl);
     }
-
-    return wasCorrect
-      ? <span className="chip chip--success">✓ Correct</span>
-      : <span className="chip chip--danger">Try Again</span>;
-  };
-
-  const generateAIPractice = async () => {
-    try {
-      setIsGenerating(true);
-      setAiItem(null);
-      const res = await fetch('/api/generate-quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: quiz?.topic || quiz?.subject || 'math', level: quiz?.level || 'NS' })
-      });
-      const data = await res.json();
-      if (data?.item) setAiItem(data.item);
-    } catch (e) {
-      console.error('AI generation failed', e);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+    if (unitId) setUnit(unitId);
+  }, [subjectCode, unitId]);
 
   const generateCurriculumPractice = async () => {
     try {
       setIsLoadingBank(true);
-      setBankItem(null);
       setBankDirectItem(null);
       setBankMessage('');
-      // Determine subject and unit to pull from bank
-      const subj = subjectCode || quiz?.subject_code || '';
-      const unit = unitId || (quiz?.unit_no ? `U${quiz.unit_no}` : null) || null;
-      if (!quizBank || (!quizBank.byUnit && !quizBank.bySubject)) {
-        console.warn('[Quiz] Missing quiz bank context or indices', { hasBank: !!quizBank, subj, unit });
+      const subjCode = courseCode;
+      const unitKey = unit;
+      if (!subjCode || !unitKey || !quizBank) {
         setIsLoadingBank(false);
-        setBankMessage('No curriculum practice available yet.');
+        setBankMessage('Select a course, grade, and unit to begin.');
         return;
       }
-      const { pickRandomQuestion, toPerseusItemFromRow, toDirectItemFromRow } = require('../services/quizBank');
+      const { pickRandomQuestion, toDirectItemFromRow } = require('../services/quizBank');
       let row = null;
-      // Best: exact video match when available
+      // Best: exact video match when available via props
       if (quizBank.byVideoId && videoId) {
         const arr = quizBank.byVideoId[videoId] || [];
         if (arr.length > 0) row = arr[Math.floor(Math.random() * arr.length)];
       }
       // Next: subject+unit
-      if (!row && subj) {
-        row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
+      if (!row) {
+        row = pickRandomQuestion(quizBank.byUnit, subjCode, unitKey, quizBank.bySubject);
       }
       // Fallback: any row from the bank if subject-based lookup failed
       if (!row && Array.isArray(quizBank.rows) && quizBank.rows.length > 0) {
-        console.warn('[Quiz] Falling back to any question in bank (no subject/unit match)', { subj, unit });
         const idx = Math.floor(Math.random() * quizBank.rows.length);
         row = quizBank.rows[idx];
       }
       if (!row) {
-        console.warn('[Quiz] No bank questions for', subj, unit);
-        setBankMessage('No curriculum practice available for this unit yet.');
+        setBankMessage('No curriculum practice available for this selection yet.');
         setIsLoadingBank(false);
         return;
       }
-      // Prefer direct render (no Perseus)
       const direct = toDirectItemFromRow(row);
       setBankDirectItem(direct);
-      // Also keep a Perseus item in case we want to compare later
-      try {
-        const pItem = toPerseusItemFromRow(row);
-        setBankItem(pItem);
-      } catch {}
     } catch (e) {
       console.error('Curriculum practice failed', e);
       setBankMessage('Unable to load curriculum practice right now.');
@@ -166,126 +117,60 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
       setIsLoadingBank(false);
     }
   };
-
-  if (!hasRawQuiz) {
-    return (
-      <div className="card quiz-card">
-        <div className="quiz-card__header">
-          <div className="quiz-card__title">
-            <span className="quiz-card__label">Quick Quiz</span>
-            <h3 className="quiz-card__heading">Quiz content unavailable</h3>
-          </div>
-        </div>
-        <p className="text-muted">We couldn&apos;t load this quiz yet. Please try again later.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="card quiz-card">
       <header className="quiz-card__header">
         <div className="quiz-card__title">
-          <span className="quiz-card__label">Quick Quiz</span>
-          <h3 className="quiz-card__heading">{quiz.title || quiz.name || 'Check your understanding'}</h3>
+          <span className="quiz-card__label">Curriculum Practice</span>
+          <h3 className="quiz-card__heading">Practice by Course, Grade, and Unit</h3>
         </div>
-        {renderStatusChip()}
       </header>
 
-      <div className="quiz-card__question">
-        <span className="quiz-card__prompt">{questionText}</span>
-        {quiz.context && <p className="quiz-card__context">{quiz.context}</p>}
+      <div className="quiz-selectors" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <div>
+          <label className="label">Course</label>
+          <select className="input-field" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
+            {subjectOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Grade</label>
+          <select className="input-field" value={level} onChange={(e) => setLevel(e.target.value)}>
+            {levelOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label">Unit</label>
+          <select className="input-field" value={unit} onChange={(e) => setUnit(e.target.value)}>
+            {unitOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
-
-      {quiz.type === 'multiple-choice' || optionEntries.length > 0 ? (
-        <div className="quiz-card__options">
-          {optionEntries.map((option) => (
-            <label key={option.value} className="radio-option">
-                <input
-                  type="radio"
-                  name="quiz-answer"
-                  value={option.value}
-                  checked={answer === option.value}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  disabled={isSubmitted}
-                />
-                <span>{option.label}</span>
-              </label>
-          ))}
-        </div>
-      ) : (
-        <input
-          type="text"
-          className="input-field"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Enter your answer"
-          disabled={isSubmitted}
-        />
-      )}
-
-      {showHint > 0 && hasHints && hints[showHint - 1] && (
-        <div className="hint-box">
-          <strong>Hint {showHint}:</strong> {hints[showHint - 1]}
-        </div>
-      )}
 
       <div className="quiz-card__controls">
         <button
           type="button"
-          onClick={handleSubmit}
-          className="button button--primary button--sm"
-          disabled={!hasAnswer || isSubmitted}
-        >
-          Check Answer
-        </button>
-        {!isSubmitted && hasHints && showHint < hints.length && (
-          <button
-            type="button"
-            onClick={() => setShowHint((h) => h + 1)}
-            className="button button--ghost button--sm"
-            disabled={isSubmitted}
-          >
-            Need a Hint?
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={generateAIPractice}
-          className="button button--ghost button--sm"
-          disabled={isGenerating}
-        >
-          {isGenerating ? 'Generating…' : 'AI Practice (Perseus)'}
-        </button>
-        <button
-          type="button"
           onClick={generateCurriculumPractice}
-          className="button button--ghost button--sm"
+          className="button button--primary button--sm"
           disabled={isLoadingBank}
         >
-          {isLoadingBank ? 'Loading…' : 'Curriculum Practice'}
+          {isLoadingBank ? 'Loading…' : (bankDirectItem ? 'Next Question' : 'Start Practice')}
         </button>
       </div>
 
-      {isSubmitted && (
-        <div className="quiz-card__explanation">
-          <strong>Explanation:</strong> {explanationText || 'Great effort! Review the solution above before moving on.'}
-        </div>
-      )}
-
-      {aiItem && (
-        <div style={{ marginTop: '1rem' }}>
-          <h4 style={{ marginBottom: '0.5rem' }}>Practice Question</h4>
-          <PerseusQuiz item={aiItem} />
-        </div>
-      )}
       {bankDirectItem && (
         <div style={{ marginTop: '1rem' }}>
           <DirectBankQuiz item={bankDirectItem} />
         </div>
       )}
-      {/* Keep Perseus rendering hidden by default; can be toggled for comparison if needed */}
-      {!bankItem && bankMessage && (
+
+      {!bankDirectItem && bankMessage && (
         <p className="text-muted" style={{ marginTop: '0.75rem' }}>{bankMessage}</p>
       )}
     </div>
