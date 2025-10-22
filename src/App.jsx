@@ -11,6 +11,8 @@ const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Quizzes = React.lazy(() => import('./pages/Quizzes'));
 const About = React.lazy(() => import('./pages/About'));
 const Contact = React.lazy(() => import('./pages/Contact'));
+const FAQ = React.lazy(() => import('./pages/FAQ'));
+const Help = React.lazy(() => import('./pages/Help'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -40,6 +42,8 @@ export default function App() {
               <Route path="quizzes" element={<Quizzes />} />
               <Route path="about" element={<About />} />
               <Route path="contact" element={<Contact />} />
+              <Route path="faq" element={<FAQ />} />
+              <Route path="help" element={<Help />} />
             </Route>
           </Routes>
         </Suspense>
