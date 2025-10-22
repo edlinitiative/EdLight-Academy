@@ -206,13 +206,7 @@ export default function CourseDetail() {
                 onComplete={() => setShowQuiz(false)}
               />
             )}
-            {showUnitQuiz && hasQuiz && (
-              <UnitQuiz
-                subjectCode={course?.id}
-                unitId={activeModuleData?.id}
-                onClose={() => setShowUnitQuiz(false)}
-              />
-            )}
+            {/* Unit Quiz will render in a modal overlay, not inline */}
             <Comments
               threadKey={threadKey}
               isAuthenticated={isAuthenticated}
@@ -335,6 +329,26 @@ export default function CourseDetail() {
           </aside>
         </div>
       </div>
+      {showUnitQuiz && (
+        <div className="modal-overlay" onClick={() => setShowUnitQuiz(false)}>
+          <article className="course-modal" onClick={(e) => e.stopPropagation()}>
+            <header className="course-modal__header">
+              <div>
+                <span className="chip chip--ghost">Unit Quiz</span>
+                <h2 className="course-modal__title">{activeModuleData?.title || '10-Question Quiz'}</h2>
+              </div>
+              <button className="course-modal__close" onClick={() => setShowUnitQuiz(false)} aria-label="Close">×</button>
+            </header>
+            <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
+              <UnitQuiz
+                subjectCode={course?.id}
+                unitId={activeModuleData?.id}
+                onClose={() => setShowUnitQuiz(false)}
+              />
+            </div>
+          </article>
+        </div>
+      )}
     </div>
   );
 }
