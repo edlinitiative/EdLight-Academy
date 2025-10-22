@@ -188,7 +188,7 @@ export function toDirectItemFromRow(row) {
   const good = String(pick(row, ['good_response', 'good', 'explanation'], '')).trim();
   const wrong = String(pick(row, ['wrong_response', 'wrong', 'feedback'], '')).trim();
   const hints = [];
-  for (const hk of ['hint', 'hint1', 'hint_1', 'rationale']) {
+  for (const hk of ['hint', 'hint1', 'hint_1', 'hint2', 'hint_2', 'hint3', 'hint_3', 'rationale']) {
     const h = pick(row, [hk], '');
     if (String(h).trim() !== '') hints.push(String(h));
   }
@@ -229,7 +229,8 @@ export function toDirectItemFromRow(row) {
       if (idx !== -1) correctIndex = idx;
     }
     if (labels.length >= 2 && correctIndex >= 0) {
-      return { kind: 'mcq', stem, options: labels, correctIndex, hints, good, wrong };
+      const correctLabel = labels[correctIndex];
+      return { kind: 'mcq', stem, options: labels, correctIndex, correctLabel, hints, good, wrong };
     }
     // If MCQ unusable, fall back to short answer with correctRaw
     return { kind: 'short', stem, correctText: correctRaw, hints, good, wrong };
@@ -245,7 +246,8 @@ export function toDirectItemFromRow(row) {
       const m = tfOptions.findIndex((l) => l.trim().toLowerCase() === corr);
       if (m >= 0) idx = m;
     }
-    return { kind: 'tf', stem, options: tfOptions, correctIndex: idx, hints, good, wrong };
+    const correctLabel = tfOptions[idx] ?? 'True';
+    return { kind: 'tf', stem, options: tfOptions, correctIndex: idx, correctLabel, hints, good, wrong };
   }
 
   if (qTypeRaw === 'shortanswer' || qTypeRaw === 'short' || qTypeRaw === 'sa' || (labels.length === 0 && correctRaw)) {

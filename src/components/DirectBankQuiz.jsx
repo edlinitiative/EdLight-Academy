@@ -58,12 +58,15 @@ export default function DirectBankQuiz({ item, onScore }) {
   const [textAns, setTextAns] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(null);
+  const [attempts, setAttempts] = useState(0);
+  const maxAttempts = 3;
 
   useEffect(() => {
     setSelected(null);
     setTextAns('');
     setSubmitted(false);
     setCorrect(null);
+    setAttempts(0);
   }, [item]);
 
   const handleCheck = () => {
@@ -75,15 +78,38 @@ export default function DirectBankQuiz({ item, onScore }) {
       const norm = (s) => String(s || '').trim().toLowerCase();
       isCorrect = norm(textAns) === norm(item.correctText);
     }
-    setSubmitted(true);
-    setCorrect(isCorrect);
-    if (onScore) onScore({ correct: isCorrect ? 1 : 0, message: isCorrect ? 'correct' : 'incorrect' });
+    if (isCorrect) {
+      setSubmitted(true);
+      setCorrect(true);
+      if (onScore) onScore({ correct: 1, message: 'correct' });
+      return;
+    }
+    const next = attempts + 1;
+    setAttempts(next);
+    if (next >= maxAttempts) {
+      setSubmitted(true);
+      setCorrect(false);
+      if (onScore) onScore({ correct: 0, message: 'exhausted_attempts' });
+    } else {
+      // allow another try without submitting
+      setCorrect(false);
+      if (onScore) onScore({ correct: 0, message: `attempt_${next}` });
+    }
   };
 
   const Status = () => {
-    if (!submitted) return <span className="chip chip--ghost">Not answered</span>;
-    return correct ? <span className="chip chip--success">✓ Correct</span> : <span className="chip chip--danger">Try Again</span>;
+    if (!submitted) {
+      const left = maxAttempts - attempts;
+      return <span className="chip chip--ghost">{left} {left === 1 ? 'try' : 'tries'} left</span>;
+    }
+    return correct ? <span className="chip chip--success">✓ Correct</span> : <span className="chip chip--danger">Out of tries</span>;
   };
+
+  const hintToShow = !submitted && attempts > 0 && Array.isArray(item.hints) ? item.hints[Math.min(attempts - 1, item.hints.length - 1)] : '';
+  const correctAnswerDisplay = useMemo(() => {
+    if (item.kind === 'mcq' || item.kind === 'tf') return item.correctLabel ?? (Array.isArray(item.options) ? item.options[item.correctIndex] : '');
+    return item.correctText || '';
+  }, [item]);
 
   return (
     <div className="card" style={{ padding: '1rem' }}>
@@ -123,6 +149,12 @@ export default function DirectBankQuiz({ item, onScore }) {
         />
       )}
 
+      {hintToShow && (
+        <div className="hint-box" style={{ margin: '0.5rem 0' }}>
+          <strong>Hint:</strong> <span dangerouslySetInnerHTML={renderWithKatex(hintToShow, katexReady)} />
+        </div>
+      )}
+
       <div className="quiz-card__controls">
         <button
           type="button"
@@ -130,22 +162,32 @@ export default function DirectBankQuiz({ item, onScore }) {
           onClick={handleCheck}
           disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf') ? selected === null : textAns.trim().length === 0)}
         >
-          Check Answer
+          {submitted ? 'Answered' : (attempts > 0 ? 'Try Again' : 'Check Answer')}
         </button>
       </div>
 
       {submitted && (
         <div className="quiz-card__explanation" style={{ marginTop: '0.75rem' }}>
-          {correct && item.good && (
-            <div><strong>Explanation:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good, katexReady)} /></div>
-          )}
-          {!correct && (
+          {correct ? (
             <div>
-              {item.wrong && (
-                <div style={{ marginBottom: '0.5rem' }}><strong>Explanation:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.wrong, katexReady)} /></div>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>Correct!</strong> {correctAnswerDisplay ? (
+                  <>
+                    {' '}<em>Answer:</em> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
+                  </>
+                ) : null}
+              </div>
+              {item.good && (
+                <div><strong>Explanation:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good, katexReady)} /></div>
               )}
-              {Array.isArray(item.hints) && item.hints.length > 0 && (
-                <div className="hint-box"><strong>Hint:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.hints[0], katexReady)} /></div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>Correct answer:</strong> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
+              </div>
+              {(item.good || item.wrong) && (
+                <div><strong>Explanation:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good || item.wrong, katexReady)} /></div>
               )}
             </div>
           )}
