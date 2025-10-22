@@ -11,6 +11,7 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
   const [bankItem, setBankItem] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingBank, setIsLoadingBank] = useState(false);
+  const [bankMessage, setBankMessage] = useState('');
   const { recordQuizAttempt } = useStore();
   const { data: appData } = require('../hooks/useData').useAppData();
   const quizBank = appData?.quizBank;
@@ -52,6 +53,7 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
     setWasCorrect(null);
     setAiItem(null);
     setBankItem(null);
+    setBankMessage('');
   }, [quizId]);
 
   const handleSubmit = () => {
@@ -112,18 +114,21 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
     try {
       setIsLoadingBank(true);
       setBankItem(null);
+      setBankMessage('');
       // Determine subject and unit to pull from bank
       const subj = subjectCode || quiz?.subject_code || '';
       const unit = unitId || (quiz?.unit_no ? `U${quiz.unit_no}` : null) || null;
-      if (!quizBank || !quizBank.byUnit || !subj || !unit) {
+      if (!quizBank || (!quizBank.byUnit && !quizBank.bySubject) || !subj) {
         console.warn('[Quiz] Missing quiz bank context or indices', { hasBank: !!quizBank, subj, unit });
         setIsLoadingBank(false);
+        setBankMessage('No curriculum practice available yet.');
         return;
       }
   const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
-  const row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
+      const row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
       if (!row) {
         console.warn('[Quiz] No bank questions for', subj, unit);
+        setBankMessage('No curriculum practice available for this unit yet.');
         setIsLoadingBank(false);
         return;
       }
@@ -131,6 +136,7 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
       setBankItem(item);
     } catch (e) {
       console.error('Curriculum practice failed', e);
+      setBankMessage('Unable to load curriculum practice right now.');
     } finally {
       setIsLoadingBank(false);
     }
@@ -253,6 +259,9 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
           <h4 style={{ marginBottom: '0.5rem' }}>Curriculum Practice</h4>
           <PerseusQuiz item={bankItem} />
         </div>
+      )}
+      {!bankItem && bankMessage && (
+        <p className="text-muted" style={{ marginTop: '0.75rem' }}>{bankMessage}</p>
       )}
     </div>
   );
