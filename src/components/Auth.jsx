@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useStore from '../contexts/store';
+import { GOOGLE_CLIENT_ID } from '../config';
 
 export function AuthModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('signin');
@@ -10,6 +11,49 @@ export function AuthModal({ onClose }) {
   const [success, setSuccess] = useState('');
   
   const setUser = useStore(state => state.setUser);
+  const googleBtnRef = useRef(null);
+
+  // Decode a Google ID token (JWT) to extract basic profile info client-side
+  function decodeJwt(token) {
+    try {
+      const payload = token.split('.')[1];
+      const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  useEffect(() => {
+    // Render Google button if library is available and client ID is configured
+    const g = window.google && window.google.accounts && window.google.accounts.id;
+    if (g && GOOGLE_CLIENT_ID && googleBtnRef.current) {
+      g.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          const data = decodeJwt(response.credential);
+          if (data) {
+            const profile = {
+              name: data.name || 'Student',
+              email: data.email || '',
+              picture: data.picture || ''
+            };
+            setUser(profile);
+            onClose();
+          }
+        },
+      });
+      try {
+        g.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          text: 'continue_with',
+          width: 320,
+        });
+      } catch {}
+    }
+  }, [googleBtnRef, setUser, onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,6 +113,14 @@ export function AuthModal({ onClose }) {
           >
             Create Account
           </button>
+        </div>
+
+        {/* Google Sign-In */}
+        <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
+          {!GOOGLE_CLIENT_ID && (
+            <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>
