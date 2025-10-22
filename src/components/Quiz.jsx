@@ -118,14 +118,23 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
       // Determine subject and unit to pull from bank
       const subj = subjectCode || quiz?.subject_code || '';
       const unit = unitId || (quiz?.unit_no ? `U${quiz.unit_no}` : null) || null;
-      if (!quizBank || (!quizBank.byUnit && !quizBank.bySubject) || !subj) {
+      if (!quizBank || (!quizBank.byUnit && !quizBank.bySubject)) {
         console.warn('[Quiz] Missing quiz bank context or indices', { hasBank: !!quizBank, subj, unit });
         setIsLoadingBank(false);
         setBankMessage('No curriculum practice available yet.');
         return;
       }
   const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
-      const row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
+      let row = null;
+      if (subj) {
+        row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
+      }
+      // Fallback: any row from the bank if subject-based lookup failed
+      if (!row && Array.isArray(quizBank.rows) && quizBank.rows.length > 0) {
+        console.warn('[Quiz] Falling back to any question in bank (no subject/unit match)', { subj, unit });
+        const idx = Math.floor(Math.random() * quizBank.rows.length);
+        row = quizBank.rows[idx];
+      }
       if (!row) {
         console.warn('[Quiz] No bank questions for', subj, unit);
         setBankMessage('No curriculum practice available for this unit yet.');
