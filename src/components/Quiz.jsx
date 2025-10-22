@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useStore from '../contexts/store';
 import PerseusQuiz from './PerseusQuiz';
+import DirectBankQuiz from './DirectBankQuiz';
 
 export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }) {
   const [answer, setAnswer] = useState('');
@@ -8,7 +9,8 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [wasCorrect, setWasCorrect] = useState(null);
   const [aiItem, setAiItem] = useState(null);
-  const [bankItem, setBankItem] = useState(null);
+  const [bankItem, setBankItem] = useState(null); // kept for Perseus path
+  const [bankDirectItem, setBankDirectItem] = useState(null); // direct-render path
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingBank, setIsLoadingBank] = useState(false);
   const [bankMessage, setBankMessage] = useState('');
@@ -53,6 +55,7 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
     setWasCorrect(null);
     setAiItem(null);
     setBankItem(null);
+    setBankDirectItem(null);
     setBankMessage('');
   }, [quizId]);
 
@@ -114,6 +117,7 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
     try {
       setIsLoadingBank(true);
       setBankItem(null);
+      setBankDirectItem(null);
       setBankMessage('');
       // Determine subject and unit to pull from bank
       const subj = subjectCode || quiz?.subject_code || '';
@@ -124,7 +128,7 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
         setBankMessage('No curriculum practice available yet.');
         return;
       }
-      const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
+      const { pickRandomQuestion, toPerseusItemFromRow, toDirectItemFromRow } = require('../services/quizBank');
       let row = null;
       // Best: exact video match when available
       if (quizBank.byVideoId && videoId) {
@@ -147,8 +151,14 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
         setIsLoadingBank(false);
         return;
       }
-      const item = toPerseusItemFromRow(row);
-      setBankItem(item);
+      // Prefer direct render (no Perseus)
+      const direct = toDirectItemFromRow(row);
+      setBankDirectItem(direct);
+      // Also keep a Perseus item in case we want to compare later
+      try {
+        const pItem = toPerseusItemFromRow(row);
+        setBankItem(pItem);
+      } catch {}
     } catch (e) {
       console.error('Curriculum practice failed', e);
       setBankMessage('Unable to load curriculum practice right now.');
@@ -269,12 +279,12 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId, videoId }
           <PerseusQuiz item={aiItem} />
         </div>
       )}
-      {bankItem && (
+      {bankDirectItem && (
         <div style={{ marginTop: '1rem' }}>
-          <h4 style={{ marginBottom: '0.5rem' }}>Curriculum Practice</h4>
-          <PerseusQuiz item={bankItem} />
+          <DirectBankQuiz item={bankDirectItem} />
         </div>
       )}
+      {/* Keep Perseus rendering hidden by default; can be toggled for comparison if needed */}
       {!bankItem && bankMessage && (
         <p className="text-muted" style={{ marginTop: '0.75rem' }}>{bankMessage}</p>
       )}

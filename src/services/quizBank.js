@@ -181,6 +181,81 @@ export function toPerseusItemFromRow(row) {
   };
 }
 
+// Convert a bank row into a simple, framework-agnostic quiz object we can render directly without Perseus
+export function toDirectItemFromRow(row) {
+  const stem = String(pick(row, ['question', 'question_text', 'prompt', 'stem'], '')).trim();
+  const qTypeRaw = String(pick(row, ['question_type', 'type', 'qtype'], '')).trim().toLowerCase();
+  const good = String(pick(row, ['good_response', 'good', 'explanation'], '')).trim();
+  const wrong = String(pick(row, ['wrong_response', 'wrong', 'feedback'], '')).trim();
+  const hints = [];
+  for (const hk of ['hint', 'hint1', 'hint_1', 'rationale']) {
+    const h = pick(row, [hk], '');
+    if (String(h).trim() !== '') hints.push(String(h));
+  }
+
+  // Options extraction
+  let labels = [];
+  const optionsJson = pick(row, ['options', 'choices'], '');
+  if (optionsJson) {
+    try {
+      const arr = JSON.parse(optionsJson);
+      if (Array.isArray(arr)) labels = arr.map((v) => String(v));
+    } catch {}
+  }
+  if (labels.length === 0) {
+    const optKeys = [
+      ['option_a', 'optionA', 'A', 'choice_a', 'Choice A', 'choice_1', 'option1'],
+      ['option_b', 'optionB', 'B', 'choice_b', 'Choice B', 'choice_2', 'option2'],
+      ['option_c', 'optionC', 'C', 'choice_c', 'Choice C', 'choice_3', 'option3'],
+      ['option_d', 'optionD', 'D', 'choice_d', 'Choice D', 'choice_4', 'option4'],
+    ];
+    for (const group of optKeys) {
+      const val = pick(row, group, '');
+      if (String(val).trim() !== '') labels.push(String(val));
+    }
+  }
+
+  const correctRaw = String(pick(row, ['correct_option', 'correctOption', 'answer', 'correct', 'key', 'correct_answer'], '')).trim();
+
+  const asMcq = () => {
+    // Determine correct index from A/B/C/D, 1-based numbers, or by matching content
+    let correctIndex = -1;
+    if (/^[A-D]$/i.test(correctRaw)) {
+      correctIndex = correctRaw.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+    } else if (/^[1-9]$/.test(correctRaw)) {
+      correctIndex = parseInt(correctRaw, 10) - 1;
+    } else if (correctRaw) {
+      const idx = labels.findIndex((l) => l.trim().toLowerCase() === correctRaw.trim().toLowerCase());
+      if (idx !== -1) correctIndex = idx;
+    }
+    if (labels.length >= 2 && correctIndex >= 0) {
+      return { kind: 'mcq', stem, options: labels, correctIndex, hints, good, wrong };
+    }
+    // If MCQ unusable, fall back to short answer with correctRaw
+    return { kind: 'short', stem, correctText: correctRaw, hints, good, wrong };
+  };
+
+  if (qTypeRaw === 'truefalse' || qTypeRaw === 'true/false' || qTypeRaw === 'tf') {
+    const tfOptions = labels.length >= 2 ? labels.slice(0, 2) : ['True', 'False'];
+    let idx = 0;
+    const corr = correctRaw.toLowerCase();
+    if (corr.startsWith('f')) idx = 1;
+    else if (corr.startsWith('t')) idx = 0;
+    else {
+      const m = tfOptions.findIndex((l) => l.trim().toLowerCase() === corr);
+      if (m >= 0) idx = m;
+    }
+    return { kind: 'tf', stem, options: tfOptions, correctIndex: idx, hints, good, wrong };
+  }
+
+  if (qTypeRaw === 'shortanswer' || qTypeRaw === 'short' || qTypeRaw === 'sa' || (labels.length === 0 && correctRaw)) {
+    return { kind: 'short', stem, correctText: correctRaw, hints, good, wrong };
+  }
+
+  // Default to MCQ flow
+  return asMcq();
+}
+
 export function indexQuizBank(rows) {
   const byUnit = {};
   const bySubject = {};
