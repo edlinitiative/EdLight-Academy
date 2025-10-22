@@ -1,16 +1,24 @@
 import { loadCSV } from '../utils/csvParser';
 
-const BANK_URL = '/data/edlight_unified_quiz_database_expanded.csv';
+const BANK_CANDIDATES = [
+  '/data/edlight_unified_quiz_database_expanded_with_chapters.csv',
+  '/data/edlight_unified_quiz_database_expanded.csv',
+  '/data/edlight_unified_quiz_database.csv'
+];
 
 export async function loadQuizBankSafe() {
-  try {
-    const rows = await loadCSV(BANK_URL);
-    return rows;
-  } catch (e) {
-    // 404 or network: treat as no bank available
-    console.warn('[QuizBank] Unified quiz CSV not found or failed to load:', e?.message || e);
-    return [];
+  for (const url of BANK_CANDIDATES) {
+    try {
+      const rows = await loadCSV(url);
+      console.info('[QuizBank] Loaded bank CSV:', url, 'rows:', rows.length);
+      return rows;
+    } catch (e) {
+      // try next
+      continue;
+    }
   }
+  console.warn('[QuizBank] No quiz bank CSV found from candidates:', BANK_CANDIDATES.join(', '));
+  return [];
 }
 
 // Utility to read the first present key from a set of candidates
@@ -188,6 +196,18 @@ const norm = (s) => String(s || '')
   .replace(/\s+/g, ' ')
   .trim();
 
+function parseChapterNo(row) {
+  // Accept numeric or dotted strings; return integer chapter number when possible
+  const raw = String(pick(row, ['Chapter_Number', 'chapter_number', 'chapterNo', 'chapter', 'lesson_no', 'lesson_number', 'Subchapter_Number', 'subchapter_number'], '')).trim();
+  if (!raw) return '';
+  // If "1.1" -> 1
+  const dotted = raw.match(/^(\d+)(?:[\.-]\d+)?$/);
+  if (dotted) return dotted[1];
+  const num = raw.match(/\b(\d{1,2})\b/);
+  if (num) return num[1];
+  return '';
+}
+
 function matchVideoForRow(row, videos) {
   if (!Array.isArray(videos) || videos.length === 0) return null;
   const subjCode = (() => {
@@ -223,10 +243,19 @@ function matchVideoForRow(row, videos) {
     if (m2) return m2[1];
     return '';
   })();
+  const chapterNo = parseChapterNo(row);
 
   // Try to match by video title when subject code present but unit missing
   const rowTitle = norm(row.video_title || row.question || '');
   const candidates = videos.filter(v => !subjCode || v.subject_code === subjCode);
+
+  // Prefer direct subject+unit+lesson (chapter) match when available
+  if (subjCode && unitNo && chapterNo) {
+    const exact = candidates.find(v => String(v.unit_no) === String(unitNo) && String(v.lesson_no) === String(chapterNo));
+    if (exact) {
+      return { video: exact, subject_code: exact.subject_code, unit_no: String(exact.unit_no) };
+    }
+  }
   let best = null;
   for (const v of candidates) {
     if (!v.video_title) continue;
