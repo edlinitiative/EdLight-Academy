@@ -10,6 +10,7 @@ const CourseDetail = React.lazy(() => import('./pages/CourseDetail'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const Quizzes = React.lazy(() => import('./pages/Quizzes'));
 const About = React.lazy(() => import('./pages/About'));
+const Contact = React.lazy(() => import('./pages/Contact'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ export default function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="quizzes" element={<Quizzes />} />
               <Route path="about" element={<About />} />
+              <Route path="contact" element={<Contact />} />
             </Route>
           </Routes>
         </Suspense>
