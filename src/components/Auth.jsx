@@ -27,9 +27,10 @@ export function AuthModal({ onClose }) {
   useEffect(() => {
     // Render Google button if library is available and client ID is configured
     const g = window.google && window.google.accounts && window.google.accounts.id;
-    if (g && GOOGLE_CLIENT_ID && googleBtnRef.current) {
+    const runtimeClientId = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || GOOGLE_CLIENT_ID || '';
+    if (g && runtimeClientId && googleBtnRef.current) {
       g.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: runtimeClientId,
         callback: (response) => {
           const data = decodeJwt(response.credential);
           if (data) {
@@ -118,7 +119,7 @@ export function AuthModal({ onClose }) {
         {/* Google Sign-In */}
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
-          {!GOOGLE_CLIENT_ID && (
+          {!(typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) && !GOOGLE_CLIENT_ID && (
             <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
           )}
         </div>
