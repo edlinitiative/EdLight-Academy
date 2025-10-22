@@ -9,6 +9,17 @@ const PERSEUS_VERSIONS = [
   '67.3.3',
 ];
 
+function getOverride() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get('perseus');
+    const file = params.get('perseus_file'); // e.g., 'perseus-standalone.min.js'
+    return { v: v || '', file: file || '' };
+  } catch {
+    return { v: '', file: '' };
+  }
+}
+
 // Prefer direct CDN in local dev where the /proxy endpoint isn't available.
 function supportsProxy() {
   try {
@@ -109,7 +120,27 @@ function resolvePerseusGlobal() {
 async function ensurePerseusLoaded() {
   if (resolvePerseusGlobal()) return { ok: true, source: 'cached' };
   let lastErr;
-  for (const v of PERSEUS_VERSIONS) {
+  const override = getOverride();
+  const versions = override.v ? [override.v, ...PERSEUS_VERSIONS.filter(x => x !== override.v)] : PERSEUS_VERSIONS;
+  for (const v of versions) {
+    // If override specific file is provided, try it first for this version
+    if (override.file) {
+      const base = override.file.replace(/^\//, '');
+      const candidates = [
+        { js: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/${base}`, css: `https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css` },
+        { js: `https://unpkg.com/@khanacademy/perseus@${v}/build/${base}`, css: `https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css` },
+        { js: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/${base}`), css: prox(`https://cdn.jsdelivr.net/npm/@khanacademy/perseus@${v}/build/perseus.css`) },
+        { js: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/${base}`), css: prox(`https://unpkg.com/@khanacademy/perseus@${v}/build/perseus.css`) },
+      ];
+      for (const c of candidates) {
+        try {
+          const ok = await tryLoadFrom(c);
+          if (ok) return { ok: true, source: c.js };
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+    }
     for (const tmpl of CDN_TEMPLATES) {
       const candidate = tmpl(v);
       try {
