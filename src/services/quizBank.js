@@ -25,20 +25,33 @@ const pick = (obj, keys, fallback = '') => {
 export function toPerseusItemFromRow(row) {
   const stem = String(pick(row, ['question', 'question_text', 'prompt', 'stem'], '')).trim();
 
-  // Collect options in common schemas: option_a..option_d, choice_1..choice_4
-  const labels = [];
-  const optKeys = [
-    ['option_a', 'optionA', 'A', 'choice_a', 'Choice A', 'choice_1', 'option1'],
-    ['option_b', 'optionB', 'B', 'choice_b', 'Choice B', 'choice_2', 'option2'],
-    ['option_c', 'optionC', 'C', 'choice_c', 'Choice C', 'choice_3', 'option3'],
-    ['option_d', 'optionD', 'D', 'choice_d', 'Choice D', 'choice_4', 'option4'],
-  ];
-  for (const group of optKeys) {
-    const val = pick(row, group, '');
-    if (String(val).trim() !== '') labels.push(String(val));
+  // Collect options from either JSON array column ("options") or common schemas option_a..option_d
+  let labels = [];
+  const optionsJson = pick(row, ['options', 'choices'], '');
+  if (optionsJson) {
+    try {
+      const arr = JSON.parse(optionsJson);
+      if (Array.isArray(arr)) {
+        labels = arr.map((v) => String(v));
+      }
+    } catch (e) {
+      // Ignore parse failure and fall back to option_a..d
+    }
+  }
+  if (labels.length === 0) {
+    const optKeys = [
+      ['option_a', 'optionA', 'A', 'choice_a', 'Choice A', 'choice_1', 'option1'],
+      ['option_b', 'optionB', 'B', 'choice_b', 'Choice B', 'choice_2', 'option2'],
+      ['option_c', 'optionC', 'C', 'choice_c', 'Choice C', 'choice_3', 'option3'],
+      ['option_d', 'optionD', 'D', 'choice_d', 'Choice D', 'choice_4', 'option4'],
+    ];
+    for (const group of optKeys) {
+      const val = pick(row, group, '');
+      if (String(val).trim() !== '') labels.push(String(val));
+    }
   }
 
-  const correctRaw = String(pick(row, ['correct_option', 'correctOption', 'answer', 'correct', 'key'], '')).trim();
+  const correctRaw = String(pick(row, ['correct_option', 'correctOption', 'answer', 'correct', 'key', 'correct_answer'], '')).trim();
   // Map A/B/C/D or 1/2/3/4 to index
   let correctIdx = -1;
   if (/^[A-D]$/i.test(correctRaw)) {
@@ -107,19 +120,74 @@ export function toPerseusItemFromRow(row) {
 
 export function indexQuizBank(rows) {
   const byUnit = {};
+  const bySubject = {};
+
+  const normalizeSubjectBase = (s) => {
+    const t = String(s || '').trim().toLowerCase();
+    if (!t) return '';
+    if (/(chem|chim)/.test(t)) return 'CHEM';
+    if (/(phys)/.test(t)) return 'PHYS';
+    if (/(math)/.test(t)) return 'MATH';
+    if (/(econ|écon|econo)/.test(t)) return 'ECON';
+    return t.toUpperCase();
+  };
+  const normalizeLevel = (lvl) => {
+    const t = String(lvl || '').toUpperCase().replace(/\s+/g, ' ').trim();
+    // Try roman numerals
+    const mRoman = t.match(/NS\s*(I{1,3}|IV)\b/);
+    if (mRoman) return `NS${mRoman[1]}`;
+    // Try digits
+    const mDigit = t.match(/NS\s*(\d)\b/);
+    if (mDigit) return `NS${'I'.repeat(parseInt(mDigit[1], 10))}`;
+    // Already compact form like NSI/NSII
+    const mCompact = t.match(/NS(IV|III|II|I)\b/);
+    if (mCompact) return `NS${mCompact[1]}`;
+    return 'NSI';
+  };
+  const deriveCourseCode = (row) => {
+    const code = String(pick(row, ['subject_code', 'course_code'], '')).trim();
+    if (code) return code;
+    const subj = normalizeSubjectBase(pick(row, ['subject', 'course', 'discipline'], ''));
+    const level = normalizeLevel(pick(row, ['level', 'grade'], ''));
+    return subj && level ? `${subj}-${level}` : '';
+  };
+  const extractUnitId = (row) => {
+    // Prefer explicit unit number
+    let raw = pick(row, ['unit_no', 'unit_number'], '').toString().trim();
+    if (!raw) raw = pick(row, ['unit'], '').toString().trim();
+    if (!raw) return '';
+    // If looks like a number, or prefixed with U
+    const mNum = raw.match(/\b(\d{1,2})\b/);
+    if (mNum) return `U${mNum[1]}`;
+    const mU = raw.match(/U\s*(\d{1,2})/i);
+    if (mU) return `U${mU[1]}`;
+    return ''; // unknown textual unit, skip per-unit index
+  };
+
   for (const row of rows) {
-    const subjectCode = String(pick(row, ['subject_code', 'subject', 'course_code'], '')).trim();
-    const unitNoRaw = pick(row, ['unit_no', 'unit', 'unit_number'], '').toString().trim();
-    if (!subjectCode || !unitNoRaw) continue;
-    const unitKey = `${subjectCode}|U${unitNoRaw.replace(/^U/i, '')}`;
-    (byUnit[unitKey] = byUnit[unitKey] || []).push(row);
+    const subjectCode = deriveCourseCode(row);
+    if (!subjectCode) continue;
+    // Always index by subject for fallback
+    (bySubject[subjectCode] = bySubject[subjectCode] || []).push(row);
+
+    // Best-effort unit index
+    const unitId = extractUnitId(row);
+    if (unitId) {
+      const unitKey = `${subjectCode}|${unitId}`;
+      (byUnit[unitKey] = byUnit[unitKey] || []).push(row);
+    }
   }
-  return { byUnit };
+  return { byUnit, bySubject };
 }
 
-export function pickRandomQuestion(byUnit, subjectCode, unitId) {
+export function pickRandomQuestion(indexByUnit, subjectCode, unitId, indexBySubject) {
+  // Try exact unit match first
   const key = `${subjectCode}|${unitId}`; // unitId like 'U1'
-  const arr = byUnit[key] || [];
+  let arr = (indexByUnit && indexByUnit[key]) || [];
+  if (arr.length === 0 && indexBySubject) {
+    // Fallback: any question for this subject
+    arr = indexBySubject[subjectCode] || [];
+  }
   if (arr.length === 0) return null;
   const idx = Math.floor(Math.random() * arr.length);
   return arr[idx];

@@ -120,8 +120,8 @@ export function QuizComponent({ quiz, onComplete, subjectCode, unitId }) {
         setIsLoadingBank(false);
         return;
       }
-      const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
-      const row = pickRandomQuestion(quizBank.byUnit, subj, unit);
+  const { pickRandomQuestion, toPerseusItemFromRow } = require('../services/quizBank');
+  const row = pickRandomQuestion(quizBank.byUnit, subj, unit, quizBank.bySubject);
       if (!row) {
         console.warn('[Quiz] No bank questions for', subj, unit);
         setIsLoadingBank(false);
