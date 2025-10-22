@@ -896,6 +896,25 @@ main {
 	}
 }
 
+/* When showing Unit Quiz inline, allow natural height and scrolling */
+.lesson-card__media--quiz {
+	aspect-ratio: auto;
+	max-height: none;
+	overflow: visible;
+	background: transparent;
+}
+
+.lesson-card__quizwrap {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.lesson-card__quizbar {
+	display: flex;
+	justify-content: flex-start;
+	align-items: center;
+}
+
 .lesson-card__placeholder {
 	display: grid;
 	place-items: center;

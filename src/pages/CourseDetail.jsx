@@ -139,8 +139,25 @@ export default function CourseDetail() {
                 <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
               </header>
 
-              <div className="lesson-card__media">
-                {primaryVideo ? (
+              <div className={`lesson-card__media ${showUnitQuiz ? 'lesson-card__media--quiz' : ''}`}>
+                {showUnitQuiz ? (
+                  <div className="lesson-card__quizwrap">
+                    <div className="lesson-card__quizbar">
+                      <button
+                        type="button"
+                        className="button button--ghost button--sm"
+                        onClick={() => setShowUnitQuiz(false)}
+                      >
+                        ← Back to Lesson Video
+                      </button>
+                    </div>
+                    <UnitQuiz
+                      subjectCode={course?.id}
+                      unitId={activeModuleData?.id}
+                      onClose={() => setShowUnitQuiz(false)}
+                    />
+                  </div>
+                ) : primaryVideo ? (
                   <iframe
                     src={primaryVideo}
                     title={activeLessonData?.title || activeModuleData?.title || course.name}
@@ -206,7 +223,7 @@ export default function CourseDetail() {
                 onComplete={() => setShowQuiz(false)}
               />
             )}
-            {/* Unit Quiz will render in a modal overlay, not inline */}
+            {/* Unit Quiz now renders inline in the media area when showUnitQuiz is true */}
             <Comments
               threadKey={threadKey}
               isAuthenticated={isAuthenticated}
@@ -329,26 +346,7 @@ export default function CourseDetail() {
           </aside>
         </div>
       </div>
-      {showUnitQuiz && (
-        <div className="modal-overlay" onClick={() => setShowUnitQuiz(false)}>
-          <article className="course-modal" onClick={(e) => e.stopPropagation()}>
-            <header className="course-modal__header">
-              <div>
-                <span className="chip chip--ghost">Unit Quiz</span>
-                <h2 className="course-modal__title">{activeModuleData?.title || '10-Question Quiz'}</h2>
-              </div>
-              <button className="course-modal__close" onClick={() => setShowUnitQuiz(false)} aria-label="Close">×</button>
-            </header>
-            <div style={{ maxHeight: '65vh', overflowY: 'auto' }}>
-              <UnitQuiz
-                subjectCode={course?.id}
-                unitId={activeModuleData?.id}
-                onClose={() => setShowUnitQuiz(false)}
-              />
-            </div>
-          </article>
-        </div>
-      )}
+      {/* Removed modal overlay; inline rendering used instead */}
     </div>
   );
 }
