@@ -140,7 +140,7 @@ export function AuthModal({ onClose }) {
         {/* Google Sign-In */}
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
-          {!hasClientId && (
+          {!hasClientId && !googleBtnRef.current?.childElementCount && (
             <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
           )}
         </div>
