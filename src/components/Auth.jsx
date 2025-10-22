@@ -9,6 +9,10 @@ export function AuthModal({ onClose }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [hasClientId, setHasClientId] = useState(() => {
+    const runtime = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || '';
+    return Boolean(runtime || GOOGLE_CLIENT_ID);
+  });
   
   const setUser = useStore(state => state.setUser);
   const googleBtnRef = useRef(null);
@@ -55,6 +59,23 @@ export function AuthModal({ onClose }) {
       } catch {}
     }
   }, [googleBtnRef, setUser, onClose]);
+
+  // In case the inline script sets the client ID slightly after mount, re-check shortly to avoid false warning
+  useEffect(() => {
+    const check = () => {
+      const runtime = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || '';
+      if (runtime || GOOGLE_CLIENT_ID) {
+        setHasClientId(true);
+      }
+    };
+    // Check on next tick and after a short delay
+    const t1 = setTimeout(check, 0);
+    const t2 = setTimeout(check, 300);
+    const t3 = setTimeout(check, 1000);
+    return () => {
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -119,7 +140,7 @@ export function AuthModal({ onClose }) {
         {/* Google Sign-In */}
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
-          {!(typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) && !GOOGLE_CLIENT_ID && (
+          {!hasClientId && (
             <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
           )}
         </div>
