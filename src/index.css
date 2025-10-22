@@ -1730,6 +1730,35 @@ main {
 	gap: 0.75rem;
 }
 
+/* Prevent long math/text from overflowing the card */
+.quiz-card__question,
+.radio-option span,
+.hint-box {
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* Ensure selectors stay within the card and are responsive */
+.quiz-selectors {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.5rem;
+}
+
+.quiz-selectors .input-field,
+.quiz-selectors select,
+.quiz-selectors input {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+	.quiz-selectors {
+		grid-template-columns: 1fr;
+	}
+}
+
 .quiz-card__controls {
 	display: flex;
 	gap: 0.75rem;
