@@ -15,6 +15,7 @@ export function AuthModal({ onClose }) {
   });
   const [googleReady, setGoogleReady] = useState(false);
   const initDoneRef = useRef(false);
+  const [googleError, setGoogleError] = useState('');
   
   const setUser = useStore(state => state.setUser);
   const googleBtnRef = useRef(null);
@@ -31,6 +32,20 @@ export function AuthModal({ onClose }) {
   }
 
   useEffect(() => {
+    // Ensure the Google Identity script is present; if not, inject it dynamically
+    const ensureScript = () => {
+      const existing = document.getElementById('google-identity-services');
+      if (!existing) {
+        const s = document.createElement('script');
+        s.id = 'google-identity-services';
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true;
+        s.defer = true;
+        document.head.appendChild(s);
+      }
+    };
+    ensureScript();
+
     // Poll for the Google Identity library to load (since the script is async)
     let attempts = 0;
     const maxAttempts = 40; // ~10s at 250ms
@@ -76,6 +91,9 @@ export function AuthModal({ onClose }) {
       attempts += 1;
       if (attempts >= maxAttempts) {
         clearInterval(interval);
+        if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+          setGoogleError('Unable to load Google Sign-In. It may be blocked by a network filter, ad blocker, or Content Security Policy.');
+        }
       }
     }, 250);
     return () => clearInterval(interval);
@@ -161,11 +179,14 @@ export function AuthModal({ onClose }) {
         {/* Google Sign-In */}
         <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
           <div ref={googleBtnRef} style={{ display: 'inline-flex' }} />
-          {hasClientId && !googleReady && (
+          {hasClientId && !googleReady && !googleError && (
             <small className="text-muted">Loading Google sign-in…</small>
           )}
-          {!hasClientId && !googleBtnRef.current?.childElementCount && (
+          {!hasClientId && !googleBtnRef.current?.childElementCount && !googleError && (
             <small className="text-muted">Google sign-in not configured. Set window.EDLIGHT_GOOGLE_CLIENT_ID to enable.</small>
+          )}
+          {googleError && (
+            <small className="text-danger">{googleError}</small>
           )}
         </div>
 
