@@ -66,7 +66,13 @@ export default function Home() {
           </div>
 
           <div className="hero-visual">
-            <div className="hero-visual__grid">
+            <img
+              className="hero-visual__image"
+              src="/assets/student-hero.svg"
+              alt="High school student learning on a laptop"
+              loading="eager"
+            />
+            <div className="hero-visual__grid" style={{ marginTop: '1rem' }}>
               <div className="hero-visual__row">
                 <span>Guided Learning Paths</span>
                 <small>Structured units that mirror the Haitian curriculum.</small>

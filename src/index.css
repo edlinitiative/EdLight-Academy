@@ -361,6 +361,14 @@ main {
 	gap: 1.25rem;
 }
 
+.hero-visual__image {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+}
+
 .hero-visual__row {
 	display: flex;
 	align-items: center;
