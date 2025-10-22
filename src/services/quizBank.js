@@ -32,6 +32,8 @@ const pick = (obj, keys, fallback = '') => {
 // Convert a bank row into a minimal Perseus multiple-choice item
 export function toPerseusItemFromRow(row) {
   const stem = String(pick(row, ['question', 'question_text', 'prompt', 'stem'], '')).trim();
+  const qTypeRaw = String(pick(row, ['question_type', 'type', 'qtype'], '')).trim();
+  const qType = qTypeRaw ? qTypeRaw.toLowerCase() : '';
 
   // Collect options from either JSON array column ("options") or common schemas option_a..option_d
   let labels = [];
@@ -60,18 +62,8 @@ export function toPerseusItemFromRow(row) {
   }
 
   const correctRaw = String(pick(row, ['correct_option', 'correctOption', 'answer', 'correct', 'key', 'correct_answer'], '')).trim();
-  // Map A/B/C/D or 1/2/3/4 to index
-  let correctIdx = -1;
-  if (/^[A-D]$/i.test(correctRaw)) {
-    correctIdx = correctRaw.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
-  } else if (/^[1-4]$/.test(correctRaw)) {
-    correctIdx = parseInt(correctRaw, 10) - 1;
-  } else if (correctRaw) {
-    // try matching by content
-    const idx = labels.findIndex((l) => l.trim().toLowerCase() === correctRaw.trim().toLowerCase());
-    if (idx !== -1) correctIdx = idx;
-  }
 
+  // Normalize hints/explanations
   const hints = [];
   const hintKeys = ['hint', 'hint1', 'hint_1', 'explanation', 'solution', 'rationale'];
   for (const hk of hintKeys) {
@@ -79,7 +71,70 @@ export function toPerseusItemFromRow(row) {
     if (String(h).trim() !== '') hints.push(String(h));
   }
 
-  // Build Perseus item
+  // Branch by question type
+  if (qType === 'truefalse' || qType === 'true/false' || qType === 'tf') {
+    const tfLabels = labels.length >= 2 ? labels : ['True', 'False'];
+    const corr = correctRaw.toLowerCase();
+    const corrIdx = corr.startsWith('t') ? 0 : corr.startsWith('f') ? 1 : tfLabels.findIndex(l => l.trim().toLowerCase() === corr);
+    const idx = corrIdx >= 0 ? corrIdx : 0;
+    return {
+      question: {
+        content: `${stem}\n\n[[☃ multiple-choice 1]]`,
+        images: {},
+        widgets: {
+          'multiple-choice 1': {
+            type: 'multiple-choice',
+            graded: true,
+            options: {
+              choices: tfLabels.slice(0, 2).map((content, i) => ({ content, correct: i === idx })),
+              randomize: false,
+            },
+            version: { major: 0, minor: 0 },
+          },
+        },
+      },
+      answerArea: { calculator: false },
+      hints: hints.map((h) => ({ content: h })),
+      itemDataVersion: { major: 0, minor: 1 },
+    };
+  }
+
+  if (qType === 'shortanswer' || qType === 'short' || qType === 'sa' || (labels.length === 0 && correctRaw)) {
+    // Text input answer
+    return {
+      question: {
+        content: `${stem}\n\n[[☃ text-input 1]]`,
+        images: {},
+        widgets: {
+          'text-input 1': {
+            type: 'text-input',
+            graded: true,
+            options: {
+              value: correctRaw || '',
+              width: 120,
+            },
+            version: { major: 0, minor: 0 },
+          },
+        },
+      },
+      answerArea: { calculator: false },
+      hints: hints.map((h) => ({ content: h })),
+      itemDataVersion: { major: 0, minor: 1 },
+    };
+  }
+
+  // Default/MCQ path
+  // Map correct to index: A/B/C/D or 1/2/3/4 or by content match
+  let correctIdx = -1;
+  if (/^[A-D]$/i.test(correctRaw)) {
+    correctIdx = correctRaw.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+  } else if (/^[1-9]$/.test(correctRaw)) {
+    correctIdx = parseInt(correctRaw, 10) - 1;
+  } else if (correctRaw) {
+    const idx = labels.findIndex((l) => l.trim().toLowerCase() === correctRaw.trim().toLowerCase());
+    if (idx !== -1) correctIdx = idx;
+  }
+
   if (labels.length >= 2 && correctIdx >= 0) {
     return {
       question: {
@@ -103,7 +158,7 @@ export function toPerseusItemFromRow(row) {
     };
   }
 
-  // Fallback: simple numeric/text input item if options are not usable
+  // Fallback: text-input if we can't construct a valid MCQ
   return {
     question: {
       content: `${stem}\n\n[[☃ text-input 1]]`,
@@ -114,7 +169,7 @@ export function toPerseusItemFromRow(row) {
           graded: true,
           options: {
             value: correctRaw || '',
-            width: 80,
+            width: 120,
           },
           version: { major: 0, minor: 0 },
         },
