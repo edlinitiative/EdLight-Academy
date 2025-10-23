@@ -310,12 +310,22 @@ main {
 
 .hero-card {
 	position: relative;
-	background: linear-gradient(160deg, rgba(10, 102, 194, 0.22), rgba(14, 165, 233, 0.12));
+	background: linear-gradient(160deg, rgba(10, 102, 194, 0.5), rgba(14, 165, 233, 0.28));
 	border-radius: var(--radius-lg);
 	padding: clamp(1.6rem, 4vw, 2.2rem);
 	color: #ffffff;
 	overflow: hidden;
 	box-shadow: var(--shadow-md);
+}
+
+/* Subtle dark overlay to boost text contrast */
+.hero-card::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.18));
+	z-index: 0;
+	pointer-events: none;
 }
 
 .hero-card::after {
@@ -332,6 +342,8 @@ main {
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 1.8rem;
+	position: relative;
+	z-index: 1;
 }
 
 .hero-card__badge {
@@ -340,9 +352,10 @@ main {
 	display: inline-flex;
 	padding: 0.35rem 0.85rem;
 	border-radius: 999px;
-	background: rgba(15, 23, 42, 0.25);
-	font-size: 0.85rem;
-	font-weight: 600;
+	background: rgba(15, 23, 42, 0.5);
+	box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+	font-size: 0.9rem;
+	font-weight: 700;
 }
 
 .hero-card__metric {
@@ -355,13 +368,15 @@ main {
 
 .hero-card__metric-item h4 {
 	font-size: 2rem;
-	font-weight: 700;
+	font-weight: 800;
 	margin-bottom: 0.15rem;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
 
 .hero-card__metric-item p {
-	color: rgba(255, 255, 255, 0.75);
-	font-size: 0.95rem;
+	color: rgba(255, 255, 255, 0.92);
+	font-size: 1rem;
+	text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .hero__content {
