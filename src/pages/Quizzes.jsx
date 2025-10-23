@@ -112,10 +112,10 @@ const Quizzes = () => {
 
         <div className="practice-layout practice-screen__content">
           {/* Left column: Filters */}
-          <aside className="practice-aside practice-screen__aside">
+          <aside className="practice-aside practice-screen__aside aside-mini">
             <div className="card card--compact">
               <h3 className="card__title">Filters</h3>
-              <div className="quiz-selectors" style={{ marginTop: '0.25rem' }}>
+              <div className="quiz-selectors quiz-selectors--vertical" style={{ marginTop: '0.25rem' }}>
                 <div>
                   <label className="label">Course</label>
                   <select className="input-field" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
@@ -156,7 +156,7 @@ const Quizzes = () => {
             {/* Keep help and tips under filters */}
             <div className="card card--compact">
               <h3 className="card__title">How practice works</h3>
-              <ul className="text-muted list--bulleted">
+              <ul className="text-muted text-xs list--bulleted">
                 <li>Three tries per question</li>
                 <li>New hint after each incorrect try</li>
                 <li>Reveal the correct answer and explanation after the third try</li>
@@ -165,7 +165,7 @@ const Quizzes = () => {
             </div>
             <div className="card card--compact">
               <h3 className="card__title">Tips</h3>
-              <ul className="text-muted list--bulleted">
+              <ul className="text-muted text-xs list--bulleted">
                 <li>If a unit has few questions, try another unit in the same course.</li>
                 <li>Switch grades (NS I–IV) to broaden topics.</li>
                 <li>We add new practice weekly—check back often.</li>

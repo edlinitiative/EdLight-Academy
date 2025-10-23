@@ -1974,6 +1974,8 @@ textarea.input-field {
 	/* Occupy the remaining height; prevent page scroll */
 	height: 100%;
 	overflow: hidden; /* contain scroll to internal regions */
+	/* Rebalance columns so the left (filters) is narrower and the right (quiz) is wider */
+	grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
 }
 
 .practice-screen__main {
@@ -1985,7 +1987,7 @@ textarea.input-field {
 
 .quiz-stage {
 	width: 100%;
-	max-width: 760px; /* include selectors + card comfortably */
+	max-width: 880px; /* give the quiz more breathing room */
 	padding: 0.5rem; /* breathing room for internal scrollbars */
 }
 
@@ -1995,6 +1997,26 @@ textarea.input-field {
 	position: static; /* disable sticky to avoid layout overflow */
 	top: auto;
 	align-self: stretch;
+}
+
+/* Vertical filter layout for the aside */
+.quiz-selectors--vertical {
+	grid-template-columns: 1fr;
+}
+
+/* Make aside info cards more compact */
+.aside-mini .card--compact {
+	padding: 0.75rem;
+}
+.aside-mini .card__title {
+	font-size: 0.95rem;
+	margin-bottom: 0.25rem;
+}
+.aside-mini .list--bulleted {
+	font-size: 0.9rem;
+}
+.aside-mini .text-muted {
+	font-size: 0.85rem;
 }
 
 /* Comments */
