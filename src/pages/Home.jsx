@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
-import { CourseCard } from '../components/Course';
 import useStore from '../contexts/store';
 
 export default function Home() {
@@ -10,7 +9,7 @@ export default function Home() {
   const { toggleAuthModal, isAuthenticated } = useStore();
   const [heroSrc, setHeroSrc] = useState('/assets/student-hero.jpg');
   
-  const featuredCourses = data?.courses?.slice(0, 6) || [];
+  // Home is a static, single-screen hero. No course listing here.
 
   if (isLoading) {
     return (
@@ -48,22 +47,7 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="hero-card">
-              <div className="hero-card__header">
-                <span className="hero-card__badge">Live Academy Snapshot</span>
-                <span className="chip chip--success">92% mastery rate</span>
-              </div>
-              <div className="hero-card__metric">
-                <div className="hero-card__metric-item">
-                  <h4>1,200+</h4>
-                  <p>Active learners this term</p>
-                </div>
-                <div className="hero-card__metric-item">
-                  <h4>200+</h4>
-                  <p>Micro-quizzes to check understanding</p>
-                </div>
-              </div>
-            </div>
+            {/* Snapshot card removed to keep home static without scroll */}
           </div>
 
           <div className="hero-visual">
@@ -96,35 +80,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section">
-        <div className="container">
-          <div className="page-header">
-            <div>
-              <span className="page-header__eyebrow">Featured this week</span>
-              <h2>Jump into a course hand-picked for momentum</h2>
-              <p className="text-muted">Preview the latest learning paths crafted by Haitian educators.</p>
-            </div>
-            <div className="page-header__actions">
-              <button 
-                className="button button--ghost button--pill"
-                onClick={() => navigate('/courses')}
-              >
-                View Full Catalog
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid--courses">
-            {featuredCourses.map(course => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onPreview={() => navigate(`/courses/${course.id}`)}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Featured courses section removed to prevent scrolling on home */}
     </>
   );
 }
