@@ -69,27 +69,29 @@ export async function exchangeCodeForTokens(code) {
   const verifier = sessionStorage.getItem('google_oauth_verifier');
   if (!verifier) throw new Error('Missing code_verifier in session');
 
-  const body = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    code,
-    code_verifier: verifier,
-    redirect_uri: getRedirectUri(),
-    grant_type: 'authorization_code',
-  });
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
+  // Exchange via serverless function to keep client_secret off the client
+  const res = await fetch('/api/oauth/google/token', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code,
+      code_verifier: verifier,
+      redirect_uri: getRedirectUri(),
+    }),
   });
 
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Token exchange failed: ${res.status} ${text}`);
+    let details = text;
+    try { details = JSON.parse(text); } catch {}
+    throw new Error(`Token exchange failed: ${res.status} ${typeof details === 'string' ? details : JSON.stringify(details)}`);
   }
 
-  const tokens = await res.json();
-  return tokens; // { access_token, expires_in, id_token, scope, token_type, refresh_token? }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
 }
 
 export function decodeJwt(token) {
