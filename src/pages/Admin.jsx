@@ -226,7 +226,7 @@ export default function Admin() {
     <>
       <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" />
       <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="quiz_id" />
-      <Section title="Users" columns={USER_COLUMNS} sourceUrl="/data/edlight_users.csv" idKey="user_id" />
+  <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" />
     </>
   );
 }

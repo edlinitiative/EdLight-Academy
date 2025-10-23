@@ -31,11 +31,25 @@ export default function AuthCallback() {
         };
         setUser(profile);
 
+        // Attempt to auto-register/update the Users CSV via serverless API (non-blocking)
+        try {
+          await fetch('/api/users/upsert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: profile.name,
+              email: profile.email,
+              sub: payload.sub || '',
+              picture: profile.picture,
+            })
+          });
+        } catch {}
+
         // Cleanup
         sessionStorage.removeItem('google_oauth_verifier');
         sessionStorage.removeItem('google_oauth_state');
 
-        navigate('/', { replace: true });
+  navigate('/', { replace: true });
       } catch (e) {
         setError(e.message);
       }
