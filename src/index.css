@@ -1951,6 +1951,52 @@ textarea.input-field {
 	margin-bottom: 0.25rem;
 }
 
+/* Full-height, non-scrolling Quizzes screen */
+.practice-screen {
+	/* Make this section fill the viewport below the sticky navbar */
+	min-height: calc(100vh - var(--navbar-height));
+	padding: clamp(1rem, 3vw, 1.5rem) 0; /* tighter to reduce overflow risk */
+}
+
+.practice-screen__inner {
+	display: grid;
+	grid-template-rows: auto 1fr; /* header + content */
+	min-height: inherit; /* propagate min-height to children */
+}
+
+.practice-screen__header {
+	display: grid;
+	gap: 0.4rem;
+	margin-bottom: 0.5rem;
+}
+
+.practice-screen__content {
+	/* Occupy the remaining height; prevent page scroll */
+	height: 100%;
+	overflow: hidden; /* contain scroll to internal regions */
+}
+
+.practice-screen__main {
+	height: 100%;
+	overflow: auto; /* enable internal scroll if needed */
+	display: grid;
+	place-items: start center; /* center quiz card while keeping top context */
+}
+
+.quiz-stage {
+	width: 100%;
+	max-width: 760px; /* include selectors + card comfortably */
+	padding: 0.5rem; /* breathing room for internal scrollbars */
+}
+
+.practice-screen__aside {
+	height: 100%;
+	overflow: auto; /* aside scrolls independently */
+	position: static; /* disable sticky to avoid layout overflow */
+	top: auto;
+	align-self: stretch;
+}
+
 /* Comments */
 .comments {
 	display: grid;
