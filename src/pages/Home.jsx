@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
@@ -8,6 +8,11 @@ export default function Home() {
   const { data, isLoading } = useAppData();
   const { toggleAuthModal, isAuthenticated } = useStore();
   const [heroSrc, setHeroSrc] = useState('/assets/student-hero.jpg');
+  // Lock scroll on home page to keep it static
+  useEffect(() => {
+    document.body.classList.add('no-scroll');
+    return () => document.body.classList.remove('no-scroll');
+  }, []);
   
   // Home is a static, single-screen hero. No course listing here.
 
@@ -77,7 +82,7 @@ export default function Home() {
                 }
               }}
             />
-            <div className="hero-visual__grid" style={{ marginTop: '1rem' }}>
+            <div className="hero-visual__grid" style={{ marginTop: 0 }}>
               <div className="hero-visual__row">
                 <span>Guided Learning Paths</span>
                 <small>Structured units that mirror the Haitian curriculum.</small>

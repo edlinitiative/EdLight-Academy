@@ -53,6 +53,11 @@ body {
 	line-height: 1.65;
 }
 
+/* Utility: disable page scroll when applied to body */
+.no-scroll {
+	overflow: hidden;
+}
+
 a {
 	color: inherit;
 	text-decoration: none;
@@ -243,9 +248,10 @@ main {
 
 /* Make the home hero fill the viewport below the navbar and reduce inner spacing to avoid scroll */
 .hero--full {
-	min-height: calc(100vh - var(--navbar-height));
+	height: calc(100vh - var(--navbar-height));
 	display: flex;
 	align-items: center;
+	padding: clamp(1rem, 3vw, 1.5rem) 0; /* tighter to avoid overflow */
 }
 
 .hero--full .container {
@@ -253,7 +259,15 @@ main {
 }
 
 .hero--full .hero__actions {
-	margin-bottom: clamp(1rem, 3vw, 1.5rem);
+	margin-bottom: clamp(0.75rem, 2vw, 1rem);
+}
+
+.hero--full .hero__content {
+	gap: 1rem;
+}
+
+.hero--full .hero__description {
+	margin-bottom: clamp(0.9rem, 2.5vw, 1.2rem);
 }
 
 .hero__badge {
