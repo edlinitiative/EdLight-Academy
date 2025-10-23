@@ -11,6 +11,10 @@ const QUIZ_COLUMNS = [
   'quiz_id','video_id','question','option_a','option_b','option_c','option_d','correct_option','explanation'
 ];
 
+const USER_COLUMNS = [
+  'user_id','name','email','role','enrolled_courses','created_at','last_seen'
+];
+
 // Lazy import xlsx to avoid heavy bundle cost until admin uses it
 let XLSXPromise;
 function getXLSX() {
@@ -222,6 +226,7 @@ export default function Admin() {
     <>
       <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" />
       <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="quiz_id" />
+      <Section title="Users" columns={USER_COLUMNS} sourceUrl="/data/edlight_users.csv" idKey="user_id" />
     </>
   );
 }
