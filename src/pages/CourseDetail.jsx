@@ -66,11 +66,12 @@ export default function CourseDetail() {
   const prevTarget = findPrevTarget(activeModule, activeLesson);
   const nextTarget = findNextTarget(activeModule, activeLesson);
 
+  const hydrated = useStore(s => s.hydrated);
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (hydrated && !isAuthenticated) {
       useStore.getState().toggleAuthModal();
     }
-  }, [isAuthenticated]);
+  }, [hydrated, isAuthenticated]);
 
   useEffect(() => {
     setActiveModule(0);

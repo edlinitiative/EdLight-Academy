@@ -3,11 +3,12 @@ import { persist } from 'zustand/middleware';
 
 const useStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       // User state
       user: null,
       isAuthenticated: false,
       language: 'en', // Default to English
+      hydrated: false,
       
       // Course progress
       enrolledCourses: [],
@@ -67,7 +68,11 @@ const useStore = create(
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,
         quizAttempts: state.quizAttempts
-      })
+      }),
+      onRehydrateStorage: () => (state, error) => {
+        // Mark store as hydrated so UI can avoid auth flicker
+        set({ hydrated: true, isAuthenticated: !!get().user });
+      }
     }
   )
 );

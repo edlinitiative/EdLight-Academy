@@ -14,6 +14,7 @@ export function Navbar() {
     toggleUserDropdown,
     logout 
   } = useStore();
+  const hydrated = useStore(s => s.hydrated);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -62,7 +63,7 @@ export function Navbar() {
         </nav>
         
         <div className="nav-actions">
-          {isAuthenticated ? (
+          {!hydrated ? null : isAuthenticated ? (
             <>
               <button 
                 className="button button--ghost button--pill"
