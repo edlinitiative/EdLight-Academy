@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <>
-      <section className="hero">
+      <section className="hero hero--full">
         <div className="container grid grid--hero">
           <div className="hero__content">
             <span className="hero__badge">Physics · Chemistry · Mathematics · Economics</span>
@@ -47,7 +47,22 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Snapshot card removed to keep home static without scroll */}
+            <div className="hero-card">
+              <div className="hero-card__header">
+                <span className="hero-card__badge">Live Academy Snapshot</span>
+                <span className="chip chip--success">92% mastery rate</span>
+              </div>
+              <div className="hero-card__metric">
+                <div className="hero-card__metric-item">
+                  <h4>1,200+</h4>
+                  <p>Active learners this term</p>
+                </div>
+                <div className="hero-card__metric-item">
+                  <h4>200+</h4>
+                  <p>Micro-quizzes to check understanding</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="hero-visual">
