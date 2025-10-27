@@ -1,0 +1,38 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection: users can read/write their own document
+    match /users/{userId} {
+      // Allow user to read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow user to create/update their own document
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Prevent deletion (optional - remove this line if you want users to delete their accounts)
+      allow delete: if false;
+    }
+    
+    // Example: Public read access for courses (if you have a courses collection)
+    // match /courses/{courseId} {
+    //   allow read: if request.auth != null;
+    //   allow write: if false; // only admins can write
+    // }
+    
+    // Example: Quiz attempts - users can only access their own attempts
+    // match /quiz_attempts/{attemptId} {
+    //   allow read, write: if request.auth != null && 
+    //                         request.auth.uid == resource.data.userId;
+    //   allow create: if request.auth != null && 
+    //                   request.auth.uid == request.resource.data.userId;
+    // }
+    
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
