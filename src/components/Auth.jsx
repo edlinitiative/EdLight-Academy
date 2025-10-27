@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import useStore from '../contexts/store';
-import { startGoogleOAuth } from '../services/googleOAuth';
+import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle } from '../services/authService';
 
 export function AuthModal({ onClose }) {
   const [activeTab, setActiveTab] = useState('signin');
@@ -9,71 +9,84 @@ export function AuthModal({ onClose }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [googleError, setGoogleError] = useState('');
+  const [loading, setLoading] = useState(false);
   
   const setUser = useStore(state => state.setUser);
-  const googleBtnRef = useRef(null);
-
-  // Decode a Google ID token (JWT) to extract basic profile info client-side
-  function decodeJwt(token) {
-    try {
-      const payload = token.split('.')[1];
-      const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
-  }
-
-  // No GIS dependency: we trigger OAuth 2.0 with PKCE on click
-
-  // In case the inline script sets the client ID slightly after mount, re-check shortly to avoid false warning
-  useEffect(() => {
-    const check = () => {
-      const runtime = (typeof window !== 'undefined' && window.EDLIGHT_GOOGLE_CLIENT_ID) || '';
-      if (runtime || GOOGLE_CLIENT_ID) {
-        setHasClientId(true);
-      }
-    };
-    // Check on next tick and after a short delay
-    const t1 = setTimeout(check, 0);
-    const t2 = setTimeout(check, 300);
-    const t3 = setTimeout(check, 1000);
-    return () => {
-      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
-    };
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setLoading(true);
 
     if (!email || !password) {
       setError('Please fill in all fields');
+      setLoading(false);
       return;
     }
 
     if (activeTab === 'signup' && !name) {
       setError('Please enter your name');
+      setLoading(false);
       return;
     }
 
     try {
+      let userData;
+      
       if (activeTab === 'signin') {
-        // TODO: Replace with actual authentication
-        setSuccess('Logging in...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setUser({ name: name || 'Student', email });
-        onClose();
+        userData = await loginWithEmailPassword(email, password);
       } else {
-        setSuccess('Creating account...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setActiveTab('signin');
-        setSuccess('Account created! Please sign in.');
+        userData = await registerWithEmailPassword(email, password, name);
       }
+      
+      setUser(userData);
+      setSuccess(activeTab === 'signin' ? 'Successfully logged in!' : 'Account created successfully!');
+      
+      // Auto close modal after successful authentication
+      setTimeout(() => {
+        onClose();
+      }, 1000);
     } catch (err) {
-      setError(err.message);
+      // Handle different Firebase error messages
+      let errorMessage = err.message;
+      if (errorMessage.includes('auth/invalid-email')) {
+        errorMessage = 'Invalid email address';
+      } else if (errorMessage.includes('auth/user-not-found')) {
+        errorMessage = 'No account found with this email';
+      } else if (errorMessage.includes('auth/wrong-password')) {
+        errorMessage = 'Incorrect password';
+      } else if (errorMessage.includes('auth/weak-password')) {
+        errorMessage = 'Password should be at least 6 characters';
+      } else if (errorMessage.includes('auth/email-already-in-use')) {
+        errorMessage = 'An account with this email already exists';
+      } else if (errorMessage.includes('auth/invalid-credential')) {
+        errorMessage = 'Invalid email or password';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    
+    try {
+      const userData = await loginWithGoogle();
+      setUser(userData);
+      setSuccess('Successfully signed in with Google!');
+      
+      setTimeout(() => {
+        onClose();
+      }, 1000);
+    } catch (err) {
+      setError(err.message || 'Failed to sign in with Google');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,19 +123,12 @@ export function AuthModal({ onClose }) {
             type="button"
             className="button button--secondary button--pill"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            onClick={async () => {
-              try {
-                setGoogleError('');
-                await startGoogleOAuth();
-              } catch (e) {
-                setGoogleError(e.message);
-              }
-            }}
+            onClick={handleGoogleSignIn}
+            disabled={loading}
           >
             <img src="/assets/logo.png" alt="G" width={18} height={18} />
             Continue with Google
           </button>
-          {googleError && (<small className="text-danger">{googleError}</small>)}
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -169,8 +175,13 @@ export function AuthModal({ onClose }) {
           {error && <div className="form-message form-message--error">{error}</div>}
           {success && <div className="form-message form-message--success">{success}</div>}
 
-          <button type="submit" className="button button--primary button--pill" style={{ width: '100%', marginTop: '0.75rem' }}>
-            {activeTab === 'signin' ? 'Sign In' : 'Create Account'}
+          <button 
+            type="submit" 
+            className="button button--primary button--pill" 
+            style={{ width: '100%', marginTop: '0.75rem' }}
+            disabled={loading}
+          >
+            {loading ? 'Please wait...' : (activeTab === 'signin' ? 'Sign In' : 'Create Account')}
           </button>
         </form>
 

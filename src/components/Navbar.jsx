@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
+import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
 
 export function Navbar() {
@@ -29,7 +30,10 @@ export function Navbar() {
     }
   }, [showUserDropdown]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch {}
     logout();
     navigate('/');
   };
