@@ -7,4 +7,25 @@
       messagingSenderId: "618990331083",
       appId: "1:618990331083:web:1af6a46399f9251a35e74e",
       measurementId: "G-KNBX35H1X1"
-    };</script><link rel="icon" href="/logo.png"><script defer="defer" src="/js/433.37f28e5c590055e29e27.js"></script><script defer="defer" src="/js/main.b48a777b3ea67b6f0240.js"></script><link href="/css/main.f49c192e99dae30a3565.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>
+    };</script><script>(function(){
+      // Capture boot-time errors and surface them in the UI if render fails
+      window.__edlight_boot_errors = [];
+      window.addEventListener('error', function(e){
+        try { window.__edlight_boot_errors.push(String(e.error && e.error.message || e.message || e)); } catch(_) {}
+      });
+      // Basic runtime config validation to avoid silent blank screen if missing
+      document.addEventListener('DOMContentLoaded', function(){
+        var cfg = (window && window.EDLIGHT_FIREBASE_CONFIG) || {};
+        var required = ['apiKey','authDomain','projectId','appId'];
+        var missing = required.filter(function(k){ return !cfg[k]; });
+        if (missing.length) {
+          var root = document.getElementById('root');
+          if (root) {
+            root.innerHTML = '<div style="padding:1rem;color:#991b1b;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;max-width:720px;margin:1rem auto;font-family:system-ui,Segoe UI,Helvetica,Arial,sans-serif">' +
+              '<strong>Configuration error:</strong> Missing Firebase config keys: <code>'+missing.join(', ')+'</code>.<br/>'+
+              'Please verify CSP allows inline scripts and that runtime config is set.'+
+              '</div>';
+          }
+        }
+      });
+    })();</script><link rel="icon" href="/logo.png"><script defer="defer" src="/js/433.37f28e5c590055e29e27.js"></script><script defer="defer" src="/js/main.b48a777b3ea67b6f0240.js"></script><link href="/css/main.f49c192e99dae30a3565.css" rel="stylesheet"></head><body><noscript>You need to enable JavaScript to run this app.</noscript><div id="root"></div></body></html>
