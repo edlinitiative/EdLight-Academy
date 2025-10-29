@@ -64,15 +64,15 @@ const useStore = create(
       name: 'edlight-storage',
       partialize: (state) => ({
         user: state.user,
+        isAuthenticated: state.isAuthenticated,
         language: state.language,
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,
-        quizAttempts: state.quizAttempts
-      }),
-      onRehydrateStorage: () => (state, error) => {
-        // Mark store as hydrated so UI can avoid auth flicker
-        set({ hydrated: true, isAuthenticated: !!get().user });
-      }
+        quizAttempts: state.quizAttempts,
+        hydrated: state.hydrated
+      })
+      // Note: Avoid using onRehydrateStorage here because set/get are out of scope.
+      // We'll mark hydrated in src/index.js after boot to prevent auth flicker.
     }
   )
 );
