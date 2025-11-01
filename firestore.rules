@@ -15,11 +15,23 @@ service cloud.firestore {
       allow delete: if false;
     }
     
-    // Example: Public read access for courses (if you have a courses collection)
-    // match /courses/{courseId} {
-    //   allow read: if request.auth != null;
-    //   allow write: if false; // only admins can write
-    // }
+    // Courses collection: Public read access
+    match /courses/{courseId} {
+      allow read: if true; // Anyone can read courses
+      allow write: if false; // Only admins can write (via Firebase Admin SDK)
+    }
+    
+    // Videos collection: Public read access
+    match /videos/{videoId} {
+      allow read: if true; // Anyone can read videos
+      allow write: if false; // Only admins can write (via Firebase Admin SDK)
+    }
+    
+    // Quizzes collection: Public read access
+    match /quizzes/{quizId} {
+      allow read: if true; // Anyone can read quizzes
+      allow write: if false; // Only admins can write (via Firebase Admin SDK)
+    }
     
     // Example: Quiz attempts - users can only access their own attempts
     // match /quiz_attempts/{attemptId} {

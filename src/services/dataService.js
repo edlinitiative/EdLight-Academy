@@ -1,5 +1,6 @@
-import { loadCSV } from '../utils/csvParser';
 import { loadQuizBankSafe, normalizeAndIndexQuizBank } from './quizBank';
+import { db } from './firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 // Prefer the English portion of a bilingual title when present.
 // Heuristic: if the title contains parentheses, and the inner text looks ASCII,
@@ -48,127 +49,243 @@ const extractEnglishTitle = (title) => {
   return normalized === '-' ? title.trim() : normalized;
 };
 
-const DATA_URLS = {
-  subjects: '/data/edlight_subjects.csv',
-  videos: '/data/edlight_videos.csv',
-  quizzes: '/data/edlight_quizzes.csv',
+// Subject color/icon mapping (moved from CSV to code)
+const SUBJECT_DEFAULTS = {
+  CHEM: { color: '#10B981', icon: 'beaker', name: 'Chemistry' },
+  PHYS: { color: '#3B82F6', icon: 'atom', name: 'Physics' },
+  MATH: { color: '#8B5CF6', icon: 'calculator', name: 'Mathematics' },
+  ECON: { color: '#F59E0B', icon: 'chart', name: 'Economics' }
 };
 
 /**
- * Transform video data into course structure
- * Groups videos by subject_code to create courses
+ * Fetch courses from Firebase Firestore with full course structure
+ * @returns {Promise<Object[]>} Array of course objects from Firestore
  */
-const transformDataToCourses = (subjects, videos, quizzes) => {
-  // Group videos by subject_code
-  const videosBySubject = videos.reduce((acc, video) => {
-    const subjectCode = video.subject_code;
-    if (!acc[subjectCode]) {
-      acc[subjectCode] = [];
-    }
-    acc[subjectCode].push(video);
-    return acc;
-  }, {});
-
-  // Create courses from grouped videos
-  const courses = Object.entries(videosBySubject).map(([subjectCode, subjectVideos]) => {
-    // Extract base subject and level from code (e.g., CHEM-NSI -> CHEM, NSI)
-    const [baseSubject, level] = subjectCode.split('-');
+const fetchCoursesFromFirestore = async () => {
+  try {
+    console.log('📚 Fetching courses from Firestore...');
+    const coursesRef = collection(db, 'courses');
+    const snapshot = await getDocs(coursesRef);
     
-    // Find matching subject info
-    const subjectInfo = subjects.find(s => s.code === subjectCode || s.id === baseSubject);
-    
-    // Group videos by unit
-    const units = subjectVideos.reduce((acc, video) => {
-      const unitKey = `U${video.unit_no}`;
-      if (!acc[unitKey]) {
-        acc[unitKey] = {
-          id: unitKey,
-          title: extractEnglishTitle(video.unit_title),
-          lessons: []
-        };
-      }
-      acc[unitKey].lessons.push({
-        id: video.id,
-        title: extractEnglishTitle(video.video_title),
-        videoUrl: video.video_url,
-        duration: video.duration_min,
-        objectives: video.learning_objectives
+    const courses = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      courses.push({
+        id: doc.id,
+        ...data
       });
-      return acc;
-    }, {});
+    });
+    
+    console.log(`✅ Fetched ${courses.length} courses from Firestore`);
+    return courses;
+  } catch (error) {
+    console.error('❌ Error fetching courses from Firestore:', error);
+    // Return empty array if Firestore fetch fails
+    return [];
+  }
+};
 
-    // Subject name mapping
-    const subjectNames = {
-      CHEM: 'Chemistry',
-      PHYS: 'Physics',
-      MATH: 'Mathematics',
-      ECON: 'Economics'
-    };
+/**
+ * Fetch videos from Firebase Firestore
+ * @returns {Promise<Map>} Map of video ID to video data
+ */
+const fetchVideosFromFirestore = async () => {
+  try {
+    console.log('🎬 Fetching videos from Firestore...');
+    const videosRef = collection(db, 'videos');
+    const snapshot = await getDocs(videosRef);
+    
+    const videosMap = new Map();
+    snapshot.forEach((doc) => {
+      videosMap.set(doc.id, {
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    console.log(`✅ Fetched ${videosMap.size} videos from Firestore`);
+    return videosMap;
+  } catch (error) {
+    console.error('❌ Error fetching videos from Firestore:', error);
+    return new Map();
+  }
+};
 
-    // Level formatting (NSI -> NS I, etc.)
-    const levelFormatted = level ? level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
+/**
+ * Fetch quizzes from Firebase Firestore
+ * @returns {Promise<Map>} Map of quiz ID to quiz data
+ */
+const fetchQuizzesFromFirestore = async () => {
+  try {
+    console.log('📝 Fetching quizzes from Firestore...');
+    const quizzesRef = collection(db, 'quizzes');
+    const snapshot = await getDocs(quizzesRef);
+    
+    const quizzesMap = new Map();
+    snapshot.forEach((doc) => {
+      quizzesMap.set(doc.id, {
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    console.log(`✅ Fetched ${quizzesMap.size} quizzes from Firestore`);
+    return quizzesMap;
+  } catch (error) {
+    console.error('❌ Error fetching quizzes from Firestore:', error);
+    return new Map();
+  }
+};
 
-    // Simple, catalog-friendly course naming
-    const baseName = subjectNames[baseSubject] || baseSubject;
-    const courseTitle = `${baseName} - ${levelFormatted}`;
+/**
+ * Transform Firestore courses to app format and enrich with video/quiz data
+ * @param {Object[]} firestoreCourses - Courses from Firestore with units structure
+ * @param {Map} videosMap - Map of video ID to video data from Firestore
+ * @param {Map} quizzesMap - Map of quiz ID to quiz data from Firestore
+ * @returns {Object[]} Transformed courses ready for the app
+ */
+const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quizzesMap = new Map()) => {
+  console.log('🔄 Transforming Firestore courses for app...');
 
-    // Short descriptions used in the catalog
-    const courseDescriptions = {
-      'CHEM-NSI': 'Build a strong chemistry foundation with everyday examples and core lab concepts.',
-      'CHEM-NSII': 'Deepen your chemistry skills with bonding, reactions, and solution chemistry practice.',
-      'CHEM-NSIII': 'Tackle equilibrium, thermodynamics, and electrochemistry with problem-focused lessons.',
-      'CHEM-NSIV': 'Explore advanced organic topics and physical chemistry questions for exam readiness.',
-      'PHYS-NSII': 'Understand motion, forces, and energy through real-world investigations.',
-      'PHYS-NSIII': 'Master mechanics, waves, and electricity with step-by-step explanations.',
-      'PHYS-NSIV': 'Connect modern physics ideas with thermodynamics and practical experiments.',
-      'MATH-NSI': 'Review algebra and geometry essentials while growing confident problem-solving habits.',
-      'MATH-NSII': 'Strengthen functions and trigonometry skills with guided examples.',
-      'MATH-NSIII': 'Practice calculus and advanced problem sets designed for NS III learners.',
-      'ECON-NSI': 'Learn key economic principles and how markets shape daily life in Haiti.'
-    };
+  return firestoreCourses.map(course => {
+    // Parse course ID (e.g., chem-ns1)
+    const [subjectPart, levelPart] = course.id.split('-');
+    const subjectCode = subjectPart ? subjectPart.toUpperCase() : '';
+    const levelCode = levelPart ? levelPart.toUpperCase().replace('NS', 'NS').replace('1', 'I').replace('2', 'II').replace('3', 'III').replace('4', 'IV') : 'NSI';
+    const fullSubjectCode = `${subjectCode}-${levelCode}`;
+    
+    // Get subject defaults (color, icon, name)
+    const subjectInfo = SUBJECT_DEFAULTS[subjectCode] || { color: '#0A66C2', icon: 'book', name: 'Course' };
+    
+    // Transform units from Firestore to modules for the app
+    // Firestore structure: { unitId, title, order, lessons: [{lessonId, title, type, order}] }
+    // App expects: { id, title, lessons: [{id, title, videoUrl, duration, objectives}] }
+    const modules = (course.units || []).map(unit => ({
+      id: unit.unitId || unit.id,
+      title: unit.title,
+      order: unit.order,
+      lessons: (unit.lessons || []).map(lesson => {
+        const lessonId = lesson.lessonId;
+        const lessonType = lesson.type;
+        
+        // Enrich with video data if it's a video lesson
+        if (lessonType === 'video' && videosMap.has(lessonId)) {
+          const videoData = videosMap.get(lessonId);
+          return {
+            id: lessonId,
+            title: lesson.title || videoData.title,
+            type: lessonType,
+            order: lesson.order,
+            videoUrl: videoData.video_url || 'https://www.youtube.com/embed/placeholder',
+            duration: videoData.duration_min || 15,
+            objectives: videoData.learning_objectives || '',
+            thumbnail: videoData.thumbnail_url || ''
+          };
+        }
+        
+        // Enrich with quiz data if it's a quiz lesson
+        if (lessonType === 'quiz' && quizzesMap.has(lessonId)) {
+          const quizData = quizzesMap.get(lessonId);
+          return {
+            id: lessonId,
+            title: lesson.title || quizData.title,
+            type: lessonType,
+            order: lesson.order,
+            videoUrl: null, // Quizzes don't have videos
+            duration: quizData.time_limit_minutes || 30,
+            objectives: quizData.description || '',
+            questionCount: quizData.total_questions || 0,
+            passingScore: quizData.passing_score || 70
+          };
+        }
+        
+        // Fallback if no enrichment data found
+        return {
+          id: lessonId,
+          title: lesson.title,
+          type: lessonType,
+          order: lesson.order,
+          videoUrl: lessonType === 'video' ? 'https://www.youtube.com/embed/placeholder' : null,
+          duration: 15,
+          objectives: ''
+        };
+      })
+    }));
 
-    const courseDescription = courseDescriptions[subjectCode]
-      || `${baseName} concepts tailored for ${levelFormatted} students with quick practice sets.`;
-
+    // Return transformed course
     return {
-      id: subjectCode,
-      code: subjectCode,
-      name: courseTitle,
-      level: level || 'NSI',
-      subject: baseSubject,
-      description: courseDescription,
-      thumbnail: subjectInfo?.icon || 'book',
-      color: subjectInfo?.color || '#0A66C2',
-      videoCount: subjectVideos.length,
-      duration: subjectVideos.reduce((sum, v) => sum + (parseInt(v.duration_min) || 0), 0),
-      modules: Object.values(units),
-      instructor: 'EdLight Academy'
+      id: course.id,
+      code: fullSubjectCode,
+      name: course.display_name || course.name,
+      level: levelCode,
+      subject: subjectCode,
+      description: course.description || '',
+      thumbnail: subjectInfo.icon,
+      color: subjectInfo.color,
+      videoCount: course.number_of_lessons || 0,
+      duration: course.length || 0,
+      modules: modules,
+      instructor: 'EdLight Academy',
+      // Keep original Firestore data for reference
+      _firestore: {
+        number_of_units: course.number_of_units,
+        number_of_lessons: course.number_of_lessons,
+        created_at: course.created_at,
+        updated_at: course.updated_at
+      }
     };
   });
-
-  return courses;
 };
 
 /**
- * Load all required CSV data for the application
- * @returns {Promise<{subjects: Object[], videos: Object[], quizzes: Object[], courses: Object[]}>}
+ * Load all required data for the application
+ * All data comes from Firestore
+ * @returns {Promise<{subjects: Object[], videos: Object[], quizzes: Object[], courses: Object[], quizBank: Object}>}
  */
 export const loadAppData = async () => {
   try {
-    const [subjects, videos, quizzes, quizBankRows] = await Promise.all([
-      loadCSV(DATA_URLS.subjects),
-      loadCSV(DATA_URLS.videos),
-      loadCSV(DATA_URLS.quizzes),
+    console.log('🚀 Loading application data from Firestore...');
+    
+    // Fetch all data from Firestore in parallel
+    const [quizBankRows, firestoreCourses, firestoreVideosMap, firestoreQuizzesMap] = await Promise.all([
       loadQuizBankSafe(),
+      fetchCoursesFromFirestore(),
+      fetchVideosFromFirestore(),
+      fetchQuizzesFromFirestore(),
     ]);
     
-    // Transform data into courses
-  const courses = transformDataToCourses(subjects, videos, quizzes);
-  const quizBank = normalizeAndIndexQuizBank(quizBankRows, videos);
+    console.log('📊 Firestore data loaded:', {
+      courses: firestoreCourses.length,
+      videos: firestoreVideosMap.size,
+      quizzes: firestoreQuizzesMap.size,
+      quizBankQuestions: quizBankRows.length
+    });
     
-  return { subjects, videos, quizzes, courses, quizBank };
+    // Transform Firestore courses to app format
+    // Enriched with video and quiz data from Firestore
+    const courses = transformFirestoreCourses(firestoreCourses, firestoreVideosMap, firestoreQuizzesMap);
+    
+    console.log(`✅ Transformed ${courses.length} courses for app`);
+    
+    // Convert Firestore maps to arrays for compatibility with existing code
+    const videos = Array.from(firestoreVideosMap.values());
+    const quizzes = Array.from(firestoreQuizzesMap.values());
+    
+    // Create subjects array from SUBJECT_DEFAULTS for compatibility
+    const subjects = Object.entries(SUBJECT_DEFAULTS).map(([code, info]) => ({
+      id: code,
+      code: code,
+      name: info.name,
+      color: info.color,
+      icon: info.icon
+    }));
+    
+    // Build quiz bank from Firestore videos
+    const quizBank = normalizeAndIndexQuizBank(quizBankRows, videos);
+    
+    return { subjects, videos, quizzes, courses, quizBank };
   } catch (err) {
-    console.error('Failed to load application data:', err);
+    console.error('❌ Failed to load application data:', err);
     throw err;
   }
 };
