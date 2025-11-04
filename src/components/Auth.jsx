@@ -84,7 +84,14 @@ export function AuthModal({ onClose }) {
         onClose();
       }, 1000);
     } catch (err) {
-      setError(err.message || 'Failed to sign in with Google');
+      // Ignore if user simply closed the popup
+      if (err.message && err.message.includes('popup-closed-by-user')) {
+        // Silent ignore - user chose not to sign in
+      } else if (err.message && err.message.includes('cancelled-popup-request')) {
+        // Also ignore if a new popup request cancelled the previous one
+      } else {
+        setError(err.message || 'Failed to sign in with Google');
+      }
     } finally {
       setLoading(false);
     }
