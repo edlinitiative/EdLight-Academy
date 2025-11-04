@@ -12,12 +12,20 @@ import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/fir
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
+console.log('[Firebase] Initializing with config:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  hasApiKey: !!firebaseConfig.apiKey
+});
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // Google OAuth Provider
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 // Authentication functions
 
@@ -57,9 +65,12 @@ export async function signUp(email, password, name) {
  */
 export async function signInWithGoogle() {
   try {
+    console.log('[Firebase] Starting Google sign-in popup...');
     const result = await signInWithPopup(auth, googleProvider);
+    console.log('[Firebase] Sign-in successful:', result.user.email);
     return result;
   } catch (error) {
+    console.error('[Firebase] Sign-in error:', error.code, error.message);
     throw error;
   }
 }
