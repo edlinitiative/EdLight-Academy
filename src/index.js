@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './mobile-fixes.css';
 import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
 import { onAuthStateChange, upsertUserDocument } from './services/firebase';
