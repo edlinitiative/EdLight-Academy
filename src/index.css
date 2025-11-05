@@ -121,6 +121,11 @@ main {
 	padding: clamp(3rem, 6vw, 5rem) 0;
 }
 
+/* Reduce top padding on course detail page */
+.course-detail__layout {
+	margin-top: -2rem; /* Pull content closer to navbar */
+}
+
 .page-header {
 	margin-bottom: clamp(2rem, 4vw, 3rem);
 	display: flex;
@@ -1158,9 +1163,9 @@ textarea.input-field {
 	gap: 1.2rem;
 	/* Sticky positioning - directly under navbar */
 	position: sticky;
-	top: 4rem; /* Stick right below navbar (navbar is ~64px tall) */
+	top: 5rem; /* Stick just below navbar with minimal gap */
 	align-self: start;
-	max-height: calc(100vh - 4rem); /* Full viewport minus navbar height */
+	max-height: calc(100vh - 5rem); /* Full viewport minus navbar height + small gap */
 	overflow: hidden;
 	z-index: 10; /* Ensure it stays on top of other content */
 }
