@@ -123,7 +123,7 @@ main {
 
 /* Reduce top padding on course detail page */
 .course-detail__layout {
-	margin-top: -2rem; /* Pull content closer to navbar */
+	margin-top: -4.5rem; /* Pull content very close to navbar (90% reduction) */
 }
 
 .page-header {
