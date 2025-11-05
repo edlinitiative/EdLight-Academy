@@ -1167,7 +1167,7 @@ textarea.input-field {
 	/* Fixed positioning - completely unscrollable */
 	position: fixed;
 	top: 5rem; /* Fixed position below navbar */
-	right: 1rem; /* Align to right edge of screen with small margin */
+	right: calc((100vw - min(1480px, 98vw)) / 2); /* Match container's right margin */
 	width: min(320px, 25vw); /* Responsive width */
 	max-height: calc(100vh - 5rem);
 	overflow: hidden;
