@@ -126,6 +126,11 @@ main {
 	margin-top: -4.5rem; /* Pull content very close to navbar (90% reduction) */
 }
 
+/* Reduce top padding on course catalog page (90% reduction) */
+.page-header:has(.filter-group) {
+	margin-top: -4.5rem;
+}
+
 .page-header {
 	margin-bottom: clamp(2rem, 4vw, 3rem);
 	display: flex;
