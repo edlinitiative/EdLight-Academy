@@ -988,8 +988,8 @@ textarea.input-field {
 .course-detail__column {
 	display: grid;
 	gap: 1.5rem;
-	/* Prevent overlap with fixed sidebar */
-	max-width: calc(100% - min(360px, 30vw));
+	/* Prevent overlap with fixed sidebar - sidebar width + gap + right margin */
+	max-width: calc(100% - min(320px, 25vw) - 2rem);
 }
 
 .lesson-card {
@@ -1167,7 +1167,7 @@ textarea.input-field {
 	/* Fixed positioning - completely unscrollable */
 	position: fixed;
 	top: 5rem; /* Fixed position below navbar */
-	right: max(1rem, calc((100vw - 1200px) / 2)); /* Align with container on larger screens */
+	right: 1rem; /* Align to right edge of screen with small margin */
 	width: min(320px, 25vw); /* Responsive width */
 	max-height: calc(100vh - 5rem);
 	overflow: hidden;
