@@ -771,10 +771,15 @@ textarea.input-field {
 
 .course-card__actions {
 	display: flex;
-	align-items: flex-start;
+	align-items: stretch; /* Make buttons same width */
 	flex-direction: column; /* stack Start above Details */
 	gap: 0.5rem;
 	flex: 0 0 auto;
+}
+
+.course-card__actions .button,
+.course-card__actions .course-card__cta {
+	width: 100%; /* Ensure both buttons take full width */
 }
 
 .course-progress {
