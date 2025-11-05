@@ -4,12 +4,6 @@ import { useAppData } from '../hooks/useData';
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
-  // Lock page scroll while on the Quizzes screen to keep a fixed, app-like viewport
-  useEffect(() => {
-    document.body.classList.add('no-scroll');
-    return () => document.body.classList.remove('no-scroll');
-  }, []);
-
   const { data: appData } = useAppData();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
@@ -102,21 +96,23 @@ const Quizzes = () => {
   };
 
   return (
-    <section className="section practice-screen">
-      <div className="container practice-screen__inner">
-        <div className="practice-screen__header">
-          <span className="page-header__eyebrow">Practice Hub</span>
-          <h1>Curriculum Practice</h1>
-          <p className="text-muted">Choose your course, grade, and unit to get a targeted question. You’ll get up to three tries with helpful hints before the full explanation.</p>
+    <section className="section">
+      <div className="container">
+        <div className="page-header">
+          <div>
+            <span className="page-header__eyebrow">Practice Hub</span>
+            <h1>Curriculum Practice</h1>
+            <p className="text-muted">Choose your course, grade, and unit to practice with targeted questions. Get up to three tries with helpful hints.</p>
+          </div>
         </div>
 
-        <div className="practice-layout practice-screen__content">
-          {/* Left column: Filters */}
-          <aside className="practice-aside practice-screen__aside aside-mini">
-            <div className="card card--compact">
-              <h3 className="card__title">Filters</h3>
-              <div className="quiz-selectors quiz-selectors--vertical" style={{ marginTop: '0.25rem' }}>
-                <div>
+        <div className="quiz-layout">
+          {/* Filters Section */}
+          <div className="quiz-filters">
+            <div className="card">
+              <h3 className="card__title">Select Practice Area</h3>
+              <div className="quiz-selectors">
+                <div className="form-group">
                   <label className="label">Course</label>
                   <select className="input-field" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
                     {subjectOptions.map((opt) => (
@@ -124,15 +120,15 @@ const Quizzes = () => {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="label">Grade</label>
+                <div className="form-group">
+                  <label className="label">Grade Level</label>
                   <select className="input-field" value={level} onChange={(e) => setLevel(e.target.value)}>
                     {levelOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="form-group">
                   <label className="label">Unit</label>
                   <select className="input-field" value={unit} onChange={(e) => setUnit(e.target.value)}>
                     {unitOptions.map((opt) => (
@@ -141,68 +137,60 @@ const Quizzes = () => {
                   </select>
                 </div>
               </div>
-              {/* Availability chips */}
-              <div className="quiz-status" style={{ marginTop: '0.6rem' }}>
+              
+              {/* Status chips */}
+              <div className="quiz-status">
+                <span className="chip chip--success">
+                  {counts.count} question{counts.count === 1 ? '' : 's'} available
+                </span>
                 {subjectBase && level && (
-                  <span className="chip">{(subjectOptions.find(o => o.value === subjectBase)?.label) || subjectBase} · {level.replace(/^NS(.*)$/i, 'NS $1')}</span>
+                  <span className="chip">
+                    {(subjectOptions.find(o => o.value === subjectBase)?.label) || subjectBase} · {level.replace(/^NS(.*)$/i, 'NS $1')}
+                  </span>
                 )}
-                {unit && (
-                  <span className="chip chip--ghost">{(unitOptions.find(o => o.value === unit)?.label) || unit}</span>
-                )}
-                <span className="chip chip--success">{counts.count} question{counts.count === 1 ? '' : 's'} available</span>
               </div>
+
+              <button
+                type="button"
+                onClick={generateCurriculumPractice}
+                className="button button--primary"
+                disabled={isLoadingBank}
+                style={{ width: '100%', marginTop: '1rem' }}
+              >
+                {isLoadingBank ? 'Loading…' : (bankDirectItem ? 'Next Question' : 'Start Practice')}
+              </button>
             </div>
 
-            {/* Keep help and tips under filters */}
+            {/* Help cards */}
             <div className="card card--compact">
-              <h3 className="card__title">How practice works</h3>
-              <ul className="text-muted text-xs list--bulleted">
+              <h3 className="card__title">How It Works</h3>
+              <ul className="list--bulleted text-muted">
                 <li>Three tries per question</li>
-                <li>New hint after each incorrect try</li>
-                <li>Reveal the correct answer and explanation after the third try</li>
-                <li>Math formatting is supported</li>
+                <li>Progressive hints after each incorrect answer</li>
+                <li>Full explanation revealed after third try</li>
               </ul>
             </div>
-            <div className="card card--compact">
-              <h3 className="card__title">Tips</h3>
-              <ul className="text-muted text-xs list--bulleted">
-                <li>If a unit has few questions, try another unit in the same course.</li>
-                <li>Switch grades (NS I–IV) to broaden topics.</li>
-                <li>We add new practice weekly—check back often.</li>
-              </ul>
-            </div>
-          </aside>
+          </div>
 
-          {/* Right column: Quiz panel */}
-          <div className="practice-main practice-screen__main">
-            <div className="quiz-stage">
-              <div className="card quiz-card">
-                <header className="quiz-card__header">
-                  <div className="quiz-card__title">
-                    <span className="quiz-card__label">Curriculum Practice</span>
-                    <h3 className="quiz-card__heading">Targeted Question</h3>
-                  </div>
-                </header>
-                <div className="quiz-card__controls">
-                  <button
-                    type="button"
-                    onClick={generateCurriculumPractice}
-                    className="button button--primary button--sm"
-                    disabled={isLoadingBank}
-                  >
-                    {isLoadingBank ? 'Loading…' : (bankDirectItem ? 'Next Question' : 'Start Practice')}
-                  </button>
-                </div>
-                {bankDirectItem && (
-                  <div style={{ marginTop: '1rem' }}>
-                    <DirectBankQuiz item={bankDirectItem} />
-                  </div>
-                )}
-                {!bankDirectItem && bankMessage && (
-                  <p className="text-muted" style={{ marginTop: '0.75rem' }}>{bankMessage}</p>
-                )}
+          {/* Quiz Panel */}
+          <div className="quiz-panel">
+            {bankDirectItem ? (
+              <div className="card">
+                <DirectBankQuiz item={bankDirectItem} />
               </div>
-            </div>
+            ) : (
+              <div className="card quiz-placeholder">
+                <div className="quiz-placeholder__content">
+                  <h3>Ready to Practice?</h3>
+                  <p className="text-muted">
+                    {bankMessage || 'Select a course, grade, and unit, then click "Start Practice" to begin.'}
+                  </p>
+                  {!bankMessage && (
+                    <div className="quiz-placeholder__icon">📚</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
