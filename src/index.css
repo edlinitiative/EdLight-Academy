@@ -983,13 +983,13 @@ textarea.input-field {
 	gap: clamp(0.9rem, 2.5vw, 1.6rem);
 	/* Single column layout since sidebar is now fixed */
 	grid-template-columns: 1fr;
-	/* Add right padding to prevent overlap with fixed sidebar */
-	padding-right: min(340px, 27vw);
 }
 
 .course-detail__column {
 	display: grid;
 	gap: 1.5rem;
+	/* Prevent overlap with fixed sidebar */
+	max-width: calc(100% - min(360px, 30vw));
 }
 
 .lesson-card {
