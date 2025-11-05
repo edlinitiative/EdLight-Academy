@@ -16,7 +16,8 @@ export default function Courses() {
     enrolled: 'My Courses',
     NSI: 'NS I',
     NSII: 'NS II',
-    NSIII: 'NS III'
+    NSIII: 'NS III',
+    NSIV: 'NS IV'
   };
 
   if (isLoading) {
@@ -35,7 +36,7 @@ export default function Courses() {
     if (filter === 'enrolled') {
       return enrolledCourses.some(c => c.id === course.id);
     }
-    if (filter === 'NSI' || filter === 'NSII' || filter === 'NSIII') {
+    if (filter === 'NSI' || filter === 'NSII' || filter === 'NSIII' || filter === 'NSIV') {
       return course.level === filter;
     }
     return true;
