@@ -140,6 +140,7 @@ main {
 /* Reduce top padding on dashboard page (90% reduction) */
 .dashboard-grid .page-header {
 	margin-top: -4.5rem;
+	margin-bottom: clamp(1rem, 2vw, 1.5rem); /* 50% reduction from default */
 }
 
 .page-header {
