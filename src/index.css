@@ -1153,8 +1153,15 @@ textarea.input-field {
 	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
 	padding: clamp(1.4rem, 3vw, 1.8rem);
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	gap: 1.2rem;
+	/* Sticky positioning */
+	position: sticky;
+	top: 80px;
+	align-self: start;
+	max-height: calc(100vh - 96px);
+	overflow: hidden;
 }
 
 .lesson-sidebar__heading {
@@ -1165,17 +1172,6 @@ textarea.input-field {
 
 .lesson-sidebar__description {
 	font-size: 0.9rem;
-}
-
-.lesson-sidebar {
-	position: sticky;
-	/* keep below the sticky navbar; adjust if navbar height changes */
-	top: 80px;
-	align-self: start;
-	/* fit within viewport height accounting for navbar offset */
-	max-height: calc(100vh - 96px);
-	display: flex;
-	flex-direction: column;
 }
 
 .lesson-list {
