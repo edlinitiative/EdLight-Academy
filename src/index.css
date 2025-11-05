@@ -131,8 +131,8 @@ main {
 	margin-top: -4.5rem;
 }
 
-/* Reduce top padding on quizzes page (90% reduction) */
-.quiz-layout {
+/* Reduce top padding on quizzes page - target page-header before quiz-layout */
+.page-header:has(+ .quiz-layout) {
 	margin-top: -4.5rem;
 }
 
