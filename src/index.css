@@ -1156,12 +1156,13 @@ textarea.input-field {
 	display: flex;
 	flex-direction: column;
 	gap: 1.2rem;
-	/* Sticky positioning */
+	/* Sticky positioning - directly under navbar */
 	position: sticky;
-	top: 80px;
+	top: 4rem; /* Stick right below navbar (navbar is ~64px tall) */
 	align-self: start;
-	max-height: calc(100vh - 96px);
+	max-height: calc(100vh - 4rem); /* Full viewport minus navbar height */
 	overflow: hidden;
+	z-index: 10; /* Ensure it stays on top of other content */
 }
 
 .lesson-sidebar__heading {
