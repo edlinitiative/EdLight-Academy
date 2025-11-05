@@ -803,12 +803,12 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
-	padding: 0.45rem 0.85rem; /* slightly tighter to avoid a larger look when stacked */
+	padding: 0.65rem 1.2rem; /* Match button size */
 	border-radius: 999px;
 	background: rgba(10, 102, 194, 0.14);
 	color: var(--primary-600);
 	font-weight: 600;
-	font-size: 0.9rem;
+	font-size: 0.95rem; /* Match button font size */
 	transition: transform 0.2s ease, background 0.2s ease;
 }
 
