@@ -131,6 +131,11 @@ main {
 	margin-top: -4.5rem;
 }
 
+/* Reduce top padding on quizzes page (90% reduction) */
+.quiz-layout {
+	margin-top: -4.5rem;
+}
+
 .page-header {
 	margin-bottom: clamp(2rem, 4vw, 3rem);
 	display: flex;
