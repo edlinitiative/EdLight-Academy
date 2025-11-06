@@ -173,6 +173,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
   async function handleLoadCurrent() {
     try {
       setSyncStatus({ type: 'info', message: 'Loading from Firebase...' });
+      setRows([]); // Clear existing rows while loading
       
       if (collectionType === 'videos') {
         const videosRef = collection(db, 'videos');
@@ -181,6 +182,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         snapshot.forEach((doc) => {
           data.push({ id: doc.id, ...doc.data() });
         });
+        console.log(`Loaded ${data.length} videos from Firebase`);
         const mapped = data.map((r) => remapRow(r, columns));
         setRows(mapped);
         setSourceName('Firebase (videos collection)');
@@ -192,6 +194,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         snapshot.forEach((doc) => {
           data.push({ id: doc.id, ...doc.data() });
         });
+        console.log(`Loaded ${data.length} quizzes from Firebase`, data.length > 0 ? data[0] : 'No data');
         const mapped = data.map((r) => remapRow(r, columns));
         setRows(mapped);
         setSourceName('Firebase (quizzes collection)');
@@ -203,6 +206,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         snapshot.forEach((doc) => {
           data.push({ user_id: doc.id, ...doc.data() });
         });
+        console.log(`Loaded ${data.length} users from Firebase`, data.length > 0 ? data[0] : 'No data');
         const mapped = data.map((r) => remapRow(r, columns));
         setRows(mapped);
         setSourceName('Firebase (users collection)');
