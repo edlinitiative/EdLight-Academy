@@ -131,22 +131,30 @@ function EditForm({ row, columns, onSave, onCancel }) {
   });
 
   return (
-    <div className="card" style={{ padding: '1rem', marginTop: '0.75rem' }}>
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-        {columns.map((c) => (
-          <div key={c} className="form-field">
-            <label className="form-label">{c}</label>
-            <input 
-              className="form-input" 
-              value={form[c] ?? ''} 
-              onChange={(e) => setForm({ ...form, [c]: e.target.value })} 
-            />
+    <div className="modal modal--active" onClick={onCancel}>
+      <div className="modal__content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
+        <div className="modal__header">
+          <h3 className="modal__title">Edit Item</h3>
+          <button className="modal__close" onClick={onCancel} aria-label="Close">×</button>
+        </div>
+        <div className="modal__body">
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+            {columns.map((c) => (
+              <div key={c} className="form-field">
+                <label className="form-label">{c}</label>
+                <input 
+                  className="form-input" 
+                  value={form[c] ?? ''} 
+                  onChange={(e) => setForm({ ...form, [c]: e.target.value })} 
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-        <button className="button button--primary button--pill" onClick={() => onSave(form)}>Save</button>
-        <button className="button button--ghost button--pill" onClick={onCancel}>Cancel</button>
+        </div>
+        <div className="modal__footer">
+          <button className="button button--ghost button--pill" onClick={onCancel}>Cancel</button>
+          <button className="button button--primary button--pill" onClick={() => onSave(form)}>Save Changes</button>
+        </div>
       </div>
     </div>
   );
@@ -342,26 +350,27 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         {hasData ? (
           <div className="card" style={{ padding: '1rem' }}>
             <div className="text-muted" style={{ marginBottom: '0.5rem' }}>
-              Source: {sourceName || '—'} • {rows.length} rows • Edit index: {editIdx !== null ? editIdx : 'none'}
+              Source: {sourceName || '—'} • {rows.length} rows
             </div>
             <DataTable rows={rows} columns={columns} onEdit={(idx) => {
               console.log('Setting editIdx to:', idx);
               setEditIdx(idx);
             }} />
-            {editIdx !== null && (
-              <EditForm
-                key={editIdx}
-                row={rows[editIdx]}
-                columns={columns}
-                onSave={handleEditSave}
-                onCancel={() => setEditIdx(null)}
-              />
-            )}
           </div>
         ) : (
           <div className="card card--compact" style={{ padding: '1rem' }}>
             <p className="text-muted">No data loaded yet. Upload a file or click "Load current" to fetch {sourceUrl}.</p>
           </div>
+        )}
+        
+        {editIdx !== null && (
+          <EditForm
+            key={editIdx}
+            row={rows[editIdx]}
+            columns={columns}
+            onSave={handleEditSave}
+            onCancel={() => setEditIdx(null)}
+          />
         )}
       </div>
     </section>
