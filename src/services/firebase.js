@@ -259,3 +259,38 @@ export async function deleteQuiz(quizId) {
   }
 }
 
+/**
+ * Update or create a user document in Firestore
+ * @param {string} userId - The user ID
+ * @param {Object} userData - The user data to save
+ */
+export async function updateUser(userId, userData) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      ...userData,
+      updated_at: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Firebase] Updated user: ${userId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error updating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a user document from Firestore
+ * @param {string} userId - The user ID to delete
+ */
+export async function deleteUser(userId) {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await deleteDoc(userRef);
+    console.log(`[Firebase] Deleted user: ${userId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error deleting user:', error);
+    throw error;
+  }
+}

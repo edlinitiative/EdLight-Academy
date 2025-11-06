@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { loadCSV } from '../utils/csvParser';
 import { toCSV, remapRow } from '../utils/csvStringify';
-import { updateVideo, updateQuiz, deleteVideo, deleteQuiz, db } from '../services/firebase';
+import { updateVideo, updateQuiz, updateUser, deleteVideo, deleteQuiz, deleteUser, db } from '../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
 // Expected column orders
@@ -161,8 +161,19 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         setRows(mapped);
         setSourceName('Firebase (quizzes collection)');
         setSyncStatus({ type: 'success', message: `✅ Loaded ${data.length} quizzes from Firebase` });
+      } else if (collectionType === 'users') {
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+        const data = [];
+        snapshot.forEach((doc) => {
+          data.push({ user_id: doc.id, ...doc.data() });
+        });
+        const mapped = data.map((r) => remapRow(r, columns));
+        setRows(mapped);
+        setSourceName('Firebase (users collection)');
+        setSyncStatus({ type: 'success', message: `✅ Loaded ${data.length} users from Firebase` });
       } else {
-        // Fallback to CSV for users or other collections
+        // Fallback to CSV for other collections
         const data = await loadCSV(sourceUrl);
         const mapped = data.map((r) => remapRow(r, columns));
         setRows(mapped);
@@ -223,6 +234,8 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
             await updateVideo(id, row);
           } else if (collectionType === 'quizzes') {
             await updateQuiz(id, row);
+          } else if (collectionType === 'users') {
+            await updateUser(id, row);
           }
           successCount++;
         } catch (err) {
@@ -327,7 +340,7 @@ export default function Admin() {
     <>
       <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
       <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="quiz_id" collectionType="quizzes" />
-      <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" />
+      <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" collectionType="users" />
     </>
   );
 }
