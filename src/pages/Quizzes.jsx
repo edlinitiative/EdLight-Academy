@@ -46,7 +46,12 @@ const Quizzes = () => {
     // Course objects may store the normalized code on `code` (e.g. "CHEM-NSII")
     // or the original Firestore doc id on `id` (e.g. "chem-ns1"). Match either to be robust.
     const course = courses.find((c) => c.code === courseCode || c.id === courseCode);
-    return (course?.modules || []).map((m) => ({ value: m.id, label: m.title || m.id }));
+    const modules = course?.modules || [];
+    
+    // Sort by order field (chapter number) to ensure proper unit sequence
+    const sorted = [...modules].sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    return sorted.map((m) => ({ value: m.id, label: m.title || m.id }));
   }, [courses, courseCode]);
 
   useEffect(() => {
