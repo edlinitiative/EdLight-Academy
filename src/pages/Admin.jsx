@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { loadCSV } from '../utils/csvParser';
 import { toCSV, remapRow } from '../utils/csvStringify';
-import { updateVideo, updateQuiz, deleteVideo, deleteQuiz } from '../services/firebase';
+import { updateVideo, updateQuiz, deleteVideo, deleteQuiz, db } from '../services/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 // Expected column orders
 const VIDEO_COLUMNS = [
@@ -135,11 +136,46 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
   const hasData = rows && rows.length > 0;
 
   async function handleLoadCurrent() {
-    const data = await loadCSV(sourceUrl);
-    // Ensure column order
-    const mapped = data.map((r) => remapRow(r, columns));
-    setRows(mapped);
-    setSourceName(sourceUrl);
+    try {
+      setSyncStatus({ type: 'info', message: 'Loading from Firebase...' });
+      
+      if (collectionType === 'videos') {
+        const videosRef = collection(db, 'videos');
+        const snapshot = await getDocs(videosRef);
+        const data = [];
+        snapshot.forEach((doc) => {
+          data.push({ id: doc.id, ...doc.data() });
+        });
+        const mapped = data.map((r) => remapRow(r, columns));
+        setRows(mapped);
+        setSourceName('Firebase (videos collection)');
+        setSyncStatus({ type: 'success', message: `✅ Loaded ${data.length} videos from Firebase` });
+      } else if (collectionType === 'quizzes') {
+        const quizzesRef = collection(db, 'quizzes');
+        const snapshot = await getDocs(quizzesRef);
+        const data = [];
+        snapshot.forEach((doc) => {
+          data.push({ quiz_id: doc.id, ...doc.data() });
+        });
+        const mapped = data.map((r) => remapRow(r, columns));
+        setRows(mapped);
+        setSourceName('Firebase (quizzes collection)');
+        setSyncStatus({ type: 'success', message: `✅ Loaded ${data.length} quizzes from Firebase` });
+      } else {
+        // Fallback to CSV for users or other collections
+        const data = await loadCSV(sourceUrl);
+        const mapped = data.map((r) => remapRow(r, columns));
+        setRows(mapped);
+        setSourceName(sourceUrl);
+        setSyncStatus({ type: 'success', message: `✅ Loaded from ${sourceUrl}` });
+      }
+      
+      setTimeout(() => setSyncStatus(null), 3000);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setSyncStatus({ type: 'error', message: `❌ Failed to load: ${error.message}` });
+      setTimeout(() => setSyncStatus(null), 5000);
+    }
   }
 
   function handleUpload(parsed, meta) {
