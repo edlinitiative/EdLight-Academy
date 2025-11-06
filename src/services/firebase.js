@@ -8,7 +8,7 @@ import { getAuth,
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
@@ -145,6 +145,116 @@ export async function upsertUserDocument(user, isNewUser = false) {
     }
   } catch (error) {
     console.error('Error upserting user document:', error);
+    throw error;
+  }
+}
+
+// Admin functions for managing content
+
+/**
+ * Update or create a video document in Firestore
+ * @param {string} videoId - The video ID
+ * @param {Object} videoData - The video data to save
+ */
+export async function updateVideo(videoId, videoData) {
+  try {
+    const videoRef = doc(db, 'videos', videoId);
+    await setDoc(videoRef, {
+      ...videoData,
+      updated_at: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Firebase] Updated video: ${videoId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error updating video:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a video document from Firestore
+ * @param {string} videoId - The video ID to delete
+ */
+export async function deleteVideo(videoId) {
+  try {
+    const videoRef = doc(db, 'videos', videoId);
+    await deleteDoc(videoRef);
+    console.log(`[Firebase] Deleted video: ${videoId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error deleting video:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update or create a course document in Firestore
+ * @param {string} courseId - The course ID
+ * @param {Object} courseData - The course data to save
+ */
+export async function updateCourse(courseId, courseData) {
+  try {
+    const courseRef = doc(db, 'courses', courseId);
+    await setDoc(courseRef, {
+      ...courseData,
+      updated_at: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Firebase] Updated course: ${courseId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error updating course:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a course document from Firestore
+ * @param {string} courseId - The course ID to delete
+ */
+export async function deleteCourse(courseId) {
+  try {
+    const courseRef = doc(db, 'courses', courseId);
+    await deleteDoc(courseRef);
+    console.log(`[Firebase] Deleted course: ${courseId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error deleting course:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update or create a quiz document in Firestore
+ * @param {string} quizId - The quiz ID
+ * @param {Object} quizData - The quiz data to save
+ */
+export async function updateQuiz(quizId, quizData) {
+  try {
+    const quizRef = doc(db, 'quizzes', quizId);
+    await setDoc(quizRef, {
+      ...quizData,
+      updated_at: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Firebase] Updated quiz: ${quizId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error updating quiz:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a quiz document from Firestore
+ * @param {string} quizId - The quiz ID to delete
+ */
+export async function deleteQuiz(quizId) {
+  try {
+    const quizRef = doc(db, 'quizzes', quizId);
+    await deleteDoc(quizRef);
+    console.log(`[Firebase] Deleted quiz: ${quizId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error deleting quiz:', error);
     throw error;
   }
 }

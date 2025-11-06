@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { loadCSV } from '../utils/csvParser';
 import { toCSV, remapRow } from '../utils/csvStringify';
+import { updateVideo, updateQuiz, deleteVideo, deleteQuiz } from '../services/firebase';
 
 // Expected column orders
 const VIDEO_COLUMNS = [
@@ -123,11 +124,13 @@ function EditForm({ row, columns, onSave, onCancel }) {
   );
 }
 
-function Section({ title, columns, sourceUrl, idKey }) {
+function Section({ title, columns, sourceUrl, idKey, collectionType }) {
   const [rows, setRows] = useState([]);
   const [sourceName, setSourceName] = useState('');
   const [mode, setMode] = useState('replace'); // replace | merge
   const [editIdx, setEditIdx] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
 
   const hasData = rows && rows.length > 0;
 
@@ -162,6 +165,50 @@ function Section({ title, columns, sourceUrl, idKey }) {
     URL.revokeObjectURL(url);
   }
 
+  async function handleSyncToFirebase() {
+    setSyncing(true);
+    setSyncStatus({ type: 'info', message: 'Syncing to Firebase...' });
+    
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const row of rows) {
+        try {
+          const id = row[idKey];
+          if (!id) {
+            console.warn('Skipping row without ID:', row);
+            errorCount++;
+            continue;
+          }
+
+          // Determine which Firebase function to use
+          if (collectionType === 'videos') {
+            await updateVideo(id, row);
+          } else if (collectionType === 'quizzes') {
+            await updateQuiz(id, row);
+          }
+          successCount++;
+        } catch (err) {
+          console.error(`Error syncing ${row[idKey]}:`, err);
+          errorCount++;
+        }
+      }
+
+      if (errorCount === 0) {
+        setSyncStatus({ type: 'success', message: `✅ Successfully synced ${successCount} items to Firebase!` });
+      } else {
+        setSyncStatus({ type: 'warning', message: `⚠️ Synced ${successCount} items. ${errorCount} failed.` });
+      }
+    } catch (err) {
+      setSyncStatus({ type: 'error', message: `❌ Sync failed: ${err.message}` });
+    } finally {
+      setSyncing(false);
+      // Clear status after 5 seconds
+      setTimeout(() => setSyncStatus(null), 5000);
+    }
+  }
+
   function handleEditSave(updated) {
     const clone = rows.slice();
     clone[editIdx] = remapRow(updated, columns);
@@ -194,9 +241,27 @@ function Section({ title, columns, sourceUrl, idKey }) {
             <FilePicker onData={handleUpload} columns={columns} label={`Upload ${title}`} />
             <button className="button button--ghost button--pill" onClick={handleLoadCurrent}>Load current</button>
             <button className="button button--secondary button--pill" onClick={handleAddNew}>Add new</button>
-            <button className="button button--primary button--pill" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
+            {collectionType && (
+              <button 
+                className="button button--primary button--pill" 
+                onClick={handleSyncToFirebase} 
+                disabled={!hasData || syncing}
+              >
+                {syncing ? 'Syncing...' : '💾 Save to Firebase'}
+              </button>
+            )}
+            <button className="button button--ghost button--pill" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
           </div>
         </div>
+
+        {syncStatus && (
+          <div 
+            className={`form-message form-message--${syncStatus.type === 'success' ? 'success' : syncStatus.type === 'error' ? 'error' : 'info'}`}
+            style={{ marginBottom: '1rem' }}
+          >
+            {syncStatus.message}
+          </div>
+        )}
 
         {hasData ? (
           <div className="card" style={{ padding: '1rem' }}>
@@ -224,9 +289,9 @@ function Section({ title, columns, sourceUrl, idKey }) {
 export default function Admin() {
   return (
     <>
-      <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" />
-      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="quiz_id" />
-  <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" />
+      <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
+      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="quiz_id" collectionType="quizzes" />
+      <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" />
     </>
   );
 }
