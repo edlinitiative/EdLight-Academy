@@ -106,14 +106,35 @@ function DataTable({ rows, columns, onEdit }) {
 }
 
 function EditForm({ row, columns, onSave, onCancel }) {
-  const [form, setForm] = useState(row || {});
+  const [form, setForm] = useState(() => {
+    // Initialize form with row data, converting any complex types to strings
+    const initialForm = {};
+    columns.forEach(col => {
+      const value = row?.[col];
+      // Handle various data types from Firebase
+      if (value === null || value === undefined) {
+        initialForm[col] = '';
+      } else if (typeof value === 'object') {
+        // Convert objects/timestamps to JSON string for editing
+        initialForm[col] = JSON.stringify(value);
+      } else {
+        initialForm[col] = String(value);
+      }
+    });
+    return initialForm;
+  });
+
   return (
     <div className="card" style={{ padding: '1rem', marginTop: '0.75rem' }}>
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
         {columns.map((c) => (
           <div key={c} className="form-field">
             <label className="form-label">{c}</label>
-            <input className="form-input" value={form[c] ?? ''} onChange={(e) => setForm({ ...form, [c]: e.target.value })} />
+            <input 
+              className="form-input" 
+              value={form[c] ?? ''} 
+              onChange={(e) => setForm({ ...form, [c]: e.target.value })} 
+            />
           </div>
         ))}
       </div>
