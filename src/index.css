@@ -2275,3 +2275,99 @@ textarea.input-field {
 		justify-content: flex-start;
 	}
 }
+
+/* Modal styles for admin edit forms */
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(15, 23, 42, 0.6);
+	backdrop-filter: blur(4px);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	padding: 1rem;
+	overflow-y: auto;
+}
+
+.modal--active {
+	display: flex;
+}
+
+.modal__content {
+	background: var(--surface);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-lg);
+	width: 100%;
+	max-width: 900px;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-20px) scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.modal__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1.5rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.modal__title {
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: var(--text-900);
+	margin: 0;
+}
+
+.modal__close {
+	background: none;
+	border: none;
+	font-size: 1.75rem;
+	line-height: 1;
+	color: var(--text-500);
+	cursor: pointer;
+	padding: 0.25rem;
+	width: 2rem;
+	height: 2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-sm);
+	transition: all 0.2s;
+}
+
+.modal__close:hover {
+	background: var(--background-accent);
+	color: var(--text-900);
+}
+
+.modal__body {
+	padding: 1.5rem;
+	overflow-y: auto;
+	flex: 1;
+}
+
+.modal__footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	padding: 1.5rem;
+	border-top: 1px solid var(--border);
+}
