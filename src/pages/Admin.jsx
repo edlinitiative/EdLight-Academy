@@ -275,26 +275,30 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
             continue;
           }
 
-          // Sanitize data: remove undefined values and convert empty strings
-          const sanitizedRow = {};
-          Object.keys(row).forEach(key => {
-            const value = row[key];
-            if (value !== undefined && value !== null) {
-              // Keep the value as is (including empty strings)
-              sanitizedRow[key] = value;
-            } else {
-              // Convert null/undefined to empty string
+          // Sanitize ID: Firebase document IDs cannot contain forward slashes
+          const sanitizedId = String(id).replace(/\//g, '_');
+          
+          // Store the sanitized ID back in the row so it's saved to Firebase
+          const sanitizedRow = {
+            ...row,
+            [idKey]: sanitizedId
+          };
+          
+          // Remove undefined/null values
+          Object.keys(sanitizedRow).forEach(key => {
+            const value = sanitizedRow[key];
+            if (value === undefined || value === null) {
               sanitizedRow[key] = '';
             }
           });
 
           // Determine which Firebase function to use
           if (collectionType === 'videos') {
-            await updateVideo(id, sanitizedRow);
+            await updateVideo(sanitizedId, sanitizedRow);
           } else if (collectionType === 'quizzes') {
-            await updateQuiz(id, sanitizedRow);
+            await updateQuiz(sanitizedId, sanitizedRow);
           } else if (collectionType === 'users') {
-            await updateUser(id, sanitizedRow);
+            await updateUser(sanitizedId, sanitizedRow);
           }
           successCount++;
         } catch (err) {
