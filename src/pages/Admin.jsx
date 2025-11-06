@@ -170,6 +170,29 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
 
   const hasData = rows && rows.length > 0;
 
+  // Helper function to convert Firebase Timestamps to readable strings
+  function convertTimestamps(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    
+    const converted = { ...obj };
+    for (const key in converted) {
+      const val = converted[key];
+      // Check if it's a Firebase Timestamp (has seconds and nanoseconds)
+      if (val && typeof val === 'object' && 'seconds' in val && 'nanoseconds' in val) {
+        // Convert to ISO string for readability
+        converted[key] = new Date(val.seconds * 1000).toISOString();
+      } else if (Array.isArray(val)) {
+        // Handle arrays
+        converted[key] = val.map(item => 
+          (item && typeof item === 'object' && 'seconds' in item) 
+            ? new Date(item.seconds * 1000).toISOString() 
+            : item
+        );
+      }
+    }
+    return converted;
+  }
+
   async function handleLoadCurrent() {
     try {
       setSyncStatus({ type: 'info', message: 'Loading from Firebase...' });
@@ -180,7 +203,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         const snapshot = await getDocs(videosRef);
         const data = [];
         snapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() });
+          data.push(convertTimestamps({ id: doc.id, ...doc.data() }));
         });
         console.log(`Loaded ${data.length} videos from Firebase`);
         const mapped = data.map((r) => remapRow(r, columns));
@@ -192,7 +215,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         const snapshot = await getDocs(quizzesRef);
         const data = [];
         snapshot.forEach((doc) => {
-          data.push({ id: doc.id, ...doc.data() });
+          data.push(convertTimestamps({ id: doc.id, ...doc.data() }));
         });
         console.log(`Loaded ${data.length} quizzes from Firebase`, data.length > 0 ? data[0] : 'No data');
         const mapped = data.map((r) => remapRow(r, columns));
@@ -204,7 +227,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         const snapshot = await getDocs(usersRef);
         const data = [];
         snapshot.forEach((doc) => {
-          data.push({ user_id: doc.id, ...doc.data() });
+          data.push(convertTimestamps({ user_id: doc.id, ...doc.data() }));
         });
         console.log(`Loaded ${data.length} users from Firebase`, data.length > 0 ? data[0] : 'No data');
         const mapped = data.map((r) => remapRow(r, columns));
