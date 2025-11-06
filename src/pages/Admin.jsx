@@ -234,6 +234,15 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
       setRows(Array.from(byId.values()));
     }
     setSourceName(meta?.sourceName || 'Uploaded');
+    
+    // Show success message with reminder to sync
+    if (collectionType) {
+      setSyncStatus({ 
+        type: 'info', 
+        message: `✅ Loaded ${parsed.length} items from ${meta?.sourceName || 'file'}. Click "💾 Save to Firebase" to sync changes.` 
+      });
+      setTimeout(() => setSyncStatus(null), 8000);
+    }
   }
 
   function handleDownload() {
