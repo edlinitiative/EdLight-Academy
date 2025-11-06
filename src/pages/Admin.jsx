@@ -10,7 +10,7 @@ const VIDEO_COLUMNS = [
 ];
 
 const QUIZ_COLUMNS = [
-  'quiz_id','video_id','question','option_a','option_b','option_c','option_d','correct_option','explanation'
+  'id','subject','level','unit','Chapter_Number','video_title','Subchapter_Number','question_type','question','options','correct_answer','hint','good_response','wrong_response','language','difficulty','tags','source_doc','created_at'
 ];
 
 const USER_COLUMNS = [
@@ -190,7 +190,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         const snapshot = await getDocs(quizzesRef);
         const data = [];
         snapshot.forEach((doc) => {
-          data.push({ quiz_id: doc.id, ...doc.data() });
+          data.push({ id: doc.id, ...doc.data() });
         });
         const mapped = data.map((r) => remapRow(r, columns));
         setRows(mapped);
@@ -408,7 +408,7 @@ export default function Admin() {
   return (
     <>
       <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
-      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="quiz_id" collectionType="quizzes" />
+      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="id" collectionType="quizzes" />
       <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" collectionType="users" />
     </>
   );
