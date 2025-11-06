@@ -43,7 +43,9 @@ const Quizzes = () => {
 
   const courseCode = subjectBase && level ? `${subjectBase}-${level}` : '';
   const unitOptions = useMemo(() => {
-    const course = courses.find((c) => c.id === courseCode);
+    // Course objects may store the normalized code on `code` (e.g. "CHEM-NSII")
+    // or the original Firestore doc id on `id` (e.g. "chem-ns1"). Match either to be robust.
+    const course = courses.find((c) => c.code === courseCode || c.id === courseCode);
     return (course?.modules || []).map((m) => ({ value: m.id, label: m.title || m.id }));
   }, [courses, courseCode]);
 
