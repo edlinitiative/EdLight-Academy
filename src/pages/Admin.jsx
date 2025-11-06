@@ -263,6 +263,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
     try {
       let successCount = 0;
       let errorCount = 0;
+      const errors = [];
       
       for (const row of rows) {
         try {
@@ -270,30 +271,47 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
           if (!id) {
             console.warn('Skipping row without ID:', row);
             errorCount++;
+            errors.push(`Row missing ${idKey}`);
             continue;
           }
 
+          // Sanitize data: remove undefined values and convert empty strings
+          const sanitizedRow = {};
+          Object.keys(row).forEach(key => {
+            const value = row[key];
+            if (value !== undefined && value !== null) {
+              // Keep the value as is (including empty strings)
+              sanitizedRow[key] = value;
+            } else {
+              // Convert null/undefined to empty string
+              sanitizedRow[key] = '';
+            }
+          });
+
           // Determine which Firebase function to use
           if (collectionType === 'videos') {
-            await updateVideo(id, row);
+            await updateVideo(id, sanitizedRow);
           } else if (collectionType === 'quizzes') {
-            await updateQuiz(id, row);
+            await updateQuiz(id, sanitizedRow);
           } else if (collectionType === 'users') {
-            await updateUser(id, row);
+            await updateUser(id, sanitizedRow);
           }
           successCount++;
         } catch (err) {
           console.error(`Error syncing ${row[idKey]}:`, err);
           errorCount++;
+          errors.push(`${row[idKey]}: ${err.message}`);
         }
       }
 
       if (errorCount === 0) {
         setSyncStatus({ type: 'success', message: `✅ Successfully synced ${successCount} items to Firebase!` });
       } else {
-        setSyncStatus({ type: 'warning', message: `⚠️ Synced ${successCount} items. ${errorCount} failed.` });
+        console.error('Sync errors:', errors);
+        setSyncStatus({ type: 'warning', message: `⚠️ Synced ${successCount} items. ${errorCount} failed. Check console for details.` });
       }
     } catch (err) {
+      console.error('Sync failed with error:', err);
       setSyncStatus({ type: 'error', message: `❌ Sync failed: ${err.message}` });
     } finally {
       setSyncing(false);
