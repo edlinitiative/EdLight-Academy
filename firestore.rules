@@ -3,34 +3,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
     // Users collection: users can read/write their own document
     match /users/{userId} {
-      // Allow user to read their own document
-      allow read: if request.auth != null && request.auth.uid == userId;
+      // Allow user to read their own document, or admins to read any
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
       
       // Allow user to create/update their own document
       allow create, update: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow admins to update any user
+      allow update: if isAdmin();
       
       // Prevent deletion (optional - remove this line if you want users to delete their accounts)
       allow delete: if false;
     }
     
-    // Courses collection: Public read access
+    // Courses collection: Public read access, admin write
     match /courses/{courseId} {
       allow read: if true; // Anyone can read courses
-      allow write: if false; // Only admins can write (via Firebase Admin SDK)
+      allow write: if isAdmin(); // Only admins can write
     }
     
-    // Videos collection: Public read access
+    // Videos collection: Public read access, admin write
     match /videos/{videoId} {
       allow read: if true; // Anyone can read videos
-      allow write: if false; // Only admins can write (via Firebase Admin SDK)
+      allow write: if isAdmin(); // Only admins can write
     }
     
-    // Quizzes collection: Public read access
+    // Quizzes collection: Public read access, admin write
     match /quizzes/{quizId} {
       allow read: if true; // Anyone can read quizzes
-      allow write: if false; // Only admins can write (via Firebase Admin SDK)
+      allow write: if isAdmin(); // Only admins can write
     }
     
     // Example: Quiz attempts - users can only access their own attempts
