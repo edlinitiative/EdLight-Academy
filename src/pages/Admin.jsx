@@ -77,6 +77,12 @@ function FilePicker({ onData, columns, label }) {
 
 function DataTable({ rows, columns, onEdit }) {
   if (!rows?.length) return null;
+  
+  const handleEditClick = (idx) => {
+    console.log('Edit clicked for index:', idx, 'Row:', rows[idx]);
+    onEdit(idx);
+  };
+  
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -95,7 +101,7 @@ function DataTable({ rows, columns, onEdit }) {
                 <td key={c} style={{ padding: '8px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r[c]}</td>
               ))}
               <td style={{ padding: '8px' }}>
-                <button className="button button--ghost button--pill" onClick={() => onEdit(idx)}>Edit</button>
+                <button className="button button--ghost button--pill" onClick={() => handleEditClick(idx)}>Edit</button>
               </td>
             </tr>
           ))}
@@ -335,10 +341,16 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
 
         {hasData ? (
           <div className="card" style={{ padding: '1rem' }}>
-            <div className="text-muted" style={{ marginBottom: '0.5rem' }}>Source: {sourceName || '—'} • {rows.length} rows</div>
-            <DataTable rows={rows} columns={columns} onEdit={(idx) => setEditIdx(idx)} />
-            {editIdx != null && (
+            <div className="text-muted" style={{ marginBottom: '0.5rem' }}>
+              Source: {sourceName || '—'} • {rows.length} rows • Edit index: {editIdx !== null ? editIdx : 'none'}
+            </div>
+            <DataTable rows={rows} columns={columns} onEdit={(idx) => {
+              console.log('Setting editIdx to:', idx);
+              setEditIdx(idx);
+            }} />
+            {editIdx !== null && (
               <EditForm
+                key={editIdx}
                 row={rows[editIdx]}
                 columns={columns}
                 onSave={handleEditSave}
