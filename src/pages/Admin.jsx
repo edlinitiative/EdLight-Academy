@@ -438,6 +438,36 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
 export default function Admin() {
   return (
     <>
+      <section className="section" style={{ paddingTop: '2rem', paddingBottom: '1rem' }}>
+        <div className="container">
+          <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+            <div>
+              <span className="page-header__eyebrow">Admin Dashboard</span>
+              <h1>Content Management</h1>
+              <p className="text-muted">Manage videos, quizzes, users, and course structure</p>
+            </div>
+          </div>
+          
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <h3 className="card__title" style={{ marginBottom: '1rem' }}>Quick Actions</h3>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <a href="/admin/courses" className="button button--primary button--pill">
+                📚 Manage Course Structure
+              </a>
+              <a href="#courses" className="button button--ghost button--pill">
+                🎬 Manage Videos
+              </a>
+              <a href="#quizzes" className="button button--ghost button--pill">
+                📝 Manage Quizzes
+              </a>
+              <a href="#users" className="button button--ghost button--pill">
+                👥 Manage Users
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
       <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="id" collectionType="quizzes" />
       <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" collectionType="users" />

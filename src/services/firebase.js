@@ -224,6 +224,53 @@ export async function deleteCourse(courseId) {
 }
 
 /**
+ * Remove a specific lesson from a course unit
+ * @param {string} courseId - The course ID
+ * @param {string} unitId - The unit ID
+ * @param {string} lessonId - The lesson ID to remove
+ */
+export async function removeLessonFromCourse(courseId, unitId, lessonId) {
+  try {
+    console.log(`[Firebase] Removing lesson ${lessonId} from unit ${unitId} in course ${courseId}`);
+    
+    // Get the course document
+    const courseRef = doc(db, 'courses', courseId);
+    const courseSnap = await getDoc(courseRef);
+    
+    if (!courseSnap.exists()) {
+      throw new Error(`Course ${courseId} not found`);
+    }
+    
+    const courseData = courseSnap.data();
+    const units = courseData.units || [];
+    
+    // Find the unit and remove the lesson
+    const updatedUnits = units.map(unit => {
+      if (unit.unitId === unitId || unit.id === unitId) {
+        return {
+          ...unit,
+          lessons: (unit.lessons || []).filter(lesson => lesson.lessonId !== lessonId)
+        };
+      }
+      return unit;
+    });
+    
+    // Update the course with modified units
+    await setDoc(courseRef, {
+      ...courseData,
+      units: updatedUnits,
+      updated_at: serverTimestamp()
+    });
+    
+    console.log(`[Firebase] Successfully removed lesson ${lessonId} from course ${courseId}`);
+    return { success: true, message: `Lesson removed from ${courseId}` };
+  } catch (error) {
+    console.error('[Firebase] Error removing lesson:', error);
+    throw error;
+  }
+}
+
+/**
  * Update or create a quiz document in Firestore
  * @param {string} quizId - The quiz ID
  * @param {Object} quizData - The quiz data to save
