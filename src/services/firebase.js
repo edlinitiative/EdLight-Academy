@@ -8,7 +8,7 @@ import { getAuth,
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, increment } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
@@ -338,6 +338,197 @@ export async function deleteUser(userId) {
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting user:', error);
+    throw error;
+  }
+}
+
+// ============================================
+// COMMENTS / DISCUSSION FUNCTIONS
+// ============================================
+
+/**
+ * Add a comment to a video/lesson thread
+ * @param {string} threadKey - The thread identifier (e.g., "comments:courseId:videoId")
+ * @param {string} text - The comment text
+ * @param {Object} user - The user object with uid, displayName, email
+ * @returns {Promise<Object>} The created comment with ID
+ */
+export async function addComment(threadKey, text, user) {
+  try {
+    const commentsRef = collection(db, 'comments');
+    const commentData = {
+      threadKey,
+      text: text.trim(),
+      authorId: user.uid,
+      authorName: user.displayName || user.email?.split('@')[0] || 'Student',
+      authorEmail: user.email,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp(),
+      replyCount: 0,
+      likes: 0
+    };
+    
+    const docRef = await addDoc(commentsRef, commentData);
+    console.log(`[Firebase] Added comment: ${docRef.id}`);
+    
+    return { 
+      id: docRef.id, 
+      ...commentData,
+      created_at: Date.now(), // Use client timestamp for immediate display
+      updated_at: Date.now()
+    };
+  } catch (error) {
+    console.error('[Firebase] Error adding comment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add a reply to a comment
+ * @param {string} commentId - The parent comment ID
+ * @param {string} text - The reply text
+ * @param {Object} user - The user object with uid, displayName, email
+ * @returns {Promise<Object>} The created reply
+ */
+export async function addReply(commentId, text, user) {
+  try {
+    const repliesRef = collection(db, 'comments', commentId, 'replies');
+    const replyData = {
+      text: text.trim(),
+      authorId: user.uid,
+      authorName: user.displayName || user.email?.split('@')[0] || 'Student',
+      authorEmail: user.email,
+      created_at: serverTimestamp(),
+      updated_at: serverTimestamp()
+    };
+    
+    const docRef = await addDoc(repliesRef, replyData);
+    
+    // Increment reply count on parent comment
+    const commentRef = doc(db, 'comments', commentId);
+    await updateDoc(commentRef, {
+      replyCount: increment(1),
+      updated_at: serverTimestamp()
+    });
+    
+    console.log(`[Firebase] Added reply: ${docRef.id} to comment: ${commentId}`);
+    
+    return { 
+      id: docRef.id, 
+      ...replyData,
+      created_at: Date.now(),
+      updated_at: Date.now()
+    };
+  } catch (error) {
+    console.error('[Firebase] Error adding reply:', error);
+    throw error;
+  }
+}
+
+/**
+ * Subscribe to comments for a specific thread
+ * @param {string} threadKey - The thread identifier
+ * @param {Function} callback - Callback function to receive comments updates
+ * @returns {Function} Unsubscribe function
+ */
+export function subscribeToComments(threadKey, callback) {
+  try {
+    const commentsRef = collection(db, 'comments');
+    const q = query(
+      commentsRef,
+      where('threadKey', '==', threadKey),
+      orderBy('created_at', 'desc')
+    );
+    
+    return onSnapshot(q, (snapshot) => {
+      const comments = [];
+      snapshot.forEach((doc) => {
+        comments.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      callback(comments);
+    }, (error) => {
+      console.error('[Firebase] Error in comments subscription:', error);
+      callback([]);
+    });
+  } catch (error) {
+    console.error('[Firebase] Error subscribing to comments:', error);
+    return () => {}; // Return empty unsubscribe function
+  }
+}
+
+/**
+ * Subscribe to replies for a specific comment
+ * @param {string} commentId - The parent comment ID
+ * @param {Function} callback - Callback function to receive replies updates
+ * @returns {Function} Unsubscribe function
+ */
+export function subscribeToReplies(commentId, callback) {
+  try {
+    const repliesRef = collection(db, 'comments', commentId, 'replies');
+    const q = query(repliesRef, orderBy('created_at', 'asc'));
+    
+    return onSnapshot(q, (snapshot) => {
+      const replies = [];
+      snapshot.forEach((doc) => {
+        replies.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      callback(replies);
+    }, (error) => {
+      console.error('[Firebase] Error in replies subscription:', error);
+      callback([]);
+    });
+  } catch (error) {
+    console.error('[Firebase] Error subscribing to replies:', error);
+    return () => {};
+  }
+}
+
+/**
+ * Delete a comment
+ * @param {string} commentId - The comment ID to delete
+ */
+export async function deleteComment(commentId) {
+  try {
+    // Delete all replies first
+    const repliesRef = collection(db, 'comments', commentId, 'replies');
+    const repliesSnapshot = await getDocs(repliesRef);
+    const deletePromises = repliesSnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+    
+    // Delete the comment
+    const commentRef = doc(db, 'comments', commentId);
+    await deleteDoc(commentRef);
+    
+    console.log(`[Firebase] Deleted comment: ${commentId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error deleting comment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a comment
+ * @param {string} commentId - The comment ID
+ * @param {string} text - The new comment text
+ */
+export async function updateComment(commentId, text) {
+  try {
+    const commentRef = doc(db, 'comments', commentId);
+    await updateDoc(commentRef, {
+      text: text.trim(),
+      updated_at: serverTimestamp()
+    });
+    console.log(`[Firebase] Updated comment: ${commentId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error updating comment:', error);
     throw error;
   }
 }

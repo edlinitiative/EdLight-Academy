@@ -42,6 +42,47 @@ service cloud.firestore {
       allow write: if isAdmin(); // Only admins can write
     }
     
+    // Comments collection: Authenticated users can read/write with restrictions
+    match /comments/{commentId} {
+      // Anyone authenticated can read comments
+      allow read: if request.auth != null;
+      
+      // Authenticated users can create comments with their own authorId
+      allow create: if request.auth != null && 
+                       request.resource.data.authorId == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['threadKey', 'text', 'authorId', 'authorName', 'created_at']);
+      
+      // Users can update their own comments (text only), admins can update any
+      allow update: if request.auth != null && 
+                       (request.auth.uid == resource.data.authorId || isAdmin()) &&
+                       // Ensure they're only updating allowed fields
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'likes', 'replyCount']);
+      
+      // Users can delete their own comments, admins can delete any
+      allow delete: if request.auth != null && 
+                       (request.auth.uid == resource.data.authorId || isAdmin());
+      
+      // Replies subcollection
+      match /replies/{replyId} {
+        // Anyone authenticated can read replies
+        allow read: if request.auth != null;
+        
+        // Authenticated users can create replies with their own authorId
+        allow create: if request.auth != null && 
+                         request.resource.data.authorId == request.auth.uid &&
+                         request.resource.data.keys().hasAll(['text', 'authorId', 'authorName', 'created_at']);
+        
+        // Users can update their own replies, admins can update any
+        allow update: if request.auth != null && 
+                         (request.auth.uid == resource.data.authorId || isAdmin()) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'likes']);
+        
+        // Users can delete their own replies, admins can delete any
+        allow delete: if request.auth != null && 
+                         (request.auth.uid == resource.data.authorId || isAdmin());
+      }
+    }
+    
     // Example: Quiz attempts - users can only access their own attempts
     // match /quiz_attempts/{attemptId} {
     //   allow read, write: if request.auth != null && 

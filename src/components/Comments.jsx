@@ -1,27 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { addComment, addReply, subscribeToComments, subscribeToReplies } from '../services/firebase';
+import { getCurrentUser } from '../services/firebase';
 
-const STORAGE_KEY = 'edlight.comments.v1';
-
-function loadAll() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
+function timeAgo(timestamp) {
+  // Handle Firestore Timestamp objects
+  let ts = timestamp;
+  if (timestamp && typeof timestamp === 'object' && 'seconds' in timestamp) {
+    ts = timestamp.seconds * 1000;
+  } else if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    ts = timestamp.toDate().getTime();
   }
-}
-
-function saveAll(map) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {}
-}
-
-function uid() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function timeAgo(ts) {
+  
   const diff = Date.now() - ts;
   const s = Math.floor(diff / 1000);
   if (s < 60) return 'just now';
@@ -30,62 +19,99 @@ function timeAgo(ts) {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   const d = Math.floor(h / 24);
-  return `${d}d ago`;
+  if (d === 1) return 'yesterday';
+  if (d < 7) return `${d}d ago`;
+  const w = Math.floor(d / 7);
+  if (w < 4) return `${w}w ago`;
+  return new Date(ts).toLocaleDateString();
 }
 
 export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) {
-  const [threads, setThreads] = useState({});
+  const [comments, setComments] = useState([]);
+  const [commentReplies, setCommentReplies] = useState({}); // {commentId: [replies]}
   const [draft, setDraft] = useState('');
   const [replyDrafts, setReplyDrafts] = useState({}); // {commentId: text}
   const [replyOpen, setReplyOpen] = useState({}); // {commentId: boolean}
+  const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
 
+  // Subscribe to comments for this thread
   useEffect(() => {
-    setThreads(loadAll());
+    if (!threadKey) return;
+    
+    setLoading(true);
+    const unsubscribe = subscribeToComments(threadKey, (newComments) => {
+      setComments(newComments);
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [threadKey]);
 
-  const comments = useMemo(() => threads[threadKey] || [], [threads, threadKey]);
+  // Subscribe to replies for each comment
+  useEffect(() => {
+    const unsubscribers = [];
+    
+    comments.forEach((comment) => {
+      const unsubscribe = subscribeToReplies(comment.id, (replies) => {
+        setCommentReplies((prev) => ({
+          ...prev,
+          [comment.id]: replies
+        }));
+      });
+      unsubscribers.push(unsubscribe);
+    });
 
-  const persist = (nextComments) => {
-    const all = loadAll();
-    all[threadKey] = nextComments;
-    saveAll(all);
-    setThreads(all);
-  };
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, [comments]);
 
-  const addComment = () => {
+  const handleAddComment = async () => {
     const text = draft.trim();
-    if (!text) return;
-    const next = [
-      {
-        id: uid(),
-        author: { name: 'You' },
-        text,
-        ts: Date.now(),
-        replies: [],
-      },
-      ...comments,
-    ];
-    setDraft('');
-    persist(next);
+    if (!text || !isAuthenticated) return;
+    
+    const user = getCurrentUser();
+    if (!user) {
+      onRequireAuth();
+      return;
+    }
+
+    try {
+      setPosting(true);
+      await addComment(threadKey, text, user);
+      setDraft('');
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      alert('Failed to post comment. Please try again.');
+    } finally {
+      setPosting(false);
+    }
   };
 
-  const addReply = (parentId) => {
+  const handleAddReply = async (parentId) => {
     const text = (replyDrafts[parentId] || '').trim();
-    if (!text) return;
-    const next = comments.map((c) =>
-      c.id === parentId
-        ? {
-            ...c,
-            replies: [
-              { id: uid(), author: { name: 'You' }, text, ts: Date.now() },
-              ...(Array.isArray(c.replies) ? c.replies : []),
-            ],
-          }
-        : c
-    );
-    setReplyDrafts((d) => ({ ...d, [parentId]: '' }));
-    setReplyOpen((o) => ({ ...o, [parentId]: false }));
-    persist(next);
+    if (!text || !isAuthenticated) return;
+    
+    const user = getCurrentUser();
+    if (!user) {
+      onRequireAuth();
+      return;
+    }
+
+    try {
+      setPosting(true);
+      await addReply(parentId, text, user);
+      setReplyDrafts((d) => ({ ...d, [parentId]: '' }));
+      setReplyOpen((o) => ({ ...o, [parentId]: false }));
+    } catch (error) {
+      console.error('Error posting reply:', error);
+      alert('Failed to post reply. Please try again.');
+    } finally {
+      setPosting(false);
+    }
   };
 
   return (
@@ -94,9 +120,6 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
         <h3 className="section__title" style={{ fontSize: '1.1rem' }}>Questions & Discussion</h3>
         <p className="text-muted" style={{ marginTop: '0.25rem' }}>
           Ask a question or share an idea about this lesson.
-          <span className="text-muted" style={{ display: 'block', fontSize: '0.85rem' }}>
-            Note: comments are saved to your device only for now.
-          </span>
         </p>
       </div>
 
@@ -107,7 +130,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
           placeholder={isAuthenticated ? 'Write a comment…' : 'Sign in to write a comment'}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          disabled={!isAuthenticated}
+          disabled={!isAuthenticated || posting}
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
           {!isAuthenticated ? (
@@ -118,89 +141,98 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
             <button
               className="button button--primary button--sm"
               type="button"
-              onClick={addComment}
-              disabled={!draft.trim()}
+              onClick={handleAddComment}
+              disabled={!draft.trim() || posting}
             >
-              Post comment
+              {posting ? 'Posting…' : 'Post comment'}
             </button>
           )}
         </div>
       </div>
 
       <div className="comments__list">
-        {comments.length === 0 ? (
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+            <div className="loading-spinner" style={{ width: '32px', height: '32px' }} />
+          </div>
+        ) : comments.length === 0 ? (
           <div className="text-muted" style={{ fontSize: '0.9rem' }}>No comments yet. Be the first to ask a question.</div>
         ) : (
-          comments.map((c) => (
-            <div key={c.id} className="comment">
-              <div className="comment__avatar" aria-hidden>💬</div>
-              <div className="comment__body">
-                <div className="comment__meta">
-                  <strong>{c.author?.name || 'Student'}</strong>
-                  <span className="text-muted">· {timeAgo(c.ts)}</span>
-                </div>
-                <div className="comment__text">{c.text}</div>
-                <div className="comment__actions">
-                  <button
-                    className="button button--ghost button--sm"
-                    type="button"
-                    onClick={() => {
-                      if (!isAuthenticated) return onRequireAuth();
-                      setReplyOpen((o) => ({ ...o, [c.id]: !o[c.id] }));
-                    }}
-                  >
-                    Reply
-                  </button>
-                </div>
+          comments.map((c) => {
+            const replies = commentReplies[c.id] || [];
+            return (
+              <div key={c.id} className="comment">
+                <div className="comment__avatar" aria-hidden>💬</div>
+                <div className="comment__body">
+                  <div className="comment__meta">
+                    <strong>{c.authorName || 'Student'}</strong>
+                    <span className="text-muted">· {timeAgo(c.created_at)}</span>
+                  </div>
+                  <div className="comment__text">{c.text}</div>
+                  <div className="comment__actions">
+                    <button
+                      className="button button--ghost button--sm"
+                      type="button"
+                      onClick={() => {
+                        if (!isAuthenticated) return onRequireAuth();
+                        setReplyOpen((o) => ({ ...o, [c.id]: !o[c.id] }));
+                      }}
+                    >
+                      Reply {c.replyCount > 0 && `(${c.replyCount})`}
+                    </button>
+                  </div>
 
-                {Array.isArray(c.replies) && c.replies.length > 0 && (
-                  <div className="comment__replies">
-                    {c.replies.map((r) => (
-                      <div key={r.id} className="comment comment--reply">
-                        <div className="comment__avatar" aria-hidden>↳</div>
-                        <div className="comment__body">
-                          <div className="comment__meta">
-                            <strong>{r.author?.name || 'Student'}</strong>
-                            <span className="text-muted">· {timeAgo(r.ts)}</span>
+                  {replies.length > 0 && (
+                    <div className="comment__replies">
+                      {replies.map((r) => (
+                        <div key={r.id} className="comment comment--reply">
+                          <div className="comment__avatar" aria-hidden>↳</div>
+                          <div className="comment__body">
+                            <div className="comment__meta">
+                              <strong>{r.authorName || 'Student'}</strong>
+                              <span className="text-muted">· {timeAgo(r.created_at)}</span>
+                            </div>
+                            <div className="comment__text">{r.text}</div>
                           </div>
-                          <div className="comment__text">{r.text}</div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {replyOpen[c.id] && (
-                  <div className="comment__reply-form">
-                    <textarea
-                      className="form-input"
-                      rows={2}
-                      placeholder="Write a reply…"
-                      value={replyDrafts[c.id] || ''}
-                      onChange={(e) => setReplyDrafts((d) => ({ ...d, [c.id]: e.target.value }))}
-                    />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                      <button
-                        className="button button--ghost button--sm"
-                        type="button"
-                        onClick={() => setReplyOpen((o) => ({ ...o, [c.id]: false }))}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        className="button button--primary button--sm"
-                        type="button"
-                        onClick={() => addReply(c.id)}
-                        disabled={!isAuthenticated || !(replyDrafts[c.id] || '').trim()}
-                      >
-                        Post reply
-                      </button>
+                      ))}
                     </div>
-                  </div>
-                )}
+                  )}
+
+                  {replyOpen[c.id] && (
+                    <div className="comment__reply-form">
+                      <textarea
+                        className="form-input"
+                        rows={2}
+                        placeholder="Write a reply…"
+                        value={replyDrafts[c.id] || ''}
+                        onChange={(e) => setReplyDrafts((d) => ({ ...d, [c.id]: e.target.value }))}
+                        disabled={posting}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                        <button
+                          className="button button--ghost button--sm"
+                          type="button"
+                          onClick={() => setReplyOpen((o) => ({ ...o, [c.id]: false }))}
+                          disabled={posting}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="button button--primary button--sm"
+                          type="button"
+                          onClick={() => handleAddReply(c.id)}
+                          disabled={!isAuthenticated || !(replyDrafts[c.id] || '').trim() || posting}
+                        >
+                          {posting ? 'Posting…' : 'Post reply'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </section>
