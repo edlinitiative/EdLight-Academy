@@ -8,7 +8,7 @@ import { getAuth,
   onAuthStateChanged,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, increment, writeBatch } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
@@ -302,6 +302,44 @@ export async function deleteQuiz(quizId) {
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting quiz:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete all documents in the quizzes collection.
+ * Use a batched delete to avoid per-doc overhead.
+ */
+export async function deleteAllQuizzes() {
+  try {
+    console.log('[Firebase] Deleting all quizzes...');
+    const quizzesRef = collection(db, 'quizzes');
+    const snap = await getDocs(quizzesRef);
+    if (snap.empty) {
+      console.log('[Firebase] No quizzes to delete');
+      return { success: true, deleted: 0 };
+    }
+
+    // Firestore batches are limited (500), process in slices
+    const docs = [];
+    snap.forEach((d) => docs.push(d));
+    let deleted = 0;
+
+    while (docs.length > 0) {
+      const batch = writeBatch(db);
+      const chunk = docs.splice(0, 400); // keep under 500
+      for (const d of chunk) {
+        batch.delete(doc(db, 'quizzes', d.id));
+      }
+      await batch.commit();
+      deleted += chunk.length;
+      console.log(`[Firebase] Deleted batch of ${chunk.length} quizzes`);
+    }
+
+    console.log(`[Firebase] Deleted total ${deleted} quizzes`);
+    return { success: true, deleted };
+  } catch (error) {
+    console.error('[Firebase] Error deleting all quizzes:', error);
     throw error;
   }
 }

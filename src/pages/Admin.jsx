@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { loadCSV } from '../utils/csvParser';
 import { toCSV, remapRow } from '../utils/csvStringify';
-import { updateVideo, updateQuiz, updateUser, deleteVideo, deleteQuiz, deleteUser, db } from '../services/firebase';
+import { updateVideo, updateQuiz, updateUser, deleteVideo, deleteQuiz, deleteUser, deleteAllQuizzes, db } from '../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
 // Expected column orders
@@ -390,6 +390,30 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
                 disabled={!hasData || syncing}
               >
                 {syncing ? 'Syncing...' : '💾 Save to Firebase'}
+              </button>
+            )}
+            {collectionType === 'quizzes' && (
+              <button
+                className="button button--danger button--pill"
+                onClick={async () => {
+                  const ok = window.confirm('This will permanently delete ALL quizzes from Firestore. Are you sure?');
+                  if (!ok) return;
+                  try {
+                    setSyncing(true);
+                    setSyncStatus({ type: 'info', message: 'Deleting all quizzes...' });
+                    const res = await deleteAllQuizzes();
+                    setRows([]);
+                    setSyncStatus({ type: 'success', message: `✅ Deleted ${res.deleted || 0} quizzes.` });
+                  } catch (err) {
+                    console.error(err);
+                    setSyncStatus({ type: 'error', message: `❌ Failed to delete quizzes: ${err.message}` });
+                  } finally {
+                    setSyncing(false);
+                    setTimeout(() => setSyncStatus(null), 5000);
+                  }
+                }}
+              >
+                🧹 Clear quiz database
               </button>
             )}
             <button className="button button--ghost button--pill" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
