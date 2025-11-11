@@ -10,7 +10,7 @@ function shuffle(array) {
   return a;
 }
 
-export default function UnitQuiz({ subjectCode, unitId, onClose }) {
+export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }) {
   const { data: appData } = require('../hooks/useData').useAppData();
   const quizBank = appData?.quizBank;
   const TOTAL = 10;
@@ -18,10 +18,23 @@ export default function UnitQuiz({ subjectCode, unitId, onClose }) {
   const rows = useMemo(() => {
     if (!quizBank || !subjectCode || !unitId) return [];
     const key = `${subjectCode}|${unitId}`;
-    const unitRows = (quizBank.byUnit?.[key] || []).slice();
+    let unitRows = (quizBank.byUnit?.[key] || []).slice();
+    
+    // If chapterNumber is provided, filter to only questions from that chapter
+    if (chapterNumber != null) {
+      unitRows = unitRows.filter((row) => {
+        const chapterField = row.Chapter_Number || row.chapter_number || row.chapterNo || row.chapter || '';
+        const chapterStr = String(chapterField).trim();
+        // Match exact chapter (e.g., "1", "2") or dotted format (e.g., "1.1" -> chapter 1)
+        if (chapterStr === String(chapterNumber)) return true;
+        const dotMatch = chapterStr.match(/^(\d+)[\.-]/);
+        return dotMatch && dotMatch[1] === String(chapterNumber);
+      });
+    }
+    
     // Strictly unit-only selection, cap at 10
     return shuffle(unitRows).slice(0, TOTAL);
-  }, [quizBank, subjectCode, unitId]);
+  }, [quizBank, subjectCode, unitId, chapterNumber]);
 
   const items = useMemo(() => {
     if (!rows.length) return [];

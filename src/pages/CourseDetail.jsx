@@ -140,7 +140,7 @@ export default function CourseDetail() {
                 <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
               </header>
 
-              <div className={`lesson-card__media ${showUnitQuiz ? 'lesson-card__media--quiz' : ''}`}>
+              <div className={`lesson-card__media ${showUnitQuiz || activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
                 {showUnitQuiz ? (
                   <div className="lesson-card__quizwrap">
                     <div className="lesson-card__quizbar">
@@ -156,6 +156,14 @@ export default function CourseDetail() {
                       subjectCode={course?.id}
                       unitId={activeModuleData?.id}
                       onClose={() => setShowUnitQuiz(false)}
+                    />
+                  </div>
+                ) : activeLessonData?.type === 'quiz' ? (
+                  <div className="lesson-card__quizwrap">
+                    <UnitQuiz
+                      subjectCode={course?.id}
+                      unitId={activeModuleData?.id}
+                      chapterNumber={activeModuleData?.order}
                     />
                   </div>
                 ) : primaryVideo ? (
@@ -315,24 +323,6 @@ export default function CourseDetail() {
                               </button>
                             );
                           })}
-                          {/* Unit Quiz entry after the last subchapter */}
-                          <button
-                            key={`${module.id}-unit-quiz`}
-                            type="button"
-                            className={`lesson-list__item ${isActiveModule && showUnitQuiz ? 'lesson-list__item--active' : ''}`}
-                            onClick={() => {
-                              setActiveModule(idx);
-                              setShowQuiz(false);
-                              setShowUnitQuiz(true);
-                            }}
-                          >
-                            <span className="lesson-list__index">{idx + 1}.{module.lessons.length + 1}</span>
-                            <span className="lesson-list__meta">
-                              <span className="lesson-list__title">Unit Quiz — 10 Questions</span>
-                              <span className="lesson-list__duration">Practice</span>
-                            </span>
-                            {isActiveModule && showUnitQuiz && <span className="chip chip--ghost">Current</span>}
-                          </button>
                         </div>
                       )}
                     </div>
