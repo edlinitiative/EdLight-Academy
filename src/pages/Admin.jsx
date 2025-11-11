@@ -393,28 +393,121 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
               </button>
             )}
             {collectionType === 'quizzes' && (
-              <button
-                className="button button--danger button--pill"
-                onClick={async () => {
-                  const ok = window.confirm('This will permanently delete ALL quizzes from Firestore. Are you sure?');
-                  if (!ok) return;
-                  try {
-                    setSyncing(true);
-                    setSyncStatus({ type: 'info', message: 'Deleting all quizzes...' });
-                    const res = await deleteAllQuizzes();
-                    setRows([]);
-                    setSyncStatus({ type: 'success', message: `✅ Deleted ${res.deleted || 0} quizzes.` });
-                  } catch (err) {
-                    console.error(err);
-                    setSyncStatus({ type: 'error', message: `❌ Failed to delete quizzes: ${err.message}` });
-                  } finally {
-                    setSyncing(false);
-                    setTimeout(() => setSyncStatus(null), 5000);
-                  }
-                }}
-              >
-                🧹 Clear quiz database
-              </button>
+              <>
+                <button
+                  className="button button--ghost button--pill"
+                  onClick={async () => {
+                    try {
+                      setSyncing(true);
+                      setSyncStatus({ type: 'info', message: 'Checking quiz database...' });
+                      
+                      // Load current quizzes to show count
+                      const quizzesRef = collection(db, 'quizzes');
+                      const snapshot = await getDocs(quizzesRef);
+                      const count = snapshot.size;
+                      
+                      setSyncStatus({ 
+                        type: 'info', 
+                        message: `📊 Dry Run: Found ${count} quizzes in database. Click "🧹 Clear quiz database" to delete them (with automatic backup).` 
+                      });
+                    } catch (err) {
+                      console.error(err);
+                      setSyncStatus({ type: 'error', message: `❌ Failed to check database: ${err.message}` });
+                    } finally {
+                      setSyncing(false);
+                      setTimeout(() => setSyncStatus(null), 10000);
+                    }
+                  }}
+                  disabled={syncing}
+                >
+                  🔍 Preview Quiz Count
+                </button>
+                <button
+                  className="button button--danger button--pill"
+                  onClick={async () => {
+                    try {
+                      setSyncing(true);
+                      setSyncStatus({ type: 'info', message: 'Loading quizzes for backup...' });
+                      
+                      // First, load all quizzes for backup
+                      const quizzesRef = collection(db, 'quizzes');
+                      const snapshot = await getDocs(quizzesRef);
+                      const backupData = [];
+                      snapshot.forEach((doc) => {
+                        const data = { id: doc.id, ...doc.data() };
+                        // Convert timestamps to readable format
+                        if (data.created_at?.seconds) {
+                          data.created_at = new Date(data.created_at.seconds * 1000).toISOString();
+                        }
+                        if (data.updated_at?.seconds) {
+                          data.updated_at = new Date(data.updated_at.seconds * 1000).toISOString();
+                        }
+                        backupData.push(data);
+                      });
+                      
+                      const count = backupData.length;
+                      
+                      if (count === 0) {
+                        setSyncStatus({ type: 'info', message: 'No quizzes to delete.' });
+                        setSyncing(false);
+                        setTimeout(() => setSyncStatus(null), 3000);
+                        return;
+                      }
+                      
+                      // Show confirmation with count
+                      const ok = window.confirm(
+                        `This will:\n\n` +
+                        `1. Export ${count} quizzes as backup CSV\n` +
+                        `2. Permanently delete ALL ${count} quizzes from Firestore\n\n` +
+                        `Are you sure you want to continue?`
+                      );
+                      
+                      if (!ok) {
+                        setSyncing(false);
+                        setSyncStatus(null);
+                        return;
+                      }
+                      
+                      // Create timestamped backup CSV
+                      setSyncStatus({ type: 'info', message: `📥 Creating backup of ${count} quizzes...` });
+                      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+                      const backupFilename = `quizzes_backup_${timestamp}.csv`;
+                      
+                      const mapped = backupData.map((r) => remapRow(r, columns));
+                      const csv = toCSV(mapped, columns);
+                      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = backupFilename;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      
+                      // Wait a moment for download to start
+                      await new Promise(resolve => setTimeout(resolve, 500));
+                      
+                      // Now delete all quizzes
+                      setSyncStatus({ type: 'info', message: `🗑️ Deleting ${count} quizzes...` });
+                      const res = await deleteAllQuizzes();
+                      
+                      setRows([]);
+                      setSyncStatus({ 
+                        type: 'success', 
+                        message: `✅ Backup saved as "${backupFilename}". Deleted ${res.deleted || 0} quizzes.` 
+                      });
+                    } catch (err) {
+                      console.error(err);
+                      setSyncStatus({ type: 'error', message: `❌ Failed: ${err.message}` });
+                    } finally {
+                      setSyncing(false);
+                      setTimeout(() => setSyncStatus(null), 8000);
+                    }
+                  }}
+                  disabled={syncing}
+                >
+                  🧹 Clear quiz database
+                </button>
+              </>
             )}
             <button className="button button--ghost button--pill" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
           </div>
