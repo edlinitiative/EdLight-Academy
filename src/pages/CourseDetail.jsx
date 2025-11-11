@@ -161,7 +161,7 @@ export default function CourseDetail() {
                 ) : activeLessonData?.type === 'quiz' ? (
                   <div className="lesson-card__quizwrap">
                     <UnitQuiz
-                      subjectCode={course?.id}
+                      subjectCode={course?.code}
                       unitId={activeModuleData?.id}
                       chapterNumber={activeModuleData?.unit_no}
                     />

@@ -18,6 +18,8 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
   const rows = useMemo(() => {
     if (!quizBank || !subjectCode) return [];
     
+    console.log(`[UnitQuiz] Input params:`, { subjectCode, unitId, chapterNumber });
+    
     // Build the unit key for quizBank lookup
     // quizBank.byUnit uses keys like "CHEM-NSI|U1" where U1 comes from unit_no
     // If we have chapterNumber (unit_no), use it to build the key
@@ -28,6 +30,12 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
       const unitKey = `${subjectCode}|U${chapterNumber}`;
       unitRows = (quizBank.byUnit?.[unitKey] || []).slice();
       console.log(`[UnitQuiz] Looking for questions with key: ${unitKey}, found: ${unitRows.length}`);
+      
+      // Debug: show available keys
+      if (unitRows.length === 0 && quizBank.byUnit) {
+        const availableKeys = Object.keys(quizBank.byUnit).filter(k => k.startsWith(subjectCode));
+        console.log(`[UnitQuiz] Available keys for ${subjectCode}:`, availableKeys);
+      }
     } else if (unitId) {
       // Fallback to unitId if provided (might not match quizBank format)
       const key = `${subjectCode}|${unitId}`;
@@ -40,6 +48,11 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
       // Fallback: get all questions for this subject and filter by Chapter_Number
       const subjectRows = (quizBank.bySubject?.[subjectCode] || []).slice();
       console.log(`[UnitQuiz] Fallback: filtering ${subjectRows.length} subject questions by Chapter_Number=${chapterNumber}`);
+      
+      if (subjectRows.length === 0 && quizBank.bySubject) {
+        const availableSubjects = Object.keys(quizBank.bySubject);
+        console.log(`[UnitQuiz] Available subjects:`, availableSubjects);
+      }
       
       unitRows = subjectRows.filter((row) => {
         const chapterField = row.Chapter_Number || row.chapter_number || row.chapterNo || row.chapter || '';
