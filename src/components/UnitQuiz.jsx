@@ -16,14 +16,32 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
   const TOTAL = 10;
 
   const rows = useMemo(() => {
-    if (!quizBank || !subjectCode || !unitId) return [];
-    const key = `${subjectCode}|${unitId}`;
-    let unitRows = (quizBank.byUnit?.[key] || []).slice();
+    if (!quizBank || !subjectCode) return [];
     
-    // If chapterNumber is provided, filter to only questions from that chapter
+    // Build the unit key for quizBank lookup
+    // quizBank.byUnit uses keys like "CHEM-NSI|U1" where U1 comes from unit_no
+    // If we have chapterNumber (unit_no), use it to build the key
+    let unitRows = [];
+    
     if (chapterNumber != null) {
-      unitRows = unitRows.filter((row) => {
-        // Check Chapter_Number field (used in quiz database)
+      // Use chapterNumber (unit_no) to build the correct key
+      const unitKey = `${subjectCode}|U${chapterNumber}`;
+      unitRows = (quizBank.byUnit?.[unitKey] || []).slice();
+      console.log(`[UnitQuiz] Looking for questions with key: ${unitKey}, found: ${unitRows.length}`);
+    } else if (unitId) {
+      // Fallback to unitId if provided (might not match quizBank format)
+      const key = `${subjectCode}|${unitId}`;
+      unitRows = (quizBank.byUnit?.[key] || []).slice();
+      console.log(`[UnitQuiz] Looking for questions with key: ${key}, found: ${unitRows.length}`);
+    }
+    
+    // If still no rows and we have chapterNumber, try filtering by Chapter_Number field
+    if (unitRows.length === 0 && chapterNumber != null) {
+      // Fallback: get all questions for this subject and filter by Chapter_Number
+      const subjectRows = (quizBank.bySubject?.[subjectCode] || []).slice();
+      console.log(`[UnitQuiz] Fallback: filtering ${subjectRows.length} subject questions by Chapter_Number=${chapterNumber}`);
+      
+      unitRows = subjectRows.filter((row) => {
         const chapterField = row.Chapter_Number || row.chapter_number || row.chapterNo || row.chapter || '';
         const chapterStr = String(chapterField).trim();
         
@@ -36,6 +54,8 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
         
         return false;
       });
+      
+      console.log(`[UnitQuiz] After Chapter_Number filter: ${unitRows.length} questions`);
     }
     
     // Shuffle and cap at 10 questions
@@ -81,7 +101,7 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
     }
   };
 
-  if (!subjectCode || !unitId) {
+  if (!subjectCode) {
     return (
       <div className="card">
         <h3>Unit Quiz</h3>
@@ -120,7 +140,19 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
     return (
       <div className="card">
         <h3>Unit Quiz</h3>
-        <p className="text-muted">No questions available for this unit yet. Try a different unit or check back soon.</p>
+        <p className="text-muted">
+          No questions available for this chapter yet. 
+          {chapterNumber && ` (Chapter ${chapterNumber})`}
+        </p>
+        {process.env.NODE_ENV === 'development' && (
+          <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#f5f5f5', fontSize: '0.75rem' }}>
+            <strong>Debug Info:</strong><br />
+            Subject: {subjectCode}<br />
+            Unit ID: {unitId}<br />
+            Chapter Number: {chapterNumber || 'none'}<br />
+            Questions found: {rows.length}
+          </div>
+        )}
       </div>
     );
   }
