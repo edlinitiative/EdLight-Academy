@@ -225,11 +225,11 @@ export default function CourseDetail() {
             </article>
 
             {showQuiz && hasQuiz && (
-              <QuizComponent
-                subjectCode={course?.id}
-                unitId={activeModuleData?.id}
-                videoId={activeLessonData?.id}
-                onComplete={() => setShowQuiz(false)}
+              <UnitQuiz
+                subjectCode={course?.code}
+                chapterNumber={activeModuleData?.unit_no}
+                subchapterNumber={activeLessonData?.lesson_no}
+                onClose={() => setShowQuiz(false)}
               />
             )}
             {/* Unit Quiz now renders inline in the media area when showUnitQuiz is true */}

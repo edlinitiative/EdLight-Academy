@@ -10,7 +10,7 @@ function shuffle(array) {
   return a;
 }
 
-export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }) {
+export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, onClose }) {
   const { data: appData } = require('../hooks/useData').useAppData();
   const quizBank = appData?.quizBank;
   const TOTAL = 10;
@@ -18,7 +18,7 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
   const rows = useMemo(() => {
     if (!quizBank || !subjectCode) return [];
     
-    console.log(`[UnitQuiz] Input params:`, { subjectCode, unitId, chapterNumber });
+    console.log(`[UnitQuiz] Input params:`, { subjectCode, unitId, chapterNumber, subchapterNumber });
     
     // Build the unit key for quizBank lookup
     // quizBank.byUnit uses keys like "CHEM-NSI|U1" where U1 comes from unit_no
@@ -71,9 +71,23 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
       console.log(`[UnitQuiz] After Chapter_Number filter: ${unitRows.length} questions`);
     }
     
+    // Filter by subchapter if provided (for video-specific practice)
+    if (subchapterNumber != null && unitRows.length > 0) {
+      const beforeSubchapterFilter = unitRows.length;
+      unitRows = unitRows.filter((row) => {
+        const subchapterField = row.Subchapter_Number || row.subchapter_number || row.subchapterNo || row.lesson_no || '';
+        const subchapterStr = String(subchapterField).trim();
+        
+        // Match exact subchapter number
+        return subchapterStr === String(subchapterNumber);
+      });
+      
+      console.log(`[UnitQuiz] After Subchapter_Number filter (${subchapterNumber}): ${unitRows.length} questions (from ${beforeSubchapterFilter})`);
+    }
+    
     // Shuffle and cap at 10 questions
     return shuffle(unitRows).slice(0, TOTAL);
-  }, [quizBank, subjectCode, unitId, chapterNumber]);
+  }, [quizBank, subjectCode, unitId, chapterNumber, subchapterNumber]);
 
   const items = useMemo(() => {
     if (!rows.length) return [];

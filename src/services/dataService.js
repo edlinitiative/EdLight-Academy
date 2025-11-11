@@ -177,7 +177,8 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
             duration: videoData.duration_min || 15,
             objectives: videoData.learning_objectives || '',
             thumbnail: videoData.thumbnail_url || '',
-            unit_no: videoData.unit_no // Include unit_no from video data
+            unit_no: videoData.unit_no, // Include unit_no from video data
+            lesson_no: videoData.lesson_no // Include lesson_no for subchapter filtering
           };
         }
         
