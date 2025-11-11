@@ -163,7 +163,7 @@ export default function CourseDetail() {
                     <UnitQuiz
                       subjectCode={course?.id}
                       unitId={activeModuleData?.id}
-                      chapterNumber={activeModuleData?.order}
+                      chapterNumber={activeModuleData?.unit_no}
                     />
                   </div>
                 ) : primaryVideo ? (

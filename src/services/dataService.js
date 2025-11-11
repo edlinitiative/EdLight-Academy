@@ -160,11 +160,8 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
     // Transform units from Firestore to modules for the app
     // Firestore structure: { unitId, title, order, lessons: [{lessonId, title, type, order}] }
     // App expects: { id, title, lessons: [{id, title, videoUrl, duration, objectives}] }
-    const modules = (course.units || []).map(unit => ({
-      id: unit.unitId || unit.id,
-      title: unit.title,
-      order: unit.order,
-      lessons: (unit.lessons || []).map(lesson => {
+    const modules = (course.units || []).map(unit => {
+      const lessons = (unit.lessons || []).map(lesson => {
         const lessonId = lesson.lessonId;
         const lessonType = lesson.type;
         
@@ -179,7 +176,8 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
             videoUrl: videoData.video_url || 'https://www.youtube.com/embed/placeholder',
             duration: videoData.duration_min || 15,
             objectives: videoData.learning_objectives || '',
-            thumbnail: videoData.thumbnail_url || ''
+            thumbnail: videoData.thumbnail_url || '',
+            unit_no: videoData.unit_no // Include unit_no from video data
           };
         }
         
@@ -209,8 +207,20 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
           duration: 15,
           objectives: ''
         };
-      })
-    }));
+      });
+      
+      // Extract unit_no from the first video lesson in this unit
+      const firstVideoLesson = lessons.find(l => l.type === 'video' && l.unit_no);
+      const unitNo = firstVideoLesson?.unit_no || unit.order;
+      
+      return {
+        id: unit.unitId || unit.id,
+        title: unit.title,
+        order: unit.order,
+        unit_no: unitNo, // Add unit_no to module
+        lessons
+      };
+    });
 
     // Return transformed course
     return {

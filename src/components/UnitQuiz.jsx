@@ -23,16 +23,22 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, onClose }
     // If chapterNumber is provided, filter to only questions from that chapter
     if (chapterNumber != null) {
       unitRows = unitRows.filter((row) => {
+        // Check Chapter_Number field (used in quiz database)
         const chapterField = row.Chapter_Number || row.chapter_number || row.chapterNo || row.chapter || '';
         const chapterStr = String(chapterField).trim();
-        // Match exact chapter (e.g., "1", "2") or dotted format (e.g., "1.1" -> chapter 1)
+        
+        // Match exact chapter number
         if (chapterStr === String(chapterNumber)) return true;
+        
+        // Also handle dotted format (e.g., "1.1" means chapter 1)
         const dotMatch = chapterStr.match(/^(\d+)[\.-]/);
-        return dotMatch && dotMatch[1] === String(chapterNumber);
+        if (dotMatch && dotMatch[1] === String(chapterNumber)) return true;
+        
+        return false;
       });
     }
     
-    // Strictly unit-only selection, cap at 10
+    // Shuffle and cap at 10 questions
     return shuffle(unitRows).slice(0, TOTAL);
   }, [quizBank, subjectCode, unitId, chapterNumber]);
 
