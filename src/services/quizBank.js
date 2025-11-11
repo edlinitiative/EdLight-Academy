@@ -285,14 +285,34 @@ export function indexQuizBank(rows) {
     return 'NSI';
   };
   const deriveCourseCode = (row) => {
+    // First priority: use the new subject_code column (e.g., "chem-ns1")
     const code = String(pick(row, ['subject_code', 'course_code'], '')).trim();
-    if (code) return code;
+    if (code) {
+      // Normalize to uppercase with dash (e.g., "chem-ns1" -> "CHEM-NSI")
+      const parts = code.split('-');
+      if (parts.length === 2) {
+        const subj = parts[0].toUpperCase();
+        const level = normalizeLevel(parts[1]);
+        return `${subj}-${level}`;
+      }
+      return code.toUpperCase();
+    }
+    
+    // Fallback: derive from separate subject and level columns
     const subj = normalizeSubjectBase(pick(row, ['subject', 'course', 'discipline'], ''));
     const level = normalizeLevel(pick(row, ['level', 'grade'], ''));
     return subj && level ? `${subj}-${level}` : '';
   };
   const extractUnitId = (row) => {
-    // Prefer explicit unit number
+    // First, try the new Chapter_Number column (most reliable)
+    let chapterNum = String(pick(row, ['Chapter_Number', 'chapter_number'], '')).trim();
+    if (chapterNum) {
+      // Extract just the chapter number (e.g., "1" from "1.1" or "1")
+      const match = chapterNum.match(/^(\d{1,2})/);
+      if (match) return `U${match[1]}`;
+    }
+    
+    // Fallback: Prefer explicit unit number
     let raw = pick(row, ['unit_no', 'unit_number'], '').toString().trim();
     if (!raw) raw = pick(row, ['unit'], '').toString().trim();
     if (!raw) return '';
@@ -310,13 +330,18 @@ export function indexQuizBank(rows) {
     // Always index by subject for fallback
     (bySubject[subjectCode] = bySubject[subjectCode] || []).push(row);
 
-    // Best-effort unit index
+    // Best-effort unit index using Chapter_Number
     const unitId = extractUnitId(row);
     if (unitId) {
       const unitKey = `${subjectCode}|${unitId}`;
       (byUnit[unitKey] = byUnit[unitKey] || []).push(row);
     }
   }
+  
+  // Log indexing summary for debugging
+  console.log('[QuizBank] Indexed questions by subject:', Object.keys(bySubject).map(k => `${k} (${bySubject[k].length})`).join(', '));
+  console.log('[QuizBank] Indexed questions by unit:', Object.keys(byUnit).slice(0, 10).map(k => `${k} (${byUnit[k].length})`).join(', '), '...');
+  
   return { byUnit, bySubject };
 }
 
