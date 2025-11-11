@@ -75,11 +75,23 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     if (subchapterNumber != null && unitRows.length > 0) {
       const beforeSubchapterFilter = unitRows.length;
       unitRows = unitRows.filter((row) => {
+        // First check if there's an explicit Subchapter_Number field
         const subchapterField = row.Subchapter_Number || row.subchapter_number || row.subchapterNo || row.lesson_no || '';
         const subchapterStr = String(subchapterField).trim();
         
-        // Match exact subchapter number
-        return subchapterStr === String(subchapterNumber);
+        if (subchapterStr && subchapterStr === String(subchapterNumber)) {
+          return true;
+        }
+        
+        // Fallback: extract lesson number from video_id (e.g., "CHEM-NSI-U1-L2" -> lesson 2)
+        const videoId = row.video_id || '';
+        const lessonMatch = videoId.match(/-L(\d+)$/i);
+        if (lessonMatch) {
+          const lessonNum = parseInt(lessonMatch[1], 10);
+          return lessonNum === parseInt(subchapterNumber, 10);
+        }
+        
+        return false;
       });
       
       console.log(`[UnitQuiz] After Subchapter_Number filter (${subchapterNumber}): ${unitRows.length} questions (from ${beforeSubchapterFilter})`);
