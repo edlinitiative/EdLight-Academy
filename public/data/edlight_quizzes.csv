@@ -1,4 +1,4 @@
-quiz_id,video_id,question,option_a,option_b,option_c,option_d,correct_option,explanation
-Q-CHEM-NSI-U1-L1-01,CHEM-NSI-U1-L1,Ki definisyon syantifik chimi a?,Syans ki etidye matyè ak transfòmasyon li yo,Syans ki sèlman etidye plant,Syans ki etidye zetwal yo,Atizay prepare manje,A,Chimi konsantre sou matyè ak chanjman li yo.
-Q-PHYS-NSI-U2-L1-01,PHYS-NSI-U2-L1,Ki inite SI pou longè?,Kilogram,Segonn,Mèt,Ampè,C,Mèt (m) se inite baz pou longè.
-Q-MATH-NSI-U1-L3-01,MATH-NSI-U1-L3,Ki valè |−7| ?,−7,0,7,Depann de x,C,Valè absoli a se distans ak zewo.
+id,subject_code,Chapter_Number,Subchapter_Number,video_id,question,option_a,option_b,option_c,option_d,correct_option,explanation
+Q-CHEM-NSI-U1-L1-01,CHEM-NSI,1,1,CHEM-NSI-U1-L1,Ki definisyon syantifik chimi a?,Syans ki etidye matyè ak transfòmasyon li yo,Syans ki sèlman etidye plant,Syans ki etidye zetwal yo,Atizay prepare manje,A,Chimi konsantre sou matyè ak chanjman li yo.
+Q-PHYS-NSI-U2-L1-01,PHYS-NSI,2,1,PHYS-NSI-U2-L1,Ki inite SI pou longè?,Kilogram,Segonn,Mèt,Ampè,C,Mèt (m) se inite baz pou longè.
+Q-MATH-NSI-U1-L3-01,MATH-NSI,1,3,MATH-NSI-U1-L3,Ki valè |−7| ?,−7,0,7,Depann de x,C,Valè absoli a se distans ak zewo.

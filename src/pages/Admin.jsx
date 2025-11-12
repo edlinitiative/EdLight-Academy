@@ -10,7 +10,7 @@ const VIDEO_COLUMNS = [
 ];
 
 const QUIZ_COLUMNS = [
-  'id','subject_code','subject','level','unit','Chapter_Number','video_title','Subchapter_Number','question_type','question','options','correct_answer','hint','good_response','wrong_response','language','difficulty','tags','source_doc','created_at'
+  'id','subject_code','Chapter_Number','Subchapter_Number','video_id','question','option_a','option_b','option_c','option_d','correct_option','explanation'
 ];
 
 const USER_COLUMNS = [
