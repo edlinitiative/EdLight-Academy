@@ -4,6 +4,16 @@ import { toCSV, remapRow } from '../utils/csvStringify';
 import { updateVideo, updateQuiz, updateUser, deleteVideo, deleteQuiz, deleteUser, deleteAllQuizzes, db } from '../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
+// Helper to load data from Firestore
+async function loadFromFirestore(collectionName) {
+  const snapshot = await getDocs(collection(db, collectionName));
+  const data = [];
+  snapshot.forEach((doc) => {
+    data.push({ id: doc.id, ...doc.data() });
+  });
+  return data;
+}
+
 // Expected column orders
 const VIDEO_COLUMNS = [
   'id','subject_code','unit_no','unit_title','lesson_no','video_title','learning_objectives','language','duration_min','video_url','thumbnail_url','tags'
@@ -234,6 +244,13 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
         setRows(mapped);
         setSourceName('Firebase (users collection)');
         setSyncStatus({ type: 'success', message: `✅ Loaded ${data.length} users from Firebase` });
+      } else if (!sourceUrl) {
+        // No CSV source - load directly from Firestore
+        const data = await loadFromFirestore(collectionType);
+        const mapped = data.map((r) => remapRow(r, columns));
+        setRows(mapped);
+        setSourceName(`Firestore (${collectionType} collection)`);
+        setSyncStatus({ type: 'success', message: `✅ Loaded ${data.length} items from Firestore` });
       } else {
         // Fallback to CSV for other collections
         const data = await loadCSV(sourceUrl);
@@ -586,7 +603,7 @@ export default function Admin() {
       </section>
       
       <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
-      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl="/data/edlight_quizzes.csv" idKey="id" collectionType="quizzes" />
+      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl={null} idKey="id" collectionType="quizzes" />
       <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" collectionType="users" />
     </>
   );
