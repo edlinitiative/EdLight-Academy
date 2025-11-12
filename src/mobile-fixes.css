@@ -10,6 +10,11 @@ html {
 /* Prevent horizontal scroll on mobile */
 body {
   overflow-x: hidden;
+  width: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 /* Container padding for mobile */
@@ -18,6 +23,15 @@ body {
     padding-left: 1rem;
     padding-right: 1rem;
     max-width: 100%;
+    width: 100%;
+  }
+  
+  /* Remove negative margins on mobile */
+  .course-detail__layout,
+  .page-header:has(.filter-group),
+  .page-header:has(+ .quiz-layout),
+  .dashboard-grid .page-header {
+    margin-top: 0 !important;
   }
   
   /* Navbar improvements */
@@ -66,12 +80,39 @@ body {
   
   /* Hero section */
   .hero {
-    padding: 2rem 0 3rem;
+    padding: 1.5rem 0 2rem;
   }
   
   .hero--full {
     min-height: auto;
-    padding: 2rem 0 3rem;
+    padding: 1.5rem 0 2rem;
+  }
+  
+  .grid--hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .hero-visual {
+    order: -1;
+  }
+  
+  .hero-visual__image {
+    max-height: 250px;
+    object-fit: cover;
+  }
+  
+  .hero-visual__grid {
+    display: none;
+  }
+  
+  .hero-card {
+    margin-top: 1.5rem;
+  }
+  
+  .hero-card__metric {
+    flex-direction: column;
+    gap: 1rem;
   }
   
   .hero__badge {
@@ -363,6 +404,7 @@ body {
     align-items: flex-start;
     gap: 1rem;
     margin-bottom: 1.5rem;
+    padding-top: 0.5rem;
   }
   
   .page-header__eyebrow {
@@ -372,6 +414,11 @@ body {
   .page-header h1,
   .page-header h2 {
     font-size: clamp(1.5rem, 5vw, 2rem);
+    line-height: 1.2;
+  }
+  
+  .page-header p {
+    font-size: 0.9375rem;
   }
   
   .page-header__actions {
@@ -380,17 +427,449 @@ body {
     gap: 0.75rem;
   }
   
-  .page-header__actions .button,
-  .page-header__actions label.chip {
+  .page-header__actions .button {
     width: 100%;
     justify-content: center;
   }
   
-  .page-header__actions .chip:not(label) {
-    width: auto;
+  .filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+  
+  .filter-pill {
+    flex: 1 1 auto;
+    min-width: fit-content;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    text-align: center;
   }
   
   /* Course detail */
+  .course-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+  
+  .course-detail__layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 0 !important;
+  }
+  
+  .course-detail__column {
+    width: 100%;
+    max-width: 100%;
+    order: 1;
+  }
+  
+  .course-detail__sidebar {
+    width: 100%;
+    order: 2;
+    position: static !important;
+    max-height: none;
+    top: auto !important;
+    right: auto !important;
+  }
+  
+  .sidebar {
+    position: static !important;
+    width: 100%;
+    height: auto;
+    max-height: none;
+  }
+  
+  .lesson-card {
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .lesson-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .lesson-card__header-content {
+    width: 100%;
+  }
+  
+  .lesson-card__title {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    line-height: 1.3;
+  }
+  
+  .lesson-card__progress-badges {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  
+  .lesson-card__media {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin: 1rem 0;
+  }
+  
+  .lesson-card__media iframe,
+  .lesson-card__media > div {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  .lesson-card__media--quiz {
+    padding-bottom: 0;
+    min-height: 400px;
+  }
+  
+  .lesson-card__description {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+  
+  .lesson-card__actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .lesson-card__actions .button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .module-list {
+    padding: 0;
+  }
+  
+  .module {
+    margin-bottom: 0.75rem;
+  }
+  
+  .module__header {
+    padding: 1rem;
+    font-size: 0.9375rem;
+    gap: 0.75rem;
+  }
+  
+  .module__title {
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+  
+  .lesson-list {
+    padding: 0;
+  }
+  
+  .lesson-list__item {
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+  }
+  
+  .lesson-list__item-meta {
+    font-size: 0.8125rem;
+  }
+  
+  /* Dashboard */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .grid--metrics {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .metric-card {
+    padding: 1.25rem;
+    text-align: center;
+  }
+  
+  .metric-card__value {
+    font-size: 2rem;
+  }
+  
+  .metric-card__caption {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+  }
+  
+  .stat-card__value {
+    font-size: 1.75rem;
+  }
+  
+  .stat-card__label {
+    font-size: 0.8125rem;
+  }
+  
+  .dashboard-section {
+    width: 100%;
+  }
+  
+  .dashboard-section__header {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .dashboard-section__header .button {
+    width: 100%;
+  }
+  
+  .progress-dashboard {
+    padding: 1.25rem;
+  }
+  
+  .progress-dashboard__section {
+    margin-bottom: 1.5rem;
+  }
+  
+  .progress-dashboard__section h3 {
+    font-size: 1.125rem;
+    margin-bottom: 1rem;
+  }
+  
+  .badge-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .badge-item {
+    padding: 0.875rem;
+    text-align: center;
+  }
+  
+  .badge-item__icon {
+    font-size: 1.5rem;
+  }
+  
+  .badge-item__name {
+    font-size: 0.8125rem;
+  }
+  
+  .course-progress-list {
+    gap: 0.75rem;
+  }
+  
+  .course-progress-item {
+    padding: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .course-progress-item__stats {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  /* Flashcards */
+  .flashcard-deck {
+    padding: 1rem;
+  }
+  
+  .flashcard-deck__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .flashcard-deck__header h3 {
+    font-size: 1.25rem;
+  }
+  
+  .flashcard-deck__actions {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .flashcard-deck__actions .button {
+    flex: 1;
+  }
+  
+  .flashcard {
+    min-height: 320px;
+  }
+  
+  .flashcard__content {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  .flashcard-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .flashcard-controls__rating {
+    width: 100%;
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .flashcard-controls__rating .button {
+    flex: 1;
+  }
+  
+  .flashcard-deck__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .flashcard {
+    min-height: 300px;
+    height: auto;
+    max-height: 400px;
+  }
+  
+  .flashcard__content {
+    font-size: 1.125rem;
+    padding: 1rem;
+    line-height: 1.6;
+  }
+  
+  .flashcard__hint,
+  .flashcard__explanation {
+    font-size: 0.875rem;
+    padding: 0.75rem;
+  }
+  
+  .flashcard-controls {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+  
+  .flashcard-controls > .button {
+    flex: 1;
+    min-width: 100px;
+  }
+  
+  .flashcard-controls__rating {
+    width: 100%;
+    order: -1;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  
+  .flashcard-controls__rating .button {
+    flex: 1;
+  }
+  
+  /* Notification Center */
+  .notification-center {
+    padding: 1rem;
+  }
+  
+  .notification-center__tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .notification-center__tab {
+    white-space: nowrap;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .notification-item,
+  .reminder-item {
+    padding: 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .notification-item__content,
+  .reminder-item__content {
+    width: 100%;
+  }
+  
+  .notification-item__actions,
+  .reminder-item__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  /* Tables */
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+  
+  .table {
+    min-width: 600px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Footer */
+  .footer {
+    padding: 2rem 0 1.5rem;
+  }
+  
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .footer__section h4 {
+    font-size: 0.9375rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .footer__links {
+    gap: 0.5rem;
+  }
+  
+  .footer__link {
+    font-size: 0.875rem;
+  }
+  
+  .footer__bottom {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+    padding-top: 1.5rem;
+  }
+  
+  .footer__social {
+    justify-content: center;
+  }
+  
   .course-header {
     padding: 1.5rem 0;
   }
@@ -554,6 +1033,57 @@ body {
   }
 }
 
+/* Tablet landscape (768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+  
+  .grid--courses {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .grid--metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .course-detail__layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .course-detail__column {
+    max-width: 100%;
+  }
+  
+  .course-detail__sidebar {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .filter-group {
+    flex-wrap: nowrap;
+  }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  .button,
+  .filter-pill,
+  .lesson-list__item,
+  .module__header {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Larger tap targets */
+  a, button, input, select, textarea {
+    min-height: 44px;
+  }
+}
+
 /* Small phones (< 375px) */
 @media (max-width: 374px) {
   .container {
@@ -572,6 +1102,15 @@ body {
   .nav-actions .button {
     padding: 0.5rem 0.75rem;
     font-size: 0.8125rem;
+  }
+  
+  .filter-pill {
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .metric-card__value {
+    font-size: 1.75rem;
   }
   
   .card,
