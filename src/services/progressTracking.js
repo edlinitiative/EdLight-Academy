@@ -1,4 +1,4 @@
-import { db } from '../firebase';
+import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import { notifyAchievement, notifyStreak } from './notificationService';
 
