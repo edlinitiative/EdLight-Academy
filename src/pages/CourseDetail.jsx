@@ -34,12 +34,29 @@ export default function CourseDetail() {
     ?? activeModuleData?.objective
     ?? course?.description
     ?? '';
-  const primaryVideo =
+  const primaryVideoRaw =
     activeLessonData?.videoUrl
     || activeModuleData?.videoUrl
     || lessonBreakdown?.[0]?.videoUrl
     || course?.trailerUrl
     || '';
+  
+  // Add YouTube parameters to prevent suggestions and enable better controls
+  const primaryVideo = primaryVideoRaw ? (() => {
+    try {
+      const url = new URL(primaryVideoRaw);
+      if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
+        // Add parameters: rel=0 (no related videos), modestbranding=1 (minimal branding)
+        url.searchParams.set('rel', '0');
+        url.searchParams.set('modestbranding', '1');
+        return url.toString();
+      }
+      return primaryVideoRaw;
+    } catch (e) {
+      return primaryVideoRaw;
+    }
+  })() : '';
+  
   // Curriculum practice is always available (subject to data availability),
   // so enable Practice regardless of legacy per-video quizzes.
   const hasQuiz = true;
