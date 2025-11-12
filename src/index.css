@@ -3022,6 +3022,22 @@ textarea.input-field {
 	font-size: 0.875rem;
 }
 
+/* ========================================
+   Hide YouTube End Screen Overlay
+   ======================================== */
+
+/* Try to hide YouTube's end screen suggestions using CSS */
+.lesson-card__media iframe {
+	position: relative;
+	z-index: 1;
+}
+
+/* This won't completely hide YouTube suggestions as they're inside the iframe,
+   but we can add an overlay when the video ends */
+.lesson-card__media {
+	position: relative;
+}
+
 
 .modal__footer {
 	display: flex;

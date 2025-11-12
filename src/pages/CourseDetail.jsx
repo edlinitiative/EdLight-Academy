@@ -41,16 +41,31 @@ export default function CourseDetail() {
     || course?.trailerUrl
     || '';
   
-  // Add YouTube parameters to prevent suggestions and enable better controls
+  // Convert YouTube URLs to embed format with parameters to minimize distractions
   const primaryVideo = primaryVideoRaw ? (() => {
+    if (!primaryVideoRaw) return '';
+    
     try {
       const url = new URL(primaryVideoRaw);
+      
+      // Handle YouTube URLs
       if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
-        // Add parameters: rel=0 (no related videos), modestbranding=1 (minimal branding)
-        url.searchParams.set('rel', '0');
-        url.searchParams.set('modestbranding', '1');
-        return url.toString();
+        let videoId = null;
+        
+        // Extract video ID from different YouTube URL formats
+        if (url.hostname.includes('youtube.com')) {
+          videoId = url.searchParams.get('v') || url.pathname.split('/embed/')[1]?.split('?')[0];
+        } else if (url.hostname.includes('youtu.be')) {
+          videoId = url.pathname.slice(1).split('?')[0];
+        }
+        
+        if (videoId) {
+          // Build embed URL with parameters to minimize distractions
+          // Note: As of 2018, rel=0 shows related videos from same channel (can't fully disable)
+          return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
+        }
       }
+      
       return primaryVideoRaw;
     } catch (e) {
       return primaryVideoRaw;
