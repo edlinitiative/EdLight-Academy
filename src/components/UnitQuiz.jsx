@@ -74,10 +74,25 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     // Filter by subchapter if provided (for video-specific practice)
     if (subchapterNumber != null && unitRows.length > 0) {
       const beforeSubchapterFilter = unitRows.length;
+      console.log(`[UnitQuiz] Before subchapter filter - sample rows:`, unitRows.slice(0, 3).map(r => ({
+        id: r.id,
+        Subchapter_Number: r.Subchapter_Number,
+        subchapter_number: r.subchapter_number,
+        video_id: r.video_id
+      })));
+      
       unitRows = unitRows.filter((row) => {
         // Check Subchapter_Number field (from Firestore/CSV)
         const subchapterField = row.Subchapter_Number || row.subchapter_number || row.subchapterNo || '';
         const subchapterStr = String(subchapterField).trim();
+        
+        console.log(`[UnitQuiz] Checking row:`, {
+          id: row.id,
+          subchapterField,
+          subchapterStr,
+          lookingFor: String(subchapterNumber),
+          match: subchapterStr === String(subchapterNumber)
+        });
         
         // Match exact subchapter number
         if (subchapterStr && subchapterStr === String(subchapterNumber)) {
