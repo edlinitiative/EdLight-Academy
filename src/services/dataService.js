@@ -269,8 +269,7 @@ export const loadAppData = async () => {
     console.log('🚀 Loading application data from Firestore...');
     
     // Fetch all data from Firestore in parallel
-    const [quizBankRows, firestoreCourses, firestoreVideosMap, firestoreQuizzesMap] = await Promise.all([
-      loadQuizBankSafe(),
+    const [firestoreCourses, firestoreVideosMap, firestoreQuizzesMap] = await Promise.all([
       fetchCoursesFromFirestore(),
       fetchVideosFromFirestore(),
       fetchQuizzesFromFirestore(),
@@ -279,8 +278,7 @@ export const loadAppData = async () => {
     console.log('📊 Firestore data loaded:', {
       courses: firestoreCourses.length,
       videos: firestoreVideosMap.size,
-      quizzes: firestoreQuizzesMap.size,
-      quizBankQuestions: quizBankRows.length
+      quizzes: firestoreQuizzesMap.size
     });
     
     // Transform Firestore courses to app format
@@ -302,8 +300,8 @@ export const loadAppData = async () => {
       icon: info.icon
     }));
     
-    // Build quiz bank from Firestore videos
-    const quizBank = normalizeAndIndexQuizBank(quizBankRows, videos);
+    // Build quiz bank from Firestore quizzes (not CSV)
+    const quizBank = normalizeAndIndexQuizBank(quizzes, videos);
     
     return { subjects, videos, quizzes, courses, quizBank };
   } catch (err) {
