@@ -7,6 +7,7 @@ import { QuizComponent } from '../components/Quiz';
 import UnitQuiz from '../components/UnitQuiz';
 import Comments from '../components/Comments';
 import FlashcardDeck from '../components/FlashcardDeck';
+import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import useStore from '../contexts/store';
 
 export default function CourseDetail() {
@@ -41,36 +42,15 @@ export default function CourseDetail() {
     || course?.trailerUrl
     || '';
   
-  // Convert YouTube URLs to embed format with parameters to minimize distractions
-  const primaryVideo = primaryVideoRaw ? (() => {
-    if (!primaryVideoRaw) return '';
-    
-    try {
-      const url = new URL(primaryVideoRaw);
-      
-      // Handle YouTube URLs
-      if (url.hostname.includes('youtube.com') || url.hostname.includes('youtu.be')) {
-        let videoId = null;
-        
-        // Extract video ID from different YouTube URL formats
-        if (url.hostname.includes('youtube.com')) {
-          videoId = url.searchParams.get('v') || url.pathname.split('/embed/')[1]?.split('?')[0];
-        } else if (url.hostname.includes('youtu.be')) {
-          videoId = url.pathname.slice(1).split('?')[0];
-        }
-        
-        if (videoId) {
-          // Build embed URL with parameters to minimize distractions
-          // Note: As of 2018, rel=0 shows related videos from same channel (can't fully disable)
-          return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&iv_load_policy=3&playsinline=1`;
-        }
-      }
-      
-      return primaryVideoRaw;
-    } catch (e) {
-      return primaryVideoRaw;
-    }
-  })() : '';
+  // Check if it's a YouTube URL and extract video ID
+  const isYouTubeVideo = primaryVideoRaw && (
+    primaryVideoRaw.includes('youtube.com') || 
+    primaryVideoRaw.includes('youtu.be')
+  );
+  const youtubeVideoId = isYouTubeVideo ? getYouTubeVideoId(primaryVideoRaw) : null;
+  
+  // For non-YouTube videos, keep the original URL
+  const primaryVideo = primaryVideoRaw;
   
   // Curriculum practice is always available (subject to data availability),
   // so enable Practice regardless of legacy per-video quizzes.
@@ -150,23 +130,51 @@ export default function CourseDetail() {
   // Check if current lesson is completed
   const isLessonCompleted = progress?.completedLessons?.includes(activeLessonData?.id) || false;
 
-  // Track video view when user spends time on a video lesson
+  // Handle YouTube player time updates for progress tracking
+  const handleVideoTimeUpdate = ({ currentTime, duration }) => {
+    if (!user?.uid || !isEnrolled || !activeLessonData) return;
+    
+    // Track video progress when user watches 10+ seconds
+    if (currentTime >= 10) {
+      trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+        watchDuration: currentTime,
+        totalDuration: duration,
+        completed: currentTime >= duration * 0.9 // 90% watched = completed
+      });
+    }
+  };
+
+  // Handle when YouTube video ends
+  const handleVideoEnded = () => {
+    if (!user?.uid || !isEnrolled || !activeLessonData) return;
+    
+    // Mark video as fully watched
+    trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+      watchDuration: activeLessonData.duration * 60 || 600,
+      totalDuration: activeLessonData.duration * 60 || 600,
+      completed: true
+    });
+  };
+
+  // Track video view when user spends time on a video lesson (fallback for non-YouTube)
   useEffect(() => {
     if (!user?.uid || !isEnrolled || !activeLessonData || activeLessonData.type !== 'video') {
       return;
     }
 
-    // Mark video as watched after 10 seconds
-    const timer = setTimeout(() => {
-      trackVideoProgress(user.uid, courseId, activeLessonData.id, {
-        watchDuration: 10, // Will be improved with actual video player tracking
-        totalDuration: activeLessonData.duration * 60 || 600,
-        completed: false
-      });
-    }, 10000); // 10 seconds
+    // For non-YouTube videos, mark as watched after 10 seconds
+    if (!youtubeVideoId) {
+      const timer = setTimeout(() => {
+        trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+          watchDuration: 10,
+          totalDuration: activeLessonData.duration * 60 || 600,
+          completed: false
+        });
+      }, 10000);
 
-    return () => clearTimeout(timer);
-  }, [user?.uid, isEnrolled, activeLessonData, courseId]);
+      return () => clearTimeout(timer);
+    }
+  }, [activeLessonData, user, isEnrolled, youtubeVideoId]);
 
   if (isLoading) {
     return (
@@ -232,12 +240,21 @@ export default function CourseDetail() {
                     />
                   </div>
                 ) : primaryVideo ? (
-                  <iframe
-                    src={primaryVideo}
-                    title={activeLessonData?.title || activeModuleData?.title || course.name}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
+                  youtubeVideoId ? (
+                    <YouTubePlayer
+                      videoId={youtubeVideoId}
+                      title={activeLessonData?.title || activeModuleData?.title || course.name}
+                      onTimeUpdate={handleVideoTimeUpdate}
+                      onEnded={handleVideoEnded}
+                    />
+                  ) : (
+                    <iframe
+                      src={primaryVideo}
+                      title={activeLessonData?.title || activeModuleData?.title || course.name}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  )
                 ) : (
                   <div className="lesson-card__placeholder">
                     Video content will appear here once available.
