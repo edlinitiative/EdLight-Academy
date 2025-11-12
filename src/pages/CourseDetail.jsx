@@ -160,46 +160,48 @@ export default function CourseDetail() {
               </div>
 
               {activeDescription && (
-                <p className="lesson-card__description text-muted">
-                  {activeDescription}
-                </p>
+                <div className="lesson-card__description-section">
+                  <h3 className="lesson-card__section-title">About This Lesson</h3>
+                  <p className="lesson-card__description text-muted">
+                    {activeDescription}
+                  </p>
+                </div>
               )}
 
-              <div className="lesson-card__nav">
-                <div className="lesson-card__nav-group">
-                  {prevTarget && (
-                    <button
-                      className="button button--ghost button--sm"
-                      onClick={() => {
-                        setActiveModule(prevTarget.module);
-                        setActiveLesson(prevTarget.lesson);
-                      }}
-                    >
-                      Previous
-                    </button>
-                  )}
-                  {nextTarget && (
-                    <button
-                      className="button button--ghost button--sm"
-                      onClick={() => {
-                        setActiveModule(nextTarget.module);
-                        setActiveLesson(nextTarget.lesson);
-                      }}
-                    >
-                      Next
-                    </button>
-                  )}
-                </div>
-
+              <div className="lesson-card__actions">
                 {hasQuiz && (
                   <button
-                    className="button button--primary button--sm"
+                    className="button button--primary button--pill"
                     onClick={() => setShowQuiz(true)}
                   >
-                    Practice
+                    📝 Practice Questions
                   </button>
                 )}
-                {/* The Unit Quiz entry now lives in the course content list below */}
+              </div>
+
+              <div className="lesson-card__nav">
+                {prevTarget && (
+                  <button
+                    className="button button--ghost button--sm"
+                    onClick={() => {
+                      setActiveModule(prevTarget.module);
+                      setActiveLesson(prevTarget.lesson);
+                    }}
+                  >
+                    ← Previous
+                  </button>
+                )}
+                {nextTarget && (
+                  <button
+                    className="button button--primary button--sm"
+                    onClick={() => {
+                      setActiveModule(nextTarget.module);
+                      setActiveLesson(nextTarget.lesson);
+                    }}
+                  >
+                    Next →
+                  </button>
+                )}
               </div>
             </article>
 
