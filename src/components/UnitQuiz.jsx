@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import DirectBankQuiz from './DirectBankQuiz';
+import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';
+import useStore from '../contexts/store';
 
 function shuffle(array) {
   const a = array.slice();
@@ -10,8 +12,9 @@ function shuffle(array) {
   return a;
 }
 
-export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, onClose }) {
+export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose }) {
   const { data: appData } = require('../hooks/useData').useAppData();
+  const { user } = useStore();
   const quizBank = appData?.quizBank;
   const TOTAL = 10;
 
@@ -126,6 +129,30 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     setCanAdvance(false);
     setFinished(false);
   }, [subjectCode, unitId]);
+
+  // Track quiz completion
+  useEffect(() => {
+    if (finished && user?.uid && courseId && items.length > 0) {
+      const quizId = `${subjectCode}-U${chapterNumber}${subchapterNumber ? `-L${subchapterNumber}` : ''}`;
+      const percentage = (score / items.length) * 100;
+      
+      trackQuizAttempt(user.uid, courseId, quizId, {
+        score,
+        totalQuestions: items.length,
+        percentage,
+        timeSpent: 0 // Could track this with a timer if needed
+      }).catch(err => {
+        console.error('[UnitQuiz] Error tracking quiz attempt:', err);
+      });
+
+      // Mark lesson as complete if score is 60% or better and lessonId is provided
+      if (percentage >= 60 && lessonId) {
+        markLessonComplete(user.uid, courseId, lessonId).catch(err => {
+          console.error('[UnitQuiz] Error marking lesson complete:', err);
+        });
+      }
+    }
+  }, [finished, user?.uid, courseId, score, items.length, subjectCode, chapterNumber, subchapterNumber, lessonId]);
 
   const handleScore = (evt) => {
     if (!evt) return;

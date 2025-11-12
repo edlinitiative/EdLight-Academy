@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
+import ProgressDashboard from '../components/ProgressDashboard';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -150,6 +151,11 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* New Progress Tracking Dashboard */}
+        <div className="dashboard-section">
+          <ProgressDashboard />
         </div>
 
         <div className="dashboard-section">

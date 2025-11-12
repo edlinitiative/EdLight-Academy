@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
+import { useCourseProgress } from '../hooks/useProgress';
+import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
 import { QuizComponent } from '../components/Quiz';
 import UnitQuiz from '../components/UnitQuiz';
 import Comments from '../components/Comments';
+import VideoPlayer from '../components/VideoPlayer';
+import FlashcardDeck from '../components/FlashcardDeck';
 import useStore from '../contexts/store';
 
 export default function CourseDetail() {
@@ -13,8 +17,10 @@ export default function CourseDetail() {
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [showFlashcards, setShowFlashcards] = useState(false);
   const [expandedModules, setExpandedModules] = useState(() => new Set([0]));
-  const { isAuthenticated, enrolledCourses } = useStore();
+  const { isAuthenticated, enrolledCourses, user } = useStore();
+  const { progress } = useCourseProgress(courseId);
 
   const course = data?.courses?.find((c) => c.id === courseId);
   const isEnrolled = enrolledCourses.some((c) => c.id === courseId);
@@ -99,6 +105,38 @@ export default function CourseDetail() {
     setShowQuiz(false);
   }, [activeLesson]);
 
+  // Handler to mark lesson as complete
+  const handleMarkComplete = async () => {
+    if (!user?.uid || !courseId || !activeLessonData?.id) return;
+    
+    try {
+      await markLessonComplete(user.uid, courseId, activeLessonData.id);
+    } catch (error) {
+      console.error('[CourseDetail] Error marking lesson complete:', error);
+    }
+  };
+
+  // Check if current lesson is completed
+  const isLessonCompleted = progress?.completedLessons?.includes(activeLessonData?.id) || false;
+
+  // Track video view when user spends time on a video lesson
+  useEffect(() => {
+    if (!user?.uid || !isEnrolled || !activeLessonData || activeLessonData.type !== 'video') {
+      return;
+    }
+
+    // Mark video as watched after 10 seconds
+    const timer = setTimeout(() => {
+      trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+        watchDuration: 10, // Will be improved with actual video player tracking
+        totalDuration: activeLessonData.duration * 60 || 600,
+        completed: false
+      });
+    }, 10000); // 10 seconds
+
+    return () => clearTimeout(timer);
+  }, [user?.uid, isEnrolled, activeLessonData, courseId]);
+
   if (isLoading) {
     return (
       <div className="section">
@@ -134,7 +172,22 @@ export default function CourseDetail() {
           <div className="course-detail__column">
             <article className="lesson-card">
               <header className="lesson-card__header">
-                <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
+                <div className="lesson-card__header-content">
+                  <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
+                  {isEnrolled && progress && (
+                    <div className="lesson-card__progress-badges">
+                      {progress.totalPoints > 0 && (
+                        <span className="chip chip--primary">🎯 {progress.totalPoints} pts</span>
+                      )}
+                      {progress.currentStreak > 0 && (
+                        <span className="chip chip--warning">🔥 {progress.currentStreak} day streak</span>
+                      )}
+                      {progress.completedLessons?.length > 0 && (
+                        <span className="chip chip--success">✓ {progress.completedLessons.length} completed</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </header>
 
               <div className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
@@ -143,14 +196,34 @@ export default function CourseDetail() {
                     <UnitQuiz
                       subjectCode={course?.code}
                       chapterNumber={activeModuleData?.unit_no}
+                      courseId={courseId}
+                      lessonId={activeLessonData?.id}
                     />
                   </div>
                 ) : primaryVideo ? (
-                  <iframe
+                  <VideoPlayer
                     src={primaryVideo}
                     title={activeLessonData?.title || activeModuleData?.title || course.name}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
+                    onTimeUpdate={(data) => {
+                      // Track video progress every 30 seconds
+                      if (user?.uid && isEnrolled && Math.floor(data.currentTime) % 30 === 0) {
+                        trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+                          watchDuration: data.currentTime,
+                          totalDuration: data.duration,
+                          completed: data.currentTime / data.duration > 0.9,
+                        }).catch(err => console.error('Error tracking video:', err));
+                      }
+                    }}
+                    onEnded={() => {
+                      // Mark video as watched when ended
+                      if (user?.uid && isEnrolled && activeLessonData?.id) {
+                        trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+                          watchDuration: activeLessonData.duration * 60 || 600,
+                          totalDuration: activeLessonData.duration * 60 || 600,
+                          completed: true,
+                        }).catch(err => console.error('Error tracking video completion:', err));
+                      }
+                    }}
                   />
                 ) : (
                   <div className="lesson-card__placeholder">
@@ -191,14 +264,33 @@ export default function CourseDetail() {
                   )}
                 </div>
 
-                {hasQuiz && (
-                  <button
-                    className="button button--primary button--sm"
-                    onClick={() => setShowQuiz(true)}
-                  >
-                    Practice
-                  </button>
-                )}
+                <div className="lesson-card__nav-group">
+                  {activeLessonData?.type !== 'quiz' && isEnrolled && (
+                    <button
+                      className={`button button--sm ${isLessonCompleted ? 'button--ghost' : 'button--secondary'}`}
+                      onClick={handleMarkComplete}
+                      disabled={isLessonCompleted}
+                    >
+                      {isLessonCompleted ? '✓ Completed' : 'Mark Complete'}
+                    </button>
+                  )}
+                  {hasQuiz && (
+                    <>
+                      <button
+                        className="button button--secondary button--sm"
+                        onClick={() => setShowFlashcards(true)}
+                      >
+                        📇 Flashcards
+                      </button>
+                      <button
+                        className="button button--primary button--sm"
+                        onClick={() => setShowQuiz(true)}
+                      >
+                        Practice
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </article>
 
@@ -208,16 +300,28 @@ export default function CourseDetail() {
                   subjectCode: course?.code,
                   chapterNumber: activeModuleData?.unit_no,
                   subchapterNumber: activeLessonData?.lesson_no,
+                  courseId,
                   activeLessonData
                 })}
                 <UnitQuiz
                   subjectCode={course?.code}
                   chapterNumber={activeModuleData?.unit_no}
                   subchapterNumber={activeLessonData?.lesson_no}
+                  courseId={courseId}
                   onClose={() => setShowQuiz(false)}
                 />
               </>
             )}
+
+            {showFlashcards && hasQuiz && (
+              <FlashcardDeck
+                subjectCode={course?.code}
+                chapterNumber={activeModuleData?.unit_no}
+                subchapterNumber={activeLessonData?.lesson_no}
+                onClose={() => setShowFlashcards(false)}
+              />
+            )}
+
             {/* Unit Quiz renders inline in the media area when lesson type is 'quiz' */}
             <Comments
               threadKey={threadKey}
@@ -288,17 +392,20 @@ export default function CourseDetail() {
                         <div className="lesson-list__children">
                           {module.lessons.map((lsn, lidx) => {
                             const isActiveLesson = isActiveModule && lidx === activeLesson;
+                            const isCompleted = progress?.completedLessons?.includes(lsn.id) || false;
                             return (
                               <button
                                 key={lsn.id ?? `${idx}-${lidx}`}
                                 type="button"
-                                className={`lesson-list__item ${isActiveLesson ? 'lesson-list__item--active' : ''}`}
+                                className={`lesson-list__item ${isActiveLesson ? 'lesson-list__item--active' : ''} ${isCompleted ? 'lesson-list__item--completed' : ''}`}
                                 onClick={() => {
                                   setActiveModule(idx);
                                   setActiveLesson(lidx);
                                 }}
                               >
-                                <span className="lesson-list__index">{idx + 1}.{lidx + 1}</span>
+                                <span className="lesson-list__index">
+                                  {isCompleted ? '✓' : `${idx + 1}.${lidx + 1}`}
+                                </span>
                                 <span className="lesson-list__meta">
                                   <span className="lesson-list__title">{lsn.title}</span>
                                   <span className="lesson-list__duration">
