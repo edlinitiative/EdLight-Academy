@@ -160,46 +160,43 @@ export default function CourseDetail() {
               </div>
 
               {activeDescription && (
-                <div className="lesson-card__description-section">
-                  <h3 className="lesson-card__section-title">About This Lesson</h3>
-                  <p className="lesson-card__description text-muted">
-                    {activeDescription}
-                  </p>
-                </div>
+                <p className="lesson-card__description text-muted">
+                  {activeDescription}
+                </p>
               )}
 
-              <div className="lesson-card__actions">
+              <div className="lesson-card__nav">
+                <div className="lesson-card__nav-group">
+                  {prevTarget && (
+                    <button
+                      className="button button--ghost button--sm"
+                      onClick={() => {
+                        setActiveModule(prevTarget.module);
+                        setActiveLesson(prevTarget.lesson);
+                      }}
+                    >
+                      Previous
+                    </button>
+                  )}
+                  {nextTarget && (
+                    <button
+                      className="button button--ghost button--sm"
+                      onClick={() => {
+                        setActiveModule(nextTarget.module);
+                        setActiveLesson(nextTarget.lesson);
+                      }}
+                    >
+                      Next
+                    </button>
+                  )}
+                </div>
+
                 {hasQuiz && (
                   <button
-                    className="button button--primary button--pill"
+                    className="button button--primary button--sm"
                     onClick={() => setShowQuiz(true)}
                   >
-                    📝 Practice Questions
-                  </button>
-                )}
-              </div>
-
-              <div className="lesson-card__nav">
-                {prevTarget && (
-                  <button
-                    className="button button--ghost button--sm"
-                    onClick={() => {
-                      setActiveModule(prevTarget.module);
-                      setActiveLesson(prevTarget.lesson);
-                    }}
-                  >
-                    ← Previous
-                  </button>
-                )}
-                {nextTarget && (
-                  <button
-                    className="button button--primary button--sm"
-                    onClick={() => {
-                      setActiveModule(nextTarget.module);
-                      setActiveLesson(nextTarget.lesson);
-                    }}
-                  >
-                    Next →
+                    Practice
                   </button>
                 )}
               </div>

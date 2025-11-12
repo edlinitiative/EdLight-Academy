@@ -1094,36 +1094,12 @@ textarea.input-field {
 	white-space: normal; /* allow wrapping to multiple lines */
 }
 
-.lesson-card__description-section {
-	margin: 1.5rem 0;
-	padding: 1rem 0;
-	border-top: 1px solid var(--gray-200);
-}
-
-.lesson-card__section-title {
-	font-size: 0.875rem;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--gray-600);
-	margin-bottom: 0.75rem;
-}
-
-.lesson-card__actions {
-	display: flex;
-	gap: 0.75rem;
-	margin: 1.5rem 0;
-	padding: 1rem 0;
-	border-top: 1px solid var(--gray-200);
-	border-bottom: 1px solid var(--gray-200);
-}
-
 .lesson-card__nav {
 	display: flex;
 	justify-content: space-between;
+	flex-wrap: wrap;
 	gap: 0.75rem;
 	align-items: center;
-	margin-top: 1.5rem;
 }
 
 .lesson-card__nav-group {
