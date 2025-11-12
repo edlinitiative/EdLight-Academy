@@ -48,7 +48,10 @@ function FilePicker({ onData, columns, label }) {
         const text = await file.text();
         // Simple CSV parse: split lines by header and commas respecting quotes handled by our csv parser already used by dataService
         const rows = await loadCSVFromText(text);
+        console.log('[Admin] Parsed CSV rows:', rows.length, 'Sample:', rows[0]);
         const mapped = rows.map((r) => remapRow(r, columns));
+        console.log('[Admin] Mapped to columns:', columns);
+        console.log('[Admin] Sample mapped row:', mapped[0]);
         onData(mapped, { sourceName: file.name, type: 'csv' });
       } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
         const arr = new Uint8Array(await file.arrayBuffer());
