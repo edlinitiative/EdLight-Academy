@@ -14,7 +14,6 @@ export default function CourseDetail() {
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [expandedModules, setExpandedModules] = useState(() => new Set([0]));
-  const [showUnitQuiz, setShowUnitQuiz] = useState(false);
   const { isAuthenticated, enrolledCourses } = useStore();
 
   const course = data?.courses?.find((c) => c.id === courseId);
@@ -88,8 +87,7 @@ export default function CourseDetail() {
   useEffect(() => {
     // reset lesson to the first when switching modules
     setActiveLesson(0);
-  setShowQuiz(false);
-  setShowUnitQuiz(false);
+    setShowQuiz(false);
     setExpandedModules((prev) => {
       const next = new Set(prev);
       next.add(activeModule);
@@ -98,8 +96,7 @@ export default function CourseDetail() {
   }, [activeModule]);
 
   useEffect(() => {
-  setShowQuiz(false);
-  setShowUnitQuiz(false);
+    setShowQuiz(false);
   }, [activeLesson]);
 
   if (isLoading) {
@@ -140,29 +137,11 @@ export default function CourseDetail() {
                 <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
               </header>
 
-              <div className={`lesson-card__media ${showUnitQuiz || activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
-                {showUnitQuiz ? (
-                  <div className="lesson-card__quizwrap">
-                    <div className="lesson-card__quizbar">
-                      <button
-                        type="button"
-                        className="button button--ghost button--sm"
-                        onClick={() => setShowUnitQuiz(false)}
-                      >
-                        ← Back to Lesson Video
-                      </button>
-                    </div>
-                    <UnitQuiz
-                      subjectCode={course?.id}
-                      unitId={activeModuleData?.id}
-                      onClose={() => setShowUnitQuiz(false)}
-                    />
-                  </div>
-                ) : activeLessonData?.type === 'quiz' ? (
+              <div className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
+                {activeLessonData?.type === 'quiz' ? (
                   <div className="lesson-card__quizwrap">
                     <UnitQuiz
                       subjectCode={course?.code}
-                      unitId={activeModuleData?.id}
                       chapterNumber={activeModuleData?.unit_no}
                     />
                   </div>
@@ -240,7 +219,7 @@ export default function CourseDetail() {
                 />
               </>
             )}
-            {/* Unit Quiz now renders inline in the media area when showUnitQuiz is true */}
+            {/* Unit Quiz renders inline in the media area when lesson type is 'quiz' */}
             <Comments
               threadKey={threadKey}
               isAuthenticated={isAuthenticated}
