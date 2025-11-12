@@ -225,12 +225,20 @@ export default function CourseDetail() {
             </article>
 
             {showQuiz && hasQuiz && (
-              <UnitQuiz
-                subjectCode={course?.code}
-                chapterNumber={activeModuleData?.unit_no}
-                subchapterNumber={activeLessonData?.lesson_no}
-                onClose={() => setShowQuiz(false)}
-              />
+              <>
+                {console.log('[CourseDetail] Practice button - passing to UnitQuiz:', {
+                  subjectCode: course?.code,
+                  chapterNumber: activeModuleData?.unit_no,
+                  subchapterNumber: activeLessonData?.lesson_no,
+                  activeLessonData
+                })}
+                <UnitQuiz
+                  subjectCode={course?.code}
+                  chapterNumber={activeModuleData?.unit_no}
+                  subchapterNumber={activeLessonData?.lesson_no}
+                  onClose={() => setShowQuiz(false)}
+                />
+              </>
             )}
             {/* Unit Quiz now renders inline in the media area when showUnitQuiz is true */}
             <Comments

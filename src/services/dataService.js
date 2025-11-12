@@ -168,6 +168,17 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
         // Enrich with video data if it's a video lesson
         if (lessonType === 'video' && videosMap.has(lessonId)) {
           const videoData = videosMap.get(lessonId);
+          
+          // Extract lesson_no from video data, or parse from ID if not present
+          // Video IDs follow pattern: CHEM-NSI-U1-L2 (lesson 2)
+          let lessonNo = videoData.lesson_no;
+          if (!lessonNo) {
+            const lessonMatch = lessonId.match(/-L(\d+)$/i);
+            if (lessonMatch) {
+              lessonNo = parseInt(lessonMatch[1], 10);
+            }
+          }
+          
           return {
             id: lessonId,
             title: lesson.title || videoData.title,
@@ -178,7 +189,7 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
             objectives: videoData.learning_objectives || '',
             thumbnail: videoData.thumbnail_url || '',
             unit_no: videoData.unit_no, // Include unit_no from video data
-            lesson_no: videoData.lesson_no // Include lesson_no for subchapter filtering
+            lesson_no: lessonNo // Include lesson_no for subchapter filtering
           };
         }
         
