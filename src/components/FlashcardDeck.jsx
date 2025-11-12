@@ -1,9 +1,64 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppData } from '../hooks/useData';
+
+// Load KaTeX for math rendering
+function loadCssOnce(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+function loadScriptOnce(src, onload) {
+  if (document.querySelector(`script[src="${src}"]`)) return onload && onload();
+  const script = document.createElement('script');
+  script.src = src;
+  script.async = true;
+  script.onload = onload || null;
+  document.body.appendChild(script);
+}
+
+function useKatex() {
+  const [ready, setReady] = useState(typeof window !== 'undefined' && !!window.katex);
+  useEffect(() => {
+    if (ready) return;
+    const CSS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.css';
+    const JS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.js';
+    loadCssOnce(CSS);
+    loadScriptOnce(JS, () => setReady(true));
+  }, [ready]);
+  return ready;
+}
+
+// Render text with KaTeX math expressions
+function renderWithKatex(text, katexReady) {
+  if (!text) return { __html: '' };
+  let html = String(text);
+  if (katexReady && typeof window !== 'undefined' && window.katex) {
+    // Inline math: \( ... \)
+    html = html.replace(/\\\((.+?)\\\)/g, (_, expr) => {
+      try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
+    });
+    // Display math: $$...$$
+    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
+      try { return window.katex.renderToString(expr, { displayMode: true, throwOnError: false }); } catch { return _; }
+    });
+  } else {
+    // Escape basic HTML when not rendering math to avoid injection
+    html = html
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>');
+  }
+  return { __html: html };
+}
 
 export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNumber, onClose }) {
   const { data: appData } = useAppData();
   const quizBank = appData?.quizBank;
+  const katexReady = useKatex();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredCards, setMasteredCards] = useState(new Set());
@@ -174,24 +229,28 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
           <div className="flashcard__inner">
             <div className="flashcard__front">
               <div className="flashcard__label">Question</div>
-              <div className="flashcard__content">
-                {currentCard.question}
-              </div>
+              <div 
+                className="flashcard__content"
+                dangerouslySetInnerHTML={renderWithKatex(currentCard.question, katexReady)}
+              />
               <div className="flashcard__hint-text">💡 Click to reveal answer</div>
             </div>
             <div className="flashcard__back">
               <div className="flashcard__label">Answer</div>
-              <div className="flashcard__content flashcard__content--answer">
-                {currentCard.answer}
-              </div>
+              <div 
+                className="flashcard__content flashcard__content--answer"
+                dangerouslySetInnerHTML={renderWithKatex(currentCard.answer, katexReady)}
+              />
               {currentCard.hint && (
                 <div className="flashcard__hint">
-                  <strong>Hint:</strong> {currentCard.hint}
+                  <strong>Hint:</strong>{' '}
+                  <span dangerouslySetInnerHTML={renderWithKatex(currentCard.hint, katexReady)} />
                 </div>
               )}
               {currentCard.explanation && (
                 <div className="flashcard__explanation">
-                  <strong>Explanation:</strong> {currentCard.explanation}
+                  <strong>Explanation:</strong>{' '}
+                  <span dangerouslySetInnerHTML={renderWithKatex(currentCard.explanation, katexReady)} />
                 </div>
               )}
             </div>
