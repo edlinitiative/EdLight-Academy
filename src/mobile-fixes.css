@@ -85,21 +85,31 @@ body {
   
   .hero--full {
     min-height: auto;
+    height: auto;
     padding: 1.5rem 0 2rem;
+    margin-top: 0;
+  }
+  
+  .section .hero--full {
+    margin-top: 0;
   }
   
   .grid--hero {
     grid-template-columns: 1fr;
     gap: 2rem;
+    padding-top: 0;
   }
   
   .hero-visual {
     order: -1;
+    margin-top: 0;
+    padding-top: 0;
   }
   
   .hero-visual__image {
     max-height: 250px;
     object-fit: cover;
+    display: block;
   }
   
   .hero-visual__grid {
