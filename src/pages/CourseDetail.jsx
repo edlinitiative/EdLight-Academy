@@ -201,30 +201,61 @@ export default function CourseDetail() {
                     />
                   </div>
                 ) : primaryVideo ? (
-                  <VideoPlayer
-                    src={primaryVideo}
-                    title={activeLessonData?.title || activeModuleData?.title || course.name}
-                    onTimeUpdate={(data) => {
-                      // Track video progress every 30 seconds
-                      if (user?.uid && isEnrolled && Math.floor(data.currentTime) % 30 === 0) {
-                        trackVideoProgress(user.uid, courseId, activeLessonData.id, {
-                          watchDuration: data.currentTime,
-                          totalDuration: data.duration,
-                          completed: data.currentTime / data.duration > 0.9,
-                        }).catch(err => console.error('Error tracking video:', err));
-                      }
-                    }}
-                    onEnded={() => {
-                      // Mark video as watched when ended
-                      if (user?.uid && isEnrolled && activeLessonData?.id) {
-                        trackVideoProgress(user.uid, courseId, activeLessonData.id, {
-                          watchDuration: activeLessonData.duration * 60 || 600,
-                          totalDuration: activeLessonData.duration * 60 || 600,
-                          completed: true,
-                        }).catch(err => console.error('Error tracking video completion:', err));
-                      }
-                    }}
-                  />
+                  <>
+                    {primaryVideo.includes('youtube.com') || primaryVideo.includes('youtu.be') ? (
+                      // YouTube iframe (native controls)
+                      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <iframe
+                          src={primaryVideo}
+                          title={activeLessonData?.title || activeModuleData?.title || course.name}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          style={{ width: '100%', height: '100%', border: 'none' }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '0.5rem',
+                          left: '0.5rem',
+                          right: '0.5rem',
+                          background: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          padding: '0.5rem',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          textAlign: 'center',
+                          pointerEvents: 'none',
+                        }}>
+                          💡 Use YouTube's playback speed: Settings ⚙️ → Playback speed
+                        </div>
+                      </div>
+                    ) : (
+                      // Custom video player for direct video files
+                      <VideoPlayer
+                        src={primaryVideo}
+                        title={activeLessonData?.title || activeModuleData?.title || course.name}
+                        onTimeUpdate={(data) => {
+                          // Track video progress every 30 seconds
+                          if (user?.uid && isEnrolled && Math.floor(data.currentTime) % 30 === 0) {
+                            trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+                              watchDuration: data.currentTime,
+                              totalDuration: data.duration,
+                              completed: data.currentTime / data.duration > 0.9,
+                            }).catch(err => console.error('Error tracking video:', err));
+                          }
+                        }}
+                        onEnded={() => {
+                          // Mark video as watched when ended
+                          if (user?.uid && isEnrolled && activeLessonData?.id) {
+                            trackVideoProgress(user.uid, courseId, activeLessonData.id, {
+                              watchDuration: activeLessonData.duration * 60 || 600,
+                              totalDuration: activeLessonData.duration * 60 || 600,
+                              completed: true,
+                            }).catch(err => console.error('Error tracking video completion:', err));
+                          }
+                        }}
+                      />
+                    )}
+                  </>
                 ) : (
                   <div className="lesson-card__placeholder">
                     Video content will appear here once available.
