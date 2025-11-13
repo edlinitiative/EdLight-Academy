@@ -143,28 +143,108 @@ function EditForm({ row, columns, onSave, onCancel }) {
     return initialForm;
   });
 
+  // Fields that should use textarea instead of input
+  const longTextFields = ['question', 'learning_objectives', 'options', 'hint', 'good_response', 'wrong_response', 'tags'];
+  
+  // Fields that should be full-width
+  const fullWidthFields = ['video_url', 'thumbnail_url', 'question', 'options', 'learning_objectives', 'email'];
+
+  const renderField = (col) => {
+    const value = form[col] ?? '';
+    const isLongText = longTextFields.includes(col);
+    const isFullWidth = fullWidthFields.includes(col);
+    const isReadOnly = col === 'id' || col === 'user_id' || col === 'created_at';
+
+    return (
+      <div 
+        key={col} 
+        className="form-field"
+        style={isFullWidth ? { gridColumn: '1 / -1' } : {}}
+      >
+        <label className="form-label" style={{ 
+          fontWeight: 500, 
+          marginBottom: '0.5rem',
+          display: 'block',
+          color: 'var(--color-text)',
+          fontSize: '0.875rem'
+        }}>
+          {col.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+          {isReadOnly && <span style={{ color: 'var(--color-text-muted)', marginLeft: '0.5rem' }}>(read-only)</span>}
+        </label>
+        {isLongText ? (
+          <textarea
+            className="form-input"
+            value={value}
+            onChange={(e) => setForm({ ...form, [col]: e.target.value })}
+            rows={4}
+            disabled={isReadOnly}
+            style={{ 
+              resize: 'vertical',
+              minHeight: '80px',
+              fontFamily: 'inherit'
+            }}
+          />
+        ) : (
+          <input 
+            className="form-input" 
+            value={value} 
+            onChange={(e) => setForm({ ...form, [col]: e.target.value })}
+            disabled={isReadOnly}
+            style={isReadOnly ? { 
+              backgroundColor: 'var(--color-bg-tertiary)', 
+              cursor: 'not-allowed',
+              opacity: 0.7
+            } : {}}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="modal modal--active" onClick={onCancel}>
-      <div className="modal__content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', overflow: 'auto' }}>
-        <div className="modal__header">
-          <h3 className="modal__title">Edit Item</h3>
+      <div 
+        className="modal__content" 
+        onClick={(e) => e.stopPropagation()} 
+        style={{ 
+          maxWidth: '1000px', 
+          maxHeight: '90vh', 
+          width: '95vw',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <div className="modal__header" style={{ 
+          borderBottom: '1px solid var(--color-border)',
+          padding: '1.5rem',
+          flexShrink: 0
+        }}>
+          <h3 className="modal__title" style={{ fontSize: '1.5rem', margin: 0 }}>Edit Course Details</h3>
           <button className="modal__close" onClick={onCancel} aria-label="Close">×</button>
         </div>
-        <div className="modal__body">
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-            {columns.map((c) => (
-              <div key={c} className="form-field">
-                <label className="form-label">{c}</label>
-                <input 
-                  className="form-input" 
-                  value={form[c] ?? ''} 
-                  onChange={(e) => setForm({ ...form, [c]: e.target.value })} 
-                />
-              </div>
-            ))}
+        <div className="modal__body" style={{ 
+          flex: 1,
+          overflow: 'auto',
+          padding: '1.5rem'
+        }}>
+          <div style={{ 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '1.5rem',
+            alignItems: 'start'
+          }}>
+            {columns.map(renderField)}
           </div>
         </div>
-        <div className="modal__footer">
+        <div className="modal__footer" style={{ 
+          borderTop: '1px solid var(--color-border)',
+          padding: '1.5rem',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '1rem',
+          flexShrink: 0,
+          backgroundColor: 'var(--color-bg-secondary)'
+        }}>
           <button className="button button--ghost button--pill" onClick={onCancel}>Cancel</button>
           <button className="button button--primary button--pill" onClick={() => onSave(form)}>Save Changes</button>
         </div>
