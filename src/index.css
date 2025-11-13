@@ -192,10 +192,11 @@ main {
 .navbar {
 	position: sticky;
 	top: 0;
-	z-index: 20;
+	z-index: 100;
 	backdrop-filter: var(--blur-backdrop);
-	background: linear-gradient(180deg, rgba(245, 246, 251, 0.85) 0%, rgba(245, 246, 251, 0.65) 100%);
-	border-bottom: 1px solid rgba(10, 102, 194, 0.12);
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%);
+	border-bottom: 1.5px solid rgba(10, 102, 194, 0.15);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .navbar__inner {
@@ -203,21 +204,34 @@ main {
 	align-items: center;
 	justify-content: space-between;
 	padding: 1rem 0;
+	gap: 2rem;
 }
 
 .logo {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.75rem;
-	font-weight: 700;
+	font-weight: 800;
 	color: var(--text-900);
 	letter-spacing: -0.02em;
+	font-size: 1.125rem;
+	transition: opacity 0.2s ease;
+}
+
+.logo:hover {
+	opacity: 0.8;
 }
 
 .logo__image {
-	height: 40px;
+	height: 44px;
 	width: auto;
 	display: block;
+	object-fit: contain;
+}
+
+.logo__text {
+	color: var(--primary-600);
+	font-weight: 800;
 }
 
 .logo__mark {
@@ -233,10 +247,37 @@ main {
 	font-size: 1.1rem;
 }
 
+.mobile-menu-toggle {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border: none;
+	background: transparent;
+	color: var(--text-700);
+	cursor: pointer;
+	border-radius: 8px;
+	transition: all 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+	background: rgba(10, 102, 194, 0.08);
+	color: var(--primary-600);
+}
+
+.mobile-menu-toggle:active {
+	transform: scale(0.95);
+}
+
+.mobile-menu-backdrop {
+	display: none;
+}
+
 .nav-links {
 	display: none;
 	align-items: center;
-	gap: 1.5rem;
+	gap: 2rem;
 }
 
 @media (min-width: 900px) {
@@ -246,14 +287,30 @@ main {
 }
 
 .nav-link {
-	color: var(--text-500);
-	font-weight: 500;
-	transition: color 0.2s ease;
+	color: var(--text-600);
+	font-weight: 600;
+	font-size: 0.9375rem;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 8px;
 }
 
-.nav-link:hover,
+.nav-link:hover {
+	color: var(--primary-600);
+	background: rgba(10, 102, 194, 0.06);
+}
+
 .nav-link.active {
 	color: var(--primary-600);
+	background: rgba(10, 102, 194, 0.1);
+	font-weight: 700;
+}
+
+.nav-link--mobile-only {
+	display: none;
 }
 
 .nav-actions {
