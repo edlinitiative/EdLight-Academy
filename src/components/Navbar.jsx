@@ -80,21 +80,21 @@ export function Navbar() {
             className={['nav-link', isActive('/courses') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
           >
-            📚 Courses
+            Courses
           </Link>
           <Link 
             to="/quizzes" 
             className={['nav-link', isActive('/quizzes') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
           >
-            📝 Quizzes
+            Quizzes
           </Link>
           <Link 
             to="/about" 
             className={['nav-link', isActive('/about') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
           >
-            ℹ️ About
+            About
           </Link>
           
           {/* Mobile-only auth actions */}
@@ -104,7 +104,7 @@ export function Navbar() {
               className="nav-link nav-link--mobile-only"
               onClick={() => setShowMobileMenu(false)}
             >
-              🏠 Dashboard
+              Dashboard
             </Link>
           ) : (
             <>
@@ -115,7 +115,7 @@ export function Navbar() {
                   setShowMobileMenu(false);
                 }}
               >
-                🔐 Sign In
+                Sign In
               </button>
               <button 
                 className="nav-link nav-link--mobile-only nav-link--button nav-link--primary"
@@ -125,7 +125,7 @@ export function Navbar() {
                   setShowMobileMenu(false);
                 }}
               >
-                ✨ Create Account
+                Create Account
               </button>
             </>
           )}
