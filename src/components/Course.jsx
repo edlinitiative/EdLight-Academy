@@ -134,82 +134,131 @@ export function CourseModal({ course, onClose, onEnroll }) {
     <div className="modal-overlay" onClick={onClose}>
       <article className="course-modal" onClick={(e) => e.stopPropagation()}>
         <header className="course-modal__header">
-          <div>
-            <span className="chip chip--ghost">{subjectLabel} · {levelLabel}</span>
+          <div className="course-modal__header-content">
+            <div className="course-modal__badges">
+              <span className="chip chip--primary" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.75rem' }}>
+                {subjectLabel}
+              </span>
+              <span className="chip chip--ghost" style={{ fontSize: '0.8125rem', padding: '0.35rem 0.75rem' }}>
+                {levelLabel}
+              </span>
+            </div>
             <h2 className="course-modal__title">{course.name}</h2>
+            {course.instructor && (
+              <p className="course-modal__instructor">
+                <span style={{ opacity: 0.7 }}>Taught by</span> <strong>{course.instructor}</strong>
+              </p>
+            )}
           </div>
           <button className="course-modal__close" onClick={onClose} aria-label="Close">
-            X
+            ×
           </button>
         </header>
 
-        <section className="course-modal__meta">
-          <div className="course-modal__meta-item">
-            <span>Duration</span>
-            <strong>{formatDuration(course.duration)}</strong>
-          </div>
-          <div className="course-modal__meta-item">
-            <span>Units</span>
-            <strong>{units.length}</strong>
-          </div>
-          <div className="course-modal__meta-item">
-            <span>Lessons</span>
-            <strong>{lessonsCount || course.videoCount}</strong>
-          </div>
-          <div className="course-modal__meta-item">
-            <span>Instructor</span>
-            <strong>{course.instructor}</strong>
-          </div>
-        </section>
-
-        <p className="course-modal__descriptor">{course.description}</p>
-
-        <section className="course-modal__syllabus">
-          {units.map((unit, idx) => (
-            <div key={unit.id} className="syllabus-item">
-              <div className="syllabus-item__left">
-                <span className="syllabus-item__index">{String(idx + 1).padStart(2, '0')}</span>
-                <div className="syllabus-item__meta">
-                  <strong className="syllabus-item__title">{unit.title}</strong>
-                  <span className="syllabus-item__subtitle">{unit.lessons?.length || 0} lessons</span>
-                </div>
-              </div>
-              <div className="syllabus-item__right">
-                <span className="text-muted syllabus-item__note">Aligned to NS standards</span>
-                <span className="syllabus-item__chevron" aria-hidden>›</span>
+        <div className="course-modal__body">
+          <section className="course-modal__meta">
+            <div className="course-modal__meta-item">
+              <svg className="course-modal__meta-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1v6l4 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/>
+              </svg>
+              <div>
+                <span className="course-modal__meta-label">Duration</span>
+                <strong className="course-modal__meta-value">{formatDuration(course.duration)}</strong>
               </div>
             </div>
-          ))}
-        </section>
+            <div className="course-modal__meta-item">
+              <svg className="course-modal__meta-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M2 6h12" stroke="currentColor" strokeWidth="1.5"/>
+              </svg>
+              <div>
+                <span className="course-modal__meta-label">Units</span>
+                <strong className="course-modal__meta-value">{units.length}</strong>
+              </div>
+            </div>
+            <div className="course-modal__meta-item">
+              <svg className="course-modal__meta-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M2 8l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div>
+                <span className="course-modal__meta-label">Lessons</span>
+                <strong className="course-modal__meta-value">{lessonsCount || course.videoCount || 0}</strong>
+              </div>
+            </div>
+          </section>
+
+          {course.description && (
+            <div className="course-modal__description">
+              <h3 className="course-modal__section-title">About This Course</h3>
+              <p className="course-modal__descriptor">{course.description}</p>
+            </div>
+          )}
+
+          {units.length > 0 && (
+            <div className="course-modal__syllabus-wrapper">
+              <h3 className="course-modal__section-title">Course Syllabus</h3>
+              <div className="course-modal__syllabus">
+                {units.map((unit, idx) => (
+                  <div key={unit.id} className="syllabus-item">
+                    <div className="syllabus-item__left">
+                      <span className="syllabus-item__index">{String(idx + 1).padStart(2, '0')}</span>
+                      <div className="syllabus-item__meta">
+                        <strong className="syllabus-item__title">{unit.title}</strong>
+                        <span className="syllabus-item__subtitle">
+                          {unit.lessons?.length || 0} lesson{(unit.lessons?.length || 0) !== 1 ? 's' : ''}
+                          {unit.duration && ` · ${formatDuration(unit.duration)}`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="syllabus-item__right">
+                      <span className="syllabus-item__chevron" aria-hidden>›</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <footer className="course-modal__footer">
           {isEnrolled ? (
             <>
               <button
-                className="button button--light button--pill"
+                className="button button--primary button--pill"
                 onClick={() => {
                   onClose();
                   navigate(`/courses/${course.id}`);
                 }}
+                style={{ flex: 1, minWidth: '150px' }}
               >
                 Continue Learning
               </button>
               <button
-                className="button button--ghost button--pill"
+                className="button button--secondary button--pill"
                 onClick={() => {
                   onClose();
                   navigate('/dashboard');
                 }}
+                style={{ flex: 1, minWidth: '150px' }}
               >
                 View Dashboard
               </button>
             </>
           ) : (
             <>
-              <button className="button button--primary button--pill" onClick={handleEnroll}>
+              <button 
+                className="button button--primary button--pill" 
+                onClick={handleEnroll}
+                style={{ flex: 1, minWidth: '150px' }}
+              >
                 Enroll Now
               </button>
-              <button className="button button--ghost button--pill" onClick={onClose}>
+              <button 
+                className="button button--ghost button--pill" 
+                onClick={onClose}
+                style={{ flex: 1, minWidth: '150px' }}
+              >
                 Maybe Later
               </button>
             </>
