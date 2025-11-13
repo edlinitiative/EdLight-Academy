@@ -253,6 +253,7 @@ export default function CourseDetail() {
                 ) : primaryVideo ? (
                   youtubeVideoId ? (
                     <YouTubePlayer
+                      key={youtubeVideoId}
                       videoId={youtubeVideoId}
                       title={activeLessonData?.title || activeModuleData?.title || course.name}
                       onTimeUpdate={handleVideoTimeUpdate}
@@ -260,6 +261,7 @@ export default function CourseDetail() {
                     />
                   ) : (
                     <iframe
+                      key={primaryVideo}
                       src={primaryVideo}
                       title={activeLessonData?.title || activeModuleData?.title || course.name}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
