@@ -19,6 +19,8 @@ export default function CourseDetail() {
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [expandedModules, setExpandedModules] = useState(() => new Set([0]));
+  const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
+  const [showComments, setShowComments] = useState(false); // Mobile comments toggle
   const { isAuthenticated, enrolledCourses, user } = useStore();
   const { progress } = useCourseProgress(courseId);
 
@@ -214,7 +216,7 @@ export default function CourseDetail() {
                 <div className="lesson-card__header-content">
                   <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
                   {isEnrolled && progress && (
-                    <div className="lesson-card__progress-badges">
+                    <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
                       {progress.totalPoints > 0 && (
                         <span className="chip chip--primary">🎯 {progress.totalPoints} pts</span>
                       )}
@@ -227,6 +229,15 @@ export default function CourseDetail() {
                     </div>
                   )}
                 </div>
+                
+                {/* Mobile: Show Course Content toggle button */}
+                <button
+                  className="button button--ghost button--sm lesson-card__sidebar-toggle"
+                  onClick={() => setShowSidebar(!showSidebar)}
+                  type="button"
+                >
+                  {showSidebar ? '✕ Close' : '📚 Course Content'}
+                </button>
               </header>
 
               <div className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
@@ -269,35 +280,43 @@ export default function CourseDetail() {
               )}
 
               <div className="lesson-card__nav">
-                <div className="lesson-card__nav-group">
-                  {prevTarget && (
+                {/* Previous/Next Navigation */}
+                {(prevTarget || nextTarget) && (
+                  <div className="lesson-card__nav-group lesson-card__nav-group--navigation">
                     <button
                       className="button button--ghost button--sm"
                       onClick={() => {
-                        setActiveModule(prevTarget.module);
-                        setActiveLesson(prevTarget.lesson);
+                        if (prevTarget) {
+                          setActiveModule(prevTarget.module);
+                          setActiveLesson(prevTarget.lesson);
+                          setShowSidebar(false);
+                        }
                       }}
+                      disabled={!prevTarget}
                     >
-                      Previous
+                      ← Previous
                     </button>
-                  )}
-                  {nextTarget && (
                     <button
                       className="button button--ghost button--sm"
                       onClick={() => {
-                        setActiveModule(nextTarget.module);
-                        setActiveLesson(nextTarget.lesson);
+                        if (nextTarget) {
+                          setActiveModule(nextTarget.module);
+                          setActiveLesson(nextTarget.lesson);
+                          setShowSidebar(false);
+                        }
                       }}
+                      disabled={!nextTarget}
                     >
-                      Next
+                      Next →
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                <div className="lesson-card__nav-group">
+                {/* Action Buttons */}
+                <div className="lesson-card__nav-group lesson-card__nav-group--actions">
                   {activeLessonData?.type !== 'quiz' && isEnrolled && (
                     <button
-                      className={`button button--sm ${isLessonCompleted ? 'button--ghost' : 'button--secondary'}`}
+                      className={`button button--sm ${isLessonCompleted ? 'button--success' : 'button--secondary'}`}
                       onClick={handleMarkComplete}
                       disabled={isLessonCompleted}
                     >
@@ -307,16 +326,20 @@ export default function CourseDetail() {
                   {hasQuiz && (
                     <>
                       <button
-                        className="button button--secondary button--sm"
+                        className="button button--ghost button--sm"
                         onClick={() => setShowFlashcards(true)}
+                        title="Study with flashcards"
                       >
-                        📇 Flashcards
+                        <span className="button-icon">📇</span>
+                        <span className="button-text">Flashcards</span>
                       </button>
                       <button
                         className="button button--primary button--sm"
                         onClick={() => setShowQuiz(true)}
+                        title="Practice with quiz"
                       >
-                        Practice
+                        <span className="button-icon">📝</span>
+                        <span className="button-text">Practice</span>
                       </button>
                     </>
                   )}
@@ -353,21 +376,53 @@ export default function CourseDetail() {
             )}
 
             {/* Unit Quiz renders inline in the media area when lesson type is 'quiz' */}
-            <Comments
-              threadKey={threadKey}
-              isAuthenticated={isAuthenticated}
-              onRequireAuth={() => useStore.getState().toggleAuthModal()}
-            />
+            
+            {/* Comments Section - Collapsible on Mobile */}
+            <div className="lesson-card lesson-card--comments">
+              <button
+                className="lesson-card__comments-toggle"
+                onClick={() => setShowComments(!showComments)}
+                type="button"
+              >
+                <span className="lesson-card__comments-title">
+                  💬 Discussion & Comments
+                </span>
+                <span className="lesson-card__comments-chevron">
+                  {showComments ? '▼' : '▶'}
+                </span>
+              </button>
+              
+              {showComments && (
+                <div className="lesson-card__comments-content">
+                  <Comments
+                    threadKey={threadKey}
+                    isAuthenticated={isAuthenticated}
+                    onRequireAuth={() => useStore.getState().toggleAuthModal()}
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
-          <aside className="lesson-sidebar">
-            <div>
-              <h3 className="lesson-sidebar__heading">Course Content</h3>
-              <p className="text-muted lesson-sidebar__description">
-                {isEnrolled
-                  ? 'Track your progress across each module and revisit lessons anytime.'
-                  : 'Preview the modules covered in this course. Enroll to unlock full lessons.'}
-              </p>
+          {/* Sidebar - Collapsible on Mobile */}
+          <aside className={`lesson-sidebar ${showSidebar ? 'lesson-sidebar--visible' : ''}`}>
+            <div className="lesson-sidebar__header">
+              <div>
+                <h3 className="lesson-sidebar__heading">Course Content</h3>
+                <p className="text-muted lesson-sidebar__description">
+                  {isEnrolled
+                    ? 'Track your progress across each module and revisit lessons anytime.'
+                    : 'Preview the modules covered in this course. Enroll to unlock full lessons.'}
+                </p>
+              </div>
+              <button
+                className="lesson-sidebar__close"
+                onClick={() => setShowSidebar(false)}
+                type="button"
+                aria-label="Close sidebar"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="lesson-list">

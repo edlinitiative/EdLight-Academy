@@ -1303,6 +1303,26 @@ textarea.input-field {
 	z-index: 10;
 }
 
+/* Hide mobile-only elements on desktop */
+.lesson-card__sidebar-toggle,
+.lesson-sidebar__close,
+.lesson-card__comments-toggle {
+	display: none;
+}
+
+/* Comments always visible on desktop */
+.lesson-card--comments {
+	padding: 1.5rem;
+}
+
+.lesson-card__comments-content {
+	display: block;
+}
+
+.lesson-sidebar__header {
+	display: block;
+}
+
 .lesson-sidebar__heading {
 	font-size: clamp(1.1rem, 3vw, 1.3rem);
 	font-weight: 700;
