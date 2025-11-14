@@ -73,7 +73,7 @@ body {
   .logo__text {
     display: inline;
     font-size: 1.0625rem;
-    color: #111827;
+    color: #6b7280;
     font-weight: 600;
     letter-spacing: -0.01em;
   }
@@ -135,7 +135,7 @@ body {
     padding: 1.125rem 1.5rem;
     font-size: 1rem;
     font-weight: 500;
-    color: #374151;
+    color: #6b7280;
     border-radius: 0;
     margin: 0;
     display: flex;
@@ -153,9 +153,9 @@ body {
   
   .nav-link.active {
     background: #f9fafb;
-    color: #111827;
+    color: #374151;
     font-weight: 600;
-    border-left: 3px solid #111827;
+    border-left: 3px solid #6b7280;
     padding-left: calc(1.5rem - 3px);
   }
   
@@ -175,7 +175,7 @@ body {
     background: white;
     border: none;
     border-bottom: 1px solid #f3f4f6;
-    color: #111827;
+    color: #6b7280;
     text-align: left;
     justify-content: flex-start;
     cursor: pointer;
