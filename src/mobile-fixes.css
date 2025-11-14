@@ -45,30 +45,35 @@ body {
     top: 0;
     z-index: 100;
     background: white;
-    border-bottom: 2px solid rgba(10, 102, 194, 0.12);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border-bottom: 1.5px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
   
   .navbar__inner {
     padding: 0.875rem 0;
     gap: 1rem;
+    justify-content: center;
+    position: relative;
   }
   
   .logo {
     font-size: 1rem;
     gap: 0.625rem;
-    flex: 1;
+    flex: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
   }
   
   .logo__image {
-    height: 36px;
+    display: none;
   }
   
   .logo__text {
     display: inline;
-    font-size: 1.0625rem;
-    color: var(--primary-600);
-    font-weight: 800;
+    font-size: 1.125rem;
+    color: #111827;
+    font-weight: 700;
   }
   
   /* Mobile Menu Toggle */
@@ -1154,6 +1159,7 @@ body {
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem 1rem 0.875rem;
+    padding-top: calc(1rem + 60px); /* Account for navbar height */
     border-bottom: 1px solid #e5e7eb;
     position: sticky;
     top: 0;
@@ -1293,13 +1299,7 @@ body {
   }
   
   .lesson-list__duration {
-    font-size: 0.75rem;
-    color: #6b7280;
-    line-height: 1.3;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none;
   }
   
   .lesson-list__chevron {

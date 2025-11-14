@@ -488,6 +488,7 @@ export default function CourseDetail() {
                                 onClick={() => {
                                   setActiveModule(idx);
                                   setActiveLesson(lidx);
+                                  setShowSidebar(false); // Close sidebar on mobile when lesson is clicked
                                 }}
                               >
                                 <span className="lesson-list__index">
