@@ -130,6 +130,14 @@ export function Navbar() {
             </>
           )}
         </nav>
+
+        {/* Mobile menu backdrop */}
+        {showMobileMenu && (
+          <div 
+            className="mobile-menu-backdrop mobile-menu-backdrop--visible"
+            onClick={() => setShowMobileMenu(false)}
+          />
+        )}
         
         <div className="nav-actions">
           {isAuthenticated ? (
