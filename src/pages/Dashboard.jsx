@@ -7,7 +7,14 @@ import ProgressDashboard from '../components/ProgressDashboard';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data, isLoading } = useAppData();
-  const { user, enrolledCourses, progress, quizAttempts } = useStore();
+  const { user, enrolledCourses, progress, quizAttempts, isAuthenticated } = useStore();
+
+  // Redirect to home if not authenticated (PrivateLayout will also catch this)
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   if (isLoading) {
     return (
@@ -17,6 +24,10 @@ export default function Dashboard() {
         </div>
       </section>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect via useEffect
   }
 
   const coursesInProgress = enrolledCourses.length;

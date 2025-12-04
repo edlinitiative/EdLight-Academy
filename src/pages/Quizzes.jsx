@@ -1,12 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { useAppData } from '../hooks/useData';
+import useStore from '../contexts/store';
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
+  const navigate = useNavigate();
   const { data: appData } = useAppData();
+  const { isAuthenticated } = useStore();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Selection state
   const [subjectBase, setSubjectBase] = useState('');

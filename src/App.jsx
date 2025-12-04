@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 
 // Lazy-loaded pages
-const Home = React.lazy(() => import('./pages/Home'));
+const Landing = React.lazy(() => import('./pages/Landing'));
 const Courses = React.lazy(() => import('./pages/Courses'));
 const CourseDetail = React.lazy(() => import('./pages/CourseDetail'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -18,6 +18,8 @@ const Terms = React.lazy(() => import('./pages/Terms'));
 const AuthCallback = React.lazy(() => import('./pages/AuthCallback'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 const CourseManager = React.lazy(() => import('./pages/CourseManager'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const Settings = React.lazy(() => import('./pages/Settings'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -40,18 +42,25 @@ export default function App() {
         }>
           <Routes>
             <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
+              {/* Public route - single landing page */}
+              <Route index element={<Landing />} />
+              
+              {/* Auth callback */}
+              <Route path="auth/google/callback" element={<AuthCallback />} />
+              
+              {/* Protected routes - require authentication, shown with sidebar */}
+              <Route path="dashboard" element={<Dashboard />} />
               <Route path="courses" element={<Courses />} />
               <Route path="courses/:courseId" element={<CourseDetail />} />
-              <Route path="dashboard" element={<Dashboard />} />
               <Route path="quizzes" element={<Quizzes />} />
               <Route path="about" element={<About />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
               <Route path="contact" element={<Contact />} />
               <Route path="faq" element={<FAQ />} />
               <Route path="help" element={<Help />} />
               <Route path="privacy" element={<Privacy />} />
               <Route path="terms" element={<Terms />} />
-              <Route path="auth/google/callback" element={<AuthCallback />} />
               <Route path="admin" element={<Admin />} />
               <Route path="admin/courses" element={<CourseManager />} />
             </Route>

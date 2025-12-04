@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import useStore from '../contexts/store';
 
 export default function About() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useStore();
+
+  // Redirect to landing if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const missionPoints = [
     'Short videos with clear concepts',

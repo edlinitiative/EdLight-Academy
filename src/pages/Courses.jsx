@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import { CourseCard, CourseModal } from '../components/Course';
@@ -10,6 +10,13 @@ export default function Courses() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [filter, setFilter] = useState('all');
   const { enrolledCourses, isAuthenticated } = useStore();
+
+  // Redirect to landing if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
   
   const filterLabels = {
     all: 'All',
