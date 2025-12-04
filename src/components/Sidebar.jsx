@@ -90,6 +90,16 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
+      {/* Logo Header */}
+      <div className="sidebar__header">
+        <a href="/dashboard" className="sidebar__logo" onClick={(e) => {
+          e.preventDefault();
+          navigate('/dashboard');
+        }}>
+          <span className="sidebar__logo-text">EdLight Academy</span>
+        </a>
+      </div>
+
       <div className="sidebar__nav">
         {navItems.map((item) => (
           <a

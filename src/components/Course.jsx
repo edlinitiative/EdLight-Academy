@@ -55,7 +55,7 @@ export function CourseCard({ course, onPreview }) {
     : 'Guided path with quizzes and mastery checks';
 
   return (
-    <article className="course-card">
+    <article className="course-card" onClick={handleStart} style={{ cursor: 'pointer' }}>
       <div className="course-card__head">
         <span className="course-card__badge">{subjectLabel} · {levelLabel}</span>
         {isEnrolled && <span className="chip chip--success">Enrolled</span>}
@@ -70,24 +70,17 @@ export function CourseCard({ course, onPreview }) {
         <span className="course-meta__item"><strong>{durationLabel}</strong></span>
       </div>
 
-      <div className="course-card__footer">
-        <div className="course-progress">
-          <span>{progressHeadline}</span>
-          <div className="progress-bar">
-            <span className="progress-bar__fill" style={{ width: `${isEnrolled ? progressPercent : 12}%` }} />
+      {isEnrolled && (
+        <div className="course-card__footer">
+          <div className="course-progress">
+            <span>{progressHeadline}</span>
+            <div className="progress-bar">
+              <span className="progress-bar__fill" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>{progressCaption}</span>
           </div>
-          <span className="text-muted" style={{ fontSize: '0.8rem' }}>{progressCaption}</span>
         </div>
-
-        <div className="course-card__actions">
-          <button className="button button--primary button--pill" onClick={handleStart}>
-            {isEnrolled ? 'Continue' : 'Start Course'}
-          </button>
-          <button className="course-card__cta" onClick={() => onPreview(course)}>
-            Course Details →
-          </button>
-        </div>
-      </div>
+      )}
     </article>
   );
 }
