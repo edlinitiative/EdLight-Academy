@@ -30,7 +30,6 @@ export default function Settings() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Account</span>
             <h1>Settings</h1>
             <p className="text-muted">Manage your preferences and account settings.</p>
           </div>

@@ -29,7 +29,6 @@ export default function Profile() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Account</span>
             <h1>Profile</h1>
             <p className="text-muted">Manage your account information and preferences.</p>
           </div>

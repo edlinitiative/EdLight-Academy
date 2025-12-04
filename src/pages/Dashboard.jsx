@@ -70,14 +70,8 @@ export default function Dashboard() {
       <div className="container dashboard-grid">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Welcome back</span>
-            <h1>Hi {firstName || 'there'}, let’s continue your journey</h1>
+            <h1>Hi {firstName || 'there'}, let's continue your journey</h1>
             <p className="text-muted">Pick up a course, review your quiz streak, or explore a new subject.</p>
-          </div>
-          <div className="page-header__actions">
-            <button className="button button--ghost button--pill" onClick={() => navigate('/courses')}>
-              Browse Catalog
-            </button>
           </div>
         </div>
 

@@ -64,30 +64,24 @@ export default function Courses() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Course Catalog</span>
-            <h1>Explore the EdLight Academy Curriculum</h1>
+            <h1>Courses</h1>
             <p className="text-muted">Filter by level or return to the lessons you already started.</p>
           </div>
-          <div className="page-header__actions">
-            <div className="filter-group">
-              {Object.entries(filterLabels).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={["filter-pill", filter === key ? 'filter-pill--active' : ''].join(' ')}
-                  onClick={() => setFilter(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="button button--ghost button--pill"
-              onClick={() => navigate('/dashboard')}
-            >
-              View Dashboard
-            </button>
+        </div>
+
+        {/* Filters moved here with the content */}
+        <div style={{ padding: '0 clamp(1rem, 3vw, 2.5rem)', marginBottom: '1.5rem' }}>
+          <div className="filter-group">
+            {Object.entries(filterLabels).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={["filter-pill", filter === key ? 'filter-pill--active' : ''].join(' ')}
+                onClick={() => setFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

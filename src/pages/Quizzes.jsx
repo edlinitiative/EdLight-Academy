@@ -118,9 +118,8 @@ const Quizzes = () => {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Practice Hub</span>
-            <h1>Curriculum Practice</h1>
-            <p className="text-muted">Choose your course, grade, and unit to practice with targeted questions. Get up to three tries with helpful hints.</p>
+            <h1>Practice</h1>
+            <p className="text-muted">Choose your course, grade, and unit to practice with targeted questions.</p>
           </div>
         </div>
 
