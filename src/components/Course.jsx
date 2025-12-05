@@ -54,6 +54,9 @@ export function CourseCard({ course, onPreview }) {
     ? `${completed}/${total} lessons completed`
     : 'Guided path with quizzes and mastery checks';
 
+  // Extract just the subject name without level info from course.name
+  const displayTitle = course.name ? course.name.split('-')[0].trim() : subjectLabel;
+
   return (
     <article className="course-card" onClick={handleStart} style={{ cursor: 'pointer' }}>
       <div className="course-card__head">
@@ -61,7 +64,7 @@ export function CourseCard({ course, onPreview }) {
         {isEnrolled && <span className="chip chip--success">Enrolled</span>}
       </div>
 
-      <h3 className="course-card__title">{course.name}</h3>
+      <h3 className="course-card__title">{displayTitle}</h3>
       <p className="course-card__description">{course.description}</p>
 
       <div className="course-card__meta">

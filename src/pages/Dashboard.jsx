@@ -109,37 +109,29 @@ export default function Dashboard() {
               {enrolledCourses.map((course) => {
                 const courseProgress = computeProgress(course.id, course.modules?.length);
                 return (
-                  <article key={course.id} className="course-card">
+                  <article 
+                    key={course.id} 
+                    className="course-card"
+                    onClick={() => navigate(`/courses/${course.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className="course-card__head">
                       <span className="course-card__badge">{course.subject} · {course.level}</span>
                       <span className="chip chip--success">In Progress</span>
                     </div>
                     <h3 className="course-card__title">{course.name || course.title}</h3>
-                    <p className="course-card__description">{course.description}</p>
 
                     <div className="course-card__footer">
                       <div className="course-progress">
-                        <span>{courseProgress.percent}% complete</span>
+                        <span style={{ fontWeight: '600', color: '#7c3aed' }}>
+                          {courseProgress.percent}% complete
+                        </span>
                         <div className="progress-bar">
                           <span className="progress-bar__fill" style={{ width: `${courseProgress.percent}%` }} />
                         </div>
                         <span className="text-muted text-xs">
                           {courseProgress.completed}/{courseProgress.total} lessons finished
                         </span>
-                      </div>
-                      <div className="course-card__actions">
-                        <button
-                          className="button button--primary button--pill"
-                          onClick={() => navigate(`/courses/${course.id}`)}
-                        >
-                          Continue
-                        </button>
-                        <button
-                          className="course-card__cta"
-                          onClick={() => navigate(`/courses/${course.id}`)}
-                        >
-                          View Details →
-                        </button>
                       </div>
                     </div>
                   </article>

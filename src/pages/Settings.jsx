@@ -30,7 +30,7 @@ export default function Settings() {
       <div className="container">
         <div className="page-header">
           <div>
-            <h1>Settings</h1>
+            <h1>Tell us about what you like</h1>
             <p className="text-muted">Manage your preferences and account settings.</p>
           </div>
         </div>

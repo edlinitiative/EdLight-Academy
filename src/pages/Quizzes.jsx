@@ -118,7 +118,7 @@ const Quizzes = () => {
       <div className="container">
         <div className="page-header">
           <div>
-            <h1>Practice</h1>
+            <h1>Hone your skills</h1>
             <p className="text-muted">Choose your course, grade, and unit to practice with targeted questions.</p>
           </div>
         </div>

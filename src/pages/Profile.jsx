@@ -29,7 +29,7 @@ export default function Profile() {
       <div className="container">
         <div className="page-header">
           <div>
-            <h1>Profile</h1>
+            <h1>Customize your identity</h1>
             <p className="text-muted">Manage your account information and preferences.</p>
           </div>
         </div>

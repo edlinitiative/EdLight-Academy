@@ -64,13 +64,13 @@ export default function Courses() {
       <div className="container">
         <div className="page-header">
           <div>
-            <h1>Courses</h1>
+            <h1>Immerse in learning</h1>
             <p className="text-muted">Filter by level or return to the lessons you already started.</p>
           </div>
         </div>
 
         {/* Filters moved here with the content */}
-        <div style={{ padding: '0 clamp(1rem, 3vw, 2.5rem)', marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.5rem' }}>
           <div className="filter-group">
             {Object.entries(filterLabels).map(([key, label]) => (
               <button
@@ -86,7 +86,7 @@ export default function Courses() {
         </div>
 
         {filteredCourses.length > 0 ? (
-          <div className="grid grid--courses">
+          <div className="grid grid--courses" style={{ padding: '0' }}>
             {filteredCourses.map(course => (
               <CourseCard
                 key={course.id}

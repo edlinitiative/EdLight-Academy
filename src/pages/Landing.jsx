@@ -295,12 +295,6 @@ export default function Landing() {
               <h4 className="landing-trusted__name">Collège Catts Pressoir</h4>
               <p className="landing-trusted__location">Port-au-Prince</p>
             </div>
-
-            <div className="landing-trusted__item">
-              <div className="landing-trusted__logo">🎯</div>
-              <h4 className="landing-trusted__name">Lycée des Jeunes Filles</h4>
-              <p className="landing-trusted__location">Gonaïves</p>
-            </div>
           </div>
 
           <div className="landing-trusted__stats">

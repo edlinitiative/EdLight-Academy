@@ -7,6 +7,15 @@ import useStore from '../contexts/store';
 export function PrivateLayout() {
   const { showAuthModal, toggleAuthModal, user, isAuthenticated } = useStore();
 
+  // Show loading while checking auth
+  if (isAuthenticated === undefined || isAuthenticated === null) {
+    return (
+      <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+        <div className="loading-spinner" />
+      </div>
+    );
+  }
+
   // Redirect to home if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
