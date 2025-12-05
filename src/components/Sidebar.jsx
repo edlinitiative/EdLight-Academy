@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
@@ -7,6 +7,7 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useStore();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -28,6 +29,11 @@ export function Sidebar() {
   const handleNavClick = (e, path) => {
     e.preventDefault();
     navigate(path);
+    setIsMobileOpen(false); // Close mobile menu after navigation
+  };
+
+  const toggleMobileSidebar = () => {
+    setIsMobileOpen(!isMobileOpen);
   };
 
   const navItems = [
@@ -40,6 +46,18 @@ export function Sidebar() {
           <rect x="14" y="3" width="7" height="7"></rect>
           <rect x="14" y="14" width="7" height="7"></rect>
           <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      )
+    },
+    {
+      path: '/my-learning',
+      label: 'My Learning',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          <path d="M12 6v6"></path>
+          <path d="M9 9l3 3 3-3"></path>
         </svg>
       )
     },
@@ -89,7 +107,21 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
+    <>
+      {/* Mobile Hamburger Button */}
+      <button 
+        className="mobile-sidebar-toggle"
+        onClick={toggleMobileSidebar}
+        aria-label="Toggle sidebar"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <aside className={`sidebar ${isMobileOpen ? 'sidebar--mobile-open' : ''}`}>
       {/* Logo Header */}
       <div className="sidebar__header">
         <a href="/dashboard" className="sidebar__logo" onClick={(e) => {
@@ -144,6 +176,13 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+
+    {/* Sidebar Overlay for Mobile */}
+    <div 
+      className={`sidebar-overlay ${isMobileOpen ? 'sidebar-overlay--visible' : ''}`}
+      onClick={() => setIsMobileOpen(false)}
+    />
+    </>
   );
 }
 

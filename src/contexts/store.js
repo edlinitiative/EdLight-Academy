@@ -8,7 +8,6 @@ const useStore = create(
       user: null,
       isAuthenticated: false,
       language: 'en', // Default to English
-      hydrated: false,
       
       // Course progress
       enrolledCourses: [],
@@ -63,16 +62,14 @@ const useStore = create(
     {
       name: 'edlight-storage',
       partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
+        // Don't persist user or isAuthenticated - Firebase is source of truth
         language: state.language,
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,
-        quizAttempts: state.quizAttempts,
-        hydrated: state.hydrated
+        quizAttempts: state.quizAttempts
       })
-      // Note: Avoid using onRehydrateStorage here because set/get are out of scope.
-      // We'll mark hydrated in src/index.js after boot to prevent auth flicker.
+      // Note: hydration happens automatically via persist middleware
+      // Auth state is determined by Firebase auth callback in index.js
     }
   )
 );

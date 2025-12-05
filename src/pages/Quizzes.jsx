@@ -177,16 +177,6 @@ const Quizzes = () => {
                 {isLoadingBank ? 'Loading…' : (bankDirectItem ? 'Next Question' : 'Start Practice')}
               </button>
             </div>
-
-            {/* Help cards */}
-            <div className="card card--compact">
-              <h3 className="card__title">How It Works</h3>
-              <ul className="list--bulleted text-muted">
-                <li>Three tries per question</li>
-                <li>Progressive hints after each incorrect answer</li>
-                <li>Full explanation revealed after third try</li>
-              </ul>
-            </div>
           </div>
 
           {/* Quiz Panel */}
@@ -205,6 +195,16 @@ const Quizzes = () => {
                   {!bankMessage && (
                     <div className="quiz-placeholder__icon">📚</div>
                   )}
+                  
+                  {/* How It Works */}
+                  <div className="quiz-placeholder__help">
+                    <h4>How It Works</h4>
+                    <ul className="list--bulleted text-muted">
+                      <li>Three tries per question</li>
+                      <li>Progressive hints after each incorrect answer</li>
+                      <li>Full explanation revealed after third try</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}

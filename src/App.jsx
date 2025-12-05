@@ -8,6 +8,7 @@ const Landing = React.lazy(() => import('./pages/Landing'));
 const Courses = React.lazy(() => import('./pages/Courses'));
 const CourseDetail = React.lazy(() => import('./pages/CourseDetail'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const MyLearning = React.lazy(() => import('./pages/MyLearning'));
 const Quizzes = React.lazy(() => import('./pages/Quizzes'));
 const About = React.lazy(() => import('./pages/About'));
 const Contact = React.lazy(() => import('./pages/Contact'));
@@ -50,6 +51,7 @@ export default function App() {
               
               {/* Protected routes - require authentication, shown with sidebar */}
               <Route path="dashboard" element={<Dashboard />} />
+              <Route path="my-learning" element={<MyLearning />} />
               <Route path="courses" element={<Courses />} />
               <Route path="courses/:courseId" element={<CourseDetail />} />
               <Route path="quizzes" element={<Quizzes />} />
