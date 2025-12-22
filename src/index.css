@@ -1257,16 +1257,15 @@ textarea.input-field {
 /* Course Detail */
 .course-detail__layout {
 	display: grid;
-	gap: clamp(0.9rem, 2.5vw, 1.6rem);
-	/* Single column layout since sidebar is now fixed */
-	grid-template-columns: 1fr;
+	gap: clamp(1rem, 2.5vw, 1.5rem);
+	/* Two-column layout: main content + sidebar */
+	grid-template-columns: 1fr 320px;
 }
 
 .course-detail__column {
 	display: grid;
 	gap: 1.5rem;
-	/* Prevent overlap with fixed sidebar - sidebar width + gap + right margin */
-	max-width: calc(100% - min(320px, 25vw) - 2rem);
+	min-width: 0; /* Prevent overflow */
 }
 
 .lesson-card {
@@ -1529,22 +1528,21 @@ textarea.input-field {
 }
 
 .lesson-sidebar {
-	background: rgba(255, 255, 255, 0.85);
+	background: rgba(255, 255, 255, 0.95);
 	border-radius: var(--radius-lg);
 	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
-	padding: clamp(1.4rem, 3vw, 1.8rem);
+	padding: clamp(1rem, 2vw, 1.5rem);
 	display: flex;
 	flex-direction: column;
-	gap: 1.2rem;
-	/* Fixed positioning - completely unscrollable */
-	position: fixed;
-	top: 5rem; /* Fixed position below navbar */
-	right: calc((100vw - min(1480px, 98vw)) / 2); /* Match container's right margin */
-	width: min(320px, 25vw); /* Responsive width */
-	max-height: calc(100vh - 5rem);
-	overflow: hidden;
-	z-index: 10;
+	gap: 1rem;
+	/* Sticky positioning - stays in view while scrolling */
+	position: sticky;
+	top: 5rem;
+	height: fit-content;
+	max-height: calc(100vh - 6rem);
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 /* Hide mobile-only elements on desktop */
@@ -1720,9 +1718,130 @@ textarea.input-field {
 	color: var(--text-500);
 }
 
-@media (max-width: 960px) {
+/* Tablet: Stack layout vertically */
+@media (max-width: 1024px) {
 	.course-detail__layout {
-		grid-template-columns: 1fr;
+		display: flex;
+		flex-direction: column;
+		gap: 1.5rem;
+	}
+	
+	.course-detail__column {
+		order: 1;
+		width: 100%;
+	}
+	
+	.lesson-sidebar {
+		position: static;
+		max-height: none;
+		width: 100%;
+		order: 2; /* Ensure sidebar appears below video */
+	}
+}
+
+/* Mobile: Sidebar collapses below video, toggle to expand */
+@media (max-width: 768px) {
+	.course-detail__layout {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	
+	.course-detail__column {
+		order: 1;
+		width: 100%;
+	}
+	
+	.lesson-sidebar {
+		display: none;
+		position: static;
+		width: 100%;
+		max-width: 100%;
+		height: auto;
+		max-height: none;
+		border-radius: var(--radius-md);
+		padding: 0;
+		background: #ffffff;
+		overflow: hidden;
+		margin-top: 0.5rem;
+		order: 2 !important; /* Ensure it appears after main content */
+	}
+	
+	.lesson-sidebar--visible {
+		display: block;
+	}
+	
+	.lesson-card__sidebar-toggle {
+		display: flex !important;
+	}
+	
+	.lesson-sidebar__header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		padding: 1rem;
+		background: rgba(248, 250, 252, 0.9);
+		border-bottom: 1px solid rgba(10, 102, 194, 0.1);
+	}
+	
+	.lesson-sidebar__close {
+		display: flex !important;
+		flex-shrink: 0;
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		border: none;
+		background: rgba(10, 102, 194, 0.1);
+		color: var(--primary-600);
+		font-size: 1rem;
+		font-weight: 400;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: all 0.2s ease;
+	}
+	
+	.lesson-sidebar__close:hover {
+		background: rgba(10, 102, 194, 0.2);
+	}
+	
+	.lesson-list {
+		padding: 0.75rem;
+		max-height: 50vh;
+		overflow-y: auto;
+	}
+	
+	.lesson-card {
+		padding: 1rem;
+	}
+	
+	.lesson-card__header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+	
+	.lesson-card__title {
+		font-size: 1.125rem;
+	}
+	
+	.lesson-card__media {
+		border-radius: var(--radius-sm);
+	}
+	
+	.lesson-card__nav {
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+	
+	.lesson-card__nav-group {
+		width: 100%;
+		justify-content: center;
+	}
+	
+	.lesson-card__nav-group--actions {
+		flex-wrap: wrap;
 	}
 }
 

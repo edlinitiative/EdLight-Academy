@@ -229,15 +229,6 @@ export default function CourseDetail() {
                     </div>
                   )}
                 </div>
-                
-                {/* Mobile: Show Course Content toggle button */}
-                <button
-                  className="button button--ghost button--sm lesson-card__sidebar-toggle"
-                  onClick={() => setShowSidebar(!showSidebar)}
-                  type="button"
-                >
-                  {showSidebar ? '✕ Close' : '📚 Course Content'}
-                </button>
               </header>
 
               <div className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
@@ -347,6 +338,15 @@ export default function CourseDetail() {
                   )}
                 </div>
               </div>
+
+              {/* Mobile: Show Course Content toggle button - at bottom */}
+              <button
+                className="button button--ghost button--sm lesson-card__sidebar-toggle"
+                onClick={() => setShowSidebar(!showSidebar)}
+                type="button"
+              >
+                {showSidebar ? '✕ Close Course Content' : '📚 View Course Content'}
+              </button>
             </article>
 
             {showQuiz && hasQuiz && (
