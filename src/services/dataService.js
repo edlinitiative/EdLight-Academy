@@ -181,7 +181,7 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
           
           return {
             id: lessonId,
-            title: lesson.title || videoData.title,
+            title: lesson.title || videoData.video_title || videoData.title || `Lesson ${lesson.order || 1}`,
             type: lessonType,
             order: lesson.order,
             videoUrl: videoData.video_url || 'https://www.youtube.com/embed/placeholder',
@@ -212,7 +212,7 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
         // Fallback if no enrichment data found
         return {
           id: lessonId,
-          title: lesson.title,
+          title: lesson.title || `Lesson ${lesson.order || 1}`,
           type: lessonType,
           order: lesson.order,
           videoUrl: lessonType === 'video' ? 'https://www.youtube.com/embed/placeholder' : null,

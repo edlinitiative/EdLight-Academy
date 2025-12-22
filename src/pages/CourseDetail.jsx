@@ -214,7 +214,9 @@ export default function CourseDetail() {
             <article className="lesson-card">
               <header className="lesson-card__header">
                 <div className="lesson-card__header-content">
-                  <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
+                  <h1 className="lesson-card__title">
+                    {activeLessonData?.title || activeLessonData?.video_title || activeLessonData?.name || activeModuleData?.title || course.name}
+                  </h1>
                   {isEnrolled && progress && (
                     <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
                       {progress.totalPoints > 0 && (
@@ -229,15 +231,6 @@ export default function CourseDetail() {
                     </div>
                   )}
                 </div>
-                
-                {/* Mobile: Show Course Content toggle button */}
-                <button
-                  className="button button--ghost button--sm lesson-card__sidebar-toggle"
-                  onClick={() => setShowSidebar(!showSidebar)}
-                  type="button"
-                >
-                  {showSidebar ? '✕ Close' : '📚 Course Content'}
-                </button>
               </header>
 
               <div className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
@@ -347,6 +340,15 @@ export default function CourseDetail() {
                   )}
                 </div>
               </div>
+
+              {/* Mobile: Show Course Content toggle button - at bottom */}
+              <button
+                className="button button--ghost button--sm lesson-card__sidebar-toggle"
+                onClick={() => setShowSidebar(!showSidebar)}
+                type="button"
+              >
+                {showSidebar ? '✕ Close Course Content' : '📚 View Course Content'}
+              </button>
             </article>
 
             {showQuiz && hasQuiz && (
@@ -495,7 +497,9 @@ export default function CourseDetail() {
                                   {isCompleted ? '✓' : `${idx + 1}.${lidx + 1}`}
                                 </span>
                                 <span className="lesson-list__meta">
-                                  <span className="lesson-list__title">{lsn.title}</span>
+                                  <span className="lesson-list__title">
+                                    {lsn.title || lsn.name || lsn.video_title || `Lesson ${lidx + 1}`}
+                                  </span>
                                   <span className="lesson-list__duration">
                                     {lsn.duration ? `${lsn.duration} min` : (lsn.readingTime ? `${lsn.readingTime} min read` : '')}
                                   </span>
