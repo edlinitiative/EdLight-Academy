@@ -214,7 +214,9 @@ export default function CourseDetail() {
             <article className="lesson-card">
               <header className="lesson-card__header">
                 <div className="lesson-card__header-content">
-                  <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
+                  <h1 className="lesson-card__title">
+                    {activeLessonData?.title || activeLessonData?.video_title || activeLessonData?.name || activeModuleData?.title || course.name}
+                  </h1>
                   {isEnrolled && progress && (
                     <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
                       {progress.totalPoints > 0 && (

@@ -198,6 +198,35 @@ main {
 	align-items: center;
 }
 
+.page-header--course {
+	position: static;
+	margin-bottom: 1.5rem;
+	background: transparent;
+	backdrop-filter: none;
+	border-bottom: none;
+	box-shadow: none;
+	padding-left: 0;
+	padding-right: 0;
+	margin-left: 0;
+	margin-right: 0;
+	width: 100%;
+}
+
+.page-header__title {
+	font-size: clamp(1.5rem, 4vw, 2rem);
+	font-weight: 700;
+	color: var(--text-900);
+	margin: 0;
+	line-height: 1.3;
+}
+
+.page-header__subtitle {
+	font-size: clamp(0.9rem, 2vw, 1rem);
+	color: var(--text-500);
+	margin: 0.25rem 0 0 0;
+	line-height: 1.5;
+}
+
 .grid {
 	display: grid;
 	gap: clamp(1.25rem, 3.2vw, 2rem);
