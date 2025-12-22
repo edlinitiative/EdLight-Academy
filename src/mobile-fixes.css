@@ -814,8 +814,7 @@ body {
     right: auto !important;
   }
   
-  .lesson-sidebar,
-  .sidebar {
+  .lesson-sidebar {
     position: static !important;
     width: 100%;
     height: auto;
