@@ -495,7 +495,9 @@ export default function CourseDetail() {
                                   {isCompleted ? '✓' : `${idx + 1}.${lidx + 1}`}
                                 </span>
                                 <span className="lesson-list__meta">
-                                  <span className="lesson-list__title">{lsn.title}</span>
+                                  <span className="lesson-list__title">
+                                    {lsn.title || lsn.name || lsn.video_title || `Lesson ${lidx + 1}`}
+                                  </span>
                                   <span className="lesson-list__duration">
                                     {lsn.duration ? `${lsn.duration} min` : (lsn.readingTime ? `${lsn.readingTime} min read` : '')}
                                   </span>
