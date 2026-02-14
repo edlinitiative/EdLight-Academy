@@ -34,6 +34,21 @@ const ExamTake = () => {
   const exam = rawExams?.[idx];
   const questions = useMemo(() => (exam ? flattenQuestions(exam) : []), [exam]);
 
+  const sectionGroups = useMemo(() => {
+    const groups = [];
+    for (let i = 0; i < questions.length; i++) {
+      const title = String(questions[i]?.sectionTitle || '').trim() || 'Questions';
+      const instructions = String(questions[i]?.sectionInstructions || '').trim();
+      const last = groups[groups.length - 1];
+      if (!last || last.title !== title || last.instructions !== instructions) {
+        groups.push({ title, instructions, start: i, end: i });
+      } else {
+        last.end = i;
+      }
+    }
+    return groups.map((g) => ({ ...g, count: g.end - g.start + 1 }));
+  }, [questions]);
+
   // ── State ──────────────────────────────────────────────────────────────────
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -178,23 +193,38 @@ const ExamTake = () => {
         <div className="exam-take__body">
           {/* Question navigation sidebar */}
           <aside className="exam-take__nav">
-            <div className="exam-take__nav-header">Questions</div>
-            <div className="exam-take__nav-grid">
-              {questions.map((q, i) => {
-                const hasAnswer = answers[i] != null && answers[i] !== '';
-                const isCurrent = i === currentQ;
-                let cls = 'exam-take__nav-btn';
-                if (isCurrent) cls += ' exam-take__nav-btn--current';
-                else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
+            <div className="exam-take__nav-header">Sections</div>
+            <div className="exam-take__nav-sections" role="navigation" aria-label="Navigation des questions par section">
+              {sectionGroups.map((sec) => {
+                const isCurrentSection = currentQ >= sec.start && currentQ <= sec.end;
                 return (
-                  <button
-                    key={i}
-                    className={cls}
-                    onClick={() => setCurrentQ(i)}
-                    title={`Question ${i + 1}`}
-                  >
-                    {i + 1}
-                  </button>
+                  <div key={`${sec.start}-${sec.end}-${sec.title}`} className="exam-take__nav-section">
+                    <div className={`exam-take__nav-section-title ${isCurrentSection ? 'exam-take__nav-section-title--current' : ''}`}>
+                      <span className="exam-take__nav-section-name">{sec.title}</span>
+                      <span className="exam-take__nav-section-count">{sec.count}</span>
+                    </div>
+                    <div className="exam-take__nav-section-grid">
+                      {Array.from({ length: sec.count }).map((_, offset) => {
+                        const i = sec.start + offset;
+                        const hasAnswer = answers[i] != null && answers[i] !== '';
+                        const isCurrent = i === currentQ;
+                        let cls = 'exam-take__nav-btn';
+                        if (isCurrent) cls += ' exam-take__nav-btn--current';
+                        else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
+                        return (
+                          <button
+                            key={i}
+                            className={cls}
+                            onClick={() => setCurrentQ(i)}
+                            title={`Question ${i + 1}`}
+                            type="button"
+                          >
+                            {i + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -202,16 +232,14 @@ const ExamTake = () => {
 
           {/* Question content */}
           <div className="exam-take__content">
-          {/* Section header if new section */}
+          {/* Always show current section context */}
           {question.sectionTitle && (
-            (currentQ === 0 || questions[currentQ - 1]?.sectionTitle !== question.sectionTitle) && (
-              <div className="exam-take__section-header">
-                <h3>{question.sectionTitle}</h3>
-                {question.sectionInstructions && (
-                  <p className="exam-take__section-instructions">{question.sectionInstructions}</p>
-                )}
-              </div>
-            )
+            <div className="exam-take__section-header">
+              <h3>{question.sectionTitle}</h3>
+              {question.sectionInstructions && (
+                <p className="exam-take__section-instructions">{question.sectionInstructions}</p>
+              )}
+            </div>
           )}
 
           <div className="card exam-take__question-card">

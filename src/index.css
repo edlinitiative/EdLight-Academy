@@ -3869,12 +3869,51 @@ textarea.input-field {
 	margin-bottom: 0.5rem;
 }
 
-.exam-take__nav-grid {
+.exam-take__nav-sections {
+	display: grid;
+	gap: 0.75rem;
+	max-height: 62vh;
+	overflow-y: auto;
+	padding-right: 0.15rem;
+}
+
+.exam-take__nav-section {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.exam-take__nav-section-title {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--text-600);
+	padding-top: 0.25rem;
+}
+
+.exam-take__nav-section-title--current {
+	color: var(--text-900);
+}
+
+.exam-take__nav-section-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.exam-take__nav-section-count {
+	font-variant-numeric: tabular-nums;
+	color: var(--text-400);
+	font-weight: 700;
+}
+
+.exam-take__nav-section-grid {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	gap: 4px;
-	max-height: 50vh;
-	overflow-y: auto;
 }
 
 .exam-take__nav-btn {
@@ -4673,9 +4712,12 @@ textarea.input-field {
 		order: 2;
 	}
 
-	.exam-take__nav-grid {
-		grid-template-columns: repeat(8, 1fr);
+	.exam-take__nav-sections {
 		max-height: none;
+	}
+
+	.exam-take__nav-section-grid {
+		grid-template-columns: repeat(8, 1fr);
 	}
 
 	.exam-take__content {
