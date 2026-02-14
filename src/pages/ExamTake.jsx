@@ -108,24 +108,28 @@ const ExamTake = () => {
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="section">
-        <div className="card card--centered card--loading">
-          <div className="loading-spinner" />
+      <section className="section">
+        <div className="container">
+          <div className="card card--centered card--loading">
+            <div className="loading-spinner" />
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   if (error || !exam) {
     return (
-      <div className="section">
-        <div className="card card--message">
-          <p>Examen introuvable.</p>
-          <button className="button button--primary" onClick={() => navigate('/exams')}>
-            ← Retour aux examens
-          </button>
+      <section className="section">
+        <div className="container">
+          <div className="card card--message">
+            <p>Examen introuvable.</p>
+            <button className="button button--primary" onClick={() => navigate('/exams')}>
+              ← Retour aux examens
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -138,65 +142,66 @@ const ExamTake = () => {
   const isTimerWarning = durationMin && secondsLeft < 300; // < 5 min
 
   return (
-    <div className="section exam-take">
-      {/* Top bar */}
-      <div className="exam-take__topbar">
-        <div className="exam-take__topbar-left">
-          <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
-            ← Examens
-          </button>
-          <div className="exam-take__exam-info">
-            <span className="exam-take__subject" style={{ color }}>{subject}</span>
-            <span className="exam-take__title-short">{exam.exam_title || 'Examen'}</span>
+    <section className="section exam-take">
+      <div className="container">
+        {/* Top bar */}
+        <div className="exam-take__topbar">
+          <div className="exam-take__topbar-left">
+            <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
+              ← Examens
+            </button>
+            <div className="exam-take__exam-info">
+              <span className="exam-take__subject" style={{ color }}>{subject}</span>
+              <span className="exam-take__title-short">{exam.exam_title || 'Examen'}</span>
+            </div>
           </div>
-        </div>
 
-        <div className="exam-take__topbar-right">
-          <span className="exam-take__progress">
-            {answeredCount}/{questions.length} répondu{answeredCount !== 1 ? 'es' : 'e'}
-          </span>
-          {durationMin > 0 && (
-            <span className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`} aria-live="polite" aria-label={`Temps restant: ${formatTime(secondsLeft)}`}>
-              <span aria-hidden="true">⏱</span> {formatTime(secondsLeft)}
+          <div className="exam-take__topbar-right">
+            <span className="exam-take__progress">
+              {answeredCount}/{questions.length} répondu{answeredCount !== 1 ? 'es' : 'e'}
             </span>
-          )}
-          <button
-            className="button button--primary button--sm"
-            onClick={() => setShowConfirm(true)}
-          >
-            Soumettre
-          </button>
-        </div>
-      </div>
-
-      {/* Main area: sidebar + question */}
-      <div className="exam-take__body">
-        {/* Question navigation sidebar */}
-        <aside className="exam-take__nav">
-          <div className="exam-take__nav-header">Questions</div>
-          <div className="exam-take__nav-grid">
-            {questions.map((q, i) => {
-              const hasAnswer = answers[i] != null && answers[i] !== '';
-              const isCurrent = i === currentQ;
-              let cls = 'exam-take__nav-btn';
-              if (isCurrent) cls += ' exam-take__nav-btn--current';
-              else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
-              return (
-                <button
-                  key={i}
-                  className={cls}
-                  onClick={() => setCurrentQ(i)}
-                  title={`Question ${i + 1}`}
-                >
-                  {i + 1}
-                </button>
-              );
-            })}
+            {durationMin > 0 && (
+              <span className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`} aria-live="polite" aria-label={`Temps restant: ${formatTime(secondsLeft)}`}>
+                <span aria-hidden="true">⏱</span> {formatTime(secondsLeft)}
+              </span>
+            )}
+            <button
+              className="button button--primary button--sm"
+              onClick={() => setShowConfirm(true)}
+            >
+              Soumettre
+            </button>
           </div>
-        </aside>
+        </div>
 
-        {/* Question content */}
-        <div className="exam-take__content">
+        {/* Main area: sidebar + question */}
+        <div className="exam-take__body">
+          {/* Question navigation sidebar */}
+          <aside className="exam-take__nav">
+            <div className="exam-take__nav-header">Questions</div>
+            <div className="exam-take__nav-grid">
+              {questions.map((q, i) => {
+                const hasAnswer = answers[i] != null && answers[i] !== '';
+                const isCurrent = i === currentQ;
+                let cls = 'exam-take__nav-btn';
+                if (isCurrent) cls += ' exam-take__nav-btn--current';
+                else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
+                return (
+                  <button
+                    key={i}
+                    className={cls}
+                    onClick={() => setCurrentQ(i)}
+                    title={`Question ${i + 1}`}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Question content */}
+          <div className="exam-take__content">
           {/* Section header if new section */}
           {question.sectionTitle && (
             (currentQ === 0 || questions[currentQ - 1]?.sectionTitle !== question.sectionTitle) && (
@@ -293,11 +298,12 @@ const ExamTake = () => {
               <button className="button button--primary" onClick={handleSubmit}>
                 Soumettre maintenant
               </button>
+              </div>
             </div>
           </div>
-        </div>
       )}
-    </div>
+      </div>
+      </section>
   );
 };
 

@@ -96,169 +96,176 @@ const ExamBrowser = () => {
 
   if (isLoading) {
     return (
-      <div className="section">
-        <div className="page-header">
-          <h1 className="page-header__title">Examens</h1>
-          <p className="page-header__subtitle">Chargement du catalogue…</p>
+      <section className="section">
+        <div className="container">
+          <div className="page-header">
+            <h1 className="page-header__title">Examens</h1>
+            <p className="page-header__subtitle">Chargement du catalogue…</p>
+          </div>
+          <div className="card card--centered card--loading">
+            <div className="loading-spinner" />
+          </div>
         </div>
-        <div className="card card--centered card--loading">
-          <div className="loading-spinner" />
-        </div>
-      </div>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="section">
-        <div className="page-header">
-          <h1 className="page-header__title">Examens</h1>
+      <section className="section">
+        <div className="container">
+          <div className="page-header">
+            <h1 className="page-header__title">Examens</h1>
+          </div>
+          <div className="card card--message">
+            <p>Erreur: {error.message}</p>
+          </div>
         </div>
-        <div className="card card--message">
-          <p>Erreur: {error.message}</p>
-        </div>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="section">
-      {/* Header */}
-      <div className="page-header exam-browser__header">
-        <h1 className="page-header__title">📝 Examens Nationaux</h1>
-        <p className="page-header__subtitle">
-          Banque d'examens officiels du MENFP — Baccalauréat, 9ème AF, Concours universitaires
-        </p>
-      </div>
+    <section className="section">
+      <div className="container">
+        {/* Header */}
+        <div className="page-header exam-browser__header">
+          <span className="page-header__eyebrow">Examens</span>
+          <h1 className="page-header__title">Examens Nationaux</h1>
+          <p className="page-header__subtitle">
+            Banque d'examens officiels du MENFP — Baccalauréat, 9ème AF, Concours universitaires
+          </p>
+        </div>
 
-      {/* Sticky filter bar */}
-      <div className="exam-browser__filters-sticky">
-        <div className="exam-browser__filters">
-          {/* Level */}
-          <select
-            className="exam-browser__select"
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
-            aria-label="Filtrer par niveau"
-          >
-            <option value="">Tous les niveaux</option>
-            {index.levels.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-
-          {/* Subject */}
-          <select
-            className="exam-browser__select"
-            value={subjectFilter}
-            onChange={(e) => setSubjectFilter(e.target.value)}
-            aria-label="Filtrer par matière"
-          >
-            <option value="">Toutes les matières</option>
-            {index.subjects.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-
-          {/* Year */}
-          <select
-            className="exam-browser__select"
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
-            aria-label="Filtrer par année"
-          >
-            <option value="">Toutes les années</option>
-            {index.years.map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-
-          {/* Search */}
-          <div className="exam-browser__search-wrap">
-            <svg className="exam-browser__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              className="exam-browser__search"
-              type="text"
-              placeholder="Rechercher un examen…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Rechercher un examen"
-            />
-          </div>
-
-          {/* Clear filters */}
-          {hasActiveFilters && (
-            <button
-              className="exam-browser__clear-btn"
-              onClick={clearFilters}
-              type="button"
+        {/* Sticky filter bar */}
+        <div className="exam-browser__filters-sticky">
+          <div className="exam-browser__filters">
+            {/* Level */}
+            <select
+              className="exam-browser__select"
+              value={levelFilter}
+              onChange={(e) => setLevelFilter(e.target.value)}
+              aria-label="Filtrer par niveau"
             >
-              ✕ Réinitialiser
-            </button>
-          )}
-        </div>
+              <option value="">Tous les niveaux</option>
+              {index.levels.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
 
-        {/* Summary */}
-        <div className="exam-browser__summary">
-          <strong>{summary.exams}</strong> examens
-          {' • '}
-          <strong>{summary.totalQ.toLocaleString()}</strong> questions
-          {summary.gradable > 0 && (
-            <>
-              {' • '}
-              <strong>{summary.gradable.toLocaleString()}</strong> auto-corrigées
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Results */}
-      {filtered.length === 0 ? (
-        <div className="card card--message" style={{ marginTop: '1.5rem' }}>
-          <p>Aucun examen trouvé. Essayez de modifier vos filtres.</p>
-          {hasActiveFilters && (
-            <button
-              className="button button--ghost"
-              onClick={clearFilters}
-              type="button"
+            {/* Subject */}
+            <select
+              className="exam-browser__select"
+              value={subjectFilter}
+              onChange={(e) => setSubjectFilter(e.target.value)}
+              aria-label="Filtrer par matière"
             >
-              Réinitialiser les filtres
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid--exams" style={{ marginTop: '1.25rem' }}>
-            {visible.map((exam) => (
-              <ExamCard
-                key={exam._idx}
-                exam={exam}
-                onClick={() => navigate(`/exams/${exam._idx}`)}
+              <option value="">Toutes les matières</option>
+              {index.subjects.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+
+            {/* Year */}
+            <select
+              className="exam-browser__select"
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              aria-label="Filtrer par année"
+            >
+              <option value="">Toutes les années</option>
+              {index.years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+
+            {/* Search */}
+            <div className="exam-browser__search-wrap">
+              <svg className="exam-browser__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                className="exam-browser__search"
+                type="text"
+                placeholder="Rechercher un examen…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Rechercher un examen"
               />
-            ))}
-          </div>
+            </div>
 
-          {/* Pagination */}
-          {hasMore && (
-            <div className="exam-browser__load-more">
+            {/* Clear filters */}
+            {hasActiveFilters && (
               <button
-                className="exam-browser__load-btn"
-                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                className="exam-browser__clear-btn"
+                onClick={clearFilters}
                 type="button"
               >
-                Afficher plus d'examens ({filtered.length - visibleCount} restants)
+                ✕ Réinitialiser
               </button>
+            )}
+          </div>
+
+          {/* Summary */}
+          <div className="exam-browser__summary">
+            <strong>{summary.exams}</strong> examens
+            {' • '}
+            <strong>{summary.totalQ.toLocaleString()}</strong> questions
+            {summary.gradable > 0 && (
+              <>
+                {' • '}
+                <strong>{summary.gradable.toLocaleString()}</strong> auto-corrigées
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Results */}
+        {filtered.length === 0 ? (
+          <div className="card card--message exam-browser__empty">
+            <p>Aucun examen trouvé. Essayez de modifier vos filtres.</p>
+            {hasActiveFilters && (
+              <button
+                className="button button--ghost"
+                onClick={clearFilters}
+                type="button"
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid--exams exam-browser__grid">
+              {visible.map((exam) => (
+                <ExamCard
+                  key={exam._idx}
+                  exam={exam}
+                  onClick={() => navigate(`/exams/${exam._idx}`)}
+                />
+              ))}
             </div>
-          )}
-          <p className="exam-browser__showing">
-            {Math.min(visibleCount, filtered.length)} sur {filtered.length} examens affichés
-          </p>
-        </>
-      )}
-    </div>
+
+            {/* Pagination */}
+            {hasMore && (
+              <div className="exam-browser__load-more">
+                <button
+                  className="exam-browser__load-btn"
+                  onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                  type="button"
+                >
+                  Afficher plus d'examens ({filtered.length - visibleCount} restants)
+                </button>
+              </div>
+            )}
+            <p className="exam-browser__showing">
+              {Math.min(visibleCount, filtered.length)} sur {filtered.length} examens affichés
+            </p>
+          </>
+        )}
+      </div>
+    </section>
   );
 };
 
@@ -284,6 +291,7 @@ function ExamCard({ exam, onClick }) {
       onClick={onClick}
       type="button"
       aria-label={`${exam._subject} — ${title} (${exam._year || ''})`}
+      style={{ '--exam-accent': color }}
     >
       <div className="exam-card__header">
         <span
@@ -332,9 +340,7 @@ function ExamCard({ exam, onClick }) {
       )}
 
       <div className="exam-card__cta">
-        <span className="button button--primary button--sm">
-          Commencer l'examen →
-        </span>
+        <span className="exam-card__cta-text">Commencer →</span>
       </div>
     </button>
   );

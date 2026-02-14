@@ -23,14 +23,16 @@ const ExamResults = () => {
 
   if (!stored) {
     return (
-      <div className="section">
-        <div className="card card--message">
-          <p>Aucun résultat trouvé pour cet examen.</p>
-          <button className="button button--primary" onClick={() => navigate('/exams')}>
-            ← Retour aux examens
-          </button>
+      <section className="section">
+        <div className="container">
+          <div className="card card--message">
+            <p>Aucun résultat trouvé pour cet examen.</p>
+            <button className="button button--primary" onClick={() => navigate('/exams')}>
+              ← Retour aux examens
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -47,18 +49,21 @@ const ExamResults = () => {
   const gradeLabel = pct >= 80 ? 'Excellent !' : pct >= 60 ? 'Bien' : pct >= 40 ? 'Passable' : 'À améliorer';
   const gradeEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : pct >= 40 ? '📖' : '💪';
 
+  const ringColor = pct >= 60 ? 'var(--success-500)' : pct >= 40 ? 'var(--warning-500)' : 'var(--danger-500)';
+
   return (
-    <div className="section exam-results">
-      {/* Header */}
-      <div className="page-header exam-results__header">
-        <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
-          ← Retour aux examens
-        </button>
-        <h1 className="page-header__title">Résultats</h1>
-        <p className="page-header__subtitle" style={{ color }}>
-          {subject} — {examTitle || 'Examen'} {level && `(${level})`}
-        </p>
-      </div>
+    <section className="section exam-results">
+      <div className="container">
+        {/* Header */}
+        <div className="page-header exam-results__header">
+          <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
+            ← Retour aux examens
+          </button>
+          <h1 className="page-header__title">Résultats</h1>
+          <p className="page-header__subtitle" style={{ color }}>
+            {subject} — {examTitle || 'Examen'} {level && `(${level})`}
+          </p>
+        </div>
 
       {/* Score overview */}
       <div className="exam-results__overview" aria-label={`Score: ${pct}%`}>
@@ -68,7 +73,7 @@ const ExamResults = () => {
             <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="8" />
             <circle
               cx="60" cy="60" r="54" fill="none"
-              stroke={pct >= 60 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444'}
+              stroke={ringColor}
               strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -189,7 +194,8 @@ const ExamResults = () => {
           📝 Choisir un autre examen
         </button>
       </div>
-    </div>
+      </div>
+    </section>
   );
 };
 

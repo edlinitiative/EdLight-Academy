@@ -3407,9 +3407,9 @@ textarea.input-field {
 	background: rgba(255, 255, 255, 0.92);
 	backdrop-filter: var(--blur-backdrop);
 	padding: 0.85rem 0;
-	margin: 0 calc(-1 * clamp(1.25rem, 4vw, 4rem));
-	padding-left: clamp(1.25rem, 4vw, 4rem);
-	padding-right: clamp(1.25rem, 4vw, 4rem);
+	margin: 0 calc(-1 * clamp(1rem, 3vw, 2rem));
+	padding-left: clamp(1rem, 3vw, 2rem);
+	padding-right: clamp(1rem, 3vw, 2rem);
 	border-bottom: 1px solid rgba(10, 102, 194, 0.08);
 	transition: box-shadow 0.2s;
 }
@@ -3518,6 +3518,14 @@ textarea.input-field {
 	grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
 }
 
+.exam-browser__grid {
+	margin-top: 1.25rem;
+}
+
+.exam-browser__empty {
+	margin-top: 1.5rem;
+}
+
 /* Exam Card */
 .exam-card {
 	display: flex;
@@ -3527,17 +3535,32 @@ textarea.input-field {
 	cursor: pointer;
 	width: 100%;
 	font-family: var(--font-sans);
-	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-	border: 1.5px solid rgba(10, 102, 194, 0.06);
+	transition: border-color 0.2s ease;
+	border: 1px solid rgba(10, 102, 194, 0.08);
 	position: relative;
 	overflow: hidden;
 }
 
+.exam-card::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 4px;
+	background: var(--exam-accent, var(--primary-500));
+	opacity: 0.35;
+	transition: opacity 0.2s ease;
+}
+
 .exam-card:hover,
 .exam-card:focus-visible {
-	transform: translateY(-3px);
-	box-shadow: var(--shadow-md), 0 8px 24px rgba(10, 102, 194, 0.08);
 	border-color: rgba(10, 102, 194, 0.18);
+}
+
+.exam-card:hover::before,
+.exam-card:focus-visible::before {
+	opacity: 0.55;
 }
 
 .exam-card:focus-visible {
@@ -3546,7 +3569,7 @@ textarea.input-field {
 }
 
 .exam-card:active {
-	transform: translateY(-1px);
+	transform: none;
 }
 
 .exam-card__header {
@@ -3657,9 +3680,14 @@ textarea.input-field {
 	margin-top: 0.25rem;
 }
 
-.exam-card__cta .button {
-	width: 100%;
+.exam-card__cta-text {
+	display: inline-flex;
+	align-items: center;
 	justify-content: center;
+	width: 100%;
+	font-weight: 700;
+	font-size: 0.9rem;
+	color: var(--primary-600);
 }
 
 /* Load more / Pagination */
@@ -3744,9 +3772,9 @@ textarea.input-field {
 	background: rgba(255, 255, 255, 0.92);
 	backdrop-filter: var(--blur-backdrop);
 	border-bottom: 1px solid var(--border);
-	margin: 0 calc(-1 * clamp(1.25rem, 4vw, 4rem));
-	padding-left: clamp(1.25rem, 4vw, 4rem);
-	padding-right: clamp(1.25rem, 4vw, 4rem);
+	margin: 0 calc(-1 * clamp(1rem, 3vw, 2rem));
+	padding-left: clamp(1rem, 3vw, 2rem);
+	padding-right: clamp(1rem, 3vw, 2rem);
 }
 
 .exam-take__topbar-left {
