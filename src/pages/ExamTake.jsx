@@ -10,6 +10,7 @@ import {
   normalizeSubject,
   normalizeLevel,
   subjectColor,
+  parseConsignes,
 } from '../utils/examUtils';
 
 /** Format hierarchical question number for display (e.g. "A.1" → "A.1", "5" → "5") */
@@ -77,6 +78,30 @@ const ExamTake = () => {
     }
     return groups.map((g) => ({ ...g, count: g.end - g.start + 1 }));
   }, [questions]);
+
+  // ── Exam intro / consignes extraction ─────────────────────────────────────
+  const [examStarted, setExamStarted] = useState(false);
+
+  const examInfo = useMemo(() => {
+    if (!exam) return null;
+    // Collect all consignes from all sections and strip them from instructions
+    let allRules = [];
+    const cleanedSections = (exam.sections || []).map((sec) => {
+      const raw = (sec.instructions || '').trim();
+      const { rules, cleanedText } = parseConsignes(raw);
+      if (rules.length) allRules.push(...rules);
+      return { ...sec, _cleanInstructions: cleanedText };
+    });
+    // Deduplicate rules (same rules often repeat across sections)
+    const seen = new Set();
+    const uniqueRules = allRules.filter((r) => {
+      const key = r.toLowerCase().replace(/[^a-zà-ÿ0-9]/gi, '').slice(0, 40);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return { rules: uniqueRules, cleanedSections };
+  }, [exam]);
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [currentQ, setCurrentQ] = useState(0);
@@ -203,13 +228,124 @@ const ExamTake = () => {
     );
   }
 
+  const subject = normalizeSubject(exam.subject);
+  const color = subjectColor(subject);
+
+  // ── Exam Intro splash ───────────────────────────────────────────────────
+  if (!examStarted) {
+    const sectionSummary = (exam.sections || []).map((sec, i) => ({
+      title: sec.section_title || `Section ${i + 1}`,
+      qCount: (sec.questions || []).length,
+    }));
+    const totalQ = sectionSummary.reduce((s, x) => s + x.qCount, 0);
+
+    return (
+      <section className="section">
+        <div className="container">
+          <div className="exam-intro">
+            {/* Header */}
+            <div className="exam-intro__header">
+              <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
+                ← Retour aux examens
+              </button>
+              <span className="exam-intro__subject" style={{ background: color + '14', color, borderColor: color + '30' }}>
+                {subject}
+              </span>
+            </div>
+
+            <h1 className="exam-intro__title">{exam.exam_title || 'Examen'}</h1>
+
+            {/* Metadata chips */}
+            <div className="exam-intro__meta">
+              {durationMin > 0 && (
+                <div className="exam-intro__chip">
+                  <span className="exam-intro__chip-icon">⏱</span>
+                  <span>{durationMin} minutes</span>
+                </div>
+              )}
+              {exam.total_points > 0 && (
+                <div className="exam-intro__chip">
+                  <span className="exam-intro__chip-icon">🎯</span>
+                  <span>{exam.total_points} points</span>
+                </div>
+              )}
+              <div className="exam-intro__chip">
+                <span className="exam-intro__chip-icon">📝</span>
+                <span>{totalQ} questions</span>
+              </div>
+              <div className="exam-intro__chip">
+                <span className="exam-intro__chip-icon">📑</span>
+                <span>{sectionSummary.length} section{sectionSummary.length > 1 ? 's' : ''}</span>
+              </div>
+              {exam.language && (
+                <div className="exam-intro__chip">
+                  <span className="exam-intro__chip-icon">🌐</span>
+                  <span>{exam.language}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Consignes / Rules */}
+            {examInfo?.rules?.length > 0 && (
+              <div className="exam-intro__rules">
+                <h3 className="exam-intro__rules-title">📋 Consignes de l'examen</h3>
+                <ul className="exam-intro__rules-list">
+                  {examInfo.rules.map((rule, i) => (
+                    <li key={i} className="exam-intro__rule">
+                      <span className="exam-intro__rule-icon">
+                        {rule.toLowerCase().includes('interdit') ? '🚫'
+                          : rule.toLowerCase().includes('silence') ? '🤫'
+                          : rule.toLowerCase().includes('obligatoire') ? '⚠️'
+                          : rule.toLowerCase().includes('durée') || rule.toLowerCase().includes('heure') ? '⏰'
+                          : rule.toLowerCase().includes('coefficient') ? '📊'
+                          : 'ℹ️'}
+                      </span>
+                      <span>{rule}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Section overview */}
+            <div className="exam-intro__sections">
+              <h3 className="exam-intro__sections-title">Structure de l'examen</h3>
+              <div className="exam-intro__section-list">
+                {sectionSummary.map((sec, i) => (
+                  <div key={i} className="exam-intro__section-item">
+                    <span className="exam-intro__section-num">{i + 1}</span>
+                    <span className="exam-intro__section-name">{sec.title}</span>
+                    <span className="exam-intro__section-count">{sec.qCount} q.</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Start button */}
+            <button
+              className="button button--primary exam-intro__start"
+              onClick={() => setExamStarted(true)}
+            >
+              Commencer l'examen →
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Active exam ────────────────────────────────────────────────────────────
   const question = questions[currentQ];
   if (!question) return null;
 
   const meta = questionTypeMeta(question.type);
-  const subject = normalizeSubject(exam.subject);
-  const color = subjectColor(subject);
   const isTimerWarning = durationMin && secondsLeft < 300; // < 5 min
+
+  // Get cleaned instructions (consignes stripped) for current question's section
+  const currentSectionIdx = (exam.sections || []).findIndex(
+    (s) => s.section_title === question.sectionTitle
+  );
+  const cleanInstructions = examInfo?.cleanedSections?.[currentSectionIdx]?._cleanInstructions || question.sectionInstructions || '';
 
   return (
     <section className="section exam-take">
@@ -294,16 +430,16 @@ const ExamTake = () => {
 
           {/* Question content */}
           <div className="exam-take__content" ref={contentRef}>
-          {/* Section context — collapsible instructions */}
+          {/* Section context — collapsible instructions (consignes stripped) */}
           {question.sectionTitle && (
             <SectionHeader
               title={question.sectionTitle}
-              instructions={question.sectionInstructions}
+              instructions={cleanInstructions}
             />
           )}
 
           {/* Floating "Show passage" button for comprehension sections */}
-          {question.sectionInstructions && question.sectionInstructions.length > 200 && (
+          {cleanInstructions && cleanInstructions.length > 200 && (
             <button
               className="exam-take__passage-btn"
               onClick={() => setShowPassage(true)}
@@ -446,7 +582,7 @@ const ExamTake = () => {
               <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
             </div>
             <div className="exam-take__passage-panel-body">
-              <InstructionRenderer text={question.sectionInstructions} />
+              <InstructionRenderer text={cleanInstructions} />
             </div>
           </div>
         </div>

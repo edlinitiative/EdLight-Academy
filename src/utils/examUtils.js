@@ -301,6 +301,107 @@ export function cleanQuestionText(text, number, isFirstInGroup) {
   return { cleanText: t, directive, wordPool };
 }
 
+// ─── Consignes / rules extraction ───────────────────────────────────────────
+
+/**
+ * Keywords that identify a rule/consigne sentence.
+ * Kept broad to catch French and Creole variations.
+ */
+const RULE_KEYWORDS =
+  /interdit|calculat|silence\s+est|obligatoire|gadget|téléphone|tablette|ipad|montre intelligente|portable|coefficient|durée\s*(?:de\s+l[''']é|:)|échange\s+de\s+papier/i;
+
+/**
+ * Header patterns: "Consignes:", "Consignes générales:", "Consignes générales
+ * de l'examen:", "Consigne:", "Instructions générales de l'examen:", etc.
+ */
+const CONSIGNE_HEADER_RE =
+  /(?:Consignes?\s*(?:générales?\s*)?(?:de\s+l['''](?:examen|évaluation)\s*)?|Instructions?\s*(?:générales?\s*)?(?:de\s+l['''](?:examen|évaluation)\s*)?)[:.]?\s*/gi;
+
+/**
+ * Parse section instructions to separate exam rules ("consignes") from
+ * actual pedagogical content (task directives, reading passages, etc.).
+ *
+ * Uses a sentence-level classification approach:
+ * 1. Split text into sentences (by newlines, then by ". " boundaries)
+ * 2. Strip any "Consignes:" headers
+ * 3. Classify each sentence as rule (contains RULE_KEYWORDS) or content
+ * 4. Rejoin content parts as cleanedText
+ *
+ * Returns { rules: string[], cleanedText: string }.
+ */
+export function parseConsignes(text) {
+  if (!text || !text.trim()) return { rules: [], cleanedText: '' };
+
+  const trimmed = text.trim();
+
+  // ── Step 1: Split into sentences ──────────────────────────────────────────
+  // First split by newlines
+  const rawLines = trimmed.split('\n');
+  const sentences = [];
+  for (const line of rawLines) {
+    const l = line.trim();
+    if (!l) {
+      sentences.push('');
+      continue;
+    }
+    // Within each line, split on boundaries between inline sentences:
+    // 1) After a letter+"." followed by a number+punct or uppercase letter
+    //    (lookbehind excludes digit+"." so "1. L'usage" doesn't split)
+    // 2) Before "N) Upper" or "N- Upper" even without a preceding period
+    //    (handles "interdit 2) Le téléphone..." patterns)
+    let expanded = l.replace(/(?<=[a-zA-ZÀ-ÿ]\.)\s+(?=\d+[-.)]\s|[A-ZÀ-ÿ])/g, '\x00');
+    expanded = expanded.replace(/\s+(?=\d+[-.)]\s+[A-ZÀ-ÿ])/g, '\x00');
+    const parts = expanded.split('\x00');
+    sentences.push(...parts);
+  }
+
+  // ── Step 2 & 3: Classify each sentence ────────────────────────────────────
+  const NUM_RE = /^\d+[-.)]\s/;
+  const rules = [];
+  const contentParts = [];
+
+  for (const sent of sentences) {
+    let s = sent.trim();
+
+    // Preserve blank-line separators in content
+    if (!s) {
+      contentParts.push('');
+      continue;
+    }
+
+    // Strip consigne headers from the sentence
+    const stripped = s.replace(CONSIGNE_HEADER_RE, '').trim();
+    if (!stripped) continue; // was just a header with nothing else
+
+    // Strip leading numbering (e.g. "1. ", "2) ", "3- ")
+    const deNumbered = stripped.replace(NUM_RE, '').trim();
+
+    // Classify: rule if it contains a keyword and is reasonably short
+    if (RULE_KEYWORDS.test(stripped) && deNumbered.length < 300) {
+      rules.push(deNumbered);
+    } else {
+      contentParts.push(sent); // keep original sentence for content
+    }
+  }
+
+  // ── Step 4: Reassemble cleaned text ───────────────────────────────────────
+  // Only accept rules if we found at least 2 (avoids false positives from
+  // a single passing mention of "calculatrice" in a task directive)
+  if (rules.length < 2) {
+    return { rules: [], cleanedText: trimmed };
+  }
+
+  const cleanedText = contentParts
+    .join('\n')
+    .replace(/^\s*\n+/, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  // Filter very short fragments
+  const filteredRules = rules.filter((r) => r.length > 5);
+  return { rules: filteredRules, cleanedText };
+}
+
 /**
  * Flatten all sections/questions into a single ordered array.
  * Each question gets sectionTitle/sectionInstructions attached,

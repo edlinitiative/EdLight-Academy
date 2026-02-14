@@ -3753,6 +3753,212 @@ textarea.input-field {
 }
 
 /* ========================================
+   Exam Intro (pre-exam splash screen)
+   ======================================== */
+
+.exam-intro {
+	max-width: 720px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 1.75rem;
+	animation: fadeInUp 0.35s ease;
+}
+
+.exam-intro__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.exam-intro__subject {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.35rem 0.85rem;
+	border-radius: 999px;
+	font-size: 0.85rem;
+	font-weight: 700;
+	text-transform: capitalize;
+	border: 1.5px solid;
+}
+
+.exam-intro__title {
+	font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+	font-weight: 800;
+	line-height: 1.3;
+	letter-spacing: -0.02em;
+	color: var(--text-900);
+}
+
+.exam-intro__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+}
+
+.exam-intro__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.5rem 0.85rem;
+	border-radius: var(--radius-sm);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--text-700);
+	box-shadow: var(--shadow-sm);
+}
+
+.exam-intro__chip-icon {
+	font-size: 1.05rem;
+}
+
+/* ── Rules callout ── */
+
+.exam-intro__rules {
+	background: #fffbeb;
+	border: 1.5px solid #f59e0b40;
+	border-radius: var(--radius-md);
+	padding: 1.25rem 1.5rem;
+}
+
+.exam-intro__rules-title {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: #92400e;
+	margin-bottom: 0.85rem;
+}
+
+.exam-intro__rules-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.exam-intro__rule {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.6rem;
+	font-size: 0.9rem;
+	line-height: 1.5;
+	color: #78350f;
+}
+
+.exam-intro__rule-icon {
+	flex-shrink: 0;
+	font-size: 1rem;
+	margin-top: 1px;
+}
+
+/* ── Section overview ── */
+
+.exam-intro__sections {
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	padding: 1.25rem 1.5rem;
+	box-shadow: var(--shadow-sm);
+}
+
+.exam-intro__sections-title {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--text-800);
+	margin-bottom: 0.85rem;
+}
+
+.exam-intro__section-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+}
+
+.exam-intro__section-item {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.6rem 0.75rem;
+	border-radius: var(--radius-sm);
+	background: var(--background);
+	transition: background 0.15s;
+}
+
+.exam-intro__section-item:hover {
+	background: var(--primary-50);
+}
+
+.exam-intro__section-num {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--primary-500);
+	color: #fff;
+	font-size: 0.8rem;
+	font-weight: 700;
+	flex-shrink: 0;
+}
+
+.exam-intro__section-name {
+	flex: 1;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--text-800);
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.exam-intro__section-count {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--text-400);
+	flex-shrink: 0;
+}
+
+/* ── Start button ── */
+
+.exam-intro__start {
+	align-self: center;
+	padding: 0.85rem 2.5rem;
+	font-size: 1.05rem;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+	.exam-intro__title {
+		font-size: 1.2rem;
+	}
+
+	.exam-intro__meta {
+		gap: 0.4rem;
+	}
+
+	.exam-intro__chip {
+		padding: 0.4rem 0.65rem;
+		font-size: 0.8rem;
+	}
+
+	.exam-intro__rules {
+		padding: 1rem 1.1rem;
+	}
+
+	.exam-intro__sections {
+		padding: 1rem 1.1rem;
+	}
+}
+
+/* ========================================
    Exam Take
    ======================================== */
 
