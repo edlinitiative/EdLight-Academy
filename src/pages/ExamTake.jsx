@@ -9,6 +9,7 @@ import {
   questionTypeMeta,
   normalizeSubject,
   normalizeLevel,
+  normalizeExamTitle,
   subjectColor,
   parseConsignes,
 } from '../utils/examUtils';
@@ -189,7 +190,7 @@ const ExamTake = () => {
       `exam-result-${idx}`,
       JSON.stringify({
         examIndex: idx,
-        examTitle: exam.exam_title,
+        examTitle: normalizeExamTitle(exam),
         subject: normalizeSubject(exam.subject),
         level: normalizeLevel(exam.level),
         result,
@@ -253,7 +254,7 @@ const ExamTake = () => {
               </span>
             </div>
 
-            <h1 className="exam-intro__title">{exam.exam_title || 'Examen'}</h1>
+            <h1 className="exam-intro__title">{normalizeExamTitle(exam)}</h1>
 
             {/* Metadata chips */}
             <div className="exam-intro__meta">
@@ -358,7 +359,7 @@ const ExamTake = () => {
             </button>
             <div className="exam-take__exam-info">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>
-              <span className="exam-take__title-short">{exam.exam_title || 'Examen'}</span>
+              <span className="exam-take__title-short">{normalizeExamTitle(exam)}</span>
             </div>
           </div>
 

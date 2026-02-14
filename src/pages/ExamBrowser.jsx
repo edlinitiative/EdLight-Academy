@@ -63,6 +63,7 @@ const ExamBrowser = () => {
       const q = search.toLowerCase();
       list = list.filter(
         (e) =>
+          (e._title || e.exam_title || '').toLowerCase().includes(q) ||
           (e.exam_title || '').toLowerCase().includes(q) ||
           (e._subject || '').toLowerCase().includes(q) ||
           (e._yearRaw || '').toLowerCase().includes(q)
@@ -283,7 +284,7 @@ function ExamCard({ exam, onClick }) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
-  const title = exam.exam_title || 'Examen';
+  const title = exam._title || exam.exam_title || 'Examen';
 
   return (
     <button
