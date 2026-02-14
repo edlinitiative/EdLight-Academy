@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -7,6 +7,8 @@ import {
   examStats,
   QUESTION_TYPE_META,
 } from '../utils/examUtils';
+
+const PAGE_SIZE = 24;
 
 /** Fetch and cache the exam catalog */
 function useExamCatalog() {
@@ -37,6 +39,17 @@ const ExamBrowser = () => {
   const [subjectFilter, setSubjectFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [search, setSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const hasActiveFilters = levelFilter || subjectFilter || yearFilter || search.trim();
+
+  const clearFilters = useCallback(() => {
+    setLevelFilter('');
+    setSubjectFilter('');
+    setYearFilter('');
+    setSearch('');
+    setVisibleCount(PAGE_SIZE);
+  }, []);
 
   // Filtered list
   const filtered = useMemo(() => {
@@ -59,6 +72,18 @@ const ExamBrowser = () => {
     // Sort: newest first
     return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
   }, [index, levelFilter, subjectFilter, yearFilter, search]);
+
+  // Reset visible count when filters change
+  const prevFilterKey = `${levelFilter}|${subjectFilter}|${yearFilter}|${search}`;
+  const [lastFilterKey, setLastFilterKey] = useState(prevFilterKey);
+  if (prevFilterKey !== lastFilterKey) {
+    setLastFilterKey(prevFilterKey);
+    setVisibleCount(PAGE_SIZE);
+  }
+
+  // Paginated subset
+  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const hasMore = visibleCount < filtered.length;
 
   // Summary counts for filtered set
   const summary = useMemo(() => {
@@ -102,11 +127,12 @@ const ExamBrowser = () => {
       <div className="page-header exam-browser__header">
         <h1 className="page-header__title">📝 Examens Nationaux</h1>
         <p className="page-header__subtitle">
-          {summary.exams} examens • {summary.totalQ.toLocaleString()} questions •{' '}
-          {summary.gradable.toLocaleString()} auto-corrigées
+          Banque d'examens officiels du MENFP — Baccalauréat, 9ème AF, Concours universitaires
         </p>
+      </div>
 
-        {/* Filters */}
+      {/* Sticky filter bar */}
+      <div className="exam-browser__filters-sticky">
         <div className="exam-browser__filters">
           {/* Level */}
           <select
@@ -162,24 +188,75 @@ const ExamBrowser = () => {
               aria-label="Rechercher un examen"
             />
           </div>
+
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <button
+              className="exam-browser__clear-btn"
+              onClick={clearFilters}
+              type="button"
+            >
+              ✕ Réinitialiser
+            </button>
+          )}
+        </div>
+
+        {/* Summary */}
+        <div className="exam-browser__summary">
+          <strong>{summary.exams}</strong> examens
+          {' • '}
+          <strong>{summary.totalQ.toLocaleString()}</strong> questions
+          {summary.gradable > 0 && (
+            <>
+              {' • '}
+              <strong>{summary.gradable.toLocaleString()}</strong> auto-corrigées
+            </>
+          )}
         </div>
       </div>
 
       {/* Results */}
       {filtered.length === 0 ? (
-        <div className="card card--message">
+        <div className="card card--message" style={{ marginTop: '1.5rem' }}>
           <p>Aucun examen trouvé. Essayez de modifier vos filtres.</p>
+          {hasActiveFilters && (
+            <button
+              className="button button--ghost"
+              onClick={clearFilters}
+              type="button"
+            >
+              Réinitialiser les filtres
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid--exams">
-          {filtered.map((exam) => (
-            <ExamCard
-              key={exam._idx}
-              exam={exam}
-              onClick={() => navigate(`/exams/${exam._idx}`)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid--exams" style={{ marginTop: '1.25rem' }}>
+            {visible.map((exam) => (
+              <ExamCard
+                key={exam._idx}
+                exam={exam}
+                onClick={() => navigate(`/exams/${exam._idx}`)}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {hasMore && (
+            <div className="exam-browser__load-more">
+              <button
+                className="exam-browser__load-btn"
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                type="button"
+              >
+                Afficher plus d'examens ({filtered.length - visibleCount} restants)
+              </button>
+            </div>
+          )}
+          <p className="exam-browser__showing">
+            {Math.min(visibleCount, filtered.length)} sur {filtered.length} examens affichés
+          </p>
+        </>
       )}
     </div>
   );
@@ -199,8 +276,15 @@ function ExamCard({ exam, onClick }) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
+  const title = exam.exam_title || 'Examen';
+
   return (
-    <button className="card exam-card" onClick={onClick} type="button" aria-label={`${exam._subject} — ${exam.exam_title || 'Examen'} (${exam._year || ''})`}>
+    <button
+      className="card exam-card"
+      onClick={onClick}
+      type="button"
+      aria-label={`${exam._subject} — ${title} (${exam._year || ''})`}
+    >
       <div className="exam-card__header">
         <span
           className="exam-card__subject-badge"
@@ -208,18 +292,20 @@ function ExamCard({ exam, onClick }) {
         >
           {exam._subject}
         </span>
-        {exam._year && <span className="exam-card__year">{exam._year}</span>}
+        {exam._year > 0 && <span className="exam-card__year">{exam._year}</span>}
       </div>
 
-      <h3 className="exam-card__title">{exam.exam_title || 'Examen'}</h3>
+      <h3 className="exam-card__title" title={title}>{title}</h3>
 
       <div className="exam-card__meta">
         <span className="exam-card__level">{exam._level}</span>
-        {exam.duration_minutes && (
+        {exam.duration_minutes > 0 && (
           <span className="exam-card__duration">⏱ {exam.duration_minutes} min</span>
         )}
         {exam.language && (
-          <span className="exam-card__lang">{exam.language === 'fr' ? '🇫🇷' : exam.language === 'ht' ? '🇭🇹' : '🇬🇧'}</span>
+          <span className="exam-card__lang">
+            {exam.language === 'fr' ? '🇫🇷' : exam.language === 'ht' ? '🇭🇹' : '🇬🇧'}
+          </span>
         )}
       </div>
 
@@ -232,20 +318,22 @@ function ExamCard({ exam, onClick }) {
         )}
       </div>
 
-      <div className="exam-card__types">
-        {topTypes.map(([type, count]) => {
-          const meta = QUESTION_TYPE_META[type] || QUESTION_TYPE_META.unknown;
-          return (
-            <span key={type} className="exam-card__type-chip">
-              {meta.icon} {meta.label} ({count})
-            </span>
-          );
-        })}
-      </div>
+      {topTypes.length > 0 && (
+        <div className="exam-card__types">
+          {topTypes.map(([type, count]) => {
+            const meta = QUESTION_TYPE_META[type] || QUESTION_TYPE_META.unknown;
+            return (
+              <span key={type} className="exam-card__type-chip">
+                {meta.icon} {meta.label} ({count})
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       <div className="exam-card__cta">
         <span className="button button--primary button--sm">
-          Commencer →
+          Commencer l'examen →
         </span>
       </div>
     </button>
