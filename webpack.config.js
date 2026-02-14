@@ -70,6 +70,11 @@ module.exports = {
         {
           from: 'public_original/assets',
           to: 'assets'
+        },
+        {
+          from: 'public/exam_catalog.json',
+          to: 'exam_catalog.json',
+          noErrorOnMissing: true
         }
       ]
     })

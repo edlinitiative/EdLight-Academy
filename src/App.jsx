@@ -19,6 +19,9 @@ const Privacy = React.lazy(() => import('./pages/Privacy'));
 const Terms = React.lazy(() => import('./pages/Terms'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 const CourseManager = React.lazy(() => import('./pages/CourseManager'));
+const ExamBrowser = React.lazy(() => import('./pages/ExamBrowser'));
+const ExamTake = React.lazy(() => import('./pages/ExamTake'));
+const ExamResults = React.lazy(() => import('./pages/ExamResults'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -55,6 +58,9 @@ export default function App() {
                 <Route path="terms" element={<Terms />} />
                 <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
                 <Route path="admin/courses" element={<AdminRoute><CourseManager /></AdminRoute>} />
+                <Route path="exams" element={<ExamBrowser />} />
+                <Route path="exams/:examIndex" element={<ExamTake />} />
+                <Route path="exams/:examIndex/results" element={<ExamResults />} />
               </Route>
             </Routes>
           </Suspense>

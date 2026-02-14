@@ -1,0 +1,207 @@
+import React, { useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import FigureRenderer from '../components/FigureRenderer';
+import {
+  questionTypeMeta,
+  subjectColor,
+  QUESTION_TYPE_META,
+} from '../utils/examUtils';
+
+const ExamResults = () => {
+  const { examIndex } = useParams();
+  const navigate = useNavigate();
+
+  // Read result from sessionStorage
+  const stored = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(`exam-result-${examIndex}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [examIndex]);
+
+  if (!stored) {
+    return (
+      <div className="section">
+        <div className="card card--message">
+          <p>Aucun résultat trouvé pour cet examen.</p>
+          <button className="button button--primary" onClick={() => navigate('/exams')}>
+            ← Retour aux examens
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { result, examTitle, subject, level } = stored;
+  const { summary, results } = result;
+  const color = subjectColor(subject);
+
+  // Score ring percentage
+  const pct = summary.percentage;
+  const circumference = 2 * Math.PI * 54;
+  const dashOffset = circumference - (circumference * pct) / 100;
+
+  // Grade label
+  const gradeLabel = pct >= 80 ? 'Excellent !' : pct >= 60 ? 'Bien' : pct >= 40 ? 'Passable' : 'À améliorer';
+  const gradeEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : pct >= 40 ? '📖' : '💪';
+
+  return (
+    <div className="section exam-results">
+      {/* Header */}
+      <div className="page-header exam-results__header">
+        <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
+          ← Retour aux examens
+        </button>
+        <h1 className="page-header__title">Résultats</h1>
+        <p className="page-header__subtitle" style={{ color }}>
+          {subject} — {examTitle || 'Examen'} {level && `(${level})`}
+        </p>
+      </div>
+
+      {/* Score overview */}
+      <div className="exam-results__overview">
+        {/* Score ring */}
+        <div className="exam-results__score-ring">
+          <svg viewBox="0 0 120 120" className="exam-results__ring-svg">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="8" />
+            <circle
+              cx="60" cy="60" r="54" fill="none"
+              stroke={pct >= 60 ? '#22c55e' : pct >= 40 ? '#f59e0b' : '#ef4444'}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              transform="rotate(-90 60 60)"
+              style={{ transition: 'stroke-dashoffset 1s ease' }}
+            />
+          </svg>
+          <div className="exam-results__score-text">
+            <span className="exam-results__score-pct">{pct}%</span>
+            <span className="exam-results__score-label">{gradeEmoji} {gradeLabel}</span>
+          </div>
+        </div>
+
+        {/* Stats cards */}
+        <div className="exam-results__stats-grid">
+          <div className="exam-results__stat-card">
+            <span className="exam-results__stat-number">{summary.earnedPoints}</span>
+            <span className="exam-results__stat-label">Points obtenus / {summary.totalPoints}</span>
+          </div>
+          <div className="exam-results__stat-card exam-results__stat-card--correct">
+            <span className="exam-results__stat-number">{summary.correctCount}</span>
+            <span className="exam-results__stat-label">Réponses correctes</span>
+          </div>
+          <div className="exam-results__stat-card exam-results__stat-card--incorrect">
+            <span className="exam-results__stat-number">{summary.incorrectCount}</span>
+            <span className="exam-results__stat-label">Réponses incorrectes</span>
+          </div>
+          <div className="exam-results__stat-card">
+            <span className="exam-results__stat-number">{summary.unanswered}</span>
+            <span className="exam-results__stat-label">Sans réponse</span>
+          </div>
+          {summary.manualReview > 0 && (
+            <div className="exam-results__stat-card exam-results__stat-card--manual">
+              <span className="exam-results__stat-number">{summary.manualReview}</span>
+              <span className="exam-results__stat-label">Correction manuelle</span>
+            </div>
+          )}
+          <div className="exam-results__stat-card">
+            <span className="exam-results__stat-number">{summary.autoGraded}</span>
+            <span className="exam-results__stat-label">Auto-corrigées</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed results */}
+      <div className="exam-results__details">
+        <h2 className="exam-results__details-title">Détails par question</h2>
+
+        {results.map((r, i) => {
+          const meta = questionTypeMeta(r.question.type);
+          return (
+            <div key={i} className={`card exam-results__item exam-results__item--${r.status}`}>
+              <div className="exam-results__item-header">
+                <span className="exam-results__item-number">Q{i + 1}</span>
+                <span className="exam-results__item-type">
+                  {meta.icon} {meta.label}
+                </span>
+                <StatusBadge status={r.status} />
+                {r.result.maxPoints > 0 && (
+                  <span className="exam-results__item-points">
+                    {r.result.awarded}/{r.result.maxPoints} pt{r.result.maxPoints !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              <div className="exam-results__item-question">
+                {r.question.question}
+              </div>
+
+              {/* Figure */}
+              {r.question.has_figure && r.question.figure_description && (
+                <FigureRenderer description={r.question.figure_description} compact />
+              )}
+
+              {/* User answer */}
+              {r.userAnswer && (
+                <div className="exam-results__item-answer">
+                  <strong>Votre réponse :</strong>{' '}
+                  {r.question.type === 'multiple_choice' && r.question.options
+                    ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
+                    : String(r.userAnswer)
+                  }
+                </div>
+              )}
+
+              {/* Correct answer */}
+              {r.question.correct && (
+                <div className="exam-results__item-correct">
+                  <strong>Réponse correcte :</strong>{' '}
+                  {r.question.type === 'multiple_choice' && r.question.options
+                    ? `${r.question.correct.toUpperCase()}) ${r.question.options[r.question.correct] || r.question.correct}`
+                    : String(r.question.correct)
+                  }
+                </div>
+              )}
+
+              {/* Explanation */}
+              {r.question.explanation && (
+                <div className="exam-results__item-explanation">
+                  💡 {r.question.explanation}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Actions */}
+      <div className="exam-results__actions">
+        <button
+          className="button button--primary"
+          onClick={() => navigate(`/exams/${examIndex}`)}
+        >
+          🔄 Recommencer cet examen
+        </button>
+        <button className="button button--ghost" onClick={() => navigate('/exams')}>
+          📝 Choisir un autre examen
+        </button>
+      </div>
+    </div>
+  );
+};
+
+function StatusBadge({ status }) {
+  const map = {
+    correct:   { label: '✓ Correct', cls: 'exam-results__badge--correct' },
+    incorrect: { label: '✗ Incorrect', cls: 'exam-results__badge--incorrect' },
+    manual:    { label: '👁 Révision', cls: 'exam-results__badge--manual' },
+    unanswered:{ label: '— Vide', cls: 'exam-results__badge--unanswered' },
+  };
+  const m = map[status] || map.unanswered;
+  return <span className={`exam-results__badge ${m.cls}`}>{m.label}</span>;
+}
+
+export default ExamResults;
