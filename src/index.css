@@ -4530,7 +4530,75 @@ textarea.input-field {
 	line-height: 1.8;
 }
 
-/* ── Styled fill-in-the-blank underlines ── */
+/* ── Styled fill-in-the-blank inline inputs ── */
+
+.exam-take__fill-blank-text {
+	font-size: 1.05rem;
+	line-height: 2.4;
+	color: var(--text-800);
+	word-wrap: break-word;
+}
+
+.exam-take__inline-blank-wrap {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	vertical-align: baseline;
+	position: relative;
+	margin: 0 0.15em;
+}
+
+.exam-take__inline-blank-hint {
+	display: block;
+	font-size: 0.7rem;
+	font-weight: 600;
+	color: var(--primary-500);
+	letter-spacing: 0.02em;
+	line-height: 1;
+	margin-bottom: 2px;
+	white-space: nowrap;
+}
+
+.exam-take__inline-blank {
+	display: inline-block;
+	appearance: none;
+	border: none;
+	border-bottom: 2.5px solid var(--primary-400);
+	background: rgba(10, 102, 194, 0.04);
+	border-radius: 4px 4px 0 0;
+	padding: 0.15em 0.4em;
+	min-width: 6em;
+	max-width: 16em;
+	font: inherit;
+	font-size: 1rem;
+	color: var(--primary-700);
+	font-weight: 600;
+	text-align: center;
+	outline: none;
+	transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.exam-take__inline-blank::placeholder {
+	color: var(--text-400);
+	font-weight: 400;
+	font-style: italic;
+}
+
+.exam-take__inline-blank:hover {
+	background: rgba(10, 102, 194, 0.08);
+}
+
+.exam-take__inline-blank:focus {
+	border-bottom-color: var(--primary-600);
+	background: rgba(10, 102, 194, 0.06);
+	box-shadow: 0 2px 0 0 var(--primary-500);
+}
+
+/* When filled, show a subtle checkmark feel */
+.exam-take__inline-blank:not(:placeholder-shown) {
+	border-bottom-color: var(--success-500);
+	background: rgba(34, 197, 94, 0.05);
+}
 
 /* ========================================
    Exam Results
@@ -5079,6 +5147,17 @@ textarea.input-field {
 
 	.exam-take__passage-panel {
 		width: 100vw;
+	}
+
+	.exam-take__inline-blank {
+		min-width: 4em;
+		font-size: 0.9rem;
+		padding: 0.1em 0.3em;
+	}
+
+	.exam-take__fill-blank-text {
+		font-size: 0.95rem;
+		line-height: 2.6;
 	}
 
 	.exam-results__overview {

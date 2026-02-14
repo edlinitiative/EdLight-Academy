@@ -32,6 +32,14 @@ function formatNavLabel(q, globalIndex) {
   return num.slice(0, 5) + '…';
 }
 
+/** Regex that matches blank placeholders: 4+ underscores OR 4+ dots */
+const BLANK_RE = /_{4,}|\.{4,}/g;
+
+/** Does the question text contain inline blank placeholders? (uses fresh regex to avoid lastIndex issues) */
+function hasInlineBlanks(text) {
+  return /_{4,}|\.{4,}/.test(text);
+}
+
 /** Shared catalog query — same queryKey so it shares cache with ExamBrowser */
 function useExamCatalog() {
   return useQuery({
@@ -348,19 +356,31 @@ const ExamTake = () => {
               <FigureRenderer description={question.figure_description} />
             )}
 
-            <div className="exam-take__question-text">
-              <InstructionRenderer text={question._displayText || question.question} />
-            </div>
-
-            {/* Answer input — varies by type */}
-            <div className="exam-take__answer-area">
-              <QuestionInput
-                question={question}
-                index={currentQ}
-                value={answers[currentQ] ?? ''}
-                onChange={setAnswer}
-              />
-            </div>
+            {/* Question text — inline blanks for fill_blank, normal renderer otherwise */}
+            {question.type === 'fill_blank' && hasInlineBlanks(question._displayText || question.question) ? (
+              <div className="exam-take__question-text">
+                <FillBlankText
+                  text={question._displayText || question.question}
+                  index={currentQ}
+                  value={answers[currentQ] ?? ''}
+                  onChange={setAnswer}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="exam-take__question-text">
+                  <InstructionRenderer text={question._displayText || question.question} />
+                </div>
+                <div className="exam-take__answer-area">
+                  <QuestionInput
+                    question={question}
+                    index={currentQ}
+                    value={answers[currentQ] ?? ''}
+                    onChange={setAnswer}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Navigation */}
@@ -466,6 +486,77 @@ function SectionHeader({ title, instructions }) {
       {hasInstructions && !collapsed && (
         <InstructionRenderer text={instructions} />
       )}
+    </div>
+  );
+}
+
+// ── Fill-in-the-blank inline renderer ────────────────────────────────────────
+
+/**
+ * Renders question text with inline <input> fields replacing blank placeholders.
+ * Supports single and multiple blanks. Values stored as pipe-separated string.
+ * Parenthetical hints like (plan) are shown as subtle labels above the input.
+ */
+function FillBlankText({ text, index, value, onChange }) {
+  // Split text on blank placeholders, keeping surrounding text
+  const parts = text.split(BLANK_RE);
+  const blankCount = parts.length - 1;
+
+  // For multiple blanks, store values pipe-separated: "val1|val2|val3"
+  const values = blankCount > 1
+    ? (value || '').split('|').concat(Array(blankCount).fill('')).slice(0, blankCount)
+    : [value || ''];
+
+  const handleChange = (blankIdx, newVal) => {
+    if (blankCount <= 1) {
+      onChange(index, newVal);
+    } else {
+      const updated = [...values];
+      updated[blankIdx] = newVal;
+      onChange(index, updated.join('|'));
+    }
+  };
+
+  // Detect parenthetical hint right after a blank, e.g. " (plan)"
+  const hintRe = /^\s*\(([^)]+)\)/;
+
+  return (
+    <div className="exam-take__fill-blank-text">
+      {parts.map((segment, i) => {
+        // Check if this segment starts with a parenthetical hint for the PREVIOUS blank
+        let hint = '';
+        let cleanSegment = segment;
+        if (i > 0) {
+          const hintMatch = segment.match(hintRe);
+          if (hintMatch) {
+            hint = hintMatch[1];
+            cleanSegment = segment.slice(hintMatch[0].length);
+          }
+        }
+
+        return (
+          <React.Fragment key={i}>
+            {/* Inline blank input (before this text segment, except for first) */}
+            {i > 0 && (
+              <span className="exam-take__inline-blank-wrap">
+                {hint && <span className="exam-take__inline-blank-hint">{hint}</span>}
+                <input
+                  type="text"
+                  className="exam-take__inline-blank"
+                  value={values[i - 1]}
+                  onChange={(e) => handleChange(i - 1, e.target.value)}
+                  placeholder={hint || '…'}
+                  autoComplete="off"
+                  spellCheck="false"
+                  style={hint ? { minWidth: `${Math.max(hint.length * 0.6 + 2, 5)}em` } : undefined}
+                />
+              </span>
+            )}
+            {/* Text segment */}
+            {cleanSegment && <span>{cleanSegment}</span>}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 }
