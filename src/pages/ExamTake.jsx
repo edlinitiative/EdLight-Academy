@@ -465,23 +465,17 @@ const ExamTake = () => {
 
           {/* Question content */}
           <div className="exam-take__content" ref={contentRef}>
-          {/* Section context — collapsible instructions (consignes stripped) */}
+          {/* Section context — title bar (short instructions inline, long passages separate) */}
           {question.sectionTitle && (
             <SectionHeader
               title={question.sectionTitle}
-              instructions={cleanInstructions}
+              instructions={cleanInstructions && cleanInstructions.length <= 200 ? cleanInstructions : ''}
             />
           )}
 
-          {/* Floating "Show passage" button for comprehension sections */}
+          {/* Reading passage panel — always visible for comprehension sections */}
           {cleanInstructions && cleanInstructions.length > 200 && (
-            <button
-              className="exam-take__passage-btn"
-              onClick={() => setShowPassage(true)}
-              type="button"
-            >
-              📖 Voir le texte
-            </button>
+            <ReadingPassage text={cleanInstructions} />
           )}
 
           {/* Sub-exercise directive header (e.g. "A. Write the correct form of the verbs...") */}
@@ -608,8 +602,8 @@ const ExamTake = () => {
           </div>
       )}
 
-      {/* Passage slide-over panel */}
-      {showPassage && (
+      {/* Passage slide-over panel — kept for quick reference while scrolled down */}
+      {showPassage && cleanInstructions && cleanInstructions.length > 200 && (
         <div className="exam-take__overlay" onClick={() => setShowPassage(false)}>
           <div className="exam-take__passage-panel" onClick={(e) => e.stopPropagation()}>
             <div className="exam-take__passage-panel-header">
@@ -627,7 +621,7 @@ const ExamTake = () => {
   );
 };
 
-// ── Section Header (collapsible instructions) ───────────────────────────────
+// ── Section Header (short instructions inline) ─────────────────────────────
 
 function SectionHeader({ title, instructions }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -656,6 +650,35 @@ function SectionHeader({ title, instructions }) {
       </div>
       {hasInstructions && !collapsed && (
         <InstructionRenderer text={instructions} />
+      )}
+    </div>
+  );
+}
+
+// ── Reading Passage (always-visible panel for comprehension text) ────────────
+
+function ReadingPassage({ text }) {
+  const [expanded, setExpanded] = useState(true);
+  if (!text) return null;
+
+  return (
+    <div className={`exam-take__reading-passage ${expanded ? '' : 'exam-take__reading-passage--collapsed'}`}>
+      <div className="exam-take__reading-passage-bar" onClick={() => setExpanded((e) => !e)}>
+        <span className="exam-take__reading-passage-icon">📖</span>
+        <span className="exam-take__reading-passage-label">Texte de référence</span>
+        <button
+          className="exam-take__reading-passage-toggle"
+          type="button"
+          aria-label={expanded ? 'Réduire le texte' : 'Afficher le texte'}
+          tabIndex={-1}
+        >
+          {expanded ? '▲ Réduire' : '▼ Afficher le texte'}
+        </button>
+      </div>
+      {expanded && (
+        <div className="exam-take__reading-passage-body">
+          <InstructionRenderer text={text} />
+        </div>
       )}
     </div>
   );

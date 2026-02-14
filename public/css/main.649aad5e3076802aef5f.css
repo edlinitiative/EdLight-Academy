@@ -4484,6 +4484,115 @@ textarea.input-field {
 	margin-top: 0.35rem;
 }
 
+/* ── Reading Passage (always-visible panel for comprehension text) ── */
+
+.exam-take__reading-passage {
+	margin-bottom: 1.25rem;
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	border: 1.5px solid rgba(10, 102, 194, 0.12);
+	box-shadow: var(--shadow-sm);
+	overflow: hidden;
+	transition: box-shadow 0.2s;
+}
+
+.exam-take__reading-passage:hover {
+	box-shadow: var(--shadow-md);
+}
+
+.exam-take__reading-passage-bar {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.75rem 1.15rem;
+	background: linear-gradient(135deg, rgba(10, 102, 194, 0.06), rgba(59, 155, 217, 0.04));
+	border-bottom: 1px solid rgba(10, 102, 194, 0.08);
+	cursor: pointer;
+	-webkit-user-select: none;
+	        user-select: none;
+	transition: background 0.15s;
+}
+
+.exam-take__reading-passage-bar:hover {
+	background: linear-gradient(135deg, rgba(10, 102, 194, 0.09), rgba(59, 155, 217, 0.06));
+}
+
+.exam-take__reading-passage-icon {
+	font-size: 1.15rem;
+	flex-shrink: 0;
+}
+
+.exam-take__reading-passage-label {
+	font-size: 0.88rem;
+	font-weight: 700;
+	color: var(--primary-600);
+	flex: 1;
+}
+
+.exam-take__reading-passage-toggle {
+	background: none;
+	border: none;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--text-400);
+	cursor: pointer;
+	padding: 0.2rem 0.5rem;
+	border-radius: 999px;
+	transition: color 0.15s, background 0.15s;
+}
+
+.exam-take__reading-passage-toggle:hover {
+	color: var(--primary-500);
+	background: rgba(10, 102, 194, 0.06);
+}
+
+.exam-take__reading-passage-body {
+	padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.exam-take__reading-passage-body .instruction-renderer {
+	max-height: none;
+	overflow: visible;
+	background: none;
+	border: none;
+	padding: 0;
+	margin-top: 0;
+	font-size: 0.95rem;
+	line-height: 1.85;
+	color: var(--text-700);
+}
+
+.exam-take__reading-passage-body .instruction-renderer__p {
+	margin: 0 0 1em;
+	text-align: justify;
+}
+
+.exam-take__reading-passage-body .instruction-renderer__p:last-child {
+	margin-bottom: 0;
+}
+
+.exam-take__reading-passage-body .instruction-renderer__heading {
+	font-size: 1.05rem;
+	margin-bottom: 0.6em;
+	color: var(--text-900);
+}
+
+/* Collapsed state: hide body */
+.exam-take__reading-passage--collapsed .exam-take__reading-passage-bar {
+	border-bottom: none;
+}
+
+@media (max-width: 768px) {
+	.exam-take__reading-passage-body {
+		padding: 1rem 1.1rem 1.15rem;
+	}
+
+	.exam-take__reading-passage-body .instruction-renderer {
+		font-size: 0.9rem;
+		line-height: 1.75;
+	}
+}
+
 /* ── Sub-exercise directive header ── */
 
 .exam-take__subex-header {
