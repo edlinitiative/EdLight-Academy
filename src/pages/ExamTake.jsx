@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import FigureRenderer from '../components/FigureRenderer';
+import InstructionRenderer from '../components/InstructionRenderer';
 import {
   flattenQuestions,
   gradeExam,
@@ -237,7 +238,7 @@ const ExamTake = () => {
             <div className="exam-take__section-header">
               <h3>{question.sectionTitle}</h3>
               {question.sectionInstructions && (
-                <p className="exam-take__section-instructions">{question.sectionInstructions}</p>
+                <InstructionRenderer text={question.sectionInstructions} />
               )}
             </div>
           )}

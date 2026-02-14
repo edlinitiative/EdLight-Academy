@@ -3974,6 +3974,74 @@ textarea.input-field {
 	margin-top: 0.35rem;
 }
 
+/* ── Instruction Renderer (reading passages, long instructions) ── */
+
+.instruction-renderer {
+	margin-top: 0.5rem;
+	padding: 1rem 1.25rem;
+	background: rgba(10, 102, 194, 0.03);
+	border: 1px solid rgba(10, 102, 194, 0.08);
+	border-radius: var(--radius-md);
+	font-size: 0.92rem;
+	line-height: 1.75;
+	color: var(--text-700);
+	max-height: 340px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.instruction-renderer__p {
+	margin: 0 0 0.75em;
+}
+
+.instruction-renderer__p:last-child {
+	margin-bottom: 0;
+}
+
+.instruction-renderer__heading {
+	display: block;
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--text-900);
+	margin-bottom: 0.35em;
+}
+
+.instruction-renderer__ul,
+.instruction-renderer__ol {
+	padding-left: 1.4em;
+	margin: 0.5em 0;
+}
+
+.instruction-renderer__ul li,
+.instruction-renderer__ol li {
+	margin-bottom: 0.3em;
+}
+
+/* Source / attribution line at end of passages */
+.instruction-renderer__p:last-child:has(em),
+.instruction-renderer p:last-child em {
+	font-size: 0.82rem;
+	color: var(--text-400);
+}
+
+/* Scrollbar styling */
+.instruction-renderer::-webkit-scrollbar {
+	width: 5px;
+}
+
+.instruction-renderer::-webkit-scrollbar-thumb {
+	background: rgba(10, 102, 194, 0.15);
+	border-radius: 999px;
+}
+
+@media (max-width: 768px) {
+	.instruction-renderer {
+		max-height: 240px;
+		padding: 0.85rem 1rem;
+		font-size: 0.88rem;
+	}
+}
+
 .exam-take__question-card {
 	display: flex;
 	flex-direction: column;
