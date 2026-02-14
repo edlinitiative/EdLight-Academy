@@ -22,6 +22,26 @@ service cloud.firestore {
       
       // Prevent deletion (optional - remove this line if you want users to delete their accounts)
       allow delete: if false;
+      
+      // Progress subcollection: users can read/write their own progress
+      match /progress/{courseId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Notifications subcollection
+      match /notifications/{notifId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Reminders subcollection
+      match /reminders/{reminderId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Notification preferences
+      match /settings/{settingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Courses collection: Public read access, admin write

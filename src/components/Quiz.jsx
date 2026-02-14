@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import DirectBankQuiz from './DirectBankQuiz';
+import { useAppData } from '../hooks/useData';
+import { pickRandomQuestion, toDirectItemFromRow } from '../services/quizBank';
 
 // Curriculum-only quiz component. If subjectCode/unitId are provided, uses those.
 // Otherwise, shows selectors for Course (subject), Grade (level), and Unit.
 export function QuizComponent({ onComplete, subjectCode, unitId, videoId }) {
-  const { data: appData } = require('../hooks/useData').useAppData();
+  const { data: appData } = useAppData();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
 
@@ -87,7 +89,6 @@ export function QuizComponent({ onComplete, subjectCode, unitId, videoId }) {
         setBankMessage('Select a course, grade, and unit to begin.');
         return;
       }
-      const { pickRandomQuestion, toDirectItemFromRow } = require('../services/quizBank');
       let row = null;
       // Best: exact video match when available via props
       if (quizBank.byVideoId && videoId) {

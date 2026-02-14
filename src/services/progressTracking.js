@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import { notifyAchievement, notifyStreak } from './notificationService';
 
 /**
@@ -47,7 +47,11 @@ export async function trackVideoProgress(userId, courseId, videoId, watchData) {
     const progressDoc = await getDoc(progressRef);
     
     const now = new Date();
-    const watchedVideos = progressDoc.exists() ? (progressDoc.data().watchedVideos || {}) : {};
+    const existingData = progressDoc.exists() ? progressDoc.data() : null;
+    const watchedVideos = existingData ? (existingData.watchedVideos || {}) : {};
+    
+    // Capture the previous lastStudyDate BEFORE we overwrite it
+    const previousLastStudyDate = existingData?.lastStudyDate;
     
     watchedVideos[videoId] = {
       watchedAt: now,
@@ -78,10 +82,9 @@ export async function trackVideoProgress(userId, courseId, videoId, watchData) {
       });
     }
     
-    // Update streak
-    await updateStreak(userId, courseId);
+    // Update streak using the PREVIOUS date (before we overwrote it)
+    await updateStreak(userId, courseId, previousLastStudyDate);
     
-    console.log(`[Progress] Video ${videoId} tracked for user ${userId}`);
   } catch (error) {
     console.error('[Progress] Error tracking video:', error);
   }
@@ -115,7 +118,6 @@ export async function markLessonComplete(userId, courseId, lessonId) {
       // Award points for completing lesson
       await awardPoints(userId, courseId, 10, 'lesson_complete');
       
-      console.log(`[Progress] Lesson ${lessonId} completed for user ${userId}`);
     }
   } catch (error) {
     console.error('[Progress] Error marking lesson complete:', error);
@@ -165,7 +167,6 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
     // Check for achievements
     await checkAchievements(userId, courseId);
     
-    console.log(`[Progress] Quiz ${quizId} attempt tracked for user ${userId}`);
   } catch (error) {
     console.error('[Progress] Error tracking quiz attempt:', error);
   }
@@ -189,7 +190,6 @@ export async function awardPoints(userId, courseId, points, reason) {
       totalPoints: currentPoints + points
     });
     
-    console.log(`[Progress] Awarded ${points} points for ${reason}`);
   } catch (error) {
     console.error('[Progress] Error awarding points:', error);
   }
@@ -197,8 +197,11 @@ export async function awardPoints(userId, courseId, points, reason) {
 
 /**
  * Update study streak
+ * @param {string} userId
+ * @param {string} courseId
+ * @param {*} previousLastStudyDate - The lastStudyDate from BEFORE the current write (avoids race condition)
  */
-async function updateStreak(userId, courseId) {
+async function updateStreak(userId, courseId, previousLastStudyDate) {
   try {
     const progressRef = doc(db, 'users', userId, 'progress', courseId);
     const progressDoc = await getDoc(progressRef);
@@ -206,7 +209,10 @@ async function updateStreak(userId, courseId) {
     if (!progressDoc.exists()) return;
     
     const data = progressDoc.data();
-    const lastStudyDate = data.lastStudyDate?.toDate();
+    // Use the passed-in previous date to avoid the race condition
+    const lastStudyDate = previousLastStudyDate?.toDate
+      ? previousLastStudyDate.toDate()
+      : (previousLastStudyDate instanceof Date ? previousLastStudyDate : null);
     const now = new Date();
     
     if (!lastStudyDate) {
@@ -281,7 +287,6 @@ export async function awardBadge(userId, courseId, badgeId) {
         badges
       });
       
-      console.log(`[Progress] Badge ${badgeId} awarded to user ${userId}`);
       
       // Send notification for new badge
       const badgeNames = {

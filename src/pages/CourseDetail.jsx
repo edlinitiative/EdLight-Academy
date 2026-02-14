@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
-import { QuizComponent } from '../components/Quiz';
 import UnitQuiz from '../components/UnitQuiz';
 import Comments from '../components/Comments';
 import FlashcardDeck from '../components/FlashcardDeck';
@@ -351,13 +350,6 @@ export default function CourseDetail() {
 
             {showQuiz && hasQuiz && (
               <>
-                {console.log('[CourseDetail] Practice button - passing to UnitQuiz:', {
-                  subjectCode: course?.code,
-                  chapterNumber: activeModuleData?.unit_no,
-                  subchapterNumber: activeLessonData?.lesson_no,
-                  courseId,
-                  activeLessonData
-                })}
                 <UnitQuiz
                   subjectCode={course?.code}
                   chapterNumber={activeModuleData?.unit_no}

@@ -27,9 +27,10 @@ const useStore = create(
       setLanguage: (language) => set({ language }),
       
       enrollInCourse: (course) =>
-        set((state) => ({
-          enrolledCourses: [...state.enrolledCourses, course]
-        })),
+        set((state) => {
+          if (state.enrolledCourses.some(c => c.id === course.id)) return state;
+          return { enrolledCourses: [...state.enrolledCourses, course] };
+        }),
         
       updateProgress: (videoId, progress) =>
         set((state) => ({
@@ -57,7 +58,13 @@ const useStore = create(
       logout: () => set({
         user: null,
         isAuthenticated: false,
-        currentCourse: null
+        currentCourse: null,
+        enrolledCourses: [],
+        progress: {},
+        quizAttempts: {},
+        showUserDropdown: false,
+        showAuthModal: false,
+        showCourseModal: false
       })
     }),
     {

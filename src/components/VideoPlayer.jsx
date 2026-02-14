@@ -139,15 +139,43 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
     }
   };
 
+  // Sync fullscreen state when user presses Esc or exits fullscreen externally
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // YouTube video detection and iframe handling
   const isYouTube = src?.includes('youtube.com') || src?.includes('youtu.be');
 
   if (isYouTube) {
+    // Normalize to embed URL
+    let embedUrl = src;
+    try {
+      const urlObj = new URL(src);
+      if (urlObj.hostname.includes('youtu.be')) {
+        const videoId = urlObj.pathname.slice(1);
+        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+      } else if (urlObj.searchParams.has('v')) {
+        embedUrl = `https://www.youtube.com/embed/${urlObj.searchParams.get('v')}`;
+      } else if (!urlObj.pathname.includes('/embed/')) {
+        embedUrl = src; // leave as-is if we can't parse it
+      }
+    } catch {
+      // leave as-is if URL parsing fails
+    }
     // For YouTube, use iframe with speed controls in description
     return (
       <div className="video-player" ref={containerRef}>
         <iframe
-          src={src}
+          src={embedUrl}
           title={title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -264,7 +292,7 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
                 onClick={toggleFullscreen}
                 title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               >
-                {isFullscreen ? '⛶' : '⛶'}
+                {isFullscreen ? '✕' : '⛶'}
               </button>
             </div>
           </div>

@@ -63,7 +63,6 @@ const SUBJECT_DEFAULTS = {
  */
 const fetchCoursesFromFirestore = async () => {
   try {
-    console.log('📚 Fetching courses from Firestore...');
     const coursesRef = collection(db, 'courses');
     const snapshot = await getDocs(coursesRef);
     
@@ -76,7 +75,6 @@ const fetchCoursesFromFirestore = async () => {
       });
     });
     
-    console.log(`✅ Fetched ${courses.length} courses from Firestore`);
     return courses;
   } catch (error) {
     console.error('❌ Error fetching courses from Firestore:', error);
@@ -91,7 +89,6 @@ const fetchCoursesFromFirestore = async () => {
  */
 const fetchVideosFromFirestore = async () => {
   try {
-    console.log('🎬 Fetching videos from Firestore...');
     const videosRef = collection(db, 'videos');
     const snapshot = await getDocs(videosRef);
     
@@ -103,7 +100,6 @@ const fetchVideosFromFirestore = async () => {
       });
     });
     
-    console.log(`✅ Fetched ${videosMap.size} videos from Firestore`);
     return videosMap;
   } catch (error) {
     console.error('❌ Error fetching videos from Firestore:', error);
@@ -117,7 +113,6 @@ const fetchVideosFromFirestore = async () => {
  */
 const fetchQuizzesFromFirestore = async () => {
   try {
-    console.log('📝 Fetching quizzes from Firestore...');
     const quizzesRef = collection(db, 'quizzes');
     const snapshot = await getDocs(quizzesRef);
     
@@ -129,7 +124,6 @@ const fetchQuizzesFromFirestore = async () => {
       });
     });
     
-    console.log(`✅ Fetched ${quizzesMap.size} quizzes from Firestore`);
     return quizzesMap;
   } catch (error) {
     console.error('❌ Error fetching quizzes from Firestore:', error);
@@ -145,7 +139,6 @@ const fetchQuizzesFromFirestore = async () => {
  * @returns {Object[]} Transformed courses ready for the app
  */
 const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quizzesMap = new Map()) => {
-  console.log('🔄 Transforming Firestore courses for app...');
 
   return firestoreCourses.map(course => {
     // Parse course ID (e.g., chem-ns1)
@@ -266,7 +259,6 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
  */
 export const loadAppData = async () => {
   try {
-    console.log('🚀 Loading application data from Firestore...');
     
     // Fetch all data from Firestore in parallel
     const [firestoreCourses, firestoreVideosMap, firestoreQuizzesMap] = await Promise.all([
@@ -275,17 +267,10 @@ export const loadAppData = async () => {
       fetchQuizzesFromFirestore(),
     ]);
     
-    console.log('📊 Firestore data loaded:', {
-      courses: firestoreCourses.length,
-      videos: firestoreVideosMap.size,
-      quizzes: firestoreQuizzesMap.size
-    });
-    
     // Transform Firestore courses to app format
     // Enriched with video and quiz data from Firestore
     const courses = transformFirestoreCourses(firestoreCourses, firestoreVideosMap, firestoreQuizzesMap);
     
-    console.log(`✅ Transformed ${courses.length} courses for app`);
     
     // Convert Firestore maps to arrays for compatibility with existing code
     const videos = Array.from(firestoreVideosMap.values());

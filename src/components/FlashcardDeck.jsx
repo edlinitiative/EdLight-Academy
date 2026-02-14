@@ -1,59 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppData } from '../hooks/useData';
-
-// Load KaTeX for math rendering
-function loadCssOnce(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.appendChild(link);
-}
-
-function loadScriptOnce(src, onload) {
-  if (document.querySelector(`script[src="${src}"]`)) return onload && onload();
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  script.onload = onload || null;
-  document.body.appendChild(script);
-}
-
-function useKatex() {
-  const [ready, setReady] = useState(typeof window !== 'undefined' && !!window.katex);
-  useEffect(() => {
-    if (ready) return;
-    const CSS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.css';
-    const JS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.js';
-    loadCssOnce(CSS);
-    loadScriptOnce(JS, () => setReady(true));
-  }, [ready]);
-  return ready;
-}
-
-// Render text with KaTeX math expressions
-function renderWithKatex(text, katexReady) {
-  if (!text) return { __html: '' };
-  let html = String(text);
-  if (katexReady && typeof window !== 'undefined' && window.katex) {
-    // Inline math: \( ... \)
-    html = html.replace(/\\\((.+?)\\\)/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
-    });
-    // Display math: $$...$$
-    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { displayMode: true, throwOnError: false }); } catch { return _; }
-    });
-  } else {
-    // Escape basic HTML when not rendering math to avoid injection
-    html = html
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br/>');
-  }
-  return { __html: html };
-}
+import { useKatex, renderWithKatex, shuffleArray } from '../utils/shared';
 
 export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNumber, onClose }) {
   const { data: appData } = useAppData();
@@ -123,7 +70,12 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
     });
   }, [quizBank, subjectCode, chapterNumber, subchapterNumber]);
 
-  if (!flashcards || flashcards.length === 0) {
+  const [shuffledFlashcards, setShuffledFlashcards] = useState(null);
+  
+  // Use shuffled cards if available, otherwise original
+  const displayCards = shuffledFlashcards || flashcards;
+
+  if (!displayCards || displayCards.length === 0) {
     return (
       <div className="flashcard-deck">
         <div className="flashcard-deck__header">
@@ -139,14 +91,14 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
     );
   }
 
-  const currentCard = flashcards[currentIndex];
+  const currentCard = displayCards[currentIndex];
   const progress = currentIndex + 1;
-  const total = flashcards.length;
+  const total = displayCards.length;
   const isMastered = masteredCards.has(currentCard.id);
   const isDifficult = difficultCards.has(currentCard.id);
 
   const goNext = () => {
-    if (currentIndex < flashcards.length - 1) {
+    if (currentIndex < displayCards.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setIsFlipped(false);
     }
@@ -192,12 +144,7 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
   };
 
   const shuffle = () => {
-    // Fisher-Yates shuffle
-    const indices = flashcards.map((_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
+    setShuffledFlashcards(shuffleArray(displayCards));
     setCurrentIndex(0);
     setIsFlipped(false);
   };
@@ -286,7 +233,7 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
           <button 
             className="button button--ghost"
             onClick={goNext}
-            disabled={currentIndex === flashcards.length - 1}
+            disabled={currentIndex === displayCards.length - 1}
           >
             Next →
           </button>

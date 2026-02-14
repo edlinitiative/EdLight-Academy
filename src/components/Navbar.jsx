@@ -90,6 +90,13 @@ export function Navbar() {
             Quizzes
           </Link>
           <Link 
+            to="/exams" 
+            className={['nav-link', isActive('/exams') ? 'active' : ''].join(' ')}
+            onClick={() => setShowMobileMenu(false)}
+          >
+            Examens
+          </Link>
+          <Link 
             to="/about" 
             className={['nav-link', isActive('/about') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
@@ -184,14 +191,6 @@ export function Navbar() {
           )}
         </div>
       </div>
-      
-      {/* Mobile menu backdrop */}
-      {showMobileMenu && (
-        <div 
-          className="mobile-menu-backdrop"
-          onClick={() => setShowMobileMenu(false)}
-        />
-      )}
     </header>
   );
 }

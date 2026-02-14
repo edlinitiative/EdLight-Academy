@@ -12,11 +12,6 @@ import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collecti
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
-console.log('[Firebase] Initializing with config:', {
-  projectId: firebaseConfig.projectId,
-  authDomain: firebaseConfig.authDomain,
-  hasApiKey: !!firebaseConfig.apiKey
-});
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
@@ -65,9 +60,7 @@ export async function signUp(email, password, name) {
  */
 export async function signInWithGoogle() {
   try {
-    console.log('[Firebase] Starting Google sign-in popup...');
     const result = await signInWithPopup(auth, googleProvider);
-    console.log('[Firebase] Sign-in successful:', result.user.email);
     return result;
   } catch (error) {
     console.error('[Firebase] Sign-in error:', error.code, error.message);
@@ -163,7 +156,6 @@ export async function updateVideo(videoId, videoData) {
       ...videoData,
       updated_at: serverTimestamp()
     }, { merge: true });
-    console.log(`[Firebase] Updated video: ${videoId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error updating video:', error);
@@ -179,7 +171,6 @@ export async function deleteVideo(videoId) {
   try {
     const videoRef = doc(db, 'videos', videoId);
     await deleteDoc(videoRef);
-    console.log(`[Firebase] Deleted video: ${videoId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting video:', error);
@@ -199,7 +190,6 @@ export async function updateCourse(courseId, courseData) {
       ...courseData,
       updated_at: serverTimestamp()
     }, { merge: true });
-    console.log(`[Firebase] Updated course: ${courseId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error updating course:', error);
@@ -215,7 +205,6 @@ export async function deleteCourse(courseId) {
   try {
     const courseRef = doc(db, 'courses', courseId);
     await deleteDoc(courseRef);
-    console.log(`[Firebase] Deleted course: ${courseId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting course:', error);
@@ -231,7 +220,6 @@ export async function deleteCourse(courseId) {
  */
 export async function removeLessonFromCourse(courseId, unitId, lessonId) {
   try {
-    console.log(`[Firebase] Removing lesson ${lessonId} from unit ${unitId} in course ${courseId}`);
     
     // Get the course document
     const courseRef = doc(db, 'courses', courseId);
@@ -262,7 +250,6 @@ export async function removeLessonFromCourse(courseId, unitId, lessonId) {
       updated_at: serverTimestamp()
     });
     
-    console.log(`[Firebase] Successfully removed lesson ${lessonId} from course ${courseId}`);
     return { success: true, message: `Lesson removed from ${courseId}` };
   } catch (error) {
     console.error('[Firebase] Error removing lesson:', error);
@@ -282,7 +269,6 @@ export async function updateQuiz(quizId, quizData) {
       ...quizData,
       updated_at: serverTimestamp()
     }, { merge: true });
-    console.log(`[Firebase] Updated quiz: ${quizId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error updating quiz:', error);
@@ -298,7 +284,6 @@ export async function deleteQuiz(quizId) {
   try {
     const quizRef = doc(db, 'quizzes', quizId);
     await deleteDoc(quizRef);
-    console.log(`[Firebase] Deleted quiz: ${quizId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting quiz:', error);
@@ -312,11 +297,9 @@ export async function deleteQuiz(quizId) {
  */
 export async function deleteAllQuizzes() {
   try {
-    console.log('[Firebase] Deleting all quizzes...');
     const quizzesRef = collection(db, 'quizzes');
     const snap = await getDocs(quizzesRef);
     if (snap.empty) {
-      console.log('[Firebase] No quizzes to delete');
       return { success: true, deleted: 0 };
     }
 
@@ -333,10 +316,8 @@ export async function deleteAllQuizzes() {
       }
       await batch.commit();
       deleted += chunk.length;
-      console.log(`[Firebase] Deleted batch of ${chunk.length} quizzes`);
     }
 
-    console.log(`[Firebase] Deleted total ${deleted} quizzes`);
     return { success: true, deleted };
   } catch (error) {
     console.error('[Firebase] Error deleting all quizzes:', error);
@@ -356,7 +337,6 @@ export async function updateUser(userId, userData) {
       ...userData,
       updated_at: serverTimestamp()
     }, { merge: true });
-    console.log(`[Firebase] Updated user: ${userId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error updating user:', error);
@@ -372,7 +352,6 @@ export async function deleteUser(userId) {
   try {
     const userRef = doc(db, 'users', userId);
     await deleteDoc(userRef);
-    console.log(`[Firebase] Deleted user: ${userId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting user:', error);
@@ -407,7 +386,6 @@ export async function addComment(threadKey, text, user) {
     };
     
     const docRef = await addDoc(commentsRef, commentData);
-    console.log(`[Firebase] Added comment: ${docRef.id}`);
     
     return { 
       id: docRef.id, 
@@ -449,7 +427,6 @@ export async function addReply(commentId, text, user) {
       updated_at: serverTimestamp()
     });
     
-    console.log(`[Firebase] Added reply: ${docRef.id} to comment: ${commentId}`);
     
     return { 
       id: docRef.id, 
@@ -543,7 +520,6 @@ export async function deleteComment(commentId) {
     const commentRef = doc(db, 'comments', commentId);
     await deleteDoc(commentRef);
     
-    console.log(`[Firebase] Deleted comment: ${commentId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error deleting comment:', error);
@@ -563,7 +539,6 @@ export async function updateComment(commentId, text) {
       text: text.trim(),
       updated_at: serverTimestamp()
     });
-    console.log(`[Firebase] Updated comment: ${commentId}`);
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error updating comment:', error);

@@ -1,19 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import DirectBankQuiz from './DirectBankQuiz';
 import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';
+import { toDirectItemFromRow } from '../services/quizBank';
+import { useAppData } from '../hooks/useData';
+import { shuffleArray } from '../utils/shared';
 import useStore from '../contexts/store';
 
-function shuffle(array) {
-  const a = array.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose }) {
-  const { data: appData } = require('../hooks/useData').useAppData();
+  const { data: appData } = useAppData();
   const { user } = useStore();
   const quizBank = appData?.quizBank;
   const TOTAL = 10;
@@ -21,100 +15,48 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   const rows = useMemo(() => {
     if (!quizBank || !subjectCode) return [];
     
-    console.log(`[UnitQuiz] Input params:`, { subjectCode, unitId, chapterNumber, subchapterNumber });
-    
-    // Build the unit key for quizBank lookup
-    // quizBank.byUnit uses keys like "CHEM-NSI|U1" where U1 comes from unit_no
-    // If we have chapterNumber (unit_no), use it to build the key
     let unitRows = [];
     
     if (chapterNumber != null) {
-      // Use chapterNumber (unit_no) to build the correct key
       const unitKey = `${subjectCode}|U${chapterNumber}`;
       unitRows = (quizBank.byUnit?.[unitKey] || []).slice();
-      console.log(`[UnitQuiz] Looking for questions with key: ${unitKey}, found: ${unitRows.length}`);
-      
-      // Debug: show available keys
-      if (unitRows.length === 0 && quizBank.byUnit) {
-        const availableKeys = Object.keys(quizBank.byUnit).filter(k => k.startsWith(subjectCode));
-        console.log(`[UnitQuiz] Available keys for ${subjectCode}:`, availableKeys);
-      }
     } else if (unitId) {
-      // Fallback to unitId if provided (might not match quizBank format)
       const key = `${subjectCode}|${unitId}`;
       unitRows = (quizBank.byUnit?.[key] || []).slice();
-      console.log(`[UnitQuiz] Looking for questions with key: ${key}, found: ${unitRows.length}`);
     }
     
     // If still no rows and we have chapterNumber, try filtering by Chapter_Number field
     if (unitRows.length === 0 && chapterNumber != null) {
-      // Fallback: get all questions for this subject and filter by Chapter_Number
       const subjectRows = (quizBank.bySubject?.[subjectCode] || []).slice();
-      console.log(`[UnitQuiz] Fallback: filtering ${subjectRows.length} subject questions by Chapter_Number=${chapterNumber}`);
-      
-      if (subjectRows.length === 0 && quizBank.bySubject) {
-        const availableSubjects = Object.keys(quizBank.bySubject);
-        console.log(`[UnitQuiz] Available subjects:`, availableSubjects);
-      }
       
       unitRows = subjectRows.filter((row) => {
         const chapterField = row.Chapter_Number || row.chapter_number || row.chapterNo || row.chapter || '';
         const chapterStr = String(chapterField).trim();
         
-        // Match exact chapter number
         if (chapterStr === String(chapterNumber)) return true;
         
-        // Also handle dotted format (e.g., "1.1" means chapter 1)
         const dotMatch = chapterStr.match(/^(\d+)[\.-]/);
         if (dotMatch && dotMatch[1] === String(chapterNumber)) return true;
         
         return false;
       });
-      
-      console.log(`[UnitQuiz] After Chapter_Number filter: ${unitRows.length} questions`);
     }
     
     // Filter by subchapter if provided (for video-specific practice)
     if (subchapterNumber != null && unitRows.length > 0) {
-      const beforeSubchapterFilter = unitRows.length;
-      console.log(`[UnitQuiz] Before subchapter filter - sample rows:`, unitRows.slice(0, 3).map(r => ({
-        id: r.id,
-        Subchapter_Number: r.Subchapter_Number,
-        subchapter_number: r.subchapter_number,
-        video_id: r.video_id
-      })));
-      
       unitRows = unitRows.filter((row) => {
-        // Check Subchapter_Number field (from Firestore/CSV)
         const subchapterField = row.Subchapter_Number || row.subchapter_number || row.subchapterNo || '';
         const subchapterStr = String(subchapterField).trim();
-        
-        console.log(`[UnitQuiz] Checking row:`, {
-          id: row.id,
-          subchapterField,
-          subchapterStr,
-          lookingFor: String(subchapterNumber),
-          match: subchapterStr === String(subchapterNumber)
-        });
-        
-        // Match exact subchapter number
-        if (subchapterStr && subchapterStr === String(subchapterNumber)) {
-          return true;
-        }
-        
-        return false;
+        return subchapterStr && subchapterStr === String(subchapterNumber);
       });
-      
-      console.log(`[UnitQuiz] After Subchapter_Number filter (${subchapterNumber}): ${unitRows.length} questions (from ${beforeSubchapterFilter})`);
     }
     
     // Shuffle and cap at 10 questions
-    return shuffle(unitRows).slice(0, TOTAL);
+    return shuffleArray(unitRows).slice(0, TOTAL);
   }, [quizBank, subjectCode, unitId, chapterNumber, subchapterNumber]);
 
   const items = useMemo(() => {
     if (!rows.length) return [];
-    const { toDirectItemFromRow } = require('../services/quizBank');
     return rows.map((r) => toDirectItemFromRow(r));
   }, [rows]);
 

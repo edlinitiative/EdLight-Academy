@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded }) {
-  const playerRef = useRef(null);
+  const playerInstanceRef = useRef(null);
   const containerRef = useRef(null);
-  const [player, setPlayer] = useState(null);
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -22,11 +21,13 @@ export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded })
     }
 
     return () => {
-      if (player) {
-        player.destroy();
-      }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (playerInstanceRef.current) {
+        try { playerInstanceRef.current.destroy(); } catch {}
+        playerInstanceRef.current = null;
       }
     };
   }, [videoId]);
@@ -38,16 +39,16 @@ export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded })
       videoId: videoId,
       playerVars: {
         autoplay: 0,
-        rel: 0, // Show related videos from same channel only
+        rel: 0,
         modestbranding: 1,
-        iv_load_policy: 3, // Disable annotations
-        fs: 1, // Allow fullscreen
+        iv_load_policy: 3,
+        fs: 1,
         playsinline: 1,
         enablejsapi: 1,
       },
       events: {
         onReady: (event) => {
-          setPlayer(event.target);
+          playerInstanceRef.current = event.target;
           startTracking(event.target);
         },
         onStateChange: (event) => {

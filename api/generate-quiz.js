@@ -7,6 +7,36 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Verify Firebase auth token to prevent unauthorized access
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid authorization header' });
+  }
+
+  // Validate the token with Firebase Admin SDK (or Google's tokeninfo endpoint)
+  try {
+    const token = authHeader.split('Bearer ')[1];
+    const verifyResp = await fetch(
+      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`
+    );
+    if (!verifyResp.ok) {
+      // Try Firebase ID token verification via Google's secure token API
+      const idResp = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY || ''}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: token }),
+        }
+      );
+      if (!idResp.ok) {
+        return res.status(401).json({ error: 'Invalid authentication token' });
+      }
+    }
+  } catch (authErr) {
+    return res.status(401).json({ error: 'Authentication verification failed' });
+  }
+
   const OPENAI_KEY = process.env.edlight_chatgpt_api;
 
   const buildPerseusFromAI = (ai) => {
@@ -71,8 +101,14 @@ export default async function handler(req, res) {
   try {
     const { topic = 'algebra', level = 'NS I', difficulty = 'easy' } = req.body || {};
 
+    // Sanitize inputs to prevent prompt injection
+    const sanitize = (str) => String(str).replace(/[^a-zA-Z0-9\s\-'àèìòùâêîôûäëïöüéÈ]/g, '').slice(0, 100);
+    const safeTopic = sanitize(topic);
+    const safeLevel = sanitize(level);
+    const safeDifficulty = sanitize(difficulty);
+
     if (!OPENAI_KEY) {
-      return res.status(200).json({ item: fallback(), meta: { topic, level, source: 'fallback' } });
+      return res.status(200).json({ item: fallback(), meta: { topic: safeTopic, level: safeLevel, source: 'fallback' } });
     }
 
     const prompt = [
@@ -83,7 +119,7 @@ export default async function handler(req, res) {
       },
       {
         role: 'user',
-        content: `Generate a multiple-choice question. Constraints:\n- Topic: ${topic}\n- Level: ${level}\n- Difficulty: ${difficulty}\n- Use LaTeX math wrapped in $...$ when helpful.\n- Return ONLY valid JSON with keys: question (markdown string), choices (array of {content, correct}), hints (array of strings), explanation (string). Exactly one choice must have correct=true.`,
+        content: `Generate a multiple-choice question. Constraints:\n- Topic: ${safeTopic}\n- Level: ${safeLevel}\n- Difficulty: ${safeDifficulty}\n- Use LaTeX math wrapped in $...$ when helpful.\n- Return ONLY valid JSON with keys: question (markdown string), choices (array of {content, correct}), hints (array of strings), explanation (string). Exactly one choice must have correct=true.`,
       },
     ];
 

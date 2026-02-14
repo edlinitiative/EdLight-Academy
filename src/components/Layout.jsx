@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, useMatch } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { AuthModal } from './Auth';
 import useStore from '../contexts/store';

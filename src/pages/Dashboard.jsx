@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 import ProgressDashboard from '../components/ProgressDashboard';
+import { getFirstName } from '../utils/shared';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -49,10 +50,7 @@ export default function Dashboard() {
     };
   };
 
-  const firstName = (user?.firstName && String(user.firstName).trim())
-    || (user?.name && String(user.name).trim().split(/\s+/)[0])
-    || (user?.email && String(user.email).split('@')[0])
-    || '';
+  const firstName = getFirstName(user);
 
   return (
     <section className="section">

@@ -22,7 +22,6 @@ export default function CourseManager() {
         data.push({ id: doc.id, ...doc.data() });
       });
       setCourses(data);
-      console.log('Loaded courses:', data);
     } catch (error) {
       console.error('Error loading courses:', error);
       setMessage({ type: 'error', text: `Error: ${error.message}` });

@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { data, isLoading } = useAppData();
   const { toggleAuthModal, isAuthenticated } = useStore();
   const [heroSrc, setHeroSrc] = useState('/assets/student-hero.jpg');
   // Lock scroll on home page to keep it static
@@ -15,16 +13,6 @@ export default function Home() {
   }, []);
   
   // Home is a static, single-screen hero. No course listing here.
-
-  if (isLoading) {
-    return (
-      <section className="section">
-        <div className="container" style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
-          <div className="loading-spinner" />
-        </div>
-      </section>
-    );
-  }
 
   return (
     <>

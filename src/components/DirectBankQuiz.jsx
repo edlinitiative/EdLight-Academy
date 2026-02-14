@@ -1,56 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-
-function loadCssOnce(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.appendChild(link);
-}
-
-function loadScriptOnce(src, onload) {
-  if (document.querySelector(`script[src="${src}"]`)) return onload && onload();
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  script.onload = onload || null;
-  document.body.appendChild(script);
-}
-
-function useKatex() {
-  const [ready, setReady] = useState(typeof window !== 'undefined' && !!window.katex);
-  useEffect(() => {
-    if (ready) return;
-    const CSS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.css';
-    const JS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.js';
-    loadCssOnce(CSS);
-    loadScriptOnce(JS, () => setReady(true));
-  }, [ready]);
-  return ready;
-}
-
-function renderWithKatex(text, katexReady) {
-  if (!text) return { __html: '' };
-  let html = String(text);
-  if (katexReady && typeof window !== 'undefined' && window.katex) {
-    // Inline math: \( ... \)
-    html = html.replace(/\\\((.+?)\\\)/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
-    });
-    // Display math: $$...$$
-    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { displayMode: true, throwOnError: false }); } catch { return _; }
-    });
-  } else {
-    // Escape basic HTML when not rendering math to avoid injection
-    html = html
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br/>');
-  }
-  return { __html: html };
-}
+import { useKatex, renderWithKatex } from '../utils/shared';
 
 export default function DirectBankQuiz({ item, onScore }) {
   const katexReady = useKatex();

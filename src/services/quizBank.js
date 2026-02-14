@@ -338,10 +338,6 @@ export function indexQuizBank(rows) {
     }
   }
   
-  // Log indexing summary for debugging
-  console.log('[QuizBank] Indexed questions by subject:', Object.keys(bySubject).map(k => `${k} (${bySubject[k].length})`).join(', '));
-  console.log('[QuizBank] Indexed questions by unit:', Object.keys(byUnit).slice(0, 10).map(k => `${k} (${byUnit[k].length})`).join(', '), '...');
-  
   return { byUnit, bySubject };
 }
 

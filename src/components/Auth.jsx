@@ -3,7 +3,8 @@ import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle } from '../services/authService';
 
 export function AuthModal({ onClose }) {
-  const [activeTab, setActiveTab] = useState('signin');
+  const storeActiveTab = useStore(state => state.activeTab);
+  const [activeTab, setActiveTab] = useState(storeActiveTab || 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
