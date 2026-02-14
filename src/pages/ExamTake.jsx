@@ -91,7 +91,9 @@ const ExamTake = () => {
       const raw = (sec.instructions || '').trim();
       const { rules, cleanedText } = parseConsignes(raw);
       if (rules.length) allRules.push(...rules);
-      return { ...sec, _cleanInstructions: cleanedText };
+      // Use null when no raw text existed; keep '' when all content was rules
+      // (so '' means "rules were stripped, nothing left" — don't fall back)
+      return { ...sec, _cleanInstructions: raw ? cleanedText : null, _hadRules: rules.length > 0 };
     });
     // Deduplicate rules (same rules often repeat across sections)
     const seen = new Set();
@@ -346,7 +348,13 @@ const ExamTake = () => {
   const currentSectionIdx = (exam.sections || []).findIndex(
     (s) => s.section_title === question.sectionTitle
   );
-  const cleanInstructions = examInfo?.cleanedSections?.[currentSectionIdx]?._cleanInstructions || question.sectionInstructions || '';
+  // Use cleaned instructions when available; only fall back to raw if no rules
+  // were extracted (i.e. cleaning wasn't applied). When rules WERE extracted and
+  // cleanedText is '' it means ALL text was consignes — don't show anything.
+  const cleanedEntry = examInfo?.cleanedSections?.[currentSectionIdx];
+  const cleanInstructions = cleanedEntry?._hadRules
+    ? (cleanedEntry._cleanInstructions || '')
+    : (question.sectionInstructions || '');
 
   return (
     <section className="section exam-take">
