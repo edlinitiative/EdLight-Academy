@@ -3912,7 +3912,7 @@ textarea.input-field {
 
 .exam-take__nav-section-grid {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
 	gap: 4px;
 }
 
@@ -3921,15 +3921,19 @@ textarea.input-field {
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-	aspect-ratio: 1;
+	min-height: 32px;
+	padding: 4px 2px;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
 	background: var(--surface);
-	font-size: 0.75rem;
+	font-size: 0.68rem;
 	font-weight: 600;
 	color: var(--text-500);
 	cursor: pointer;
 	transition: all 0.15s;
+	line-height: 1.1;
+	text-align: center;
+	word-break: break-word;
 }
 
 .exam-take__nav-btn:hover {
@@ -3961,6 +3965,15 @@ textarea.input-field {
 	border-left: 4px solid var(--primary-500);
 }
 
+.exam-take__section-header-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	cursor: pointer;
+	user-select: none;
+}
+
 .exam-take__section-header h3 {
 	font-size: 1.05rem;
 	font-weight: 700;
@@ -3968,10 +3981,81 @@ textarea.input-field {
 	margin: 0;
 }
 
+.exam-take__section-toggle {
+	background: none;
+	border: none;
+	font-size: 0.75rem;
+	color: var(--text-400);
+	cursor: pointer;
+	padding: 0.25rem;
+	border-radius: var(--radius-sm);
+	transition: color 0.15s;
+	line-height: 1;
+}
+
+.exam-take__section-toggle:hover {
+	color: var(--primary-500);
+}
+
 .exam-take__section-instructions {
 	font-size: 0.88rem;
 	color: var(--text-500);
 	margin-top: 0.35rem;
+}
+
+/* ── Sub-exercise directive header ── */
+
+.exam-take__subex-header {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+	padding: 0.65rem 0.85rem;
+	background: rgba(139, 92, 246, 0.05);
+	border-radius: var(--radius-sm);
+	border-left: 3px solid rgba(139, 92, 246, 0.4);
+}
+
+.exam-take__subex-label {
+	font-size: 0.9rem;
+	font-weight: 800;
+	color: #7c3aed;
+	flex-shrink: 0;
+}
+
+.exam-take__subex-directive {
+	font-size: 0.88rem;
+	line-height: 1.5;
+	color: var(--text-600);
+	font-style: italic;
+}
+
+/* ── Word pool callout ── */
+
+.exam-take__word-pool {
+	margin-bottom: 0.75rem;
+	padding: 0.55rem 0.85rem;
+	background: rgba(245, 158, 11, 0.06);
+	border: 1px dashed rgba(245, 158, 11, 0.3);
+	border-radius: var(--radius-sm);
+	font-size: 0.88rem;
+	line-height: 1.5;
+}
+
+.exam-take__word-pool--compact {
+	padding: 0.4rem 0.75rem;
+	margin-bottom: 0.5rem;
+}
+
+.exam-take__word-pool-label {
+	font-weight: 700;
+	color: #b45309;
+	margin-right: 0.25rem;
+}
+
+.exam-take__word-pool-words {
+	color: var(--text-700);
+	font-style: italic;
 }
 
 /* ── Instruction Renderer (reading passages, long instructions) ── */
@@ -4060,9 +4144,23 @@ textarea.input-field {
 }
 
 .exam-take__question-number {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.15rem;
 	font-size: 0.82rem;
-	font-weight: 700;
 	color: var(--text-500);
+}
+
+.exam-take__question-num-label {
+	font-weight: 800;
+	font-size: 0.88rem;
+	color: var(--text-700);
+}
+
+.exam-take__question-num-total {
+	font-weight: 500;
+	font-size: 0.78rem;
+	color: var(--text-400);
 }
 
 .exam-take__question-type {
@@ -4086,6 +4184,28 @@ textarea.input-field {
 	font-size: 1rem;
 	line-height: 1.65;
 	color: var(--text-900);
+}
+
+/* Question text uses InstructionRenderer — override its container styles when inside a question */
+.exam-take__question-text .instruction-renderer {
+	margin-top: 0;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 0;
+	max-height: none;
+	overflow: visible;
+	font-size: 1rem;
+	line-height: 1.65;
+	color: var(--text-900);
+}
+
+.exam-take__question-text .instruction-renderer__p {
+	margin: 0 0 0.5em;
+}
+
+.exam-take__question-text .instruction-renderer__p:last-child {
+	margin-bottom: 0;
 }
 
 .exam-take__answer-area {
@@ -4487,6 +4607,28 @@ textarea.input-field {
 	line-height: 1.55;
 	color: var(--text-900);
 	margin-bottom: 0.5rem;
+}
+
+/* Override InstructionRenderer container styles inside results */
+.exam-results__item-question .instruction-renderer {
+	margin-top: 0;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 0;
+	max-height: none;
+	overflow: visible;
+	font-size: 0.95rem;
+	line-height: 1.55;
+	color: var(--text-900);
+}
+
+.exam-results__item-question .instruction-renderer__p {
+	margin: 0 0 0.4em;
+}
+
+.exam-results__item-question .instruction-renderer__p:last-child {
+	margin-bottom: 0;
 }
 
 .exam-results__item-answer {

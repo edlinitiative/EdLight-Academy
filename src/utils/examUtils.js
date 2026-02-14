@@ -225,18 +225,118 @@ export function buildExamIndex(rawExams) {
 // ─── Flatten questions ──────────────────────────────────────────────────────
 
 /**
+ * Extract the sub-exercise letter prefix from a question number.
+ * "A.1" → "A", "B.3" → "B", "C" → "C", "II.A.2" → "II.A", "5" → null
+ */
+function subExerciseGroup(num) {
+  if (!num) return null;
+  const s = String(num).trim();
+  // Match leading letter-based prefix: A.1 → A, II.A.2 → II.A, B → B
+  const m = s.match(/^([A-Z]+(?:\.[A-Z]+)*)(?:[.\-]?\d|$)/i);
+  if (m) return m[1];
+  // Standalone letter: "A", "B", etc.
+  if (/^[A-Z]$/i.test(s)) return s;
+  return null;
+}
+
+/**
+ * Clean up question text for display:
+ * 1. Strip leading directive prefix from first-in-group questions
+ *    (e.g. "A. Write the correct form... (10%)\n1. She has been...")
+ * 2. Strip redundant leading sub-number (e.g. "2. If we had...")
+ * 3. Strip embedded percentage/point markers like "(10%)" or "15%"
+ * 4. Extract word pool / word bank into a separate field
+ * 5. Handle remaining leading whitespace / newlines
+ *
+ * Returns { cleanText, directive, wordPool }
+ */
+export function cleanQuestionText(text, number, isFirstInGroup) {
+  if (!text) return { cleanText: '', directive: '', wordPool: '' };
+
+  let t = text;
+  let directive = '';
+  let wordPool = '';
+
+  // ── 1. Extract directive prefix from first-in-group ──
+  // Matches: "A. Write the correct form of the verbs... (10%)\n"
+  // or "D. Choose the right word... 10%\n"
+  // or "A- Problem-solving situation (10%)\n"
+  if (isFirstInGroup) {
+    const directiveMatch = t.match(
+      /^([A-Z][\.\-\)]\s*.+?)(?:\s*\(?\s*\d+\s*%\s*\)?\s*)?\n/
+    );
+    if (directiveMatch) {
+      directive = directiveMatch[1].replace(/\s*\(?\s*\d+\s*%\s*\)?\s*$/, '').trim();
+      t = t.slice(directiveMatch[0].length);
+    }
+  }
+
+  // ── 2. Extract word pool / word bank ──
+  // Matches: "(Word pool: transport, customs, ...)" or "(Mots: ...)"
+  const wpRegex = /\((?:Word\s*pool|Word\s*bank|Banque\s*de\s*mots|Mots)\s*:\s*([^)]+)\)/gi;
+  const wpMatches = [...t.matchAll(wpRegex)];
+  if (wpMatches.length > 0) {
+    wordPool = wpMatches[0][1].trim();
+    // Remove all occurrences from text
+    t = t.replace(wpRegex, '').trim();
+  }
+
+  // ── 3. Strip redundant leading sub-number or sub-letter ──
+  // "1. She has been..." → "She has been..."
+  // "2. If we had..." → "If we had..."
+  // "a. Reorder the following..." → "Reorder the following..."
+  // "b. Write a ten-line..." → "Write a ten-line..."
+  t = t.replace(/^(?:\d+|[a-z])[\.\)]\s*/, '');
+
+  // ── 4. Strip embedded standalone percentage markers ──
+  // Remove leading "10%" or "(10%)" on their own
+  t = t.replace(/^\s*\(?\s*\d+\s*%\s*\)?\s*\n?/, '');
+  // Also clean trailing percentage at end of first line:
+  // "Select the correct word to complete each sentence. 10%"
+  t = t.replace(/^(.+?)\s+\d+\s*%\s*$/m, '$1');
+
+  // ── 5. Trim leading/trailing whitespace ──
+  t = t.replace(/^\s*\n/, '').trim();
+
+  return { cleanText: t, directive, wordPool };
+}
+
+/**
  * Flatten all sections/questions into a single ordered array.
- * Each question gets sectionTitle/sectionInstructions attached.
+ * Each question gets sectionTitle/sectionInstructions attached,
+ * plus cleaned text and sub-exercise grouping metadata.
  */
 export function flattenQuestions(exam) {
   const flat = [];
   for (const sec of exam.sections || []) {
-    for (const q of sec.questions || []) {
+    let prevGroup = null;
+
+    for (let qi = 0; qi < (sec.questions || []).length; qi++) {
+      const q = sec.questions[qi];
+      const num = String(q.number || '').trim();
+      const group = subExerciseGroup(num);
+      const isFirstInGroup = group !== null && group !== prevGroup;
+
+      const { cleanText, directive, wordPool } = cleanQuestionText(
+        q.question || '',
+        num,
+        isFirstInGroup,
+      );
+
       flat.push({
         ...q,
         sectionTitle: sec.section_title || '',
         sectionInstructions: sec.instructions || '',
+        // Cleaned display fields
+        _displayText: cleanText,
+        _subExGroup: group,
+        _subExDirective: directive,
+        _subExFirstInGroup: isFirstInGroup,
+        _wordPool: wordPool,
+        _displayNumber: num,
       });
+
+      if (group !== null) prevGroup = group;
     }
   }
   return flat;

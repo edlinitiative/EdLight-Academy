@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import FigureRenderer from '../components/FigureRenderer';
+import InstructionRenderer from '../components/InstructionRenderer';
 import {
   questionTypeMeta,
   subjectColor,
@@ -128,7 +129,7 @@ const ExamResults = () => {
           return (
             <div key={i} className={`card exam-results__item exam-results__item--${r.status}`}>
               <div className="exam-results__item-header">
-                <span className="exam-results__item-number">Q{i + 1}</span>
+                <span className="exam-results__item-number">{r.question._displayNumber || `Q${i + 1}`}</span>
                 <span className="exam-results__item-type">
                   {meta.icon} {meta.label}
                 </span>
@@ -141,7 +142,7 @@ const ExamResults = () => {
               </div>
 
               <div className="exam-results__item-question">
-                {r.question.question}
+                <InstructionRenderer text={r.question._displayText || r.question.question} />
               </div>
 
               {/* Figure */}

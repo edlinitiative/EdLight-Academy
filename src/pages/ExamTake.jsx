@@ -12,6 +12,26 @@ import {
   subjectColor,
 } from '../utils/examUtils';
 
+/** Format hierarchical question number for display (e.g. "A.1" → "A.1", "5" → "5") */
+function formatQuestionLabel(q, globalIndex) {
+  const num = q._displayNumber;
+  if (num) return num;
+  return String(globalIndex + 1);
+}
+
+/** Abbreviate question label for sidebar nav buttons (keep short) */
+function formatNavLabel(q, globalIndex) {
+  const num = q._displayNumber;
+  if (!num) return String(globalIndex + 1);
+  // If already short enough, use as-is
+  if (num.length <= 6) return num;
+  // Try to extract a short code: "A- COMPREHENSION 1" → "A-1", "B- Grammar section 2" → "B-2"
+  const m = num.match(/^([A-Z]+[\-.]?)\s*.*?(\d+)$/i);
+  if (m) return m[1] + m[2];
+  // Truncate with ellipsis
+  return num.slice(0, 5) + '…';
+}
+
 /** Shared catalog query — same queryKey so it shares cache with ExamBrowser */
 function useExamCatalog() {
   return useQuery({
@@ -207,20 +227,22 @@ const ExamTake = () => {
                     <div className="exam-take__nav-section-grid">
                       {Array.from({ length: sec.count }).map((_, offset) => {
                         const i = sec.start + offset;
+                        const q = questions[i];
                         const hasAnswer = answers[i] != null && answers[i] !== '';
                         const isCurrent = i === currentQ;
                         let cls = 'exam-take__nav-btn';
                         if (isCurrent) cls += ' exam-take__nav-btn--current';
                         else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
+                        const label = formatNavLabel(q, i);
                         return (
                           <button
                             key={i}
                             className={cls}
                             onClick={() => setCurrentQ(i)}
-                            title={`Question ${i + 1}`}
+                            title={`Question ${formatQuestionLabel(q, i)}`}
                             type="button"
                           >
-                            {i + 1}
+                            {label}
                           </button>
                         );
                       })}
@@ -233,20 +255,41 @@ const ExamTake = () => {
 
           {/* Question content */}
           <div className="exam-take__content">
-          {/* Always show current section context */}
+          {/* Section context — collapsible instructions */}
           {question.sectionTitle && (
-            <div className="exam-take__section-header">
-              <h3>{question.sectionTitle}</h3>
-              {question.sectionInstructions && (
-                <InstructionRenderer text={question.sectionInstructions} />
-              )}
+            <SectionHeader
+              title={question.sectionTitle}
+              instructions={question.sectionInstructions}
+            />
+          )}
+
+          {/* Sub-exercise directive header (e.g. "A. Write the correct form of the verbs...") */}
+          {question._subExFirstInGroup && question._subExDirective && (
+            <div className="exam-take__subex-header">
+              <span className="exam-take__subex-label">{question._subExGroup}.</span>
+              <span className="exam-take__subex-directive">{question._subExDirective.replace(/^[A-Z][.\-)\s]+/, '')}</span>
+            </div>
+          )}
+
+          {/* Word pool callout — shown once per group */}
+          {question._wordPool && question._subExFirstInGroup && (
+            <div className="exam-take__word-pool">
+              <span className="exam-take__word-pool-label">Banque de mots :</span>{' '}
+              <span className="exam-take__word-pool-words">{question._wordPool}</span>
+            </div>
+          )}
+          {/* Show word pool inline if not first-in-group but has one */}
+          {question._wordPool && !question._subExFirstInGroup && (
+            <div className="exam-take__word-pool exam-take__word-pool--compact">
+              <span className="exam-take__word-pool-words">{question._wordPool}</span>
             </div>
           )}
 
           <div className="card exam-take__question-card">
             <div className="exam-take__question-header">
               <span className="exam-take__question-number">
-                Question {currentQ + 1} / {questions.length}
+                <span className="exam-take__question-num-label">{formatQuestionLabel(question, currentQ)}</span>
+                <span className="exam-take__question-num-total"> / {questions.length}</span>
               </span>
               <span className="exam-take__question-type" style={{ background: color + '18', color }}>
                 {meta.icon} {meta.label}
@@ -264,7 +307,7 @@ const ExamTake = () => {
             )}
 
             <div className="exam-take__question-text">
-              {question.question}
+              <InstructionRenderer text={question._displayText || question.question} />
             </div>
 
             {/* Answer input — varies by type */}
@@ -335,6 +378,40 @@ const ExamTake = () => {
       </section>
   );
 };
+
+// ── Section Header (collapsible instructions) ───────────────────────────────
+
+function SectionHeader({ title, instructions }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const hasInstructions = !!instructions?.trim();
+
+  return (
+    <div className="exam-take__section-header">
+      <div
+        className="exam-take__section-header-top"
+        onClick={() => hasInstructions && setCollapsed((c) => !c)}
+        role={hasInstructions ? 'button' : undefined}
+        tabIndex={hasInstructions ? 0 : undefined}
+        onKeyDown={(e) => { if (hasInstructions && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setCollapsed((c) => !c); } }}
+      >
+        <h3>{title}</h3>
+        {hasInstructions && (
+          <button
+            className="exam-take__section-toggle"
+            type="button"
+            aria-label={collapsed ? 'Afficher les instructions' : 'Masquer les instructions'}
+            tabIndex={-1}
+          >
+            {collapsed ? '▶' : '▼'}
+          </button>
+        )}
+      </div>
+      {hasInstructions && !collapsed && (
+        <InstructionRenderer text={instructions} />
+      )}
+    </div>
+  );
+}
 
 // ── Question Input Components ────────────────────────────────────────────────
 
