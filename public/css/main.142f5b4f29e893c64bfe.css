@@ -4723,6 +4723,11 @@ textarea.input-field {
 	animation: fadeInUp 0.2s ease;
 }
 
+/* Stacked cards in grouped questions get spacing between them */
+.exam-take__question-card + .exam-take__question-card {
+	margin-top: 0.75rem;
+}
+
 @keyframes fadeInUp {
 	from {
 		opacity: 0;
@@ -4963,6 +4968,16 @@ textarea.input-field {
 	justify-content: space-between;
 	gap: 0.75rem;
 	margin-top: 1.5rem;
+}
+
+/* Group counter (between grouped cards and nav) */
+.exam-take__group-counter {
+	text-align: center;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--text-400);
+	padding: 0.35rem 0;
+	letter-spacing: 0.02em;
 }
 
 /* Confirmation modal */

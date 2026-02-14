@@ -80,6 +80,24 @@ const ExamTake = () => {
     return groups.map((g) => ({ ...g, count: g.end - g.start + 1 }));
   }, [questions]);
 
+  // ── Sub-exercise groups: consecutive questions with same _subExGroup ──────
+  // Each group = { start, end, group (letter or null), questions: [...indices] }
+  // Ungrouped questions are each their own group.
+  const questionGroups = useMemo(() => {
+    const groups = [];
+    for (let i = 0; i < questions.length; i++) {
+      const g = questions[i]._subExGroup;
+      const last = groups[groups.length - 1];
+      if (g && last && last.group === g) {
+        last.end = i;
+        last.indices.push(i);
+      } else {
+        groups.push({ group: g, start: i, end: i, indices: [i] });
+      }
+    }
+    return groups;
+  }, [questions]);
+
   // ── Exam intro / consignes extraction ─────────────────────────────────────
   const [examStarted, setExamStarted] = useState(false);
 
@@ -155,21 +173,29 @@ const ExamTake = () => {
   const answeredCount = Object.keys(answers).filter((k) => answers[k] !== '' && answers[k] != null).length;
   const progressPct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
 
-  // Keyboard navigation
+  // Keyboard navigation (move by group)
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
-        setCurrentQ((p) => Math.min(p + 1, questions.length - 1));
+        setCurrentQ((p) => {
+          const gi = questionGroups.findIndex((g) => p >= g.start && p <= g.end);
+          const next = questionGroups[gi + 1];
+          return next ? next.start : p;
+        });
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         e.preventDefault();
-        setCurrentQ((p) => Math.max(p - 1, 0));
+        setCurrentQ((p) => {
+          const gi = questionGroups.findIndex((g) => p >= g.start && p <= g.end);
+          const prev = questionGroups[gi - 1];
+          return prev ? prev.start : p;
+        });
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [questions.length]);
+  }, [questions.length, questionGroups]);
 
   // Scroll question content into view on question change
   const contentRef = useRef(null);
@@ -367,6 +393,13 @@ const ExamTake = () => {
   const question = questions[currentQ];
   if (!question) return null;
 
+  // Current group: all questions displayed together on this page
+  const currentGroupIdx = questionGroups.findIndex((g) => currentQ >= g.start && currentQ <= g.end);
+  const currentGrp = questionGroups[currentGroupIdx] || { start: currentQ, end: currentQ, indices: [currentQ], group: null };
+  const groupQuestions = currentGrp.indices.map((i) => ({ ...questions[i], _flatIdx: i }));
+  const isLastGroup = currentGroupIdx >= questionGroups.length - 1;
+  const isFirstGroup = currentGroupIdx <= 0;
+
   const meta = questionTypeMeta(question.type);
   const isTimerWarning = durationMin && secondsLeft < 300; // < 5 min
 
@@ -439,16 +472,18 @@ const ExamTake = () => {
                         const i = sec.start + offset;
                         const q = questions[i];
                         const hasAnswer = answers[i] != null && answers[i] !== '';
-                        const isCurrent = i === currentQ;
+                        const isInCurrentGroup = i >= currentGrp.start && i <= currentGrp.end;
                         let cls = 'exam-take__nav-btn';
-                        if (isCurrent) cls += ' exam-take__nav-btn--current';
+                        if (isInCurrentGroup) cls += ' exam-take__nav-btn--current';
                         else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
                         const label = formatNavLabel(q, i);
+                        // Clicking any question in a group navigates to the group start
+                        const targetGroup = questionGroups.find((g) => i >= g.start && i <= g.end);
                         return (
                           <button
                             key={i}
                             className={cls}
-                            onClick={() => setCurrentQ(i)}
+                            onClick={() => setCurrentQ(targetGroup ? targetGroup.start : i)}
                             title={`Question ${formatQuestionLabel(q, i)}`}
                             type="button"
                           >
@@ -478,89 +513,105 @@ const ExamTake = () => {
             <ReadingPassage text={cleanInstructions} />
           )}
 
-          {/* Sub-exercise directive header (e.g. "A. Write the correct form of the verbs...") */}
-          {question._subExFirstInGroup && question._subExDirective && (
+          {/* Sub-exercise directive header — shown once for the group */}
+          {groupQuestions[0]._subExDirective && (
             <div className="exam-take__subex-header">
-              <span className="exam-take__subex-label">{question._subExGroup}.</span>
-              <span className="exam-take__subex-directive">{question._subExDirective.replace(/^[A-Z][.\-)\s]+/, '')}</span>
+              <span className="exam-take__subex-label">{groupQuestions[0]._subExGroup}.</span>
+              <span className="exam-take__subex-directive">{groupQuestions[0]._subExDirective.replace(/^[A-Z][.\-)\s]+/, '')}</span>
             </div>
           )}
 
-          {/* Word pool callout — shown once per group */}
-          {question._wordPool && question._subExFirstInGroup && (
+          {/* Word pool callout — shown once for the group */}
+          {groupQuestions[0]._wordPool && (
             <div className="exam-take__word-pool">
               <span className="exam-take__word-pool-label">Banque de mots :</span>{' '}
-              <span className="exam-take__word-pool-words">{question._wordPool}</span>
-            </div>
-          )}
-          {/* Show word pool inline if not first-in-group but has one */}
-          {question._wordPool && !question._subExFirstInGroup && (
-            <div className="exam-take__word-pool exam-take__word-pool--compact">
-              <span className="exam-take__word-pool-words">{question._wordPool}</span>
+              <span className="exam-take__word-pool-words">{groupQuestions[0]._wordPool}</span>
             </div>
           )}
 
-          <div className="card exam-take__question-card">
-            <div className="exam-take__question-header">
-              <span className="exam-take__question-number">
-                <span className="exam-take__question-num-label">{formatQuestionLabel(question, currentQ)}</span>
-                <span className="exam-take__question-num-total"> / {questions.length}</span>
-              </span>
-              <span className="exam-take__question-type" style={{ background: color + '18', color }}>
-                {meta.icon} {meta.label}
-              </span>
-              {question.points && (
-                <span className="exam-take__question-points">
-                  {question.points} pt{question.points !== 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
+          {/* Render all questions in the current group together */}
+          {groupQuestions.map((gq) => {
+            const qMeta = questionTypeMeta(gq.type);
+            const qIdx = gq._flatIdx;
+            return (
+              <div className="card exam-take__question-card" key={qIdx}>
+                <div className="exam-take__question-header">
+                  <span className="exam-take__question-number">
+                    <span className="exam-take__question-num-label">{formatQuestionLabel(gq, qIdx)}</span>
+                    {groupQuestions.length === 1 && (
+                      <span className="exam-take__question-num-total"> / {questions.length}</span>
+                    )}
+                  </span>
+                  <span className="exam-take__question-type" style={{ background: color + '18', color }}>
+                    {qMeta.icon} {qMeta.label}
+                  </span>
+                  {gq.points && (
+                    <span className="exam-take__question-points">
+                      {gq.points} pt{gq.points !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
 
-            {/* Figure — rendered from description */}
-            {question.has_figure && question.figure_description && (
-              <FigureRenderer description={question.figure_description} />
-            )}
+                {/* Figure — rendered from description */}
+                {gq.has_figure && gq.figure_description && (
+                  <FigureRenderer description={gq.figure_description} />
+                )}
 
-            {/* Question text — inline blanks for fill_blank, normal renderer otherwise */}
-            {question.type === 'fill_blank' && hasInlineBlanks(question._displayText || question.question) ? (
-              <div className="exam-take__question-text">
-                <FillBlankText
-                  text={question._displayText || question.question}
-                  index={currentQ}
-                  value={answers[currentQ] ?? ''}
-                  onChange={setAnswer}
-                />
+                {/* Question text — inline blanks for fill_blank, normal renderer otherwise */}
+                {gq.type === 'fill_blank' && hasInlineBlanks(gq._displayText || gq.question) ? (
+                  <div className="exam-take__question-text">
+                    <FillBlankText
+                      text={gq._displayText || gq.question}
+                      index={qIdx}
+                      value={answers[qIdx] ?? ''}
+                      onChange={setAnswer}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="exam-take__question-text">
+                      <InstructionRenderer text={gq._displayText || gq.question} />
+                    </div>
+                    <div className="exam-take__answer-area">
+                      <QuestionInput
+                        question={gq}
+                        index={qIdx}
+                        value={answers[qIdx] ?? ''}
+                        onChange={setAnswer}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                <div className="exam-take__question-text">
-                  <InstructionRenderer text={question._displayText || question.question} />
-                </div>
-                <div className="exam-take__answer-area">
-                  <QuestionInput
-                    question={question}
-                    index={currentQ}
-                    value={answers[currentQ] ?? ''}
-                    onChange={setAnswer}
-                  />
-                </div>
-              </>
-            )}
-          </div>
+            );
+          })}
 
-          {/* Navigation */}
+          {/* Group counter */}
+          {groupQuestions.length > 1 && (
+            <div className="exam-take__group-counter">
+              {groupQuestions[0]._subExGroup ? `Groupe ${groupQuestions[0]._subExGroup}` : 'Groupe'} — {groupQuestions.length} questions ({groupQuestions[0]._flatIdx + 1}–{groupQuestions[groupQuestions.length - 1]._flatIdx + 1} sur {questions.length})
+            </div>
+          )}
+
+          {/* Navigation — moves by group */}
           <div className="exam-take__question-nav">
             <button
               className="button button--ghost"
-              disabled={currentQ === 0}
-              onClick={() => setCurrentQ((p) => p - 1)}
+              disabled={isFirstGroup}
+              onClick={() => {
+                const prev = questionGroups[currentGroupIdx - 1];
+                if (prev) setCurrentQ(prev.start);
+              }}
             >
               ← Précédent
             </button>
-            {currentQ < questions.length - 1 ? (
+            {!isLastGroup ? (
               <button
                 className="button button--primary"
-                onClick={() => setCurrentQ((p) => p + 1)}
+                onClick={() => {
+                  const next = questionGroups[currentGroupIdx + 1];
+                  if (next) setCurrentQ(next.start);
+                }}
               >
                 Suivant →
               </button>
