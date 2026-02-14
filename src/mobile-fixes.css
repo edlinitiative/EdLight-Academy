@@ -19,13 +19,6 @@ body {
 
 /* Container padding for mobile */
 @media (max-width: 768px) {
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    max-width: 100%;
-    width: 100%;
-  }
-  
   /* Remove negative margins on mobile */
   .course-detail__layout,
   .page-header:has(.filter-group),
