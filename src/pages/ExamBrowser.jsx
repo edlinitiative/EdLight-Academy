@@ -113,6 +113,7 @@ const ExamBrowser = () => {
             className="exam-browser__select"
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
+            aria-label="Filtrer par niveau"
           >
             <option value="">Tous les niveaux</option>
             {index.levels.map((l) => (
@@ -125,6 +126,7 @@ const ExamBrowser = () => {
             className="exam-browser__select"
             value={subjectFilter}
             onChange={(e) => setSubjectFilter(e.target.value)}
+            aria-label="Filtrer par matière"
           >
             <option value="">Toutes les matières</option>
             {index.subjects.map((s) => (
@@ -137,6 +139,7 @@ const ExamBrowser = () => {
             className="exam-browser__select"
             value={yearFilter}
             onChange={(e) => setYearFilter(e.target.value)}
+            aria-label="Filtrer par année"
           >
             <option value="">Toutes les années</option>
             {index.years.map((y) => (
@@ -156,6 +159,7 @@ const ExamBrowser = () => {
               placeholder="Rechercher un examen…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Rechercher un examen"
             />
           </div>
         </div>
@@ -196,7 +200,7 @@ function ExamCard({ exam, onClick }) {
     .slice(0, 3);
 
   return (
-    <button className="card exam-card" onClick={onClick} type="button">
+    <button className="card exam-card" onClick={onClick} type="button" aria-label={`${exam._subject} — ${exam.exam_title || 'Examen'} (${exam._year || ''})`}>
       <div className="exam-card__header">
         <span
           className="exam-card__subject-badge"

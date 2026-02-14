@@ -80,14 +80,14 @@ export function Navbar() {
             className={['nav-link', isActive('/courses') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
           >
-            Courses
+            Cours
           </Link>
           <Link 
             to="/quizzes" 
             className={['nav-link', isActive('/quizzes') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
           >
-            Quizzes
+            Quiz
           </Link>
           <Link 
             to="/exams" 
@@ -101,7 +101,7 @@ export function Navbar() {
             className={['nav-link', isActive('/about') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
           >
-            About
+            À propos
           </Link>
           
           {/* Mobile-only auth actions */}
@@ -111,7 +111,7 @@ export function Navbar() {
               className="nav-link nav-link--mobile-only"
               onClick={() => setShowMobileMenu(false)}
             >
-              Dashboard
+              Tableau de bord
             </Link>
           ) : (
             <>
@@ -122,7 +122,7 @@ export function Navbar() {
                   setShowMobileMenu(false);
                 }}
               >
-                Sign In
+                Se connecter
               </button>
               <button 
                 className="nav-link nav-link--mobile-only nav-link--button nav-link--primary"
@@ -132,7 +132,7 @@ export function Navbar() {
                   setShowMobileMenu(false);
                 }}
               >
-                Create Account
+                Créer un compte
               </button>
             </>
           )}
@@ -153,7 +153,7 @@ export function Navbar() {
                 className="button button--ghost button--pill nav-actions__dashboard"
                 onClick={() => navigate('/dashboard')}
               >
-                Dashboard
+                Tableau de bord
               </button>
 
               <div className="dropdown" ref={dropdownRef}>
@@ -176,7 +176,7 @@ export function Navbar() {
                 className="button button--ghost button--pill nav-actions__signin"
                 onClick={() => useStore.getState().toggleAuthModal()}
               >
-                Sign In
+                Se connecter
               </button>
               <button 
                 className="button button--primary button--pill nav-actions__signup"
@@ -185,7 +185,7 @@ export function Navbar() {
                   useStore.getState().setActiveTab('signup');
                 }}
               >
-                Create Account
+                Créer un compte
               </button>
             </>
           )}

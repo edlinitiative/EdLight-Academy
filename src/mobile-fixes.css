@@ -1123,7 +1123,12 @@ body {
   }
   
   .lesson-card__comments-content {
+    display: none;
     padding: 0 1rem 1rem;
+  }
+
+  .lesson-card--comments-open .lesson-card__comments-content {
+    display: block;
     animation: slideDown 0.3s ease;
   }
   

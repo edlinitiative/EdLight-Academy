@@ -156,8 +156,8 @@ const ExamTake = () => {
             {answeredCount}/{questions.length} répondu{answeredCount !== 1 ? 'es' : 'e'}
           </span>
           {durationMin > 0 && (
-            <span className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`}>
-              ⏱ {formatTime(secondsLeft)}
+            <span className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`} aria-live="polite" aria-label={`Temps restant: ${formatTime(secondsLeft)}`}>
+              <span aria-hidden="true">⏱</span> {formatTime(secondsLeft)}
             </span>
           )}
           <button

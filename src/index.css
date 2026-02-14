@@ -12,9 +12,14 @@
 	--primary-500: #0A66C2;
 	--primary-600: #095aa8;
 	--primary-700: #084e8f;
+	/* Alias: shorthand --primary maps to the main brand colour */
+	--primary: #0A66C2;
 	--text-900: #0f172a;
+	--text-800: #1e293b;
 	--text-700: #334155;
+	--text-600: #475569;
 	--text-500: #64748b;
+	--text-400: #94a3b8;
 	--text-300: #94a3b8;
 	--success-500: #22c55e;
 	--warning-500: #f59e0b;
@@ -56,6 +61,41 @@ body {
 /* Utility: disable page scroll when applied to body */
 .no-scroll {
 	overflow: hidden;
+}
+
+/* Suspense / lazy-load fallback */
+.suspense-fallback {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+}
+
+/* Skip-to-content link (accessibility) */
+.skip-to-content {
+	position: absolute;
+	left: -999px;
+	top: auto;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	z-index: 9999;
+}
+.skip-to-content:focus {
+	position: fixed;
+	top: 0.5rem;
+	left: 50%;
+	transform: translateX(-50%);
+	width: auto;
+	height: auto;
+	padding: 0.65rem 1.2rem;
+	border-radius: 999px;
+	background: var(--primary-600);
+	color: #fff;
+	font-weight: 600;
+	font-size: 0.9rem;
+	box-shadow: var(--shadow-md);
+	text-decoration: none;
 }
 
 a {
@@ -118,29 +158,20 @@ main {
 }
 
 .section {
-	padding: clamp(3rem, 6vw, 5rem) 0;
+	padding: clamp(1.5rem, 3vw, 2.5rem) 0;
 }
 
-/* Reduce top padding on course detail page */
-.course-detail__layout {
-	margin-top: -4.5rem; /* Pull content very close to navbar (90% reduction) */
-}
-
-/* Reduce top padding on course catalog page (90% reduction) */
-.page-header:has(.filter-group) {
-	margin-top: -4.5rem;
-}
-
-/* Reduce top padding on quizzes page - target page-header before quiz-layout */
-.page-header:has(+ .quiz-layout) {
-	margin-top: -4.5rem;
-	margin-bottom: clamp(1rem, 2vw, 1.5rem); /* 50% reduction from default */
-}
-
-/* Reduce top padding on dashboard page (90% reduction) */
+/* Pages that need tighter spacing to navbar */
+.course-detail__layout,
+.page-header:has(.filter-group),
+.page-header:has(+ .quiz-layout),
 .dashboard-grid .page-header {
-	margin-top: -4.5rem;
-	margin-bottom: clamp(1rem, 2vw, 1.5rem); /* 50% reduction from default */
+	margin-top: 0;
+}
+
+.page-header:has(+ .quiz-layout),
+.dashboard-grid .page-header {
+	margin-bottom: clamp(1rem, 2vw, 1.5rem);
 }
 
 .page-header {
@@ -166,6 +197,20 @@ main {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem;
+}
+
+.page-header__title {
+	font-size: clamp(1.5rem, 4vw, 2rem);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	color: var(--text-900);
+	line-height: 1.25;
+}
+
+.page-header__subtitle {
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--text-600);
 }
 
 .grid {
@@ -549,6 +594,18 @@ main {
 	background: rgba(10, 102, 194, 0.18);
 }
 
+.button--secondary {
+	background: var(--surface);
+	color: var(--text-700);
+	border: 1px solid var(--border-strong);
+	box-shadow: var(--shadow-sm);
+}
+
+.button--secondary:hover {
+	background: var(--surface-muted);
+	border-color: rgba(10, 102, 194, 0.4);
+}
+
 .button--light {
 	background: rgba(255, 255, 255, 0.85);
 	color: var(--text-900);
@@ -587,6 +644,16 @@ main {
 	color: var(--text-500);
 }
 
+.chip--primary {
+	background: rgba(10, 102, 194, 0.14);
+	color: var(--primary-600);
+}
+
+.chip--warning {
+	background: rgba(245, 158, 11, 0.14);
+	color: #b45309;
+}
+
 .chip--danger {
 	background: rgba(239, 68, 68, 0.16);
 	color: var(--danger-500);
@@ -602,7 +669,10 @@ main {
 	transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.card:hover {
+/* Only lift interactive cards (buttons / links) on hover */
+button.card:hover,
+a.card:hover,
+.card--interactive:hover {
 	transform: translateY(-4px);
 	box-shadow: var(--shadow-md);
 }
@@ -680,7 +750,7 @@ textarea.input-field {
 	line-height: 1.5;
 }
 
-.input-field:invalid {
+.input-field:not(:placeholder-shown):invalid {
 	border-color: rgba(239, 68, 68, 0.6);
 	box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12);
 }
@@ -691,14 +761,11 @@ textarea.input-field {
 }
 
 .metric-card {
-	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(209, 213, 255, 0.65));
+	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(219, 239, 255, 0.68));
 	border-radius: var(--radius-lg);
 	padding: clamp(1.4rem, 3vw, 1.9rem);
 	border: 1px solid rgba(10, 102, 194, 0.18);
 	box-shadow: var(--shadow-sm);
-}
-.metric-card {
-	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(219, 239, 255, 0.68));
 }
 .metric-card__icon {
 	font-size: 1.25rem;
@@ -2112,6 +2179,23 @@ textarea.input-field {
 	text-align: center;
 	font-size: 0.85rem;
 	color: var(--text-500);
+}
+
+.form-footnote__link {
+	background: none;
+	border: none;
+	color: var(--primary-600);
+	font-weight: 600;
+	font-size: inherit;
+	cursor: pointer;
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	padding: 0;
+}
+
+.form-footnote__link:hover {
+	color: var(--primary-700);
+	text-decoration-style: solid;
 }
 
 .hint-box {

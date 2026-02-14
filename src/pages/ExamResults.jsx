@@ -61,7 +61,7 @@ const ExamResults = () => {
       </div>
 
       {/* Score overview */}
-      <div className="exam-results__overview">
+      <div className="exam-results__overview" aria-label={`Score: ${pct}%`}>
         {/* Score ring */}
         <div className="exam-results__score-ring">
           <svg viewBox="0 0 120 120" className="exam-results__ring-svg">

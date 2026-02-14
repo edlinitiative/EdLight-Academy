@@ -372,7 +372,7 @@ export default function CourseDetail() {
             {/* Unit Quiz renders inline in the media area when lesson type is 'quiz' */}
             
             {/* Comments Section - Collapsible on Mobile */}
-            <div className="lesson-card lesson-card--comments">
+            <div className={`lesson-card lesson-card--comments ${showComments ? 'lesson-card--comments-open' : ''}`}>
               <button
                 className="lesson-card__comments-toggle"
                 onClick={() => setShowComments(!showComments)}
@@ -386,15 +386,13 @@ export default function CourseDetail() {
                 </span>
               </button>
               
-              {showComments && (
-                <div className="lesson-card__comments-content">
-                  <Comments
-                    threadKey={threadKey}
-                    isAuthenticated={isAuthenticated}
-                    onRequireAuth={() => useStore.getState().toggleAuthModal()}
-                  />
-                </div>
-              )}
+              <div className="lesson-card__comments-content">
+                <Comments
+                  threadKey={threadKey}
+                  isAuthenticated={isAuthenticated}
+                  onRequireAuth={() => useStore.getState().toggleAuthModal()}
+                />
+              </div>
             </div>
           </div>
 
