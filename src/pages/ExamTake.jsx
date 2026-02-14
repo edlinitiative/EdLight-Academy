@@ -117,6 +117,32 @@ const ExamTake = () => {
   }, []);
 
   const answeredCount = Object.keys(answers).filter((k) => answers[k] !== '' && answers[k] != null).length;
+  const progressPct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setCurrentQ((p) => Math.min(p + 1, questions.length - 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setCurrentQ((p) => Math.max(p - 1, 0));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [questions.length]);
+
+  // Scroll question content into view on question change
+  const contentRef = useRef(null);
+  useEffect(() => {
+    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [currentQ]);
+
+  // Passage panel state (for comprehension sections)
+  const [showPassage, setShowPassage] = useState(false);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
@@ -194,7 +220,7 @@ const ExamTake = () => {
 
           <div className="exam-take__topbar-right">
             <span className="exam-take__progress">
-              {answeredCount}/{questions.length} répondu{answeredCount !== 1 ? 'es' : 'e'}
+              {answeredCount}/{questions.length}
             </span>
             {durationMin > 0 && (
               <span className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`} aria-live="polite" aria-label={`Temps restant: ${formatTime(secondsLeft)}`}>
@@ -208,6 +234,11 @@ const ExamTake = () => {
               Soumettre
             </button>
           </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="exam-take__progress-bar" role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100}>
+          <div className="exam-take__progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
 
         {/* Main area: sidebar + question */}
@@ -254,13 +285,24 @@ const ExamTake = () => {
           </aside>
 
           {/* Question content */}
-          <div className="exam-take__content">
+          <div className="exam-take__content" ref={contentRef}>
           {/* Section context — collapsible instructions */}
           {question.sectionTitle && (
             <SectionHeader
               title={question.sectionTitle}
               instructions={question.sectionInstructions}
             />
+          )}
+
+          {/* Floating "Show passage" button for comprehension sections */}
+          {question.sectionInstructions && question.sectionInstructions.length > 200 && (
+            <button
+              className="exam-take__passage-btn"
+              onClick={() => setShowPassage(true)}
+              type="button"
+            >
+              📖 Voir le texte
+            </button>
           )}
 
           {/* Sub-exercise directive header (e.g. "A. Write the correct form of the verbs...") */}
@@ -373,6 +415,21 @@ const ExamTake = () => {
               </div>
             </div>
           </div>
+      )}
+
+      {/* Passage slide-over panel */}
+      {showPassage && (
+        <div className="exam-take__overlay" onClick={() => setShowPassage(false)}>
+          <div className="exam-take__passage-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="exam-take__passage-panel-header">
+              <h3>📖 Texte de référence</h3>
+              <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
+            </div>
+            <div className="exam-take__passage-panel-body">
+              <InstructionRenderer text={question.sectionInstructions} />
+            </div>
+          </div>
+        </div>
       )}
       </div>
       </section>
