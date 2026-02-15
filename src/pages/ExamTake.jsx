@@ -21,17 +21,24 @@ function formatQuestionLabel(q, globalIndex) {
   return String(globalIndex + 1);
 }
 
-/** Abbreviate question label for sidebar nav buttons (keep short) */
+/** Abbreviate question label for sidebar nav buttons (max ~4–5 visible chars) */
 function formatNavLabel(q, globalIndex) {
   const num = q._displayNumber;
   if (!num) return String(globalIndex + 1);
-  // If already short enough, use as-is
-  if (num.length <= 6) return num;
-  // Try to extract a short code: "A- COMPREHENSION 1" → "A-1", "B- Grammar section 2" → "B-2"
-  const m = num.match(/^([A-Z]+[\-.]?)\s*.*?(\d+)$/i);
-  if (m) return m[1] + m[2];
-  // Truncate with ellipsis
-  return num.slice(0, 5) + '…';
+  // Short labels are fine as-is ("1", "A.1", "B.3")
+  if (num.length <= 4) return num;
+  // Extract short prefix+digit: "A- COMPREHENSION 1" → "A-1", "EXERCICE 2" → "Ex.2"
+  const m = num.match(/^([A-Z]+)[\-.]?\s*.*?(\d+)$/i);
+  if (m) {
+    let prefix = m[1];
+    // Long prefixes like EXERCICE → abbreviate to 2-letter code
+    if (prefix.length > 2) prefix = prefix.slice(0, 2) + '.';
+    const short = prefix + m[2];
+    if (short.length <= 5) return short;
+    return short.slice(0, 4) + '…';
+  }
+  // Fallback: just truncate
+  return num.slice(0, 3) + '…';
 }
 
 /** Regex that matches blank placeholders: 4+ underscores OR 4+ dots */
