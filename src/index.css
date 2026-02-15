@@ -5050,6 +5050,354 @@ textarea.input-field {
 	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.12);
 }
 
+/* ── Proof / Demonstration Step-by-Step Input ── */
+
+.proof-input {
+	border: 1.5px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+.proof-input__header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.7rem 1rem;
+	background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(99,102,241,0.03));
+	border-bottom: 1px solid var(--border);
+	flex-wrap: wrap;
+}
+
+.proof-input__header-icon {
+	font-size: 1.1rem;
+}
+
+.proof-input__header-title {
+	font-size: 0.88rem;
+	font-weight: 700;
+	color: var(--text-800);
+}
+
+.proof-input__header-hint {
+	font-size: 0.72rem;
+	color: var(--text-400);
+	margin-left: auto;
+}
+
+.proof-input__header-hint code {
+	background: rgba(0,0,0,0.06);
+	padding: 0.1em 0.35em;
+	border-radius: 3px;
+	font-size: 0.9em;
+}
+
+.proof-input__steps {
+	padding: 0.75rem 1rem 0;
+}
+
+.proof-input__add-step {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	width: 100%;
+	padding: 0.6rem;
+	border: none;
+	border-top: 1px dashed var(--border);
+	background: none;
+	color: var(--primary-600);
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+
+.proof-input__add-step:hover {
+	background: rgba(99,102,241,0.06);
+	color: var(--primary-700);
+}
+
+.proof-input__add-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.3rem;
+	height: 1.3rem;
+	border-radius: 50%;
+	border: 1.5px solid currentColor;
+	font-size: 0.85rem;
+	line-height: 1;
+}
+
+/* ── Single Proof Step ── */
+
+.proof-step {
+	display: flex;
+	gap: 0.75rem;
+	position: relative;
+	padding-bottom: 0.75rem;
+	margin-bottom: 0.25rem;
+}
+
+.proof-step--focused {
+	/* subtle highlight */
+}
+
+.proof-step__gutter {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 1.8rem;
+	flex-shrink: 0;
+	padding-top: 0.15rem;
+}
+
+.proof-step__number {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.6rem;
+	height: 1.6rem;
+	border-radius: 50%;
+	background: var(--primary-500);
+	color: #fff;
+	font-size: 0.72rem;
+	font-weight: 700;
+	flex-shrink: 0;
+}
+
+.proof-step--focused .proof-step__number {
+	background: var(--primary-600);
+	box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+}
+
+.proof-step__line {
+	flex: 1;
+	width: 2px;
+	background: var(--border);
+	margin-top: 0.35rem;
+	border-radius: 1px;
+}
+
+.proof-step:last-child .proof-step__line {
+	display: none;
+}
+
+.proof-step__body {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.proof-step__label {
+	display: block;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--text-400);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	margin-bottom: 0.2rem;
+}
+
+.proof-step__math-input {
+	width: 100%;
+	padding: 0.6rem 0.75rem;
+	border: 1.5px solid var(--border);
+	border-radius: var(--radius-sm);
+	font-size: 0.92rem;
+	font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+	color: var(--text-800);
+	background: var(--surface);
+	resize: vertical;
+	min-height: 2.8rem;
+	transition: border-color 0.2s, box-shadow 0.2s;
+	line-height: 1.5;
+}
+
+.proof-step__math-input:focus {
+	outline: none;
+	border-color: var(--primary-500);
+	box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+
+.proof-step__math-input::placeholder {
+	font-family: var(--font-sans);
+	font-size: 0.85rem;
+	color: var(--text-300);
+}
+
+/* Live KaTeX preview */
+.proof-step__preview {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	background: rgba(34,197,94,0.04);
+	border: 1px solid rgba(34,197,94,0.15);
+	border-radius: var(--radius-sm);
+	min-height: 2rem;
+	overflow-x: auto;
+}
+
+.proof-step__preview-label {
+	font-size: 0.7rem;
+	font-weight: 600;
+	color: var(--success-500);
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	flex-shrink: 0;
+	padding-top: 0.2em;
+}
+
+.proof-step__preview .katex {
+	font-size: 1.05em;
+}
+
+/* Justification row */
+.proof-step__justify-row {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.proof-step__justify-select {
+	flex: 0 1 auto;
+	min-width: 12em;
+	padding: 0.35rem 0.6rem;
+	border: 1.5px solid var(--border);
+	border-radius: var(--radius-sm);
+	font-size: 0.82rem;
+	color: var(--text-600);
+	background: var(--surface);
+	cursor: pointer;
+	transition: border-color 0.15s;
+}
+
+.proof-step__justify-select:focus {
+	outline: none;
+	border-color: var(--primary-400);
+}
+
+.proof-step__justify-custom {
+	flex: 1;
+	min-width: 10em;
+	padding: 0.35rem 0.6rem;
+	border: 1.5px solid var(--border);
+	border-radius: var(--radius-sm);
+	font-size: 0.82rem;
+	color: var(--text-700);
+	background: var(--surface);
+	transition: border-color 0.15s;
+}
+
+.proof-step__justify-custom:focus {
+	outline: none;
+	border-color: var(--primary-400);
+}
+
+/* Remove step button */
+.proof-step__remove {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 1.4rem;
+	height: 1.4rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: rgba(239,68,68,0.08);
+	color: var(--danger-500);
+	border-radius: 50%;
+	font-size: 0.7rem;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s, background 0.15s;
+}
+
+.proof-step:hover .proof-step__remove {
+	opacity: 1;
+}
+
+.proof-step__remove:hover {
+	background: rgba(239,68,68,0.18);
+}
+
+/* ── Proof Steps in Exam Results ── */
+
+.proof-results {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.proof-results__step {
+	display: flex;
+	gap: 0.6rem;
+	padding: 0.5rem 0.65rem;
+	background: rgba(10,102,194,0.03);
+	border-radius: var(--radius-sm);
+	border-left: 3px solid var(--primary-400);
+}
+
+.proof-results__step-number {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.4rem;
+	height: 1.4rem;
+	border-radius: 50%;
+	background: var(--primary-500);
+	color: #fff;
+	font-size: 0.65rem;
+	font-weight: 700;
+	flex-shrink: 0;
+	margin-top: 0.1rem;
+}
+
+.proof-results__step-body {
+	flex: 1;
+	min-width: 0;
+}
+
+.proof-results__step-math {
+	font-size: 0.9rem;
+	color: var(--text-800);
+	line-height: 1.6;
+	overflow-x: auto;
+}
+
+.proof-results__step-math .katex {
+	font-size: 1em;
+}
+
+.proof-results__step-justify {
+	font-size: 0.78rem;
+	color: var(--text-500);
+	font-style: italic;
+	margin-top: 0.15rem;
+}
+
+/* Responsive: stack justify below on small screens */
+@media (max-width: 480px) {
+	.proof-step__justify-row {
+		flex-direction: column;
+	}
+	.proof-step__justify-select,
+	.proof-step__justify-custom {
+		width: 100%;
+	}
+	.proof-input__header-hint {
+		margin-left: 0;
+		width: 100%;
+		margin-top: 0.25rem;
+	}
+}
+
 /* Matching / no-options */
 .exam-take__matching-hint {
 	font-size: 0.85rem;

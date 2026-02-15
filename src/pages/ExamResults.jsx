@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
+import { useKatex, renderWithKatex } from '../utils/shared';
 import {
   questionTypeMeta,
   subjectColor,
@@ -156,7 +157,7 @@ const ExamResults = () => {
                   <strong>Votre réponse :</strong>{' '}
                   {r.question.type === 'multiple_choice' && r.question.options
                     ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
-                    : String(r.userAnswer)
+                    : <ProofOrPlainAnswer answer={r.userAnswer} />
                   }
                 </div>
               )}
@@ -199,6 +200,48 @@ const ExamResults = () => {
     </section>
   );
 };
+
+/**
+ * Renders a user answer — if it's a JSON array of proof steps, render them
+ * nicely with math + justification. Otherwise render as plain text.
+ */
+function ProofOrPlainAnswer({ answer }) {
+  const katexReady = useKatex();
+
+  // Try to parse as proof steps (JSON array)
+  let steps = null;
+  if (typeof answer === 'string' && answer.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(answer);
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].math !== undefined) {
+        steps = parsed;
+      }
+    } catch { /* not proof JSON */ }
+  }
+
+  if (!steps) return <>{String(answer)}</>;
+
+  return (
+    <div className="proof-results">
+      {steps.map((step, i) => (
+        <div key={i} className="proof-results__step">
+          <span className="proof-results__step-number">{i + 1}</span>
+          <div className="proof-results__step-body">
+            <div className="proof-results__step-math">
+              {step.math && (/\$/.test(step.math) || /\\[a-zA-Z]/.test(step.math))
+                ? <span dangerouslySetInnerHTML={renderWithKatex(step.math, katexReady)} />
+                : step.math || '(vide)'
+              }
+            </div>
+            {step.justification && (
+              <div className="proof-results__step-justify">↳ {step.justification}</div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function StatusBadge({ status }) {
   const map = {

@@ -51,6 +51,18 @@ function MathText({ text }) {
   return <span dangerouslySetInnerHTML={renderWithKatex(text, katexReady)} />;
 }
 
+/** Detect proof / demonstration questions by their phrasing */
+const PROOF_RE = /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|vérifier\s+que|justifier\s+que|en\s+déduire|simplifier|factoriser|développer\s+et\s+réduire|calculer\s+et\s+simplifier|résoudre\s+(dans|l['']équation)|déterminer)\b/i;
+
+function isProofQuestion(question) {
+  const text = question._displayText || question.question || '';
+  const type = question.type || '';
+  // Only activate for open-ended types that can't be auto-graded
+  if (!['calculation', 'short_answer', 'essay'].includes(type)) return false;
+  // Must contain a proof/demonstration keyword
+  return PROOF_RE.test(text);
+}
+
 /** Regex that matches blank placeholders: 4+ underscores OR 4+ dots */
 const BLANK_RE = /_{4,}|\.{4,}/g;
 
@@ -188,7 +200,18 @@ const ExamTake = () => {
     setAnswers((prev) => ({ ...prev, [qIndex]: value }));
   }, []);
 
-  const answeredCount = Object.keys(answers).filter((k) => answers[k] !== '' && answers[k] != null).length;
+  const answeredCount = Object.keys(answers).filter((k) => {
+    const v = answers[k];
+    if (v == null || v === '') return false;
+    // Proof steps stored as JSON array — count as answered if any step has content
+    if (typeof v === 'string' && v.startsWith('[')) {
+      try {
+        const steps = JSON.parse(v);
+        return Array.isArray(steps) && steps.some((s) => s.math?.trim());
+      } catch { /* not JSON */ }
+    }
+    return true;
+  }).length;
   const progressPct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
 
   // Keyboard navigation (move by group)
@@ -859,6 +882,11 @@ function FillBlankText({ text, index, value, onChange }) {
 function QuestionInput({ question, index, value, onChange }) {
   const type = question.type || 'unknown';
 
+  // Route proof / demonstration questions to the step-by-step input
+  if (isProofQuestion(question)) {
+    return <ProofInput index={index} value={value} onChange={onChange} />;
+  }
+
   switch (type) {
     case 'multiple_choice':
       return <MCQInput question={question} index={index} value={value} onChange={onChange} />;
@@ -875,6 +903,172 @@ function QuestionInput({ question, index, value, onChange }) {
     default:
       return <TextInput type={type} index={index} value={value} onChange={onChange} />;
   }
+}
+
+// ── Proof / Demonstration Step-by-Step Input ──────────────────────────────────
+
+const JUSTIFICATION_OPTIONS = [
+  '', 'Par définition', 'Par hypothèse', 'Par simplification', 'Par factorisation',
+  'Par substitution', 'Par identité remarquable', 'Par calcul', 'Par développement',
+  'Par récurrence', 'Par l\'absurde', 'Par contraposée', 'D\'après le théorème',
+  'En utilisant la propriété', 'On en déduit que', 'Autre',
+];
+
+function ProofInput({ index, value, onChange }) {
+  const katexReady = useKatex();
+
+  // Parse stored JSON value → steps array
+  const steps = useMemo(() => {
+    if (!value) return [{ math: '', justification: '' }];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch { /* not JSON yet */ }
+    // Legacy: plain text answer → import as single step
+    if (typeof value === 'string' && value.trim()) {
+      return [{ math: value, justification: '' }];
+    }
+    return [{ math: '', justification: '' }];
+  }, [value]);
+
+  const updateSteps = useCallback((newSteps) => {
+    onChange(index, JSON.stringify(newSteps));
+  }, [index, onChange]);
+
+  const setStepField = useCallback((stepIdx, field, val) => {
+    const updated = steps.map((s, i) => i === stepIdx ? { ...s, [field]: val } : s);
+    updateSteps(updated);
+  }, [steps, updateSteps]);
+
+  const addStep = useCallback(() => {
+    updateSteps([...steps, { math: '', justification: '' }]);
+  }, [steps, updateSteps]);
+
+  const removeStep = useCallback((stepIdx) => {
+    if (steps.length <= 1) return;
+    updateSteps(steps.filter((_, i) => i !== stepIdx));
+  }, [steps, updateSteps]);
+
+  return (
+    <div className="proof-input">
+      <div className="proof-input__header">
+        <span className="proof-input__header-icon">📐</span>
+        <span className="proof-input__header-title">Démonstration étape par étape</span>
+        <span className="proof-input__header-hint">
+          Utilisez <code>$...$</code> pour les expressions math (ex: <code>$\sqrt{'{2}'}$</code>)
+        </span>
+      </div>
+
+      <div className="proof-input__steps">
+        {steps.map((step, i) => (
+          <ProofStep
+            key={i}
+            stepIndex={i}
+            totalSteps={steps.length}
+            math={step.math}
+            justification={step.justification}
+            katexReady={katexReady}
+            onMathChange={(val) => setStepField(i, 'math', val)}
+            onJustificationChange={(val) => setStepField(i, 'justification', val)}
+            onRemove={() => removeStep(i)}
+          />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="proof-input__add-step"
+        onClick={addStep}
+      >
+        <span className="proof-input__add-icon">+</span> Ajouter une étape
+      </button>
+    </div>
+  );
+}
+
+function ProofStep({ stepIndex, totalSteps, math, justification, katexReady, onMathChange, onJustificationChange, onRemove }) {
+  const [focused, setFocused] = useState(false);
+  const hasMath = math && (/\$/.test(math) || /\\[a-zA-Z]/.test(math));
+
+  return (
+    <div className={`proof-step ${focused ? 'proof-step--focused' : ''}`}>
+      <div className="proof-step__gutter">
+        <span className="proof-step__number">{stepIndex + 1}</span>
+        <div className="proof-step__line" />
+      </div>
+
+      <div className="proof-step__body">
+        <div className="proof-step__math-section">
+          <label className="proof-step__label">Expression / Calcul</label>
+          <textarea
+            className="proof-step__math-input"
+            value={math}
+            onChange={(e) => onMathChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={stepIndex === 0
+              ? 'Ex: On a $N = 3\\sqrt{\\frac{72}{7}} - 5\\sqrt{\\frac{50}{7}} + 2\\sqrt{\\frac{288}{7}}$'
+              : 'Continuez votre raisonnement…'}
+            rows={2}
+            spellCheck="false"
+          />
+          {/* Live KaTeX preview */}
+          {hasMath && katexReady && (
+            <div className="proof-step__preview">
+              <span className="proof-step__preview-label">Aperçu :</span>
+              <span dangerouslySetInnerHTML={renderWithKatex(math, katexReady)} />
+            </div>
+          )}
+        </div>
+
+        <div className="proof-step__justify-section">
+          <label className="proof-step__label">Justification</label>
+          <div className="proof-step__justify-row">
+            <select
+              className="proof-step__justify-select"
+              value={JUSTIFICATION_OPTIONS.includes(justification) ? justification : 'Autre'}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'Autre') {
+                  // Keep custom text or clear
+                  if (JUSTIFICATION_OPTIONS.includes(justification)) onJustificationChange('');
+                } else {
+                  onJustificationChange(val);
+                }
+              }}
+            >
+              <option value="">— Justification (optionnel) —</option>
+              {JUSTIFICATION_OPTIONS.slice(1).map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            {!JUSTIFICATION_OPTIONS.includes(justification) && (
+              <input
+                className="proof-step__justify-custom"
+                type="text"
+                value={justification}
+                onChange={(e) => onJustificationChange(e.target.value)}
+                placeholder="Justification personnalisée…"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Remove button — not shown for single step */}
+      {totalSteps > 1 && (
+        <button
+          type="button"
+          className="proof-step__remove"
+          onClick={onRemove}
+          aria-label="Supprimer cette étape"
+          title="Supprimer cette étape"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
 }
 
 function MCQInput({ question, index, value, onChange }) {
