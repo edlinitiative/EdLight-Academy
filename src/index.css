@@ -4267,7 +4267,8 @@ textarea.input-field {
 		0 8px 24px rgba(10,102,194,0.07);
 	transition: box-shadow 0.3s ease;
 	min-width: 0;
-	overflow-x: hidden;
+	width: 210px;
+	box-sizing: border-box;
 }
 
 .exam-take__nav:hover {
@@ -4281,6 +4282,8 @@ textarea.input-field {
 	display: flex;
 	align-items: center;
 	gap: 0.65rem;
+	width: 100%;
+	min-width: 0;
 }
 
 .exam-take__nav-ring-wrap {
@@ -4367,6 +4370,7 @@ textarea.input-field {
 	scrollbar-width: thin;
 	scrollbar-color: rgba(10,102,194,0.12) transparent;
 	min-width: 0;
+	width: 100%;
 }
 
 .exam-take__nav-sections::-webkit-scrollbar {
@@ -4386,6 +4390,8 @@ textarea.input-field {
 	border-left: 2px solid transparent;
 	transition: border-color 0.25s ease;
 	min-width: 0;
+	width: 100%;
+	overflow: hidden;
 }
 
 .exam-take__nav-section--active {
@@ -4402,6 +4408,8 @@ textarea.input-field {
 	color: var(--text-500);
 	padding-top: 0.15rem;
 	transition: color 0.2s;
+	min-width: 0;
+	width: 100%;
 }
 
 .exam-take__nav-section-title--current {
@@ -4435,9 +4443,11 @@ textarea.input-field {
 /* ── Question grid ─────────────────────────────────────────────── */
 .exam-take__nav-section-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
-	gap: 4px;
+	grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
+	gap: 3px;
 	min-width: 0;
+	width: 100%;
+	overflow: hidden;
 }
 
 .exam-take__nav-btn {
