@@ -456,16 +456,46 @@ const ExamTake = () => {
         {/* Main area: sidebar + question */}
         <div className="exam-take__body">
           {/* Question navigation sidebar */}
-          <aside className="exam-take__nav">
-            <div className="exam-take__nav-header">Sections</div>
+          <aside className="exam-take__nav" style={{ '--nav-accent': color }}>
+            {/* Progress ring header */}
+            <div className="exam-take__nav-progress">
+              <div className="exam-take__nav-ring-wrap">
+                <svg className="exam-take__nav-ring" viewBox="0 0 48 48" aria-hidden="true">
+                  <circle className="exam-take__nav-ring-bg" cx="24" cy="24" r="19" />
+                  <circle
+                    className="exam-take__nav-ring-fill"
+                    cx="24" cy="24" r="19"
+                    style={{
+                      strokeDasharray: `${2 * Math.PI * 19}`,
+                      strokeDashoffset: `${2 * Math.PI * 19 * (1 - progressPct / 100)}`,
+                    }}
+                  />
+                </svg>
+                <span className="exam-take__nav-ring-pct">{progressPct}<small>%</small></span>
+              </div>
+              <div className="exam-take__nav-progress-meta">
+                <span className="exam-take__nav-progress-title">Progression</span>
+                <span className="exam-take__nav-progress-detail">{answeredCount} sur {questions.length}</span>
+              </div>
+            </div>
+
+            <div className="exam-take__nav-divider" />
+
             <div className="exam-take__nav-sections" role="navigation" aria-label="Navigation des questions par section">
               {sectionGroups.map((sec) => {
                 const isCurrentSection = currentQ >= sec.start && currentQ <= sec.end;
+                const secAnswered = Array.from({ length: sec.count }).filter((_, off) => {
+                  const a = answers[sec.start + off];
+                  return a != null && a !== '';
+                }).length;
+                const secDone = secAnswered === sec.count;
                 return (
-                  <div key={`${sec.start}-${sec.end}-${sec.title}`} className="exam-take__nav-section">
+                  <div key={`${sec.start}-${sec.end}-${sec.title}`} className={`exam-take__nav-section ${isCurrentSection ? 'exam-take__nav-section--active' : ''}`}>
                     <div className={`exam-take__nav-section-title ${isCurrentSection ? 'exam-take__nav-section-title--current' : ''}`}>
                       <span className="exam-take__nav-section-name">{sec.title}</span>
-                      <span className="exam-take__nav-section-count">{sec.count}</span>
+                      <span className={`exam-take__nav-section-badge ${secDone ? 'exam-take__nav-section-badge--done' : ''}`}>
+                        {secDone ? '✓' : `${secAnswered}/${sec.count}`}
+                      </span>
                     </div>
                     <div className="exam-take__nav-section-grid">
                       {Array.from({ length: sec.count }).map((_, offset) => {
@@ -477,7 +507,6 @@ const ExamTake = () => {
                         if (isInCurrentGroup) cls += ' exam-take__nav-btn--current';
                         else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
                         const label = formatNavLabel(q, i);
-                        // Clicking any question in a group navigates to the group start
                         const targetGroup = questionGroups.find((g) => i >= g.start && i <= g.end);
                         return (
                           <button
@@ -488,6 +517,7 @@ const ExamTake = () => {
                             type="button"
                           >
                             {label}
+                            {hasAnswer && !isInCurrentGroup && <span className="exam-take__nav-btn-check" aria-hidden="true" />}
                           </button>
                         );
                       })}
