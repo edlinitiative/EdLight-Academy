@@ -4268,9 +4268,6 @@ textarea.input-field {
 	transition: box-shadow 0.3s ease;
 	min-width: 0;
 	overflow-x: hidden;
-	max-height: calc(100vh - var(--navbar-height) - 80px);
-	display: flex;
-	flex-direction: column;
 }
 
 .exam-take__nav:hover {
@@ -4363,8 +4360,7 @@ textarea.input-field {
 .exam-take__nav-sections {
 	display: grid;
 	gap: 0.6rem;
-	flex: 1 1 0;
-	min-height: 0;
+	max-height: calc(100vh - var(--navbar-height) - 200px);
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding-right: 0.2rem;
