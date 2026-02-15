@@ -37,17 +37,23 @@ export function useKatex() {
 
 /**
  * Render text containing LaTeX math to an HTML string for dangerouslySetInnerHTML.
- * Supports inline \(...\) and display $$...$$ delimiters.
+ * Supports inline $...$, \(...\), and display $$...$$ delimiters.
  */
 export function renderWithKatex(text, katexReady) {
   if (!text) return { __html: '' };
   let html = String(text);
   if (katexReady && typeof window !== 'undefined' && window.katex) {
+    // Display math first: $$...$$
+    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
+      try { return window.katex.renderToString(expr, { displayMode: true, throwOnError: false }); } catch { return _; }
+    });
+    // Inline math: \(...\)
     html = html.replace(/\\\((.+?)\\\)/g, (_, expr) => {
       try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
     });
-    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { displayMode: true, throwOnError: false }); } catch { return _; }
+    // Inline math: $...$  (single dollar, not escaped \$, not $$)
+    html = html.replace(/(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)/g, (_, expr) => {
+      try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
     });
   } else {
     html = html

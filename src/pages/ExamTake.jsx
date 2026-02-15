@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
+import { useKatex, renderWithKatex } from '../utils/shared';
 import {
   flattenQuestions,
   gradeExam,
@@ -41,6 +42,15 @@ function formatNavLabel(q, globalIndex) {
   return num.slice(0, 3) + '…';
 }
 
+/** Render a short text span with inline KaTeX math ($..$ and $$..$$) */
+function MathText({ text }) {
+  const katexReady = useKatex();
+  if (!text) return null;
+  // If no math delimiters, render as plain text (avoids dangerouslySetInnerHTML)
+  if (!/\$/.test(text) && !/\\\(/.test(text)) return <>{text}</>;
+  return <span dangerouslySetInnerHTML={renderWithKatex(text, katexReady)} />;
+}
+
 /** Regex that matches blank placeholders: 4+ underscores OR 4+ dots */
 const BLANK_RE = /_{4,}|\.{4,}/g;
 
@@ -65,6 +75,7 @@ function useExamCatalog() {
 const ExamTake = () => {
   const { examIndex } = useParams();
   const navigate = useNavigate();
+  const katexReady = useKatex();
 
   const { data: rawExams, isLoading, error } = useExamCatalog();
 
@@ -554,7 +565,7 @@ const ExamTake = () => {
           {groupQuestions[0]._subExDirective && (
             <div className="exam-take__subex-header">
               <span className="exam-take__subex-label">{groupQuestions[0]._subExGroup}.</span>
-              <span className="exam-take__subex-directive">{groupQuestions[0]._subExDirective.replace(/^[A-Z][.\-)\s]+/, '')}</span>
+              <span className="exam-take__subex-directive"><MathText text={groupQuestions[0]._subExDirective.replace(/^[A-Z][.\-)\s]+/, '')} /></span>
             </div>
           )}
 
@@ -835,7 +846,7 @@ function FillBlankText({ text, index, value, onChange }) {
               </span>
             )}
             {/* Text segment */}
-            {cleanSegment && <span>{cleanSegment}</span>}
+            {cleanSegment && <span><MathText text={cleanSegment} /></span>}
           </React.Fragment>
         );
       })}
@@ -903,7 +914,7 @@ function MCQInput({ question, index, value, onChange }) {
               className="exam-take__mcq-radio"
             />
             <span className="exam-take__mcq-key">{key.toUpperCase()}</span>
-            <span className="exam-take__mcq-text">{text}</span>
+            <span className="exam-take__mcq-text"><MathText text={text} /></span>
           </label>
         );
       })}

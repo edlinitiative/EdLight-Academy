@@ -4971,6 +4971,30 @@ textarea.input-field {
 	margin-bottom: 0;
 }
 
+/* KaTeX math integration */
+.exam-take__question-text .katex-display {
+	margin: 0.75em 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 0.25em 0;
+}
+
+.exam-take__question-text .katex {
+	font-size: 1.05em;
+}
+
+.exam-take__mcq-text .katex {
+	font-size: 1em;
+}
+
+.exam-take__fill-blank-text .katex {
+	font-size: 1em;
+}
+
+.exam-take__subex-directive .katex {
+	font-size: 1em;
+}
+
 .exam-take__answer-area {
 	margin-top: 0.5rem;
 }
