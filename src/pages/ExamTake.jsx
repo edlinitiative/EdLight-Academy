@@ -955,7 +955,7 @@ function ProofInput({ index, value, onChange }) {
         <span className="proof-input__header-icon">📐</span>
         <span className="proof-input__header-title">Démonstration étape par étape</span>
         <span className="proof-input__header-hint">
-          Utilisez <code>$...$</code> pour les expressions math (ex: <code>$\sqrt{'{2}'}$</code>)
+          Écrivez vos calculs et raisonnements — le texte mathématique sera mis en forme automatiquement
         </span>
       </div>
 
@@ -1007,7 +1007,7 @@ function ProofStep({ stepIndex, totalSteps, math, justification, katexReady, onM
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={stepIndex === 0
-              ? 'Ex: On a $N = 3\\sqrt{\\frac{72}{7}} - 5\\sqrt{\\frac{50}{7}} + 2\\sqrt{\\frac{288}{7}}$'
+              ? 'Écrivez votre première étape ici…'
               : 'Continuez votre raisonnement…'}
             rows={2}
             spellCheck="false"
