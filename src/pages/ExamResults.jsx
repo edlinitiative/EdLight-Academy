@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import { useKatex, renderWithKatex } from '../utils/shared';
+import { checkWithCAS, evaluateExpression } from '../utils/mathCAS';
 import {
   questionTypeMeta,
   subjectColor,
@@ -157,7 +158,7 @@ const ExamResults = () => {
                   <strong>Votre réponse :</strong>{' '}
                   {r.question.type === 'multiple_choice' && r.question.options
                     ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
-                    : <ProofOrPlainAnswer answer={r.userAnswer} />
+                    : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct} />
                   }
                 </div>
               )}
@@ -202,28 +203,40 @@ const ExamResults = () => {
 };
 
 /**
- * Renders a user answer — if it's a JSON array of proof steps, render them
- * nicely with math + justification. Otherwise render as plain text.
+ * Renders a user answer — if it's proof JSON, render steps + final answer
+ * with CAS verification. Otherwise render as plain text.
  */
-function ProofOrPlainAnswer({ answer }) {
+function ProofOrPlainAnswer({ answer, correctAnswer }) {
   const katexReady = useKatex();
 
-  // Try to parse as proof steps (JSON array)
-  let steps = null;
-  if (typeof answer === 'string' && answer.startsWith('[')) {
+  // Try to parse as proof JSON
+  let proofData = null;
+  if (typeof answer === 'string' && (answer.startsWith('{') || answer.startsWith('['))) {
     try {
       const parsed = JSON.parse(answer);
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].math !== undefined) {
-        steps = parsed;
+      // New format: { steps, finalAnswer }
+      if (parsed && parsed.steps && Array.isArray(parsed.steps)) {
+        proofData = { steps: parsed.steps, finalAnswer: parsed.finalAnswer || '' };
+      }
+      // Legacy array format
+      else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].math !== undefined) {
+        proofData = { steps: parsed, finalAnswer: '' };
       }
     } catch { /* not proof JSON */ }
   }
 
-  if (!steps) return <>{String(answer)}</>;
+  if (!proofData) return <>{String(answer)}</>;
+
+  // CAS-check the final answer if both student and correct answer exist
+  let casVerdict = null;
+  if (proofData.finalAnswer && correctAnswer) {
+    casVerdict = checkWithCAS(proofData.finalAnswer, correctAnswer);
+  }
 
   return (
     <div className="proof-results">
-      {steps.map((step, i) => (
+      {/* Proof steps */}
+      {proofData.steps.map((step, i) => (
         <div key={i} className="proof-results__step">
           <span className="proof-results__step-number">{i + 1}</span>
           <div className="proof-results__step-body">
@@ -239,6 +252,32 @@ function ProofOrPlainAnswer({ answer }) {
           </div>
         </div>
       ))}
+
+      {/* Final answer with CAS verification */}
+      {proofData.finalAnswer && (
+        <div className={`proof-results__final ${casVerdict ? (casVerdict.correct ? 'proof-results__final--correct' : 'proof-results__final--incorrect') : ''}`}>
+          <div className="proof-results__final-header">
+            <span className="proof-results__final-icon">🎯</span>
+            <strong>Résultat final :</strong>
+            {casVerdict && (
+              <span className={`proof-results__cas-badge ${casVerdict.correct ? 'proof-results__cas-badge--correct' : 'proof-results__cas-badge--incorrect'}`}>
+                {casVerdict.correct ? '✓ Vérifié par calcul' : '✗ Résultat différent'}
+                {casVerdict.method === 'cas' && casVerdict.details?.valueA != null && (
+                  <span className="proof-results__cas-detail">
+                    {' '}(≈ {casVerdict.details.valueA.toFixed(4)}{!casVerdict.correct && casVerdict.details.valueB != null ? ` ≠ ${casVerdict.details.valueB.toFixed(4)}` : ''})
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+          <div className="proof-results__final-value">
+            {(/\$/.test(proofData.finalAnswer) || /\\[a-zA-Z]/.test(proofData.finalAnswer))
+              ? <span dangerouslySetInnerHTML={renderWithKatex(proofData.finalAnswer, katexReady)} />
+              : proofData.finalAnswer
+            }
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,8 @@
  * index builder, grading engine, and helpers for the Exam UI pages.
  */
 
+import { checkWithCAS } from './mathCAS';
+
 // ─── Subject normalisation ──────────────────────────────────────────────────
 
 const SUBJECT_MAP = {
@@ -856,17 +858,42 @@ function checkAnswer(question, userAnswer) {
     case 'fill_blank':
     case 'calculation':
     case 'short_answer': {
+      // Check if the answer is a proof-format JSON (with finalAnswer)
+      let effectiveUser = user;
+      if (typeof userAnswer === 'string' && (userAnswer.startsWith('{') || userAnswer.startsWith('['))) {
+        try {
+          const parsed = JSON.parse(userAnswer);
+          // New format: { steps, finalAnswer }
+          if (parsed && parsed.finalAnswer) {
+            effectiveUser = parsed.finalAnswer.trim().toLowerCase();
+          }
+          // Legacy array format — no final answer to grade
+          else if (Array.isArray(parsed)) {
+            return false; // Can't auto-grade raw steps
+          }
+        } catch { /* not JSON, use as-is */ }
+      }
+
+      if (!effectiveUser) return false;
+      const correctClean = correct;
+
       // Exact match first
-      if (user === correct) return true;
-      // Try numeric comparison
-      const userNum = parseFloat(user.replace(/,/g, '.'));
-      const correctNum = parseFloat(correct.replace(/,/g, '.'));
+      if (effectiveUser === correctClean) return true;
+
+      // Try numeric comparison (simple)
+      const userNum = parseFloat(effectiveUser.replace(/,/g, '.'));
+      const correctNum = parseFloat(correctClean.replace(/,/g, '.'));
       if (!isNaN(userNum) && !isNaN(correctNum)) {
         return Math.abs(userNum - correctNum) < 0.01;
       }
+
+      // CAS expression equivalence (handles fractions, radicals, etc.)
+      const casResult = checkWithCAS(effectiveUser, correctClean);
+      if (casResult.correct) return true;
+
       // Loose text match (ignore accents and extra spaces)
       const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
-      return norm(user) === norm(correct);
+      return norm(effectiveUser) === norm(correctClean);
     }
 
     default:
