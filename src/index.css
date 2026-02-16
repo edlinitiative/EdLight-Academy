@@ -5127,6 +5127,40 @@ textarea.input-field {
 	background: #ecfdf5;
 }
 
+.scaffold__blank--correct {
+	border-color: #16a34a;
+	border-style: solid;
+	background: #dcfce7;
+	color: #166534;
+}
+
+.scaffold__blank--incorrect {
+	border-color: #dc2626;
+	border-style: solid;
+	background: #fef2f2;
+	color: #991b1b;
+}
+
+.scaffold__blank-check {
+	color: #16a34a;
+	font-weight: 700;
+	font-size: 1.1em;
+	margin-left: 0.25rem;
+}
+
+.scaffold__blank-cross {
+	color: #dc2626;
+	font-weight: 700;
+	font-size: 1.1em;
+	margin-left: 0.25rem;
+}
+
+.scaffold__correct-count {
+	color: #16a34a;
+	font-weight: 600;
+	margin-right: 0.35rem;
+}
+
 .scaffold__blank::placeholder {
 	color: #a78bfa;
 	font-style: italic;
@@ -5166,6 +5200,146 @@ textarea.input-field {
 	color: #1f2937;
 }
 
+.scaffold-result__item--correct {
+	background: #f0fdf4;
+	border-radius: 0.25rem;
+	padding: 0.15rem 0.5rem;
+}
+
+.scaffold-result__item--incorrect {
+	background: #fef2f2;
+	border-radius: 0.25rem;
+	padding: 0.15rem 0.5rem;
+}
+
+.scaffold-result__value--correct {
+	color: #16a34a;
+	font-weight: 600;
+}
+
+.scaffold-result__value--incorrect {
+	color: #dc2626;
+	text-decoration: line-through;
+}
+
+.scaffold-result__expected {
+	color: #16a34a;
+	font-weight: 600;
+	font-size: 0.85rem;
+}
+
+.scaffold-result__solution {
+	margin-top: 0.75rem;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.5rem;
+	overflow: hidden;
+}
+
+.scaffold-result__solution-toggle {
+	padding: 0.5rem 0.75rem;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.88rem;
+	background: #f9fafb;
+	color: #4b5563;
+}
+
+.scaffold-result__solution-body {
+	padding: 0.75rem;
+	font-size: 0.9rem;
+	line-height: 1.6;
+	white-space: pre-wrap;
+}
+
+.exam-results__badge--partial {
+	background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+	color: #92400e;
+}
+
+.exam-results__item--partial {
+	border-left: 3px solid #f59e0b;
+}
+
+.exam-results__item-solution,
+.exam-results__item-approaches {
+	margin-top: 0.5rem;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.5rem;
+	overflow: hidden;
+}
+
+.exam-results__item-solution > summary,
+.exam-results__item-approaches > summary {
+	padding: 0.5rem 0.75rem;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 0.85rem;
+	background: #f9fafb;
+	color: #4b5563;
+}
+
+.exam-results__item-solution-body,
+.exam-results__item-approaches-body {
+	padding: 0.75rem;
+	font-size: 0.9rem;
+	line-height: 1.6;
+}
+
+.exam-results__approach {
+	margin-bottom: 0.75rem;
+}
+
+.exam-results__approach ol {
+	margin: 0.25rem 0 0 1.25rem;
+	padding: 0;
+}
+
+.exam-results__approach li {
+	margin-bottom: 0.25rem;
+}
+
+/* Dark mode for new result elements */
+[data-theme="dark"] .scaffold-result__item--correct {
+	background: #064e3b;
+}
+
+[data-theme="dark"] .scaffold-result__item--incorrect {
+	background: #450a0a;
+}
+
+[data-theme="dark"] .scaffold-result__value--correct {
+	color: #34d399;
+}
+
+[data-theme="dark"] .scaffold-result__value--incorrect {
+	color: #f87171;
+}
+
+[data-theme="dark"] .scaffold-result__expected {
+	color: #34d399;
+}
+
+[data-theme="dark"] .scaffold-result__solution {
+	border-color: #374151;
+}
+
+[data-theme="dark"] .scaffold-result__solution-toggle,
+[data-theme="dark"] .exam-results__item-solution > summary,
+[data-theme="dark"] .exam-results__item-approaches > summary {
+	background: #1f2937;
+	color: #d1d5db;
+}
+
+[data-theme="dark"] .exam-results__badge--partial {
+	background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+	color: #fde68a;
+}
+
+[data-theme="dark"] .exam-results__item-solution,
+[data-theme="dark"] .exam-results__item-approaches {
+	border-color: #374151;
+}
+
 /* Dark mode */
 [data-theme="dark"] .scaffold {
 	background: linear-gradient(135deg, #1e1333 0%, #2a1f4e 100%);
@@ -5202,6 +5376,26 @@ textarea.input-field {
 [data-theme="dark"] .scaffold__blank--filled {
 	border-color: #34d399;
 	background: #064e3b;
+}
+
+[data-theme="dark"] .scaffold__blank--correct {
+	border-color: #22c55e;
+	background: #052e16;
+	color: #bbf7d0;
+}
+
+[data-theme="dark"] .scaffold__blank--incorrect {
+	border-color: #f87171;
+	background: #450a0a;
+	color: #fecaca;
+}
+
+[data-theme="dark"] .scaffold__blank-check {
+	color: #4ade80;
+}
+
+[data-theme="dark"] .scaffold__blank-cross {
+	color: #f87171;
 }
 
 [data-theme="dark"] .scaffold__blank::placeholder {

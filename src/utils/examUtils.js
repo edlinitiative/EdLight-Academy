@@ -494,7 +494,7 @@ export function buildExamIndex(rawExams) {
         const t = q.type || 'unknown';
         typeCounts[t] = (typeCounts[t] || 0) + 1;
         const meta = QUESTION_TYPE_META[t] || QUESTION_TYPE_META.unknown;
-        if (meta.gradable && q.correct) autoGradable++;
+        if ((meta.gradable && q.correct) || (q.answer_parts && q.answer_parts.length > 0)) autoGradable++;
       }
     }
 
@@ -754,10 +754,85 @@ export function examStats(exam) {
     for (const q of sec.questions || []) {
       total++;
       const meta = QUESTION_TYPE_META[q.type] || QUESTION_TYPE_META.unknown;
-      if (meta.gradable && q.correct) gradable++;
+      // Gradable if: type supports auto-grading with a correct answer,
+      // OR question has answer_parts for scaffold grading
+      if ((meta.gradable && q.correct) || (q.answer_parts && q.answer_parts.length > 0)) gradable++;
     }
   }
   return { total, gradable };
+}
+
+// ─── Scaffold blank grading (answer_parts comparison) ───────────────────────
+
+/**
+ * Normalize a string for comparison: lowercase, strip accents, collapse whitespace,
+ * remove surrounding $ for LaTeX, trim.
+ */
+function normalizeAnswer(s) {
+  if (!s) return '';
+  return s
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // strip accents
+    .replace(/^\$+|\$+$/g, '')  // strip wrapping LaTeX $ signs
+    .replace(/\\text\{([^}]*)\}/g, '$1')  // strip \text{} wrappers
+    .replace(/\\,/g, '')  // strip LaTeX thin spaces
+    .replace(/\s+/g, ' ')  // collapse whitespace
+    .trim();
+}
+
+/**
+ * Check if a user answer matches any of the acceptable answers for a blank.
+ * Returns true for exact match, numeric proximity (±1%), or CAS equivalence.
+ */
+function answerMatches(userVal, expectedAnswer, alternatives = []) {
+  const user = normalizeAnswer(userVal);
+  if (!user) return false;
+
+  const allAcceptable = [expectedAnswer, ...(alternatives || [])];
+  for (const ans of allAcceptable) {
+    const expected = normalizeAnswer(ans);
+    if (!expected) continue;
+
+    // Exact text match
+    if (user === expected) return true;
+
+    // Numeric comparison (±1% or ±0.01 for small numbers)
+    const userNum = parseFloat(user.replace(/,/g, '.'));
+    const expNum = parseFloat(expected.replace(/,/g, '.'));
+    if (!isNaN(userNum) && !isNaN(expNum)) {
+      const tolerance = Math.max(Math.abs(expNum) * 0.01, 0.01);
+      if (Math.abs(userNum - expNum) <= tolerance) return true;
+    }
+
+    // CAS expression equivalence (fractions, radicals, symbolic)
+    try {
+      const casResult = checkWithCAS(user, expected);
+      if (casResult.correct) return true;
+    } catch { /* CAS unavailable */ }
+  }
+
+  return false;
+}
+
+/**
+ * Grade each scaffold blank against its answer_parts entry.
+ * Returns array of { blankIndex, correct, userValue, expectedAnswer, label }.
+ */
+export function gradeScaffoldBlanks(scaffoldValues, answerParts) {
+  return (answerParts || []).map((part, i) => {
+    const userVal = scaffoldValues[i] || '';
+    const isCorrect = answerMatches(userVal, part.answer, part.alternatives);
+    return {
+      blankIndex: i,
+      correct: isCorrect,
+      userValue: userVal,
+      expectedAnswer: part.answer,
+      alternatives: part.alternatives || [],
+      label: part.label || `Partie ${i + 1}`,
+    };
+  });
 }
 
 // ─── Grading engine ─────────────────────────────────────────────────────────
@@ -797,25 +872,84 @@ export function gradeExam(questions, answers) {
     if (!meta.gradable || !q.correct) {
       // Check if this is a scaffolded answer with all blanks filled
       if (q.scaffold_text && q.scaffold_blanks) {
-        let scaffoldComplete = false;
+        let scaffoldValues = null;
         try {
           const parsed = JSON.parse(userAnswer);
           if (parsed && parsed.scaffold && Array.isArray(parsed.scaffold)) {
-            const filled = parsed.scaffold.filter(v => v && v.trim());
-            scaffoldComplete = filled.length === q.scaffold_blanks.length;
+            scaffoldValues = parsed.scaffold;
           }
         } catch { /* not scaffold JSON */ }
 
-        if (scaffoldComplete) {
-          // Award partial credit for completing all scaffold blanks
+        if (scaffoldValues && scaffoldValues.filter(v => v && v.trim()).length > 0) {
           autoGraded++;
-          correctCount++;
-          earnedPoints += pts;
+
+          // If answer_parts exist, grade each blank against them
+          if (q.answer_parts && q.answer_parts.length > 0) {
+            const blankResults = gradeScaffoldBlanks(scaffoldValues, q.answer_parts);
+            const correctBlanks = blankResults.filter(r => r.correct).length;
+            const totalBlanks = q.answer_parts.length;
+            const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
+            const awarded = Math.round(pts * ratio * 100) / 100;
+
+            if (correctBlanks === totalBlanks) correctCount++;
+            else if (correctBlanks > 0) correctCount += ratio;
+            else incorrectCount++;
+            earnedPoints += awarded;
+
+            return {
+              question: q,
+              userAnswer,
+              status: correctBlanks === totalBlanks ? 'correct' : correctBlanks > 0 ? 'partial' : 'incorrect',
+              result: { awarded, maxPoints: pts, blankResults },
+            };
+          }
+
+          // No answer_parts — fall back to scaffold-complete (full credit for effort)
+          const filled = scaffoldValues.filter(v => v && v.trim());
+          if (filled.length === q.scaffold_blanks.length) {
+            correctCount++;
+            earnedPoints += pts;
+            return {
+              question: q,
+              userAnswer,
+              status: 'scaffold-complete',
+              result: { awarded: pts, maxPoints: pts },
+            };
+          }
+        }
+      }
+
+      // Check if this is a proof/text answer that can be graded via final_answer
+      if (q.final_answer && typeof userAnswer === 'string') {
+        let effectiveUser = userAnswer;
+        try {
+          const parsed = JSON.parse(userAnswer);
+          if (parsed && parsed.finalAnswer) effectiveUser = parsed.finalAnswer;
+        } catch { /* not JSON */ }
+
+        if (effectiveUser && effectiveUser.trim()) {
+          const allAcceptable = [q.final_answer];
+          if (q.answer_parts) {
+            q.answer_parts.forEach(p => {
+              if (p.answer) allAcceptable.push(p.answer);
+              (p.alternatives || []).forEach(a => allAcceptable.push(a));
+            });
+          }
+
+          const isCorrect = answerMatches(effectiveUser, q.final_answer,
+            allAcceptable.slice(1));
+          autoGraded++;
+          if (isCorrect) {
+            correctCount++;
+            earnedPoints += pts;
+          } else {
+            incorrectCount++;
+          }
           return {
             question: q,
             userAnswer,
-            status: 'scaffold-complete',
-            result: { awarded: pts, maxPoints: pts },
+            status: isCorrect ? 'correct' : 'incorrect',
+            result: { awarded: isCorrect ? pts : 0, maxPoints: pts },
           };
         }
       }

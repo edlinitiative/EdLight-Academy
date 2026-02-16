@@ -1037,6 +1037,11 @@ function QuestionHints({ hints }) {
 function ScaffoldedAnswer({ question, index, value, onChange }) {
   const template = question.scaffold_text;
   const blanks = question.scaffold_blanks || [];
+  const answerParts = question.answer_parts || [];
+  const hasGrading = answerParts.length > 0;
+
+  // Track which blanks have been validated (on blur)
+  const [validated, setValidated] = React.useState({});
 
   // Parse stored JSON → array of blank values
   const blankValues = useMemo(() => {
@@ -1058,10 +1063,42 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
   const setBlank = useCallback((blankIdx, val) => {
     const updated = [...blankValues];
     updated[blankIdx] = val;
+    // Clear validation on edit
+    setValidated(prev => ({ ...prev, [blankIdx]: undefined }));
     serialize(updated);
   }, [blankValues, serialize]);
 
+  // Validate a blank on blur — compare to answer_parts
+  const validateBlank = useCallback((blankIdx) => {
+    if (!hasGrading || !answerParts[blankIdx]) return;
+    const userVal = (blankValues[blankIdx] || '').trim();
+    if (!userVal) return;
+
+    const part = answerParts[blankIdx];
+    const allAcceptable = [part.answer, ...(part.alternatives || [])];
+    const normalize = (s) => (s || '').toString().trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/^\$+|\$+$/g, '').replace(/\\text\{([^}]*)\}/g, '$1')
+      .replace(/\\,/g, '').replace(/\s+/g, ' ').trim();
+
+    const userNorm = normalize(userVal);
+    let isCorrect = false;
+    for (const ans of allAcceptable) {
+      const expected = normalize(ans);
+      if (!expected) continue;
+      if (userNorm === expected) { isCorrect = true; break; }
+      // Numeric comparison
+      const u = parseFloat(userNorm.replace(/,/g, '.'));
+      const e = parseFloat(expected.replace(/,/g, '.'));
+      if (!isNaN(u) && !isNaN(e) && Math.abs(u - e) <= Math.max(Math.abs(e) * 0.01, 0.01)) {
+        isCorrect = true; break;
+      }
+    }
+    setValidated(prev => ({ ...prev, [blankIdx]: isCorrect }));
+  }, [hasGrading, answerParts, blankValues]);
+
   const filledCount = blankValues.filter(v => v.trim()).length;
+  const correctCount = Object.values(validated).filter(v => v === true).length;
   const totalBlanks = blanks.length;
 
   if (!template || totalBlanks === 0) return null;
@@ -1087,6 +1124,9 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
       <div className="scaffold__header">
         <span className="scaffold__badge">📝 Réponse guidée</span>
         <span className="scaffold__progress">
+          {hasGrading && correctCount > 0 && (
+            <span className="scaffold__correct-count">✓ {correctCount} </span>
+          )}
           {filledCount}/{totalBlanks} complété{filledCount !== 1 ? 's' : ''}
         </span>
       </div>
@@ -1105,16 +1145,23 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
           const bi = part.blankIdx;
           const blank = blanks[bi];
           if (!blank) return null;
+          const vState = validated[bi];
+          const blankClass = vState === true ? 'scaffold__blank--correct'
+            : vState === false ? 'scaffold__blank--incorrect'
+            : blankValues[bi]?.trim() ? 'scaffold__blank--filled' : '';
           return (
             <span key={`b-${bi}`} className="scaffold__blank-wrapper">
               <input
-                className={`scaffold__blank ${blankValues[bi]?.trim() ? 'scaffold__blank--filled' : ''}`}
+                className={`scaffold__blank ${blankClass}`}
                 type="text"
                 value={blankValues[bi] || ''}
                 onChange={(e) => setBlank(bi, e.target.value)}
+                onBlur={() => validateBlank(bi)}
                 placeholder={blank.label || `Réponse ${bi + 1}`}
                 aria-label={blank.label || `Blank ${bi + 1}`}
               />
+              {vState === true && <span className="scaffold__blank-check">✓</span>}
+              {vState === false && <span className="scaffold__blank-cross">✗</span>}
               {blank.label && (
                 <span className="scaffold__blank-label">{blank.label}</span>
               )}

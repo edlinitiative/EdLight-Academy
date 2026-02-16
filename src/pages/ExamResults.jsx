@@ -10,8 +10,8 @@ import {
   QUESTION_TYPE_META,
 } from '../utils/examUtils';
 
-/** Renders scaffold blank answers in the results view */
-function ScaffoldResultDisplay({ answer, blanks }) {
+/** Renders scaffold blank answers in the results view with per-blank grading */
+function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
   let values = [];
   try {
     const parsed = JSON.parse(answer);
@@ -22,12 +22,34 @@ function ScaffoldResultDisplay({ answer, blanks }) {
 
   return (
     <div className="scaffold-result">
-      {(blanks || []).map((blank, i) => (
-        <div key={i} className="scaffold-result__item">
-          <span className="scaffold-result__label">{blank.label || `#${i + 1}`} :</span>
-          <span className="scaffold-result__value">{values[i] || '—'}</span>
-        </div>
-      ))}
+      {(blanks || []).map((blank, i) => {
+        const br = blankResults?.[i];
+        const isCorrect = br?.correct;
+        const hasGrading = !!br;
+        return (
+          <div key={i} className={`scaffold-result__item ${hasGrading ? (isCorrect ? 'scaffold-result__item--correct' : 'scaffold-result__item--incorrect') : ''}`}>
+            <span className="scaffold-result__label">{blank.label || `#${i + 1}`} :</span>
+            <span className={`scaffold-result__value ${hasGrading ? (isCorrect ? 'scaffold-result__value--correct' : 'scaffold-result__value--incorrect') : ''}`}>
+              {hasGrading && (isCorrect ? '✓ ' : '✗ ')}
+              {values[i] || '—'}
+            </span>
+            {hasGrading && !isCorrect && br.expectedAnswer && (
+              <span className="scaffold-result__expected">
+                → {br.expectedAnswer}
+              </span>
+            )}
+          </div>
+        );
+      })}
+      {/* Show model answer (full solution) when available */}
+      {modelAnswer && (
+        <details className="scaffold-result__solution">
+          <summary className="scaffold-result__solution-toggle">📖 Voir la solution complète</summary>
+          <div className="scaffold-result__solution-body">
+            <InstructionRenderer text={modelAnswer} />
+          </div>
+        </details>
+      )}
     </div>
   );
 }
@@ -178,24 +200,58 @@ const ExamResults = () => {
               {r.userAnswer && (
                 <div className="exam-results__item-answer">
                   <strong>Votre réponse :</strong>{' '}
-                  {r.status === 'scaffold-complete' || (r.userAnswer.startsWith('{') && r.userAnswer.includes('"scaffold"'))
-                    ? <ScaffoldResultDisplay answer={r.userAnswer} blanks={r.question.scaffold_blanks} />
+                  {r.status === 'scaffold-complete' || r.status === 'partial' || (r.userAnswer.startsWith('{') && r.userAnswer.includes('"scaffold"'))
+                    ? <ScaffoldResultDisplay
+                        answer={r.userAnswer}
+                        blanks={r.question.scaffold_blanks}
+                        blankResults={r.result?.blankResults}
+                        modelAnswer={r.question.model_answer}
+                      />
                     : r.question.type === 'multiple_choice' && r.question.options
                       ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
-                      : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct} />
+                      : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct || r.question.final_answer} />
                   }
                 </div>
               )}
 
               {/* Correct answer */}
-              {r.question.correct && (
+              {(r.question.correct || r.question.final_answer) && (
                 <div className="exam-results__item-correct">
                   <strong>Réponse correcte :</strong>{' '}
                   {r.question.type === 'multiple_choice' && r.question.options
-                    ? `${r.question.correct.toUpperCase()}) ${r.question.options[r.question.correct] || r.question.correct}`
-                    : String(r.question.correct)
+                    ? `${(r.question.correct || '').toUpperCase()}) ${r.question.options[r.question.correct] || r.question.correct}`
+                    : String(r.question.correct || r.question.final_answer)
                   }
                 </div>
+              )}
+
+              {/* Model answer — show full solution for questions with answer_parts */}
+              {!r.question.correct && r.question.model_answer && r.status !== 'scaffold-complete' && r.status !== 'partial' && (
+                <details className="exam-results__item-solution">
+                  <summary>📖 Voir la solution complète</summary>
+                  <div className="exam-results__item-solution-body">
+                    <InstructionRenderer text={r.question.model_answer} />
+                  </div>
+                </details>
+              )}
+
+              {/* Multiple approaches for proofs/calculations */}
+              {r.question.approaches && r.question.approaches.length > 1 && (
+                <details className="exam-results__item-approaches">
+                  <summary>🔄 Approches alternatives ({r.question.approaches.length})</summary>
+                  <div className="exam-results__item-approaches-body">
+                    {r.question.approaches.map((approach, ai) => (
+                      <div key={ai} className="exam-results__approach">
+                        <strong>{approach.name}</strong>
+                        <ol>
+                          {(approach.steps || []).map((step, si) => (
+                            <li key={si}><InstructionRenderer text={step} /></li>
+                          ))}
+                        </ol>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               )}
 
               {/* Explanation */}
@@ -327,6 +383,7 @@ function StatusBadge({ status }) {
   const map = {
     correct:            { label: '✓ Correct', cls: 'exam-results__badge--correct' },
     incorrect:          { label: '✗ Incorrect', cls: 'exam-results__badge--incorrect' },
+    partial:            { label: '◐ Partiel', cls: 'exam-results__badge--partial' },
     manual:             { label: '👁 Révision', cls: 'exam-results__badge--manual' },
     unanswered:         { label: '— Vide', cls: 'exam-results__badge--unanswered' },
     'scaffold-complete': { label: '📝 Complété', cls: 'exam-results__badge--correct' },
