@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import { useKatex, renderWithKatex } from '../utils/shared';
-import { checkWithCAS, evaluateExpression } from '../utils/mathCAS';
+import { checkWithCAS } from '../utils/mathCAS';
 import {
   questionTypeMeta,
   subjectColor,
@@ -204,7 +204,7 @@ const ExamResults = () => {
 
 /**
  * Renders a user answer — if it's proof JSON, render steps + final answer
- * with CAS verification. Otherwise render as plain text.
+ * with CAS verification in a clean Khan Academy-style layout.
  */
 function ProofOrPlainAnswer({ answer, correctAnswer }) {
   const katexReady = useKatex();
@@ -214,12 +214,9 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
   if (typeof answer === 'string' && (answer.startsWith('{') || answer.startsWith('['))) {
     try {
       const parsed = JSON.parse(answer);
-      // New format: { steps, finalAnswer }
       if (parsed && parsed.steps && Array.isArray(parsed.steps)) {
         proofData = { steps: parsed.steps, finalAnswer: parsed.finalAnswer || '' };
-      }
-      // Legacy array format
-      else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].math !== undefined) {
+      } else if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].math !== undefined) {
         proofData = { steps: parsed, finalAnswer: '' };
       }
     } catch { /* not proof JSON */ }
@@ -227,57 +224,77 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
 
   if (!proofData) return <>{String(answer)}</>;
 
-  // CAS-check the final answer if both student and correct answer exist
+  // CAS-check the final answer
   let casVerdict = null;
   if (proofData.finalAnswer && correctAnswer) {
     casVerdict = checkWithCAS(proofData.finalAnswer, correctAnswer);
   }
 
-  return (
-    <div className="proof-results">
-      {/* Proof steps */}
-      {proofData.steps.map((step, i) => (
-        <div key={i} className="proof-results__step">
-          <span className="proof-results__step-number">{i + 1}</span>
-          <div className="proof-results__step-body">
-            <div className="proof-results__step-math">
-              {step.math && (/\$/.test(step.math) || /\\[a-zA-Z]/.test(step.math))
-                ? <span dangerouslySetInnerHTML={renderWithKatex(step.math, katexReady)} />
-                : step.math || '(vide)'
-              }
-            </div>
-            {step.justification && (
-              <div className="proof-results__step-justify">↳ {step.justification}</div>
-            )}
-          </div>
-        </div>
-      ))}
+  const filledSteps = proofData.steps.filter(s => s.math?.trim());
 
-      {/* Final answer with CAS verification */}
-      {proofData.finalAnswer && (
-        <div className={`proof-results__final ${casVerdict ? (casVerdict.correct ? 'proof-results__final--correct' : 'proof-results__final--incorrect') : ''}`}>
-          <div className="proof-results__final-header">
-            <span className="proof-results__final-icon">🎯</span>
-            <strong>Résultat final :</strong>
-            {casVerdict && (
-              <span className={`proof-results__cas-badge ${casVerdict.correct ? 'proof-results__cas-badge--correct' : 'proof-results__cas-badge--incorrect'}`}>
-                {casVerdict.correct ? '✓ Vérifié par calcul' : '✗ Résultat différent'}
-                {casVerdict.method === 'cas' && casVerdict.details?.valueA != null && (
-                  <span className="proof-results__cas-detail">
-                    {' '}(≈ {casVerdict.details.valueA.toFixed(4)}{!casVerdict.correct && casVerdict.details.valueB != null ? ` ≠ ${casVerdict.details.valueB.toFixed(4)}` : ''})
-                  </span>
+  return (
+    <div className="ka-results">
+      {/* Steps timeline */}
+      <div className="ka-results__steps">
+        {proofData.steps.map((step, i) => {
+          const filled = !!step.math?.trim();
+          return (
+            <div key={i} className={`ka-results__step ${filled ? 'ka-results__step--done' : 'ka-results__step--empty'}`}>
+              <div className="ka-results__step-dot">
+                {filled ? (
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                ) : (
+                  <span>{i + 1}</span>
                 )}
+              </div>
+              <div className="ka-results__step-body">
+                <div className="ka-results__step-math">
+                  {step.math && (/\$/.test(step.math) || /\\[a-zA-Z]/.test(step.math))
+                    ? <span dangerouslySetInnerHTML={renderWithKatex(step.math, katexReady)} />
+                    : step.math || <span className="ka-results__empty">—</span>
+                  }
+                </div>
+                {step.justification && (
+                  <div className="ka-results__step-reason">↳ {step.justification}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Final answer with CAS badge */}
+      {proofData.finalAnswer && (
+        <div className={`ka-results__answer ${casVerdict ? (casVerdict.correct ? 'ka-results__answer--correct' : 'ka-results__answer--incorrect') : ''}`}>
+          <div className="ka-results__answer-row">
+            <span className="ka-results__answer-label">🎯 Résultat final</span>
+            {casVerdict && (
+              <span className={`ka-results__cas ${casVerdict.correct ? 'ka-results__cas--correct' : 'ka-results__cas--incorrect'}`}>
+                {casVerdict.correct ? '✓ Correct' : '✗ Incorrect'}
               </span>
             )}
           </div>
-          <div className="proof-results__final-value">
+          <div className="ka-results__answer-value">
             {(/\$/.test(proofData.finalAnswer) || /\\[a-zA-Z]/.test(proofData.finalAnswer))
               ? <span dangerouslySetInnerHTML={renderWithKatex(proofData.finalAnswer, katexReady)} />
               : proofData.finalAnswer
             }
           </div>
+          {casVerdict && casVerdict.method === 'cas' && casVerdict.details?.valueA != null && (
+            <div className="ka-results__cas-detail">
+              ≈ {casVerdict.details.valueA.toFixed(4)}
+              {!casVerdict.correct && casVerdict.details.valueB != null && ` ≠ ${casVerdict.details.valueB.toFixed(4)}`}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Summary line */}
+      <div className="ka-results__summary">
+        {filledSteps.length} étape{filledSteps.length !== 1 ? 's' : ''} complétée{filledSteps.length !== 1 ? 's' : ''}
+      </div>
     </div>
   );
 }

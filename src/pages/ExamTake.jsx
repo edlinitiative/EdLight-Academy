@@ -14,7 +14,6 @@ import {
   subjectColor,
   parseConsignes,
 } from '../utils/examUtils';
-import { checkCAS } from '../utils/mathCAS';
 
 /** Format hierarchical question number for display (e.g. "A.1" → "A.1", "5" → "5") */
 function formatQuestionLabel(q, globalIndex) {
@@ -58,10 +57,11 @@ const PROOF_SUBTYPES = [
     key: 'simplify',
     re: /\b(simplifier|réduire|écrire.*sous.*forme|mettre.*sous.*forme)\b/i,
     label: 'Simplification',
+    icon: '✨',
     scaffoldSteps: [
-      { hint: 'Identifiez et simplifiez chaque terme séparément', justification: 'Par simplification' },
-      { hint: 'Combinez les termes semblables', justification: 'Par calcul' },
-      { hint: 'Écrivez le résultat sous la forme demandée', justification: '' },
+      { hint: 'Identifiez et simplifiez chaque terme séparément' },
+      { hint: 'Combinez les termes semblables' },
+      { hint: 'Écrivez le résultat sous la forme demandée' },
     ],
     askFinalAnswer: true,
     finalLabel: 'Résultat simplifié',
@@ -70,10 +70,11 @@ const PROOF_SUBTYPES = [
     key: 'factor',
     re: /\b(factoriser)\b/i,
     label: 'Factorisation',
+    icon: '🔗',
     scaffoldSteps: [
-      { hint: 'Identifiez le facteur commun ou l\'identité remarquable', justification: 'Par identification' },
-      { hint: 'Mettez en facteur', justification: 'Par factorisation' },
-      { hint: 'Vérifiez en développant', justification: 'Par vérification' },
+      { hint: 'Identifiez le facteur commun ou l\'identité remarquable' },
+      { hint: 'Mettez en facteur' },
+      { hint: 'Vérifiez en développant' },
     ],
     askFinalAnswer: true,
     finalLabel: 'Forme factorisée',
@@ -82,10 +83,11 @@ const PROOF_SUBTYPES = [
     key: 'solve',
     re: /\b(résoudre|trouver.*solution|déterminer.*valeur|trouver.*valeur)\b/i,
     label: 'Résolution',
+    icon: '🔍',
     scaffoldSteps: [
-      { hint: 'Posez l\'équation ou identifiez les données', justification: 'Par hypothèse' },
-      { hint: 'Isolez l\'inconnue étape par étape', justification: 'Par calcul' },
-      { hint: 'Vérifiez la / les solution(s)', justification: 'Par vérification' },
+      { hint: 'Posez l\'équation ou identifiez les données' },
+      { hint: 'Isolez l\'inconnue étape par étape' },
+      { hint: 'Vérifiez la / les solution(s)' },
     ],
     askFinalAnswer: true,
     finalLabel: 'Solution(s)',
@@ -94,9 +96,10 @@ const PROOF_SUBTYPES = [
     key: 'calculate',
     re: /\b(calculer|évaluer|déterminer)\b/i,
     label: 'Calcul',
+    icon: '🧮',
     scaffoldSteps: [
-      { hint: 'Posez le calcul avec les données', justification: '' },
-      { hint: 'Effectuez les opérations', justification: 'Par calcul' },
+      { hint: 'Posez le calcul avec les données' },
+      { hint: 'Effectuez les opérations' },
     ],
     askFinalAnswer: true,
     finalLabel: 'Résultat',
@@ -105,10 +108,11 @@ const PROOF_SUBTYPES = [
     key: 'prove',
     re: /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|vérifier\s+que|justifier\s+que|en\s+déduire)\b/i,
     label: 'Démonstration',
+    icon: '📐',
     scaffoldSteps: [
-      { hint: 'Partez de l\'hypothèse ou de l\'expression de départ', justification: 'Par hypothèse' },
-      { hint: 'Développez le raisonnement', justification: '' },
-      { hint: 'Concluez en retrouvant le résultat demandé', justification: '' },
+      { hint: 'Partez de l\'hypothèse ou de l\'expression de départ' },
+      { hint: 'Développez le raisonnement' },
+      { hint: 'Concluez en retrouvant le résultat demandé' },
     ],
     askFinalAnswer: false,
     finalLabel: '',
@@ -117,9 +121,10 @@ const PROOF_SUBTYPES = [
     key: 'develop',
     re: /\b(développer|développer\s+et\s+réduire)\b/i,
     label: 'Développement',
+    icon: '📖',
     scaffoldSteps: [
-      { hint: 'Appliquez la distributivité ou l\'identité remarquable', justification: 'Par développement' },
-      { hint: 'Réduisez les termes semblables', justification: 'Par simplification' },
+      { hint: 'Appliquez la distributivité ou l\'identité remarquable' },
+      { hint: 'Réduisez les termes semblables' },
     ],
     askFinalAnswer: true,
     finalLabel: 'Forme développée',
@@ -128,10 +133,10 @@ const PROOF_SUBTYPES = [
 
 /** Default scaffold for unrecognized proof types */
 const DEFAULT_SCAFFOLD = {
-  key: 'generic', label: 'Raisonnement',
+  key: 'generic', label: 'Raisonnement', icon: '💡',
   scaffoldSteps: [
-    { hint: 'Première étape de votre raisonnement', justification: '' },
-    { hint: 'Continuez…', justification: '' },
+    { hint: 'Première étape de votre raisonnement' },
+    { hint: 'Continuez…' },
   ],
   askFinalAnswer: true, finalLabel: 'Résultat final',
 };
@@ -1004,7 +1009,7 @@ function QuestionInput({ question, index, value, onChange }) {
   }
 }
 
-// ── Proof / Demonstration Step-by-Step Input ──────────────────────────────────
+// ── Proof / Demonstration Step-by-Step Input (Khan Academy style) ─────────
 
 const JUSTIFICATION_OPTIONS = [
   '', 'Par définition', 'Par hypothèse', 'Par simplification', 'Par factorisation',
@@ -1013,40 +1018,52 @@ const JUSTIFICATION_OPTIONS = [
   'En utilisant la propriété', 'On en déduit que', 'Autre',
 ];
 
+/** Encouraging micro-feedback messages */
+const ENCOURAGEMENTS = [
+  'Bien joué ! 🎉',
+  'Super ! Continue 💪',
+  'Bravo ! 👏',
+  'Excellent travail ! ⭐',
+  'Bien raisonné ! 🧠',
+];
+
 function ProofInput({ question, index, value, onChange }) {
   const katexReady = useKatex();
   const questionText = question?._displayText || question?.question || '';
   const subtype = useMemo(() => detectProofSubtype(questionText), [questionText]);
+  const [hintsRevealed, setHintsRevealed] = useState(0);
+  const [encouragement, setEncouragement] = useState('');
 
   // Parse stored JSON value → { steps, finalAnswer }
   const { steps, finalAnswer } = useMemo(() => {
     if (!value) {
-      // Pre-populate with scaffold steps
       return {
-        steps: subtype.scaffoldSteps.map((sc) => ({ math: '', justification: sc.justification, _hint: sc.hint })),
+        steps: subtype.scaffoldSteps.map(() => ({ math: '', justification: '' })),
         finalAnswer: '',
       };
     }
     try {
       const parsed = JSON.parse(value);
-      // New format: { steps: [...], finalAnswer: '...' }
       if (parsed && parsed.steps && Array.isArray(parsed.steps)) {
         return { steps: parsed.steps, finalAnswer: parsed.finalAnswer || '' };
       }
-      // Legacy format: plain array of steps
       if (Array.isArray(parsed) && parsed.length > 0) {
         return { steps: parsed, finalAnswer: '' };
       }
     } catch { /* not JSON yet */ }
-    // Legacy: plain text answer → import as single step
     if (typeof value === 'string' && value.trim()) {
       return { steps: [{ math: value, justification: '' }], finalAnswer: '' };
     }
     return {
-      steps: subtype.scaffoldSteps.map((sc) => ({ math: '', justification: sc.justification, _hint: sc.hint })),
+      steps: subtype.scaffoldSteps.map(() => ({ math: '', justification: '' })),
       finalAnswer: '',
     };
   }, [value, subtype]);
+
+  // Count completed steps for progress
+  const completedCount = steps.filter(s => s.math?.trim()).length;
+  const totalSteps = steps.length;
+  const progress = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
 
   const serialize = useCallback((newSteps, newFinal) => {
     onChange(index, JSON.stringify({ steps: newSteps, finalAnswer: newFinal }));
@@ -1054,6 +1071,11 @@ function ProofInput({ question, index, value, onChange }) {
 
   const setStepField = useCallback((stepIdx, field, val) => {
     const updated = steps.map((s, i) => i === stepIdx ? { ...s, [field]: val } : s);
+    // Show encouragement when a step is first completed
+    if (field === 'math' && val.trim() && !steps[stepIdx].math?.trim()) {
+      setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
+      setTimeout(() => setEncouragement(''), 2000);
+    }
     serialize(updated, finalAnswer);
   }, [steps, finalAnswer, serialize]);
 
@@ -1070,169 +1092,190 @@ function ProofInput({ question, index, value, onChange }) {
     serialize(steps, val);
   }, [steps, serialize]);
 
+  const revealNextHint = useCallback(() => {
+    setHintsRevealed(h => Math.min(h + 1, subtype.scaffoldSteps.length));
+  }, [subtype]);
+
+  const canRevealHint = hintsRevealed < subtype.scaffoldSteps.length;
+
   return (
-    <div className="proof-input">
-      <div className="proof-input__header">
-        <span className="proof-input__header-icon">📐</span>
-        <span className="proof-input__header-title">{subtype.label} — étape par étape</span>
-        <span className="proof-input__header-hint">
-          Suivez les étapes guidées — ajoutez-en si nécessaire
-        </span>
+    <div className="ka-proof">
+      {/* Header with type badge and progress */}
+      <div className="ka-proof__header">
+        <div className="ka-proof__header-left">
+          <span className="ka-proof__type-badge">{subtype.icon || '📐'} {subtype.label}</span>
+        </div>
+        <div className="ka-proof__header-right">
+          <div className="ka-proof__progress">
+            <div className="ka-proof__progress-bar">
+              <div className="ka-proof__progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="ka-proof__progress-text">{completedCount}/{totalSteps}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="proof-input__steps">
+      {/* Encouragement toast */}
+      {encouragement && (
+        <div className="ka-proof__encouragement">{encouragement}</div>
+      )}
+
+      {/* Steps timeline */}
+      <div className="ka-proof__timeline">
         {steps.map((step, i) => {
-          // Get scaffold hint for this step position (if available)
-          const scaffold = subtype.scaffoldSteps[i];
+          const isDone = !!step.math?.trim();
+          const isActive = !isDone && (i === 0 || !!steps[i - 1]?.math?.trim());
+          const hint = subtype.scaffoldSteps[i]?.hint || '';
+          const hintVisible = i < hintsRevealed;
+
           return (
-            <ProofStep
-              key={i}
-              stepIndex={i}
-              totalSteps={steps.length}
-              math={step.math}
-              justification={step.justification}
-              scaffoldHint={step._hint || scaffold?.hint || ''}
-              katexReady={katexReady}
-              onMathChange={(val) => setStepField(i, 'math', val)}
-              onJustificationChange={(val) => setStepField(i, 'justification', val)}
-              onRemove={() => removeStep(i)}
-            />
+            <div key={i} className={`ka-step ${isDone ? 'ka-step--done' : ''} ${isActive ? 'ka-step--active' : ''}`}>
+              {/* Timeline connector */}
+              <div className="ka-step__rail">
+                <div className="ka-step__dot">
+                  {isDone ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : (
+                    <span className="ka-step__dot-number">{i + 1}</span>
+                  )}
+                </div>
+                {i < totalSteps - 1 && <div className="ka-step__connector" />}
+              </div>
+
+              {/* Step content */}
+              <div className="ka-step__content">
+                <div className="ka-step__label">Étape {i + 1}</div>
+
+                {/* Hint pill (revealed progressively) */}
+                {hintVisible && hint && !isDone && (
+                  <div className="ka-step__hint">
+                    <span className="ka-step__hint-icon">💡</span>
+                    {hint}
+                  </div>
+                )}
+
+                {/* Math input */}
+                <textarea
+                  className="ka-step__input"
+                  value={step.math}
+                  onChange={(e) => setStepField(i, 'math', e.target.value)}
+                  placeholder={isDone ? '' : 'Écrivez votre expression ici…'}
+                  rows={1}
+                  spellCheck="false"
+                />
+
+                {/* Live KaTeX preview */}
+                {step.math && (/\$/.test(step.math) || /\\[a-zA-Z]/.test(step.math)) && katexReady && (
+                  <div className="ka-step__preview">
+                    <span dangerouslySetInnerHTML={renderWithKatex(step.math, katexReady)} />
+                  </div>
+                )}
+
+                {/* Justification (collapsible, minimal) */}
+                <JustificationPicker
+                  value={step.justification}
+                  onChange={(val) => setStepField(i, 'justification', val)}
+                />
+
+                {/* Remove button */}
+                {totalSteps > 1 && (
+                  <button
+                    type="button"
+                    className="ka-step__remove"
+                    onClick={() => removeStep(i)}
+                    aria-label="Supprimer cette étape"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
 
-      <button
-        type="button"
-        className="proof-input__add-step"
-        onClick={addStep}
-      >
-        <span className="proof-input__add-icon">+</span> Ajouter une étape
-      </button>
-
-      {/* Final Answer field — shown for subtypes that expect a concrete result */}
-      {subtype.askFinalAnswer && (
-        <FinalAnswerField
-          label={subtype.finalLabel}
-          value={finalAnswer}
-          onChange={setFinalAnswer}
-          katexReady={katexReady}
-        />
-      )}
-    </div>
-  );
-}
-
-function FinalAnswerField({ label, value, onChange, katexReady }) {
-  const hasMath = value && (/\$/.test(value) || /\\[a-zA-Z]/.test(value));
-
-  return (
-    <div className="proof-input__final">
-      <div className="proof-input__final-header">
-        <span className="proof-input__final-icon">🎯</span>
-        <label className="proof-input__final-label">{label || 'Résultat final'}</label>
-        <span className="proof-input__final-hint">Cette réponse sera vérifiée automatiquement si possible</span>
-      </div>
-      <input
-        className="proof-input__final-input"
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={`Entrez votre ${(label || 'résultat').toLowerCase()}…`}
-      />
-      {hasMath && katexReady && (
-        <div className="proof-step__preview">
-          <span className="proof-step__preview-label">Aperçu :</span>
-          <span dangerouslySetInnerHTML={renderWithKatex(value, katexReady)} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProofStep({ stepIndex, totalSteps, math, justification, scaffoldHint, katexReady, onMathChange, onJustificationChange, onRemove }) {
-  const [focused, setFocused] = useState(false);
-  const hasMath = math && (/\$/.test(math) || /\\[a-zA-Z]/.test(math));
-
-  return (
-    <div className={`proof-step ${focused ? 'proof-step--focused' : ''}`}>
-      <div className="proof-step__gutter">
-        <span className="proof-step__number">{stepIndex + 1}</span>
-        <div className="proof-step__line" />
-      </div>
-
-      <div className="proof-step__body">
-        {/* Scaffold hint — shows above the input as guidance */}
-        {scaffoldHint && !math && (
-          <div className="proof-step__scaffold-hint">
-            💡 {scaffoldHint}
-          </div>
+      {/* Bottom actions */}
+      <div className="ka-proof__actions">
+        <button type="button" className="ka-proof__add-btn" onClick={addStep}>
+          + Ajouter une étape
+        </button>
+        {canRevealHint && (
+          <button type="button" className="ka-proof__hint-btn" onClick={revealNextHint}>
+            💡 Obtenir un indice
+          </button>
         )}
+      </div>
 
-        <div className="proof-step__math-section">
-          <label className="proof-step__label">Expression / Calcul</label>
-          <textarea
-            className="proof-step__math-input"
-            value={math}
-            onChange={(e) => onMathChange(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder={scaffoldHint || (stepIndex === 0 ? 'Écrivez votre première étape ici…' : 'Continuez votre raisonnement…')}
-            rows={2}
-            spellCheck="false"
+      {/* Final Answer field (Khan-style answer box) */}
+      {subtype.askFinalAnswer && (
+        <div className="ka-proof__answer">
+          <div className="ka-proof__answer-header">
+            <span className="ka-proof__answer-icon">🎯</span>
+            <label className="ka-proof__answer-label">{subtype.finalLabel || 'Résultat final'}</label>
+            <span className="ka-proof__answer-badge">Vérifié automatiquement</span>
+          </div>
+          <input
+            className="ka-proof__answer-input"
+            type="text"
+            value={finalAnswer}
+            onChange={(e) => setFinalAnswer(e.target.value)}
+            placeholder={`Votre ${(subtype.finalLabel || 'résultat').toLowerCase()}…`}
           />
-          {/* Live KaTeX preview */}
-          {hasMath && katexReady && (
-            <div className="proof-step__preview">
-              <span className="proof-step__preview-label">Aperçu :</span>
-              <span dangerouslySetInnerHTML={renderWithKatex(math, katexReady)} />
+          {finalAnswer && (/\$/.test(finalAnswer) || /\\[a-zA-Z]/.test(finalAnswer)) && katexReady && (
+            <div className="ka-proof__answer-preview">
+              <span dangerouslySetInnerHTML={renderWithKatex(finalAnswer, katexReady)} />
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
 
-        <div className="proof-step__justify-section">
-          <label className="proof-step__label">Justification</label>
-          <div className="proof-step__justify-row">
-            <select
-              className="proof-step__justify-select"
-              value={JUSTIFICATION_OPTIONS.includes(justification) ? justification : (justification ? 'Autre' : '')}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === 'Autre') {
-                  if (JUSTIFICATION_OPTIONS.includes(justification)) onJustificationChange('');
-                } else {
-                  onJustificationChange(val);
-                }
-              }}
-            >
-              <option value="">— Justification (optionnel) —</option>
-              {JUSTIFICATION_OPTIONS.slice(1).map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-            {justification && !JUSTIFICATION_OPTIONS.includes(justification) && (
-              <input
-                className="proof-step__justify-custom"
-                type="text"
-                value={justification}
-                onChange={(e) => onJustificationChange(e.target.value)}
-                placeholder="Justification personnalisée…"
-              />
-            )}
-          </div>
-        </div>
-      </div>
+/** Collapsible justification picker — click to expand, minimal when collapsed */
+function JustificationPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
 
-      {/* Remove button — not shown for single step */}
-      {totalSteps > 1 && (
-        <button
-          type="button"
-          className="proof-step__remove"
-          onClick={onRemove}
-          aria-label="Supprimer cette étape"
-          title="Supprimer cette étape"
-        >
-          ✕
-        </button>
+  if (!open && !value) {
+    return (
+      <button type="button" className="ka-justify__toggle" onClick={() => setOpen(true)}>
+        + Justification
+      </button>
+    );
+  }
+
+  return (
+    <div className="ka-justify">
+      <select
+        className="ka-justify__select"
+        value={JUSTIFICATION_OPTIONS.includes(value) ? value : (value ? 'Autre' : '')}
+        onChange={(e) => {
+          const val = e.target.value;
+          if (val === 'Autre') {
+            if (JUSTIFICATION_OPTIONS.includes(value)) onChange('');
+          } else {
+            onChange(val);
+          }
+        }}
+      >
+        <option value="">— Choisir —</option>
+        {JUSTIFICATION_OPTIONS.slice(1).map(opt => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      {value && !JUSTIFICATION_OPTIONS.includes(value) && (
+        <input
+          className="ka-justify__custom"
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Justification personnalisée…"
+        />
+      )}
+      {!value && (
+        <button type="button" className="ka-justify__close" onClick={() => setOpen(false)}>✕</button>
       )}
     </div>
   );
