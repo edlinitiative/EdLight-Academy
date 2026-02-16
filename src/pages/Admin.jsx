@@ -671,6 +671,9 @@ export default function Admin() {
               <a href="/admin/courses" className="button button--primary button--pill">
                 📚 Manage Course Structure
               </a>
+              <a href="/admin/verify" className="button button--primary button--pill">
+                ✅ Verify Exam Answers
+              </a>
               <a href="#courses" className="button button--ghost button--pill">
                 🎬 Manage Videos
               </a>
