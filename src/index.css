@@ -4963,6 +4963,100 @@ textarea.input-field {
 	margin-top: 0.5rem;
 }
 
+/* ── Question Hints (progressive reveal) ───────────────────────────────── */
+
+.qa-hints {
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px dashed var(--border);
+}
+
+.qa-hints__item {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.6rem 0.75rem;
+	margin-bottom: 0.5rem;
+	background: linear-gradient(135deg, #fffbe6 0%, #fff9db 100%);
+	border: 1px solid #f0e68c;
+	border-radius: var(--radius-sm);
+	animation: qa-hint-in 0.35s cubic-bezier(.175,.885,.32,1.275) both;
+	font-size: 0.92rem;
+	line-height: 1.45;
+	color: #5d4e00;
+}
+
+@keyframes qa-hint-in {
+	0% {
+		opacity: 0;
+		transform: translateY(-6px) scale(0.97);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.qa-hints__icon {
+	flex-shrink: 0;
+	font-size: 1.05em;
+	margin-top: 0.05em;
+}
+
+.qa-hints__text {
+	flex: 1;
+}
+
+.qa-hints__btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.45rem 0.9rem;
+	border: 1.5px solid #e8d44d;
+	border-radius: 999px;
+	background: linear-gradient(135deg, #fffdf0 0%, #fef9c3 100%);
+	color: #92750a;
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.qa-hints__btn:hover {
+	background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%);
+	border-color: #d4a72c;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 8px rgba(212, 167, 44, 0.18);
+}
+
+.qa-hints__btn:active {
+	transform: translateY(0);
+}
+
+.qa-hints__counter {
+	font-weight: 400;
+	opacity: 0.65;
+	font-size: 0.8em;
+}
+
+/* Dark mode */
+[data-theme="dark"] .qa-hints__item {
+	background: linear-gradient(135deg, #3d3400 0%, #2a2400 100%);
+	border-color: #5c4a00;
+	color: #fef08a;
+}
+
+[data-theme="dark"] .qa-hints__btn {
+	background: linear-gradient(135deg, #2a2400 0%, #3d3400 100%);
+	border-color: #5c4a00;
+	color: #fef08a;
+}
+
+[data-theme="dark"] .qa-hints__btn:hover {
+	background: linear-gradient(135deg, #3d3400 0%, #524000 100%);
+	border-color: #7c6a10;
+}
+
 /* MCQ options */
 .exam-take__mcq-options {
 	display: flex;

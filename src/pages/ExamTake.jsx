@@ -757,6 +757,11 @@ const ExamTake = () => {
                     </div>
                   </>
                 )}
+
+                {/* Progressive hints (available for ALL question types) */}
+                {!isProofQuestion(gq) && gq.hints && gq.hints.length > 0 && (
+                  <QuestionHints hints={gq.hints} />
+                )}
               </div>
             );
           })}
@@ -977,6 +982,40 @@ function FillBlankText({ text, index, value, onChange }) {
           </React.Fragment>
         );
       })}
+    </div>
+  );
+}
+
+// ── Question Hints (progressive reveal for ALL question types) ───────────────
+
+function QuestionHints({ hints }) {
+  const [revealed, setRevealed] = useState(0);
+
+  if (!hints || !Array.isArray(hints) || hints.length === 0) return null;
+
+  const canReveal = revealed < hints.length;
+
+  return (
+    <div className="qa-hints">
+      {/* Revealed hints */}
+      {hints.slice(0, revealed).map((hint, i) => (
+        <div key={i} className="qa-hints__item" style={{ animationDelay: `${i * 0.05}s` }}>
+          <span className="qa-hints__icon">💡</span>
+          <span className="qa-hints__text"><MathText text={hint} /></span>
+        </div>
+      ))}
+
+      {/* Reveal button */}
+      {canReveal && (
+        <button
+          type="button"
+          className="qa-hints__btn"
+          onClick={() => setRevealed(r => r + 1)}
+        >
+          💡 {revealed === 0 ? 'Obtenir un indice' : 'Indice suivant'}{' '}
+          <span className="qa-hints__counter">({revealed}/{hints.length})</span>
+        </button>
+      )}
     </div>
   );
 }
