@@ -10,6 +10,28 @@ import {
   QUESTION_TYPE_META,
 } from '../utils/examUtils';
 
+/** Renders scaffold blank answers in the results view */
+function ScaffoldResultDisplay({ answer, blanks }) {
+  let values = [];
+  try {
+    const parsed = JSON.parse(answer);
+    if (parsed && parsed.scaffold) values = parsed.scaffold;
+  } catch { /* not scaffold JSON */ }
+
+  if (!values.length) return <span>{answer}</span>;
+
+  return (
+    <div className="scaffold-result">
+      {(blanks || []).map((blank, i) => (
+        <div key={i} className="scaffold-result__item">
+          <span className="scaffold-result__label">{blank.label || `#${i + 1}`} :</span>
+          <span className="scaffold-result__value">{values[i] || '—'}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const ExamResults = () => {
   const { examIndex } = useParams();
   const navigate = useNavigate();
@@ -156,9 +178,11 @@ const ExamResults = () => {
               {r.userAnswer && (
                 <div className="exam-results__item-answer">
                   <strong>Votre réponse :</strong>{' '}
-                  {r.question.type === 'multiple_choice' && r.question.options
-                    ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
-                    : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct} />
+                  {r.status === 'scaffold-complete' || (r.userAnswer.startsWith('{') && r.userAnswer.includes('"scaffold"'))
+                    ? <ScaffoldResultDisplay answer={r.userAnswer} blanks={r.question.scaffold_blanks} />
+                    : r.question.type === 'multiple_choice' && r.question.options
+                      ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
+                      : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct} />
                   }
                 </div>
               )}
@@ -301,10 +325,11 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
 
 function StatusBadge({ status }) {
   const map = {
-    correct:   { label: '✓ Correct', cls: 'exam-results__badge--correct' },
-    incorrect: { label: '✗ Incorrect', cls: 'exam-results__badge--incorrect' },
-    manual:    { label: '👁 Révision', cls: 'exam-results__badge--manual' },
-    unanswered:{ label: '— Vide', cls: 'exam-results__badge--unanswered' },
+    correct:            { label: '✓ Correct', cls: 'exam-results__badge--correct' },
+    incorrect:          { label: '✗ Incorrect', cls: 'exam-results__badge--incorrect' },
+    manual:             { label: '👁 Révision', cls: 'exam-results__badge--manual' },
+    unanswered:         { label: '— Vide', cls: 'exam-results__badge--unanswered' },
+    'scaffold-complete': { label: '📝 Complété', cls: 'exam-results__badge--correct' },
   };
   const m = map[status] || map.unanswered;
   return <span className={`exam-results__badge ${m.cls}`}>{m.label}</span>;

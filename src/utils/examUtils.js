@@ -795,6 +795,31 @@ export function gradeExam(questions, answers) {
 
     // Non-gradable types
     if (!meta.gradable || !q.correct) {
+      // Check if this is a scaffolded answer with all blanks filled
+      if (q.scaffold_text && q.scaffold_blanks) {
+        let scaffoldComplete = false;
+        try {
+          const parsed = JSON.parse(userAnswer);
+          if (parsed && parsed.scaffold && Array.isArray(parsed.scaffold)) {
+            const filled = parsed.scaffold.filter(v => v && v.trim());
+            scaffoldComplete = filled.length === q.scaffold_blanks.length;
+          }
+        } catch { /* not scaffold JSON */ }
+
+        if (scaffoldComplete) {
+          // Award partial credit for completing all scaffold blanks
+          autoGraded++;
+          correctCount++;
+          earnedPoints += pts;
+          return {
+            question: q,
+            userAnswer,
+            status: 'scaffold-complete',
+            result: { awarded: pts, maxPoints: pts },
+          };
+        }
+      }
+
       manualReview++;
       return {
         question: q,

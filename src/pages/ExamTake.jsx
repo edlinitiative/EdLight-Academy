@@ -747,14 +747,26 @@ const ExamTake = () => {
                     <div className="exam-take__question-text">
                       <InstructionRenderer text={gq._displayText || gq.question} />
                     </div>
-                    <div className="exam-take__answer-area">
-                      <QuestionInput
-                        question={gq}
-                        index={qIdx}
-                        value={answers[qIdx] ?? ''}
-                        onChange={setAnswer}
-                      />
-                    </div>
+                    {/* Show scaffold as primary input OR regular QuestionInput */}
+                    {!gq.correct && gq.scaffold_text && gq.scaffold_blanks && !isProofQuestion(gq) ? (
+                      <div className="exam-take__answer-area">
+                        <ScaffoldedAnswer
+                          question={gq}
+                          index={qIdx}
+                          value={answers[qIdx] ?? ''}
+                          onChange={setAnswer}
+                        />
+                      </div>
+                    ) : (
+                      <div className="exam-take__answer-area">
+                        <QuestionInput
+                          question={gq}
+                          index={qIdx}
+                          value={answers[qIdx] ?? ''}
+                          onChange={setAnswer}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -1016,6 +1028,100 @@ function QuestionHints({ hints }) {
           <span className="qa-hints__counter">({revealed}/{hints.length})</span>
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Scaffolded Answer (guided model answer with blanks to fill) ──────────────
+
+function ScaffoldedAnswer({ question, index, value, onChange }) {
+  const template = question.scaffold_text;
+  const blanks = question.scaffold_blanks || [];
+
+  // Parse stored JSON → array of blank values
+  const blankValues = useMemo(() => {
+    if (!value) return blanks.map(() => '');
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && parsed.scaffold && Array.isArray(parsed.scaffold)) {
+        const arr = parsed.scaffold;
+        return blanks.map((_, i) => arr[i] || '');
+      }
+    } catch { /* not JSON yet */ }
+    return blanks.map(() => '');
+  }, [value, blanks]);
+
+  const serialize = useCallback((newValues) => {
+    onChange(index, JSON.stringify({ scaffold: newValues }));
+  }, [index, onChange]);
+
+  const setBlank = useCallback((blankIdx, val) => {
+    const updated = [...blankValues];
+    updated[blankIdx] = val;
+    serialize(updated);
+  }, [blankValues, serialize]);
+
+  const filledCount = blankValues.filter(v => v.trim()).length;
+  const totalBlanks = blanks.length;
+
+  if (!template || totalBlanks === 0) return null;
+
+  // Split template by {{n}} markers and interleave text + input fields
+  const parts = [];
+  const regex = /\{\{(\d+)\}\}/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(template)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', content: template.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: 'blank', blankIdx: parseInt(match[1], 10) });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < template.length) {
+    parts.push({ type: 'text', content: template.slice(lastIndex) });
+  }
+
+  return (
+    <div className="scaffold">
+      <div className="scaffold__header">
+        <span className="scaffold__badge">📝 Réponse guidée</span>
+        <span className="scaffold__progress">
+          {filledCount}/{totalBlanks} complété{filledCount !== 1 ? 's' : ''}
+        </span>
+      </div>
+      <div className="scaffold__body">
+        {parts.map((part, i) => {
+          if (part.type === 'text') {
+            // Render text with math support, splitting by newlines for structure
+            return part.content.split('\n').map((line, li) => (
+              <React.Fragment key={`${i}-${li}`}>
+                {li > 0 && <br />}
+                <MathText text={line} />
+              </React.Fragment>
+            ));
+          }
+          // Blank input
+          const bi = part.blankIdx;
+          const blank = blanks[bi];
+          if (!blank) return null;
+          return (
+            <span key={`b-${bi}`} className="scaffold__blank-wrapper">
+              <input
+                className={`scaffold__blank ${blankValues[bi]?.trim() ? 'scaffold__blank--filled' : ''}`}
+                type="text"
+                value={blankValues[bi] || ''}
+                onChange={(e) => setBlank(bi, e.target.value)}
+                placeholder={blank.label || `Réponse ${bi + 1}`}
+                aria-label={blank.label || `Blank ${bi + 1}`}
+              />
+              {blank.label && (
+                <span className="scaffold__blank-label">{blank.label}</span>
+              )}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
