@@ -747,8 +747,8 @@ const ExamTake = () => {
                     <div className="exam-take__question-text">
                       <InstructionRenderer text={gq._displayText || gq.question} />
                     </div>
-                    {/* Show scaffold as primary input OR regular QuestionInput */}
-                    {!gq.correct && gq.scaffold_text && gq.scaffold_blanks && !isProofQuestion(gq) ? (
+                    {/* Show scaffold as primary input when scaffold data exists, otherwise QuestionInput */}
+                    {!gq.correct && gq.scaffold_text && gq.scaffold_blanks ? (
                       <div className="exam-take__answer-area">
                         <ScaffoldedAnswer
                           question={gq}
