@@ -1,15 +1,15 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
+  buildExamIndex,
   subjectColor,
-  examStats,
   QUESTION_TYPE_META,
 } from '../utils/examUtils';
 
 const PAGE_SIZE = 24;
 
-/** Fetch and cache the exam catalog */
+/** Fetch and cache the exam catalog (flat array of exam objects) */
 function useExamCatalog() {
   return useQuery({
     queryKey: ['exam-catalog'],
@@ -17,12 +17,26 @@ function useExamCatalog() {
       const res = await fetch('/exam_catalog.json');
       if (!res.ok) throw new Error('Failed to load exam catalog');
       const data = await res.json();
-      // Data is structured by level, flatten it for original filtering logic
-      return Object.values(data).flat();
+      // The catalog is a flat array; return as-is
+      return Array.isArray(data) ? data : Object.values(data).flat();
     },
     staleTime: Infinity, // static asset, never re-fetch
   });
 }
+
+/** Map URL path segments to the raw level values used in exam_catalog.json */
+const URL_LEVEL_TO_RAW = {
+  '9e': '9eme_af',
+  'terminale': 'baccalaureat',
+  'university': 'universite',
+};
+
+/** Display labels for level URL params */
+const LEVEL_LABELS = {
+  '9e': '9ème AF',
+  'terminale': 'Baccalauréat',
+  'university': 'Université',
+};
 
 const ExamBrowser = () => {
   const navigate = useNavigate();
@@ -30,37 +44,38 @@ const ExamBrowser = () => {
 
   const { data: allExams, isLoading, error } = useExamCatalog();
 
-  // Filter exams by level from URL
-  const rawExams = useMemo(() => {
-    if (!allExams) return [];
-    if (!level) return allExams; // Should not happen with new routes
-    
-    // Map URL level to catalog key
-    const levelKey = {
-      '9e': '9e Année',
-      'terminale': 'Terminale',
-      'university': 'Université'
-    }[level];
-
-    return allExams.filter(exam => {
-        if (levelKey === '9e Année') return exam.title.includes('9e') || exam.title.includes('9AF');
-        if (levelKey === 'Terminale') return exam.title.includes('Terminale') || exam.title.includes('Philo') || exam.title.includes('NS') || exam.title.includes('SVT');
-        if (levelKey === 'Université') return ! (exam.title.includes('9e') || exam.title.includes('9AF') || exam.title.includes('Terminale') || exam.title.includes('Philo') || exam.title.includes('NS') || exam.title.includes('SVT'));
-        return false;
-    });
-  }, [allExams, level]);
-
-  // Build index once
+  // Build enriched index from full catalog, then filter by level
   const index = useMemo(() => {
-    if (!rawExams) return null;
-    // buildExamIndex expects a flat array
-    return { exams: rawExams };
-  }, [rawExams]);
+    if (!allExams) return null;
+    const full = buildExamIndex(allExams);
+    if (!level) return full;
+
+    const rawLevel = URL_LEVEL_TO_RAW[level];
+    if (!rawLevel) return full;
+
+    const filtered = full.exams.filter(
+      (e) => (e.level || '').toLowerCase() === rawLevel
+    );
+
+    // Rebuild unique subjects / years from the filtered set
+    const subjectSet = new Set();
+    const yearSet = new Set();
+    for (const e of filtered) {
+      if (e._subject) subjectSet.add(e._subject);
+      if (e._year) yearSet.add(e._year);
+    }
+
+    return {
+      exams: filtered,
+      levels: full.levels,
+      subjects: [...subjectSet].sort(),
+      years: [...yearSet].sort((a, b) => b - a),
+    };
+  }, [allExams, level]);
 
   // Filter state
   const [subjectFilter, setSubjectFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
-  const [levelFilter, setLevelFilter] = useState(level || '');
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -70,29 +85,28 @@ const ExamBrowser = () => {
     setSubjectFilter('');
     setYearFilter('');
     setSearch('');
-    setLevelFilter(level || '');
     setVisibleCount(PAGE_SIZE);
-  }, [level]);
+  }, []);
 
   // Filtered list
   const filtered = useMemo(() => {
     if (!index) return [];
     let list = index.exams;
 
-    if (subjectFilter) list = list.filter((e) => e.subject === subjectFilter);
-    if (yearFilter) list = list.filter((e) => e.year === yearFilter);
+    if (subjectFilter) list = list.filter((e) => e._subject === subjectFilter);
+    if (yearFilter) list = list.filter((e) => e._year === Number(yearFilter));
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
         (e) =>
-          (e.title || '').toLowerCase().includes(q) ||
-          (e.subject || '').toLowerCase().includes(q) ||
-          (e.year || '').toLowerCase().includes(q)
+          (e._title || '').toLowerCase().includes(q) ||
+          (e._subject || '').toLowerCase().includes(q) ||
+          String(e._year || '').includes(q)
       );
     }
 
     // Sort: newest first
-    return [...list].sort((a, b) => (b.year || 0) - (a.year || 0));
+    return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
   }, [index, subjectFilter, yearFilter, search]);
 
   // Reset visible count when filters change
@@ -109,25 +123,14 @@ const ExamBrowser = () => {
 
   // Summary counts for filtered set
   const summary = useMemo(() => {
-    const totalQ = filtered.reduce((s, e) => s + (e.questions?.length || 0), 0);
-    const gradable = filtered.reduce((s, e) => s + (e.questions?.filter(q => q.auto_gradable).length || 0), 0);
+    const totalQ = filtered.reduce((s, e) => s + (e._questionCount || 0), 0);
+    const gradable = filtered.reduce((s, e) => s + (e._autoGradable || 0), 0);
     return { exams: filtered.length, totalQ, gradable };
   }, [filtered]);
 
-  // Unique subjects and years for filters
-  const { subjects, years } = useMemo(() => {
-    if (!rawExams) return { subjects: [], years: [] };
-    const subjectSet = new Set();
-    const yearSet = new Set();
-    rawExams.forEach(exam => {
-      if (exam.subject) subjectSet.add(exam.subject);
-      if (exam.year) yearSet.add(exam.year);
-    });
-    return {
-      subjects: Array.from(subjectSet).sort(),
-      years: Array.from(yearSet).sort((a, b) => b - a)
-    };
-  }, [rawExams]);
+  // Unique subjects and years for filter dropdowns (from level-filtered index)
+  const subjects = index?.subjects || [];
+  const years = index?.years || [];
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -168,9 +171,9 @@ const ExamBrowser = () => {
         {/* Header */}
         <div className="page-header exam-browser__header">
           <span className="page-header__eyebrow">Examens</span>
-          <h1 className="page-header__title">Examens Nationaux</h1>
+          <h1 className="page-header__title">{LEVEL_LABELS[level] || 'Examens Nationaux'}</h1>
           <p className="page-header__subtitle">
-            Banque d'examens officiels du MENFP — Baccalauréat, 9ème AF, Concours universitaires
+            Banque d'examens officiels du MENFP{level ? ` — ${LEVEL_LABELS[level]}` : ''}
           </p>
         </div>
 
@@ -266,7 +269,7 @@ const ExamBrowser = () => {
                 <ExamCard
                   key={exam._idx}
                   exam={exam}
-                  onClick={() => navigate(`/exams/${exam._idx}`)}
+                  onClick={() => navigate(`/exams/${level}/${exam._idx}`)}
                 />
               ))}
             </div>

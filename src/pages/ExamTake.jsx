@@ -183,13 +183,13 @@ function useExamCatalog() {
 }
 
 const ExamTake = () => {
-  const { examIndex } = useParams();
+  const { level, examId } = useParams();
   const navigate = useNavigate();
   const katexReady = useKatex();
 
   const { data: rawExams, isLoading, error } = useExamCatalog();
 
-  const idx = parseInt(examIndex, 10);
+  const idx = parseInt(examId, 10);
   const exam = rawExams?.[idx];
   const questions = useMemo(() => (exam ? flattenQuestions(exam) : []), [exam]);
 
@@ -372,8 +372,8 @@ const ExamTake = () => {
       })
     );
 
-    navigate(`/exams/${idx}/results`);
-  }, [questions, answers, idx, exam, navigate]);
+    navigate(`/exams/${level}/${idx}/results`);
+  }, [questions, answers, idx, exam, level, navigate]);
 
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
@@ -394,7 +394,7 @@ const ExamTake = () => {
         <div className="container">
           <div className="card card--message">
             <p>Examen introuvable.</p>
-            <button className="button button--primary" onClick={() => navigate('/exams')}>
+            <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)}>
               ← Retour aux examens
             </button>
           </div>
@@ -437,7 +437,7 @@ const ExamTake = () => {
         <div className="exam-cover__inner">
           {/* Navigation */}
           <nav className="exam-cover__nav">
-            <button className="exam-cover__back" onClick={() => navigate('/exams')}>
+            <button className="exam-cover__back" onClick={() => navigate(`/exams/${level || ''}`)}>
               <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
               Retour
             </button>
@@ -567,7 +567,7 @@ const ExamTake = () => {
         {/* Top bar */}
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
-            <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
+            <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)}>
               ← Examens
             </button>
             <div className="exam-take__exam-info">

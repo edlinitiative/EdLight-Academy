@@ -55,18 +55,18 @@ function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
 }
 
 const ExamResults = () => {
-  const { examIndex } = useParams();
+  const { level, examId } = useParams();
   const navigate = useNavigate();
 
   // Read result from sessionStorage
   const stored = useMemo(() => {
     try {
-      const raw = sessionStorage.getItem(`exam-result-${examIndex}`);
+      const raw = sessionStorage.getItem(`exam-result-${examId}`);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
-  }, [examIndex]);
+  }, [examId]);
 
   if (!stored) {
     return (
@@ -74,7 +74,7 @@ const ExamResults = () => {
         <div className="container">
           <div className="card card--message">
             <p>Aucun résultat trouvé pour cet examen.</p>
-            <button className="button button--primary" onClick={() => navigate('/exams')}>
+            <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)}>
               ← Retour aux examens
             </button>
           </div>
@@ -83,7 +83,7 @@ const ExamResults = () => {
     );
   }
 
-  const { result, examTitle, subject, level } = stored;
+  const { result, examTitle, subject, level: storedLevel } = stored;
   const { summary, results } = result;
   const color = subjectColor(subject);
 
@@ -103,12 +103,12 @@ const ExamResults = () => {
       <div className="container">
         {/* Header */}
         <div className="page-header exam-results__header">
-          <button className="button button--ghost button--sm" onClick={() => navigate('/exams')}>
+          <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)}>
             ← Retour aux examens
           </button>
           <h1 className="page-header__title">Résultats</h1>
           <p className="page-header__subtitle" style={{ color }}>
-            {subject} — {examTitle || 'Examen'} {level && `(${level})`}
+            {subject} — {examTitle || 'Examen'} {storedLevel && `(${storedLevel})`}
           </p>
         </div>
 
@@ -269,11 +269,11 @@ const ExamResults = () => {
       <div className="exam-results__actions">
         <button
           className="button button--primary"
-          onClick={() => navigate(`/exams/${examIndex}`)}
+          onClick={() => navigate(`/exams/${level}/${examId}`)}
         >
           🔄 Recommencer cet examen
         </button>
-        <button className="button button--ghost" onClick={() => navigate('/exams')}>
+        <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)}>
           📝 Choisir un autre examen
         </button>
       </div>
