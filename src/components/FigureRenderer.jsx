@@ -468,14 +468,21 @@ function GeometryFigure({ description }) {
   const isPendulum = /pendule/.test(d);
   const isCoordinate = /repère|orthonorm|cartésien/.test(d);
 
-  // Mirror / optics — check BEFORE triangle so "miroir + triangle" gets DescCard
-  const isMirror = /miroir|réflexion|rayon\s*lumineux|réfraction|lentille|optique/i.test(d);
+  // Mirror / optics — check BEFORE triangle so "miroir + triangle" gets OpticsSVG
+  const isMirror = /miroir|mirror|réflexion|rayon\s*lumineux|réfraction|lentille|optique/i.test(d);
+
+  // Inclined plane (physics)
+  const isInclinedPlane = /plan\s+incliné|inclined\s+plane/i.test(d);
 
   // Concentric circles: distinguish target/bullseye from math geometry
   const isConcentric = /concentric|concentri/.test(d);
   const isTarget = /cible|target|zones?\s*[:.]|points?\s+for|point.*zone/i.test(d)
     || (/concentric/.test(d) && /zone|point/i.test(d));
   const isTangentGeometry = isConcentric && /tangent|perpendiculaire|rayon.*[rR]|droit|AB|OA|OB/i.test(d);
+
+  // Circle geometry (not concentric, not mirror) — circle with chord, tangent, inscribed angle, etc.
+  const isCircle = /cercle|circle/i.test(d) && /centre|center|corde|chord|tangent|inscrit|rayon/i.test(d)
+    && !isConcentric && !isMirror && !isTarget;
 
   // Non-triangle geometry that happens to contain the word "triangle"
   const isCube = /cube|parallélépipède/i.test(d);
@@ -491,7 +498,9 @@ function GeometryFigure({ description }) {
   if (isCoordinate) return <CoordinateSVG description={description} />;
   if (isTangentGeometry) return <ConcentricTangentSVG description={description} />;
   if (isTarget) return <TargetSVG description={description} />;
-  if (isMirror) return <DescriptionCard description={description} icon="🔍" label="Optique" />;
+  if (isMirror) return <OpticsSVG description={description} />;
+  if (isInclinedPlane) return <InclinedPlaneSVG description={description} />;
+  if (isCircle) return <CircleSVG description={description} />;
   if (isRightTriangle) return <RightTriangleSVG description={description} />;
   if (isTriangle) return <TriangleSVG description={description} />;
 
@@ -797,6 +806,602 @@ function TriangleSVG({ description }) {
         <circle cx={Ax} cy={Ay} r="3" fill="#333" />
         <circle cx={Bx} cy={By} r="3" fill="#333" />
         <circle cx={Cx} cy={Cy} r="3" fill="#333" />
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Optics Renderer ────────────────────────────────────────────────────────
+
+function OpticsSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  const isTwoMirrors = /deux miroirs|two mirrors|miroirs.*inclinés|miroir.*vertical.*miroir.*incliné/i.test(d);
+  const isRefraction = /réfract|lame\s+de\s+verre|glass\s+slab|réservoir|snell|indice.*milieu/i.test(d);
+  const isLens = /lentille|lens|convergent|divergent/i.test(d);
+
+  if (isTwoMirrors) return <TwoMirrorsSVG description={description} />;
+  if (isRefraction) return <RefractionSVG description={description} />;
+  if (isLens) return <LensSVG description={description} />;
+  return <PlaneMirrorSVG description={description} />;
+}
+
+function PlaneMirrorSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Extract angle if mentioned
+  const angleMatch = d.match(/(\d+)\s*[°o]\s*/);
+  const angle = angleMatch ? angleMatch[1] + '°' : null;
+
+  // Mirror line: vertical at center
+  const mx = 150, my1 = 40, my2 = 200;
+  // Incident ray: from upper-left to mirror mid-point
+  const hitY = 120;
+  const ix = 50, iy = 60;
+  // Reflected ray: symmetric about normal
+  const rx = 250, ry = 60;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 240" className="figure-render__geo-svg">
+        {/* Mirror surface */}
+        <line x1={mx} y1={my1} x2={mx} y2={my2}
+          stroke="#333" strokeWidth="2.5" />
+        {/* Hatching behind mirror */}
+        {[0,1,2,3,4,5,6,7].map(i => {
+          const y = my1 + i * 20;
+          return <line key={i} x1={mx} y1={y} x2={mx + 10} y2={y + 14}
+            stroke="#999" strokeWidth="1" />;
+        })}
+
+        {/* Normal line (dashed) */}
+        <line x1={mx - 60} y1={hitY} x2={mx + 60} y2={hitY}
+          stroke="#666" strokeWidth="0.8" strokeDasharray="5,3" />
+        <text x={mx + 46} y={hitY - 6} fontSize="10" fill="#666"
+          fontStyle="italic">N</text>
+
+        {/* Incident ray */}
+        <line x1={ix} y1={iy} x2={mx} y2={hitY}
+          stroke="#e63946" strokeWidth="1.5" />
+        <polygon points={`${mx - 2},${hitY} ${mx - 14},${hitY - 6} ${mx - 12},${hitY - 1}`}
+          fill="#e63946" />
+
+        {/* Reflected ray */}
+        <line x1={mx} y1={hitY} x2={rx} y2={ry}
+          stroke="#457b9d" strokeWidth="1.5" />
+        <polygon points={`${rx},${ry} ${rx - 14},${ry + 2} ${rx - 11},${ry - 5}`}
+          fill="#457b9d" />
+
+        {/* Angle of incidence arc */}
+        <path d={`M${mx - 30},${hitY} A30,30 0 0,0 ${mx - 18},${hitY - 24}`}
+          fill="none" stroke="#e63946" strokeWidth="1.2" />
+        <text x={mx - 46} y={hitY - 14} fontSize="11" fill="#e63946"
+          fontWeight="600">θᵢ</text>
+
+        {/* Angle of reflection arc */}
+        <path d={`M${mx + 30},${hitY} A30,30 0 0,1 ${mx + 18},${hitY - 24}`}
+          fill="none" stroke="#457b9d" strokeWidth="1.2" />
+        <text x={mx + 30} y={hitY - 14} fontSize="11" fill="#457b9d"
+          fontWeight="600">θᵣ</text>
+
+        {/* Angle value if known */}
+        {angle && (
+          <text x={mx - 54} y={hitY + 18} fontSize="10" fill="#333">{angle}</text>
+        )}
+
+        {/* Labels */}
+        <text x={ix - 4} y={iy - 6} fontSize="10" fill="#e63946">rayon incident</text>
+        <text x={rx - 30} y={ry - 6} fontSize="10" fill="#457b9d">rayon réfléchi</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+function TwoMirrorsSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Try to extract the angle between mirrors
+  const angleBetweenMatch = d.match(/(\d+)\s*[°o\\^]/);
+  const angleBetween = angleBetweenMatch ? angleBetweenMatch[1] + '°' : 'α';
+
+  // Extract mirror labels
+  const m1Match = d.match(/miroirs?\s*(?:inclinés?\s*,?\s*)?([A-Z]{1,2}'?)\s+et\s+([A-Z]{1,2}'?)/i)
+    || d.match(/mirrors?\s+\$?([A-Z]_?\{?[12]?\}?)\$?\s+and\s+\$?([A-Z]_?\{?[12]?\}?)\$?/i);
+  const m1Label = m1Match ? m1Match[1].replace(/\$/g, '') : 'M₁';
+  const m2Label = m1Match ? m1Match[2].replace(/\$/g, '') : 'M₂';
+
+  // Two mirrors meeting at an angle
+  // M1: lower-left going up-right. M2: lower-right going up-left. They meet at bottom-center.
+  const apex = { x: 150, y: 190 };
+  const m1End = { x: 50, y: 80 };
+  const m2End = { x: 250, y: 80 };
+
+  // Ray path: enter from left, hit M1, bounce to M2, exit right
+  const hit1 = { x: 95, y: 130 };
+  const hit2 = { x: 205, y: 130 };
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 230" className="figure-render__geo-svg">
+        {/* Mirror M1 */}
+        <line x1={m1End.x} y1={m1End.y} x2={apex.x} y2={apex.y}
+          stroke="#333" strokeWidth="2.5" />
+        {/* M1 hatching */}
+        {[0,1,2,3,4].map(i => {
+          const t = 0.15 + i * 0.18;
+          const x = m1End.x + t * (apex.x - m1End.x);
+          const y = m1End.y + t * (apex.y - m1End.y);
+          return <line key={'m1'+i} x1={x - 4} y1={y - 10} x2={x + 6} y2={y}
+            stroke="#999" strokeWidth="0.8" />;
+        })}
+
+        {/* Mirror M2 */}
+        <line x1={apex.x} y1={apex.y} x2={m2End.x} y2={m2End.y}
+          stroke="#333" strokeWidth="2.5" />
+        {/* M2 hatching */}
+        {[0,1,2,3,4].map(i => {
+          const t = 0.15 + i * 0.18;
+          const x = apex.x + t * (m2End.x - apex.x);
+          const y = apex.y + t * (m2End.y - apex.y);
+          return <line key={'m2'+i} x1={x - 6} y1={y} x2={x + 4} y2={y - 10}
+            stroke="#999" strokeWidth="0.8" />;
+        })}
+
+        {/* Angle between mirrors at apex */}
+        <path d={`M${apex.x - 22},${apex.y - 18} A28,28 0 0,1 ${apex.x + 22},${apex.y - 18}`}
+          fill="none" stroke="#f59e0b" strokeWidth="1.2" />
+        <text x={apex.x - 6} y={apex.y - 24} fontSize="11" fill="#f59e0b"
+          fontWeight="600" textAnchor="middle">{angleBetween}</text>
+
+        {/* Incident ray → hit1 on M1 */}
+        <line x1={30} y1={90} x2={hit1.x} y2={hit1.y}
+          stroke="#e63946" strokeWidth="1.5" />
+        <polygon points={`${hit1.x},${hit1.y} ${hit1.x - 12},${hit1.y - 8} ${hit1.x - 8},${hit1.y - 1}`}
+          fill="#e63946" />
+
+        {/* Reflected from M1 to hit2 on M2 */}
+        <line x1={hit1.x} y1={hit1.y} x2={hit2.x} y2={hit2.y}
+          stroke="#2a9d8f" strokeWidth="1.5" />
+        <polygon points={`${hit2.x},${hit2.y} ${hit2.x - 8},${hit2.y - 1} ${hit2.x - 12},${hit2.y + 8}`}
+          fill="#2a9d8f" />
+
+        {/* Reflected from M2 → exit */}
+        <line x1={hit2.x} y1={hit2.y} x2={270} y2={90}
+          stroke="#457b9d" strokeWidth="1.5" />
+        <polygon points={`${270},${90} ${258},${92} ${260},${84}`}
+          fill="#457b9d" />
+
+        {/* Incidence points */}
+        <circle cx={hit1.x} cy={hit1.y} r="2.5" fill="#333" />
+        <circle cx={hit2.x} cy={hit2.y} r="2.5" fill="#333" />
+
+        {/* Mirror labels */}
+        <text x={m1End.x - 8} y={m1End.y - 6} fontSize="12" fontWeight="600" fill="#333">{m1Label}</text>
+        <text x={m2End.x - 2} y={m2End.y - 6} fontSize="12" fontWeight="600" fill="#333">{m2Label}</text>
+
+        {/* Ray labels */}
+        <text x={22} y={82} fontSize="9" fill="#e63946">incident</text>
+        <text x={246} y={82} fontSize="9" fill="#457b9d">émergent</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+function RefractionSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  const isGlassSlab = /lame\s+de\s+verre|glass\s+slab|lame\s+à\s+faces\s+parallèles/i.test(d);
+  const isWater = /eau|water|réservoir|bassin|piscine/i.test(d);
+
+  // Labels for media
+  const topMedium = isWater ? 'Air' : 'Milieu 1';
+  const bottomMedium = isWater ? 'Eau' : isGlassSlab ? 'Verre' : 'Milieu 2';
+
+  if (isGlassSlab) {
+    // Glass slab: two parallel surfaces
+    const surfY1 = 80, surfY2 = 160;
+    const entryX = 120, exitX = 150;
+
+    return (
+      <div className="figure-render figure-render--geometry">
+        <svg viewBox="0 0 300 240" className="figure-render__geo-svg">
+          {/* Glass slab */}
+          <rect x={30} y={surfY1} width={240} height={surfY2 - surfY1}
+            fill="rgba(69,123,157,0.12)" stroke="#333" strokeWidth="1.5" />
+
+          {/* Normal lines (dashed) */}
+          <line x1={entryX} y1={surfY1 - 30} x2={entryX} y2={surfY1 + 40}
+            stroke="#666" strokeWidth="0.8" strokeDasharray="4,3" />
+          <line x1={exitX} y1={surfY2 - 40} x2={exitX} y2={surfY2 + 30}
+            stroke="#666" strokeWidth="0.8" strokeDasharray="4,3" />
+
+          {/* Incident ray */}
+          <line x1={60} y1={30} x2={entryX} y2={surfY1}
+            stroke="#e63946" strokeWidth="1.5" />
+          <polygon points={`${entryX},${surfY1} ${entryX - 12},${surfY1 - 8} ${entryX - 8},${surfY1 - 2}`}
+            fill="#e63946" />
+
+          {/* Ray inside glass */}
+          <line x1={entryX} y1={surfY1} x2={exitX} y2={surfY2}
+            stroke="#2a9d8f" strokeWidth="1.5" />
+
+          {/* Emergent ray (parallel-shifted from incident) */}
+          <line x1={exitX} y1={surfY2} x2={210} y2={surfY2 + 50}
+            stroke="#457b9d" strokeWidth="1.5" />
+          <polygon points={`${210},${surfY2 + 50} ${200},${surfY2 + 38} ${205},${surfY2 + 42}`}
+            fill="#457b9d" />
+
+          {/* Angle labels */}
+          <text x={entryX - 40} y={surfY1 - 16} fontSize="10" fill="#e63946" fontWeight="600">θ₁</text>
+          <text x={entryX + 8} y={surfY1 + 28} fontSize="10" fill="#2a9d8f" fontWeight="600">θ₂</text>
+          <text x={exitX + 8} y={surfY2 + 26} fontSize="10" fill="#457b9d" fontWeight="600">θ₃</text>
+
+          {/* Media labels */}
+          <text x={240} y={surfY1 - 8} fontSize="10" fill="#333">Air</text>
+          <text x={240} y={surfY1 + 20} fontSize="10" fill="#457b9d" fontWeight="600">{bottomMedium}</text>
+          <text x={240} y={surfY2 + 18} fontSize="10" fill="#333">Air</text>
+
+          {/* Lateral displacement indicator */}
+          <line x1={entryX} y1={surfY2 + 10} x2={exitX} y2={surfY2 + 10}
+            stroke="#f59e0b" strokeWidth="1" />
+          <text x={(entryX + exitX) / 2 - 3} y={surfY2 + 24} fontSize="9"
+            fill="#f59e0b" textAnchor="middle">d</text>
+        </svg>
+        <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+      </div>
+    );
+  }
+
+  // Single surface refraction (water, glass, etc.)
+  const surfY = 120;
+  const hitX = 150;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 240" className="figure-render__geo-svg">
+        {/* Lower medium fill */}
+        <rect x={20} y={surfY} width={260} height={100}
+          fill="rgba(69,123,157,0.08)" stroke="none" />
+
+        {/* Surface line */}
+        <line x1={20} y1={surfY} x2={280} y2={surfY}
+          stroke="#333" strokeWidth="1.5" />
+
+        {/* Normal line (dashed) */}
+        <line x1={hitX} y1={surfY - 60} x2={hitX} y2={surfY + 70}
+          stroke="#666" strokeWidth="0.8" strokeDasharray="5,3" />
+        <text x={hitX + 4} y={surfY - 52} fontSize="10" fill="#666" fontStyle="italic">N</text>
+
+        {/* Incident ray */}
+        <line x1={70} y1={40} x2={hitX} y2={surfY}
+          stroke="#e63946" strokeWidth="1.5" />
+        <polygon points={`${hitX},${surfY} ${hitX - 14},${surfY - 8} ${hitX - 10},${surfY - 2}`}
+          fill="#e63946" />
+
+        {/* Refracted ray (bends toward normal in denser medium) */}
+        <line x1={hitX} y1={surfY} x2={210} y2={surfY + 70}
+          stroke="#457b9d" strokeWidth="1.5" />
+        <polygon points={`${210},${surfY + 70} ${200},${surfY + 60} ${205},${surfY + 62}`}
+          fill="#457b9d" />
+
+        {/* Angle of incidence arc */}
+        <path d={`M${hitX},${surfY - 30} A30,30 0 0,0 ${hitX - 22},${surfY - 20}`}
+          fill="none" stroke="#e63946" strokeWidth="1.2" />
+        <text x={hitX - 36} y={surfY - 24} fontSize="11" fill="#e63946" fontWeight="600">θ₁</text>
+
+        {/* Angle of refraction arc */}
+        <path d={`M${hitX},${surfY + 30} A30,30 0 0,1 ${hitX + 18},${surfY + 24}`}
+          fill="none" stroke="#457b9d" strokeWidth="1.2" />
+        <text x={hitX + 22} y={surfY + 30} fontSize="11" fill="#457b9d" fontWeight="600">θ₂</text>
+
+        {/* Hit point */}
+        <circle cx={hitX} cy={surfY} r="2.5" fill="#333" />
+
+        {/* Media labels */}
+        <text x={230} y={surfY - 14} fontSize="11" fill="#333" fontWeight="600">{topMedium}</text>
+        <text x={230} y={surfY + 18} fontSize="11" fill="#457b9d" fontWeight="600">{bottomMedium}</text>
+
+        {/* Ray labels */}
+        <text x={52} y={36} fontSize="9" fill="#e63946">incident</text>
+        <text x={198} y={surfY + 84} fontSize="9" fill="#457b9d">réfracté</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+function LensSVG({ description }) {
+  const d = (description || '').toLowerCase();
+  const isDiverging = /divergent|concave/i.test(d);
+
+  const cx = 150, cy = 110;
+  const lensH = 80; // half-height
+  const focalDist = 70;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 220" className="figure-render__geo-svg">
+        {/* Principal axis */}
+        <line x1={20} y1={cy} x2={280} y2={cy}
+          stroke="#333" strokeWidth="1" />
+
+        {/* Lens */}
+        {isDiverging ? (
+          <g>
+            {/* Diverging lens: concave on both sides */}
+            <path d={`M${cx},${cy - lensH} Q${cx + 12},${cy} ${cx},${cy + lensH}`}
+              fill="none" stroke="#457b9d" strokeWidth="2.5" />
+            <path d={`M${cx},${cy - lensH} Q${cx - 12},${cy} ${cx},${cy + lensH}`}
+              fill="none" stroke="#457b9d" strokeWidth="2.5" />
+            {/* Arrows pointing inward at tips */}
+            <polygon points={`${cx - 6},${cy - lensH + 4} ${cx},${cy - lensH} ${cx + 6},${cy - lensH + 4}`}
+              fill="#457b9d" />
+            <polygon points={`${cx - 6},${cy + lensH - 4} ${cx},${cy + lensH} ${cx + 6},${cy + lensH - 4}`}
+              fill="#457b9d" />
+          </g>
+        ) : (
+          <g>
+            {/* Converging lens: convex on both sides */}
+            <path d={`M${cx},${cy - lensH} Q${cx + 16},${cy} ${cx},${cy + lensH}`}
+              fill="rgba(69,123,157,0.08)" stroke="#457b9d" strokeWidth="2.5" />
+            <path d={`M${cx},${cy - lensH} Q${cx - 16},${cy} ${cx},${cy + lensH}`}
+              fill="rgba(69,123,157,0.08)" stroke="#457b9d" strokeWidth="2.5" />
+            {/* Arrows pointing outward at tips */}
+            <polygon points={`${cx - 6},${cy - lensH - 4} ${cx},${cy - lensH} ${cx + 6},${cy - lensH - 4}`}
+              fill="#457b9d" />
+            <polygon points={`${cx - 6},${cy + lensH + 4} ${cx},${cy + lensH} ${cx + 6},${cy + lensH + 4}`}
+              fill="#457b9d" />
+          </g>
+        )}
+
+        {/* Focal points */}
+        <text x={cx - focalDist - 2} y={cy + 16} fontSize="11" fill="#e63946"
+          textAnchor="middle" fontWeight="600">F</text>
+        <circle cx={cx - focalDist} cy={cy} r="2.5" fill="#e63946" />
+        <text x={cx + focalDist - 2} y={cy + 16} fontSize="11" fill="#e63946"
+          textAnchor="middle" fontWeight="600">F'</text>
+        <circle cx={cx + focalDist} cy={cy} r="2.5" fill="#e63946" />
+
+        {/* Optical center */}
+        <text x={cx} y={cy + 16} fontSize="11" fill="#333"
+          textAnchor="middle" fontWeight="600">O</text>
+        <circle cx={cx} cy={cy} r="2.5" fill="#333" />
+
+        {/* Example rays for converging lens */}
+        {!isDiverging && (
+          <g>
+            {/* Parallel ray → through F' */}
+            <line x1={30} y1={cy - 35} x2={cx} y2={cy - 35}
+              stroke="#2a9d8f" strokeWidth="1.2" />
+            <line x1={cx} y1={cy - 35} x2={cx + focalDist + 40} y2={cy + 20}
+              stroke="#2a9d8f" strokeWidth="1.2" />
+            {/* Through center ray (undeviated) */}
+            <line x1={50} y1={cy - 50} x2={250} y2={cy + 40}
+              stroke="#f59e0b" strokeWidth="1" strokeDasharray="5,3" />
+          </g>
+        )}
+        {isDiverging && (
+          <g>
+            {/* Parallel ray → diverges as if from F */}
+            <line x1={30} y1={cy - 35} x2={cx} y2={cy - 35}
+              stroke="#2a9d8f" strokeWidth="1.2" />
+            <line x1={cx} y1={cy - 35} x2={cx + focalDist + 40} y2={cy - 55}
+              stroke="#2a9d8f" strokeWidth="1.2" />
+            {/* Virtual extension back to F */}
+            <line x1={cx} y1={cy - 35} x2={cx - focalDist} y2={cy}
+              stroke="#2a9d8f" strokeWidth="0.8" strokeDasharray="4,3" />
+          </g>
+        )}
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Inclined Plane (physics) ───────────────────────────────────────────────
+
+function InclinedPlaneSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Extract angle value
+  const angleMatch = d.match(/(\d+)\s*[°o^\\]|angle\s+(?:de\s+)?\$?\\?alpha\$?/);
+  const angleLabel = angleMatch && /\d/.test(angleMatch[0])
+    ? angleMatch[1] + '°'
+    : 'α';
+
+  // Has forces?
+  const hasForces = /force|poids|weight|friction|frottement|normal|tension|câble/i.test(d);
+  const hasFriction = /frottement|friction/i.test(d);
+
+  // Ramp shape
+  const Ax = 40, Ay = 200;   // bottom-left (ground level)
+  const Bx = 260, By = 200;  // bottom-right
+  const Cx = 260, Cy = 80;   // top of ramp
+
+  // Object on the slope (small rectangle)
+  const objT = 0.55; // position along slope
+  const objCx = Ax + objT * (Cx - Ax);
+  const objCy = Ay + objT * (Cy - Ay);
+
+  // Slope direction unit vector
+  const slopeLen = Math.sqrt((Cx - Ax) ** 2 + (Cy - Ay) ** 2);
+  const sx = (Cx - Ax) / slopeLen;
+  const sy = (Cy - Ay) / slopeLen;
+  // Normal to slope (pointing away from surface)
+  const nx = -sy, ny = sx;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 240" className="figure-render__geo-svg">
+        {/* Ground */}
+        <line x1={20} y1={By} x2={280} y2={By}
+          stroke="#999" strokeWidth="1" strokeDasharray="4,3" />
+
+        {/* Ramp surface */}
+        <polygon points={`${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}`}
+          fill="rgba(69,123,157,0.06)" stroke="#333" strokeWidth="1.5"
+          strokeLinejoin="round" />
+
+        {/* Hatching on ramp */}
+        {[0,1,2,3,4,5].map(i => {
+          const x = Bx - 10 - i * 38;
+          return <line key={i} x1={x} y1={By} x2={x + 8} y2={By + 8}
+            stroke="#999" strokeWidth="0.8" />;
+        })}
+
+        {/* Angle arc at base */}
+        <path d={`M${Bx - 40},${By} A40,40 0 0,1 ${Bx - 30},${By - 30}`}
+          fill="none" stroke="#e63946" strokeWidth="1.3" />
+        <text x={Bx - 52} y={By - 14} fontSize="12" fill="#e63946"
+          fontWeight="600">{angleLabel}</text>
+
+        {/* Object on slope (small box) */}
+        <rect
+          x={objCx - 14} y={objCy - 14} width={28} height={20}
+          fill="rgba(230,57,70,0.15)" stroke="#e63946" strokeWidth="1.5"
+          transform={`rotate(${Math.atan2(Cy - Ay, Cx - Ax) * 180 / Math.PI}, ${objCx}, ${objCy})`}
+          rx="2"
+        />
+        <text x={objCx - 6} y={objCy + 3} fontSize="10" fill="#e63946"
+          fontWeight="600"
+          transform={`rotate(${Math.atan2(Cy - Ay, Cx - Ax) * 180 / Math.PI}, ${objCx}, ${objCy})`}>m</text>
+
+        {/* Force vectors (if described) */}
+        {hasForces && (
+          <g>
+            {/* Weight (downward) */}
+            <line x1={objCx} y1={objCy} x2={objCx} y2={objCy + 45}
+              stroke="#333" strokeWidth="1.5" />
+            <polygon points={`${objCx},${objCy + 45} ${objCx - 4},${objCy + 38} ${objCx + 4},${objCy + 38}`}
+              fill="#333" />
+            <text x={objCx + 6} y={objCy + 44} fontSize="10" fill="#333" fontWeight="600">P⃗</text>
+
+            {/* Normal force (perpendicular to slope, outward) */}
+            <line x1={objCx} y1={objCy}
+              x2={objCx + nx * 40} y2={objCy + ny * 40}
+              stroke="#457b9d" strokeWidth="1.5" />
+            <polygon points={`${objCx + nx * 40},${objCy + ny * 40} ${objCx + nx * 33 - ny * 4},${objCy + ny * 33 + nx * 4} ${objCx + nx * 33 + ny * 4},${objCy + ny * 33 - nx * 4}`}
+              fill="#457b9d" />
+            <text x={objCx + nx * 44} y={objCy + ny * 44 - 4} fontSize="10"
+              fill="#457b9d" fontWeight="600">N⃗</text>
+
+            {/* Friction (along slope, downhill) — only if mentioned */}
+            {hasFriction && (
+              <g>
+                <line x1={objCx} y1={objCy}
+                  x2={objCx - sx * 35} y2={objCy - sy * 35}
+                  stroke="#f59e0b" strokeWidth="1.5" />
+                <polygon points={`${objCx - sx * 35},${objCy - sy * 35} ${objCx - sx * 28 + sy * 4},${objCy - sy * 28 - sx * 4} ${objCx - sx * 28 - sy * 4},${objCy - sy * 28 + sx * 4}`}
+                  fill="#f59e0b" />
+                <text x={objCx - sx * 40 - 4} y={objCy - sy * 40} fontSize="10"
+                  fill="#f59e0b" fontWeight="600">f⃗</text>
+              </g>
+            )}
+          </g>
+        )}
+
+        {/* Labels */}
+        <text x={Ax - 4} y={Ay + 16} fontSize="11" fill="#333" fontWeight="600">A</text>
+        <text x={Cx + 4} y={Cy - 4} fontSize="11" fill="#333" fontWeight="600">B</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Circle Geometry ────────────────────────────────────────────────────────
+
+function CircleSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Circle center and radius
+  const cx = 150, cy = 115, r = 75;
+
+  // Detect features
+  const hasChord = /corde|chord/i.test(d);
+  const hasTangent = /tangent/i.test(d);
+  const hasInscribedAngle = /inscrit|inscribed/i.test(d);
+  const hasDiameter = /diamètre|diameter/i.test(d);
+
+  // Extract center label
+  const centerMatch = d.match(/centre\s+([a-z])/i);
+  const centerLabel = centerMatch ? centerMatch[1].toUpperCase() : 'O';
+
+  // Extract point labels from description
+  const pointsMatch = d.match(/points?\s+([a-z]),?\s*([a-z])(?:,?\s*([a-z]))?/i)
+    || d.match(/([a-z]),\s*([a-z])(?:,?\s*([a-z]))?\s+(?:sont|sont des points|sur)/i);
+  const p1Label = pointsMatch ? pointsMatch[1].toUpperCase() : 'A';
+  const p2Label = pointsMatch ? pointsMatch[2].toUpperCase() : 'B';
+  const p3Label = pointsMatch && pointsMatch[3] ? pointsMatch[3].toUpperCase() : 'C';
+
+  // Point positions on circle
+  const p1Angle = -30 * Math.PI / 180;
+  const p2Angle = 210 * Math.PI / 180;
+  const p3Angle = 100 * Math.PI / 180;
+  const p1 = { x: cx + r * Math.cos(p1Angle), y: cy + r * Math.sin(p1Angle) };
+  const p2 = { x: cx + r * Math.cos(p2Angle), y: cy + r * Math.sin(p2Angle) };
+  const p3 = { x: cx + r * Math.cos(p3Angle), y: cy + r * Math.sin(p3Angle) };
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 230" className="figure-render__geo-svg">
+        {/* Circle */}
+        <circle cx={cx} cy={cy} r={r}
+          fill="rgba(69,123,157,0.06)" stroke="#333" strokeWidth="1.5" />
+
+        {/* Center point */}
+        <circle cx={cx} cy={cy} r="2.5" fill="#333" />
+        <text x={cx + 6} y={cy - 6} fontSize="13" fontWeight="600" fill="#333">{centerLabel}</text>
+
+        {/* Radius line */}
+        <line x1={cx} y1={cy} x2={p1.x} y2={p1.y}
+          stroke="#999" strokeWidth="0.8" strokeDasharray="4,3" />
+        <text x={(cx + p1.x) / 2 + 4} y={(cy + p1.y) / 2 - 4}
+          fontSize="10" fill="#999" fontStyle="italic">r</text>
+
+        {/* Chord or diameter from P1 to P2 */}
+        {(hasChord || hasDiameter) && (
+          <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+            stroke="#457b9d" strokeWidth="1.5" />
+        )}
+
+        {/* Tangent line at P1 */}
+        {hasTangent && (
+          <g>
+            {/* Tangent is perpendicular to radius at P1 */}
+            <line
+              x1={p1.x - 50 * Math.sin(p1Angle)} y1={p1.y + 50 * Math.cos(p1Angle)}
+              x2={p1.x + 50 * Math.sin(p1Angle)} y2={p1.y - 50 * Math.cos(p1Angle)}
+              stroke="#e63946" strokeWidth="1.3" />
+            {/* Right angle mark */}
+            <rect x={p1.x - 5} y={p1.y - 5} width={8} height={8}
+              fill="none" stroke="#333" strokeWidth="0.8"
+              transform={`rotate(${p1Angle * 180 / Math.PI}, ${p1.x}, ${p1.y})`} />
+          </g>
+        )}
+
+        {/* Third point on circle (for inscribed angles, etc.) */}
+        <circle cx={p3.x} cy={p3.y} r="3" fill="#333" />
+        <text x={p3.x - 14} y={p3.y - 6} fontSize="13" fontWeight="600" fill="#333">{p3Label}</text>
+
+        {/* Lines from P3 to P1 and P2 (inscribed angle) */}
+        {hasInscribedAngle && (
+          <g>
+            <line x1={p3.x} y1={p3.y} x2={p1.x} y2={p1.y}
+              stroke="#2a9d8f" strokeWidth="1" />
+            <line x1={p3.x} y1={p3.y} x2={p2.x} y2={p2.y}
+              stroke="#2a9d8f" strokeWidth="1" />
+          </g>
+        )}
+
+        {/* P1 and P2 points */}
+        <circle cx={p1.x} cy={p1.y} r="3" fill="#333" />
+        <text x={p1.x + 6} y={p1.y + 4} fontSize="13" fontWeight="600" fill="#333">{p1Label}</text>
+        <circle cx={p2.x} cy={p2.y} r="3" fill="#333" />
+        <text x={p2.x - 16} y={p2.y + 4} fontSize="13" fontWeight="600" fill="#333">{p2Label}</text>
       </svg>
       <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
     </div>
