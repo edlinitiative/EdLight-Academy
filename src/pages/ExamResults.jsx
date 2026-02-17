@@ -208,7 +208,7 @@ const ExamResults = () => {
                         modelAnswer={r.question.model_answer}
                       />
                     : r.question.type === 'multiple_choice' && r.question.options
-                      ? `${r.userAnswer.toUpperCase()}) ${r.question.options[r.userAnswer] || r.userAnswer}`
+                      ? <span>{r.userAnswer.toUpperCase()}) <InstructionRenderer text={r.question.options[r.userAnswer] || r.userAnswer} inline /></span>
                       : <ProofOrPlainAnswer answer={r.userAnswer} correctAnswer={r.question.correct || r.question.final_answer} />
                   }
                 </div>
@@ -219,8 +219,8 @@ const ExamResults = () => {
                 <div className="exam-results__item-correct">
                   <strong>Réponse correcte :</strong>{' '}
                   {r.question.type === 'multiple_choice' && r.question.options
-                    ? `${(r.question.correct || '').toUpperCase()}) ${r.question.options[r.question.correct] || r.question.correct}`
-                    : String(r.question.correct || r.question.final_answer)
+                    ? <span>{(r.question.correct || '').toUpperCase()}) <InstructionRenderer text={r.question.options[r.question.correct] || r.question.correct} inline /></span>
+                    : <InstructionRenderer text={String(r.question.correct || r.question.final_answer)} inline />
                   }
                 </div>
               )}
@@ -257,7 +257,7 @@ const ExamResults = () => {
               {/* Explanation */}
               {r.question.explanation && (
                 <div className="exam-results__item-explanation">
-                  💡 {r.question.explanation}
+                  💡 <InstructionRenderer text={r.question.explanation} inline />
                 </div>
               )}
             </div>

@@ -8,17 +8,24 @@ import 'katex/dist/katex.min.css';
 /**
  * Renders exam instructions / question text with markdown AND LaTeX math.
  * Supports $inline$ and $$display$$ math via remark-math + rehype-katex.
+ *
+ * Pass `inline` prop to render as a <span> (for use inside sentences).
  */
-export default function InstructionRenderer({ text }) {
+export default function InstructionRenderer({ text, inline }) {
   if (!text) return null;
 
+  const Wrapper = inline ? 'span' : 'div';
+
   return (
-    <div className="instruction-renderer">
+    <Wrapper className="instruction-renderer">
       <ReactMarkdown 
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          p: ({node, ...props}) => <p className="instruction-renderer__p" {...props} />,
+          // When inline, render <p> as <span> to avoid block-level nesting issues
+          p: ({node, ...props}) => inline
+            ? <span className="instruction-renderer__p" {...props} />
+            : <p className="instruction-renderer__p" {...props} />,
           ul: ({node, ...props}) => <ul className="instruction-renderer__ul" {...props} />,
           ol: ({node, ...props}) => <ol className="instruction-renderer__ol" {...props} />,
           h1: ({node, ...props}) => <strong className="instruction-renderer__heading" {...props} />,
@@ -28,6 +35,6 @@ export default function InstructionRenderer({ text }) {
       >
         {text}
       </ReactMarkdown>
-    </div>
+    </Wrapper>
   );
 }
