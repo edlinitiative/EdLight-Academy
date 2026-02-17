@@ -1,8 +1,7 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  buildExamIndex,
   subjectColor,
   examStats,
   QUESTION_TYPE_META,
@@ -17,7 +16,9 @@ function useExamCatalog() {
     queryFn: async () => {
       const res = await fetch('/exam_catalog.json');
       if (!res.ok) throw new Error('Failed to load exam catalog');
-      return res.json();
+      const data = await res.json();
+      // Data is structured by level, flatten it for original filtering logic
+      return Object.values(data).flat();
     },
     staleTime: Infinity, // static asset, never re-fetch
   });
@@ -25,26 +26,46 @@ function useExamCatalog() {
 
 const ExamBrowser = () => {
   const navigate = useNavigate();
+  const { level } = useParams(); // Get level from URL
 
-  const { data: rawExams, isLoading, error } = useExamCatalog();
+  const { data: allExams, isLoading, error } = useExamCatalog();
+
+  // Filter exams by level from URL
+  const rawExams = useMemo(() => {
+    if (!allExams) return [];
+    if (!level) return allExams; // Should not happen with new routes
+    
+    // Map URL level to catalog key
+    const levelKey = {
+      '9e': '9e Année',
+      'terminale': 'Terminale',
+      'university': 'Université'
+    }[level];
+
+    return allExams.filter(exam => {
+        if (levelKey === '9e Année') return exam.title.includes('9e') || exam.title.includes('9AF');
+        if (levelKey === 'Terminale') return exam.title.includes('Terminale') || exam.title.includes('Philo') || exam.title.includes('NS') || exam.title.includes('SVT');
+        if (levelKey === 'Université') return ! (exam.title.includes('9e') || exam.title.includes('9AF') || exam.title.includes('Terminale') || exam.title.includes('Philo') || exam.title.includes('NS') || exam.title.includes('SVT'));
+        return false;
+    });
+  }, [allExams, level]);
 
   // Build index once
   const index = useMemo(() => {
     if (!rawExams) return null;
-    return buildExamIndex(rawExams);
+    // buildExamIndex expects a flat array
+    return { exams: rawExams };
   }, [rawExams]);
 
   // Filter state
-  const [levelFilter, setLevelFilter] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const hasActiveFilters = levelFilter || subjectFilter || yearFilter || search.trim();
+  const hasActiveFilters = subjectFilter || yearFilter || search.trim();
 
   const clearFilters = useCallback(() => {
-    setLevelFilter('');
     setSubjectFilter('');
     setYearFilter('');
     setSearch('');
@@ -56,26 +77,24 @@ const ExamBrowser = () => {
     if (!index) return [];
     let list = index.exams;
 
-    if (levelFilter) list = list.filter((e) => e._level === levelFilter);
-    if (subjectFilter) list = list.filter((e) => e._subject === subjectFilter);
-    if (yearFilter) list = list.filter((e) => e._year === parseInt(yearFilter, 10));
+    if (subjectFilter) list = list.filter((e) => e.subject === subjectFilter);
+    if (yearFilter) list = list.filter((e) => e.year === yearFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
         (e) =>
-          (e._title || e.exam_title || '').toLowerCase().includes(q) ||
-          (e.exam_title || '').toLowerCase().includes(q) ||
-          (e._subject || '').toLowerCase().includes(q) ||
-          (e._yearRaw || '').toLowerCase().includes(q)
+          (e.title || '').toLowerCase().includes(q) ||
+          (e.subject || '').toLowerCase().includes(q) ||
+          (e.year || '').toLowerCase().includes(q)
       );
     }
 
     // Sort: newest first
-    return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
-  }, [index, levelFilter, subjectFilter, yearFilter, search]);
+    return [...list].sort((a, b) => (b.year || 0) - (a.year || 0));
+  }, [index, subjectFilter, yearFilter, search]);
 
   // Reset visible count when filters change
-  const prevFilterKey = `${levelFilter}|${subjectFilter}|${yearFilter}|${search}`;
+  const prevFilterKey = `${subjectFilter}|${yearFilter}|${search}`;
   const [lastFilterKey, setLastFilterKey] = useState(prevFilterKey);
   if (prevFilterKey !== lastFilterKey) {
     setLastFilterKey(prevFilterKey);
@@ -88,10 +107,25 @@ const ExamBrowser = () => {
 
   // Summary counts for filtered set
   const summary = useMemo(() => {
-    const totalQ = filtered.reduce((s, e) => s + e._questionCount, 0);
-    const gradable = filtered.reduce((s, e) => s + e._autoGradable, 0);
+    const totalQ = filtered.reduce((s, e) => s + (e.questions?.length || 0), 0);
+    const gradable = filtered.reduce((s, e) => s + (e.questions?.filter(q => q.auto_gradable).length || 0), 0);
     return { exams: filtered.length, totalQ, gradable };
   }, [filtered]);
+
+  // Unique subjects and years for filters
+  const { subjects, years } = useMemo(() => {
+    if (!rawExams) return { subjects: [], years: [] };
+    const subjectSet = new Set();
+    const yearSet = new Set();
+    rawExams.forEach(exam => {
+      if (exam.subject) subjectSet.add(exam.subject);
+      if (exam.year) yearSet.add(exam.year);
+    });
+    return {
+      subjects: Array.from(subjectSet).sort(),
+      years: Array.from(yearSet).sort((a, b) => b - a)
+    };
+  }, [rawExams]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 

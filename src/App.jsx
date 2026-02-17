@@ -19,6 +19,7 @@ const Privacy = React.lazy(() => import('./pages/Privacy'));
 const Terms = React.lazy(() => import('./pages/Terms'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 const CourseManager = React.lazy(() => import('./pages/CourseManager'));
+const ExamLanding = React.lazy(() => import('./pages/ExamLanding'));
 const ExamBrowser = React.lazy(() => import('./pages/ExamBrowser'));
 const ExamTake = React.lazy(() => import('./pages/ExamTake'));
 const ExamResults = React.lazy(() => import('./pages/ExamResults'));
@@ -60,9 +61,10 @@ export default function App() {
                 <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
                 <Route path="admin/courses" element={<AdminRoute><CourseManager /></AdminRoute>} />
                 <Route path="admin/verify" element={<AdminRoute><AnswerVerification /></AdminRoute>} />
-                <Route path="exams" element={<ExamBrowser />} />
-                <Route path="exams/:examIndex" element={<ExamTake />} />
-                <Route path="exams/:examIndex/results" element={<ExamResults />} />
+                <Route path="exams" element={<ExamLanding />} />
+                <Route path="exams/:level" element={<ExamBrowser />} />
+                <Route path="exams/:level/:examId" element={<ExamTake />} />
+                <Route path="exams/:level/:examId/results" element={<ExamResults />} />
               </Route>
             </Routes>
           </Suspense>

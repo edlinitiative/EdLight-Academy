@@ -55,6 +55,7 @@ RULES:
 - Hint 1: Point toward the right topic/concept/era/formula (gentle nudge)
 - Hint 2: Give a more specific clue (a key detail, date range, related concept)
 - Hint 3 (optional, for hard questions): Almost reveal the answer without stating it
+- For long-form/essay questions: help structure the argument, suggest key themes to consider, or point to relevant historical context.
 - For math: reference the specific formula or technique needed
 - For history/geography: reference the era, region, or key figure
 - For science: reference the specific law, reaction type, or biological process
