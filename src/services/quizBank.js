@@ -184,6 +184,7 @@ export function toPerseusItemFromRow(row) {
 // Convert a bank row into a simple, framework-agnostic quiz object we can render directly without Perseus
 export function toDirectItemFromRow(row) {
   const stem = String(pick(row, ['question', 'question_text', 'prompt', 'stem'], '')).trim();
+  const context = String(pick(row, ['context', 'passage', 'reference_text', 'text'], '')).trim();
   const qTypeRaw = String(pick(row, ['question_type', 'type', 'qtype'], '')).trim().toLowerCase();
   const good = String(pick(row, ['good_response', 'good', 'explanation'], '')).trim();
   const wrong = String(pick(row, ['wrong_response', 'wrong', 'feedback'], '')).trim();
@@ -230,10 +231,10 @@ export function toDirectItemFromRow(row) {
     }
     if (labels.length >= 2 && correctIndex >= 0) {
       const correctLabel = labels[correctIndex];
-      return { kind: 'mcq', stem, options: labels, correctIndex, correctLabel, hints, good, wrong };
+      return { kind: 'mcq', stem, context, options: labels, correctIndex, correctLabel, hints, good, wrong };
     }
     // If MCQ unusable, fall back to short answer with correctRaw
-    return { kind: 'short', stem, correctText: correctRaw, hints, good, wrong };
+    return { kind: 'short', stem, context, correctText: correctRaw, hints, good, wrong };
   };
 
   if (qTypeRaw === 'truefalse' || qTypeRaw === 'true/false' || qTypeRaw === 'tf') {
@@ -247,11 +248,15 @@ export function toDirectItemFromRow(row) {
       if (m >= 0) idx = m;
     }
     const correctLabel = tfOptions[idx] ?? 'True';
-    return { kind: 'tf', stem, options: tfOptions, correctIndex: idx, correctLabel, hints, good, wrong };
+    return { kind: 'tf', stem, context, options: tfOptions, correctIndex: idx, correctLabel, hints, good, wrong };
   }
 
   if (qTypeRaw === 'shortanswer' || qTypeRaw === 'short' || qTypeRaw === 'sa' || (labels.length === 0 && correctRaw)) {
-    return { kind: 'short', stem, correctText: correctRaw, hints, good, wrong };
+    return { kind: 'short', stem, context, correctText: correctRaw, hints, good, wrong };
+  }
+
+  if (qTypeRaw === 'essay' || qTypeRaw === 'long-form' || qTypeRaw === 'long_form') {
+    return { kind: 'essay', stem, context, correctText: correctRaw, hints, good, wrong };
   }
 
   // Default to MCQ flow
@@ -471,7 +476,7 @@ export function normalizeAndIndexQuizBank(rows, videos = []) {
   const bySubject = {};
   const byVideoId = {};
   for (const r of rowsNorm) {
-    if (r.subject_code_norm) {
+    if r.subject_code_norm) {
       (bySubject[r.subject_code_norm] = bySubject[r.subject_code_norm] || []).push(r);
       if (r.unit_no_norm) {
         const key = `${r.subject_code_norm}|U${r.unit_no_norm}`;

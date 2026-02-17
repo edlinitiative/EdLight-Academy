@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useKatex, renderWithKatex } from '../utils/shared';
+import EssayQuiz from './EssayQuiz';
 
 export default function DirectBankQuiz({ item, onScore }) {
   const katexReady = useKatex();
@@ -59,6 +60,10 @@ export default function DirectBankQuiz({ item, onScore }) {
     if (item.kind === 'mcq' || item.kind === 'tf') return item.correctLabel ?? (Array.isArray(item.options) ? item.options[item.correctIndex] : '');
     return item.correctText || '';
   }, [item]);
+
+  if (item.kind === 'essay') {
+    return <EssayQuiz item={item} onScore={onScore} />;
+  }
 
   return (
     <div className="card" style={{ padding: '1rem' }}>
