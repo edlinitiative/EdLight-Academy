@@ -72,7 +72,8 @@ function classifyFigure(desc) {
   }
 
   // Graphs and charts
-  if (/graphique|courbe|axe\s+(horizontal|vertical)|diagramme.*(bar|cercle|bâton)|graphe\b/.test(d) ||
+  // "diagramme" only matches chart-type qualifiers immediately after (not "diagramme ... cercle" in geometry)
+  if (/graphique|courbe|axe\s+(horizontal|vertical)|diagramme\s+(à\s+|en\s+|de\s+)?(barres?|bâtons?|cercle|circulaire|secteurs?)|graphe\b/.test(d) ||
       /\b(graph|chart|plot|axis|curve)\b/.test(d)) {
     return FIGURE_TYPES.GRAPH;
   }
