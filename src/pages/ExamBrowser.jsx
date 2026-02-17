@@ -60,6 +60,7 @@ const ExamBrowser = () => {
   // Filter state
   const [subjectFilter, setSubjectFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState(level || '');
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -69,8 +70,9 @@ const ExamBrowser = () => {
     setSubjectFilter('');
     setYearFilter('');
     setSearch('');
+    setLevelFilter(level || '');
     setVisibleCount(PAGE_SIZE);
-  }, []);
+  }, [level]);
 
   // Filtered list
   const filtered = useMemo(() => {
