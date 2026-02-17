@@ -447,14 +447,34 @@ function CircuitFigure({ description }) {
 function GeometryFigure({ description }) {
   const d = (description || '').toLowerCase();
 
-  // Detect specific geometry type
+  // Detect specific geometry type — order matters (most specific first)
   const isPendulum = /pendule/.test(d);
-  const isTarget = /concentric|concentri|cible|target/.test(d);
   const isCoordinate = /repère|orthonorm|cartésien/.test(d);
 
+  // Concentric circles: distinguish target/bullseye from math geometry
+  const isConcentric = /concentric|concentri/.test(d);
+  const isTarget = /cible|target|zones?\s*[:.]|points?\s+for|point.*zone/i.test(d)
+    || (/concentric/.test(d) && /zone|point/i.test(d));
+  const isTangentGeometry = isConcentric && /tangent|perpendiculaire|rayon.*[rR]|droit|AB|OA|OB/i.test(d);
+
+  // Triangle figures
+  const isTriangle = /triangle/.test(d) && !isConcentric;
+  const isRightTriangle = isTriangle && /rectangle|droit|perpendiculaire|90|right\s*angle/i.test(d);
+
+  // Mirror / optics diagrams
+  const isMirror = /miroir|réflexion|rayon\s*lumineux|réfraction|lentille|optique/i.test(d);
+
   if (isPendulum) return <PendulumSVG description={description} />;
-  if (isTarget) return <TargetSVG description={description} />;
   if (isCoordinate) return <CoordinateSVG description={description} />;
+  if (isTangentGeometry) return <ConcentricTangentSVG description={description} />;
+  if (isTarget) return <TargetSVG description={description} />;
+  if (isRightTriangle) return <RightTriangleSVG description={description} />;
+  if (isTriangle) return <TriangleSVG description={description} />;
+  if (isMirror) return <DescriptionCard description={description} icon="🔍" label="Optique" />;
+
+  // For concentric figures that aren't targets or tangent geometry (e.g. Earth layers),
+  // fall back to description card
+  if (isConcentric) return <DescriptionCard description={description} icon="📐" label="Figure géométrique" />;
 
   return <DescriptionCard description={description} icon="📐" label="Figure géométrique" />;
 }
@@ -547,6 +567,220 @@ function CoordinateSVG({ description }) {
             <text x="110" y={123 - n * 22} fontSize="8" textAnchor="end" fill="#666">{n}</text>
           </g>
         ))}
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Concentric Circles with Tangent Line ───────────────────────────────────
+
+function ConcentricTangentSVG({ description }) {
+  // Two concentric circles (center O), inner radius r, outer radius R,
+  // tangent line AB touching inner circle at D, with OA = OB = R.
+  const cx = 150, cy = 130;
+  const R = 90, r = 50;
+
+  // D is the tangent point on the inner circle (top of inner circle)
+  const Dx = cx, Dy = cy - r;
+
+  // A and B are on the outer circle, on the tangent line through D.
+  // Tangent at D is horizontal (perpendicular to OD which is vertical).
+  // OA = R, DA² = R² - r² => DA = sqrt(R²-r²)
+  const DA = Math.sqrt(R * R - r * r);
+  const Ax = cx - DA, Ay = Dy;
+  const Bx = cx + DA, By = Dy;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 270" className="figure-render__geo-svg">
+        {/* Outer circle (C_R) */}
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="#457b9d" strokeWidth="1.5" />
+        {/* Inner circle (C_r) */}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e63946" strokeWidth="1.5" />
+
+        {/* Tangent line AB */}
+        <line x1={Ax - 10} y1={Ay} x2={Bx + 10} y2={By} stroke="#333" strokeWidth="1.5" />
+
+        {/* Radii OA, OB */}
+        <line x1={cx} y1={cy} x2={Ax} y2={Ay} stroke="#457b9d" strokeWidth="1" strokeDasharray="5,3" />
+        <line x1={cx} y1={cy} x2={Bx} y2={By} stroke="#457b9d" strokeWidth="1" strokeDasharray="5,3" />
+
+        {/* Radius OD */}
+        <line x1={cx} y1={cy} x2={Dx} y2={Dy} stroke="#e63946" strokeWidth="1.5" />
+
+        {/* Right angle mark at D */}
+        <polyline points={`${Dx + 8},${Dy} ${Dx + 8},${Dy + 8} ${Dx},${Dy + 8}`}
+          fill="none" stroke="#333" strokeWidth="1" />
+
+        {/* Points */}
+        <circle cx={cx} cy={cy} r="3" fill="#333" />
+        <circle cx={Ax} cy={Ay} r="3" fill="#457b9d" />
+        <circle cx={Bx} cy={By} r="3" fill="#457b9d" />
+        <circle cx={Dx} cy={Dy} r="3" fill="#e63946" />
+
+        {/* Labels */}
+        <text x={cx + 5} y={cy + 15} fontSize="13" fontWeight="600" fill="#333">O</text>
+        <text x={Ax - 14} y={Ay - 8} fontSize="13" fontWeight="600" fill="#457b9d">A</text>
+        <text x={Bx + 5} y={By - 8} fontSize="13" fontWeight="600" fill="#457b9d">B</text>
+        <text x={Dx + 10} y={Dy - 5} fontSize="13" fontWeight="600" fill="#e63946">D</text>
+
+        {/* Radius labels */}
+        <text x={cx + 4} y={cy - r / 2 - 2} fontSize="11" fill="#e63946" fontStyle="italic">r</text>
+        <text x={cx - DA / 2 - 2} y={cy - 5} fontSize="11" fill="#457b9d" fontStyle="italic">R</text>
+
+        {/* Circle labels */}
+        <text x={cx + R - 18} y={cy + R - 5} fontSize="10" fill="#457b9d">C(R)</text>
+        <text x={cx + r + 3} y={cy + 12} fontSize="10" fill="#e63946">C(r)</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Triangle SVG ───────────────────────────────────────────────────────────
+
+function TriangleSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Try to extract vertex labels from description
+  const labelMatch = d.match(/triangle\s+([a-z])([a-z])([a-z])/i);
+  const [vA, vB, vC] = labelMatch
+    ? [labelMatch[1].toUpperCase(), labelMatch[2].toUpperCase(), labelMatch[3].toUpperCase()]
+    : ['A', 'B', 'C'];
+
+  // Check for a height / altitude
+  const hasHeight = /hauteur|altitude|perpendiculaire|height/i.test(d);
+  const heightMatch = d.match(/(?:hauteur|altitude)\s*(?:issue\s*de\s*)?([a-z])/i);
+  const heightVertex = heightMatch ? heightMatch[1].toUpperCase() : 'C';
+
+  // Standard scalene triangle coordinates
+  const Ax = 40, Ay = 190;
+  const Bx = 260, By = 190;
+  const Cx = 180, Cy = 40;
+
+  // Check for angle labels
+  const hasAlpha = /alpha|α/.test(d);
+  const hasBeta = /beta|β/.test(d);
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 230" className="figure-render__geo-svg">
+        {/* Triangle */}
+        <polygon
+          points={`${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}`}
+          fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        {/* Height from C to AB if described */}
+        {hasHeight && (
+          <g>
+            <line x1={Cx} y1={Cy} x2={Cx} y2={By} stroke="#e63946" strokeWidth="1" strokeDasharray="5,3" />
+            <text x={Cx + 5} y={By - 5} fontSize="11" fill="#e63946">H</text>
+            <circle cx={Cx} cy={By} r="2.5" fill="#e63946" />
+            {/* Right angle mark */}
+            <polyline points={`${Cx - 8},${By} ${Cx - 8},${By - 8} ${Cx},${By - 8}`}
+              fill="none" stroke="#333" strokeWidth="0.8" />
+          </g>
+        )}
+
+        {/* Angle arcs */}
+        {hasAlpha && (
+          <g>
+            <path d={`M${Ax + 30},${Ay} A30,30 0 0,0 ${Ax + 22},${Ay - 18}`}
+              fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            <text x={Ax + 28} y={Ay - 10} fontSize="10" fill="#f59e0b">α</text>
+          </g>
+        )}
+        {hasBeta && (
+          <g>
+            <path d={`M${Bx - 30},${By} A30,30 0 0,1 ${Bx - 18},${By - 22}`}
+              fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            <text x={Bx - 35} y={By - 15} fontSize="10" fill="#f59e0b">β</text>
+          </g>
+        )}
+
+        {/* Vertex labels */}
+        <text x={Ax - 15} y={Ay + 5} fontSize="13" fontWeight="600" fill="#333">{vA}</text>
+        <text x={Bx + 5} y={By + 5} fontSize="13" fontWeight="600" fill="#333">{vB}</text>
+        <text x={Cx + 5} y={Cy - 5} fontSize="13" fontWeight="600" fill="#333">{vC}</text>
+
+        {/* Vertex dots */}
+        <circle cx={Ax} cy={Ay} r="3" fill="#333" />
+        <circle cx={Bx} cy={By} r="3" fill="#333" />
+        <circle cx={Cx} cy={Cy} r="3" fill="#333" />
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+function RightTriangleSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Try to extract vertex labels
+  const labelMatch = d.match(/triangle\s+(?:rectangle\s+)?([a-z])([a-z])([a-z])/i);
+  const [vA, vB, vC] = labelMatch
+    ? [labelMatch[1].toUpperCase(), labelMatch[2].toUpperCase(), labelMatch[3].toUpperCase()]
+    : ['A', 'B', 'C'];
+
+  // Detect which vertex has the right angle
+  const rightAtMatch = d.match(/(?:rectangle|droit)\s+en\s+([a-z])/i);
+  const rightAt = rightAtMatch ? rightAtMatch[1].toUpperCase() : vC;
+
+  // Check for angle labels
+  const hasAlpha = /alpha|α/.test(d);
+  const hasBeta = /beta|β/.test(d);
+
+  // Place right angle at bottom-left for clearest visual
+  const Ax = 40, Ay = 190;   // bottom-left (right angle vertex)
+  const Bx = 260, By = 190;  // bottom-right
+  const Cx = 40, Cy = 40;    // top-left
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 230" className="figure-render__geo-svg">
+        {/* Triangle */}
+        <polygon
+          points={`${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}`}
+          fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+
+        {/* Right angle mark */}
+        <polyline points={`${Ax + 15},${Ay} ${Ax + 15},${Ay - 15} ${Ax},${Ay - 15}`}
+          fill="none" stroke="#333" strokeWidth="1" />
+
+        {/* Angle arcs */}
+        {hasBeta && (
+          <g>
+            <path d={`M${Bx - 30},${By} A30,30 0 0,1 ${Bx - 18},${By - 22}`}
+              fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            <text x={Bx - 38} y={By - 12} fontSize="10" fill="#f59e0b">β</text>
+          </g>
+        )}
+        {hasAlpha && (
+          <g>
+            <path d={`M${Cx},${Cy + 30} A30,30 0 0,0 ${Cx + 20},${Cy + 22}`}
+              fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            <text x={Cx + 14} y={Cy + 32} fontSize="10" fill="#f59e0b">α</text>
+          </g>
+        )}
+
+        {/* Vertex labels */}
+        <text x={Ax - 5} y={Ay + 18} fontSize="13" fontWeight="600" fill="#333">{rightAt}</text>
+        <text x={Bx + 5} y={By + 5} fontSize="13" fontWeight="600" fill="#333">
+          {rightAt === vA ? vB : rightAt === vB ? vC : vB}
+        </text>
+        <text x={Cx - 15} y={Cy - 5} fontSize="13" fontWeight="600" fill="#333">
+          {rightAt === vA ? vC : rightAt === vC ? vA : vA}
+        </text>
+
+        {/* Vertex dots */}
+        <circle cx={Ax} cy={Ay} r="3" fill="#333" />
+        <circle cx={Bx} cy={By} r="3" fill="#333" />
+        <circle cx={Cx} cy={Cy} r="3" fill="#333" />
       </svg>
       <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
     </div>
