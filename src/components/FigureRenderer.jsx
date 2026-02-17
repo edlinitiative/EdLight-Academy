@@ -592,62 +592,90 @@ function CoordinateSVG({ description }) {
 // ─── Concentric Circles with Tangent Line ───────────────────────────────────
 
 function ConcentricTangentSVG({ description }) {
-  // Two concentric circles (center O), inner radius r, outer radius R,
-  // tangent line AB touching inner circle at D, with OA = OB = R.
-  const cx = 150, cy = 130;
+  // Two concentric circles (center O), inner radius r, outer radius R.
+  // Tangent line AB touches the inner circle at D.  OA = OB = R.
+  // Triangle ODA is right-angled at D.
+  const cx = 150, cy = 150;
   const R = 90, r = 50;
 
-  // D is the tangent point on the inner circle (top of inner circle)
-  const Dx = cx, Dy = cy - r;
+  // Place D at "10 o'clock" on the inner circle so the triangle ODA
+  // is clearly visible as a proper right triangle (not a flat T-shape).
+  // Direction from O to D in SVG coords (upper-left):
+  const odx = -Math.sin(Math.PI / 3);   // ≈ -0.866
+  const ody = -Math.cos(Math.PI / 3);   // ≈ -0.5
 
-  // A and B are on the outer circle, on the tangent line through D.
-  // Tangent at D is horizontal (perpendicular to OD which is vertical).
-  // OA = R, DA² = R² - r² => DA = sqrt(R²-r²)
-  const DA = Math.sqrt(R * R - r * r);
-  const Ax = cx - DA, Ay = Dy;
-  const Bx = cx + DA, By = Dy;
+  // D on the inner circle
+  const Dx = cx + r * odx;
+  const Dy = cy + r * ody;
+
+  // Tangent direction at D: perpendicular to OD, rotated 90° CW
+  const tx = -ody;    // ≈ 0.5   (toward A, upper-right)
+  const ty = odx;     // ≈ -0.866
+
+  // Half-chord from D to each endpoint: sqrt(R² – r²)
+  const half = Math.sqrt(R * R - r * r);
+
+  // A (upper-right) and B (lower-left) on the outer circle
+  const Ax = Dx + half * tx, Ay = Dy + half * ty;
+  const Bx = Dx - half * tx, By = Dy - half * ty;
+
+  // Right-angle mark at D between rays D→A and D→O
+  const s = 10;
+  const dox = -odx, doy = -ody;   // unit vector D → O
+  const r1x = Dx + s * tx,  r1y = Dy + s * ty;
+  const r2x = r1x + s * dox, r2y = r1y + s * doy;
+  const r3x = Dx + s * dox,  r3y = Dy + s * doy;
 
   return (
     <div className="figure-render figure-render--geometry">
       <svg viewBox="0 0 300 270" className="figure-render__geo-svg">
-        {/* Outer circle (C_R) */}
+        {/* Outer circle */}
         <circle cx={cx} cy={cy} r={R} fill="none" stroke="#457b9d" strokeWidth="1.5" />
-        {/* Inner circle (C_r) */}
+        {/* Inner circle */}
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e63946" strokeWidth="1.5" />
 
-        {/* Tangent line AB */}
-        <line x1={Ax - 10} y1={Ay} x2={Bx + 10} y2={By} stroke="#333" strokeWidth="1.5" />
+        {/* Highlight triangle ODA */}
+        <polygon points={`${cx},${cy} ${Dx},${Dy} ${Ax},${Ay}`}
+          fill="rgba(69,123,157,0.1)" stroke="none" />
 
-        {/* Radii OA, OB */}
-        <line x1={cx} y1={cy} x2={Ax} y2={Ay} stroke="#457b9d" strokeWidth="1" strokeDasharray="5,3" />
-        <line x1={cx} y1={cy} x2={Bx} y2={By} stroke="#457b9d" strokeWidth="1" strokeDasharray="5,3" />
+        {/* Tangent line AB (extended slightly past A and B) */}
+        <line x1={Bx - 15 * tx} y1={By - 15 * ty}
+              x2={Ax + 15 * tx} y2={Ay + 15 * ty}
+          stroke="#333" strokeWidth="1.5" />
 
-        {/* Radius OD */}
-        <line x1={cx} y1={cy} x2={Dx} y2={Dy} stroke="#e63946" strokeWidth="1.5" />
+        {/* Radius OA (dashed, hypotenuse of △ODA) */}
+        <line x1={cx} y1={cy} x2={Ax} y2={Ay}
+          stroke="#457b9d" strokeWidth="1.2" strokeDasharray="5,3" />
+        {/* Radius OB (dashed) */}
+        <line x1={cx} y1={cy} x2={Bx} y2={By}
+          stroke="#457b9d" strokeWidth="1.2" strokeDasharray="5,3" />
 
-        {/* Right angle mark at D */}
-        <polyline points={`${Dx + 8},${Dy} ${Dx + 8},${Dy + 8} ${Dx},${Dy + 8}`}
+        {/* Radius OD (solid) */}
+        <line x1={cx} y1={cy} x2={Dx} y2={Dy}
+          stroke="#e63946" strokeWidth="1.5" />
+
+        {/* Right-angle mark at D */}
+        <polyline points={`${r1x},${r1y} ${r2x},${r2y} ${r3x},${r3y}`}
           fill="none" stroke="#333" strokeWidth="1" />
 
-        {/* Points */}
+        {/* Vertex dots */}
         <circle cx={cx} cy={cy} r="3" fill="#333" />
+        <circle cx={Dx} cy={Dy} r="3" fill="#e63946" />
         <circle cx={Ax} cy={Ay} r="3" fill="#457b9d" />
         <circle cx={Bx} cy={By} r="3" fill="#457b9d" />
-        <circle cx={Dx} cy={Dy} r="3" fill="#e63946" />
 
         {/* Labels */}
-        <text x={cx + 5} y={cy + 15} fontSize="13" fontWeight="600" fill="#333">O</text>
-        <text x={Ax - 14} y={Ay - 8} fontSize="13" fontWeight="600" fill="#457b9d">A</text>
-        <text x={Bx + 5} y={By - 8} fontSize="13" fontWeight="600" fill="#457b9d">B</text>
-        <text x={Dx + 10} y={Dy - 5} fontSize="13" fontWeight="600" fill="#e63946">D</text>
+        <text x={cx + 8} y={cy + 16} fontSize="14" fontWeight="600" fill="#333">O</text>
+        <text x={Dx - 18} y={Dy - 6} fontSize="14" fontWeight="600" fill="#e63946">D</text>
+        <text x={Ax + 6} y={Ay - 8} fontSize="14" fontWeight="600" fill="#457b9d">A</text>
+        <text x={Bx - 18} y={By + 16} fontSize="14" fontWeight="600" fill="#457b9d">B</text>
 
-        {/* Radius labels */}
-        <text x={cx + 4} y={cy - r / 2 - 2} fontSize="11" fill="#e63946" fontStyle="italic">r</text>
-        <text x={cx - DA / 2 - 2} y={cy - 5} fontSize="11" fill="#457b9d" fontStyle="italic">R</text>
-
-        {/* Circle labels */}
-        <text x={cx + R - 18} y={cy + R - 5} fontSize="10" fill="#457b9d">C(R)</text>
-        <text x={cx + r + 3} y={cy + 12} fontSize="10" fill="#e63946">C(r)</text>
+        {/* r label along OD */}
+        <text x={(cx + Dx) / 2 - 14} y={(cy + Dy) / 2 - 4}
+          fontSize="13" fill="#e63946" fontStyle="italic">r</text>
+        {/* R label along OA */}
+        <text x={(cx + Ax) / 2 + 6} y={(cy + Ay) / 2 - 8}
+          fontSize="13" fill="#457b9d" fontStyle="italic">R</text>
       </svg>
       <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
     </div>
