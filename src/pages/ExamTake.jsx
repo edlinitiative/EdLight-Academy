@@ -1032,7 +1032,7 @@ function QuestionHints({ hints }) {
   );
 }
 
-// ── Scaffolded Answer (guided model answer with blanks to fill) ──────────────
+// ── Scaffolded Answer (Khan Academy-inspired step-by-step) ───────────────────
 
 function ScaffoldedAnswer({ question, index, value, onChange }) {
   const template = question.scaffold_text;
@@ -1040,8 +1040,11 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
   const answerParts = question.answer_parts || [];
   const hasGrading = answerParts.length > 0;
 
-  // Track which blanks have been validated (on blur)
   const [validated, setValidated] = React.useState({});
+  const [checked, setChecked] = React.useState(false);
+  const [showSolution, setShowSolution] = React.useState(false);
+  const [focusedBlank, setFocusedBlank] = React.useState(null);
+  const inputRefs = useRef([]);
 
   // Parse stored JSON → array of blank values
   const blankValues = useMemo(() => {
@@ -1049,8 +1052,7 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
     try {
       const parsed = JSON.parse(value);
       if (parsed && parsed.scaffold && Array.isArray(parsed.scaffold)) {
-        const arr = parsed.scaffold;
-        return blanks.map((_, i) => arr[i] || '');
+        return blanks.map((_, i) => parsed.scaffold[i] || '');
       }
     } catch { /* not JSON yet */ }
     return blanks.map(() => '');
@@ -1063,111 +1065,203 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
   const setBlank = useCallback((blankIdx, val) => {
     const updated = [...blankValues];
     updated[blankIdx] = val;
-    // Clear validation on edit
-    setValidated(prev => ({ ...prev, [blankIdx]: undefined }));
+    if (checked) { setChecked(false); setValidated({}); }
     serialize(updated);
-  }, [blankValues, serialize]);
+  }, [blankValues, serialize, checked]);
 
-  // Validate a blank on blur — compare to answer_parts
-  const validateBlank = useCallback((blankIdx) => {
-    if (!hasGrading || !answerParts[blankIdx]) return;
-    const userVal = (blankValues[blankIdx] || '').trim();
-    if (!userVal) return;
+  // Normalize for comparison
+  const normalize = useCallback((s) => (s || '').toString().trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/^\$+|\$+$/g, '').replace(/\\text\{([^}]*)\}/g, '$1')
+    .replace(/\\,/g, '').replace(/\s+/g, ' ').trim(), []);
 
-    const part = answerParts[blankIdx];
-    const allAcceptable = [part.answer, ...(part.alternatives || [])];
-    const normalize = (s) => (s || '').toString().trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/^\$+|\$+$/g, '').replace(/\\text\{([^}]*)\}/g, '$1')
-      .replace(/\\,/g, '').replace(/\s+/g, ' ').trim();
+  // Check all blanks at once (Khan Academy "Check" button)
+  const checkAnswers = useCallback(() => {
+    if (!hasGrading) return;
+    const results = {};
+    blanks.forEach((_, bi) => {
+      const userVal = (blankValues[bi] || '').trim();
+      if (!userVal) { results[bi] = undefined; return; }
+      const part = answerParts[bi];
+      if (!part) { results[bi] = undefined; return; }
+      const allAcceptable = [part.answer, ...(part.alternatives || [])];
+      const userNorm = normalize(userVal);
+      let isCorrect = false;
+      for (const ans of allAcceptable) {
+        const expected = normalize(ans);
+        if (!expected) continue;
+        if (userNorm === expected) { isCorrect = true; break; }
+        const u = parseFloat(userNorm.replace(/,/g, '.'));
+        const e = parseFloat(expected.replace(/,/g, '.'));
+        if (!isNaN(u) && !isNaN(e) && Math.abs(u - e) <= Math.max(Math.abs(e) * 0.01, 0.01)) {
+          isCorrect = true; break;
+        }
+      }
+      results[bi] = isCorrect;
+    });
+    setValidated(results);
+    setChecked(true);
+  }, [hasGrading, answerParts, blankValues, blanks, normalize]);
 
-    const userNorm = normalize(userVal);
-    let isCorrect = false;
-    for (const ans of allAcceptable) {
-      const expected = normalize(ans);
-      if (!expected) continue;
-      if (userNorm === expected) { isCorrect = true; break; }
-      // Numeric comparison
-      const u = parseFloat(userNorm.replace(/,/g, '.'));
-      const e = parseFloat(expected.replace(/,/g, '.'));
-      if (!isNaN(u) && !isNaN(e) && Math.abs(u - e) <= Math.max(Math.abs(e) * 0.01, 0.01)) {
-        isCorrect = true; break;
+  // Handle Enter key → move to next blank or check
+  const handleKeyDown = useCallback((e, bi) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (bi < blanks.length - 1) {
+        inputRefs.current[bi + 1]?.focus();
+      } else {
+        checkAnswers();
       }
     }
-    setValidated(prev => ({ ...prev, [blankIdx]: isCorrect }));
-  }, [hasGrading, answerParts, blankValues]);
+  }, [blanks.length, checkAnswers]);
 
   const filledCount = blankValues.filter(v => v.trim()).length;
   const correctCount = Object.values(validated).filter(v => v === true).length;
+  const incorrectCount = Object.values(validated).filter(v => v === false).length;
   const totalBlanks = blanks.length;
 
   if (!template || totalBlanks === 0) return null;
 
-  // Split template by {{n}} markers and interleave text + input fields
-  const parts = [];
-  const regex = /\{\{(\d+)\}\}/g;
-  let lastIndex = 0;
-  let match;
-  while ((match = regex.exec(template)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push({ type: 'text', content: template.slice(lastIndex, match.index) });
-    }
-    parts.push({ type: 'blank', blankIdx: parseInt(match[1], 10) });
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastIndex < template.length) {
-    parts.push({ type: 'text', content: template.slice(lastIndex) });
-  }
+  // Extract the solution text (everything before the first {{n}} marker)
+  const firstBlankPos = template.search(/\{\{\d+\}\}/);
+  const solutionText = firstBlankPos > 0 ? template.slice(0, firstBlankPos).trim() : '';
+
+  const allCorrect = checked && correctCount === totalBlanks;
+  const allFilled = filledCount === totalBlanks;
 
   return (
-    <div className="scaffold">
-      <div className="scaffold__header">
-        <span className="scaffold__badge">📝 Réponse guidée</span>
-        <span className="scaffold__progress">
-          {hasGrading && correctCount > 0 && (
-            <span className="scaffold__correct-count">✓ {correctCount} </span>
-          )}
-          {filledCount}/{totalBlanks} complété{filledCount !== 1 ? 's' : ''}
-        </span>
-      </div>
-      <div className="scaffold__body">
-        {parts.map((part, i) => {
-          if (part.type === 'text') {
-            // Render text with math support, splitting by newlines for structure
-            return part.content.split('\n').map((line, li) => (
-              <React.Fragment key={`${i}-${li}`}>
-                {li > 0 && <br />}
-                <MathText text={line} />
-              </React.Fragment>
-            ));
-          }
-          // Blank input
-          const bi = part.blankIdx;
-          const blank = blanks[bi];
-          if (!blank) return null;
-          const vState = validated[bi];
-          const blankClass = vState === true ? 'scaffold__blank--correct'
-            : vState === false ? 'scaffold__blank--incorrect'
-            : blankValues[bi]?.trim() ? 'scaffold__blank--filled' : '';
+    <div className={`ka-scaffold ${allCorrect ? 'ka-scaffold--complete' : ''}`}>
+      {/* Progress dots — Khan Academy style */}
+      <div className="ka-scaffold__dots">
+        {blanks.map((_, bi) => {
+          let dotClass = 'ka-scaffold__dot';
+          if (validated[bi] === true) dotClass += ' ka-scaffold__dot--correct';
+          else if (validated[bi] === false) dotClass += ' ka-scaffold__dot--wrong';
+          else if (blankValues[bi]?.trim()) dotClass += ' ka-scaffold__dot--filled';
+          if (focusedBlank === bi) dotClass += ' ka-scaffold__dot--active';
           return (
-            <span key={`b-${bi}`} className="scaffold__blank-wrapper">
-              <input
-                className={`scaffold__blank ${blankClass}`}
-                type="text"
-                value={blankValues[bi] || ''}
-                onChange={(e) => setBlank(bi, e.target.value)}
-                onBlur={() => validateBlank(bi)}
-                placeholder={blank.label || `Réponse ${bi + 1}`}
-                aria-label={blank.label || `Blank ${bi + 1}`}
-              />
-              {vState === true && <span className="scaffold__blank-check">✓</span>}
-              {vState === false && <span className="scaffold__blank-cross">✗</span>}
-              {blank.label && (
-                <span className="scaffold__blank-label">{blank.label}</span>
-              )}
-            </span>
+            <button
+              key={bi}
+              className={dotClass}
+              onClick={() => inputRefs.current[bi]?.focus()}
+              title={`Étape ${bi + 1}`}
+              type="button"
+              aria-label={`Aller à l'étape ${bi + 1}`}
+            />
           );
         })}
+      </div>
+
+      {/* Solution walkthrough — collapsible */}
+      {solutionText && (
+        <div className="ka-scaffold__solution-wrap">
+          <button
+            className={`ka-scaffold__solution-toggle ${showSolution ? 'ka-scaffold__solution-toggle--open' : ''}`}
+            onClick={() => setShowSolution(s => !s)}
+            type="button"
+          >
+            <svg className="ka-scaffold__solution-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            {showSolution ? 'Masquer la démarche' : 'Voir la démarche complète'}
+            <svg className="ka-scaffold__chevron" viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+          {showSolution && (
+            <div className="ka-scaffold__solution-body">
+              {solutionText.split('\n').map((line, li) => (
+                <React.Fragment key={li}>
+                  {li > 0 && <br />}
+                  <MathText text={line} />
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step inputs — each blank is a clean step card */}
+      <div className="ka-scaffold__steps">
+        {blanks.map((blank, bi) => {
+          const vState = validated[bi];
+          let stepClass = 'ka-scaffold__step';
+          if (vState === true) stepClass += ' ka-scaffold__step--correct';
+          else if (vState === false) stepClass += ' ka-scaffold__step--wrong';
+          else if (focusedBlank === bi) stepClass += ' ka-scaffold__step--focused';
+          else if (blankValues[bi]?.trim()) stepClass += ' ka-scaffold__step--filled';
+
+          return (
+            <div key={bi} className={stepClass}>
+              <div className="ka-scaffold__step-num">{bi + 1}</div>
+              <div className="ka-scaffold__step-content">
+                {blank.label && (
+                  <label className="ka-scaffold__step-label" htmlFor={`scaffold-${index}-${bi}`}>
+                    {blank.label}
+                  </label>
+                )}
+                <div className="ka-scaffold__input-row">
+                  <input
+                    ref={el => inputRefs.current[bi] = el}
+                    id={`scaffold-${index}-${bi}`}
+                    className="ka-scaffold__input"
+                    type="text"
+                    value={blankValues[bi] || ''}
+                    onChange={e => setBlank(bi, e.target.value)}
+                    onFocus={() => setFocusedBlank(bi)}
+                    onBlur={() => setFocusedBlank(null)}
+                    onKeyDown={e => handleKeyDown(e, bi)}
+                    placeholder="Votre réponse"
+                    autoComplete="off"
+                    spellCheck="false"
+                    aria-label={blank.label || `Étape ${bi + 1}`}
+                  />
+                  {/* Validation feedback icon — only after checking */}
+                  {vState === true && (
+                    <span className="ka-scaffold__feedback ka-scaffold__feedback--correct" aria-label="Correct">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                  )}
+                  {vState === false && (
+                    <span className="ka-scaffold__feedback ka-scaffold__feedback--wrong" aria-label="Incorrect">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </span>
+                  )}
+                </div>
+                {/* Show correct answer on wrong attempt */}
+                {vState === false && answerParts[bi] && (
+                  <div className="ka-scaffold__expected">
+                    Réponse attendue : <MathText text={answerParts[bi].answer} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bottom bar — Check button + status */}
+      <div className="ka-scaffold__bottom">
+        {checked && allCorrect ? (
+          <div className="ka-scaffold__status ka-scaffold__status--success">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            Excellent ! Toutes les réponses sont correctes.
+          </div>
+        ) : checked && incorrectCount > 0 ? (
+          <div className="ka-scaffold__status ka-scaffold__status--retry">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+            {correctCount}/{totalBlanks} correct{correctCount > 1 ? 's' : ''} — corrigez les erreurs et réessayez.
+          </div>
+        ) : null}
+
+        <button
+          className={`ka-scaffold__check-btn ${!allFilled ? 'ka-scaffold__check-btn--disabled' : ''} ${allCorrect ? 'ka-scaffold__check-btn--done' : ''}`}
+          onClick={checkAnswers}
+          disabled={!allFilled || allCorrect}
+          type="button"
+        >
+          {allCorrect ? '✓ Terminé' : checked ? 'Revérifier' : 'Vérifier'}
+        </button>
       </div>
     </div>
   );
