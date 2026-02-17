@@ -177,19 +177,6 @@ const ExamBrowser = () => {
         {/* Sticky filter bar */}
         <div className="exam-browser__filters-sticky">
           <div className="exam-browser__filters">
-            {/* Level */}
-            <select
-              className="exam-browser__select"
-              value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value)}
-              aria-label="Filtrer par niveau"
-            >
-              <option value="">Tous les niveaux</option>
-              {index.levels.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
-            </select>
-
             {/* Subject */}
             <select
               className="exam-browser__select"
@@ -198,7 +185,7 @@ const ExamBrowser = () => {
               aria-label="Filtrer par matière"
             >
               <option value="">Toutes les matières</option>
-              {index.subjects.map((s) => (
+              {subjects.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -211,7 +198,7 @@ const ExamBrowser = () => {
               aria-label="Filtrer par année"
             >
               <option value="">Toutes les années</option>
-              {index.years.map((y) => (
+              {years.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
