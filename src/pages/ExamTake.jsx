@@ -155,8 +155,8 @@ const PROOF_RE = /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|véri
 function isProofQuestion(question) {
   const text = question._displayText || question.question || '';
   const type = question.type || '';
-  // Only activate for open-ended types that can't be auto-graded
-  if (!['calculation', 'short_answer', 'essay'].includes(type)) return false;
+  // Only activate for open-ended math types — never for essays
+  if (!['calculation', 'short_answer'].includes(type)) return false;
   // Must contain a proof/demonstration keyword
   return PROOF_RE.test(text);
 }
