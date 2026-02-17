@@ -1001,35 +1001,17 @@ function FillBlankText({ text, index, value, onChange }) {
 
 // ── Question Hints (progressive reveal for ALL question types) ───────────────
 
-// Generic boilerplate hints that add no value — suppress them
-const GENERIC_HINTS = new Set([
-  'lisez attentivement la question.',
-  'identifiez les mots cles.',
-  'verifiez votre reponse.',
-]);
-function isGenericHint(h) {
-  return GENERIC_HINTS.has(
-    (h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-  );
-}
-
 function QuestionHints({ hints }) {
   const [revealed, setRevealed] = useState(0);
 
-  // Filter out useless boilerplate hints
-  const realHints = useMemo(
-    () => (hints || []).filter(h => !isGenericHint(h)),
-    [hints],
-  );
+  if (!hints || !Array.isArray(hints) || hints.length === 0) return null;
 
-  if (realHints.length === 0) return null;
-
-  const canReveal = revealed < realHints.length;
+  const canReveal = revealed < hints.length;
 
   return (
     <div className="qa-hints">
       {/* Revealed hints */}
-      {realHints.slice(0, revealed).map((hint, i) => (
+      {hints.slice(0, revealed).map((hint, i) => (
         <div key={i} className="qa-hints__item" style={{ animationDelay: `${i * 0.05}s` }}>
           <span className="qa-hints__icon">💡</span>
           <span className="qa-hints__text"><MathText text={hint} /></span>
@@ -1044,7 +1026,7 @@ function QuestionHints({ hints }) {
           onClick={() => setRevealed(r => r + 1)}
         >
           💡 {revealed === 0 ? 'Obtenir un indice' : 'Indice suivant'}{' '}
-          <span className="qa-hints__counter">({revealed}/{realHints.length})</span>
+          <span className="qa-hints__counter">({revealed}/{hints.length})</span>
         </button>
       )}
     </div>
