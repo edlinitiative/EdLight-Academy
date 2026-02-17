@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
+import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import {
   flattenQuestions,
@@ -1201,20 +1202,18 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
                   </label>
                 )}
                 <div className="ka-scaffold__input-row">
-                  <input
+                  <MathKeyboard
                     ref={el => inputRefs.current[bi] = el}
                     id={`scaffold-${index}-${bi}`}
-                    className="ka-scaffold__input"
-                    type="text"
                     value={blankValues[bi] || ''}
-                    onChange={e => setBlank(bi, e.target.value)}
+                    onChange={val => setBlank(bi, val)}
                     onFocus={() => setFocusedBlank(bi)}
                     onBlur={() => setFocusedBlank(null)}
                     onKeyDown={e => handleKeyDown(e, bi)}
                     placeholder="Votre réponse"
-                    autoComplete="off"
-                    spellCheck="false"
-                    aria-label={blank.label || `Étape ${bi + 1}`}
+                    ariaLabel={blank.label || `Étape ${bi + 1}`}
+                    disabled={allCorrect}
+                    compact={totalBlanks > 4}
                   />
                   {/* Validation feedback icon — only after checking */}
                   {vState === true && (
