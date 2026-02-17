@@ -468,6 +468,14 @@ function GeometryFigure({ description }) {
   const isPendulum = /pendule/.test(d);
   const isCoordinate = /repère|orthonorm|cartésien/.test(d);
 
+  // Pedigree / family tree — check EARLY: descriptions contain "cercle" (female symbol)
+  // but are really genetics diagrams, not geometry
+  const isPedigree = /pedigree|arbre\s+généalogique|génération.*individu|individu.*génération/i.test(d);
+
+  // Venn diagram — check EARLY: contains "cercle" but is a set diagram
+  const isVenn = /venn|diagramme.*cercles?\s+(principaux|qui\s+se)/i.test(d)
+    || (/cercles?\s+(principaux|chevauch)/i.test(d) && /patrimoine|ensemble/i.test(d));
+
   // Mirror / optics — check BEFORE triangle so "miroir + triangle" gets OpticsSVG
   const isMirror = /miroir|mirror|réflexion|rayon\s*lumineux|réfraction|lentille|optique/i.test(d);
 
@@ -482,7 +490,20 @@ function GeometryFigure({ description }) {
 
   // Circle geometry (not concentric, not mirror) — circle with chord, tangent, inscribed angle, etc.
   const isCircle = /cercle|circle/i.test(d) && /centre|center|corde|chord|tangent|inscrit|rayon/i.test(d)
-    && !isConcentric && !isMirror && !isTarget;
+    && !isConcentric && !isMirror && !isTarget && !isPedigree && !isVenn;
+
+  // Matrix (matrice carrée) — check before cube so "matrice carrée" doesn't match "carré" elsewhere
+  const isMatrix = /matrice/i.test(d);
+
+  // Parallelogram (not cube, not triangle)
+  const isParallelogram = /parallélogramme/i.test(d) && !/cube|prisme/i.test(d);
+
+  // Tree height surveying (arbre + jalon alignment)
+  const isTreeHeight = /arbre.*jalon|jalon.*arbre/i.test(d);
+
+  // Magnetic flux (surface + normale + champ magnétique)
+  const isMagneticFlux = /surface.*normale.*champ|normale.*champ.*magnétique|flux.*magnétique/i.test(d)
+    || (/surface\s+plane/i.test(d) && /champ\s+magnétique/i.test(d));
 
   // Non-triangle geometry that happens to contain the word "triangle"
   const isCube = /cube|parallélépipède/i.test(d);
@@ -494,6 +515,8 @@ function GeometryFigure({ description }) {
   // Do NOT match "perpendiculaire" alone — that usually describes a height, not a right triangle
   const isRightTriangle = isTriangle && /triangle\s+rectangle|angle\s+droit|droit\s+en\s+[a-z]|right\s*angle|\b90[°\s]/i.test(d);
 
+  if (isPedigree) return <PedigreeSVG description={description} />;
+  if (isVenn) return <VennSVG description={description} />;
   if (isPendulum) return <PendulumSVG description={description} />;
   if (isCoordinate) return <CoordinateSVG description={description} />;
   if (isTangentGeometry) return <ConcentricTangentSVG description={description} />;
@@ -501,6 +524,11 @@ function GeometryFigure({ description }) {
   if (isMirror) return <OpticsSVG description={description} />;
   if (isInclinedPlane) return <InclinedPlaneSVG description={description} />;
   if (isCircle) return <CircleSVG description={description} />;
+  if (isMatrix) return <MatrixSVG description={description} />;
+  if (isParallelogram) return <ParallelogramSVG description={description} />;
+  if (isTreeHeight) return <TreeHeightSVG description={description} />;
+  if (isMagneticFlux) return <MagneticFluxSVG description={description} />;
+  if (isCube || isNet) return <CubeSVG description={description} />;
   if (isRightTriangle) return <RightTriangleSVG description={description} />;
   if (isTriangle) return <TriangleSVG description={description} />;
 
@@ -1505,6 +1533,446 @@ function RightTriangleSVG({ description }) {
   );
 }
 
+// ─── Cube / 3D Shape ────────────────────────────────────────────────────────
+
+function CubeSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  const isNet = /patron|net.*fold|dépli|cross.*shape/i.test(d);
+
+  // Extract vertex labels (e.g. "cube ABCDEFGH")
+  const vertMatch = description.match(/cube\s+(?:nommé\s+)?([A-Z])([A-Z])([A-Z])([A-Z])([A-Z])([A-Z])([A-Z])([A-Z])/i);
+  const labels = vertMatch
+    ? Array.from({ length: 8 }, (_, i) => vertMatch[i + 1].toUpperCase())
+    : ['A','B','C','D','E','F','G','H'];
+
+  if (isNet) {
+    // Cross-shaped net of a cube
+    const s = 50, ox = 80, oy = 20;
+    return (
+      <div className="figure-render figure-render--geometry">
+        <svg viewBox="0 0 300 280" className="figure-render__geo-svg">
+          {/* Top face */}
+          <rect x={ox + s} y={oy} width={s} height={s} fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5" />
+          {/* Middle row: 4 faces */}
+          {[0,1,2,3].map(i => (
+            <rect key={i} x={ox + i * s} y={oy + s} width={s} height={s}
+              fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5" />
+          ))}
+          {/* Bottom face */}
+          <rect x={ox + s} y={oy + 2 * s} width={s} height={s} fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5" />
+          {/* Fold arrows */}
+          {[0,1,2,3].map(i => (
+            <text key={i} x={ox + s * i + s / 2} y={oy + s + s / 2 + 4} fontSize="16" textAnchor="middle" fill="#999">↻</text>
+          ))}
+        </svg>
+        <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+      </div>
+    );
+  }
+
+  // 3D cube projection
+  const fx = 60, fy = 140, s = 90, dx = 40, dy = -35;
+  const pts = [
+    {x: fx, y: fy}, {x: fx+s, y: fy}, {x: fx+s, y: fy-s}, {x: fx, y: fy-s},           // front: A B C D
+    {x: fx+dx, y: fy+dy}, {x: fx+s+dx, y: fy+dy}, {x: fx+s+dx, y: fy-s+dy}, {x: fx+dx, y: fy-s+dy} // back: E F G H
+  ];
+  const [A,B,C,D,E,F,G,H] = pts;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 260 190" className="figure-render__geo-svg">
+        {/* Hidden edges (dashed) */}
+        <line x1={A.x} y1={A.y} x2={E.x} y2={E.y} stroke="#999" strokeWidth="1" strokeDasharray="4,3" />
+        <line x1={E.x} y1={E.y} x2={F.x} y2={F.y} stroke="#999" strokeWidth="1" strokeDasharray="4,3" />
+        <line x1={E.x} y1={E.y} x2={H.x} y2={H.y} stroke="#999" strokeWidth="1" strokeDasharray="4,3" />
+        {/* Front face */}
+        <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`}
+          fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5" />
+        {/* Top face */}
+        <polygon points={`${D.x},${D.y} ${C.x},${C.y} ${G.x},${G.y} ${H.x},${H.y}`}
+          fill="rgba(69,123,157,0.04)" stroke="#333" strokeWidth="1.5" />
+        {/* Right face */}
+        <polygon points={`${B.x},${B.y} ${F.x},${F.y} ${G.x},${G.y} ${C.x},${C.y}`}
+          fill="rgba(69,123,157,0.06)" stroke="#333" strokeWidth="1.5" />
+        {/* Vertex labels */}
+        {[[-14,14],[4,14],[6,4],[-14,4],[-14,-4],[6,-4],[6,-6],[-14,-6]].map(([ox,oy], i) => (
+          <g key={i}>
+            <circle cx={pts[i].x} cy={pts[i].y} r="2.5" fill={i >= 4 && i <= 5 ? "#999" : "#333"} />
+            <text x={pts[i].x+ox} y={pts[i].y+oy} fontSize="12" fontWeight="600"
+              fill={i >= 4 && i <= 5 ? "#999" : "#333"}>{labels[i]}</text>
+          </g>
+        ))}
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Matrix SVG ─────────────────────────────────────────────────────────────
+
+function MatrixSVG({ description }) {
+  const d = description || '';
+
+  // Parse matrix rows from description patterns like "première ligne (3, -2, a)"
+  const rowMatches = [...d.matchAll(/(?:première|deuxième|troisième|quatrième|1[èe]re|2[èe]me|3[èe]me|4[èe]me)\s+ligne\s*(?:est\s*)?\(?([^)]+)\)?/gi)];
+
+  let rows = [];
+  if (rowMatches.length > 0) {
+    rows = rowMatches.map(m => m[1].split(/[,;]\s*/).map(s => s.trim()));
+  } else {
+    // Try parenthesized groups: "(a, b) et (8, -8)"
+    const parenMatches = [...d.matchAll(/\(([^)]+)\)/g)];
+    if (parenMatches.length >= 2) {
+      rows = parenMatches.map(m => m[1].split(/[,;]\s*/).map(s => s.trim()));
+    }
+  }
+  if (rows.length === 0) rows = [['a','b'],['c','d']];
+
+  const nRows = rows.length;
+  const nCols = Math.max(...rows.map(r => r.length));
+  const cellW = 44, cellH = 30;
+  const matW = nCols * cellW;
+  const matH = nRows * cellH;
+  const ox = 60, oy = 20;
+
+  // Extract matrix name
+  const nameMatch = d.match(/matrice\s+(?:carrée\s+)?([A-Z])/i);
+  const matName = nameMatch ? nameMatch[1] : 'M';
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox={`0 0 ${matW + 140} ${matH + 60}`} className="figure-render__geo-svg">
+        {/* Matrix name */}
+        <text x={ox - 30} y={oy + matH / 2 + 6} fontSize="16" fontWeight="700" fill="#457b9d" fontStyle="italic">{matName}</text>
+        <text x={ox - 10} y={oy + matH / 2 + 6} fontSize="13" fill="#333">=</text>
+        {/* Left bracket */}
+        <path d={`M${ox + 12},${oy} L${ox + 2},${oy} L${ox + 2},${oy + matH} L${ox + 12},${oy + matH}`}
+          fill="none" stroke="#333" strokeWidth="2" />
+        {/* Right bracket */}
+        <path d={`M${ox + matW + 8},${oy} L${ox + matW + 18},${oy} L${ox + matW + 18},${oy + matH} L${ox + matW + 8},${oy + matH}`}
+          fill="none" stroke="#333" strokeWidth="2" />
+        {/* Elements */}
+        {rows.map((row, ri) =>
+          row.map((val, ci) => (
+            <text key={`${ri}-${ci}`}
+              x={ox + 10 + ci * cellW + cellW / 2}
+              y={oy + ri * cellH + cellH / 2 + 6}
+              fontSize="14" textAnchor="middle" fill="#333"
+              fontStyle={/^[a-z]$/i.test(val) ? 'italic' : 'normal'}>
+              {val}
+            </text>
+          ))
+        )}
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Parallelogram SVG ──────────────────────────────────────────────────────
+
+function ParallelogramSVG({ description }) {
+  const d = (description || '');
+
+  // Extract vertex labels
+  const labelMatch = d.match(/parallélogramme\s+([A-Z])([A-Z])([A-Z])([A-Z])/i);
+  const [vA, vB, vC, vD] = labelMatch
+    ? [labelMatch[1].toUpperCase(), labelMatch[2].toUpperCase(), labelMatch[3].toUpperCase(), labelMatch[4].toUpperCase()]
+    : ['A','B','C','D'];
+
+  // Extract side lengths (AB = 6, AD = 4, etc.)
+  const sideLabels = {};
+  const sideMatches = [...d.matchAll(/([A-Z]{2})\s*=\s*(\d+)/gi)];
+  sideMatches.forEach(m => { sideLabels[m[1].toUpperCase()] = m[2]; });
+
+  const A = {x: 50, y: 160}, B = {x: 220, y: 160}, C = {x: 260, y: 50}, D = {x: 90, y: 50};
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 310 200" className="figure-render__geo-svg">
+        <polygon points={`${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y} ${D.x},${D.y}`}
+          fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5" strokeLinejoin="round" />
+        {/* Diagonals (dashed) */}
+        <line x1={A.x} y1={A.y} x2={C.x} y2={C.y} stroke="#999" strokeWidth="0.8" strokeDasharray="5,3" />
+        <line x1={B.x} y1={B.y} x2={D.x} y2={D.y} stroke="#999" strokeWidth="0.8" strokeDasharray="5,3" />
+        {/* Side labels */}
+        {sideLabels[vA+vB] && (
+          <text x={(A.x+B.x)/2} y={A.y+18} fontSize="11" textAnchor="middle" fill="#457b9d" fontWeight="600">
+            {vA+vB} = {sideLabels[vA+vB]}
+          </text>
+        )}
+        {sideLabels[vA+vD] && (
+          <text x={(A.x+D.x)/2-20} y={(A.y+D.y)/2} fontSize="11" fill="#457b9d" fontWeight="600">
+            {vA+vD} = {sideLabels[vA+vD]}
+          </text>
+        )}
+        {/* Vertex labels and dots */}
+        {[[A,-14,6],[B,4,6],[C,4,-4],[D,-14,-4]].map(([p,ox,oy], i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="3" fill="#333" />
+            <text x={p.x+ox} y={p.y+oy} fontSize="14" fontWeight="600" fill="#333">
+              {[vA,vB,vC,vD][i]}
+            </text>
+          </g>
+        ))}
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Tree Height Surveying SVG ──────────────────────────────────────────────
+
+function TreeHeightSVG({ description }) {
+  const ground = 180;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 220" className="figure-render__geo-svg">
+        {/* Ground line */}
+        <line x1={20} y1={ground} x2={280} y2={ground} stroke="#999" strokeWidth="1" />
+
+        {/* Tree AB */}
+        <line x1={40} y1={ground} x2={40} y2={30} stroke="#2a9d8f" strokeWidth="3" />
+        <ellipse cx={40} cy={22} rx="15" ry="12" fill="rgba(42,157,143,0.2)" stroke="#2a9d8f" strokeWidth="1" />
+        <text x={26} y={ground+14} fontSize="11" fontWeight="600" fill="#333">A</text>
+        <text x={26} y={26} fontSize="11" fontWeight="600" fill="#333">B</text>
+
+        {/* Jalon 1 — CD */}
+        <line x1={130} y1={ground} x2={130} y2={110} stroke="#e63946" strokeWidth="2" />
+        <text x={126} y={ground+14} fontSize="11" fontWeight="600" fill="#333">C</text>
+        <text x={134} y={106} fontSize="11" fontWeight="600" fill="#e63946">D</text>
+        <text x={138} y={(ground+110)/2+4} fontSize="10" fill="#e63946" fontStyle="italic">h₁</text>
+
+        {/* Jalon 2 — EF */}
+        <line x1={210} y1={ground} x2={210} y2={130} stroke="#457b9d" strokeWidth="2" />
+        <text x={206} y={ground+14} fontSize="11" fontWeight="600" fill="#333">E</text>
+        <text x={214} y={126} fontSize="11" fontWeight="600" fill="#457b9d">F</text>
+        <text x={218} y={(ground+130)/2+4} fontSize="10" fill="#457b9d" fontStyle="italic">h₂</text>
+
+        {/* Sight line B-D-F (collinear alignment) */}
+        <line x1={40} y1={30} x2={260} y2={150}
+          stroke="#f59e0b" strokeWidth="1" strokeDasharray="6,3" />
+
+        {/* Ground distances */}
+        <line x1={40} y1={ground+6} x2={130} y2={ground+6} stroke="#333" strokeWidth="0.8" />
+        <text x={85} y={ground+20} fontSize="10" textAnchor="middle" fill="#333" fontStyle="italic">d₂</text>
+        <line x1={130} y1={ground+6} x2={210} y2={ground+6} stroke="#333" strokeWidth="0.8" />
+        <text x={170} y={ground+20} fontSize="10" textAnchor="middle" fill="#333" fontStyle="italic">d₁</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Magnetic Flux (surface + B field) ──────────────────────────────────────
+
+function MagneticFluxSVG({ description }) {
+  const cx = 150, cy = 110;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 220" className="figure-render__geo-svg">
+        {/* Surface (tilted parallelogram representing plane area S) */}
+        <polygon points="60,160 200,160 240,80 100,80"
+          fill="rgba(69,123,157,0.1)" stroke="#333" strokeWidth="1.5" />
+        <text x={210} y={172} fontSize="12" fill="#333" fontWeight="600">S</text>
+
+        {/* Center point O */}
+        <circle cx={cx} cy={cy} r="2.5" fill="#333" />
+        <text x={cx+6} y={cy+14} fontSize="11" fontWeight="600" fill="#333">O</text>
+
+        {/* Normal vector ON (pointing up from surface) */}
+        <line x1={cx} y1={cy} x2={cx+8} y2={cy-72} stroke="#457b9d" strokeWidth="1.8" />
+        <polygon points={`${cx+8},${cy-72} ${cx+2},${cy-60} ${cx+14},${cy-60}`} fill="#457b9d" />
+        <text x={cx+16} y={cy-64} fontSize="12" fontWeight="600" fill="#457b9d">N⃗</text>
+
+        {/* B vector (at angle α from normal) */}
+        <line x1={cx} y1={cy} x2={cx+52} y2={cy-56} stroke="#e63946" strokeWidth="1.8" />
+        <polygon points={`${cx+52},${cy-56} ${cx+40},${cy-48} ${cx+48},${cy-42}`} fill="#e63946" />
+        <text x={cx+56} y={cy-50} fontSize="13" fontWeight="700" fill="#e63946">B⃗</text>
+
+        {/* Angle α arc between N and B */}
+        <path d={`M${cx+5},${cy-36} A36,36 0 0,1 ${cx+26},${cy-28}`}
+          fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+        <text x={cx+20} y={cy-34} fontSize="12" fill="#f59e0b" fontWeight="600">α</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Pedigree (Genetic Family Tree) SVG ─────────────────────────────────────
+
+function PedigreeSVG({ description }) {
+  const d = (description || '').toLowerCase();
+
+  // Parse generations from description — count how many generations mentioned
+  const genMatches = [...d.matchAll(/génération\s+(i{1,3}v?)/gi)];
+  const nGens = genMatches.length > 0 ? Math.max(...genMatches.map(m => m[1].length)) : 3;
+
+  // Detect affected trait
+  const hasDaltonism = /daltonisme|daltonien|color\s*blind/i.test(d);
+  const traitLabel = hasDaltonism ? 'daltonisme' : 'trait';
+
+  // Standard 3-generation pedigree layout
+  // Gen I: 2 couples (4 individuals)
+  // Gen II: 4-6 individuals
+  // Gen III: 2-4 individuals
+  const sz = 14; // symbol size (radius for circle, half-side for square)
+  const rowH = 55;
+  const cx = 160;
+
+  // Generation I: founding couple
+  const genI = [
+    { x: cx - 30, y: 30, male: true, affected: false, label: '1' },
+    { x: cx + 30, y: 30, male: false, affected: false, label: '2' },
+  ];
+
+  // Generation II: children
+  const genII = [
+    { x: cx - 70, y: 30 + rowH, male: true, affected: true, label: '3' },
+    { x: cx - 30, y: 30 + rowH, male: false, affected: false, label: '4' },
+    { x: cx + 10, y: 30 + rowH, male: true, affected: false, label: '5' },
+    { x: cx + 50, y: 30 + rowH, male: false, affected: false, label: '6' },
+    { x: cx + 90, y: 30 + rowH, male: false, affected: false, label: '7' },
+  ];
+
+  // Generation III: grandchildren
+  const genIII = [
+    { x: cx - 30, y: 30 + rowH * 2, male: true, affected: false, label: '8' },
+    { x: cx + 10, y: 30 + rowH * 2, male: false, affected: true, label: '9' },
+    { x: cx + 70, y: 30 + rowH * 2, male: true, affected: true, label: '10' },
+  ];
+
+  const allGens = [genI, genII, genIII];
+
+  function renderIndividual(ind) {
+    const fill = ind.affected ? '#999' : 'white';
+    const stroke = '#333';
+    if (ind.male) {
+      return (
+        <g key={ind.label}>
+          <rect x={ind.x - sz} y={ind.y - sz} width={sz * 2} height={sz * 2}
+            fill={fill} stroke={stroke} strokeWidth="1.5" />
+          <text x={ind.x} y={ind.y + sz + 14} fontSize="9" textAnchor="middle" fill="#666">{ind.label}</text>
+        </g>
+      );
+    }
+    return (
+      <g key={ind.label}>
+        <circle cx={ind.x} cy={ind.y} r={sz}
+          fill={fill} stroke={stroke} strokeWidth="1.5" />
+        <text x={ind.x} y={ind.y + sz + 14} fontSize="9" textAnchor="middle" fill="#666">{ind.label}</text>
+      </g>
+    );
+  }
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 320 230" className="figure-render__geo-svg">
+        {/* Generation labels */}
+        {['I', 'II', 'III'].map((g, i) => (
+          <text key={g} x={12} y={34 + i * rowH} fontSize="12" fontWeight="700" fill="#457b9d">{g}</text>
+        ))}
+
+        {/* Mating lines Gen I */}
+        <line x1={genI[0].x} y1={genI[0].y} x2={genI[1].x} y2={genI[1].y} stroke="#333" strokeWidth="1" />
+
+        {/* Descent line from Gen I couple to Gen II */}
+        <line x1={cx} y1={genI[0].y} x2={cx} y2={genI[0].y + 20} stroke="#333" strokeWidth="1" />
+        <line x1={genII[0].x} y1={genI[0].y + 20} x2={genII[genII.length-1].x} y2={genI[0].y + 20} stroke="#333" strokeWidth="1" />
+        {genII.map(ind => (
+          <line key={`d-${ind.label}`} x1={ind.x} y1={genI[0].y + 20} x2={ind.x} y2={ind.y - sz} stroke="#333" strokeWidth="1" />
+        ))}
+
+        {/* Mating lines Gen II (couple: 4+5, 6+7 or similar) */}
+        <line x1={genII[1].x} y1={genII[1].y} x2={genII[2].x} y2={genII[2].y} stroke="#333" strokeWidth="1" />
+        <line x1={genII[3].x} y1={genII[3].y} x2={genII[4].x} y2={genII[4].y} stroke="#333" strokeWidth="1" />
+
+        {/* Descent to Gen III */}
+        {genIII.length > 0 && (
+          <g>
+            <line x1={(genII[1].x+genII[2].x)/2} y1={genII[1].y}
+              x2={(genII[1].x+genII[2].x)/2} y2={genII[1].y + 16} stroke="#333" strokeWidth="1" />
+            <line x1={genIII[0].x} y1={genII[1].y+16} x2={genIII[1].x} y2={genII[1].y+16} stroke="#333" strokeWidth="1" />
+            {genIII.slice(0,2).map(ind => (
+              <line key={`d3-${ind.label}`} x1={ind.x} y1={genII[1].y+16} x2={ind.x} y2={ind.y - sz} stroke="#333" strokeWidth="1" />
+            ))}
+            <line x1={(genII[3].x+genII[4].x)/2} y1={genII[3].y}
+              x2={(genII[3].x+genII[4].x)/2} y2={genII[3].y + 16} stroke="#333" strokeWidth="1" />
+            <line x1={genIII[2].x} y1={genII[3].y+16} x2={genIII[2].x} y2={genIII[2].y - sz} stroke="#333" strokeWidth="1" />
+          </g>
+        )}
+
+        {/* Render all individuals */}
+        {allGens.flat().map(renderIndividual)}
+
+        {/* Legend */}
+        <rect x={230} y={10} width={12} height={12} fill="white" stroke="#333" strokeWidth="1" />
+        <text x={248} y={20} fontSize="9" fill="#333">♂ sain</text>
+        <circle cx={236} cy={34} r={6} fill="white" stroke="#333" strokeWidth="1" />
+        <text x={248} y={37} fontSize="9" fill="#333">♀ saine</text>
+        <rect x={230} y={46} width={12} height={12} fill="#999" stroke="#333" strokeWidth="1" />
+        <text x={248} y={56} fontSize="9" fill="#333">affecté(e)</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Venn Diagram SVG ───────────────────────────────────────────────────────
+
+function VennSVG({ description }) {
+  const d = description || '';
+
+  // Try to extract circle labels from description
+  const circleMatches = [...d.matchAll(/cercle\s+(?:contient|avec)\s+'([^']+)'/gi)];
+  const labels = circleMatches.length >= 2
+    ? circleMatches.map(m => m[1])
+    : ['A', 'B', 'C'];
+
+  // Extract title
+  const titleMatch = d.match(/intitulé\s+'([^']+)'/i) || d.match(/titre\s+'([^']+)'/i);
+  const title = titleMatch ? titleMatch[1] : '';
+
+  const cx = 150, cy = 120, r = 55, spread = 35;
+  const circles = [
+    { x: cx - spread, y: cy - spread * 0.4, color: 'rgba(230,57,70,0.15)', stroke: '#e63946' },
+    { x: cx + spread, y: cy - spread * 0.4, color: 'rgba(69,123,157,0.15)', stroke: '#457b9d' },
+    { x: cx, y: cy + spread * 0.6, color: 'rgba(42,157,143,0.15)', stroke: '#2a9d8f' },
+  ];
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 240" className="figure-render__geo-svg">
+        {/* Title */}
+        {title && (
+          <text x={cx} y={18} fontSize="12" fontWeight="700" textAnchor="middle" fill="#333">{title}</text>
+        )}
+        {/* Circles */}
+        {circles.map((c, i) => (
+          <g key={i}>
+            <circle cx={c.x} cy={c.y} r={r} fill={c.color} stroke={c.stroke} strokeWidth="1.5" />
+            {/* Label outside circle */}
+            <text
+              x={i === 0 ? c.x - r - 4 : i === 1 ? c.x + r + 4 : c.x}
+              y={i === 2 ? c.y + r + 14 : c.y - r - 4}
+              fontSize="10" fontWeight="600" fill={c.stroke}
+              textAnchor={i === 0 ? 'end' : i === 1 ? 'start' : 'middle'}>
+              {labels[i] ? labels[i].substring(0, 20) : ''}
+            </text>
+          </g>
+        ))}
+        {/* Center intersection indicator */}
+        <circle cx={cx} cy={cy} r="3" fill="#333" opacity="0.3" />
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
 // ─── Chemistry Renderer ─────────────────────────────────────────────────────
 
 function ChemistryFigure({ description }) {
@@ -1616,6 +2084,285 @@ function EquationFigure({ description }) {
   );
 }
 
+// ─── Diagram Sub-Router ─────────────────────────────────────────────────────
+
+function DiagramFigure({ description }) {
+  const d = (description || '').toLowerCase();
+
+  const isSolenoid = /solénoïde|électro-?aimant|bobine.*noyau|noyau.*fer.*spire|spire.*noyau/i.test(d);
+  const isFresnel = /fresnel|vecteurs?\s+tournants?/i.test(d);
+  const isMagnet = /aimant(?!.*électro)|boussole|pôle\s+(nord|sud)|champ\s+magnétique\s+terrestre/i.test(d);
+  const isRail = /barres?\s+parallèles?.*tige|tige.*barres?\s+parallèles?|rails?.*conductrice/i.test(d);
+
+  if (isSolenoid) return <SolenoidSVG description={description} />;
+  if (isFresnel) return <FresnelSVG description={description} />;
+  if (isMagnet || isRail) return <MagnetSVG description={description} />;
+
+  return <DescriptionCard description={description} icon="📊" label="Schéma" />;
+}
+
+// ─── Solenoid / Electromagnet SVG ───────────────────────────────────────────
+
+function SolenoidSVG({ description }) {
+  const d = (description || '').toLowerCase();
+  const hasNails = /clou|nail|attir/i.test(d);
+  const hasCore = /noyau|core|fer\s+doux/i.test(d);
+
+  // Solenoid body dimensions
+  const bodyX = 60, bodyY = 50, bodyW = 180, bodyH = 80;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 200" className="figure-render__geo-svg">
+        {/* Solenoid body */}
+        <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx="4"
+          fill="rgba(69,123,157,0.06)" stroke="#333" strokeWidth="1.5" />
+
+        {/* Iron core (if present) */}
+        {hasCore && (
+          <rect x={bodyX+10} y={bodyY+20} width={bodyW-20} height={bodyH-40} rx="2"
+            fill="rgba(153,153,153,0.15)" stroke="#999" strokeWidth="1" />
+        )}
+
+        {/* Coil windings (arcs on top) */}
+        {Array.from({length: 7}, (_, i) => {
+          const x = bodyX + 14 + i * 24;
+          return (
+            <path key={i}
+              d={`M${x},${bodyY+bodyH} Q${x+6},${bodyY+bodyH+8} ${x+12},${bodyY+bodyH} M${x},${bodyY} Q${x+6},${bodyY-8} ${x+12},${bodyY}`}
+              fill="none" stroke="#457b9d" strokeWidth="1.5" />
+          );
+        })}
+
+        {/* Wire connections */}
+        <line x1={bodyX} y1={bodyY+bodyH} x2={bodyX-20} y2={bodyY+bodyH} stroke="#e63946" strokeWidth="1.5" />
+        <line x1={bodyX-20} y1={bodyY+bodyH} x2={bodyX-20} y2={bodyY+bodyH+20} stroke="#e63946" strokeWidth="1.5" />
+        <line x1={bodyX+bodyW} y1={bodyY+bodyH} x2={bodyX+bodyW+20} y2={bodyY+bodyH} stroke="#e63946" strokeWidth="1.5" />
+        <line x1={bodyX+bodyW+20} y1={bodyY+bodyH} x2={bodyX+bodyW+20} y2={bodyY+bodyH+20} stroke="#e63946" strokeWidth="1.5" />
+
+        {/* Current direction */}
+        <polygon points={`${bodyX-12},${bodyY+bodyH} ${bodyX-4},${bodyY+bodyH-3} ${bodyX-4},${bodyY+bodyH+3}`} fill="#e63946" />
+        <text x={bodyX-24} y={bodyY+bodyH+36} fontSize="11" fill="#e63946" fontWeight="600">I</text>
+
+        {/* Magnetic field lines inside (B vector) */}
+        <line x1={bodyX+20} y1={bodyY+bodyH/2} x2={bodyX+bodyW-20} y2={bodyY+bodyH/2}
+          stroke="#2a9d8f" strokeWidth="1.2" strokeDasharray="6,3" />
+        <polygon points={`${bodyX+bodyW-20},${bodyY+bodyH/2} ${bodyX+bodyW-28},${bodyY+bodyH/2-4} ${bodyX+bodyW-28},${bodyY+bodyH/2+4}`}
+          fill="#2a9d8f" />
+        <text x={bodyX+bodyW/2-8} y={bodyY+bodyH/2-8} fontSize="11" fill="#2a9d8f" fontWeight="600">B⃗</text>
+
+        {/* N and S pole labels */}
+        <text x={bodyX+bodyW+4} y={bodyY+20} fontSize="14" fontWeight="700" fill="#e63946">N</text>
+        <text x={bodyX-14} y={bodyY+20} fontSize="14" fontWeight="700" fill="#457b9d">S</text>
+
+        {/* Nails attracted (if mentioned) */}
+        {hasNails && (
+          <g>
+            {[0,1,2].map(i => (
+              <g key={i}>
+                <line x1={bodyX+bodyW+8+i*7} y1={bodyY+bodyH/2+10+i*10}
+                  x2={bodyX+bodyW+14+i*7} y2={bodyY+bodyH/2-2+i*10}
+                  stroke="#333" strokeWidth="1.5" strokeLinecap="round" />
+              </g>
+            ))}
+            <text x={bodyX+bodyW+6} y={bodyY+bodyH+14} fontSize="9" fill="#666">clous</text>
+          </g>
+        )}
+
+        <text x={bodyX+bodyW/2} y={bodyY+bodyH+36} fontSize="10" textAnchor="middle" fill="#666" fontStyle="italic">solénoïde</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Fresnel Phasor Diagram ─────────────────────────────────────────────────
+
+function FresnelSVG({ description }) {
+  const d = (description || '').toLowerCase();
+  const cx = 150, cy = 110, radius = 70;
+
+  // Detect which components are in the circuit
+  const hasR = /résist|u_r|ohmique/i.test(d);
+  const hasL = /induct|bobine|self|u_l/i.test(d);
+  const hasC = /condensat|capacit|u_c/i.test(d);
+  const isResonance = /résonance/i.test(d);
+
+  // Phase angle φ for the total voltage
+  const phi = isResonance ? 0 : (hasL && hasC) ? Math.PI / 6 : hasL ? Math.PI / 3 : hasC ? -Math.PI / 4 : 0;
+
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 300 220" className="figure-render__geo-svg">
+        {/* Reference circle */}
+        <circle cx={cx} cy={cy} r={radius} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="0.5" />
+        {/* Axes */}
+        <line x1={cx-radius-15} y1={cy} x2={cx+radius+15} y2={cy} stroke="#999" strokeWidth="0.5" />
+        <line x1={cx} y1={cy+radius+15} x2={cx} y2={cy-radius-15} stroke="#999" strokeWidth="0.5" />
+
+        {/* Origin */}
+        <circle cx={cx} cy={cy} r="2" fill="#333" />
+        <text x={cx-12} y={cy+14} fontSize="10" fill="#333">O</text>
+
+        {/* Current vector I (along +x) */}
+        <line x1={cx} y1={cy} x2={cx+radius*0.75} y2={cy} stroke="#333" strokeWidth="2" />
+        <polygon points={`${cx+radius*0.75},${cy} ${cx+radius*0.75-8},${cy-4} ${cx+radius*0.75-8},${cy+4}`} fill="#333" />
+        <text x={cx+radius*0.75+6} y={cy+5} fontSize="12" fontWeight="700" fill="#333">I⃗</text>
+
+        {/* U_R vector (in phase with I) */}
+        {hasR && (
+          <g>
+            <line x1={cx} y1={cy} x2={cx+radius*0.55} y2={cy} stroke="#2a9d8f" strokeWidth="1.5" />
+            <polygon points={`${cx+radius*0.55},${cy} ${cx+radius*0.55-7},${cy-3} ${cx+radius*0.55-7},${cy+3}`} fill="#2a9d8f" />
+            <text x={cx+radius*0.55-12} y={cy+16} fontSize="10" fontWeight="600" fill="#2a9d8f">U⃗ᵣ</text>
+          </g>
+        )}
+
+        {/* U_L vector (leads I by π/2, pointing up) */}
+        {hasL && (
+          <g>
+            <line x1={cx} y1={cy} x2={cx} y2={cy-radius*0.65} stroke="#e63946" strokeWidth="1.5" />
+            <polygon points={`${cx},${cy-radius*0.65} ${cx-3},${cy-radius*0.65+7} ${cx+3},${cy-radius*0.65+7}`} fill="#e63946" />
+            <text x={cx+6} y={cy-radius*0.65+4} fontSize="10" fontWeight="600" fill="#e63946">U⃗ₗ</text>
+          </g>
+        )}
+
+        {/* U_C vector (lags I by π/2, pointing down) */}
+        {hasC && (
+          <g>
+            <line x1={cx} y1={cy} x2={cx} y2={cy+radius*0.5} stroke="#457b9d" strokeWidth="1.5" />
+            <polygon points={`${cx},${cy+radius*0.5} ${cx-3},${cy+radius*0.5-7} ${cx+3},${cy+radius*0.5-7}`} fill="#457b9d" />
+            <text x={cx+6} y={cy+radius*0.5+4} fontSize="10" fontWeight="600" fill="#457b9d">U⃗꜀</text>
+          </g>
+        )}
+
+        {/* Total voltage U (at angle φ) */}
+        {(() => {
+          const uLen = radius * 0.85;
+          const ux = cx + uLen * Math.cos(phi);
+          const uy = cy - uLen * Math.sin(phi);
+          return (
+            <g>
+              <line x1={cx} y1={cy} x2={ux} y2={uy} stroke="#f59e0b" strokeWidth="2" />
+              <polygon points={`${ux},${uy} ${ux-8*Math.cos(phi)+4*Math.sin(phi)},${uy+8*Math.sin(phi)+4*Math.cos(phi)} ${ux-8*Math.cos(phi)-4*Math.sin(phi)},${uy+8*Math.sin(phi)-4*Math.cos(phi)}`}
+                fill="#f59e0b" />
+              <text x={ux+6} y={uy-6} fontSize="12" fontWeight="700" fill="#f59e0b">U⃗</text>
+              {/* Phase angle arc */}
+              {Math.abs(phi) > 0.01 && (
+                <g>
+                  <path d={`M${cx+28},${cy} A28,28 0 0,${phi > 0 ? 0 : 1} ${cx+28*Math.cos(phi)},${cy-28*Math.sin(phi)}`}
+                    fill="none" stroke="#f59e0b" strokeWidth="1.2" />
+                  <text x={cx+32} y={cy + (phi > 0 ? -6 : 14)} fontSize="10" fill="#f59e0b" fontWeight="600">φ</text>
+                </g>
+              )}
+            </g>
+          );
+        })()}
+
+        {/* Label */}
+        <text x={cx} y={cy+radius+28} fontSize="10" textAnchor="middle" fill="#666" fontStyle="italic">Diagramme de Fresnel</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
+// ─── Magnet / Rail SVG ──────────────────────────────────────────────────────
+
+function MagnetSVG({ description }) {
+  const d = (description || '').toLowerCase();
+  const isUMagnet = /aimant\s+en\s+u|fer\s+à\s+cheval|entrefer/i.test(d);
+  const isCompass = /boussole|compass|champ.*terrestre|composante/i.test(d);
+  const isRail = /barres?\s+parallèles?|rails?|tige\s+conductrice/i.test(d);
+
+  if (isRail) {
+    return (
+      <div className="figure-render figure-render--geometry">
+        <svg viewBox="0 0 300 200" className="figure-render__geo-svg">
+          {/* Two parallel rails */}
+          <line x1={40} y1={50} x2={260} y2={50} stroke="#333" strokeWidth="2.5" />
+          <line x1={40} y1={140} x2={260} y2={140} stroke="#333" strokeWidth="2.5" />
+          <text x={268} y={54} fontSize="11" fontWeight="600" fill="#333">M</text>
+          <text x={268} y={144} fontSize="11" fontWeight="600" fill="#333">N</text>
+          {/* Conducting rod */}
+          <line x1={150} y1={46} x2={150} y2={144} stroke="#e63946" strokeWidth="3" />
+          {/* B field (dots = out of page) */}
+          {[0,1,2].map(i => (
+            <g key={i}>
+              <circle cx={80+i*60} cy={95} r="8" fill="none" stroke="#457b9d" strokeWidth="1" />
+              <circle cx={80+i*60} cy={95} r="2" fill="#457b9d" />
+            </g>
+          ))}
+          <text x={72} y={120} fontSize="10" fill="#457b9d" fontWeight="600">B⃗ ⊙</text>
+          {/* Velocity arrow */}
+          <line x1={155} y1={162} x2={205} y2={162} stroke="#2a9d8f" strokeWidth="1.5" />
+          <polygon points="205,162 197,158 197,166" fill="#2a9d8f" />
+          <text x={175} y={178} fontSize="10" fill="#2a9d8f" fontWeight="600">v⃗</text>
+        </svg>
+        <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+      </div>
+    );
+  }
+
+  if (isCompass) {
+    return (
+      <div className="figure-render figure-render--geometry">
+        <svg viewBox="0 0 260 220" className="figure-render__geo-svg">
+          {/* Compass circle */}
+          <circle cx={130} cy={100} r={60} fill="rgba(69,123,157,0.06)" stroke="#333" strokeWidth="1.5" />
+          {/* N needle */}
+          <line x1={130} y1={100} x2={130} y2={50} stroke="#e63946" strokeWidth="2" />
+          <polygon points="130,50 126,62 134,62" fill="#e63946" />
+          <text x={134} y={46} fontSize="11" fontWeight="700" fill="#e63946">N</text>
+          {/* S needle */}
+          <line x1={130} y1={100} x2={130} y2={150} stroke="#457b9d" strokeWidth="2" />
+          <polygon points="130,150 126,138 134,138" fill="#457b9d" />
+          <text x={134} y={158} fontSize="11" fontWeight="700" fill="#457b9d">S</text>
+          {/* Horizontal component Bh */}
+          <line x1={130} y1={100} x2={195} y2={100} stroke="#2a9d8f" strokeWidth="1.5" strokeDasharray="5,3" />
+          <polygon points="195,100 187,96 187,104" fill="#2a9d8f" />
+          <text x={198} y={104} fontSize="10" fill="#2a9d8f" fontWeight="600">Bₕ</text>
+          {/* Vertical component Bv */}
+          <line x1={130} y1={100} x2={130} y2={175} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,3" />
+          <polygon points="130,175 126,167 134,167" fill="#f59e0b" />
+          <text x={136} y={178} fontSize="10" fill="#f59e0b" fontWeight="600">Bᵥ</text>
+          {/* Center */}
+          <circle cx={130} cy={100} r="3" fill="#333" />
+        </svg>
+        <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+      </div>
+    );
+  }
+
+  // Default: U-shaped magnet
+  return (
+    <div className="figure-render figure-render--geometry">
+      <svg viewBox="0 0 260 200" className="figure-render__geo-svg">
+        {/* U-magnet body */}
+        <path d="M60,40 L60,140 Q60,170 90,170 L170,170 Q200,170 200,140 L200,40"
+          fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="2" />
+        {/* Pole faces */}
+        <rect x={50} y={28} width={20} height={16} fill="#457b9d" stroke="#333" strokeWidth="1" rx="1" />
+        <rect x={190} y={28} width={20} height={16} fill="#e63946" stroke="#333" strokeWidth="1" rx="1" />
+        {/* Pole labels */}
+        <text x={56} y={22} fontSize="14" fontWeight="700" fill="#457b9d">S</text>
+        <text x={196} y={22} fontSize="14" fontWeight="700" fill="#e63946">N</text>
+        {/* Point A in gap */}
+        <circle cx={130} cy={58} r="3" fill="#f59e0b" />
+        <text x={136} y={62} fontSize="12" fontWeight="600" fill="#f59e0b">A</text>
+        {/* Field lines */}
+        {[0,1,2].map(i => (
+          <line key={i} x1={75} y1={38+i*15} x2={185} y2={38+i*15}
+            stroke="#2a9d8f" strokeWidth="0.8" strokeDasharray="4,3" />
+        ))}
+        <polygon points="185,38 179,34 179,42" fill="#2a9d8f" />
+        <text x={125} y={80} fontSize="10" fill="#2a9d8f" fontWeight="600">B⃗</text>
+      </svg>
+      <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
+    </div>
+  );
+}
+
 // ─── Generic Description Card ───────────────────────────────────────────────
 
 function DescriptionCard({ description, icon, label }) {
@@ -1685,7 +2432,7 @@ export default function FigureRenderer({ description, compact = false }) {
       content = <ImagePlaceholder description={description} />;
       break;
     case FIGURE_TYPES.DIAGRAM:
-      content = <DescriptionCard description={description} icon="📊" label="Schéma" />;
+      content = <DiagramFigure description={description} />;
       break;
     case FIGURE_TYPES.TEXT:
     default:
