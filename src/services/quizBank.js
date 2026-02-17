@@ -476,7 +476,7 @@ export function normalizeAndIndexQuizBank(rows, videos = []) {
   const bySubject = {};
   const byVideoId = {};
   for (const r of rowsNorm) {
-    if r.subject_code_norm) {
+    if (r.subject_code_norm) {
       (bySubject[r.subject_code_norm] = bySubject[r.subject_code_norm] || []).push(r);
       if (r.unit_no_norm) {
         const key = `${r.subject_code_norm}|U${r.unit_no_norm}`;
