@@ -50,6 +50,21 @@ function classifyFigure(desc) {
     return FIGURE_TYPES.TABLE;
   }
 
+  // Electrochemistry (galvanic / voltaic cells) — before circuit check
+  if (/pile\s*(voltaïque|galvanique|électrochimique)|galvanic\s+cell|voltaic\s+cell|pile.*électrode/.test(d)) {
+    return FIGURE_TYPES.CHEMISTRY;
+  }
+
+  // Fresnel / phasor diagrams — before circuit check
+  if (/fresnel|vecteurs?\s+tournants?/.test(d)) {
+    return FIGURE_TYPES.DIAGRAM;
+  }
+
+  // Solenoid / electromagnet (not full circuit) — before circuit check
+  if (/solénoïde|électro-?aimant/.test(d) && !/circuit/.test(d)) {
+    return FIGURE_TYPES.DIAGRAM;
+  }
+
   // Electrical circuits
   if (/circuit|résistance|condensateur|capacit|bobine|voltmètre|ampèremètre|dipôle|générateur/.test(d) ||
       /\b(resistor|capacitor|inductor|lamp|battery|voltmeter)\b/.test(d)) {
@@ -62,9 +77,10 @@ function classifyFigure(desc) {
     return FIGURE_TYPES.GRAPH;
   }
 
-  // Chemistry
-  if (/benzène|cycle aromatique|molécule|formule (topologique|semi-développée|développée)|substitué|chaîne (principale|carbonée)|group|amine|carbonyle|carboxyle/.test(d) ||
-      /\b(zigzag chain|carbon atoms|functional group|chemical structure|organic)\b/.test(d)) {
+  // Chemistry — use specific group patterns to avoid matching "group of notes"
+  if (/benzène|cycle aromatique|molécule|formule (topologique|semi-développée|développée)|substitué|chaîne (principale|carbonée)|groupe\s+(fonctionnel|hydroxyl|amino|nitro|méthyl|éthyl|carbonyl|carboxyl|aldéhyd)|amine|carbonyle|carboxyle/.test(d) ||
+      /\b(zigzag chain|carbon atoms?|functional groups?|chemical structure|organic|skeletal (structure|formula)|cyclohex)\b/.test(d) ||
+      /\b(aldehyde|hydroxyl|amino|nitro|methyl|ethyl|carbonyl|carboxyl)\s+groups?\b/.test(d)) {
     return FIGURE_TYPES.CHEMISTRY;
   }
 
