@@ -1132,45 +1132,74 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
 
   return (
     <div className={`ka-scaffold ${allCorrect ? 'ka-scaffold--complete' : ''}`}>
-      {/* Progress dots — Khan Academy style */}
-      <div className="ka-scaffold__dots">
-        {blanks.map((_, bi) => {
-          let dotClass = 'ka-scaffold__dot';
-          if (validated[bi] === true) dotClass += ' ka-scaffold__dot--correct';
-          else if (validated[bi] === false) dotClass += ' ka-scaffold__dot--wrong';
-          else if (blankValues[bi]?.trim()) dotClass += ' ka-scaffold__dot--filled';
-          if (focusedBlank === bi) dotClass += ' ka-scaffold__dot--active';
+      {/* ── Feedback banner (KA-style: appears after checking) ── */}
+      {checked && allCorrect && (
+        <div className="ka-scaffold__banner ka-scaffold__banner--correct">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <span>Correct !</span>
+        </div>
+      )}
+      {checked && incorrectCount > 0 && (
+        <div className="ka-scaffold__banner ka-scaffold__banner--incorrect">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          <span>Incorrect — réessayez.</span>
+        </div>
+      )}
+
+      {/* ── Blank inputs — flat KA-style label + input rows ── */}
+      <div className="ka-scaffold__fields">
+        {blanks.map((blank, bi) => {
+          const vState = validated[bi];
+          let fieldClass = 'ka-scaffold__field';
+          if (vState === true) fieldClass += ' ka-scaffold__field--correct';
+          else if (vState === false) fieldClass += ' ka-scaffold__field--wrong';
+
           return (
-            <button
-              key={bi}
-              className={dotClass}
-              onClick={() => inputRefs.current[bi]?.focus()}
-              title={`Étape ${bi + 1}`}
-              type="button"
-              aria-label={`Aller à l'étape ${bi + 1}`}
-            />
+            <div key={bi} className={fieldClass}>
+              {blank.label && (
+                <label className="ka-scaffold__label" htmlFor={`scaffold-${index}-${bi}`}>
+                  <MathText text={blank.label} />
+                  {totalBlanks > 1 && <> =</>}
+                </label>
+              )}
+              <div className="ka-scaffold__input-wrap">
+                <MathKeyboard
+                  ref={el => inputRefs.current[bi] = el}
+                  id={`scaffold-${index}-${bi}`}
+                  value={blankValues[bi] || ''}
+                  onChange={val => setBlank(bi, val)}
+                  onFocus={() => setFocusedBlank(bi)}
+                  onBlur={() => setFocusedBlank(null)}
+                  onKeyDown={e => handleKeyDown(e, bi)}
+                  placeholder="Votre réponse"
+                  ariaLabel={blank.label || `Étape ${bi + 1}`}
+                  disabled={allCorrect}
+                  compact={totalBlanks > 4}
+                />
+              </div>
+              {/* Show correct answer on wrong attempt */}
+              {vState === false && answerParts[bi] && (
+                <div className="ka-scaffold__correction">
+                  Réponse : <MathText text={answerParts[bi].answer} />
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
 
-      {/* Solution walkthrough — collapsible */}
+      {/* ── Hint toggle — KA-style collapsible ── */}
       {solutionText && (
-        <div className="ka-scaffold__solution-wrap">
+        <div className="ka-scaffold__hint-area">
           <button
-            className={`ka-scaffold__solution-toggle ${showSolution ? 'ka-scaffold__solution-toggle--open' : ''}`}
+            className="ka-scaffold__hint-btn"
             onClick={() => setShowSolution(s => !s)}
             type="button"
           >
-            <svg className="ka-scaffold__solution-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            {showSolution ? 'Masquer la démarche' : 'Voir la démarche complète'}
-            <svg className="ka-scaffold__chevron" viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+            {showSolution ? 'Masquer la démarche' : 'Voir la démarche'}
           </button>
           {showSolution && (
-            <div className="ka-scaffold__solution-body">
+            <div className="ka-scaffold__hint-body">
               {solutionText.split('\n').map((line, li) => (
                 <React.Fragment key={li}>
                   {li > 0 && <br />}
@@ -1182,84 +1211,35 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
         </div>
       )}
 
-      {/* Step inputs — each blank is a clean step card */}
-      <div className="ka-scaffold__steps">
-        {blanks.map((blank, bi) => {
-          const vState = validated[bi];
-          let stepClass = 'ka-scaffold__step';
-          if (vState === true) stepClass += ' ka-scaffold__step--correct';
-          else if (vState === false) stepClass += ' ka-scaffold__step--wrong';
-          else if (focusedBlank === bi) stepClass += ' ka-scaffold__step--focused';
-          else if (blankValues[bi]?.trim()) stepClass += ' ka-scaffold__step--filled';
-
-          return (
-            <div key={bi} className={stepClass}>
-              <div className="ka-scaffold__step-num">{bi + 1}</div>
-              <div className="ka-scaffold__step-content">
-                {blank.label && (
-                  <label className="ka-scaffold__step-label" htmlFor={`scaffold-${index}-${bi}`}>
-                    {blank.label}
-                  </label>
-                )}
-                <div className="ka-scaffold__input-row">
-                  <MathKeyboard
-                    ref={el => inputRefs.current[bi] = el}
-                    id={`scaffold-${index}-${bi}`}
-                    value={blankValues[bi] || ''}
-                    onChange={val => setBlank(bi, val)}
-                    onFocus={() => setFocusedBlank(bi)}
-                    onBlur={() => setFocusedBlank(null)}
-                    onKeyDown={e => handleKeyDown(e, bi)}
-                    placeholder="Votre réponse"
-                    ariaLabel={blank.label || `Étape ${bi + 1}`}
-                    disabled={allCorrect}
-                    compact={totalBlanks > 4}
-                  />
-                  {/* Validation feedback icon — only after checking */}
-                  {vState === true && (
-                    <span className="ka-scaffold__feedback ka-scaffold__feedback--correct" aria-label="Correct">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                    </span>
-                  )}
-                  {vState === false && (
-                    <span className="ka-scaffold__feedback ka-scaffold__feedback--wrong" aria-label="Incorrect">
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </span>
-                  )}
-                </div>
-                {/* Show correct answer on wrong attempt */}
-                {vState === false && answerParts[bi] && (
-                  <div className="ka-scaffold__expected">
-                    Réponse attendue : <MathText text={answerParts[bi].answer} />
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom bar — Check button + status */}
+      {/* ── Bottom bar: progress dots + Check — KA-style ── */}
       <div className="ka-scaffold__bottom">
-        {checked && allCorrect ? (
-          <div className="ka-scaffold__status ka-scaffold__status--success">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Excellent ! Toutes les réponses sont correctes.
-          </div>
-        ) : checked && incorrectCount > 0 ? (
-          <div className="ka-scaffold__status ka-scaffold__status--retry">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
-            {correctCount}/{totalBlanks} correct{correctCount > 1 ? 's' : ''} — corrigez les erreurs et réessayez.
-          </div>
-        ) : null}
+        <div className="ka-scaffold__dots">
+          {blanks.map((_, bi) => {
+            let dotClass = 'ka-scaffold__dot';
+            if (validated[bi] === true) dotClass += ' ka-scaffold__dot--correct';
+            else if (validated[bi] === false) dotClass += ' ka-scaffold__dot--wrong';
+            else if (blankValues[bi]?.trim()) dotClass += ' ka-scaffold__dot--filled';
+            if (focusedBlank === bi) dotClass += ' ka-scaffold__dot--active';
+            return (
+              <button
+                key={bi}
+                className={dotClass}
+                onClick={() => inputRefs.current[bi]?.focus()}
+                title={`Étape ${bi + 1}`}
+                type="button"
+                aria-label={`Aller à l'étape ${bi + 1}`}
+              />
+            );
+          })}
+        </div>
 
         <button
-          className={`ka-scaffold__check-btn ${!allFilled ? 'ka-scaffold__check-btn--disabled' : ''} ${allCorrect ? 'ka-scaffold__check-btn--done' : ''}`}
+          className={`ka-scaffold__check ${allCorrect ? 'ka-scaffold__check--done' : ''}`}
           onClick={checkAnswers}
           disabled={!allFilled || allCorrect}
           type="button"
         >
-          {allCorrect ? '✓ Terminé' : checked ? 'Revérifier' : 'Vérifier'}
+          {allCorrect ? 'Terminé ✓' : checked ? 'Revérifier' : 'Vérifier'}
         </button>
       </div>
     </div>
