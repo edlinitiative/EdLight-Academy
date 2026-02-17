@@ -468,26 +468,32 @@ function GeometryFigure({ description }) {
   const isPendulum = /pendule/.test(d);
   const isCoordinate = /repère|orthonorm|cartésien/.test(d);
 
+  // Mirror / optics — check BEFORE triangle so "miroir + triangle" gets DescCard
+  const isMirror = /miroir|réflexion|rayon\s*lumineux|réfraction|lentille|optique/i.test(d);
+
   // Concentric circles: distinguish target/bullseye from math geometry
   const isConcentric = /concentric|concentri/.test(d);
   const isTarget = /cible|target|zones?\s*[:.]|points?\s+for|point.*zone/i.test(d)
     || (/concentric/.test(d) && /zone|point/i.test(d));
   const isTangentGeometry = isConcentric && /tangent|perpendiculaire|rayon.*[rR]|droit|AB|OA|OB/i.test(d);
 
-  // Triangle figures
-  const isTriangle = /triangle/.test(d) && !isConcentric;
-  const isRightTriangle = isTriangle && /rectangle|droit|perpendiculaire|90|right\s*angle/i.test(d);
+  // Non-triangle geometry that happens to contain the word "triangle"
+  const isCube = /cube|parallélépipède/i.test(d);
+  const isNet = /patron|net.*fold|dépli/i.test(d);
 
-  // Mirror / optics diagrams
-  const isMirror = /miroir|réflexion|rayon\s*lumineux|réfraction|lentille|optique/i.test(d);
+  // Triangle figures — only when it's primarily about a triangle
+  const isTriangle = /triangle/.test(d) && !isConcentric && !isCube && !isNet && !isMirror;
+  // Right triangle: match explicit "triangle rectangle", "angle droit", "droit en X"
+  // Do NOT match "perpendiculaire" alone — that usually describes a height, not a right triangle
+  const isRightTriangle = isTriangle && /triangle\s+rectangle|angle\s+droit|droit\s+en\s+[a-z]|right\s*angle|\b90[°\s]/i.test(d);
 
   if (isPendulum) return <PendulumSVG description={description} />;
   if (isCoordinate) return <CoordinateSVG description={description} />;
   if (isTangentGeometry) return <ConcentricTangentSVG description={description} />;
   if (isTarget) return <TargetSVG description={description} />;
+  if (isMirror) return <DescriptionCard description={description} icon="🔍" label="Optique" />;
   if (isRightTriangle) return <RightTriangleSVG description={description} />;
   if (isTriangle) return <TriangleSVG description={description} />;
-  if (isMirror) return <DescriptionCard description={description} icon="🔍" label="Optique" />;
 
   // For concentric figures that aren't targets or tangent geometry (e.g. Earth layers),
   // fall back to description card
@@ -688,45 +694,62 @@ function ConcentricTangentSVG({ description }) {
 function TriangleSVG({ description }) {
   const d = (description || '').toLowerCase();
 
-  // Try to extract vertex labels from description
+  // Extract vertex labels
   const labelMatch = d.match(/triangle\s+([a-z])([a-z])([a-z])/i);
   const [vA, vB, vC] = labelMatch
     ? [labelMatch[1].toUpperCase(), labelMatch[2].toUpperCase(), labelMatch[3].toUpperCase()]
     : ['A', 'B', 'C'];
 
-  // Check for a height / altitude
-  const hasHeight = /hauteur|altitude|perpendiculaire|height/i.test(d);
-  const heightMatch = d.match(/(?:hauteur|altitude)\s*(?:issue\s*de\s*)?([a-z])/i);
-  const heightVertex = heightMatch ? heightMatch[1].toUpperCase() : 'C';
+  // Height / altitude detection
+  const hasHeight = /hauteur|altitude|perpendiculaire.*à\s*[A-Z]{2}|height/i.test(d);
+  const heightFromMatch = d.match(/(?:hauteur|altitude)\s*(?:issue\s*de\s*)?([a-z])/i);
+  const heightFrom = heightFromMatch ? heightFromMatch[1].toUpperCase() : vC;   // vertex the height comes from
+  const footMatch = d.match(/point\s+([a-z])\s+(?:est|sur)/i);
+  const footLabel = footMatch ? footMatch[1].toUpperCase() : 'H';
 
-  // Standard scalene triangle coordinates
-  const Ax = 40, Ay = 190;
-  const Bx = 260, By = 190;
-  const Cx = 180, Cy = 40;
+  // Side labels (a, b, c)
+  const hasSideLabels = /side.*labeled|côté.*étiqueté|labeled.*'[abc]'/i.test(d)
+    || /\b[abc]'?\s*[,.]/.test(d) && /side|côté/i.test(d);
 
-  // Check for angle labels
+  // Angle labels
   const hasAlpha = /alpha|α/.test(d);
   const hasBeta = /beta|β/.test(d);
+  const hasGamma = /gamma|γ/.test(d);
+
+  // Triangle vertices — scalene with C offset right so height hits inside AB
+  const Ax = 40, Ay = 190;
+  const Bx = 260, By = 190;
+  const Cx = 190, Cy = 40;
+
+  // Compute foot of height H from C to AB
+  // H = A + ((AC · AB) / (AB · AB)) * AB  (projection)
+  const ABx = Bx - Ax, ABy = By - Ay;
+  const ACx = Cx - Ax, ACy = Cy - Ay;
+  const t = (ACx * ABx + ACy * ABy) / (ABx * ABx + ABy * ABy);
+  const Hx = Ax + t * ABx, Hy = Ay + t * ABy;
 
   return (
     <div className="figure-render figure-render--geometry">
       <svg viewBox="0 0 300 230" className="figure-render__geo-svg">
-        {/* Triangle */}
+        {/* Triangle fill */}
         <polygon
           points={`${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}`}
           fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5"
           strokeLinejoin="round"
         />
 
-        {/* Height from C to AB if described */}
+        {/* Height from C to H on AB */}
         {hasHeight && (
           <g>
-            <line x1={Cx} y1={Cy} x2={Cx} y2={By} stroke="#e63946" strokeWidth="1" strokeDasharray="5,3" />
-            <text x={Cx + 5} y={By - 5} fontSize="11" fill="#e63946">H</text>
-            <circle cx={Cx} cy={By} r="2.5" fill="#e63946" />
-            {/* Right angle mark */}
-            <polyline points={`${Cx - 8},${By} ${Cx - 8},${By - 8} ${Cx},${By - 8}`}
-              fill="none" stroke="#333" strokeWidth="0.8" />
+            <line x1={Cx} y1={Cy} x2={Hx} y2={Hy}
+              stroke="#e63946" strokeWidth="1.2" strokeDasharray="6,3" />
+            {/* Right-angle mark at H */}
+            <polyline
+              points={`${Hx - 10},${Hy} ${Hx - 10},${Hy - 10} ${Hx},${Hy - 10}`}
+              fill="none" stroke="#333" strokeWidth="1" />
+            {/* H point */}
+            <circle cx={Hx} cy={Hy} r="3" fill="#e63946" />
+            <text x={Hx + 2} y={Hy + 16} fontSize="13" fontWeight="600" fill="#e63946">{footLabel}</text>
           </g>
         )}
 
@@ -735,21 +758,40 @@ function TriangleSVG({ description }) {
           <g>
             <path d={`M${Ax + 30},${Ay} A30,30 0 0,0 ${Ax + 22},${Ay - 18}`}
               fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-            <text x={Ax + 28} y={Ay - 10} fontSize="10" fill="#f59e0b">α</text>
+            <text x={Ax + 32} y={Ay - 8} fontSize="11" fill="#f59e0b">α</text>
           </g>
         )}
         {hasBeta && (
           <g>
             <path d={`M${Bx - 30},${By} A30,30 0 0,1 ${Bx - 18},${By - 22}`}
               fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-            <text x={Bx - 35} y={By - 15} fontSize="10" fill="#f59e0b">β</text>
+            <text x={Bx - 38} y={By - 12} fontSize="11" fill="#f59e0b">β</text>
+          </g>
+        )}
+        {hasGamma && (
+          <g>
+            <path d={`M${Cx - 12},${Cy + 25} A20,20 0 0,1 ${Cx + 8},${Cy + 22}`}
+              fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+            <text x={Cx - 5} y={Cy + 38} fontSize="11" fill="#f59e0b">γ</text>
+          </g>
+        )}
+
+        {/* Side labels */}
+        {hasSideLabels && (
+          <g>
+            <text x={(Bx + Cx) / 2 + 8} y={(By + Cy) / 2} fontSize="12"
+              fill="#457b9d" fontStyle="italic">a</text>
+            <text x={(Ax + Cx) / 2 - 18} y={(Ay + Cy) / 2} fontSize="12"
+              fill="#457b9d" fontStyle="italic">b</text>
+            <text x={(Ax + Bx) / 2} y={Ay + 18} fontSize="12" textAnchor="middle"
+              fill="#457b9d" fontStyle="italic">c</text>
           </g>
         )}
 
         {/* Vertex labels */}
-        <text x={Ax - 15} y={Ay + 5} fontSize="13" fontWeight="600" fill="#333">{vA}</text>
-        <text x={Bx + 5} y={By + 5} fontSize="13" fontWeight="600" fill="#333">{vB}</text>
-        <text x={Cx + 5} y={Cy - 5} fontSize="13" fontWeight="600" fill="#333">{vC}</text>
+        <text x={Ax - 16} y={Ay + 6} fontSize="14" fontWeight="600" fill="#333">{vA}</text>
+        <text x={Bx + 6} y={By + 6} fontSize="14" fontWeight="600" fill="#333">{vB}</text>
+        <text x={Cx + 6} y={Cy - 6} fontSize="14" fontWeight="600" fill="#333">{vC}</text>
 
         {/* Vertex dots */}
         <circle cx={Ax} cy={Ay} r="3" fill="#333" />
@@ -764,68 +806,94 @@ function TriangleSVG({ description }) {
 function RightTriangleSVG({ description }) {
   const d = (description || '').toLowerCase();
 
-  // Try to extract vertex labels
+  // Extract vertex labels
   const labelMatch = d.match(/triangle\s+(?:rectangle\s+)?([a-z])([a-z])([a-z])/i);
-  const [vA, vB, vC] = labelMatch
+  const verts = labelMatch
     ? [labelMatch[1].toUpperCase(), labelMatch[2].toUpperCase(), labelMatch[3].toUpperCase()]
     : ['A', 'B', 'C'];
 
   // Detect which vertex has the right angle
-  const rightAtMatch = d.match(/(?:rectangle|droit)\s+en\s+([a-z])/i);
-  const rightAt = rightAtMatch ? rightAtMatch[1].toUpperCase() : vC;
+  const rightAtMatch = d.match(/(?:rectangle|droit|right\s*angle)\s+(?:en|at|in)\s+([a-z])/i);
+  const rightAt = rightAtMatch ? rightAtMatch[1].toUpperCase() : verts[2];
+
+  // Assign positions: right-angle vertex at bottom-left corner
+  const rightIdx = verts.indexOf(rightAt);
+  const others = verts.filter((_, i) => i !== rightIdx);
+  const labelBL = rightAt;           // bottom-left = right angle
+  const labelBR = others[1] || others[0]; // bottom-right
+  const labelTL = others[0] || others[1]; // top-left
 
   // Check for angle labels
   const hasAlpha = /alpha|α/.test(d);
   const hasBeta = /beta|β/.test(d);
 
-  // Place right angle at bottom-left for clearest visual
-  const Ax = 40, Ay = 190;   // bottom-left (right angle vertex)
-  const Bx = 260, By = 190;  // bottom-right
-  const Cx = 40, Cy = 40;    // top-left
+  // Check for midpoints or special points
+  const midpointMatches = [...d.matchAll(/point\s+([a-z])\s+(?:est\s+)?(?:le\s+)?milieu/gi)];
+  const midpoints = midpointMatches.map(m => m[1].toUpperCase());
+
+  // Coordinates
+  const RVx = 40, RVy = 190;   // bottom-left (right angle)
+  const BRx = 260, BRy = 190;  // bottom-right
+  const TLx = 40, TLy = 40;    // top-left
 
   return (
     <div className="figure-render figure-render--geometry">
       <svg viewBox="0 0 300 230" className="figure-render__geo-svg">
         {/* Triangle */}
         <polygon
-          points={`${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}`}
+          points={`${RVx},${RVy} ${BRx},${BRy} ${TLx},${TLy}`}
           fill="rgba(69,123,157,0.08)" stroke="#333" strokeWidth="1.5"
           strokeLinejoin="round"
         />
 
         {/* Right angle mark */}
-        <polyline points={`${Ax + 15},${Ay} ${Ax + 15},${Ay - 15} ${Ax},${Ay - 15}`}
+        <polyline points={`${RVx + 15},${RVy} ${RVx + 15},${RVy - 15} ${RVx},${RVy - 15}`}
           fill="none" stroke="#333" strokeWidth="1" />
 
         {/* Angle arcs */}
         {hasBeta && (
           <g>
-            <path d={`M${Bx - 30},${By} A30,30 0 0,1 ${Bx - 18},${By - 22}`}
+            <path d={`M${BRx - 30},${BRy} A30,30 0 0,1 ${BRx - 18},${BRy - 22}`}
               fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-            <text x={Bx - 38} y={By - 12} fontSize="10" fill="#f59e0b">β</text>
+            <text x={BRx - 38} y={BRy - 12} fontSize="11" fill="#f59e0b">β</text>
           </g>
         )}
         {hasAlpha && (
           <g>
-            <path d={`M${Cx},${Cy + 30} A30,30 0 0,0 ${Cx + 20},${Cy + 22}`}
+            <path d={`M${TLx},${TLy + 30} A30,30 0 0,0 ${TLx + 20},${TLy + 22}`}
               fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-            <text x={Cx + 14} y={Cy + 32} fontSize="10" fill="#f59e0b">α</text>
+            <text x={TLx + 16} y={TLy + 34} fontSize="11" fill="#f59e0b">α</text>
+          </g>
+        )}
+
+        {/* Midpoint markers */}
+        {midpoints.length >= 1 && (
+          <g>
+            <circle cx={(RVx + TLx) / 2} cy={(RVy + TLy) / 2} r="3" fill="#457b9d" />
+            <text x={(RVx + TLx) / 2 - 16} y={(RVy + TLy) / 2 + 4}
+              fontSize="12" fontWeight="600" fill="#457b9d">{midpoints[0]}</text>
+          </g>
+        )}
+        {midpoints.length >= 2 && (
+          <g>
+            <circle cx={(TLx + BRx) / 2} cy={(TLy + BRy) / 2} r="3" fill="#457b9d" />
+            <text x={(TLx + BRx) / 2 + 6} y={(TLy + BRy) / 2 - 4}
+              fontSize="12" fontWeight="600" fill="#457b9d">{midpoints[1]}</text>
+            <line x1={(RVx + TLx) / 2} y1={(RVy + TLy) / 2}
+              x2={(TLx + BRx) / 2} y2={(TLy + BRy) / 2}
+              stroke="#457b9d" strokeWidth="1" strokeDasharray="5,3" />
           </g>
         )}
 
         {/* Vertex labels */}
-        <text x={Ax - 5} y={Ay + 18} fontSize="13" fontWeight="600" fill="#333">{rightAt}</text>
-        <text x={Bx + 5} y={By + 5} fontSize="13" fontWeight="600" fill="#333">
-          {rightAt === vA ? vB : rightAt === vB ? vC : vB}
-        </text>
-        <text x={Cx - 15} y={Cy - 5} fontSize="13" fontWeight="600" fill="#333">
-          {rightAt === vA ? vC : rightAt === vC ? vA : vA}
-        </text>
+        <text x={RVx - 5} y={RVy + 18} fontSize="14" fontWeight="600" fill="#333">{labelBL}</text>
+        <text x={BRx + 6} y={BRy + 6} fontSize="14" fontWeight="600" fill="#333">{labelBR}</text>
+        <text x={TLx - 16} y={TLy - 6} fontSize="14" fontWeight="600" fill="#333">{labelTL}</text>
 
         {/* Vertex dots */}
-        <circle cx={Ax} cy={Ay} r="3" fill="#333" />
-        <circle cx={Bx} cy={By} r="3" fill="#333" />
-        <circle cx={Cx} cy={Cy} r="3" fill="#333" />
+        <circle cx={RVx} cy={RVy} r="3" fill="#333" />
+        <circle cx={BRx} cy={BRy} r="3" fill="#333" />
+        <circle cx={TLx} cy={TLy} r="3" fill="#333" />
       </svg>
       <div className="figure-render__geo-desc"><InlineMath text={description} /></div>
     </div>
