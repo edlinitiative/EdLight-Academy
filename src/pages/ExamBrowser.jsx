@@ -176,76 +176,98 @@ const ExamBrowser = () => {
 
         {/* Sticky filter bar */}
         <div className="exam-browser__filters-sticky">
-          <div className="exam-browser__filters">
-            {/* Subject */}
-            <select
-              className="exam-browser__select"
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              aria-label="Filtrer par matière"
-            >
-              <option value="">Toutes les matières</option>
-              {subjects.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+          <div className="exam-browser__filters-card">
+            <div className="exam-browser__filters">
+              {/* Subject */}
+              <div className="exam-browser__field">
+                <span className="exam-browser__label">Matière</span>
+                <select
+                  className="exam-browser__select"
+                  value={subjectFilter}
+                  onChange={(e) => setSubjectFilter(e.target.value)}
+                  aria-label="Filtrer par matière"
+                >
+                  <option value="">Toutes</option>
+                  {subjects.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Year */}
-            <select
-              className="exam-browser__select"
-              value={yearFilter}
-              onChange={(e) => setYearFilter(e.target.value)}
-              aria-label="Filtrer par année"
-            >
-              <option value="">Toutes les années</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+              {/* Year */}
+              <div className="exam-browser__field">
+                <span className="exam-browser__label">Année</span>
+                <select
+                  className="exam-browser__select"
+                  value={yearFilter}
+                  onChange={(e) => setYearFilter(e.target.value)}
+                  aria-label="Filtrer par année"
+                >
+                  <option value="">Toutes</option>
+                  {years.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Search */}
-            <div className="exam-browser__search-wrap">
-              <svg className="exam-browser__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                className="exam-browser__search"
-                type="search"
-                placeholder="Rechercher un examen…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Rechercher un examen"
-                enterKeyHint="search"
-                autoCapitalize="none"
-                autoCorrect="off"
-              />
+              {/* Search */}
+              <div className="exam-browser__field exam-browser__field--search">
+                <span className="exam-browser__label">Recherche</span>
+                <div className="exam-browser__search-wrap">
+                  <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    className="exam-browser__search"
+                    type="search"
+                    placeholder="Titre, matière, année…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    aria-label="Rechercher un examen"
+                    enterKeyHint="search"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                  />
+                </div>
+              </div>
+
+              {/* Clear filters */}
+              {hasActiveFilters && (
+                <div className="exam-browser__field exam-browser__field--actions">
+                  <button
+                    className="exam-browser__clear-btn"
+                    onClick={clearFilters}
+                    type="button"
+                    aria-label="Réinitialiser les filtres"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    Effacer
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Clear filters */}
-            {hasActiveFilters && (
-              <button
-                className="exam-browser__clear-btn"
-                onClick={clearFilters}
-                type="button"
-                aria-label="Réinitialiser les filtres"
-              >
-                ✕ Réinitialiser
-              </button>
-            )}
-          </div>
+            {/* Divider */}
+            <hr className="exam-browser__divider" />
 
-          {/* Summary */}
-          <div className="exam-browser__summary">
-            <strong>{summary.exams}</strong> examens
-            {' • '}
-            <strong>{summary.totalQ.toLocaleString()}</strong> questions
-            {summary.gradable > 0 && (
-              <>
-                {' • '}
-                <strong>{summary.gradable.toLocaleString()}</strong> auto-corrigées
-              </>
-            )}
+            {/* Stat chips */}
+            <div className="exam-browser__summary">
+              <span className="exam-browser__stat-chip">
+                <span className="exam-browser__stat-icon">📋</span>
+                {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
+              </span>
+              <span className="exam-browser__stat-chip">
+                <span className="exam-browser__stat-icon">❓</span>
+                {summary.totalQ.toLocaleString()} question{summary.totalQ !== 1 ? 's' : ''}
+              </span>
+              {summary.gradable > 0 && (
+                <span className="exam-browser__stat-chip exam-browser__stat-chip--accent">
+                  <span className="exam-browser__stat-icon">✓</span>
+                  {summary.gradable.toLocaleString()} auto-corrigée{summary.gradable !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
