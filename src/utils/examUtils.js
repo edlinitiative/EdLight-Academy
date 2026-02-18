@@ -453,6 +453,7 @@ export function subjectColor(subject) {
 
 export const QUESTION_TYPE_META = {
   multiple_choice: { icon: '🔘', label: 'QCM', gradable: true },
+  multiple_select: { icon: '☑️', label: 'QCM (plusieurs)', gradable: true },
   true_false: { icon: '✅', label: 'Vrai/Faux', gradable: true },
   fill_blank: { icon: '✏️', label: 'Compléter', gradable: true },
   calculation: { icon: '🧮', label: 'Calcul', gradable: true },
@@ -1167,6 +1168,17 @@ function checkAnswer(question, userAnswer) {
   switch (question.type) {
     case 'multiple_choice':
       return user === correct;
+
+    case 'multiple_select': {
+      // User answer is JSON array of selected keys, correct_keys is array of correct keys
+      let userKeys = [];
+      try {
+        const parsed = JSON.parse(String(userAnswer));
+        if (Array.isArray(parsed)) userKeys = parsed.map(k => String(k).trim().toLowerCase()).sort();
+      } catch { userKeys = [user]; }
+      const correctKeys = (question.correct_keys || correct.split(',')).map(k => String(k).trim().toLowerCase()).sort();
+      return userKeys.length === correctKeys.length && userKeys.every((k, i) => k === correctKeys[i]);
+    }
 
     case 'true_false': {
       // Normalize common variants

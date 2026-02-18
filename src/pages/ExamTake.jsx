@@ -1773,6 +1773,8 @@ function QuestionInput({ question, index, value, onChange, disabled }) {
   switch (type) {
     case 'multiple_choice':
       return <MCQInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
+    case 'multiple_select':
+      return <MultiSelectInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'true_false':
       return <TrueFalseInput index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'fill_blank':
@@ -2095,6 +2097,69 @@ function MCQInput({ question, index, value, onChange, disabled }) {
               checked={isSelected}
               onChange={() => onChange(index, key)}
               className="exam-take__mcq-radio"
+            />
+            <span className="exam-take__mcq-key">{key.toUpperCase()}</span>
+            <span className="exam-take__mcq-text"><MathText text={text} /></span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function MultiSelectInput({ question, index, value, onChange, disabled }) {
+  const options = question.options || {};
+  const entries = Object.entries(options);
+
+  // Parse stored JSON array of selected keys
+  const selected = useMemo(() => {
+    if (!value) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch { /* not JSON */ }
+    return [];
+  }, [value]);
+
+  const toggle = useCallback((key) => {
+    const next = selected.includes(key)
+      ? selected.filter(k => k !== key)
+      : [...selected, key];
+    onChange(index, JSON.stringify(next));
+  }, [selected, index, onChange]);
+
+  if (entries.length === 0) {
+    return (
+      <div className="exam-take__no-options">
+        <p>Options non disponibles pour cette question. Tapez votre réponse :</p>
+        <input
+          className="exam-take__text-input"
+          type="text"
+          value={value}
+          onChange={(e) => onChange(index, e.target.value)}
+          placeholder="Votre réponse…"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="exam-take__mcq-options exam-take__mcq-options--multi">
+      <p className="exam-take__multi-hint">☑️ Plusieurs réponses possibles</p>
+      {entries.map(([key, text]) => {
+        const isSelected = selected.includes(key);
+        return (
+          <label
+            key={key}
+            className={`exam-take__mcq-option ${isSelected ? 'exam-take__mcq-option--selected' : ''}`}
+          >
+            <input
+              type="checkbox"
+              value={key}
+              checked={isSelected}
+              onChange={() => toggle(key)}
+              className="exam-take__mcq-checkbox"
+              disabled={disabled}
             />
             <span className="exam-take__mcq-key">{key.toUpperCase()}</span>
             <span className="exam-take__mcq-text"><MathText text={text} /></span>

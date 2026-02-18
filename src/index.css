@@ -6419,6 +6419,24 @@ textarea.input-field {
 	accent-color: var(--primary-500);
 }
 
+.exam-take__mcq-checkbox {
+	margin-top: 2px;
+	accent-color: var(--primary-500);
+	width: 16px;
+	height: 16px;
+}
+
+.exam-take__multi-hint {
+	font-size: 0.82rem;
+	color: var(--text-secondary, #666);
+	margin-bottom: 4px;
+	font-style: italic;
+}
+
+.exam-take__mcq-options--multi .exam-take__mcq-key {
+	border-radius: 4px;
+}
+
 .exam-take__mcq-key {
 	display: flex;
 	align-items: center;
