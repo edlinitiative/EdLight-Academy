@@ -367,7 +367,7 @@ const ExamTake = () => {
     const v = answers[k];
     if (v == null || v === '') return false;
     // Proof steps stored as JSON — count as answered if any step has content or final answer
-    if (typeof v === 'string' && v.startsWith('{') || v.startsWith('[')) {
+    if (typeof v === 'string' && (v.startsWith('{') || v.startsWith('['))) {
       try {
         const parsed = JSON.parse(v);
         // New format: { steps, finalAnswer }
@@ -439,6 +439,18 @@ const ExamTake = () => {
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [showConfirm, showPassage]);
+
+  // Track-specific section directive for the current user's track
+  // NOTE: This useMemo MUST be before any early returns to comply with Rules of Hooks.
+  const userTrack = useStore.getState().track;
+  const trackDirective = useMemo(() => {
+    const q = questions[currentQ];
+    if (!userTrack || !q?.sectionInstructions) return null;
+    const directives = parseTrackDirectives(q.sectionInstructions);
+    if (!directives.length) return null;
+    return getDirectiveForTrack(directives, userTrack);
+  }, [userTrack, questions, currentQ]);
+  const trackInfo = userTrack ? TRACK_BY_CODE[userTrack] : null;
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
@@ -709,16 +721,6 @@ const ExamTake = () => {
   const cleanInstructions = cleanedEntry?._hadRules
     ? (cleanedEntry._cleanInstructions || '')
     : (question.sectionInstructions || '');
-
-  // Track-specific section directive for the current user's track
-  const userTrack = useStore.getState().track;
-  const trackDirective = useMemo(() => {
-    if (!userTrack || !question.sectionInstructions) return null;
-    const directives = parseTrackDirectives(question.sectionInstructions);
-    if (!directives.length) return null;
-    return getDirectiveForTrack(directives, userTrack);
-  }, [userTrack, question.sectionInstructions]);
-  const trackInfo = userTrack ? TRACK_BY_CODE[userTrack] : null;
 
   return (
     <section className="section exam-take">
