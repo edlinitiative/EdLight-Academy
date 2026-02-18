@@ -19,7 +19,7 @@ const ExamLanding = () => {
         <Link to="/exams/terminale" className="level-card">
           <div className="level-card-content">
             <h2>Terminale</h2>
-            <p>Examens pour les classes de Philo et SVT.</p>
+            <p>Examens de baccalauréat pour les classes de Terminale.</p>
           </div>
         </Link>
         <Link to="/exams/university" className="level-card">
