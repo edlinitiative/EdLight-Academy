@@ -952,6 +952,7 @@ const ExamTake = () => {
                           value={answers[qIdx] ?? ''}
                           onChange={setAnswer}
                           disabled={isLocked}
+                          mathMode={MATH_SUBJECTS.has(subject)}
                         />
                       </div>
                     ) : (
@@ -1299,7 +1300,12 @@ function QuestionHints({ hints }) {
 
 // ── Scaffolded Answer (Khan Academy-inspired step-by-step) ───────────────────
 
-function ScaffoldedAnswer({ question, index, value, onChange }) {
+// Subjects that benefit from the MathKeyboard (formulas, equations, symbols).
+const MATH_SUBJECTS = new Set([
+  'Mathématiques', 'Physique', 'Chimie', 'SVT', 'Informatique',
+]);
+
+function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }) {
   const template = question.scaffold_text;
   const blanks = question.scaffold_blanks || [];
   const answerParts = question.answer_parts || [];
@@ -1427,19 +1433,36 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
                 </label>
               )}
               <div className="ka-scaffold__input-wrap">
-                <MathKeyboard
-                  ref={el => inputRefs.current[bi] = el}
-                  id={`scaffold-${index}-${bi}`}
-                  value={blankValues[bi] || ''}
-                  onChange={val => setBlank(bi, val)}
-                  onFocus={() => setFocusedBlank(bi)}
-                  onBlur={() => setFocusedBlank(null)}
-                  onKeyDown={e => handleKeyDown(e, bi)}
-                  placeholder="Votre réponse"
-                  ariaLabel={blank.label || `Étape ${bi + 1}`}
-                  disabled={allCorrect}
-                  compact={totalBlanks > 4}
-                />
+                {mathMode ? (
+                  <MathKeyboard
+                    ref={el => inputRefs.current[bi] = el}
+                    id={`scaffold-${index}-${bi}`}
+                    value={blankValues[bi] || ''}
+                    onChange={val => setBlank(bi, val)}
+                    onFocus={() => setFocusedBlank(bi)}
+                    onBlur={() => setFocusedBlank(null)}
+                    onKeyDown={e => handleKeyDown(e, bi)}
+                    placeholder="Votre réponse"
+                    ariaLabel={blank.label || `Étape ${bi + 1}`}
+                    disabled={allCorrect}
+                    compact={totalBlanks > 4}
+                  />
+                ) : (
+                  <input
+                    ref={el => inputRefs.current[bi] = el}
+                    id={`scaffold-${index}-${bi}`}
+                    className="ka-scaffold__text-input"
+                    type="text"
+                    value={blankValues[bi] || ''}
+                    onChange={e => setBlank(bi, e.target.value)}
+                    onFocus={() => setFocusedBlank(bi)}
+                    onBlur={() => setFocusedBlank(null)}
+                    onKeyDown={e => handleKeyDown(e, bi)}
+                    placeholder="Votre réponse"
+                    aria-label={blank.label || `Étape ${bi + 1}`}
+                    disabled={allCorrect}
+                  />
+                )}
               </div>
               {/* Show correct answer on wrong attempt */}
               {vState === false && answerParts[bi] && (

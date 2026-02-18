@@ -5569,6 +5569,37 @@ textarea.input-field {
 	max-width: 400px;
 }
 
+/* Plain text input (non-math subjects) */
+.ka-scaffold__text-input {
+	width: 100%;
+	padding: 0.55rem 0.75rem;
+	font-size: 0.95rem;
+	font-family: inherit;
+	border: 2px solid #d1d5db;
+	border-radius: 0.5rem;
+	background: #fff;
+	color: #1e293b;
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ka-scaffold__text-input:focus {
+	border-color: #6366f1;
+	box-shadow: 0 0 0 3px rgba(99,102,241,0.13);
+}
+.ka-scaffold__text-input:disabled {
+	background: #f3f4f6;
+	color: #9ca3af;
+}
+.ka-scaffold__field--correct .ka-scaffold__text-input {
+	border-color: #0d923f;
+	background: #f6fef8;
+	color: #0d6b2f;
+}
+.ka-scaffold__field--wrong .ka-scaffold__text-input {
+	border-color: #d92828;
+	background: #fef6f6;
+}
+
 /* Correction hint (shown below input on wrong answer) */
 .ka-scaffold__correction {
 	margin-top: 0.3rem;
@@ -5739,6 +5770,28 @@ textarea.input-field {
 	background: #0b2e1a;
 }
 [data-theme="dark"] .ka-scaffold__field--wrong .ka-scaffold__input-wrap .math-kb__input-row {
+	border-color: #e54545;
+	background: #2e0b0b;
+}
+[data-theme="dark"] .ka-scaffold__text-input {
+	background: #21242c;
+	border-color: #4b5060;
+	color: #e2e8f0;
+}
+[data-theme="dark"] .ka-scaffold__text-input:focus {
+	border-color: #818cf8;
+	box-shadow: 0 0 0 3px rgba(129,140,248,0.18);
+}
+[data-theme="dark"] .ka-scaffold__text-input:disabled {
+	background: #181a20;
+	color: #6b7280;
+}
+[data-theme="dark"] .ka-scaffold__field--correct .ka-scaffold__text-input {
+	border-color: #1fa34e;
+	background: #0b2e1a;
+	color: #6ee7a0;
+}
+[data-theme="dark"] .ka-scaffold__field--wrong .ka-scaffold__text-input {
 	border-color: #e54545;
 	background: #2e0b0b;
 }
