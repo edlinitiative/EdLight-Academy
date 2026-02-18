@@ -5313,6 +5313,32 @@ textarea.input-field {
 	margin-left: auto;
 }
 
+/* Temporal context note */
+.exam-take__temporal-note {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.6rem 0.85rem;
+	margin: 0.5rem 0;
+	border-radius: 8px;
+	background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.03));
+	border: 1px solid rgba(245, 158, 11, 0.2);
+	font-size: 0.82rem;
+	line-height: 1.5;
+	color: var(--text-700);
+}
+
+.exam-take__temporal-note-icon {
+	flex-shrink: 0;
+	font-size: 1rem;
+	margin-top: 0.05rem;
+}
+
+.exam-take__temporal-note-text {
+	flex: 1;
+	min-width: 0;
+}
+
 .exam-take__question-text {
 	font-size: 1rem;
 	line-height: 1.65;
@@ -7048,6 +7074,73 @@ textarea.input-field {
 	margin-bottom: 0.5rem;
 }
 
+/* Structured matching (select-based) */
+.exam-take__matching-structured {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.exam-take__matching-progress {
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--text-400);
+	text-align: right;
+}
+
+.exam-take__matching-pairs {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.exam-take__matching-pair {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: 8px;
+	background: var(--bg-100, #f8f9fa);
+	border: 1px solid var(--border);
+	transition: background 0.15s;
+}
+
+.exam-take__matching-pair:hover {
+	background: var(--bg-200, #f0f1f3);
+}
+
+.exam-take__matching-item {
+	font-size: 0.88rem;
+	font-weight: 600;
+	color: var(--text-800);
+	min-width: 0;
+	flex: 1;
+}
+
+.exam-take__matching-arrow {
+	color: var(--text-300);
+	font-size: 0.9rem;
+	flex-shrink: 0;
+}
+
+.exam-take__matching-select {
+	flex: 1;
+	min-width: 0;
+	padding: 0.4rem 0.6rem;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	font-size: 0.85rem;
+	background: white;
+	color: var(--text-800);
+	cursor: pointer;
+}
+
+.exam-take__matching-select:focus {
+	outline: none;
+	border-color: var(--primary);
+	box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.15);
+}
+
 .exam-take__no-options p {
 	font-size: 0.85rem;
 	color: var(--text-500);
@@ -7763,6 +7856,79 @@ textarea.input-field {
 /* Image placeholder */
 .figure-render--image {
 	padding: 0.75rem;
+}
+
+/* Music notation figure */
+.figure-render--music {
+	padding: 0.75rem;
+	border-left: 3px solid #8b5cf6;
+	background: linear-gradient(135deg, rgba(139, 92, 246, 0.04), rgba(139, 92, 246, 0.01));
+}
+
+.figure-render__music-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.5rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid var(--border);
+	flex-wrap: wrap;
+}
+
+.figure-render__music-icon {
+	font-size: 1.2rem;
+}
+
+.figure-render__music-label {
+	font-size: 0.78rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #8b5cf6;
+}
+
+.figure-render__music-clef {
+	font-size: 1.5rem;
+	line-height: 1;
+	opacity: 0.6;
+}
+
+.figure-render__music-badge {
+	font-size: 0.7rem;
+	font-weight: 600;
+	padding: 0.15rem 0.45rem;
+	border-radius: 100px;
+	background: rgba(139, 92, 246, 0.12);
+	color: #7c3aed;
+}
+
+.figure-render__music-staff {
+	margin: 0.5rem 0;
+}
+
+.figure-render__music-lines {
+	width: 100%;
+	height: 48px;
+	color: #8b5cf6;
+}
+
+.figure-render__music-desc {
+	font-size: 0.88rem;
+	line-height: 1.6;
+	color: var(--text-700);
+	padding: 0.5rem 0;
+}
+
+.figure-render__music-hint {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.4rem;
+	font-size: 0.78rem;
+	color: var(--text-400);
+	font-style: italic;
+	margin-top: 0.25rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--border);
 }
 
 .figure-render__image-placeholder {

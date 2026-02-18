@@ -217,6 +217,14 @@ const ExamResults = () => {
                 <FigureRenderer description={r.question.figure_description} compact />
               )}
 
+              {/* Temporal context note */}
+              {r.question.temporal_note && (
+                <div className="exam-take__temporal-note" style={{ margin: '0.5rem 0' }}>
+                  <span className="exam-take__temporal-note-icon">🕐</span>
+                  <span className="exam-take__temporal-note-text">{r.question.temporal_note}</span>
+                </div>
+              )}
+
               {/* User answer */}
               {r.userAnswer && (
                 <div className="exam-results__item-answer">

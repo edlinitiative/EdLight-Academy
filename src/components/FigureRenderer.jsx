@@ -37,6 +37,7 @@ const FIGURE_TYPES = {
   GEOMETRY: 'geometry',
   EQUATION: 'equation',
   CHEMISTRY: 'chemistry',
+  MUSIC: 'music',
   TEXT: 'text',
   IMAGE: 'image',
 };
@@ -76,6 +77,11 @@ function classifyFigure(desc) {
   if (/graphique|courbe|axe\s+(horizontal|vertical)|diagramme\s+(à\s+|en\s+|de\s+)?(barres?|bâtons?|cercle|circulaire|secteurs?)|graphe\b/.test(d) ||
       /\b(graph|chart|plot|axis|curve)\b/.test(d)) {
     return FIGURE_TYPES.GRAPH;
+  }
+
+  // Musical notation / staff figures
+  if (/portée\s*musicale|musical\s+staff|clé\s+de\s+(sol|fa|ut)|treble\s+clef|bass\s+clef|mesures?\s+(contenant|de\s+musique)|accords?\s+(de|parfait|majeur|mineur)|notes?\s+(blanch|noir|croch|ronde|pointée)|quarter\s+note|eighth\s+note|whole\s+note|half\s+note|dièses?|bémols?|gamme|intervalle|solfège|partition|temps\s+signature|time\s+signature|\bstaff\b.*\bnotes?\b/.test(d)) {
+    return FIGURE_TYPES.MUSIC;
   }
 
   // Chemistry — use specific group patterns to avoid matching "group of notes"
@@ -2363,6 +2369,66 @@ function MagnetSVG({ description }) {
   );
 }
 
+// ─── Music Notation Figure ──────────────────────────────────────────────────
+
+function MusicFigure({ description }) {
+  // Parse the description to extract structured musical info
+  const d = (description || '').toLowerCase();
+
+  // Detect key signature
+  const clefMatch = d.match(/clé\s+de\s+(sol|fa|ut)|treble\s+clef|bass\s+clef/);
+  const clef = clefMatch
+    ? /sol|treble/.test(clefMatch[0]) ? '𝄞' : /fa|bass/.test(clefMatch[0]) ? '𝄢' : '𝄡'
+    : null;
+
+  // Detect time signature
+  const timeMatch = d.match(/(\d+)\/(\d+)\s*(time\s+signature|mesure)|(mesure\s+en\s+)(\d+)\/(\d+)/);
+  const timeSig = timeMatch
+    ? (timeMatch[1] && timeMatch[2]) ? `${timeMatch[1]}/${timeMatch[2]}` : (timeMatch[5] && timeMatch[6]) ? `${timeMatch[5]}/${timeMatch[6]}` : null
+    : null;
+
+  // Detect number of measures
+  const measureMatch = d.match(/(\d+)\s*mesures?|(\d+)\s*measures?/);
+  const measureCount = measureMatch ? (measureMatch[1] || measureMatch[2]) : null;
+
+  // Detect sharps/flats
+  const sharpMatch = d.match(/(\d+)\s*dièses?|(\d+)\s*sharps?/);
+  const flatMatch = d.match(/(\d+)\s*bémols?|(\d+)\s*flats?/);
+  const sharps = sharpMatch ? (sharpMatch[1] || sharpMatch[2]) : null;
+  const flats = flatMatch ? (flatMatch[1] || flatMatch[2]) : null;
+
+  return (
+    <div className="figure-render figure-render--music">
+      <div className="figure-render__music-header">
+        <span className="figure-render__music-icon">🎵</span>
+        <span className="figure-render__music-label">Notation musicale</span>
+        {clef && <span className="figure-render__music-clef">{clef}</span>}
+        {timeSig && <span className="figure-render__music-badge">{timeSig}</span>}
+        {measureCount && <span className="figure-render__music-badge">{measureCount} mesures</span>}
+        {sharps && <span className="figure-render__music-badge">♯×{sharps}</span>}
+        {flats && <span className="figure-render__music-badge">♭×{flats}</span>}
+      </div>
+      <div className="figure-render__music-staff">
+        {/* Decorative 5-line staff */}
+        <svg className="figure-render__music-lines" viewBox="0 0 400 60" preserveAspectRatio="none">
+          {[12, 18, 24, 30, 36].map(y => (
+            <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="currentColor" strokeWidth="0.8" opacity="0.35" />
+          ))}
+          {clef && (
+            <text x="8" y="32" fontSize="28" fill="currentColor" opacity="0.25">{clef}</text>
+          )}
+        </svg>
+      </div>
+      <div className="figure-render__music-desc">
+        <InlineMath text={description} />
+      </div>
+      <div className="figure-render__music-hint">
+        <span>📝</span> Cette question fait référence à une partition musicale. Lisez attentivement la description ci-dessus.
+      </div>
+    </div>
+  );
+}
+
 // ─── Generic Description Card ───────────────────────────────────────────────
 
 function DescriptionCard({ description, icon, label }) {
@@ -2424,6 +2490,9 @@ export default function FigureRenderer({ description, compact = false }) {
       break;
     case FIGURE_TYPES.CHEMISTRY:
       content = <ChemistryFigure description={description} />;
+      break;
+    case FIGURE_TYPES.MUSIC:
+      content = <MusicFigure description={description} />;
       break;
     case FIGURE_TYPES.EQUATION:
       content = <EquationFigure description={description} />;

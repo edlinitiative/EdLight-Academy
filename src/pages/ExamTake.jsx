@@ -919,6 +919,14 @@ const ExamTake = () => {
                   <FigureRenderer description={gq.figure_description} />
                 )}
 
+                {/* Temporal context note — shown for questions with time-sensitive answers */}
+                {gq.temporal_note && (
+                  <div className="exam-take__temporal-note">
+                    <span className="exam-take__temporal-note-icon">🕐</span>
+                    <span className="exam-take__temporal-note-text">{gq.temporal_note}</span>
+                  </div>
+                )}
+
                 {/* Question text — inline blanks for fill_blank, normal renderer otherwise */}
                 {gq.type === 'fill_blank' && hasInlineBlanks(gq._displayText || gq.question) ? (
                   <div className="exam-take__question-text">
@@ -2012,8 +2020,58 @@ function EssayInput({ index, value, onChange, disabled }) {
 }
 
 function MatchingInput({ question, index, value, onChange, disabled }) {
-  // For matching, store as JSON string of pairs
-  // Simple fallback: just a text area
+  const options = question.options || {};
+  const entries = Object.entries(options);
+
+  // If we have structured matching pairs (key→value), render a proper matching UI
+  if (entries.length > 0) {
+    // Parse stored JSON value → { [key]: selectedValue }
+    const selections = useMemo(() => {
+      try { return value ? JSON.parse(value) : {}; } catch { return {}; }
+    }, [value]);
+
+    // Get unique target values (the right-hand side to match to)
+    const targets = useMemo(() => {
+      const vals = entries.map(([, v]) => v);
+      return [...new Set(vals)].sort();
+    }, [entries]);
+
+    const setMatch = (key, val) => {
+      const next = { ...selections, [key]: val };
+      onChange(index, JSON.stringify(next));
+    };
+
+    const matchedCount = entries.filter(([k]) => selections[k]).length;
+
+    return (
+      <div className="exam-take__matching-structured">
+        <div className="exam-take__matching-progress">
+          {matchedCount}/{entries.length} associés
+        </div>
+        <div className="exam-take__matching-pairs">
+          {entries.map(([key]) => (
+            <div className="exam-take__matching-pair" key={key}>
+              <span className="exam-take__matching-item">{key}</span>
+              <span className="exam-take__matching-arrow">→</span>
+              <select
+                className="exam-take__matching-select"
+                value={selections[key] || ''}
+                onChange={(e) => setMatch(key, e.target.value)}
+                disabled={disabled}
+              >
+                <option value="">— Choisir —</option>
+                {targets.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for matching without structured options: text input
   return (
     <div className="exam-take__matching">
       <p className="exam-take__matching-hint">
