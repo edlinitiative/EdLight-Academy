@@ -4258,6 +4258,68 @@ textarea.input-field {
 	margin-top: 2px;
 }
 
+/* ── Feedback mode selector ── */
+.exam-cover__feedback-mode {
+	grid-column: 1 / -1;
+	animation: coverReveal 0.5s cubic-bezier(0.16,1,0.3,1) 0.2s both;
+}
+.exam-cover__feedback-options {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+	margin-top: 0.65rem;
+}
+.exam-cover__feedback-option {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	padding: 0.85rem 1rem;
+	border: 2px solid var(--border-200, #e2e8f0);
+	border-radius: 12px;
+	cursor: pointer;
+	transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+	background: var(--bg-50, #fff);
+}
+.exam-cover__feedback-option:hover {
+	border-color: var(--border-300, #cbd5e1);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.exam-cover__feedback-option--selected {
+	box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.exam-cover__feedback-radio {
+	margin-top: 3px;
+	accent-color: var(--cover-accent, var(--primary-500));
+}
+.exam-cover__feedback-content {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+}
+.exam-cover__feedback-icon {
+	font-size: 1.35rem;
+	flex-shrink: 0;
+	margin-top: -1px;
+}
+.exam-cover__feedback-content strong {
+	display: block;
+	font-size: 0.92rem;
+	font-weight: 700;
+	color: var(--text-900, #1e293b);
+	margin-bottom: 2px;
+}
+.exam-cover__feedback-content p {
+	font-size: 0.78rem;
+	color: var(--text-500, #64748b);
+	margin: 0;
+	line-height: 1.35;
+}
+@media (max-width: 500px) {
+	.exam-cover__feedback-options {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* ── CTA ── */
 .exam-cover__cta {
 	display: flex;
@@ -4694,6 +4756,26 @@ textarea.input-field {
 	border-color: rgba(34, 197, 94, 0.25);
 }
 
+/* Immediate mode: graded nav button variants */
+.exam-take__nav-btn--correct {
+	background: rgba(34, 197, 94, 0.12);
+	color: #16a34a;
+	border-color: rgba(34, 197, 94, 0.35);
+	font-weight: 600;
+}
+.exam-take__nav-btn--incorrect {
+	background: rgba(239, 68, 68, 0.10);
+	color: #dc2626;
+	border-color: rgba(239, 68, 68, 0.30);
+	font-weight: 600;
+}
+.exam-take__nav-btn--partial {
+	background: rgba(245, 158, 11, 0.10);
+	color: #d97706;
+	border-color: rgba(245, 158, 11, 0.30);
+	font-weight: 600;
+}
+
 /* Small green check dot on answered buttons */
 .exam-take__nav-btn-check {
 	position: absolute;
@@ -4995,6 +5077,196 @@ textarea.input-field {
 
 .exam-take__question-card:hover {
 	transform: none;
+}
+
+/* Locked card (immediate mode — already graded) */
+.exam-take__question-card--locked {
+	opacity: 0.85;
+	pointer-events: none; /* read-only, except feedback area */
+}
+.exam-take__question-card--locked .exam-take__feedback,
+.exam-take__question-card--locked .exam-take__feedback-explain-btn {
+	pointer-events: auto;
+	opacity: 1;
+}
+
+/* ── "Vérifier" / "Évaluer" check-answer button area ── */
+.exam-take__check-answer {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	flex-wrap: wrap;
+	padding-top: 0.25rem;
+}
+.exam-take__check-hint {
+	font-size: 0.78rem;
+	color: var(--text-400, #94a3b8);
+	font-style: italic;
+}
+.loading-spinner--inline {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border: 2px solid rgba(255,255,255,0.3);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: spin 0.6s linear infinite;
+	vertical-align: middle;
+	margin-right: 4px;
+}
+
+/* ── Inline feedback card (immediate mode) ── */
+.exam-take__feedback {
+	border-radius: 10px;
+	padding: 0.85rem 1rem;
+	margin-top: 0.25rem;
+	animation: fadeInUp 0.25s ease;
+}
+.exam-take__feedback--correct {
+	background: rgba(34, 197, 94, 0.08);
+	border: 1px solid rgba(34, 197, 94, 0.25);
+}
+.exam-take__feedback--partial {
+	background: rgba(245, 158, 11, 0.08);
+	border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.exam-take__feedback--incorrect {
+	background: rgba(239, 68, 68, 0.07);
+	border: 1px solid rgba(239, 68, 68, 0.20);
+}
+.exam-take__feedback--manual {
+	background: rgba(99, 102, 241, 0.06);
+	border: 1px solid rgba(99, 102, 241, 0.18);
+}
+.exam-take__feedback--unanswered {
+	background: rgba(100, 116, 139, 0.06);
+	border: 1px solid rgba(100, 116, 139, 0.15);
+}
+
+.exam-take__feedback-banner {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-weight: 700;
+	font-size: 0.95rem;
+	margin-bottom: 0.5rem;
+}
+.exam-take__feedback-icon {
+	font-size: 1.15rem;
+}
+.exam-take__feedback-score {
+	margin-left: auto;
+	font-size: 0.82rem;
+	font-weight: 600;
+	opacity: 0.75;
+}
+.exam-take__feedback--correct .exam-take__feedback-banner { color: #16a34a; }
+.exam-take__feedback--partial .exam-take__feedback-banner { color: #d97706; }
+.exam-take__feedback--incorrect .exam-take__feedback-banner { color: #dc2626; }
+.exam-take__feedback--manual .exam-take__feedback-banner { color: #6366f1; }
+
+/* Essay AI feedback */
+.exam-take__feedback-essay {
+	background: rgba(99, 102, 241, 0.05);
+	border-radius: 8px;
+	padding: 0.65rem 0.85rem;
+	margin-bottom: 0.5rem;
+}
+.exam-take__feedback-essay-score {
+	font-size: 0.88rem;
+	margin-bottom: 0.35rem;
+}
+.exam-take__feedback-essay-score strong {
+	color: var(--primary-600, #4f46e5);
+}
+.exam-take__feedback-essay-text {
+	font-size: 0.84rem;
+	color: var(--text-700, #334155);
+	line-height: 1.55;
+	margin: 0;
+}
+
+/* Correct answer reveal */
+.exam-take__feedback-correct {
+	font-size: 0.88rem;
+	padding: 0.45rem 0;
+	color: var(--text-700, #334155);
+}
+.exam-take__feedback-correct-label {
+	color: var(--text-400, #94a3b8);
+	font-size: 0.8rem;
+}
+
+/* Scaffold blank results */
+.exam-take__feedback-blanks {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	font-size: 0.84rem;
+	margin: 0.35rem 0;
+}
+.exam-take__feedback-blank {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.2rem 0;
+}
+.exam-take__feedback-blank--ok { color: #16a34a; }
+.exam-take__feedback-blank--wrong { color: #dc2626; }
+.exam-take__feedback-blank-user {
+	text-decoration: line-through;
+	opacity: 0.6;
+}
+
+/* Explanation toggle */
+.exam-take__feedback-explain {
+	margin-top: 0.35rem;
+	border-top: 1px solid rgba(0,0,0,0.06);
+	padding-top: 0.45rem;
+}
+.exam-take__feedback-explain-btn {
+	font-size: 0.82rem;
+	color: var(--primary-600, #4f46e5);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0.25rem 0;
+	font-weight: 600;
+}
+.exam-take__feedback-explain-btn:hover {
+	text-decoration: underline;
+}
+.exam-take__feedback-explain-body {
+	margin-top: 0.5rem;
+	font-size: 0.85rem;
+	color: var(--text-700, #334155);
+	line-height: 1.6;
+}
+.exam-take__feedback-explain-model {
+	margin-top: 0.65rem;
+	padding: 0.6rem 0.85rem;
+	background: rgba(0,0,0,0.025);
+	border-radius: 8px;
+}
+
+/* Essay word count */
+.exam-take__essay-wrap {
+	position: relative;
+}
+.exam-take__essay-wordcount {
+	position: absolute;
+	bottom: 8px;
+	right: 12px;
+	font-size: 0.72rem;
+	color: var(--text-300, #a1a1aa);
+	pointer-events: none;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Disabled MCQ options */
+.exam-take__mcq-options--disabled {
+	pointer-events: none;
+	opacity: 0.7;
 }
 
 .exam-take__question-header {

@@ -8,6 +8,7 @@ import { useKatex, renderWithKatex } from '../utils/shared';
 import {
   flattenQuestions,
   gradeExam,
+  gradeSingleQuestion,
   questionTypeMeta,
   normalizeSubject,
   normalizeLevel,
@@ -258,6 +259,16 @@ const ExamTake = () => {
   const [submitted, setSubmitted] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Feedback mode: 'end' (default — see all results after submit)
+  //                'immediate' (see per-question result after answering)
+  const [feedbackMode, setFeedbackMode] = useState(
+    () => localStorage.getItem('edlight-exam-feedback-mode') || 'end'
+  );
+  // Per-question results for immediate mode  { [flatIndex]: gradeResult }
+  const [questionResults, setQuestionResults] = useState({});
+  // Track which questions are currently being AI-graded (essay)
+  const [gradingInProgress, setGradingInProgress] = useState({});
+
   // Timer
   const durationMin = exam?.duration_minutes || 0;
   const [secondsLeft, setSecondsLeft] = useState(durationMin * 60);
@@ -297,6 +308,58 @@ const ExamTake = () => {
   const setAnswer = useCallback((qIndex, value) => {
     setAnswers((prev) => ({ ...prev, [qIndex]: value }));
   }, []);
+
+  // ── Immediate-mode: grade a single question ──────────────────────────────
+  const ESSAY_MIN_WORDS = 50;
+
+  const gradeQuestionImmediate = useCallback(async (qIndex) => {
+    const q = questions[qIndex];
+    const userAnswer = answers[qIndex];
+    if (!q || userAnswer == null || userAnswer === '') return;
+    // Don't re-grade if already graded
+    if (questionResults[qIndex]) return;
+
+    if (q.type === 'essay') {
+      // Essay: needs AI grading — enforce minimum word count
+      const wordCount = (userAnswer || '').trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount < ESSAY_MIN_WORDS) return; // caller should show a warning
+
+      setGradingInProgress((prev) => ({ ...prev, [qIndex]: true }));
+      try {
+        const response = await fetch('/api/grade-essay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: q._displayText || q.question,
+            context: q.sectionInstructions || '',
+            answer: userAnswer,
+            modelAnswer: q.model_answer || q.correct || '',
+          }),
+        });
+        let essayResult;
+        if (response.ok) {
+          essayResult = await response.json();
+        } else {
+          essayResult = { isCorrect: false, feedback: 'Évaluation automatique indisponible.', score: 'N/A' };
+        }
+        const result = gradeSingleQuestion(q, userAnswer, essayResult);
+        setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
+      } catch {
+        const result = gradeSingleQuestion(q, userAnswer, {
+          isCorrect: false,
+          feedback: 'Erreur de connexion — votre réponse sera évaluée manuellement.',
+          score: 'N/A',
+        });
+        setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
+      } finally {
+        setGradingInProgress((prev) => ({ ...prev, [qIndex]: false }));
+      }
+    } else {
+      // Non-essay: grade locally
+      const result = gradeSingleQuestion(q, userAnswer);
+      setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
+    }
+  }, [questions, answers, questionResults]);
 
   const answeredCount = Object.keys(answers).filter((k) => {
     const v = answers[k];
@@ -380,7 +443,8 @@ const ExamTake = () => {
     clearInterval(timerRef.current);
     setSubmitted(true);
 
-    const result = gradeExam(questions, answers);
+    // In immediate mode, pass pre-graded results so they aren't re-graded
+    const result = gradeExam(questions, answers, feedbackMode === 'immediate' ? questionResults : {});
 
     // Store in sessionStorage for ExamResults page
     sessionStorage.setItem(
@@ -396,7 +460,7 @@ const ExamTake = () => {
     );
 
     navigate(`/exams/${level}/${idx}/results`);
-  }, [questions, answers, idx, exam, level, navigate]);
+  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate]);
 
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
@@ -541,6 +605,56 @@ const ExamTake = () => {
             )}
           </div>
 
+          {/* Feedback mode selector */}
+          <div className="exam-cover__feedback-mode">
+            <h2 className="exam-cover__panel-heading">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Mode de correction
+            </h2>
+            <div className="exam-cover__feedback-options">
+              <label
+                className={`exam-cover__feedback-option ${feedbackMode === 'immediate' ? 'exam-cover__feedback-option--selected' : ''}`}
+                style={feedbackMode === 'immediate' ? { borderColor: color, background: color + '0a' } : undefined}
+              >
+                <input
+                  type="radio"
+                  name="feedbackMode"
+                  value="immediate"
+                  checked={feedbackMode === 'immediate'}
+                  onChange={() => { setFeedbackMode('immediate'); localStorage.setItem('edlight-exam-feedback-mode', 'immediate'); }}
+                  className="exam-cover__feedback-radio"
+                />
+                <div className="exam-cover__feedback-content">
+                  <span className="exam-cover__feedback-icon">⚡</span>
+                  <div>
+                    <strong>Résultat immédiat</strong>
+                    <p>Voir la correction après chaque question</p>
+                  </div>
+                </div>
+              </label>
+              <label
+                className={`exam-cover__feedback-option ${feedbackMode === 'end' ? 'exam-cover__feedback-option--selected' : ''}`}
+                style={feedbackMode === 'end' ? { borderColor: color, background: color + '0a' } : undefined}
+              >
+                <input
+                  type="radio"
+                  name="feedbackMode"
+                  value="end"
+                  checked={feedbackMode === 'end'}
+                  onChange={() => { setFeedbackMode('end'); localStorage.setItem('edlight-exam-feedback-mode', 'end'); }}
+                  className="exam-cover__feedback-radio"
+                />
+                <div className="exam-cover__feedback-content">
+                  <span className="exam-cover__feedback-icon">📋</span>
+                  <div>
+                    <strong>Résultat à la fin</strong>
+                    <p>Voir tous les résultats après avoir soumis l'examen</p>
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {/* CTA */}
           <div className="exam-cover__cta">
             <button
@@ -679,8 +793,12 @@ const ExamTake = () => {
                         const q = questions[i];
                         const hasAnswer = answers[i] != null && answers[i] !== '';
                         const isInCurrentGroup = i >= currentGrp.start && i <= currentGrp.end;
+                        const qResult = questionResults[i];
                         let cls = 'exam-take__nav-btn';
                         if (isInCurrentGroup) cls += ' exam-take__nav-btn--current';
+                        else if (qResult?.status === 'correct' || qResult?.status === 'scaffold-complete') cls += ' exam-take__nav-btn--correct';
+                        else if (qResult?.status === 'incorrect') cls += ' exam-take__nav-btn--incorrect';
+                        else if (qResult?.status === 'partial') cls += ' exam-take__nav-btn--partial';
                         else if (hasAnswer) cls += ' exam-take__nav-btn--answered';
                         const label = formatNavLabel(q, i);
                         const targetGroup = questionGroups.find((g) => i >= g.start && i <= g.end);
@@ -740,8 +858,9 @@ const ExamTake = () => {
           {groupQuestions.map((gq) => {
             const qMeta = questionTypeMeta(gq.type);
             const qIdx = gq._flatIdx;
+            const isLocked = feedbackMode === 'immediate' && !!questionResults[qIdx];
             return (
-              <div className="card exam-take__question-card" key={qIdx}>
+              <div className={`card exam-take__question-card ${isLocked ? 'exam-take__question-card--locked' : ''}`} key={qIdx}>
                 <div className="exam-take__question-header">
                   <span className="exam-take__question-number">
                     <span className="exam-take__question-num-label">{formatQuestionLabel(gq, qIdx)}</span>
@@ -772,6 +891,7 @@ const ExamTake = () => {
                       index={qIdx}
                       value={answers[qIdx] ?? ''}
                       onChange={setAnswer}
+                      disabled={isLocked}
                     />
                   </div>
                 ) : (
@@ -787,6 +907,7 @@ const ExamTake = () => {
                           index={qIdx}
                           value={answers[qIdx] ?? ''}
                           onChange={setAnswer}
+                          disabled={isLocked}
                         />
                       </div>
                     ) : (
@@ -796,6 +917,7 @@ const ExamTake = () => {
                           index={qIdx}
                           value={answers[qIdx] ?? ''}
                           onChange={setAnswer}
+                          disabled={isLocked}
                         />
                       </div>
                     )}
@@ -805,6 +927,56 @@ const ExamTake = () => {
                 {/* Progressive hints (available for ALL question types) */}
                 {!isProofQuestion(gq) && gq.hints && gq.hints.length > 0 && (
                   <QuestionHints hints={gq.hints} />
+                )}
+
+                {/* ── Immediate feedback mode: "Vérifier" button + inline result ── */}
+                {feedbackMode === 'immediate' && !questionResults[qIdx] && (
+                  <div className="exam-take__check-answer">
+                    {gq.type === 'essay' ? (
+                      <>
+                        <button
+                          className="button button--primary button--sm"
+                          type="button"
+                          disabled={
+                            !answers[qIdx] ||
+                            (answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS ||
+                            gradingInProgress[qIdx]
+                          }
+                          onClick={() => gradeQuestionImmediate(qIdx)}
+                        >
+                          {gradingInProgress[qIdx] ? (
+                            <><span className="loading-spinner loading-spinner--inline" /> Évaluation en cours…</>
+                          ) : (
+                            '🤖 Évaluer ma rédaction'
+                          )}
+                        </button>
+                        <span className="exam-take__check-hint">
+                          {(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS
+                            ? `Minimum ${ESSAY_MIN_WORDS} mots requis (${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length} actuellement)`
+                            : `${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length} mots — prêt pour l'évaluation`
+                          }
+                        </span>
+                      </>
+                    ) : (
+                      <button
+                        className="button button--primary button--sm"
+                        type="button"
+                        disabled={!answers[qIdx] || answers[qIdx] === ''}
+                        onClick={() => gradeQuestionImmediate(qIdx)}
+                      >
+                        ✓ Vérifier ma réponse
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Inline result (immediate mode) ── */}
+                {feedbackMode === 'immediate' && questionResults[qIdx] && (
+                  <ImmediateFeedback
+                    result={questionResults[qIdx]}
+                    question={gq}
+                    color={color}
+                  />
                 )}
               </div>
             );
@@ -982,7 +1154,7 @@ function ReadingPassage({ text }) {
  * Supports single and multiple blanks. Values stored as pipe-separated string.
  * Parenthetical hints like (plan) are shown as subtle labels above the input.
  */
-function FillBlankText({ text, index, value, onChange }) {
+function FillBlankText({ text, index, value, onChange, disabled }) {
   // Split text on blank placeholders, keeping surrounding text
   const parts = text.split(BLANK_RE);
   const blankCount = parts.length - 1;
@@ -1033,6 +1205,7 @@ function FillBlankText({ text, index, value, onChange }) {
                   placeholder={hint || '…'}
                   autoComplete="off"
                   spellCheck="false"
+                  disabled={disabled}
                   style={hint ? { minWidth: `${Math.max(hint.length * 0.6 + 2, 5)}em` } : undefined}
                 />
               </span>
@@ -1293,31 +1466,127 @@ function ScaffoldedAnswer({ question, index, value, onChange }) {
   );
 }
 
+// ── Immediate Feedback Card (shown inline after grading a question) ─────────
+
+function ImmediateFeedback({ result, question, color }) {
+  const [showExplanation, setShowExplanation] = useState(false);
+  const { status, essayFeedback } = result;
+
+  const statusConfig = {
+    correct: { icon: '✓', label: 'Correct', cls: 'exam-take__feedback--correct' },
+    partial: { icon: '◐', label: 'Partiellement correct', cls: 'exam-take__feedback--partial' },
+    incorrect: { icon: '✗', label: 'Incorrect', cls: 'exam-take__feedback--incorrect' },
+    'scaffold-complete': { icon: '✓', label: 'Complété', cls: 'exam-take__feedback--correct' },
+    manual: { icon: '👁', label: 'Évaluation manuelle', cls: 'exam-take__feedback--manual' },
+    unanswered: { icon: '—', label: 'Sans réponse', cls: 'exam-take__feedback--unanswered' },
+  };
+  const cfg = statusConfig[status] || statusConfig.manual;
+
+  const awarded = result.result?.awarded ?? 0;
+  const maxPts = result.result?.maxPoints ?? (question.points || 1);
+
+  return (
+    <div className={`exam-take__feedback ${cfg.cls}`}>
+      {/* Status banner */}
+      <div className="exam-take__feedback-banner">
+        <span className="exam-take__feedback-icon">{cfg.icon}</span>
+        <span className="exam-take__feedback-label">{cfg.label}</span>
+        <span className="exam-take__feedback-score">{awarded}/{maxPts} pt{maxPts > 1 ? 's' : ''}</span>
+      </div>
+
+      {/* Essay AI feedback */}
+      {essayFeedback && (
+        <div className="exam-take__feedback-essay">
+          <div className="exam-take__feedback-essay-score">
+            <span>🤖 Note IA :</span> <strong>{essayFeedback.score}</strong>
+          </div>
+          {essayFeedback.feedback && (
+            <p className="exam-take__feedback-essay-text">{essayFeedback.feedback}</p>
+          )}
+        </div>
+      )}
+
+      {/* Correct answer (for non-essay auto-gradable) */}
+      {status === 'incorrect' && question.correct && question.type !== 'essay' && (
+        <div className="exam-take__feedback-correct">
+          <span className="exam-take__feedback-correct-label">Réponse correcte :</span>{' '}
+          <strong><MathText text={
+            question.type === 'multiple_choice' && question.options
+              ? `${question.correct.toUpperCase()}. ${question.options[question.correct] || question.correct}`
+              : question.correct
+          } /></strong>
+        </div>
+      )}
+
+      {/* Scaffold blank results */}
+      {result.result?.blankResults && (
+        <div className="exam-take__feedback-blanks">
+          {result.result.blankResults.map((br, i) => (
+            <div key={i} className={`exam-take__feedback-blank ${br.correct ? 'exam-take__feedback-blank--ok' : 'exam-take__feedback-blank--wrong'}`}>
+              <span>{br.correct ? '✓' : '✗'} {br.label}:</span>{' '}
+              {!br.correct && <><span className="exam-take__feedback-blank-user">{br.userValue || '—'}</span> → <strong><MathText text={br.expectedAnswer} /></strong></>}
+              {br.correct && <strong><MathText text={br.userValue} /></strong>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Explanation toggle */}
+      {(question.explanation || question.model_answer) && (
+        <div className="exam-take__feedback-explain">
+          <button
+            className="exam-take__feedback-explain-btn"
+            type="button"
+            onClick={() => setShowExplanation((s) => !s)}
+          >
+            {showExplanation ? '▲ Masquer l\'explication' : '▼ Voir l\'explication'}
+          </button>
+          {showExplanation && (
+            <div className="exam-take__feedback-explain-body">
+              {question.explanation && (
+                <div className="exam-take__feedback-explain-text">
+                  <InstructionRenderer text={question.explanation} />
+                </div>
+              )}
+              {question.model_answer && (
+                <div className="exam-take__feedback-explain-model">
+                  <strong>Réponse modèle :</strong>
+                  <InstructionRenderer text={question.model_answer} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Question Input Components ────────────────────────────────────────────────
 
-function QuestionInput({ question, index, value, onChange }) {
+function QuestionInput({ question, index, value, onChange, disabled }) {
   const type = question.type || 'unknown';
 
   // Route proof / demonstration questions to the step-by-step input
   if (isProofQuestion(question)) {
-    return <ProofInput question={question} index={index} value={value} onChange={onChange} />;
+    return <ProofInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
   }
 
   switch (type) {
     case 'multiple_choice':
-      return <MCQInput question={question} index={index} value={value} onChange={onChange} />;
+      return <MCQInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'true_false':
-      return <TrueFalseInput index={index} value={value} onChange={onChange} />;
+      return <TrueFalseInput index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'fill_blank':
     case 'calculation':
     case 'short_answer':
-      return <TextInput type={type} index={index} value={value} onChange={onChange} />;
+      return <TextInput type={type} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'essay':
-      return <EssayInput index={index} value={value} onChange={onChange} />;
+      return <EssayInput index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'matching':
-      return <MatchingInput question={question} index={index} value={value} onChange={onChange} />;
+      return <MatchingInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     default:
-      return <TextInput type={type} index={index} value={value} onChange={onChange} />;
+      return <TextInput type={type} index={index} value={value} onChange={onChange} disabled={disabled} />;
   }
 }
 
@@ -1593,7 +1862,7 @@ function JustificationPicker({ value, onChange }) {
   );
 }
 
-function MCQInput({ question, index, value, onChange }) {
+function MCQInput({ question, index, value, onChange, disabled }) {
   const options = question.options || {};
   const entries = Object.entries(options);
 
@@ -1638,7 +1907,7 @@ function MCQInput({ question, index, value, onChange }) {
   );
 }
 
-function TrueFalseInput({ index, value, onChange }) {
+function TrueFalseInput({ index, value, onChange, disabled }) {
   return (
     <div className="exam-take__tf-options">
       {[
@@ -1658,6 +1927,7 @@ function TrueFalseInput({ index, value, onChange }) {
               checked={isSelected}
               onChange={() => onChange(index, key)}
               className="exam-take__tf-radio"
+              disabled={disabled}
             />
             <span>{label}</span>
           </label>
@@ -1667,7 +1937,7 @@ function TrueFalseInput({ index, value, onChange }) {
   );
 }
 
-function TextInput({ type, index, value, onChange }) {
+function TextInput({ type, index, value, onChange, disabled }) {
   const placeholders = {
     fill_blank: 'Complétez le blanc…',
     calculation: 'Entrez votre résultat…',
@@ -1681,23 +1951,31 @@ function TextInput({ type, index, value, onChange }) {
       value={value}
       onChange={(e) => onChange(index, e.target.value)}
       placeholder={placeholders[type] || 'Votre réponse…'}
+      disabled={disabled}
     />
   );
 }
 
-function EssayInput({ index, value, onChange }) {
+function EssayInput({ index, value, onChange, disabled }) {
+  const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
   return (
-    <textarea
-      className="exam-take__essay-input"
-      value={value}
-      onChange={(e) => onChange(index, e.target.value)}
-      placeholder="Rédigez votre réponse ici…"
-      rows={8}
-    />
+    <div className="exam-take__essay-wrap">
+      <textarea
+        className="exam-take__essay-input"
+        value={value}
+        onChange={(e) => onChange(index, e.target.value)}
+        placeholder="Rédigez votre réponse ici…"
+        rows={8}
+        disabled={disabled}
+      />
+      <div className="exam-take__essay-wordcount">
+        {wordCount} mot{wordCount !== 1 ? 's' : ''}
+      </div>
+    </div>
   );
 }
 
-function MatchingInput({ question, index, value, onChange }) {
+function MatchingInput({ question, index, value, onChange, disabled }) {
   // For matching, store as JSON string of pairs
   // Simple fallback: just a text area
   return (
@@ -1711,6 +1989,7 @@ function MatchingInput({ question, index, value, onChange }) {
         value={value}
         onChange={(e) => onChange(index, e.target.value)}
         placeholder="1-B, 2-A, 3-C…"
+        disabled={disabled}
       />
     </div>
   );

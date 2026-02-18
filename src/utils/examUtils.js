@@ -835,13 +835,142 @@ export function gradeScaffoldBlanks(scaffoldValues, answerParts) {
   });
 }
 
+// ─── Single-question grading (for immediate feedback mode) ──────────────────
+
+/**
+ * Grade a single question. Returns the same result shape as one entry of
+ * gradeExam's `results` array:
+ * { question, userAnswer, status, result: { awarded, maxPoints, blankResults? } }
+ *
+ * For essay questions this returns status:'manual' — the caller is responsible
+ * for sending the answer to the AI grading endpoint and merging the result.
+ *
+ * `preGradedEssay` is an optional object { isCorrect, feedback, score } from
+ * the /api/grade-essay endpoint.  When provided for an essay question the
+ * function uses it instead of returning 'manual'.
+ */
+export function gradeSingleQuestion(question, userAnswer, preGradedEssay) {
+  const pts = question.points || 1;
+  const meta = QUESTION_TYPE_META[question.type] || QUESTION_TYPE_META.unknown;
+
+  // No answer
+  if (userAnswer == null || userAnswer === '') {
+    return {
+      question,
+      userAnswer: null,
+      status: 'unanswered',
+      result: { awarded: 0, maxPoints: pts },
+    };
+  }
+
+  // Essay with AI grade already available
+  if (question.type === 'essay' && preGradedEssay) {
+    const scoreParts = (preGradedEssay.score || '').split('/');
+    const num = parseFloat(scoreParts[0]);
+    const den = parseFloat(scoreParts[1]) || 10;
+    const ratio = !isNaN(num) ? num / den : 0;
+    const awarded = Math.round(pts * ratio * 100) / 100;
+    return {
+      question,
+      userAnswer,
+      status: preGradedEssay.isCorrect ? 'correct' : ratio >= 0.4 ? 'partial' : 'incorrect',
+      result: { awarded, maxPoints: pts },
+      essayFeedback: preGradedEssay,
+    };
+  }
+
+  // Non-gradable types (essay without AI, matching, unknown)
+  if (!meta.gradable || !question.correct) {
+    // Scaffold grading
+    if (question.scaffold_text && question.scaffold_blanks) {
+      let scaffoldValues = null;
+      try {
+        const parsed = JSON.parse(userAnswer);
+        if (parsed && parsed.scaffold && Array.isArray(parsed.scaffold)) {
+          scaffoldValues = parsed.scaffold;
+        }
+      } catch { /* not scaffold JSON */ }
+
+      if (scaffoldValues && scaffoldValues.filter(v => v && v.trim()).length > 0) {
+        if (question.answer_parts && question.answer_parts.length > 0) {
+          const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts);
+          const correctBlanks = blankResults.filter(r => r.correct).length;
+          const totalBlanks = question.answer_parts.length;
+          const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
+          const awarded = Math.round(pts * ratio * 100) / 100;
+          return {
+            question,
+            userAnswer,
+            status: correctBlanks === totalBlanks ? 'correct' : correctBlanks > 0 ? 'partial' : 'incorrect',
+            result: { awarded, maxPoints: pts, blankResults },
+          };
+        }
+        const filled = scaffoldValues.filter(v => v && v.trim());
+        if (filled.length === question.scaffold_blanks.length) {
+          return {
+            question,
+            userAnswer,
+            status: 'scaffold-complete',
+            result: { awarded: pts, maxPoints: pts },
+          };
+        }
+      }
+    }
+
+    // Check final_answer field
+    if (question.final_answer && typeof userAnswer === 'string') {
+      let effectiveUser = userAnswer;
+      try {
+        const parsed = JSON.parse(userAnswer);
+        if (parsed && parsed.finalAnswer) effectiveUser = parsed.finalAnswer;
+      } catch { /* not JSON */ }
+
+      if (effectiveUser && effectiveUser.trim()) {
+        const allAcceptable = [question.final_answer];
+        if (question.answer_parts) {
+          question.answer_parts.forEach(p => {
+            if (p.answer) allAcceptable.push(p.answer);
+            (p.alternatives || []).forEach(a => allAcceptable.push(a));
+          });
+        }
+        const isCorrect = answerMatches(effectiveUser, question.final_answer, allAcceptable.slice(1));
+        return {
+          question,
+          userAnswer,
+          status: isCorrect ? 'correct' : 'incorrect',
+          result: { awarded: isCorrect ? pts : 0, maxPoints: pts },
+        };
+      }
+    }
+
+    return {
+      question,
+      userAnswer,
+      status: 'manual',
+      result: { awarded: 0, maxPoints: pts },
+    };
+  }
+
+  // Auto-gradable
+  const isCorrect = checkAnswer(question, userAnswer);
+  return {
+    question,
+    userAnswer,
+    status: isCorrect ? 'correct' : 'incorrect',
+    result: { awarded: isCorrect ? pts : 0, maxPoints: pts },
+  };
+}
+
 // ─── Grading engine ─────────────────────────────────────────────────────────
 
 /**
  * Grade an exam given the flat questions array and the user answers map.
+ * Accepts optional `preGradedResults` — a map of { [questionIndex]: gradeResult }
+ * for questions that have already been individually graded (e.g. immediate-mode
+ * essays graded via AI).  Pre-graded entries are used as-is.
  * Returns { summary, results }.
  */
-export function gradeExam(questions, answers) {
+export function gradeExam(questions, answers, preGradedResults = {}) {
   let totalPoints = 0;
   let earnedPoints = 0;
   let correctCount = 0;
@@ -851,6 +980,22 @@ export function gradeExam(questions, answers) {
   let autoGraded = 0;
 
   const results = questions.map((q, i) => {
+    // Use pre-graded result if available (from immediate feedback mode)
+    if (preGradedResults[i]) {
+      const pre = preGradedResults[i];
+      const pts = q.points || 1;
+      totalPoints += pts;
+      const awarded = pre.result?.awarded || 0;
+      earnedPoints += awarded;
+      if (pre.status === 'correct' || pre.status === 'scaffold-complete') correctCount++;
+      else if (pre.status === 'partial') correctCount += pts > 0 ? awarded / pts : 0;
+      else if (pre.status === 'incorrect') incorrectCount++;
+      else if (pre.status === 'unanswered') unanswered++;
+      else if (pre.status === 'manual') manualReview++;
+      if (pre.status !== 'unanswered' && pre.status !== 'manual') autoGraded++;
+      return pre;
+    }
+
     const userAnswer = answers[i] != null ? answers[i] : null;
     const pts = q.points || 1;
     totalPoints += pts;
