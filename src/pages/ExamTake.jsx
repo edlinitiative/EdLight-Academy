@@ -234,7 +234,7 @@ const ExamTake = () => {
   }, [questions]);
 
   // ── Exam intro / consignes extraction ─────────────────────────────────────
-  const [examStarted, setExamStarted] = useState(false);
+  const [viewState, setViewState] = useState('cover'); // 'cover' | 'preview' | 'active'
 
   const examInfo = useMemo(() => {
     if (!exam) return null;
@@ -281,7 +281,7 @@ const ExamTake = () => {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    if (!durationMin || submitted) return;
+    if (!durationMin || submitted || viewState !== 'active') return;
     setSecondsLeft(durationMin * 60);
     timerRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
@@ -293,7 +293,7 @@ const ExamTake = () => {
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
-  }, [durationMin, submitted]);
+  }, [durationMin, submitted, viewState]);
 
   // Auto-submit when timer hits 0
   useEffect(() => {
@@ -578,7 +578,7 @@ const ExamTake = () => {
   // subject and color are now declared at the top of the component (before hooks)
 
   // ── Exam Intro splash ───────────────────────────────────────────────────
-  if (!examStarted) {
+  if (viewState === 'cover') {
     const sectionSummary = (exam.sections || []).map((sec, i) => ({
       title: sec.section_title || `Section ${i + 1}`,
       qCount: (sec.questions || []).length,
@@ -744,13 +744,153 @@ const ExamTake = () => {
             <button
               className="exam-cover__start-btn"
               style={{ background: color }}
-              onClick={() => setExamStarted(true)}
+              onClick={() => setViewState('preview')}
               type="button"
             >
-              <span>Commencer l'examen</span>
+              <span>Aperçu de l'examen</span>
               <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
             </button>
             <p className="exam-cover__cta-hint">Bonne chance ! 🍀</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Preview mode (read-only continuous view) ───────────────────────────────
+  if (viewState === 'preview') {
+    return (
+      <section className="section exam-take exam-take--preview">
+        <div className="container">
+          {/* Top bar */}
+          <div className="exam-take__topbar">
+            <div className="exam-take__topbar-left">
+              <button className="button button--ghost button--sm" onClick={() => setViewState('cover')} type="button">
+                ← Retour
+              </button>
+              <div className="exam-take__exam-info">
+                <span className="exam-take__subject" style={{ color }}>{subject}</span>
+                <span className="exam-take__title-short">{normalizeExamTitle(exam)}</span>
+              </div>
+            </div>
+            <div className="exam-take__topbar-right">
+              <div className="exam-take__timer-box" style={{ background: 'rgba(10, 102, 194, 0.08)' }}>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{durationMin} min</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="exam-take__preview-scroll">
+            <div className="exam-take__preview-notice">
+              <span className="exam-take__preview-notice-icon">👁️</span>
+              <div>
+                <strong>Aperçu de l'examen</strong>
+                <p>Prenez le temps de lire toutes les questions. Quand vous êtes prêt, cliquez sur "Commencer" pour débuter le chronomètre.</p>
+              </div>
+            </div>
+
+            {/* Render all sections and questions continuously */}
+            {exam.sections?.map((section, secIdx) => {
+              const secQuestions = questions.filter(q => q.sectionTitle === section.section_title);
+              if (!secQuestions.length) return null;
+
+              const cleanedEntry = examInfo?.cleanedSections?.[secIdx];
+              const cleanInstructions = cleanedEntry?._hadRules
+                ? (cleanedEntry._cleanInstructions || '')
+                : (section.instructions || '');
+
+              return (
+                <div key={secIdx} className="exam-take__preview-section">
+                  {/* Section header */}
+                  <div className="exam-take__preview-section-header">
+                    <h2>{section.section_title || `Section ${secIdx + 1}`}</h2>
+                    {cleanInstructions && cleanInstructions.length <= 200 && (
+                      <div className="exam-take__preview-section-instructions">
+                        <InstructionRenderer text={cleanInstructions} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reading passage */}
+                  {cleanInstructions && cleanInstructions.length > 200 && (
+                    <div className="exam-take__preview-passage">
+                      <div className="exam-take__preview-passage-label">📖 Texte de référence</div>
+                      <InstructionRenderer text={cleanInstructions} />
+                    </div>
+                  )}
+
+                  {/* Questions */}
+                  {secQuestions.map((q, qLocalIdx) => {
+                    const globalIdx = questions.indexOf(q);
+                    const qMeta = questionTypeMeta(q.type);
+                    
+                    return (
+                      <div key={globalIdx} className="exam-take__preview-question">
+                        <div className="exam-take__preview-question-header">
+                          <span className="exam-take__preview-question-number">
+                            {formatQuestionLabel(q, globalIdx)}
+                          </span>
+                          <span className="exam-take__preview-question-type" style={{ background: color + '18', color }}>
+                            {qMeta.icon} {qMeta.label}
+                          </span>
+                          {q.points && (
+                            <span className="exam-take__preview-question-points">
+                              {q.points} pt{q.points !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+
+                        {q.has_figure && q.figure_description && (
+                          <FigureRenderer description={q.figure_description} />
+                        )}
+
+                        {q.temporal_note && (
+                          <div className="exam-take__temporal-note">
+                            <span className="exam-take__temporal-note-icon">🕐</span>
+                            <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
+                          </div>
+                        )}
+
+                        <div className="exam-take__preview-question-text">
+                          <InstructionRenderer text={q._displayText || q.question} />
+                        </div>
+
+                        {/* Show MCQ options in preview */}
+                        {q.type === 'mcq' && q.options && (
+                          <div className="exam-take__preview-mcq-options">
+                            {q.options.map((opt, i) => (
+                              <div key={i} className="exam-take__preview-mcq-option">
+                                <span className="exam-take__preview-mcq-letter">{String.fromCharCode(65 + i)}.</span>
+                                <span><MathText text={opt} /></span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
+            {/* CTA to start exam */}
+            <div className="exam-take__preview-cta">
+              <button
+                className="button button--primary button--lg"
+                style={{ background: color }}
+                onClick={() => setViewState('active')}
+                type="button"
+              >
+                <span>Commencer l'examen</span>
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+              <p className="exam-take__preview-cta-hint">Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀</p>
+            </div>
           </div>
         </div>
       </section>

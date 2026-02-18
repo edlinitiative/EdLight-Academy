@@ -74,7 +74,7 @@ export default function InstructionRenderer({ text, inline }) {
           h3: ({node, ...props}) => <strong className="instruction-renderer__heading" {...props} />,
         }}
       >
-        {text}
+        {processed}
       </ReactMarkdown>
     </Wrapper>
   );
