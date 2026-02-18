@@ -3398,44 +3398,35 @@ textarea.input-field {
 	margin-top: 0;
 }
 
-/* ─── Sticky filter bar — premium glass panel ─── */
+/* ─── Sticky filter strip — minimal frost, no box ─── */
 .exam-browser__filters-sticky {
 	position: sticky;
 	top: var(--navbar-height);
 	z-index: 40;
-	background: rgba(255, 255, 255, 0.80);
-	backdrop-filter: saturate(160%) blur(20px);
-	-webkit-backdrop-filter: saturate(160%) blur(20px);
-	padding: 1rem 1.25rem;
+	background: rgba(255, 255, 255, 0.55);
+	backdrop-filter: saturate(140%) blur(16px);
+	-webkit-backdrop-filter: saturate(140%) blur(16px);
+	padding: 0.85rem 0;
 	margin: 0 calc(-1 * clamp(1rem, 3vw, 2rem));
 	padding-left: clamp(1rem, 3vw, 2rem);
 	padding-right: clamp(1rem, 3vw, 2rem);
-	border-bottom: 1px solid rgba(10, 102, 194, 0.06);
-	transition: box-shadow 0.25s ease, border-color 0.25s ease;
+	border-bottom: 1px solid rgba(10, 102, 194, 0.05);
+	transition: box-shadow 0.3s ease;
 }
 
 .exam-browser__filters-sticky:has(~ .grid--exams) {
-	box-shadow: 0 4px 24px rgba(10, 102, 194, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
 }
 
-/* Inner glass card that wraps the controls */
+/* Transparent wrapper — no visible card */
 .exam-browser__filters-card {
-	background: rgba(255, 255, 255, 0.60);
-	backdrop-filter: blur(12px);
-	-webkit-backdrop-filter: blur(12px);
-	border: 1px solid rgba(10, 102, 194, 0.08);
-	border-radius: var(--radius-md);
-	padding: 1rem 1.25rem;
 	display: flex;
 	flex-direction: column;
-	gap: 0.75rem;
-	box-shadow: 0 2px 12px rgba(10, 102, 194, 0.05);
-	transition: box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-.exam-browser__filters-card:focus-within {
-	border-color: rgba(10, 102, 194, 0.15);
-	box-shadow: 0 4px 20px rgba(10, 102, 194, 0.08);
+	gap: 0.6rem;
+	background: none;
+	border: none;
+	padding: 0;
+	box-shadow: none;
 }
 
 /* Row that holds grouped controls */
