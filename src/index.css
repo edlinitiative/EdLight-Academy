@@ -3398,24 +3398,21 @@ textarea.input-field {
 	margin-top: 0;
 }
 
-/* ─── Sticky filter strip — minimal frost, no box ─── */
+/* ─── Sticky filter strip — fully transparent ─── */
 .exam-browser__filters-sticky {
 	position: sticky;
 	top: var(--navbar-height);
 	z-index: 40;
-	background: rgba(255, 255, 255, 0.55);
-	backdrop-filter: saturate(140%) blur(16px);
-	-webkit-backdrop-filter: saturate(140%) blur(16px);
+	background: none;
 	padding: 0.85rem 0;
 	margin: 0 calc(-1 * clamp(1rem, 3vw, 2rem));
 	padding-left: clamp(1rem, 3vw, 2rem);
 	padding-right: clamp(1rem, 3vw, 2rem);
-	border-bottom: 1px solid rgba(10, 102, 194, 0.05);
-	transition: box-shadow 0.3s ease;
+	border-bottom: none;
 }
 
 .exam-browser__filters-sticky:has(~ .grid--exams) {
-	box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
+	box-shadow: none;
 }
 
 /* Transparent wrapper — no visible card */
