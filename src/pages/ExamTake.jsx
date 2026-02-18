@@ -155,11 +155,13 @@ function detectProofSubtype(text) {
 /** Detect proof / demonstration questions by their phrasing */
 const PROOF_RE = /\b(montrer\s+que|démontrer|prouver\s+que|déduire\s+que|vérifier\s+que|justifier\s+que|en\s+déduire|simplifier|factoriser|développer\s+et\s+réduire|calculer\s+et\s+simplifier|résoudre\s+(dans|l['']équation)|déterminer)\b/i;
 
-function isProofQuestion(question) {
+function isProofQuestion(question, subject) {
   const text = question._displayText || question.question || '';
   const type = question.type || '';
   // Only activate for open-ended math types — never for essays
   if (!['calculation', 'short_answer'].includes(type)) return false;
+  // Never activate for non-math subjects (culture, history, languages, etc.)
+  if (subject && !MATH_SUBJECTS.has(subject)) return false;
   // Must contain a proof/demonstration keyword
   return PROOF_RE.test(text);
 }
@@ -346,21 +348,21 @@ const ExamTake = () => {
         } else {
           essayResult = { isCorrect: false, feedback: 'Évaluation automatique indisponible.', score: 'N/A' };
         }
-        const result = gradeSingleQuestion(q, userAnswer, essayResult);
+        const result = gradeSingleQuestion(q, userAnswer, essayResult, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
       } catch {
         const result = gradeSingleQuestion(q, userAnswer, {
           isCorrect: false,
           feedback: 'Erreur de connexion — votre réponse sera évaluée manuellement.',
           score: 'N/A',
-        });
+        }, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
       } finally {
         setGradingInProgress((prev) => ({ ...prev, [qIndex]: false }));
       }
     } else if (q.scaffold_text && q.scaffold_blanks && q.answer_parts && !MATH_SUBJECTS.has(subject)) {
       // Non-math scaffold: try exact match first, then AI for long-text blanks
-      const result = gradeSingleQuestion(q, userAnswer);
+      const result = gradeSingleQuestion(q, userAnswer, null, { subject });
       const hasUngradedLongBlanks = (result.result?.blankResults || []).some(
         (br) => !br.correct && (br.expectedAnswer || '').length > 25
       );
@@ -418,7 +420,7 @@ const ExamTake = () => {
       }
     } else {
       // Non-essay: grade locally
-      const result = gradeSingleQuestion(q, userAnswer);
+      const result = gradeSingleQuestion(q, userAnswer, null, { subject });
       setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
     }
   }, [questions, answers, questionResults, subject]);
@@ -1022,6 +1024,7 @@ const ExamTake = () => {
                           value={answers[qIdx] ?? ''}
                           onChange={setAnswer}
                           disabled={isLocked}
+                          subject={subject}
                         />
                       </div>
                     )}
@@ -1029,7 +1032,7 @@ const ExamTake = () => {
                 )}
 
                 {/* Progressive hints (available for ALL question types) */}
-                {!isProofQuestion(gq) && gq.hints && gq.hints.length > 0 && (
+                {!isProofQuestion(gq, subject) && gq.hints && gq.hints.length > 0 && (
                   <QuestionHints hints={gq.hints} />
                 )}
 
@@ -1435,6 +1438,19 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
         if (!isNaN(u) && !isNaN(e) && Math.abs(u - e) <= Math.max(Math.abs(e) * 0.01, 0.01)) {
           isCorrect = true; break;
         }
+        // Fuzzy word-subset match for non-math subjects
+        if (!mathMode) {
+          const fuzzyNorm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+          const fu = fuzzyNorm(userVal);
+          const fe = fuzzyNorm(ans || '');
+          if (fu === fe) { isCorrect = true; break; }
+          const expectedWords = fe.split(' ').filter(w => w.length >= 3);
+          const userWords = fu.split(' ').filter(w => w.length >= 3);
+          if (expectedWords.length > 1 && userWords.length > 0) {
+            const matchCount = userWords.filter(uw => expectedWords.some(ew => ew === uw)).length;
+            if (matchCount > 0) { isCorrect = true; break; }
+          }
+        }
       }
       if (isCorrect) {
         results[bi] = true;
@@ -1763,11 +1779,11 @@ function ImmediateFeedback({ result, question, color }) {
 
 // ── Question Input Components ────────────────────────────────────────────────
 
-function QuestionInput({ question, index, value, onChange, disabled }) {
+function QuestionInput({ question, index, value, onChange, disabled, subject }) {
   const type = question.type || 'unknown';
 
   // Route proof / demonstration questions to the step-by-step input
-  if (isProofQuestion(question)) {
+  if (isProofQuestion(question, subject)) {
     return <ProofInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
   }
 

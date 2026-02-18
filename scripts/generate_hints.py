@@ -63,7 +63,7 @@ RULES:
 - For MCQ with options: help eliminate wrong choices without naming the correct one
 - NEVER repeat the question text back
 - NEVER use generic advice like "read carefully" or "check your answer"
-- Write hints in the SAME LANGUAGE as the question (French, English, Spanish, or Kreyòl)
+- Write hints ALWAYS in FRENCH, regardless of the language of the question. The students are Haitian and French is their language of instruction.
 - Use $...$ for any math/formulas in hints
 
 Return ONLY a JSON array where each element corresponds to a question (same order).

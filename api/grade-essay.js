@@ -9,7 +9,7 @@ Compare the student's answer to the provided model answer.
 
 Your task is to:
 1.  Determine if the student's answer is substantially correct based on the model answer.
-2.  Provide a short, constructive feedback (2-3 sentences) explaining what the student did well and what they could improve.
+2.  Provide a short, constructive feedback in FRENCH (2-3 sentences) explaining what the student did well and what they could improve. The students are Haitian and French is their language of instruction.
 3.  Assign a score from 0 to 10, where 10 is a perfect match to the model answer's concepts.
 
 Respond with ONLY a JSON object with three keys: "isCorrect" (boolean), "feedback" (string), and "score" (string, e.g., "8/10").

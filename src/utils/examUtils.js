@@ -786,12 +786,46 @@ function normalizeAnswer(s) {
 }
 
 /**
- * Check if a user answer matches any of the acceptable answers for a blank.
- * Returns true for exact match, numeric proximity (±1%), or CAS equivalence.
+ * Subjects that are math/science — use strict matching only.
+ * For non-math subjects (culture, history, languages), apply fuzzy matching.
  */
-function answerMatches(userVal, expectedAnswer, alternatives = []) {
+const MATH_SUBJECTS_SET = new Set([
+  'Mathématiques', 'Physique', 'Chimie', 'SVT', 'Informatique',
+]);
+
+/**
+ * For non-math text answers, check if the user's answer contains the key
+ * words of the expected answer (word-subset matching). This handles cases
+ * like accepting "Souvnans" for "Lakou Souvnans", or the full phrase.
+ */
+function fuzzyTextMatch(user, expected) {
+  if (!user || !expected) return false;
+  const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const u = norm(user);
+  const e = norm(expected);
+  // Exact accent-stripped match
+  if (u === e) return true;
+  // Word-subset: if expected has multiple words, accept if user typed any
+  // significant word (length >= 3) that matches a word in expected
+  const expectedWords = e.split(' ').filter(w => w.length >= 3);
+  const userWords = u.split(' ').filter(w => w.length >= 3);
+  if (expectedWords.length > 1 && userWords.length > 0) {
+    // Accept if user provided at least one significant matching word
+    const matchCount = userWords.filter(uw => expectedWords.some(ew => ew === uw)).length;
+    if (matchCount > 0 && matchCount >= Math.min(userWords.length, 1)) return true;
+  }
+  return false;
+}
+
+/**
+ * Check if a user answer matches any of the acceptable answers for a blank.
+ * Returns true for exact match, numeric proximity (±1%), CAS equivalence,
+ * or (for non-math subjects) fuzzy text match with word-subset support.
+ */
+function answerMatches(userVal, expectedAnswer, alternatives = [], options = {}) {
   const user = normalizeAnswer(userVal);
   if (!user) return false;
+  const isMathSubject = options.subject ? MATH_SUBJECTS_SET.has(options.subject) : true;
 
   const allAcceptable = [expectedAnswer, ...(alternatives || [])];
   for (const ans of allAcceptable) {
@@ -814,6 +848,9 @@ function answerMatches(userVal, expectedAnswer, alternatives = []) {
       const casResult = checkWithCAS(user, expected);
       if (casResult.correct) return true;
     } catch { /* CAS unavailable */ }
+
+    // Fuzzy text match for non-math subjects (accent-insensitive + word-subset)
+    if (!isMathSubject && fuzzyTextMatch(userVal, ans)) return true;
   }
 
   return false;
@@ -823,10 +860,10 @@ function answerMatches(userVal, expectedAnswer, alternatives = []) {
  * Grade each scaffold blank against its answer_parts entry.
  * Returns array of { blankIndex, correct, userValue, expectedAnswer, label }.
  */
-export function gradeScaffoldBlanks(scaffoldValues, answerParts) {
+export function gradeScaffoldBlanks(scaffoldValues, answerParts, options = {}) {
   return (answerParts || []).map((part, i) => {
     const userVal = scaffoldValues[i] || '';
-    const isCorrect = answerMatches(userVal, part.answer, part.alternatives);
+    const isCorrect = answerMatches(userVal, part.answer, part.alternatives, options);
     return {
       blankIndex: i,
       correct: isCorrect,
@@ -852,7 +889,7 @@ export function gradeScaffoldBlanks(scaffoldValues, answerParts) {
  * the /api/grade-essay endpoint.  When provided for an essay question the
  * function uses it instead of returning 'manual'.
  */
-export function gradeSingleQuestion(question, userAnswer, preGradedEssay) {
+export function gradeSingleQuestion(question, userAnswer, preGradedEssay, options = {}) {
   const pts = question.points || 1;
   const meta = QUESTION_TYPE_META[question.type] || QUESTION_TYPE_META.unknown;
 
@@ -896,7 +933,7 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay) {
 
       if (scaffoldValues && scaffoldValues.filter(v => v && v.trim()).length > 0) {
         if (question.answer_parts && question.answer_parts.length > 0) {
-          const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts);
+          const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts, options);
           const correctBlanks = blankResults.filter(r => r.correct).length;
           const totalBlanks = question.answer_parts.length;
           const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
@@ -936,7 +973,7 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay) {
             (p.alternatives || []).forEach(a => allAcceptable.push(a));
           });
         }
-        const isCorrect = answerMatches(effectiveUser, question.final_answer, allAcceptable.slice(1));
+        const isCorrect = answerMatches(effectiveUser, question.final_answer, allAcceptable.slice(1), options);
         return {
           question,
           userAnswer,
@@ -955,7 +992,7 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay) {
   }
 
   // Auto-gradable
-  const isCorrect = checkAnswer(question, userAnswer);
+  const isCorrect = checkAnswer(question, userAnswer, options);
   return {
     question,
     userAnswer,
@@ -1035,7 +1072,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
 
           // If answer_parts exist, grade each blank against them
           if (q.answer_parts && q.answer_parts.length > 0) {
-            const blankResults = gradeScaffoldBlanks(scaffoldValues, q.answer_parts);
+            const blankResults = gradeScaffoldBlanks(scaffoldValues, q.answer_parts, options);
             const correctBlanks = blankResults.filter(r => r.correct).length;
             const totalBlanks = q.answer_parts.length;
             const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
@@ -1087,7 +1124,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
           }
 
           const isCorrect = answerMatches(effectiveUser, q.final_answer,
-            allAcceptable.slice(1));
+            allAcceptable.slice(1), options);
           autoGraded++;
           if (isCorrect) {
             correctCount++;
@@ -1115,7 +1152,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
 
     // Grade it
     autoGraded++;
-    const isCorrect = checkAnswer(q, userAnswer);
+    const isCorrect = checkAnswer(q, userAnswer, options);
     if (isCorrect) {
       correctCount++;
       earnedPoints += pts;
@@ -1159,7 +1196,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
   return { summary, results };
 }
 
-function checkAnswer(question, userAnswer) {
+function checkAnswer(question, userAnswer, options = {}) {
   const correct = (question.correct || '').trim().toLowerCase();
   const user = String(userAnswer).trim().toLowerCase();
 
@@ -1227,7 +1264,15 @@ function checkAnswer(question, userAnswer) {
 
       // Loose text match (ignore accents and extra spaces)
       const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
-      return norm(effectiveUser) === norm(correctClean);
+      if (norm(effectiveUser) === norm(correctClean)) return true;
+
+      // Word-subset fuzzy match for non-math subjects
+      const isMathSubject = options.subject ? MATH_SUBJECTS_SET.has(options.subject) : true;
+      if (!isMathSubject) {
+        return fuzzyTextMatch(effectiveUser, correctClean);
+      }
+
+      return false;
     }
 
     default:

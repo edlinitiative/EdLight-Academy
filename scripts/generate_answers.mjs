@@ -155,7 +155,8 @@ RULES:
 7. For short_answer: Provide a complete, correct answer.
 8. For matching: Give the correct pairs.
 9. For questions with sub-parts (a, b, c, d): Solve EACH sub-part separately.
-10. Always answer in the language of the question (French, English, Spanish, Kreyòl).
+10. ALWAYS write ALL output in FRENCH — model_answer, explanation, approaches, and all explanatory text MUST be in French. The students are Haitian and French is their language of instruction, even for English, Spanish, or Kreyòl exams.
+11. For short text answers (names, places, terms): include ALL plausible alternative forms in the "alternatives" array — partial answers (e.g., last name only when full name is expected), accent-less variants, common misspellings, and equivalent expressions. For multi-word answers, include each significant word individually as an alternative.
 
 IMPORTANT: Identify the 2-4 KEY ANSWER FRAGMENTS that are the critical results a student must provide. These will be used for grading. For math, these are the computed values. For essays, these are the key thesis points. For MCQ, this is the letter.
 

@@ -38,7 +38,7 @@ Be generous but fair — the student is a Haitian high-school student who may an
 Respond with ONLY a JSON array (one object per blank, in the same order), each with:
 - "index": the blank index (number)
 - "isCorrect": boolean
-- "feedback": a short 1-sentence explanation in the language of the question
+- "feedback": a short 1-sentence explanation in FRENCH (the students are Haitian)
 
 ---
 QUESTION:
