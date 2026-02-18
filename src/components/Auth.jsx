@@ -224,16 +224,67 @@ export function AuthModal({ onClose }) {
 }
 
 export function UserDropdown({ user, onLogout }) {
+  const track = useStore((s) => s.track);
+  const [showTrackSelector, setShowTrackSelector] = React.useState(false);
+
+  // Lazy-import track info to avoid circular deps
+  const trackInfo = React.useMemo(() => {
+    try {
+      const { TRACK_BY_CODE } = require('../config/trackConfig');
+      return track ? TRACK_BY_CODE[track] : null;
+    } catch { return null; }
+  }, [track]);
+
   return (
-    <div className="dropdown__menu">
-      <div className="dropdown__item dropdown__item--muted">
-        <strong>{user.name}</strong>
-        <span className="text-muted" style={{ fontSize: '0.85rem' }}>{user.email}</span>
+    <>
+      <div className="dropdown__menu">
+        <div className="dropdown__item dropdown__item--muted">
+          <strong>{user.name}</strong>
+          <span className="text-muted" style={{ fontSize: '0.85rem' }}>{user.email}</span>
+        </div>
+        {trackInfo && (
+          <>
+            <div className="dropdown__divider" />
+            <div className="dropdown__item dropdown__track">
+              <span>Filière</span>
+              <span className="dropdown__track-badge" style={{ color: trackInfo.color }}>
+                {trackInfo.icon} {trackInfo.shortLabel}
+              </span>
+            </div>
+          </>
+        )}
+        <div className="dropdown__divider" />
+        <button
+          className="dropdown__item"
+          onClick={() => {
+            useStore.getState().setShowUserDropdown(false);
+            setShowTrackSelector(true);
+          }}
+        >
+          {track ? '🔄 Changer de filière' : '🎓 Choisir ma filière'}
+        </button>
+        <div className="dropdown__divider" />
+        <button className="dropdown__item" onClick={onLogout}>
+          Sign Out
+        </button>
       </div>
-      <div className="dropdown__divider" />
-      <button className="dropdown__item" onClick={onLogout}>
-        Sign Out
-      </button>
-    </div>
+      {showTrackSelector && (
+        <TrackSelectorModal
+          currentTrack={track}
+          onClose={() => setShowTrackSelector(false)}
+          onSelect={() => setShowTrackSelector(false)}
+        />
+      )}
+    </>
+  );
+}
+
+/** Lazy wrapper so TrackSelector is only loaded when needed */
+function TrackSelectorModal({ currentTrack, onClose, onSelect }) {
+  const TrackSelector = React.lazy(() => import('./TrackSelector'));
+  return (
+    <React.Suspense fallback={null}>
+      <TrackSelector mode="modal" currentTrack={currentTrack} onClose={onClose} onSelect={onSelect} />
+    </React.Suspense>
   );
 }

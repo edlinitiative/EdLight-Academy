@@ -4,6 +4,7 @@ import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
+import { TRACK_BY_CODE } from '../config/trackConfig';
 import {
   questionTypeMeta,
   subjectColor,
@@ -83,9 +84,10 @@ const ExamResults = () => {
     );
   }
 
-  const { result, examTitle, subject, level: storedLevel } = stored;
+  const { result, examTitle, subject, level: storedLevel, track: examTrack } = stored;
   const { summary, results } = result;
   const color = subjectColor(subject);
+  const trackInfo = examTrack ? TRACK_BY_CODE[examTrack] : null;
 
   // Score ring percentage
   const pct = summary.percentage;
@@ -164,6 +166,25 @@ const ExamResults = () => {
             <span className="exam-results__stat-label">Auto-corrigées</span>
           </div>
         </div>
+
+        {/* Coefficient-weighted score (when track is set) */}
+        {summary.coefficient && summary.coefficient > 1 && trackInfo && (
+          <div className="exam-results__weighted">
+            <h3 className="exam-results__weighted-title">
+              📊 Score pondéré — Filière {trackInfo.icon} {trackInfo.shortLabel}
+            </h3>
+            <div className="exam-results__weighted-row">
+              <span>Coefficient {subject}</span>
+              <span className="exam-results__coeff-badge">×{summary.coefficient}</span>
+            </div>
+            <div className="exam-results__weighted-row">
+              <span>Points pondérés</span>
+              <span className="exam-results__weighted-value">
+                {summary.weightedEarned} / {summary.weightedTotal}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detailed results */}

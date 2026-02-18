@@ -6,6 +6,7 @@
  */
 
 import { checkWithCAS } from './mathCAS';
+import { getCoefficient } from '../config/trackConfig';
 
 // ─── Subject normalisation ──────────────────────────────────────────────────
 
@@ -513,6 +514,7 @@ export function buildExamIndex(rawExams) {
       _questionCount: qCount,
       _autoGradable: autoGradable,
       _typeCounts: typeCounts,
+      tracks: exam.tracks || ['ALL'],
     };
   });
 
@@ -968,9 +970,11 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay) {
  * Accepts optional `preGradedResults` — a map of { [questionIndex]: gradeResult }
  * for questions that have already been individually graded (e.g. immediate-mode
  * essays graded via AI).  Pre-graded entries are used as-is.
+ *
+ * Accepts optional `options` — { track, subject } for coefficient-weighted scoring.
  * Returns { summary, results }.
  */
-export function gradeExam(questions, answers, preGradedResults = {}) {
+export function gradeExam(questions, answers, preGradedResults = {}, options = {}) {
   let totalPoints = 0;
   let earnedPoints = 0;
   let correctCount = 0;
@@ -1136,6 +1140,20 @@ export function gradeExam(questions, answers, preGradedResults = {}) {
     autoGraded,
     percentage: totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0,
   };
+
+  // Add coefficient-weighted score if track + subject are provided
+  if (options.track && options.subject) {
+    try {
+      const coeff = getCoefficient(options.track, options.subject);
+      summary.coefficient = coeff;
+      summary.weightedEarned = Math.round(earnedPoints * coeff * 100) / 100;
+      summary.weightedTotal = Math.round(totalPoints * coeff * 100) / 100;
+      summary.track = options.track;
+      summary.subject = options.subject;
+    } catch {
+      // coefficient lookup failed — skip weighted scoring
+    }
+  }
 
   return { summary, results };
 }

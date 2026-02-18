@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import useStore from '../contexts/store';
+import { TRACK_BY_CODE, parseTrackDirectives, getDirectiveForTrack } from '../config/trackConfig';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import MathKeyboard from '../components/MathKeyboard';
@@ -443,8 +445,16 @@ const ExamTake = () => {
     clearInterval(timerRef.current);
     setSubmitted(true);
 
+    // Get the user's track for coefficient-weighted scoring
+    const currentTrack = useStore.getState().track;
+    const examSubject = normalizeSubject(exam.subject);
+
     // In immediate mode, pass pre-graded results so they aren't re-graded
-    const result = gradeExam(questions, answers, feedbackMode === 'immediate' ? questionResults : {});
+    const result = gradeExam(
+      questions, answers,
+      feedbackMode === 'immediate' ? questionResults : {},
+      { track: currentTrack, subject: examSubject }
+    );
 
     // Store in sessionStorage for ExamResults page
     sessionStorage.setItem(
@@ -452,8 +462,9 @@ const ExamTake = () => {
       JSON.stringify({
         examIndex: idx,
         examTitle: normalizeExamTitle(exam),
-        subject: normalizeSubject(exam.subject),
+        subject: examSubject,
         level: normalizeLevel(exam.level),
+        track: currentTrack,
         result,
         timestamp: Date.now(),
       })
@@ -699,6 +710,16 @@ const ExamTake = () => {
     ? (cleanedEntry._cleanInstructions || '')
     : (question.sectionInstructions || '');
 
+  // Track-specific section directive for the current user's track
+  const userTrack = useStore.getState().track;
+  const trackDirective = useMemo(() => {
+    if (!userTrack || !question.sectionInstructions) return null;
+    const directives = parseTrackDirectives(question.sectionInstructions);
+    if (!directives.length) return null;
+    return getDirectiveForTrack(directives, userTrack);
+  }, [userTrack, question.sectionInstructions]);
+  const trackInfo = userTrack ? TRACK_BY_CODE[userTrack] : null;
+
   return (
     <section className="section exam-take">
       <div className="container">
@@ -831,6 +852,19 @@ const ExamTake = () => {
               title={question.sectionTitle}
               instructions={cleanInstructions && cleanInstructions.length <= 200 ? cleanInstructions : ''}
             />
+          )}
+
+          {/* Track-specific directive banner */}
+          {trackDirective && trackInfo && (
+            <div
+              className="exam-take__track-banner"
+              style={{ '--track-color': trackInfo.color }}
+            >
+              <span className="exam-take__track-banner-icon">{trackInfo.icon}</span>
+              <div className="exam-take__track-banner-text">
+                <strong>{trackInfo.shortLabel}</strong> — {trackDirective}
+              </div>
+            </div>
           )}
 
           {/* Reading passage panel — always visible for comprehension sections */}

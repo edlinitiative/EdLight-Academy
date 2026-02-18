@@ -9,6 +9,8 @@ const useStore = create(
       isAuthenticated: false,
       language: 'en', // Default to English
       hydrated: false,
+      track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
+      onboardingCompleted: false,
       
       // Course progress
       enrolledCourses: [],
@@ -25,6 +27,8 @@ const useStore = create(
       // Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setLanguage: (language) => set({ language }),
+      setTrack: (track) => set({ track }),
+      setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       
       enrollInCourse: (course) =>
         set((state) => {
@@ -58,6 +62,8 @@ const useStore = create(
       logout: () => set({
         user: null,
         isAuthenticated: false,
+        track: null,
+        onboardingCompleted: false,
         currentCourse: null,
         enrolledCourses: [],
         progress: {},
@@ -73,6 +79,8 @@ const useStore = create(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         language: state.language,
+        track: state.track,
+        onboardingCompleted: state.onboardingCompleted,
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,
         quizAttempts: state.quizAttempts,

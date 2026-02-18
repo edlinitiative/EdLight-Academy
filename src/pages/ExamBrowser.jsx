@@ -1,6 +1,9 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import useStore from '../contexts/store';
+import { TRACKS, TRACK_BY_CODE } from '../config/trackConfig';
+import TrackSelector from '../components/TrackSelector';
 import {
   buildExamIndex,
   subjectColor,
@@ -44,6 +47,28 @@ const ExamBrowser = () => {
 
   const { data: allExams, isLoading, error } = useExamCatalog();
 
+  // Track state
+  const userTrack = useStore((s) => s.track);
+  const onboardingCompleted = useStore((s) => s.onboardingCompleted);
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const isTerminale = level === 'terminale';
+  const [trackFilter, setTrackFilter] = useState('');
+  const [showTrackSelector, setShowTrackSelector] = useState(false);
+
+  // Auto-default track filter to user's track on first load
+  useEffect(() => {
+    if (isTerminale && userTrack && !trackFilter) {
+      setTrackFilter(userTrack);
+    }
+  }, [isTerminale, userTrack]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show onboarding prompt for authenticated Terminale users without a track
+  useEffect(() => {
+    if (isTerminale && isAuthenticated && !onboardingCompleted && !userTrack) {
+      setShowTrackSelector(true);
+    }
+  }, [isTerminale, isAuthenticated, onboardingCompleted, userTrack]);
+
   // Build enriched index from full catalog, then filter by level
   const index = useMemo(() => {
     if (!allExams) return null;
@@ -79,12 +104,13 @@ const ExamBrowser = () => {
   const [search, setSearch] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const hasActiveFilters = subjectFilter || yearFilter || search.trim();
+  const hasActiveFilters = subjectFilter || yearFilter || search.trim() || trackFilter;
 
   const clearFilters = useCallback(() => {
     setSubjectFilter('');
     setYearFilter('');
     setSearch('');
+    setTrackFilter('');
     setVisibleCount(PAGE_SIZE);
   }, []);
 
@@ -92,6 +118,14 @@ const ExamBrowser = () => {
   const filtered = useMemo(() => {
     if (!index) return [];
     let list = index.exams;
+
+    // Track filter (only for Terminale/baccalaureat level)
+    if (trackFilter && isTerminale) {
+      list = list.filter((e) => {
+        const tracks = e.tracks || [];
+        return tracks.includes('ALL') || tracks.includes(trackFilter);
+      });
+    }
 
     if (subjectFilter) list = list.filter((e) => e._subject === subjectFilter);
     if (yearFilter) list = list.filter((e) => e._year === Number(yearFilter));
@@ -107,12 +141,12 @@ const ExamBrowser = () => {
 
     // Sort: newest first
     return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
-  }, [index, subjectFilter, yearFilter, search]);
+  }, [index, subjectFilter, yearFilter, search, trackFilter, isTerminale]);
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [subjectFilter, yearFilter, search]);
+  }, [subjectFilter, yearFilter, search, trackFilter]);
 
   // Paginated subset
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
@@ -251,6 +285,41 @@ const ExamBrowser = () => {
             {/* Divider */}
             <hr className="exam-browser__divider" />
 
+            {/* Track filter chips — only for Terminale/Baccalauréat */}
+            {isTerminale && (
+              <div className="exam-browser__track-bar">
+                <span className="exam-browser__track-label">Filière :</span>
+                <button
+                  className={`exam-browser__track-chip ${!trackFilter ? 'exam-browser__track-chip--active' : ''}`}
+                  onClick={() => setTrackFilter('')}
+                  type="button"
+                >
+                  Toutes
+                </button>
+                {TRACKS.map((t) => (
+                  <button
+                    key={t.code}
+                    className={`exam-browser__track-chip ${trackFilter === t.code ? 'exam-browser__track-chip--active' : ''}`}
+                    style={{ '--track-color': t.color }}
+                    onClick={() => setTrackFilter(trackFilter === t.code ? '' : t.code)}
+                    type="button"
+                  >
+                    {t.icon} {t.shortLabel}
+                  </button>
+                ))}
+                {!userTrack && isAuthenticated && (
+                  <button
+                    className="exam-browser__track-chip"
+                    style={{ '--track-color': '#6366f1' }}
+                    onClick={() => setShowTrackSelector(true)}
+                    type="button"
+                  >
+                    ⚙️ Définir ma filière
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Stat chips */}
             <div className="exam-browser__summary">
               <span className="exam-browser__stat-chip">
@@ -314,6 +383,19 @@ const ExamBrowser = () => {
             </p>
           </>
         )}
+
+        {/* Track selector modal (onboarding) */}
+        {showTrackSelector && (
+          <TrackSelector
+            mode="modal"
+            currentTrack={userTrack}
+            onSelect={(code) => {
+              setShowTrackSelector(false);
+              setTrackFilter(code);
+            }}
+            onClose={() => setShowTrackSelector(false)}
+          />
+        )}
       </div>
     </section>
   );
@@ -375,6 +457,20 @@ function ExamCard({ exam, onClick }) {
           </span>
         )}
       </div>
+
+      {/* Track badges */}
+      {exam.tracks && exam.tracks.length > 0 && !exam.tracks.includes('ALL') && (
+        <div className="exam-card__tracks">
+          {exam.tracks.map((t) => {
+            const info = TRACK_BY_CODE[t];
+            return (
+              <span key={t} className="exam-card__track-chip">
+                {info?.icon || ''} {info?.shortLabel || t}
+              </span>
+            );
+          })}
+        </div>
+      )}
 
       {topTypes.length > 0 && (
         <div className="exam-card__types">

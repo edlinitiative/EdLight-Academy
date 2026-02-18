@@ -1,9 +1,30 @@
-import { signIn, signUp, signInWithGoogle, logout as firebaseLogout, getCurrentUser, upsertUserDocument } from './firebase';
+import { signIn, signUp, signInWithGoogle, logout as firebaseLogout, getCurrentUser, upsertUserDocument, getUserProfile } from './firebase';
+import useStore from '../contexts/store';
 
 /**
  * Service layer for authentication
  * This handles the mapping between Firebase auth and your app's user state
  */
+
+/**
+ * After authentication, load user profile from Firestore and sync track to store.
+ */
+async function syncUserProfile(uid) {
+  try {
+    const profile = await getUserProfile(uid);
+    if (profile) {
+      const store = useStore.getState();
+      if (profile.track) {
+        store.setTrack(profile.track);
+      }
+      if (profile.onboarding_completed) {
+        store.setOnboardingCompleted(true);
+      }
+    }
+  } catch (err) {
+    console.warn('Could not sync user profile:', err);
+  }
+}
 
 export async function loginWithEmailPassword(email, password) {
   try {
@@ -12,6 +33,9 @@ export async function loginWithEmailPassword(email, password) {
     
     // Update user document in Firestore (update last_seen)
     await upsertUserDocument(user, false);
+    
+    // Sync track/onboarding from Firestore
+    await syncUserProfile(user.uid);
     
     return {
       uid: user.uid,
@@ -53,6 +77,9 @@ export async function loginWithGoogle() {
     
     // Create or update user document in Firestore
     await upsertUserDocument(user, isNewUser);
+    
+    // Sync track/onboarding from Firestore
+    await syncUserProfile(user.uid);
     
     return {
       uid: user.uid,

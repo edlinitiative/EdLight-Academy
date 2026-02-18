@@ -106,6 +106,7 @@ export async function upsertUserDocument(user, isNewUser = false) {
         created_at: serverTimestamp(),
         email: user.email || '',
         enrollment: '',
+        track: '',
         full_name: user.displayName || '',
         last_seen: serverTimestamp(),
         onboarding_completed: false,
@@ -121,6 +122,7 @@ export async function upsertUserDocument(user, isNewUser = false) {
           created_at: serverTimestamp(),
           email: user.email || '',
           enrollment: '',
+          track: '',
           full_name: user.displayName || '',
           last_seen: serverTimestamp(),
           onboarding_completed: false,
@@ -143,6 +145,41 @@ export async function upsertUserDocument(user, isNewUser = false) {
 }
 
 // Admin functions for managing content
+
+/**
+ * Update the user's Bac track (série/filière) in Firestore.
+ * Also marks onboarding as completed.
+ */
+export async function updateUserTrack(uid, trackCode) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+      track: trackCode,
+      enrollment: trackCode,
+      onboarding_completed: true,
+      updated_at: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error updating user track:', error);
+    throw error;
+  }
+}
+
+/**
+ * Load user profile data from Firestore (including track).
+ * Returns { track, onboarding_completed, ... } or null.
+ */
+export async function getUserProfile(uid) {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) return null;
+    return snap.data();
+  } catch (error) {
+    console.error('Error loading user profile:', error);
+    return null;
+  }
+}
 
 /**
  * Update or create a video document in Firestore

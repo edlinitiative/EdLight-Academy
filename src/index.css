@@ -8800,3 +8800,308 @@ textarea.input-field {
 		padding: 1rem;
 	}
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   TRACK SELECTOR (onboarding + settings)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.track-selector__overlay {
+	z-index: 1000;
+}
+
+.track-selector__modal {
+	background: var(--surface);
+	border-radius: 1.25rem;
+	max-width: 620px;
+	width: 95%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+	animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+	from { opacity: 0; transform: translateY(20px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+.track-selector {
+	padding: 1.75rem;
+}
+
+.track-selector__header {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+
+.track-selector__icon {
+	font-size: 2.5rem;
+	display: block;
+	margin-bottom: 0.5rem;
+}
+
+.track-selector__title {
+	font-size: 1.35rem;
+	font-weight: 700;
+	margin: 0 0 0.4rem;
+	color: var(--text);
+}
+
+.track-selector__subtitle {
+	font-size: 0.92rem;
+	color: var(--text-muted);
+	margin: 0;
+	line-height: 1.5;
+}
+
+.track-selector__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 0.75rem;
+	margin-bottom: 1.25rem;
+}
+
+.track-selector__card {
+	all: unset;
+	box-sizing: border-box;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 1rem 0.75rem;
+	border: 2px solid var(--border, #e2e8f0);
+	border-radius: 0.875rem;
+	background: var(--surface);
+	transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+	position: relative;
+	text-align: center;
+}
+
+.track-selector__card:hover {
+	border-color: var(--track-color);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--track-color) 15%, transparent);
+	transform: translateY(-1px);
+}
+
+.track-selector__card--selected {
+	border-color: var(--track-color);
+	background: color-mix(in srgb, var(--track-color) 6%, var(--surface));
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--track-color) 20%, transparent);
+}
+
+.track-selector__card-icon {
+	font-size: 1.75rem;
+}
+
+.track-selector__card-code {
+	font-size: 1.05rem;
+	font-weight: 700;
+	color: var(--track-color);
+}
+
+.track-selector__card-name {
+	font-size: 0.72rem;
+	color: var(--text-muted);
+	line-height: 1.3;
+}
+
+.track-selector__card-desc {
+	font-size: 0.68rem;
+	color: var(--text-muted);
+	opacity: 0.7;
+	line-height: 1.3;
+}
+
+.track-selector__check {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+}
+
+.track-selector__error {
+	color: var(--danger-500, #ef4444);
+	font-size: 0.88rem;
+	text-align: center;
+	margin: 0.75rem 0;
+}
+
+.track-selector__actions {
+	display: flex;
+	gap: 0.75rem;
+	justify-content: center;
+	margin-top: 1rem;
+}
+
+.track-selector__confirm {
+	min-width: 160px;
+}
+
+.track-selector__hint {
+	text-align: center;
+	font-size: 0.78rem;
+	color: var(--text-muted);
+	margin: 1rem 0 0;
+}
+
+/* Track filter chip bar (ExamBrowser) */
+.exam-browser__track-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	align-items: center;
+}
+
+.exam-browser__track-label {
+	font-size: 0.82rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	margin-right: 0.25rem;
+}
+
+.exam-browser__track-chip {
+	all: unset;
+	box-sizing: border-box;
+	cursor: pointer;
+	font-size: 0.78rem;
+	font-weight: 600;
+	padding: 0.3rem 0.7rem;
+	border-radius: 999px;
+	border: 1.5px solid var(--border, #e2e8f0);
+	background: var(--surface);
+	color: var(--text-muted);
+	transition: all 0.15s;
+	white-space: nowrap;
+}
+
+.exam-browser__track-chip:hover {
+	border-color: var(--track-color, var(--primary));
+	color: var(--track-color, var(--primary));
+}
+
+.exam-browser__track-chip--active {
+	border-color: var(--track-color, var(--primary));
+	background: color-mix(in srgb, var(--track-color, var(--primary)) 12%, var(--surface));
+	color: var(--track-color, var(--primary));
+}
+
+/* Track banner in ExamTake */
+.exam-take__track-banner {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.6rem;
+	padding: 0.75rem 1rem;
+	border-radius: 0.625rem;
+	background: color-mix(in srgb, var(--track-color, #3b82f6) 8%, var(--surface));
+	border: 1px solid color-mix(in srgb, var(--track-color, #3b82f6) 25%, transparent);
+	margin-bottom: 1rem;
+	font-size: 0.88rem;
+	line-height: 1.5;
+}
+
+.exam-take__track-banner-icon {
+	font-size: 1.1rem;
+	flex-shrink: 0;
+	margin-top: 0.1rem;
+}
+
+.exam-take__track-banner-text {
+	color: var(--text);
+}
+
+.exam-take__track-banner-text strong {
+	color: var(--track-color, #3b82f6);
+}
+
+/* Track badge on exam cards */
+.exam-card__tracks {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin-top: 0.25rem;
+}
+
+.exam-card__track-chip {
+	font-size: 0.65rem;
+	font-weight: 600;
+	padding: 0.1rem 0.4rem;
+	border-radius: 4px;
+	background: var(--bg-muted, #f1f5f9);
+	color: var(--text-muted);
+}
+
+/* Coefficient badge in ExamResults */
+.exam-results__coeff-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	padding: 0.2rem 0.6rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+	color: var(--primary);
+	margin-left: 0.5rem;
+}
+
+.exam-results__weighted {
+	margin-top: 1rem;
+	padding: 1rem;
+	background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+	border-radius: 0.75rem;
+	border: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.exam-results__weighted-title {
+	font-size: 0.88rem;
+	font-weight: 600;
+	color: var(--text);
+	margin: 0 0 0.5rem;
+}
+
+.exam-results__weighted-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.85rem;
+	padding: 0.25rem 0;
+}
+
+.exam-results__weighted-value {
+	font-weight: 700;
+	color: var(--primary);
+}
+
+/* Change track button in dropdown */
+.dropdown__track {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.85rem;
+}
+
+.dropdown__track-badge {
+	font-size: 0.72rem;
+	font-weight: 700;
+	padding: 0.1rem 0.4rem;
+	border-radius: 4px;
+	background: var(--bg-muted, #f1f5f9);
+}
+
+@media (max-width: 480px) {
+	.track-selector__grid {
+		grid-template-columns: 1fr 1fr;
+	}
+
+	.track-selector__card {
+		padding: 0.75rem 0.5rem;
+	}
+
+	.track-selector__card-icon {
+		font-size: 1.4rem;
+	}
+
+	.track-selector__actions {
+		flex-direction: column;
+	}
+}
