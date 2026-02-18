@@ -1,65 +1,219 @@
-.exam-landing-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 20px;
-    background-color: #f4f7f6;
-    min-height: 100vh;
+/* ─── Exam Landing Page ─────────────────────────────────────────────────────── */
+
+.exam-landing {
+  position: relative;
+  min-height: calc(100vh - var(--navbar-height));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 3vw, 2rem) clamp(3rem, 6vw, 5rem);
+  background:
+    radial-gradient(circle at 20% 15%, rgba(10, 102, 194, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(59, 155, 217, 0.07) 0%, transparent 40%),
+    var(--background);
+}
+
+/* Decorative grid overlay */
+.exam-landing::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(10, 102, 194, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 102, 194, 0.032) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Page header ── */
+.exam-landing__header {
+  text-align: center;
+  margin-bottom: clamp(2.5rem, 6vw, 4rem);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.exam-landing__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(10, 102, 194, 0.1);
+  color: var(--primary-600);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.exam-landing__title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-900);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.exam-landing__subtitle {
+  font-size: clamp(0.92rem, 2vw, 1.05rem);
+  color: var(--text-500);
+  max-width: 38rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── Level cards grid ── */
+.exam-landing__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1000px;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Individual level card ── */
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  box-shadow:
+    0 1px 2px rgba(10, 102, 194, 0.04),
+    0 6px 24px rgba(10, 102, 194, 0.08);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease;
+}
+
+.level-card:hover {
+  transform: translateY(-7px);
+  box-shadow:
+    0 2px 4px rgba(10, 102, 194, 0.06),
+    0 20px 56px rgba(10, 102, 194, 0.14);
+  border-color: rgba(10, 102, 194, 0.22);
+  text-decoration: none;
+}
+
+.level-card:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 3px;
+}
+
+/* ── Colored top accent bar ── */
+.level-card__accent {
+  height: 4px;
+  width: 100%;
+  background: var(--level-color, var(--primary-500));
+  flex-shrink: 0;
+}
+
+/* ── Card body ── */
+.level-card__body {
+  padding: 1.75rem 1.75rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.level-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: color-mix(in srgb, var(--level-color, var(--primary-500)) 12%, transparent);
+  margin-bottom: 0.3rem;
+  flex-shrink: 0;
+}
+
+.level-card__heading {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-900);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.level-card__desc {
+  font-size: 0.9rem;
+  color: var(--text-600);
+  line-height: 1.65;
+  flex: 1;
+  margin: 0;
+}
+
+/* ── Card footer ── */
+.level-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.75rem;
+  border-top: 1px solid rgba(10, 102, 194, 0.07);
+  background: rgba(10, 102, 194, 0.025);
+}
+
+.level-card__cta {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--level-color, var(--primary-600));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  letter-spacing: 0.01em;
+  transition: gap 0.2s ease;
+}
+
+.level-card:hover .level-card__cta {
+  gap: 0.65rem;
+}
+
+.level-card__badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  color: var(--text-400);
+  background: rgba(148, 163, 184, 0.14);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .exam-landing {
+    padding-top: clamp(2rem, 6vw, 3.5rem);
   }
-  
-  .exam-landing-header {
-    text-align: center;
-    margin-bottom: 40px;
+  .exam-landing__grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
   }
-  
-  .exam-landing-header h1 {
-    font-size: 2.5rem;
-    color: #333;
-    margin-bottom: 10px;
+  .level-card__body {
+    padding: 1.4rem 1.4rem 1.2rem;
   }
-  
-  .exam-landing-header p {
-    font-size: 1.2rem;
-    color: #666;
+  .level-card__footer {
+    padding: 0.8rem 1.4rem;
   }
-  
-  .level-selection-container {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    flex-wrap: wrap;
-    width: 100%;
-    max-width: 1200px;
-  }
-  
-  .level-card {
-    background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    width: 300px;
-  }
-  
-  .level-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-  }
-  
-  .level-card-content {
-    padding: 20px;
-  }
-  
-  .level-card-content h2 {
-    font-size: 1.8rem;
-    color: #0056b3;
-    margin-bottom: 10px;
-  }
-  
-  .level-card-content p {
-    font-size: 1rem;
-    color: #555;
-  }
-  
+}
