@@ -194,6 +194,8 @@ const ExamTake = () => {
 
   const idx = parseInt(examId, 10);
   const exam = rawExams?.[idx];
+  const subject = useMemo(() => normalizeSubject(exam?.subject), [exam?.subject]);
+  const color = useMemo(() => subjectColor(subject), [subject]);
   const questions = useMemo(() => (exam ? flattenQuestions(exam) : []), [exam]);
 
   const sectionGroups = useMemo(() => {
@@ -571,8 +573,7 @@ const ExamTake = () => {
     );
   }
 
-  const subject = normalizeSubject(exam.subject);
-  const color = subjectColor(subject);
+  // subject and color are now declared at the top of the component (before hooks)
 
   // ── Exam Intro splash ───────────────────────────────────────────────────
   if (!examStarted) {
