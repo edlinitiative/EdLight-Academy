@@ -7,7 +7,7 @@
   flex-direction: column;
   align-items: center;
   overflow: hidden;
-  padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 3vw, 2rem) clamp(3rem, 6vw, 5rem);
+  padding: clamp(2rem, 6vw, 3.5rem) 1rem clamp(2.25rem, 6vw, 3rem);
   background:
     radial-gradient(circle at 20% 15%, rgba(10, 102, 194, 0.08) 0%, transparent 45%),
     radial-gradient(circle at 80% 80%, rgba(59, 155, 217, 0.07) 0%, transparent 40%),
@@ -32,7 +32,7 @@
 /* ── Page header ── */
 .exam-landing__header {
   text-align: center;
-  margin-bottom: clamp(2.5rem, 6vw, 4rem);
+  margin-bottom: 2rem;
   position: relative;
   z-index: 1;
   display: flex;
@@ -56,7 +56,7 @@
 }
 
 .exam-landing__title {
-  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-size: clamp(1.75rem, 7vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text-900);
@@ -65,9 +65,9 @@
 }
 
 .exam-landing__subtitle {
-  font-size: clamp(0.92rem, 2vw, 1.05rem);
+  font-size: 0.92rem;
   color: var(--text-500);
-  max-width: 38rem;
+  max-width: 34rem;
   line-height: 1.7;
   margin: 0;
 }
@@ -75,10 +75,10 @@
 /* ── Level cards grid ── */
 .exam-landing__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   width: 100%;
-  max-width: 1000px;
+  max-width: 420px;
   position: relative;
   z-index: 1;
 }
@@ -129,7 +129,7 @@
 
 /* ── Card body ── */
 .level-card__body {
-  padding: 1.75rem 1.75rem 1.4rem;
+  padding: 1.3rem 1.2rem 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -137,20 +137,20 @@
 }
 
 .level-card__icon {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   background: color-mix(in srgb, var(--level-color, var(--primary-500)) 12%, transparent);
   margin-bottom: 0.3rem;
   flex-shrink: 0;
 }
 
 .level-card__heading {
-  font-size: 1.35rem;
+  font-size: 1.16rem;
   font-weight: 800;
   letter-spacing: -0.025em;
   color: var(--text-900);
@@ -159,7 +159,7 @@
 }
 
 .level-card__desc {
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   color: var(--text-600);
   line-height: 1.65;
   flex: 1;
@@ -171,13 +171,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem 1.75rem;
+  padding: 0.75rem 1.2rem;
   border-top: 1px solid rgba(10, 102, 194, 0.07);
   background: rgba(10, 102, 194, 0.025);
 }
 
 .level-card__cta {
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: var(--level-color, var(--primary-600));
   display: inline-flex;
@@ -192,7 +192,7 @@
 }
 
 .level-card__badge {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.035em;
   color: var(--text-400);
@@ -201,19 +201,58 @@
   border-radius: 999px;
 }
 
-/* ── Responsive ── */
-@media (max-width: 700px) {
+/* ── Desktop/tablet enhancements ── */
+@media (min-width: 701px) {
   .exam-landing {
-    padding-top: clamp(2rem, 6vw, 3.5rem);
+    padding: clamp(3rem, 8vw, 6rem) clamp(1rem, 3vw, 2rem) clamp(3rem, 6vw, 5rem);
   }
+
+  .exam-landing__header {
+    margin-bottom: clamp(2.5rem, 6vw, 4rem);
+  }
+
+  .exam-landing__title {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+  }
+
+  .exam-landing__subtitle {
+    font-size: clamp(0.92rem, 2vw, 1.05rem);
+    max-width: 38rem;
+  }
+
   .exam-landing__grid {
-    grid-template-columns: 1fr;
-    max-width: 400px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    max-width: 1000px;
   }
+
   .level-card__body {
-    padding: 1.4rem 1.4rem 1.2rem;
+    padding: 1.75rem 1.75rem 1.4rem;
   }
+
+  .level-card__icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+  }
+
+  .level-card__heading {
+    font-size: 1.35rem;
+  }
+
+  .level-card__desc {
+    font-size: 0.9rem;
+  }
+
   .level-card__footer {
-    padding: 0.8rem 1.4rem;
+    padding: 0.9rem 1.75rem;
+  }
+
+  .level-card__cta {
+    font-size: 0.88rem;
+  }
+
+  .level-card__badge {
+    font-size: 0.7rem;
   }
 }

@@ -322,7 +322,15 @@ const ExamTake = () => {
   // Keyboard navigation (move by group)
   useEffect(() => {
     const handler = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+      const tag = e.target?.tagName;
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        tag === 'BUTTON' ||
+        e.target?.isContentEditable
+      ) return;
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault();
         setCurrentQ((p) => {
@@ -346,11 +354,26 @@ const ExamTake = () => {
   // Scroll question content into view on question change
   const contentRef = useRef(null);
   useEffect(() => {
-    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    contentRef.current?.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'start' });
   }, [currentQ]);
 
   // Passage panel state (for comprehension sections)
   const [showPassage, setShowPassage] = useState(false);
+
+  // Escape key closes overlays (confirm modal / passage panel)
+  useEffect(() => {
+    const onEsc = (e) => {
+      if (e.key !== 'Escape') return;
+      if (showConfirm) setShowConfirm(false);
+      if (showPassage) setShowPassage(false);
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [showConfirm, showPassage]);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
@@ -437,7 +460,7 @@ const ExamTake = () => {
         <div className="exam-cover__inner">
           {/* Navigation */}
           <nav className="exam-cover__nav">
-            <button className="exam-cover__back" onClick={() => navigate(`/exams/${level || ''}`)}>
+            <button className="exam-cover__back" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
               <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
               Retour
             </button>
@@ -524,6 +547,7 @@ const ExamTake = () => {
               className="exam-cover__start-btn"
               style={{ background: color }}
               onClick={() => setExamStarted(true)}
+              type="button"
             >
               <span>Commencer l'examen</span>
               <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
@@ -567,7 +591,7 @@ const ExamTake = () => {
         {/* Top bar */}
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
-            <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)}>
+            <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
               ← Examens
             </button>
             <div className="exam-take__exam-info">
@@ -581,13 +605,19 @@ const ExamTake = () => {
               {answeredCount}/{questions.length}
             </span>
             {durationMin > 0 && (
-              <span className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`} aria-live="polite" aria-label={`Temps restant: ${formatTime(secondsLeft)}`}>
+              <span
+                className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`}
+                aria-live={isTimerWarning ? 'polite' : 'off'}
+                aria-atomic="true"
+                aria-label={`Temps restant: ${formatTime(secondsLeft)}`}
+              >
                 <span aria-hidden="true">⏱</span> {formatTime(secondsLeft)}
               </span>
             )}
             <button
               className="button button--primary button--sm"
               onClick={() => setShowConfirm(true)}
+              type="button"
             >
               Soumettre
             </button>
@@ -661,6 +691,7 @@ const ExamTake = () => {
                             onClick={() => setCurrentQ(targetGroup ? targetGroup.start : i)}
                             title={`Question ${formatQuestionLabel(q, i)}`}
                             type="button"
+                            aria-label={`Aller à la question ${formatQuestionLabel(q, i)}`}
                           >
                             {label}
                             {hasAnswer && !isInCurrentGroup && <span className="exam-take__nav-btn-check" aria-hidden="true" />}
@@ -795,6 +826,7 @@ const ExamTake = () => {
                 const prev = questionGroups[currentGroupIdx - 1];
                 if (prev) setCurrentQ(prev.start);
               }}
+              type="button"
             >
               ← Précédent
             </button>
@@ -805,6 +837,7 @@ const ExamTake = () => {
                   const next = questionGroups[currentGroupIdx + 1];
                   if (next) setCurrentQ(next.start);
                 }}
+                type="button"
               >
                 Suivant →
               </button>
@@ -812,6 +845,7 @@ const ExamTake = () => {
               <button
                 className="button button--primary"
                 onClick={() => setShowConfirm(true)}
+                type="button"
               >
                 Terminer l'examen
               </button>
@@ -823,9 +857,16 @@ const ExamTake = () => {
       {/* Confirmation modal */}
       {showConfirm && (
         <div className="exam-take__overlay" onClick={() => setShowConfirm(false)}>
-          <div className="exam-take__modal card" onClick={(e) => e.stopPropagation()}>
-            <h3>Soumettre l'examen ?</h3>
-            <p>
+          <div
+            className="exam-take__modal card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exam-submit-dialog-title"
+            aria-describedby="exam-submit-dialog-desc"
+          >
+            <h3 id="exam-submit-dialog-title">Soumettre l'examen ?</h3>
+            <p id="exam-submit-dialog-desc">
               Vous avez répondu à <strong>{answeredCount}</strong> sur{' '}
               <strong>{questions.length}</strong> questions.
               {answeredCount < questions.length && (
@@ -835,10 +876,10 @@ const ExamTake = () => {
               )}
             </p>
             <div className="exam-take__modal-actions">
-              <button className="button button--ghost" onClick={() => setShowConfirm(false)}>
+              <button className="button button--ghost" onClick={() => setShowConfirm(false)} type="button">
                 Continuer l'examen
               </button>
-              <button className="button button--primary" onClick={handleSubmit}>
+              <button className="button button--primary" onClick={handleSubmit} type="button">
                 Soumettre maintenant
               </button>
               </div>
@@ -849,9 +890,15 @@ const ExamTake = () => {
       {/* Passage slide-over panel — kept for quick reference while scrolled down */}
       {showPassage && cleanInstructions && cleanInstructions.length > 200 && (
         <div className="exam-take__overlay" onClick={() => setShowPassage(false)}>
-          <div className="exam-take__passage-panel" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="exam-take__passage-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exam-passage-title"
+          >
             <div className="exam-take__passage-panel-header">
-              <h3>📖 Texte de référence</h3>
+              <h3 id="exam-passage-title">📖 Texte de référence</h3>
               <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
             </div>
             <div className="exam-take__passage-panel-body">

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -110,12 +110,9 @@ const ExamBrowser = () => {
   }, [index, subjectFilter, yearFilter, search]);
 
   // Reset visible count when filters change
-  const prevFilterKey = `${subjectFilter}|${yearFilter}|${search}`;
-  const [lastFilterKey, setLastFilterKey] = useState(prevFilterKey);
-  if (prevFilterKey !== lastFilterKey) {
-    setLastFilterKey(prevFilterKey);
+  useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }
+  }, [subjectFilter, yearFilter, search]);
 
   // Paginated subset
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
@@ -214,11 +211,14 @@ const ExamBrowser = () => {
               </svg>
               <input
                 className="exam-browser__search"
-                type="text"
+                type="search"
                 placeholder="Rechercher un examen…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 aria-label="Rechercher un examen"
+                enterKeyHint="search"
+                autoCapitalize="none"
+                autoCorrect="off"
               />
             </div>
 
@@ -228,6 +228,7 @@ const ExamBrowser = () => {
                 className="exam-browser__clear-btn"
                 onClick={clearFilters}
                 type="button"
+                aria-label="Réinitialiser les filtres"
               >
                 ✕ Réinitialiser
               </button>

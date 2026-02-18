@@ -74,7 +74,7 @@ const ExamResults = () => {
         <div className="container">
           <div className="card card--message">
             <p>Aucun résultat trouvé pour cet examen.</p>
-            <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)}>
+            <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
               ← Retour aux examens
             </button>
           </div>
@@ -103,7 +103,7 @@ const ExamResults = () => {
       <div className="container">
         {/* Header */}
         <div className="page-header exam-results__header">
-          <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)}>
+          <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
             ← Retour aux examens
           </button>
           <h1 className="page-header__title">Résultats</h1>
@@ -270,10 +270,11 @@ const ExamResults = () => {
         <button
           className="button button--primary"
           onClick={() => navigate(`/exams/${level}/${examId}`)}
+          type="button"
         >
           🔄 Recommencer cet examen
         </button>
-        <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)}>
+        <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
           📝 Choisir un autre examen
         </button>
       </div>
