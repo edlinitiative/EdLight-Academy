@@ -5608,6 +5608,48 @@ textarea.input-field {
 	color: #0d923f;
 }
 
+/* AI grading feedback */
+.ka-scaffold__ai-loading {
+	margin-top: 0.3rem;
+	font-size: 0.82rem;
+	color: #6366f1;
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+.ka-scaffold__spinner {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border: 2px solid #c7d2fe;
+	border-top-color: #6366f1;
+	border-radius: 50%;
+	animation: ka-spin 0.6s linear infinite;
+}
+@keyframes ka-spin { to { transform: rotate(360deg); } }
+
+.ka-scaffold__ai-feedback {
+	margin-top: 0.3rem;
+	font-size: 0.82rem;
+	padding: 0.3rem 0.5rem;
+	border-radius: 0.35rem;
+	line-height: 1.4;
+}
+.ka-scaffold__ai-feedback--correct {
+	color: #0d6b2f;
+	background: #f0fdf4;
+}
+.ka-scaffold__ai-feedback--wrong {
+	color: #92400e;
+	background: #fffbeb;
+}
+
+.ka-scaffold__field--pending .ka-scaffold__text-input,
+.ka-scaffold__field--pending .math-kb__input-row {
+	border-color: #a5b4fc;
+	background: #eef2ff;
+}
+
 /* ── Hint area — KA-style "Related content" / hint toggle ────────── */
 .ka-scaffold__hint-area {
 	padding: 0 1.25rem 0.5rem;
@@ -5794,6 +5836,26 @@ textarea.input-field {
 [data-theme="dark"] .ka-scaffold__field--wrong .ka-scaffold__text-input {
 	border-color: #e54545;
 	background: #2e0b0b;
+}
+[data-theme="dark"] .ka-scaffold__ai-loading {
+	color: #a5b4fc;
+}
+[data-theme="dark"] .ka-scaffold__spinner {
+	border-color: #3730a3;
+	border-top-color: #a5b4fc;
+}
+[data-theme="dark"] .ka-scaffold__ai-feedback--correct {
+	color: #6ee7a0;
+	background: #0b2e1a;
+}
+[data-theme="dark"] .ka-scaffold__ai-feedback--wrong {
+	color: #fcd34d;
+	background: #2e1f0b;
+}
+[data-theme="dark"] .ka-scaffold__field--pending .ka-scaffold__text-input,
+[data-theme="dark"] .ka-scaffold__field--pending .math-kb__input-row {
+	border-color: #6366f1;
+	background: #1e1b4b;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────── */

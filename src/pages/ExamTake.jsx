@@ -356,12 +356,70 @@ const ExamTake = () => {
       } finally {
         setGradingInProgress((prev) => ({ ...prev, [qIndex]: false }));
       }
+    } else if (q.scaffold_text && q.scaffold_blanks && q.answer_parts && !MATH_SUBJECTS.has(subject)) {
+      // Non-math scaffold: try exact match first, then AI for long-text blanks
+      const result = gradeSingleQuestion(q, userAnswer);
+      const hasUngradedLongBlanks = (result.result?.blankResults || []).some(
+        (br) => !br.correct && (br.expectedAnswer || '').length > 25
+      );
+
+      if (hasUngradedLongBlanks) {
+        // Re-grade the failed long-text blanks with AI
+        setGradingInProgress((prev) => ({ ...prev, [qIndex]: true }));
+        try {
+          const failedLong = (result.result.blankResults || []).filter(
+            (br) => !br.correct && (br.expectedAnswer || '').length > 25
+          );
+          const response = await fetch('/api/grade-scaffold', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              question: q._displayText || q.question || '',
+              blanks: failedLong.map((br) => ({
+                index: br.blankIndex,
+                label: br.label,
+                userAnswer: br.userValue,
+                expectedAnswer: br.expectedAnswer,
+                alternatives: br.alternatives || [],
+              })),
+            }),
+          });
+          if (response.ok) {
+            const { results: aiResults } = await response.json();
+            const blankResults = [...result.result.blankResults];
+            (aiResults || []).forEach((r) => {
+              if (r.isCorrect && blankResults[r.index]) {
+                blankResults[r.index] = { ...blankResults[r.index], correct: true, aiGraded: true };
+              }
+            });
+            const correctBlanks = blankResults.filter((r) => r.correct).length;
+            const totalBlanks = blankResults.length;
+            const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
+            const pts = q.points || 1;
+            const awarded = Math.round(pts * ratio * 100) / 100;
+            const merged = {
+              ...result,
+              status: correctBlanks === totalBlanks ? 'correct' : correctBlanks > 0 ? 'partial' : 'incorrect',
+              result: { ...result.result, awarded, blankResults },
+            };
+            setQuestionResults((prev) => ({ ...prev, [qIndex]: merged }));
+          } else {
+            setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
+          }
+        } catch {
+          setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
+        } finally {
+          setGradingInProgress((prev) => ({ ...prev, [qIndex]: false }));
+        }
+      } else {
+        setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
+      }
     } else {
       // Non-essay: grade locally
       const result = gradeSingleQuestion(q, userAnswer);
       setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
     }
-  }, [questions, answers, questionResults]);
+  }, [questions, answers, questionResults, subject]);
 
   const answeredCount = Object.keys(answers).filter((k) => {
     const v = answers[k];
@@ -1312,7 +1370,9 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
   const hasGrading = answerParts.length > 0;
 
   const [validated, setValidated] = React.useState({});
+  const [aiFeedback, setAiFeedback] = React.useState({});
   const [checked, setChecked] = React.useState(false);
+  const [grading, setGrading] = React.useState(false);
   const [showSolution, setShowSolution] = React.useState(false);
   const [focusedBlank, setFocusedBlank] = React.useState(null);
   const inputRefs = useRef([]);
@@ -1336,7 +1396,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
   const setBlank = useCallback((blankIdx, val) => {
     const updated = [...blankValues];
     updated[blankIdx] = val;
-    if (checked) { setChecked(false); setValidated({}); }
+    if (checked) { setChecked(false); setValidated({}); setAiFeedback({}); }
     serialize(updated);
   }, [blankValues, serialize, checked]);
 
@@ -1346,10 +1406,17 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
     .replace(/^\$+|\$+$/g, '').replace(/\\text\{([^}]*)\}/g, '$1')
     .replace(/\\,/g, '').replace(/\s+/g, ' ').trim(), []);
 
-  // Check all blanks at once (Khan Academy "Check" button)
-  const checkAnswers = useCallback(() => {
+  // Minimum expected answer length to trigger AI grading (short answers grade fine by exact match)
+  const AI_THRESHOLD = 25;
+
+  // Check all blanks: exact match first, then AI for long-text blanks that fail
+  const checkAnswers = useCallback(async () => {
     if (!hasGrading) return;
+    setGrading(true);
     const results = {};
+    const needsAI = [];
+
+    // ── Pass 1: exact / numeric matching (instant) ──
     blanks.forEach((_, bi) => {
       const userVal = (blankValues[bi] || '').trim();
       if (!userVal) { results[bi] = undefined; return; }
@@ -1368,11 +1435,62 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
           isCorrect = true; break;
         }
       }
-      results[bi] = isCorrect;
+      if (isCorrect) {
+        results[bi] = true;
+      } else {
+        // If the expected answer is long text, queue for AI; otherwise mark wrong
+        const expectedLen = (part.answer || '').trim().length;
+        if (!mathMode && expectedLen > AI_THRESHOLD) {
+          needsAI.push({
+            index: bi,
+            label: blanks[bi]?.label || `Étape ${bi + 1}`,
+            userAnswer: userVal,
+            expectedAnswer: part.answer,
+            alternatives: part.alternatives || [],
+          });
+          results[bi] = 'pending'; // placeholder
+        } else {
+          results[bi] = false;
+        }
+      }
     });
+
+    // ── Pass 2: AI grading for long-text blanks that failed exact match ──
+    if (needsAI.length > 0) {
+      // Show the exact-match results immediately, with pending blanks loading
+      setValidated({ ...results });
+      setChecked(true);
+
+      try {
+        const response = await fetch('/api/grade-scaffold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: question._displayText || question.question || '',
+            blanks: needsAI,
+          }),
+        });
+        if (response.ok) {
+          const { results: aiResults } = await response.json();
+          const newFeedback = {};
+          (aiResults || []).forEach(r => {
+            results[r.index] = !!r.isCorrect;
+            if (r.feedback) newFeedback[r.index] = r.feedback;
+          });
+          setAiFeedback(newFeedback);
+        } else {
+          // API failure — mark pending blanks as false with note
+          needsAI.forEach(b => { results[b.index] = false; });
+        }
+      } catch {
+        needsAI.forEach(b => { results[b.index] = false; });
+      }
+    }
+
     setValidated(results);
     setChecked(true);
-  }, [hasGrading, answerParts, blankValues, blanks, normalize]);
+    setGrading(false);
+  }, [hasGrading, answerParts, blankValues, blanks, normalize, mathMode, question]);
 
   // Handle Enter key → move to next blank or check
   const handleKeyDown = useCallback((e, bi) => {
@@ -1423,6 +1541,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
           let fieldClass = 'ka-scaffold__field';
           if (vState === true) fieldClass += ' ka-scaffold__field--correct';
           else if (vState === false) fieldClass += ' ka-scaffold__field--wrong';
+          else if (vState === 'pending') fieldClass += ' ka-scaffold__field--pending';
 
           return (
             <div key={bi} className={fieldClass}>
@@ -1464,6 +1583,18 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                   />
                 )}
               </div>
+              {/* Show AI grading spinner for pending blanks */}
+              {vState === 'pending' && (
+                <div className="ka-scaffold__ai-loading">
+                  <span className="ka-scaffold__spinner" /> Évaluation en cours…
+                </div>
+              )}
+              {/* Show AI feedback when available */}
+              {aiFeedback[bi] && vState !== 'pending' && (
+                <div className={`ka-scaffold__ai-feedback ${vState === true ? 'ka-scaffold__ai-feedback--correct' : 'ka-scaffold__ai-feedback--wrong'}`}>
+                  {aiFeedback[bi]}
+                </div>
+              )}
               {/* Show correct answer on wrong attempt */}
               {vState === false && answerParts[bi] && (
                 <div className="ka-scaffold__correction">
@@ -1523,10 +1654,10 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
         <button
           className={`ka-scaffold__check ${allCorrect ? 'ka-scaffold__check--done' : ''}`}
           onClick={checkAnswers}
-          disabled={!allFilled || allCorrect}
+          disabled={!allFilled || allCorrect || grading}
           type="button"
         >
-          {allCorrect ? 'Terminé ✓' : checked ? 'Revérifier' : 'Vérifier'}
+          {grading ? 'Évaluation…' : allCorrect ? 'Terminé ✓' : checked ? 'Revérifier' : 'Vérifier'}
         </button>
       </div>
     </div>
