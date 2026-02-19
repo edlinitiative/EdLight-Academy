@@ -5612,6 +5612,31 @@ textarea.input-field {
 	line-height: 1.6;
 }
 
+/* Keep the semi-transparent box ONLY for section instructions */
+.exam-take__preview-section-instructions .instruction-renderer {
+	padding: 0.65rem 0.85rem;
+	font-size: 0.88rem;
+	max-height: none;
+	overflow: visible;
+}
+
+/* Strip the box from all other preview instruction-renderer usages */
+.exam-take__preview-passage .instruction-renderer,
+.exam-take__preview-subex-directive .instruction-renderer,
+.exam-take__preview-question-inline-text .instruction-renderer,
+.exam-take__preview-word-pool .instruction-renderer {
+	margin: 0;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 0;
+	max-height: none;
+	overflow: visible;
+	font-size: inherit;
+	line-height: inherit;
+	color: inherit;
+}
+
 .exam-take__preview-passage {
 	padding: 0.75rem 1rem 0.75rem 1.25rem;
 	margin-bottom: 1rem;
