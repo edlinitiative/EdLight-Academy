@@ -5755,15 +5755,15 @@ textarea.input-field {
 }
 
 .exam-take__preview-subex-directive {
-	padding: 0.5rem 0 0.5rem 1rem;
-	margin-bottom: 0.75rem;
+	padding: 0.25rem 0;
+	margin-bottom: 0.5rem;
 	background: none;
-	border-left: 3px solid rgba(139, 92, 246, 0.35);
-	border-radius: 0;
-	font-size: 0.92rem;
-	font-style: italic;
-	line-height: 1.6;
-	color: var(--text-600);
+	border: none;
+	font-size: 0.93rem;
+	font-style: normal;
+	font-weight: 700;
+	line-height: 1.5;
+	color: var(--text-800);
 }
 
 .exam-take__preview-word-pool {
@@ -5799,7 +5799,6 @@ textarea.input-field {
 	}
 
 	.exam-take__preview-subex-directive {
-		padding-left: 0.75rem;
 		font-size: 0.88rem;
 	}
 
