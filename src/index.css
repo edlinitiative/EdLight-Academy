@@ -5090,16 +5090,48 @@ textarea.input-field {
 	opacity: 1;
 }
 
-/* ── "Vérifier" / "Évaluer" check-answer button area ── */
+/* ── Action row: hints + check on same line ── */
+.exam-take__action-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding-top: 0.35rem;
+	flex-wrap: wrap;
+}
+
 .exam-take__check-answer {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
-	flex-wrap: wrap;
-	padding-top: 0.25rem;
+	gap: 0.5rem;
+	margin-left: auto;
 }
+
+.exam-take__check-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.3rem 0.75rem;
+	border: 1.5px solid var(--primary-500);
+	border-radius: 999px;
+	background: none;
+	color: var(--primary-600);
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.15s;
+	white-space: nowrap;
+}
+.exam-take__check-btn:hover:not(:disabled) {
+	background: var(--primary-500);
+	color: #fff;
+}
+.exam-take__check-btn:disabled {
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
 .exam-take__check-hint {
-	font-size: 0.78rem;
+	font-size: 0.75rem;
 	color: var(--text-400, #94a3b8);
 	font-style: italic;
 }
@@ -5463,9 +5495,70 @@ textarea.input-field {
 	top: 0;
 	z-index: 100;
 	background: var(--surface);
-	box-shadow: var(--shadow-sm);
-	padding: 0.75rem 1.5rem;
+	border-bottom: 1px solid var(--border);
+	padding: 0.5rem 1rem;
 	margin: -1.5rem -1.5rem 1.5rem;
+}
+
+/* Preview topbar — mobile-first single-row layout */
+.exam-take__topbar--preview {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.exam-take__back-btn {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem 0.5rem;
+	border: none;
+	background: none;
+	color: var(--text-500);
+	font-size: 0.82rem;
+	font-weight: 500;
+	cursor: pointer;
+	border-radius: var(--radius-sm);
+	transition: color 0.15s;
+	flex-shrink: 0;
+}
+.exam-take__back-btn:hover {
+	color: var(--text-800);
+	background: rgba(0,0,0,0.04);
+}
+
+.exam-take__topbar-center {
+	display: flex;
+	align-items: baseline;
+	gap: 0.35rem;
+	min-width: 0;
+	flex: 1;
+	overflow: hidden;
+}
+
+.exam-take__topbar-sep {
+	color: var(--text-300);
+	flex-shrink: 0;
+}
+
+.exam-take__topbar--preview .exam-take__title-short {
+	max-width: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.exam-take__timer-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.2rem 0.55rem;
+	border-radius: 999px;
+	background: rgba(10, 102, 194, 0.08);
+	color: var(--primary-600);
+	font-size: 0.78rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .exam-take__preview-scroll {
@@ -5473,53 +5566,33 @@ textarea.input-field {
 	margin: 0 auto;
 }
 
-.exam-take__preview-notice {
-	display: flex;
-	gap: 1rem;
-	padding: 1rem 1.25rem;
+.exam-take__preview-hint {
+	font-size: 0.88rem;
+	color: var(--text-500);
 	margin-bottom: 1.5rem;
-	background: linear-gradient(135deg, rgba(10, 102, 194, 0.08), rgba(10, 102, 194, 0.03));
-	border: 1.5px solid rgba(10, 102, 194, 0.2);
-	border-radius: var(--radius-lg);
-	align-items: flex-start;
-}
-
-.exam-take__preview-notice-icon {
-	font-size: 1.5rem;
-	flex-shrink: 0;
-	margin-top: 0.15rem;
-}
-
-.exam-take__preview-notice strong {
-	display: block;
-	font-size: 1.05rem;
-	color: var(--text-900);
-	margin-bottom: 0.25rem;
-}
-
-.exam-take__preview-notice p {
-	font-size: 0.92rem;
-	color: var(--text-600);
-	margin: 0;
 	line-height: 1.5;
+}
+.exam-take__preview-hint strong {
+	color: var(--text-700);
 }
 
 .exam-take__preview-section {
-	margin-bottom: 2.5rem;
+	margin-bottom: 2rem;
 	page-break-inside: avoid;
 }
 
 .exam-take__preview-section-header {
-	margin-bottom: 1.25rem;
-	padding-bottom: 0.75rem;
-	border-bottom: 2px solid rgba(10, 102, 194, 0.15);
+	margin-bottom: 1rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid var(--border);
 }
 
 .exam-take__preview-section-header h2 {
-	font-size: 1.35rem;
+	font-size: 1.15rem;
 	font-weight: 700;
 	color: var(--text-900);
-	margin: 0 0 0.5rem;
+	margin: 0 0 0.35rem;
+	letter-spacing: -0.01em;
 }
 
 .exam-take__preview-section-instructions {
@@ -5529,32 +5602,32 @@ textarea.input-field {
 }
 
 .exam-take__preview-passage {
-	padding: 1rem 1.25rem;
-	margin-bottom: 1.25rem;
-	background: rgba(10, 102, 194, 0.03);
-	border: 1px solid rgba(10, 102, 194, 0.1);
-	border-radius: var(--radius-md);
+	padding: 0.75rem 1rem 0.75rem 1.25rem;
+	margin-bottom: 1rem;
+	background: none;
+	border: none;
+	border-left: 3px solid var(--primary-200, rgba(10, 102, 194, 0.2));
+	border-radius: 0;
 }
 
 .exam-take__preview-passage-label {
 	display: block;
-	font-size: 0.85rem;
+	font-size: 0.78rem;
 	font-weight: 600;
-	color: var(--primary-600);
-	margin-bottom: 0.5rem;
+	color: var(--text-400);
+	margin-bottom: 0.4rem;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 }
 
 .exam-take__preview-question {
-	margin-bottom: 1rem;
-	padding: 0.75rem 0;
-	border-bottom: 1px solid rgba(10, 102, 194, 0.08);
+	margin-bottom: 0.5rem;
+	padding: 0.5rem 0;
+	border-bottom: none;
 	page-break-inside: avoid;
 }
 
 .exam-take__preview-question:last-child {
-	border-bottom: none;
 	margin-bottom: 0;
 }
 
@@ -5642,91 +5715,97 @@ textarea.input-field {
 
 .exam-take__preview-cta {
 	text-align: center;
-	padding: 3rem 1rem;
-	margin-top: 2rem;
+	padding: 2rem 1rem;
+	margin-top: 1.5rem;
+	border-top: 1px solid var(--border);
 }
 
 .exam-take__preview-cta button {
-	font-size: 1.1rem;
-	padding: 1rem 2.5rem;
-	box-shadow: var(--shadow-md);
-	transition: transform 0.2s, box-shadow 0.2s;
+	font-size: 1rem;
+	padding: 0.75rem 2rem;
+	transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .exam-take__preview-cta button:hover {
-	transform: translateY(-2px);
-	box-shadow: var(--shadow-lg);
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-md);
 }
 
 .exam-take__preview-cta-hint {
-	margin-top: 1rem;
-	font-size: 0.95rem;
-	color: var(--text-500);
+	margin-top: 0.75rem;
+	font-size: 0.85rem;
+	color: var(--text-400);
 }
 
 /* Sub-exercise groups (A., B., C. etc.) */
 .exam-take__preview-subex-group {
-	margin-bottom: 2rem;
+	margin-bottom: 1.5rem;
 	page-break-inside: avoid;
 }
 
 .exam-take__preview-subex-directive {
-	padding: 1rem 1.25rem;
-	margin-bottom: 1rem;
-	background: rgba(10, 102, 194, 0.05);
-	border-left: 4px solid rgba(10, 102, 194, 0.3);
-	border-radius: 0 4px 4px 0;
-	font-size: 0.95rem;
-	line-height: 1.7;
-	color: var(--text-700);
+	padding: 0.5rem 0 0.5rem 1rem;
+	margin-bottom: 0.75rem;
+	background: none;
+	border-left: 3px solid rgba(139, 92, 246, 0.35);
+	border-radius: 0;
+	font-size: 0.92rem;
+	font-style: italic;
+	line-height: 1.6;
+	color: var(--text-600);
 }
 
 .exam-take__preview-word-pool {
-	padding: 1rem 1.25rem;
-	margin-bottom: 1rem;
-	background: rgba(76, 175, 80, 0.05);
-	border: 1px solid rgba(76, 175, 80, 0.15);
-	border-radius: var(--radius-md);
+	padding: 0.5rem 0 0.5rem 1rem;
+	margin-bottom: 0.75rem;
+	background: none;
+	border: none;
+	border-left: 3px solid rgba(245, 158, 11, 0.35);
+	border-radius: 0;
 }
 
 .exam-take__preview-word-pool-label {
 	display: block;
-	font-size: 0.8rem;
+	font-size: 0.75rem;
 	font-weight: 600;
-	color: #4caf50;
-	margin-bottom: 0.5rem;
+	color: var(--text-400);
+	margin-bottom: 0.3rem;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 }
 
 @media (max-width: 768px) {
 	.exam-take__preview-scroll {
-		padding: 0 0.5rem;
+		padding: 0 0.25rem;
 	}
 	
 	.exam-take__preview-section-header h2 {
-		font-size: 1.15rem;
+		font-size: 1.05rem;
 	}
 	
 	.exam-take__preview-question {
-		padding: 0.75rem 0;
-		margin-bottom: 1.25rem;
+		padding: 0.4rem 0;
 	}
 
 	.exam-take__preview-subex-directive {
-		padding: 0.85rem 1rem;
-		font-size: 0.9rem;
+		padding-left: 0.75rem;
+		font-size: 0.88rem;
 	}
 
 	.exam-take__preview-word-pool {
-		padding: 0.85rem 1rem;
+		padding-left: 0.75rem;
+	}
+
+	.exam-take--preview .exam-take__topbar {
+		padding: 0.4rem 0.65rem;
+		margin: -1rem -1rem 1rem;
 	}
 }
 
 /* Print styles for preview */
 @media print {
 	.exam-take--preview .exam-take__topbar,
-	.exam-take__preview-notice,
+	.exam-take__preview-hint,
 	.exam-take__preview-cta {
 		display: none;
 	}
@@ -5743,23 +5822,22 @@ textarea.input-field {
 /* ── Question Hints (progressive reveal) ───────────────────────────────── */
 
 .qa-hints {
-	margin-top: 0.75rem;
-	padding-top: 0.75rem;
-	border-top: 1px dashed var(--border);
-}
-
-.qa-hints__item {
 	display: flex;
 	align-items: flex-start;
 	gap: 0.5rem;
-	padding: 0.6rem 0.75rem;
-	margin-bottom: 0.5rem;
-	background: linear-gradient(135deg, #fffbe6 0%, #fff9db 100%);
-	border: 1px solid #f0e68c;
-	border-radius: var(--radius-sm);
-	animation: qa-hint-in 0.35s cubic-bezier(.175,.885,.32,1.275) both;
-	font-size: 0.92rem;
-	line-height: 1.45;
+	flex-wrap: wrap;
+}
+
+.qa-hints__item {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 0.35rem;
+	padding: 0.3rem 0.65rem;
+	background: #fffbe6;
+	border-radius: 999px;
+	animation: qa-hint-in 0.3s ease both;
+	font-size: 0.82rem;
+	line-height: 1.4;
 	color: #5d4e00;
 }
 
@@ -5774,12 +5852,6 @@ textarea.input-field {
 	}
 }
 
-.qa-hints__icon {
-	flex-shrink: 0;
-	font-size: 1.05em;
-	margin-top: 0.05em;
-}
-
 .qa-hints__text {
 	flex: 1;
 }
@@ -5787,50 +5859,49 @@ textarea.input-field {
 .qa-hints__btn {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.4rem;
-	padding: 0.45rem 0.9rem;
+	gap: 0.3rem;
+	padding: 0.3rem 0.65rem;
 	border: 1.5px solid #e8d44d;
 	border-radius: 999px;
-	background: linear-gradient(135deg, #fffdf0 0%, #fef9c3 100%);
+	background: #fffdf0;
 	color: #92750a;
-	font-size: 0.85rem;
+	font-size: 0.8rem;
 	font-weight: 600;
 	cursor: pointer;
-	transition: all 0.2s;
+	transition: all 0.15s;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .qa-hints__btn:hover {
-	background: linear-gradient(135deg, #fef9c3 0%, #fde68a 100%);
+	background: #fef9c3;
 	border-color: #d4a72c;
-	transform: translateY(-1px);
-	box-shadow: 0 2px 8px rgba(212, 167, 44, 0.18);
 }
 
 .qa-hints__btn:active {
-	transform: translateY(0);
+	transform: scale(0.97);
 }
 
 .qa-hints__counter {
-	font-weight: 400;
-	opacity: 0.65;
-	font-size: 0.8em;
+	font-weight: 500;
+	opacity: 0.7;
+	font-size: 0.75em;
 }
 
 /* Dark mode */
 [data-theme="dark"] .qa-hints__item {
-	background: linear-gradient(135deg, #3d3400 0%, #2a2400 100%);
-	border-color: #5c4a00;
+	background: #3d340033;
 	color: #fef08a;
 }
 
 [data-theme="dark"] .qa-hints__btn {
-	background: linear-gradient(135deg, #2a2400 0%, #3d3400 100%);
+	background: #2a2400;
 	border-color: #5c4a00;
 	color: #fef08a;
 }
 
 [data-theme="dark"] .qa-hints__btn:hover {
-	background: linear-gradient(135deg, #3d3400 0%, #524000 100%);
+	background: #3d3400;
 	border-color: #7c6a10;
 }
 

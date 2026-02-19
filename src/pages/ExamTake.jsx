@@ -762,35 +762,25 @@ const ExamTake = () => {
     return (
       <section className="section exam-take exam-take--preview">
         <div className="container">
-          {/* Top bar */}
-          <div className="exam-take__topbar">
-            <div className="exam-take__topbar-left">
-              <button className="button button--ghost button--sm" onClick={() => setViewState('cover')} type="button">
-                ← Retour
-              </button>
-              <div className="exam-take__exam-info">
-                <span className="exam-take__subject" style={{ color }}>{subject}</span>
-                <span className="exam-take__title-short">{normalizeExamTitle(exam)}</span>
-              </div>
+          {/* Top bar — mobile-first compact */}
+          <div className="exam-take__topbar exam-take__topbar--preview">
+            <button className="exam-take__back-btn" onClick={() => setViewState('cover')} type="button">
+              ← Retour
+            </button>
+            <div className="exam-take__topbar-center">
+              <span className="exam-take__subject" style={{ color }}>{subject}</span>
+              <span className="exam-take__topbar-sep">·</span>
+              <span className="exam-take__title-short">{normalizeExamTitle(exam)}</span>
             </div>
-            <div className="exam-take__topbar-right">
-              <div className="exam-take__timer-box" style={{ background: 'rgba(10, 102, 194, 0.08)' }}>
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{durationMin} min</span>
-              </div>
-            </div>
+            {durationMin > 0 && (
+              <span className="exam-take__timer-badge">{durationMin} min</span>
+            )}
           </div>
 
           <div className="exam-take__preview-scroll">
-            <div className="exam-take__preview-notice">
-              <span className="exam-take__preview-notice-icon">👁️</span>
-              <div>
-                <strong>Aperçu de l'examen</strong>
-                <p>Prenez le temps de lire toutes les questions. Quand vous êtes prêt, cliquez sur "Commencer" pour débuter le chronomètre.</p>
-              </div>
-            </div>
+            <p className="exam-take__preview-hint">
+              Parcourez les questions ci-dessous, puis cliquez sur <strong>Commencer</strong> quand vous êtes prêt.
+            </p>
 
             {/* Render all sections and questions continuously */}
             {exam.sections?.map((section, secIdx) => {
@@ -1215,51 +1205,54 @@ const ExamTake = () => {
                   </>
                 )}
 
-                {/* Progressive hints (available for ALL question types) */}
-                {!isProofQuestion(gq, subject) && gq.hints && gq.hints.length > 0 && (
-                  <QuestionHints hints={gq.hints} />
-                )}
+                {/* ── Action row: hints + check on same line ── */}
+                <div className="exam-take__action-row">
+                  {/* Progressive hints (available for ALL question types) */}
+                  {!isProofQuestion(gq, subject) && gq.hints && gq.hints.length > 0 && (
+                    <QuestionHints hints={gq.hints} />
+                  )}
 
-                {/* ── Immediate feedback mode: "Vérifier" button + inline result ── */}
-                {feedbackMode === 'immediate' && !questionResults[qIdx] && (
-                  <div className="exam-take__check-answer">
-                    {gq.type === 'essay' ? (
-                      <>
+                  {/* Immediate feedback mode: compact "Vérifier" button */}
+                  {feedbackMode === 'immediate' && !questionResults[qIdx] && (
+                    <div className="exam-take__check-answer">
+                      {gq.type === 'essay' ? (
+                        <>
+                          <button
+                            className="exam-take__check-btn"
+                            type="button"
+                            disabled={
+                              !answers[qIdx] ||
+                              (answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS ||
+                              gradingInProgress[qIdx]
+                            }
+                            onClick={() => gradeQuestionImmediate(qIdx)}
+                          >
+                            {gradingInProgress[qIdx] ? (
+                              <><span className="loading-spinner loading-spinner--inline" /> Évaluation…</>
+                            ) : (
+                              '✓ Évaluer'
+                            )}
+                          </button>
+                          <span className="exam-take__check-hint">
+                            {(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS
+                              ? `Min. ${ESSAY_MIN_WORDS} mots (${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length})`
+                              : `${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length} mots`
+                            }
+                          </span>
+                        </>
+                      ) : (
                         <button
-                          className="button button--primary button--sm"
+                          className="exam-take__check-btn"
                           type="button"
-                          disabled={
-                            !answers[qIdx] ||
-                            (answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS ||
-                            gradingInProgress[qIdx]
-                          }
+                          disabled={!answers[qIdx] || answers[qIdx] === ''}
                           onClick={() => gradeQuestionImmediate(qIdx)}
                         >
-                          {gradingInProgress[qIdx] ? (
-                            <><span className="loading-spinner loading-spinner--inline" /> Évaluation en cours…</>
-                          ) : (
-                            '🤖 Évaluer ma rédaction'
-                          )}
+                          ✓ Vérifier
                         </button>
-                        <span className="exam-take__check-hint">
-                          {(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS
-                            ? `Minimum ${ESSAY_MIN_WORDS} mots requis (${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length} actuellement)`
-                            : `${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length} mots — prêt pour l'évaluation`
-                          }
-                        </span>
-                      </>
-                    ) : (
-                      <button
-                        className="button button--primary button--sm"
-                        type="button"
-                        disabled={!answers[qIdx] || answers[qIdx] === ''}
-                        onClick={() => gradeQuestionImmediate(qIdx)}
-                      >
-                        ✓ Vérifier ma réponse
-                      </button>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* ── Inline result (immediate mode) ── */}
                 {feedbackMode === 'immediate' && questionResults[qIdx] && (
@@ -1521,25 +1514,24 @@ function QuestionHints({ hints }) {
 
   return (
     <div className="qa-hints">
-      {/* Revealed hints */}
-      {hints.slice(0, revealed).map((hint, i) => (
-        <div key={i} className="qa-hints__item" style={{ animationDelay: `${i * 0.05}s` }}>
-          <span className="qa-hints__icon">💡</span>
-          <span className="qa-hints__text"><MathText text={hint} /></span>
-        </div>
-      ))}
-
-      {/* Reveal button */}
+      {/* Reveal button — compact icon + counter */}
       {canReveal && (
         <button
           type="button"
           className="qa-hints__btn"
           onClick={() => setRevealed(r => r + 1)}
+          title={revealed === 0 ? 'Obtenir un indice' : 'Indice suivant'}
         >
-          💡 {revealed === 0 ? 'Obtenir un indice' : 'Indice suivant'}{' '}
-          <span className="qa-hints__counter">({revealed}/{hints.length})</span>
+          💡 <span className="qa-hints__counter">{revealed}/{hints.length}</span>
         </button>
       )}
+
+      {/* Revealed hints — compact inline */}
+      {hints.slice(0, revealed).map((hint, i) => (
+        <div key={i} className="qa-hints__item" style={{ animationDelay: `${i * 0.05}s` }}>
+          <span className="qa-hints__text"><MathText text={hint} /></span>
+        </div>
+      ))}
     </div>
   );
 }
