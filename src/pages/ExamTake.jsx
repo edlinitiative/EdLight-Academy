@@ -822,56 +822,77 @@ const ExamTake = () => {
                     </div>
                   )}
 
-                  {/* Questions */}
-                  {secQuestions.map((q, qLocalIdx) => {
-                    const globalIdx = questions.indexOf(q);
-                    const qMeta = questionTypeMeta(q.type);
+                  {/* Questions grouped by type */}
+                  {(() => {
+                    // Group consecutive questions by type
+                    const typeGroups = [];
+                    let currentGroup = null;
                     
-                    return (
-                      <div key={globalIdx} className="exam-take__preview-question">
-                        <div className="exam-take__preview-question-header">
-                          <span className="exam-take__preview-question-number">
-                            {formatQuestionLabel(q, globalIdx)}
+                    secQuestions.forEach((q, qLocalIdx) => {
+                      const globalIdx = questions.indexOf(q);
+                      const qMeta = questionTypeMeta(q.type);
+                      
+                      if (!currentGroup || currentGroup.type !== q.type) {
+                        currentGroup = { type: q.type, meta: qMeta, questions: [] };
+                        typeGroups.push(currentGroup);
+                      }
+                      currentGroup.questions.push({ ...q, globalIdx });
+                    });
+                    
+                    return typeGroups.map((group, groupIdx) => (
+                      <div key={groupIdx} className="exam-take__preview-type-group">
+                        {/* Type header - shown once per group */}
+                        <div className="exam-take__preview-type-header">
+                          <span className="exam-take__preview-type-label" style={{ background: color + '18', color }}>
+                            {group.meta.icon} {group.meta.label}
                           </span>
-                          <span className="exam-take__preview-question-type" style={{ background: color + '18', color }}>
-                            {qMeta.icon} {qMeta.label}
-                          </span>
-                          {q.points && (
-                            <span className="exam-take__preview-question-points">
-                              {q.points} pt{q.points !== 1 ? 's' : ''}
-                            </span>
-                          )}
                         </div>
+                        
+                        {/* Questions in this type group */}
+                        {group.questions.map((q) => (
+                          <div key={q.globalIdx} className="exam-take__preview-question">
+                            <div className="exam-take__preview-question-header">
+                              <span className="exam-take__preview-question-number">
+                                {formatQuestionLabel(q, q.globalIdx)}
+                              </span>
+                              {q.points && (
+                                <span className="exam-take__preview-question-points">
+                                  {q.points} pt{q.points !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
 
-                        {q.has_figure && q.figure_description && (
-                          <FigureRenderer description={q.figure_description} />
-                        )}
+                            {q.has_figure && q.figure_description && (
+                              <FigureRenderer description={q.figure_description} />
+                            )}
 
-                        {q.temporal_note && (
-                          <div className="exam-take__temporal-note">
-                            <span className="exam-take__temporal-note-icon">🕐</span>
-                            <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
-                          </div>
-                        )}
-
-                        <div className="exam-take__preview-question-text">
-                          <InstructionRenderer text={q._displayText || q.question} />
-                        </div>
-
-                        {/* Show MCQ options in preview */}
-                        {q.type === 'mcq' && q.options && (
-                          <div className="exam-take__preview-mcq-options">
-                            {q.options.map((opt, i) => (
-                              <div key={i} className="exam-take__preview-mcq-option">
-                                <span className="exam-take__preview-mcq-letter">{String.fromCharCode(65 + i)}.</span>
-                                <span><MathText text={opt} /></span>
+                            {q.temporal_note && (
+                              <div className="exam-take__temporal-note">
+                                <span className="exam-take__temporal-note-icon">🕐</span>
+                                <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
                               </div>
-                            ))}
+                            )}
+
+                            <div className="exam-take__preview-question-text">
+                              <InstructionRenderer text={q._displayText || q.question} />
+                            </div>
+
+                            {/* Show MCQ options in preview */}
+                            {q.type === 'mcq' && q.options && (
+                              <div className="exam-take__preview-mcq-options">
+                                {q.options.map((opt, i) => (
+                                  <div key={i} className="exam-take__preview-mcq-option">
+                                    <span className="exam-take__preview-mcq-letter">{String.fromCharCode(65 + i)}.</span>
+                                    <span><MathText text={opt} /></span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        ))}
                       </div>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
               );
             })}

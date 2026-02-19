@@ -5557,6 +5557,26 @@ textarea.input-field {
 	border-bottom: none;
 }
 
+.exam-take__preview-type-group {
+	margin-bottom: 2rem;
+}
+
+.exam-take__preview-type-header {
+	margin-bottom: 1.25rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1.5px solid rgba(10, 102, 194, 0.12);
+}
+
+.exam-take__preview-type-label {
+	display: inline-block;
+	font-size: 0.85rem;
+	font-weight: 600;
+	padding: 0.35rem 0.85rem;
+	border-radius: 999px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
 .exam-take__preview-question-header {
 	display: flex;
 	align-items: center;
@@ -5570,15 +5590,6 @@ textarea.input-field {
 	font-weight: 700;
 	color: var(--primary-600);
 	min-width: 2.5rem;
-}
-
-.exam-take__preview-question-type {
-	font-size: 0.75rem;
-	font-weight: 600;
-	padding: 0.25rem 0.65rem;
-	border-radius: 999px;
-	text-transform: uppercase;
-	letter-spacing: 0.3px;
 }
 
 .exam-take__preview-question-points {
