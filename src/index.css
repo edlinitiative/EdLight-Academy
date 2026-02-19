@@ -5496,7 +5496,7 @@ textarea.input-field {
 	z-index: 100;
 	background: var(--surface);
 	border-bottom: 1px solid var(--border);
-	padding: 0.5rem 1rem;
+	padding: 0.65rem 1.25rem;
 	margin: -1.5rem -1.5rem 1.5rem;
 }
 
@@ -5504,44 +5504,55 @@ textarea.input-field {
 .exam-take__topbar--preview {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0.65rem;
 }
 
 .exam-take__back-btn {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.25rem 0.5rem;
+	padding: 0.3rem 0.6rem;
 	border: none;
 	background: none;
-	color: var(--text-500);
-	font-size: 0.82rem;
-	font-weight: 500;
+	color: var(--text-600);
+	font-size: 0.88rem;
+	font-weight: 600;
 	cursor: pointer;
 	border-radius: var(--radius-sm);
-	transition: color 0.15s;
+	transition: color 0.15s, background 0.15s;
 	flex-shrink: 0;
 }
 .exam-take__back-btn:hover {
-	color: var(--text-800);
-	background: rgba(0,0,0,0.04);
+	color: var(--text-900);
+	background: rgba(0,0,0,0.05);
 }
 
 .exam-take__topbar-center {
 	display: flex;
 	align-items: baseline;
-	gap: 0.35rem;
+	gap: 0.4rem;
 	min-width: 0;
 	flex: 1;
 	overflow: hidden;
 }
 
 .exam-take__topbar-sep {
-	color: var(--text-300);
+	color: var(--text-400);
 	flex-shrink: 0;
+	font-weight: 700;
+}
+
+.exam-take__topbar--preview .exam-take__subject {
+	font-size: 0.92rem;
+	font-weight: 800;
+	text-transform: none;
+	letter-spacing: 0;
 }
 
 .exam-take__topbar--preview .exam-take__title-short {
 	max-width: none;
+	font-size: 0.92rem;
+	color: var(--text-700);
+	font-weight: 500;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -5550,11 +5561,11 @@ textarea.input-field {
 .exam-take__timer-badge {
 	display: inline-flex;
 	align-items: center;
-	padding: 0.2rem 0.55rem;
+	padding: 0.25rem 0.6rem;
 	border-radius: 999px;
-	background: rgba(10, 102, 194, 0.08);
+	background: rgba(10, 102, 194, 0.1);
 	color: var(--primary-600);
-	font-size: 0.78rem;
+	font-size: 0.82rem;
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
