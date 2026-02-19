@@ -187,82 +187,115 @@ function TableFigure({ description }) {
 function parseTable(desc) {
   const d = desc || '';
 
-  // Pattern 1: "columns: A, B, C" or "colonnes: A, B, C"
+  // ── Helper: split a value string on commas / semicolons, keeping decimals intact ──
+  function splitValues(s) {
+    // Clean trailing period/whitespace
+    const cleaned = s.replace(/\.\s*$/, '').trim();
+    // If values contain interval notation like [a; b[ then semicolons are
+    // part of the value — split on commas only
+    if (/\[[^\]]*;[^\]]*\[/.test(cleaned)) {
+      return cleaned.split(/,\s*/).map(v => v.trim()).filter(Boolean);
+    }
+    // If there are semicolons, split on them (covers French decimal notation
+    // like "8,2; 7,4" and also plain "48; 54; 52")
+    if (/;\s*/.test(cleaned)) {
+      return cleaned.split(/;\s*/).map(v => v.trim()).filter(Boolean);
+    }
+    // Otherwise split on commas, but not inside $...$
+    return cleaned.split(/,\s*(?=(?:[^$]*\$[^$]*\$)*[^$]*$)/).map(v => v.trim()).filter(Boolean);
+  }
+
+  // ── Helper: split description into semantic sentences ──
+  // Split on ". " followed by an uppercase letter or "La/Le/The", but NOT on
+  // decimal numbers like "12.2" or abbreviations
+  function splitSentences(text) {
+    return text.split(/\.\s+(?=[A-ZÀ-Ü]|La |Le |The )/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // ── Strategy 1: Row-based descriptions with labels ──
+  const rowEntries = [];
+  const sentences = splitSentences(d);
+
+  for (const sent of sentences) {
+    // Pattern A: "The Nth row, LABEL, contains values VAL1, VAL2, ..."
+    const enMatch = sent.match(
+      /(?:the\s+)?(?:first|second|third|fourth|fifth|\d+(?:st|nd|rd|th)?)\s+row,\s*(.+?),\s*contains?\s+values?\s+(.+)/i
+    );
+    if (enMatch) {
+      rowEntries.push({ label: enMatch[1].trim(), values: splitValues(enMatch[2]) });
+      continue;
+    }
+
+    // Pattern B: "ligne étiquetée 'LABEL' et contient les valeurs ..."
+    const etiMatch = sent.match(
+      /ligne[^'"]*?(?:est\s+)?étiquetée\s+['"]([^'"]+)['"][^'"]*?contient\s+(?:les\s+)?(?:valeurs?|entrées?|intervalles?)\s*:?\s*(.+)/i
+    );
+    if (etiMatch) {
+      rowEntries.push({ label: etiMatch[1].trim(), values: splitValues(etiMatch[2]) });
+      continue;
+    }
+
+    // Pattern C: "(première|deuxième|...) ligne contient les valeurs TYPE: VAL1, ..."
+    const frMatch = sent.match(
+      /(?:première|deuxième|troisième|quatrième|cinquième|first|second|third)\s+(?:ligne|row)\s+.*?contient?\s+(?:les\s+)?(?:valeurs?|probabilités?)\s*(?:([^:]+?):\s*)?(\S.+)/i
+    );
+    if (frMatch) {
+      const label = (frMatch[1] || '').trim();
+      rowEntries.push({ label, values: splitValues(frMatch[2]) });
+      continue;
+    }
+  }
+
+  // Pattern D: "Colonne A contient: a) X, b) Y" or "Colonne A contient les entrées: X, Y"
+  if (rowEntries.length === 0) {
+    for (const m of d.matchAll(
+      /(?:colonne|col\.?)\s+(['"]?[A-Za-z]+['"]?)\s+(?:.*?)(?:contient|lists?|has)\s*(?:les\s+)?(?:entrées?|valeurs?|descriptions?|items?)?\s*:?\s*([\s\S]+?)(?=(?:colonne|col\.?)\s+['"]?[A-Za-z]+['"]?\s+|$)/gi
+    )) {
+      const label = m[1].replace(/['"]/g, '').trim();
+      let vals;
+      const items = m[2].match(/[a-z0-9]\)\s*[^,]+/gi);
+      if (items && items.length >= 2) {
+        vals = items.map(v => v.trim());
+      } else {
+        vals = splitValues(m[2]);
+      }
+      if (vals.length > 0) rowEntries.push({ label: `Colonne ${label}`, values: vals });
+    }
+  }
+
+  if (rowEntries.length >= 2) {
+    const headers = rowEntries.map(r => r.label || '');
+    const dataRows = rowEntries.map(r => r.values);
+    const maxLen = Math.max(...dataRows.map(r => r.length));
+    // Transpose: each rowEntry becomes a column
+    const transposed = [];
+    for (let c = 0; c < maxLen; c++) {
+      transposed.push(dataRows.map(r => r[c] || ''));
+    }
+    return { headers, rows: transposed };
+  }
+
+  // ── Strategy 2: Column-based header detection + row data ──
   let headers = [];
   const colMatch = d.match(/(?:columns?|colonnes?)\s*[:=]\s*([^.]+)/i);
   if (colMatch) {
     headers = colMatch[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
   }
 
-  // Pattern 2: first row / première ligne as headers
-  if (headers.length === 0) {
-    const firstRowMatch = d.match(/(?:première|first)\s+(?:ligne|row).*?(?:intitulée|is|est|:)\s*['"]?([^'"]+?)['"]?\s+(?:et |and |contient|avec|with|has|values?)/i);
-    if (firstRowMatch) {
-      // Try to extract from "La première ligne est intitulée 'X' et contient les valeurs"
-    }
-  }
-
-  // Pattern 3: "Tableau à N lignes et M colonnes"
-  // Try to extract data from row descriptions
   const rows = [];
 
-  // Try to find row data patterns like "(30$, 5)" or "valeurs 1, 2, 3, 4"
-  const rowPatterns = d.matchAll(/(?:(?:row|ligne|rangée)\s*\d*|deuxième ligne|troisième ligne|première ligne)[^.]*?(?:contient|has|avec|values?|valeurs?)\s*(?:les valeurs\s*)?[:=]?\s*([0-9$.,\s/\-a-zA-Zàéèêôùç]+?)(?:\.|$)/gi);
-
-  for (const match of rowPatterns) {
-    const vals = match[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
-    if (vals.length > 0) rows.push(vals);
-  }
-
-  // Pattern: detect "intitulée 'X'" for row labels  
-  const labelledRows = [...d.matchAll(/(?:ligne|row)[^.]*?intitulée\s*['"]([^'"]+)['"][^.]*?(?:contient|valeurs?|values?)\s*(?:les valeurs\s*)?[:=]?\s*([\d.,\s$%]+)/gi)];
-  if (labelledRows.length > 0) {
-    headers = [];
-    const dataRows = [];
-    for (const m of labelledRows) {
-      const label = m[1].trim();
-      const vals = m[2].split(/,\s*/).map(s => s.trim()).filter(Boolean);
-      headers.push(label);
-      dataRows.push(vals);
-    }
-    // Transpose: rows are currently [header -> values], make columns
-    if (dataRows.length > 0) {
-      const maxLen = Math.max(...dataRows.map(r => r.length));
-      const transposed = [];
-      for (let c = 0; c < maxLen; c++) {
-        transposed.push(dataRows.map(r => r[c] || ''));
-      }
-      return { headers, rows: transposed };
-    }
-  }
-
-  // Pattern for tabular data with "(price, qty)" pairs
-  const pairPatterns = [...d.matchAll(/\(([^)]+)\)/g)];
-  if (pairPatterns.length >= 2 && headers.length > 0) {
-    for (const p of pairPatterns) {
-      const vals = p[1].split(/,\s*/).map(s => s.trim());
-      if (vals.length >= 2) rows.push(vals);
-    }
-  }
-
-  // Pattern: "Pays X = 50 ans, Pays Y = 79 ans" style
-  const comparisonMatch = d.match(/(?:Pays|Country)\s+\w+\s*=\s*[\d.]+/gi);
-  if (comparisonMatch && comparisonMatch.length >= 2) {
-    // Extract comparison table from text
+  // Pattern: "Pays X = 50, Pays Y = 79" comparisons
+  if (headers.length === 0) {
     const indicators = [...d.matchAll(/([A-ZÀ-Ü][^(,:.]+?)\s*\((?:Pays|Country)\s+(\w+)\s*=\s*([^,)]+),?\s*(?:Pays|Country)\s+(\w+)\s*=\s*([^)]+)\)/gi)];
     if (indicators.length > 0) {
-      const hdr1 = indicators[0][2];
-      const hdr2 = indicators[0][4];
-      headers = ['Indicateur', `Pays ${hdr1}`, `Pays ${hdr2}`];
+      headers = ['Indicateur', `Pays ${indicators[0][2]}`, `Pays ${indicators[0][4]}`];
       for (const ind of indicators) {
         rows.push([ind[1].trim(), ind[3].trim(), ind[5].trim()]);
       }
     }
   }
 
-  // If we have some reasonable data
   if (headers.length > 0 && rows.length > 0) {
-    // Pad rows to match header length
     const padded = rows.map(r => {
       while (r.length < headers.length) r.push('');
       return r.slice(0, headers.length);
@@ -270,9 +303,15 @@ function parseTable(desc) {
     return { headers, rows: padded };
   }
 
-  // Simple fallback: try "X | Y | Z" or "X: val1, Y: val2" patterns
   if (headers.length > 0) {
     return { headers, rows };
+  }
+
+  // ── Strategy 3: Single row entry (with label) → display as labeled list ──
+  if (rowEntries.length === 1 && rowEntries[0].values.length > 0) {
+    const entry = rowEntries[0];
+    const hdr = entry.label || 'Valeurs';
+    return { headers: [hdr], rows: entry.values.map(v => [v]) };
   }
 
   return null;

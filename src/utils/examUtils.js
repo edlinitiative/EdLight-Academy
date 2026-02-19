@@ -611,7 +611,10 @@ export function cleanQuestionText(text, number, isFirstInGroup) {
     }
   }
 
-  // ── 3. Strip redundant leading sub-number or sub-letter ──
+  // ── 3. Strip [Figure: ...] tags (rendered separately by FigureRenderer) ──
+  t = t.replace(/\s*\[Figure:\s*[^\]]*\]\s*/g, ' ').trim();
+
+  // ── 4. Strip redundant leading sub-number or sub-letter ──
   // "1. She has been..." → "She has been..."
   // "2. If we had..." → "If we had..."
   // "a. Reorder the following..." → "Reorder the following..."
