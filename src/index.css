@@ -5664,6 +5664,41 @@ textarea.input-field {
 	color: var(--text-500);
 }
 
+/* Sub-exercise groups (A., B., C. etc.) */
+.exam-take__preview-subex-group {
+	margin-bottom: 2rem;
+	page-break-inside: avoid;
+}
+
+.exam-take__preview-subex-directive {
+	padding: 1rem 1.25rem;
+	margin-bottom: 1rem;
+	background: rgba(10, 102, 194, 0.05);
+	border-left: 4px solid rgba(10, 102, 194, 0.3);
+	border-radius: 0 4px 4px 0;
+	font-size: 0.95rem;
+	line-height: 1.7;
+	color: var(--text-700);
+}
+
+.exam-take__preview-word-pool {
+	padding: 1rem 1.25rem;
+	margin-bottom: 1rem;
+	background: rgba(76, 175, 80, 0.05);
+	border: 1px solid rgba(76, 175, 80, 0.15);
+	border-radius: var(--radius-md);
+}
+
+.exam-take__preview-word-pool-label {
+	display: block;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #4caf50;
+	margin-bottom: 0.5rem;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
 @media (max-width: 768px) {
 	.exam-take__preview-scroll {
 		padding: 0 0.5rem;
@@ -5676,6 +5711,15 @@ textarea.input-field {
 	.exam-take__preview-question {
 		padding: 0.75rem 0;
 		margin-bottom: 1.25rem;
+	}
+
+	.exam-take__preview-subex-directive {
+		padding: 0.85rem 1rem;
+		font-size: 0.9rem;
+	}
+
+	.exam-take__preview-word-pool {
+		padding: 0.85rem 1rem;
 	}
 }
 

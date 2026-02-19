@@ -822,76 +822,117 @@ const ExamTake = () => {
                     </div>
                   )}
 
-                  {/* Questions grouped by type */}
+                  {/* Questions organized by sub-exercise group (A, B, C, etc.) */}
                   {(() => {
-                    // Group consecutive questions by type
-                    const typeGroups = [];
-                    let currentGroup = null;
-                    
-                    secQuestions.forEach((q, qLocalIdx) => {
-                      const globalIdx = questions.indexOf(q);
-                      const qMeta = questionTypeMeta(q.type);
-                      
-                      if (!currentGroup || currentGroup.type !== q.type) {
-                        currentGroup = { type: q.type, meta: qMeta, questions: [] };
-                        typeGroups.push(currentGroup);
+                    // Build sub-groups: consecutive questions with same _subExGroup
+                    const subGroups = [];
+                    for (let i = 0; i < secQuestions.length; i++) {
+                      const q = secQuestions[i];
+                      const g = q._subExGroup;
+                      const last = subGroups[subGroups.length - 1];
+                      if (g && last && last.group === g) {
+                        last.end = i;
+                        last.indices.push(i);
+                      } else {
+                        subGroups.push({ group: g, start: i, end: i, indices: [i] });
                       }
-                      currentGroup.questions.push({ ...q, globalIdx });
-                    });
+                    }
                     
-                    return typeGroups.map((group, groupIdx) => (
-                      <div key={groupIdx} className="exam-take__preview-type-group">
-                        {/* Type header - shown once per group */}
-                        <div className="exam-take__preview-type-header">
-                          <span className="exam-take__preview-type-label" style={{ background: color + '18', color }}>
-                            {group.meta.icon} {group.meta.label}
-                          </span>
-                        </div>
+                    return subGroups.map((subGroup, subGroupIdx) => {
+                      const subGroupQs = subGroup.indices.map(i => secQuestions[i]);
+                      const firstInGroup = subGroupQs[0];
+                      const showSubExDirective = firstInGroup._subExDirective?.trim();
+                      const wordPool = firstInGroup._wordPool?.trim();
+                      
+                      // Within this sub-group, group by type
+                      const typeGroups = [];
+                      let currentTypeGroup = null;
+                      
+                      subGroupQs.forEach((q) => {
+                        const globalIdx = questions.indexOf(q);
+                        const qMeta = questionTypeMeta(q.type);
                         
-                        {/* Questions in this type group */}
-                        {group.questions.map((q) => (
-                          <div key={q.globalIdx} className="exam-take__preview-question">
-                            {/* Compact single-line question header */}
-                            <div className="exam-take__preview-question-line">
-                              <span className="exam-take__preview-question-number">
-                                {formatQuestionLabel(q, q.globalIdx)}
-                              </span>
-                              {q.points && (
-                                <span className="exam-take__preview-question-points">
-                                  ({q.points} pt{q.points !== 1 ? 's' : ''})
-                                </span>
-                              )}
-                              <span className="exam-take__preview-question-inline-text">
-                                <InstructionRenderer text={q._displayText || q.question} inline={true} />
-                              </span>
+                        if (!currentTypeGroup || currentTypeGroup.type !== q.type) {
+                          currentTypeGroup = { type: q.type, meta: qMeta, questions: [] };
+                          typeGroups.push(currentTypeGroup);
+                        }
+                        currentTypeGroup.questions.push({ ...q, globalIdx });
+                      });
+                      
+                      return (
+                        <div key={subGroupIdx} className="exam-take__preview-subex-group">
+                          {/* Sub-exercise directive (A., B., C., etc.) */}
+                          {showSubExDirective && (
+                            <div className="exam-take__preview-subex-directive">
+                              <InstructionRenderer text={showSubExDirective} />
                             </div>
-
-                            {q.has_figure && q.figure_description && (
-                              <FigureRenderer description={q.figure_description} />
-                            )}
-
-                            {q.temporal_note && (
-                              <div className="exam-take__temporal-note">
-                                <span className="exam-take__temporal-note-icon">🕐</span>
-                                <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
+                          )}
+                          
+                          {/* Word pool (if present) */}
+                          {wordPool && (
+                            <div className="exam-take__preview-word-pool">
+                              <div className="exam-take__preview-word-pool-label">📚 Vocabulaire</div>
+                              <InstructionRenderer text={wordPool} />
+                            </div>
+                          )}
+                          
+                          {/* Type groups within this sub-exercise */}
+                          {typeGroups.map((group, typeGroupIdx) => (
+                            <div key={typeGroupIdx} className="exam-take__preview-type-group">
+                              {/* Type header - shown once per type within sub-group */}
+                              <div className="exam-take__preview-type-header">
+                                <span className="exam-take__preview-type-label" style={{ background: color + '18', color }}>
+                                  {group.meta.icon} {group.meta.label}
+                                </span>
                               </div>
-                            )}
-
-                            {/* Show MCQ options in preview */}
-                            {q.type === 'mcq' && q.options && (
-                              <div className="exam-take__preview-mcq-options">
-                                {q.options.map((opt, i) => (
-                                  <div key={i} className="exam-take__preview-mcq-option">
-                                    <span className="exam-take__preview-mcq-letter">{String.fromCharCode(65 + i)}.</span>
-                                    <span><MathText text={opt} /></span>
+                              
+                              {/* Questions in this type group */}
+                              {group.questions.map((q) => (
+                                <div key={q.globalIdx} className="exam-take__preview-question">
+                                  {/* Compact single-line question header */}
+                                  <div className="exam-take__preview-question-line">
+                                    <span className="exam-take__preview-question-number">
+                                      {formatQuestionLabel(q, q.globalIdx)}
+                                    </span>
+                                    {q.points && (
+                                      <span className="exam-take__preview-question-points">
+                                        ({q.points} pt{q.points !== 1 ? 's' : ''})
+                                      </span>
+                                    )}
+                                    <span className="exam-take__preview-question-inline-text">
+                                      <InstructionRenderer text={q._displayText || q.question} inline={true} />
+                                    </span>
                                   </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ));
+
+                                  {q.has_figure && q.figure_description && (
+                                    <FigureRenderer description={q.figure_description} />
+                                  )}
+
+                                  {q.temporal_note && (
+                                    <div className="exam-take__temporal-note">
+                                      <span className="exam-take__temporal-note-icon">🕐</span>
+                                      <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
+                                    </div>
+                                  )}
+
+                                  {/* Show MCQ options in preview */}
+                                  {q.type === 'mcq' && q.options && (
+                                    <div className="exam-take__preview-mcq-options">
+                                      {q.options.map((opt, i) => (
+                                        <div key={i} className="exam-take__preview-mcq-option">
+                                          <span className="exam-take__preview-mcq-letter">{String.fromCharCode(65 + i)}.</span>
+                                          <span><MathText text={opt} /></span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    });
                   })()}
                 </div>
               );
