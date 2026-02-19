@@ -588,13 +588,27 @@ export function cleanQuestionText(text, number, isFirstInGroup) {
   }
 
   // ── 2. Extract word pool / word bank ──
-  // Matches: "(Word pool: transport, customs, ...)" or "(Mots: ...)"
+  // a) Parenthesized: "(Word pool: ...)" or "(Mots: ...)"
   const wpRegex = /\((?:Word\s*pool|Word\s*bank|Banque\s*de\s*mots|Mots)\s*:\s*([^)]+)\)/gi;
   const wpMatches = [...t.matchAll(wpRegex)];
   if (wpMatches.length > 0) {
     wordPool = wpMatches[0][1].trim();
     // Remove all occurrences from text
     t = t.replace(wpRegex, '').trim();
+  }
+
+  // b) Standalone word list line(s): "Lista de palabras: ...", "Word list: ..."
+  //    These are not parenthesized; capture everything after the label up to the
+  //    next numbered question line (or end of string).
+  if (!wordPool) {
+    const wpStandalone = t.match(
+      /(?:Lista\s+de\s+palabras|Word\s*list)\s*:\s*(.+(?:\n(?!\d+[.\-)]\s).+)*)/i
+    );
+    if (wpStandalone) {
+      wordPool = wpStandalone[1].replace(/\s*\n\s*/g, ' ').trim();
+      const start = t.indexOf(wpStandalone[0]);
+      t = (t.slice(0, start) + t.slice(start + wpStandalone[0].length)).trim();
+    }
   }
 
   // ── 3. Strip redundant leading sub-number or sub-letter ──
