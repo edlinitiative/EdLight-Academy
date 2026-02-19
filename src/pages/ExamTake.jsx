@@ -1139,9 +1139,6 @@ const ExamTake = () => {
                       <span className="exam-take__question-num-total"> / {questions.length}</span>
                     )}
                   </span>
-                  <span className="exam-take__question-type" style={{ background: color + '18', color }}>
-                    {qMeta.icon} {qMeta.label}
-                  </span>
                   {gq.points && (
                     <span className="exam-take__question-points">
                       {gq.points} pt{gq.points !== 1 ? 's' : ''}
@@ -1213,7 +1210,8 @@ const ExamTake = () => {
                   )}
 
                   {/* Immediate feedback mode: compact "Vérifier" button */}
-                  {feedbackMode === 'immediate' && !questionResults[qIdx] && (
+                  {/* Skip when scaffold is active — it has its own check button */}
+                  {feedbackMode === 'immediate' && !questionResults[qIdx] && !(!gq.correct && gq.scaffold_text && gq.scaffold_blanks) && (
                     <div className="exam-take__check-answer">
                       {gq.type === 'essay' ? (
                         <>
