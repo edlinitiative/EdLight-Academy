@@ -1479,20 +1479,17 @@ function FillBlankText({ text, index, value, onChange, disabled }) {
           <React.Fragment key={i}>
             {/* Inline blank input (before this text segment, except for first) */}
             {i > 0 && (
-              <span className="exam-take__inline-blank-wrap">
-                {hint && <span className="exam-take__inline-blank-hint">{hint}</span>}
-                <input
-                  type="text"
-                  className="exam-take__inline-blank"
-                  value={values[i - 1]}
-                  onChange={(e) => handleChange(i - 1, e.target.value)}
-                  placeholder={hint || '…'}
-                  autoComplete="off"
-                  spellCheck="false"
-                  disabled={disabled}
-                  style={hint ? { minWidth: `${Math.max(hint.length * 0.6 + 2, 5)}em` } : undefined}
-                />
-              </span>
+              <input
+                type="text"
+                className="exam-take__inline-blank"
+                value={values[i - 1]}
+                onChange={(e) => handleChange(i - 1, e.target.value)}
+                placeholder={hint || '…'}
+                autoComplete="off"
+                spellCheck="false"
+                disabled={disabled}
+                style={hint ? { minWidth: `${Math.max(hint.length * 0.7 + 1.5, 5)}em` } : undefined}
+              />
             )}
             {/* Text segment */}
             {cleanSegment && <span><MathText text={cleanSegment} /></span>}

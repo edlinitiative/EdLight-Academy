@@ -3929,7 +3929,7 @@ textarea.input-field {
 
 	.exam-take__fill-blank-text {
 		font-size: 0.95rem;
-		line-height: 2.6;
+		line-height: 2;
 	}
 
 	.exam-results__overview {
@@ -5632,8 +5632,8 @@ textarea.input-field {
 }
 
 .exam-take__preview-question {
-	margin-bottom: 0.5rem;
-	padding: 0.5rem 0;
+	margin-bottom: 0.15rem;
+	padding: 0.3rem 0;
 	border-bottom: none;
 	page-break-inside: avoid;
 }
@@ -5665,11 +5665,11 @@ textarea.input-field {
 .exam-take__preview-question-line {
 	display: flex;
 	align-items: baseline;
-	gap: 0.5rem;
-	margin-bottom: 0.75rem;
+	gap: 0.35rem;
+	margin-bottom: 0.25rem;
 	flex-wrap: wrap;
 	font-size: 0.95rem;
-	line-height: 1.6;
+	line-height: 1.55;
 }
 
 .exam-take__preview-question-number {
@@ -5700,9 +5700,9 @@ textarea.input-field {
 .exam-take__preview-mcq-options {
 	display: flex;
 	flex-direction: column;
-	gap: 0.35rem;
-	margin-top: 0.5rem;
-	margin-left: 2rem;
+	gap: 0.2rem;
+	margin-top: 0.25rem;
+	margin-left: 1.8rem;
 }
 
 .exam-take__preview-mcq-option {
@@ -5750,7 +5750,7 @@ textarea.input-field {
 
 /* Sub-exercise groups (A., B., C. etc.) */
 .exam-take__preview-subex-group {
-	margin-bottom: 1.5rem;
+	margin-bottom: 1rem;
 	page-break-inside: avoid;
 }
 
@@ -7864,47 +7864,29 @@ textarea.input-field {
 
 .exam-take__fill-blank-text {
 	font-size: 1.05rem;
-	line-height: 2.4;
+	line-height: 1.9;
 	color: var(--text-800);
 	word-wrap: break-word;
-}
-
-.exam-take__inline-blank-wrap {
-	display: inline-flex;
-	flex-direction: column;
-	align-items: center;
-	vertical-align: baseline;
-	position: relative;
-	margin: 0 0.15em;
-}
-
-.exam-take__inline-blank-hint {
-	display: block;
-	font-size: 0.7rem;
-	font-weight: 600;
-	color: var(--primary-500);
-	letter-spacing: 0.02em;
-	line-height: 1;
-	margin-bottom: 2px;
-	white-space: nowrap;
 }
 
 .exam-take__inline-blank {
 	display: inline-block;
 	appearance: none;
 	border: none;
-	border-bottom: 2.5px solid var(--primary-400);
+	border-bottom: 2px solid var(--primary-400);
 	background: rgba(10, 102, 194, 0.04);
 	border-radius: 4px 4px 0 0;
-	padding: 0.15em 0.4em;
-	min-width: 6em;
+	padding: 0.1em 0.35em;
+	margin: 0 0.15em;
+	min-width: 5em;
 	max-width: 16em;
 	font: inherit;
-	font-size: 1rem;
+	font-size: 0.95rem;
 	color: var(--primary-700);
 	font-weight: 600;
 	text-align: center;
 	outline: none;
+	vertical-align: baseline;
 	transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
@@ -8586,7 +8568,7 @@ textarea.input-field {
 
 	.exam-take__fill-blank-text {
 		font-size: 0.95rem;
-		line-height: 2.6;
+		line-height: 2;
 	}
 
 	.exam-results__overview {
@@ -9381,7 +9363,7 @@ textarea.input-field {
 
 .exam-take__fill-blank-text {
 	font-size: 0.95rem;
-	line-height: 2.6;
+	line-height: 2;
 }
 
 .exam-results__overview {
