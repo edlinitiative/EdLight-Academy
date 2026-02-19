@@ -5295,6 +5295,69 @@ textarea.input-field {
 	font-variant-numeric: tabular-nums;
 }
 
+/* Short-answer (long-text with LLM grading) */
+.exam-take__short-answer-wrap {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+.exam-take__short-answer-guide {
+	background: var(--surface-100, #f4f4f5);
+	border: 1px solid var(--border-200, #e4e4e7);
+	border-radius: 8px;
+	padding: 0.65rem 0.85rem;
+	font-size: 0.82rem;
+}
+.exam-take__short-answer-guide-title {
+	font-weight: 700;
+	color: var(--text-600, #52525b);
+	display: block;
+	margin-bottom: 0.25rem;
+}
+.exam-take__short-answer-guide-list {
+	margin: 0;
+	padding-left: 1.2rem;
+	color: var(--text-500, #71717a);
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+.exam-take__short-answer-guide-list li {
+	line-height: 1.45;
+}
+.exam-take__short-answer-input {
+	width: 100%;
+	min-height: 120px;
+	padding: 0.75rem 1rem;
+	border: 1.5px solid var(--border-200, #e4e4e7);
+	border-radius: 10px;
+	font-size: 0.92rem;
+	line-height: 1.6;
+	resize: vertical;
+	transition: border-color 0.15s;
+	font-family: inherit;
+	background: var(--surface-50, #fafafa);
+}
+.exam-take__short-answer-input:focus {
+	outline: none;
+	border-color: var(--primary, #6366f1);
+	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+.exam-take__short-answer-input:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+.exam-take__short-answer-wordcount {
+	position: absolute;
+	bottom: 8px;
+	right: 12px;
+	font-size: 0.72rem;
+	color: var(--text-300, #a1a1aa);
+	pointer-events: none;
+	font-variant-numeric: tabular-nums;
+}
+
 /* Disabled MCQ options */
 .exam-take__mcq-options--disabled {
 	pointer-events: none;
@@ -5857,8 +5920,8 @@ textarea.input-field {
 /* ── Question Hints (progressive reveal) ───────────────────────────────── */
 
 .qa-hints {
-	display: flex;
-	align-items: flex-start;
+	display: inline-flex;
+	align-items: center;
 	gap: 0.5rem;
 	flex-wrap: wrap;
 }
