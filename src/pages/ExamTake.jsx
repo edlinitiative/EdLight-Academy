@@ -844,21 +844,6 @@ const ExamTake = () => {
                       const showSubExDirective = firstInGroup._subExDirective?.trim();
                       const wordPool = firstInGroup._wordPool?.trim();
                       
-                      // Within this sub-group, group by type
-                      const typeGroups = [];
-                      let currentTypeGroup = null;
-                      
-                      subGroupQs.forEach((q) => {
-                        const globalIdx = questions.indexOf(q);
-                        const qMeta = questionTypeMeta(q.type);
-                        
-                        if (!currentTypeGroup || currentTypeGroup.type !== q.type) {
-                          currentTypeGroup = { type: q.type, meta: qMeta, questions: [] };
-                          typeGroups.push(currentTypeGroup);
-                        }
-                        currentTypeGroup.questions.push({ ...q, globalIdx });
-                      });
-                      
                       return (
                         <div key={subGroupIdx} className="exam-take__preview-subex-group">
                           {/* Sub-exercise directive (A., B., C., etc.) */}
@@ -876,23 +861,20 @@ const ExamTake = () => {
                             </div>
                           )}
                           
-                          {/* Type groups within this sub-exercise */}
-                          {typeGroups.map((group, typeGroupIdx) => (
-                            <div key={typeGroupIdx} className="exam-take__preview-type-group">
-                              {/* Type header - shown once per type within sub-group */}
-                              <div className="exam-take__preview-type-header">
-                                <span className="exam-take__preview-type-label" style={{ background: color + '18', color }}>
-                                  {group.meta.icon} {group.meta.label}
-                                </span>
-                              </div>
+                          {/* Questions (no type grouping — render flat) */}
+                          {(() => {
+                            return subGroupQs.map((q) => {
+                              const globalIdx = questions.indexOf(q);
+                              const opts = q.options || {};
+                              const optEntries = Object.entries(opts);
+                              const isMCQ = q.type === 'multiple_choice' || q.type === 'multiple_select' || q.type === 'true_false';
                               
-                              {/* Questions in this type group */}
-                              {group.questions.map((q) => (
-                                <div key={q.globalIdx} className="exam-take__preview-question">
+                              return (
+                                <div key={globalIdx} className="exam-take__preview-question">
                                   {/* Compact single-line question header */}
                                   <div className="exam-take__preview-question-line">
                                     <span className="exam-take__preview-question-number">
-                                      {formatQuestionLabel(q, q.globalIdx)}
+                                      {formatQuestionLabel(q, globalIdx)}
                                     </span>
                                     {q.points && (
                                       <span className="exam-take__preview-question-points">
@@ -915,21 +897,21 @@ const ExamTake = () => {
                                     </div>
                                   )}
 
-                                  {/* Show MCQ options in preview */}
-                                  {q.type === 'mcq' && q.options && (
+                                  {/* Show MCQ / True-False options in preview */}
+                                  {isMCQ && optEntries.length > 0 && (
                                     <div className="exam-take__preview-mcq-options">
-                                      {q.options.map((opt, i) => (
-                                        <div key={i} className="exam-take__preview-mcq-option">
-                                          <span className="exam-take__preview-mcq-letter">{String.fromCharCode(65 + i)}.</span>
-                                          <span><MathText text={opt} /></span>
+                                      {optEntries.map(([key, text]) => (
+                                        <div key={key} className="exam-take__preview-mcq-option">
+                                          <span className="exam-take__preview-mcq-letter">{key.toUpperCase()}.</span>
+                                          <span><MathText text={text} /></span>
                                         </div>
                                       ))}
                                     </div>
                                   )}
                                 </div>
-                              ))}
-                            </div>
-                          ))}
+                              );
+                            });
+                          })()}
                         </div>
                       );
                     });
