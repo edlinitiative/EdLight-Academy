@@ -573,6 +573,17 @@ export function cleanQuestionText(text, number, isFirstInGroup) {
     if (directiveMatch) {
       directive = directiveMatch[1].replace(/\s*\(?\s*\d+\s*%\s*\)?\s*$/, '').trim();
       t = t.slice(directiveMatch[0].length);
+    } else {
+      // Fallback: instruction line without a letter prefix, e.g.
+      // "Escoger la formula verbal adecuada... (10%)\n1. Joana..."
+      // or "Situación (Ítem obligatorio) (10%)\n..."
+      const fallbackMatch = t.match(
+        /^(.+?)\s*\(?\s*\d+\s*%\s*\)?\s*\n(?=\d+[.\-)]\s|\S)/
+      );
+      if (fallbackMatch) {
+        directive = fallbackMatch[1].replace(/\s*\(?\s*\d+\s*%\s*\)?\s*$/, '').trim();
+        t = t.slice(fallbackMatch[0].length);
+      }
     }
   }
 
