@@ -307,7 +307,192 @@ function parseTable(desc) {
     return { headers, rows };
   }
 
-  // ── Strategy 3: Single row entry (with label) → display as labeled list ──
+  // ── Strategy 3: Inline value-list tables ──
+  // "Les valeurs de $x_i$ sont: 10, 12, 18" / "Les probabilités sont: $P(X=1)=0.1$, ..."
+  // "Pointures: 37, 38, 39. Effectifs: 3, 17, 11"
+  // "$x_i$: [5, 7, 10], $y_i$: [3.61, 3.70, 3.75]"
+  // "Row 1 (x) values: -1/2, 7. Row 2 (f(x)) values: 7/8, 7/2"
+  if (rowEntries.length === 0) {
+    const inlineRows = [];
+
+    // Pattern E1: "Les valeurs de LABEL sont: V1, V2" / "LABEL: V1, V2"
+    for (const m of d.matchAll(
+      /(?:Les\s+(?:valeurs|probabilités|effectifs|données)\s+(?:de\s+|correspondant[es]*\s+(?:de\s+|à\s+)?)?)([$\\A-Za-zÀ-ü()_{}]+(?:\s*[$\\A-Za-zÀ-ü()_{}]+)*)\s+sont\s*:?\s*([\d$\\,;.\s/\-–frach{}]+(?:\s*(?:,|;)\s*[\d$\\,./\-–frach{}]+)*)/gi
+    )) {
+      const label = m[1].trim();
+      const vals = splitValues(m[2]);
+      if (vals.length >= 2) inlineRows.push({ label, values: vals });
+    }
+
+    // Pattern E2: "LABEL: [V1, V2, V3]" (bracket-delimited)
+    if (inlineRows.length === 0) {
+      for (const m of d.matchAll(
+        /([$\\A-Za-zÀ-ü()_{}]+(?:\s*[$\\A-Za-zÀ-ü()_{}]+)*)\s*:\s*\[([^\]]+)\]/gi
+      )) {
+        const label = m[1].trim();
+        const vals = splitValues(m[2]);
+        if (vals.length >= 2) inlineRows.push({ label, values: vals });
+      }
+    }
+
+    // Pattern E3: "LABEL: V1, V2, V3." (colon-delimited, sentence-ending)
+    if (inlineRows.length === 0) {
+      for (const m of d.matchAll(
+        /(?:^|[.]\s+)([$\\A-Za-zÀ-ü()_{}]+(?:\s+(?:en\s+\S+|[$\\A-Za-zÀ-ü()_{}]+))*)\s*:\s*([\d$\\,;.\s/\-–frach{}]+(?:(?:,|;)\s*[\d$\\,./\-–frach{}]+){2,})/gi
+      )) {
+        const label = m[1].trim();
+        const vals = splitValues(m[2]);
+        if (vals.length >= 2) inlineRows.push({ label, values: vals });
+      }
+    }
+
+    // Pattern E4: "Row N (LABEL) values: V1, V2" (English with row+label)
+    if (inlineRows.length === 0) {
+      for (const m of d.matchAll(
+        /Row\s+\d+\s*\(([^)]+)\)\s*(?:values?\s*)?:\s*(.+?)(?=Row\s+\d+\s*\(|$)/gi
+      )) {
+        const label = m[1].trim();
+        const vals = splitValues(m[2]);
+        if (vals.length >= 2) inlineRows.push({ label, values: vals });
+      }
+    }
+
+    // Pattern E5: "$P(X=v)=p$" pairs → probability distribution table
+    if (inlineRows.length === 0) {
+      const pPairs = [...d.matchAll(/\$?P\s*\(\s*X\s*=\s*([^)]+)\)\s*=\s*([^$,]+)\$?/gi)];
+      if (pPairs.length >= 2) {
+        inlineRows.push({ label: '$x_i$', values: pPairs.map(m => m[1].trim()) });
+        inlineRows.push({ label: '$P(X=x_i)$', values: pPairs.map(m => m[2].trim()) });
+      }
+    }
+
+    // Pattern E6: Paired data "(X=V1, Y=V2), (X=V3, Y=V4), ..."
+    if (inlineRows.length === 0) {
+      const pairs = [...d.matchAll(/\(\s*\$?([A-Za-z_${}\\]+)\$?\s*=\s*([^,)]+),\s*\$?([A-Za-z_${}\\]+)\$?\s*=\s*([^)]+)\)/g)];
+      if (pairs.length >= 2) {
+        inlineRows.push({ label: pairs[0][1], values: pairs.map(m => m[2].trim()) });
+        inlineRows.push({ label: pairs[0][3], values: pairs.map(m => m[4].trim()) });
+      }
+    }
+
+    if (inlineRows.length >= 2) {
+      const headers = inlineRows.map(r => r.label);
+      const dataRows = inlineRows.map(r => r.values);
+      const maxLen = Math.max(...dataRows.map(r => r.length));
+      const transposed = [];
+      for (let c = 0; c < maxLen; c++) {
+        transposed.push(dataRows.map(r => r[c] || ''));
+      }
+      return { headers, rows: transposed };
+    }
+    // Single inline row → show as single-column table
+    if (inlineRows.length === 1 && inlineRows[0].values.length >= 2) {
+      return { headers: [inlineRows[0].label], rows: inlineRows[0].values.map(v => [v]) };
+    }
+  }
+
+  // ── Strategy 4: Matching / Column A/B tables ──
+  // "Column A contains words: '1 Pills', '2 Widower'. Column B contains definitions: 'a driver', ..."
+  // "Table with two columns, A and B. Column A contains words: 1. bride, 2. guilty. Column B contains: ..."
+  // "Left column 'Économiste' with rows: 1. François..., Right column 'Courant' with rows: a. ..."
+  if (rowEntries.length === 0) {
+    const colEntries = [];
+
+    for (const m of d.matchAll(
+      /(?:(?:Left|Right|First|Second)?\s*(?:column|colonne)\s+)?(?:(?:is\s+titled|titled|labeled|header:?|intitulée?)\s+)?['"]?([A-ZÀ-Ü][^'",:]+?)['"]?\s+(?:(?:contains?|with|has|lists?|avec)\s+(?:(?:the\s+)?(?:words?|items?|sentences?|definitions?|terms?|questions?|answers?|rows?|entries?|categories?)\s*:?\s*))((?:'[^']*'(?:\s*,\s*)?|(?:\d+[\.\)]\s*[^,]+(?:,\s*)?)|(?:[a-z][\.\)]\s*[^,]+(?:,\s*)?)){2,})/gi
+    )) {
+      const label = m[1].trim();
+      // Extract items: either 'quoted items' or numbered/lettered items
+      const raw = m[3];
+      let items = [...raw.matchAll(/'([^']+)'/g)].map(x => x[1].trim());
+      if (items.length < 2) {
+        items = [...raw.matchAll(/(?:\d+|[a-z])[\.\)]\s*([^,]+)/gi)].map(x => x[1].trim());
+      }
+      if (items.length >= 2) colEntries.push({ label, values: items });
+    }
+
+    if (colEntries.length >= 2) {
+      const headers = colEntries.map(r => r.label);
+      const dataRows = colEntries.map(r => r.values);
+      const maxLen = Math.max(...dataRows.map(r => r.length));
+      const transposed = [];
+      for (let c = 0; c < maxLen; c++) {
+        transposed.push(dataRows.map(r => r[c] || ''));
+      }
+      return { headers, rows: transposed };
+    }
+  }
+
+  // ── Strategy 5: Fill-in / structural tables ──
+  // "Table with columns: Nord, Sud, Ouest" or "columns 'Fraz' and 'tip predika'"
+  // Show the structure even if cells are empty
+  if (rowEntries.length === 0) {
+    let fillHeaders = [];
+    let fillRows = [];
+
+    // Detect column headers from various patterns
+    const colHeaderMatch = d.match(
+      /(?:colonnes?|columns?|en-têtes?\s+(?:de\s+)?colonnes?)\s*(?:intitulée?s?\s*)?[:=]?\s*['"]?(.+?)['"]?(?:\.|$)/i
+    );
+    if (colHeaderMatch) {
+      fillHeaders = colHeaderMatch[1].split(/,\s*|\s+et\s+|\s+and\s+/).map(s => s.replace(/^['"]|['"]$/g, '').trim()).filter(Boolean);
+    }
+
+    // Detect row labels: "Rows are 'Fraz a', 'Fraz b'" or "lignes: X, Y, Z"
+    const rowLabelMatch = d.match(
+      /(?:rows?\s+(?:are|:)|lignes?\s*:)\s*(.+?)(?:\.\s|$)/i
+    );
+    if (rowLabelMatch && fillHeaders.length > 0) {
+      const labels = rowLabelMatch[1].split(/,\s*/).map(s => s.replace(/^['"]|['"]$/g, '').trim()).filter(Boolean);
+      for (const label of labels) {
+        const row = [label];
+        for (let i = 1; i < fillHeaders.length; i++) row.push('');
+        fillRows.push(row);
+      }
+    }
+
+    // Two-column with listed content: "'Fraz' column contains: X, Y, Z"
+    const twoColMatch = [...d.matchAll(
+      /(?:column|colonne)\s+(?:(?:is\s+)?titled\s+|(?:\d+\s+(?:is\s+)?)?)?['"]([^'"]+)['"]\s+(?:and\s+)?(?:contains?|avec|lists?)\s*:?\s*(?:(?:(?:the\s+)?(?:sentences?|values?|items?|entries?)\s*:?\s*))?(.+?)(?=(?:column|colonne)\s|$)/gi
+    )];
+    if (twoColMatch.length >= 2 && fillHeaders.length === 0) {
+      fillHeaders = twoColMatch.map(m => m[1].trim());
+      const colData = twoColMatch.map(m => {
+        const raw = m[2].trim();
+        const items = [...raw.matchAll(/['"]([^'"]+)['"]/g)].map(x => x[1]);
+        if (items.length >= 2) return items;
+        return raw.split(/,\s*/).map(s => s.replace(/^['"]|['"]$/g, '').trim()).filter(Boolean);
+      });
+      const maxLen = Math.max(...colData.map(c => c.length));
+      for (let r = 0; r < maxLen; r++) {
+        fillRows.push(colData.map(c => c[r] || ''));
+      }
+    }
+
+    if (fillHeaders.length >= 2) {
+      return { headers: fillHeaders, rows: fillRows };
+    }
+  }
+
+  // ── Strategy 6: Markdown-style table in description ──
+  // "Année | Consommation (C) | Pmc | Revenu disponible (Rd)\n---|---|---\n2013 | $2 700 | ..."
+  const mdLines = d.split('\n').map(l => l.trim()).filter(Boolean);
+  const mdSep = mdLines.findIndex(l => /^[\s|:-]+$/.test(l) && l.includes('|'));
+  if (mdSep > 0) {
+    const headerLine = mdLines[mdSep - 1];
+    const mdHeaders = headerLine.split('|').map(s => s.trim()).filter(Boolean);
+    const mdRows = [];
+    for (let i = mdSep + 1; i < mdLines.length; i++) {
+      if (!mdLines[i].includes('|')) break;
+      const cells = mdLines[i].split('|').map(s => s.trim()).filter(Boolean);
+      mdRows.push(cells);
+    }
+    if (mdHeaders.length >= 2 && mdRows.length >= 1) {
+      return { headers: mdHeaders, rows: mdRows };
+    }
+  }
+
+  // ── Strategy 7: Single row entry (with label) → display as labeled list ──
   if (rowEntries.length === 1 && rowEntries[0].values.length > 0) {
     const entry = rowEntries[0];
     const hdr = entry.label || 'Valeurs';
