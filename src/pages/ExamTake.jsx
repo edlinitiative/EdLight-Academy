@@ -851,15 +851,19 @@ const ExamTake = () => {
                         {/* Questions in this type group */}
                         {group.questions.map((q) => (
                           <div key={q.globalIdx} className="exam-take__preview-question">
-                            <div className="exam-take__preview-question-header">
+                            {/* Compact single-line question header */}
+                            <div className="exam-take__preview-question-line">
                               <span className="exam-take__preview-question-number">
                                 {formatQuestionLabel(q, q.globalIdx)}
                               </span>
                               {q.points && (
                                 <span className="exam-take__preview-question-points">
-                                  {q.points} pt{q.points !== 1 ? 's' : ''}
+                                  ({q.points} pt{q.points !== 1 ? 's' : ''})
                                 </span>
                               )}
+                              <span className="exam-take__preview-question-inline-text">
+                                <InstructionRenderer text={q._displayText || q.question} inline={true} />
+                              </span>
                             </div>
 
                             {q.has_figure && q.figure_description && (
@@ -872,10 +876,6 @@ const ExamTake = () => {
                                 <span className="exam-take__temporal-note-text">{q.temporal_note}</span>
                               </div>
                             )}
-
-                            <div className="exam-take__preview-question-text">
-                              <InstructionRenderer text={q._displayText || q.question} />
-                            </div>
 
                             {/* Show MCQ options in preview */}
                             {q.type === 'mcq' && q.options && (
