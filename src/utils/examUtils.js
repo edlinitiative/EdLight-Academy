@@ -903,8 +903,8 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
     };
   }
 
-  // Essay with AI grade already available
-  if (question.type === 'essay' && preGradedEssay) {
+  // Essay or short_answer with AI grade already available
+  if ((question.type === 'essay' || question.type === 'short_answer') && preGradedEssay) {
     const scoreParts = (preGradedEssay.score || '').split('/');
     const num = parseFloat(scoreParts[0]);
     const den = parseFloat(scoreParts[1]) || 10;
@@ -921,8 +921,8 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
 
   // Non-gradable types (essay without AI, matching, unknown)
   if (!meta.gradable || !question.correct) {
-    // Scaffold grading
-    if (question.scaffold_text && question.scaffold_blanks) {
+    // Scaffold grading (skip for essay questions — they use AI grading)
+    if (question.type !== 'essay' && question.scaffold_text && question.scaffold_blanks) {
       let scaffoldValues = null;
       try {
         const parsed = JSON.parse(userAnswer);

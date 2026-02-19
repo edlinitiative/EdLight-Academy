@@ -4,15 +4,15 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBA4NHDVyIbnGt7iVfPUJ
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
-const GRADING_PROMPT = `You are an expert teacher grading a high-school level essay.
-Compare the student's answer to the provided model answer.
+const GRADING_PROMPT = `You are an expert teacher grading a student's written answer.
+Compare the student's answer to the provided model answer and reference text.
 
 Your task is to:
-1.  Determine if the student's answer is substantially correct based on the model answer.
+1.  Determine if the student's answer is substantially correct based on the model answer. For short-answer questions, check whether the student addresses the key expected points. Be generous with wording — accept answers in French, English, Haitian Creole, or Spanish.
 2.  Provide a short, constructive feedback in FRENCH (2-3 sentences) explaining what the student did well and what they could improve. The students are Haitian and French is their language of instruction.
 3.  Assign a score from 0 to 10, where 10 is a perfect match to the model answer's concepts.
 
-Respond with ONLY a JSON object with three keys: "isCorrect" (boolean), "feedback" (string), and "score" (string, e.g., "8/10").
+Respond with ONLY a JSON object with three keys: "isCorrect" (boolean — true if score >= 6), "feedback" (string), and "score" (string, e.g., "8/10").
 
 ---
 REFERENCE TEXT:

@@ -317,6 +317,7 @@ const ExamTake = () => {
 
   // ── Immediate-mode: grade a single question ──────────────────────────────
   const ESSAY_MIN_WORDS = 50;
+  const SHORT_ANSWER_MIN_WORDS = 5;
 
   const gradeQuestionImmediate = useCallback(async (qIndex) => {
     const q = questions[qIndex];
@@ -325,10 +326,20 @@ const ExamTake = () => {
     // Don't re-grade if already graded
     if (questionResults[qIndex]) return;
 
-    if (q.type === 'essay') {
-      // Essay: needs AI grading — enforce minimum word count
+    if (q.type === 'essay' || q.type === 'short_answer') {
+      // Essay / short_answer: needs AI grading — enforce minimum word count
+      const minWords = q.type === 'short_answer' ? SHORT_ANSWER_MIN_WORDS : ESSAY_MIN_WORDS;
       const wordCount = (userAnswer || '').trim().split(/\s+/).filter(Boolean).length;
-      if (wordCount < ESSAY_MIN_WORDS) return; // caller should show a warning
+      if (wordCount < minWords) return; // caller should show a warning
+
+      // Build rich context for the LLM: include answer_parts labels+answers as reference
+      let modelRef = q.model_answer || q.correct || '';
+      if (q.answer_parts && q.answer_parts.length > 0) {
+        const partsText = q.answer_parts.map(p =>
+          `${p.label}: ${p.answer}${p.alternatives && p.alternatives.length ? ' (also acceptable: ' + p.alternatives.join(', ') + ')' : ''}`
+        ).join('\n');
+        modelRef = modelRef ? modelRef + '\n\nKey expected points:\n' + partsText : partsText;
+      }
 
       setGradingInProgress((prev) => ({ ...prev, [qIndex]: true }));
       try {
@@ -339,7 +350,7 @@ const ExamTake = () => {
             question: q._displayText || q.question,
             context: q.sectionInstructions || '',
             answer: userAnswer,
-            modelAnswer: q.model_answer || q.correct || '',
+            modelAnswer: modelRef,
           }),
         });
         let essayResult;
@@ -1176,7 +1187,8 @@ const ExamTake = () => {
                       <InstructionRenderer text={gq._displayText || gq.question} />
                     </div>
                     {/* Show scaffold as primary input when scaffold data exists, otherwise QuestionInput */}
-                    {!gq.correct && gq.scaffold_text && gq.scaffold_blanks ? (
+                    {/* Essay + short_answer always get their textarea — skip scaffold even if scaffold data exists */}
+                    {gq.type !== 'essay' && gq.type !== 'short_answer' && !gq.correct && gq.scaffold_text && gq.scaffold_blanks ? (
                       <div className="exam-take__answer-area">
                         <ScaffoldedAnswer
                           question={gq}
@@ -1210,33 +1222,34 @@ const ExamTake = () => {
                   )}
 
                   {/* Immediate feedback mode: compact "Vérifier" button */}
-                  {/* Skip when scaffold is active — it has its own check button */}
-                  {feedbackMode === 'immediate' && !questionResults[qIdx] && !(!gq.correct && gq.scaffold_text && gq.scaffold_blanks) && (
+                  {/* Skip when scaffold is active — it has its own check button (but not for essay/short_answer) */}
+                  {feedbackMode === 'immediate' && !questionResults[qIdx] && !(gq.type !== 'essay' && gq.type !== 'short_answer' && !gq.correct && gq.scaffold_text && gq.scaffold_blanks) && (
                     <div className="exam-take__check-answer">
-                      {gq.type === 'essay' ? (
+                      {(gq.type === 'essay' || gq.type === 'short_answer') ? (
                         <>
-                          <button
-                            className="exam-take__check-btn"
-                            type="button"
-                            disabled={
-                              !answers[qIdx] ||
-                              (answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS ||
-                              gradingInProgress[qIdx]
-                            }
-                            onClick={() => gradeQuestionImmediate(qIdx)}
-                          >
-                            {gradingInProgress[qIdx] ? (
-                              <><span className="loading-spinner loading-spinner--inline" /> Évaluation…</>
-                            ) : (
-                              '✓ Évaluer'
-                            )}
-                          </button>
-                          <span className="exam-take__check-hint">
-                            {(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length < ESSAY_MIN_WORDS
-                              ? `Min. ${ESSAY_MIN_WORDS} mots (${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length})`
-                              : `${(answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length} mots`
-                            }
-                          </span>
+                          {(() => {
+                            const minWords = gq.type === 'short_answer' ? SHORT_ANSWER_MIN_WORDS : ESSAY_MIN_WORDS;
+                            const wc = (answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length;
+                            return (
+                              <>
+                                <button
+                                  className="exam-take__check-btn"
+                                  type="button"
+                                  disabled={!answers[qIdx] || wc < minWords || gradingInProgress[qIdx]}
+                                  onClick={() => gradeQuestionImmediate(qIdx)}
+                                >
+                                  {gradingInProgress[qIdx] ? (
+                                    <><span className="loading-spinner loading-spinner--inline" /> Évaluation…</>
+                                  ) : (
+                                    '✓ Évaluer'
+                                  )}
+                                </button>
+                                <span className="exam-take__check-hint">
+                                  {wc < minWords ? `Min. ${minWords} mots (${wc})` : `${wc} mots`}
+                                </span>
+                              </>
+                            );
+                          })()}
                         </>
                       ) : (
                         <button
@@ -1967,8 +1980,9 @@ function QuestionInput({ question, index, value, onChange, disabled, subject }) 
       return <TrueFalseInput index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'fill_blank':
     case 'calculation':
-    case 'short_answer':
       return <TextInput type={type} index={index} value={value} onChange={onChange} disabled={disabled} />;
+    case 'short_answer':
+      return <ShortAnswerInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'essay':
       return <EssayInput index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'matching':
@@ -2388,11 +2402,42 @@ function TrueFalseInput({ index, value, onChange, disabled }) {
   );
 }
 
+function ShortAnswerInput({ question, index, value, onChange, disabled }) {
+  const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
+  const answerParts = question.answer_parts || [];
+
+  return (
+    <div className="exam-take__short-answer-wrap">
+      {/* Show answer_parts labels as guidance */}
+      {answerParts.length > 0 && (
+        <div className="exam-take__short-answer-guide">
+          <span className="exam-take__short-answer-guide-title">Points à aborder :</span>
+          <ul className="exam-take__short-answer-guide-list">
+            {answerParts.map((p, i) => (
+              <li key={i}>{p.label}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <textarea
+        className="exam-take__short-answer-input"
+        value={value}
+        onChange={(e) => onChange(index, e.target.value)}
+        placeholder="Rédigez votre réponse ici…"
+        rows={6}
+        disabled={disabled}
+      />
+      <div className="exam-take__short-answer-wordcount">
+        {wordCount} mot{wordCount !== 1 ? 's' : ''}
+      </div>
+    </div>
+  );
+}
+
 function TextInput({ type, index, value, onChange, disabled }) {
   const placeholders = {
     fill_blank: 'Complétez le blanc…',
     calculation: 'Entrez votre résultat…',
-    short_answer: 'Votre réponse…',
   };
 
   return (
