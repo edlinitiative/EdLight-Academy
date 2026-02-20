@@ -13,8 +13,35 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <section className="section">
-        <div className="container" style={{ display: 'grid', placeItems: 'center', minHeight: '320px' }}>
-          <div className="loading-spinner" />
+        <div className="container dashboard-grid">
+          <div className="page-header">
+            <div>
+              <div className="skeleton" style={{ height: 18, width: 100, borderRadius: 999, marginBottom: '0.75rem' }} />
+              <div className="skeleton" style={{ height: 30, width: '55%', marginBottom: '0.5rem' }} />
+              <div className="skeleton" style={{ height: 15, width: '45%' }} />
+            </div>
+          </div>
+          <div className="grid grid--metrics">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton-metric">
+                <div className="skeleton skeleton-metric__icon" />
+                <div className="skeleton skeleton-metric__label" />
+                <div className="skeleton skeleton-metric__value" />
+                <div className="skeleton skeleton-metric__cap" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid--courses">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton-card">
+                <div className="skeleton skeleton-card__badge" />
+                <div className="skeleton skeleton-card__title" />
+                <div className="skeleton skeleton-card__line" />
+                <div className="skeleton skeleton-card__bar" />
+                <div className="skeleton skeleton-card__btn" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );

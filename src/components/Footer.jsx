@@ -4,27 +4,27 @@ import { Link } from 'react-router-dom';
 export function Footer() {
   const footerLinks = {
     platform: {
-      title: 'Platform',
+      title: 'Plateforme',
       links: [
-        { to: '/about', label: 'About' },
-        { to: '/courses', label: 'Courses' },
-        { to: '/quizzes', label: 'Quizzes' },
-        { to: '/exams', label: 'Exams' }
+        { to: '/about', label: 'À propos' },
+        { to: '/courses', label: 'Cours' },
+        { to: '/quizzes', label: 'Quiz' },
+        { to: '/exams', label: 'Examens' }
       ]
     },
     resources: {
-      title: 'Resources',
+      title: 'Ressources',
       links: [
-        { to: '/help', label: 'Help' },
+        { to: '/help', label: 'Aide' },
         { to: '/faq', label: 'FAQ' },
-        { to: '/contact', label: 'Contact Us' }
+        { to: '/contact', label: 'Nous contacter' }
       ]
     },
     legal: {
-      title: 'Legal',
+      title: 'Légal',
       links: [
-        { to: '/privacy', label: 'Privacy' },
-        { to: '/terms', label: 'Terms of Use' }
+        { to: '/privacy', label: 'Confidentialité' },
+        { to: '/terms', label: "Conditions d'utilisation" }
       ]
     }
   };
@@ -39,7 +39,7 @@ export function Footer() {
               <span>EdLight Academy</span>
             </Link>
             <p className="footer__brand-copy">
-              A community-built platform helping Haiti’s NS students master STEM subjects through modern, bilingual resources.
+              Une plateforme communautaire pour aider les élèves haïtiens à maîtriser les matières STEM grâce à des ressources modernes et bilingues.
             </p>
           </div>
 
@@ -61,7 +61,7 @@ export function Footer() {
           ))}
 
           <div>
-            <h4 className="footer__column-title">Stay connected</h4>
+            <h4 className="footer__column-title">Rester connecté</h4>
             <div className="footer__social">
               <a href="https://twitter.com/EdLightAcademy" target="_blank" rel="noopener noreferrer" className="footer__social-link" aria-label="EdLight on X (Twitter)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -80,7 +80,7 @@ export function Footer() {
         </div>
 
         <div className="footer__bottom">
-          <span>© {new Date().getFullYear()} EdLight Academy. Crafted for Haitian learners.</span>
+          <span>© {new Date().getFullYear()} EdLight Academy. Conçu pour les apprenants haïtiens.</span>
           <div className="flex" style={{ gap: '0.75rem' }}>
           <a href="https://github.com/edlinitiative" target="_blank" rel="noopener noreferrer" className="footer__link">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

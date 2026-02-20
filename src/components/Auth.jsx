@@ -159,6 +159,10 @@ export function AuthModal({ onClose }) {
           </button>
         </div>
 
+        <div className="auth-divider">
+          <span className="auth-divider__label">or continue with email</span>
+        </div>
+
         <form onSubmit={handleSubmit}>
           {activeTab === 'signup' && (
             <div className="form-field">

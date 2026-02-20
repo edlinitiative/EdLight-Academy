@@ -23,8 +23,26 @@ export default function Courses() {
   if (isLoading) {
     return (
       <section className="section">
-        <div className="container" style={{ display: 'grid', placeItems: 'center', minHeight: '320px' }}>
-          <div className="loading-spinner" />
+        <div className="container">
+          <div className="page-header" style={{ marginBottom: '2rem' }}>
+            <div>
+              <div className="skeleton" style={{ height: 22, width: 120, borderRadius: 999, marginBottom: '0.75rem' }} />
+              <div className="skeleton" style={{ height: 32, width: '60%', marginBottom: '0.5rem' }} />
+              <div className="skeleton" style={{ height: 16, width: '40%' }} />
+            </div>
+          </div>
+          <div className="grid grid--courses">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton-card">
+                <div className="skeleton skeleton-card__badge" />
+                <div className="skeleton skeleton-card__title" />
+                <div className="skeleton skeleton-card__line" />
+                <div className="skeleton skeleton-card__line--short" />
+                <div className="skeleton skeleton-card__bar" />
+                <div className="skeleton skeleton-card__btn" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );
