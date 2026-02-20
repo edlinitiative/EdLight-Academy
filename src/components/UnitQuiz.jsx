@@ -6,11 +6,12 @@ import { useAppData } from '../hooks/useData';
 import { shuffleArray } from '../utils/shared';
 import useStore from '../contexts/store';
 
-export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose }) {
+export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose, limit = 10, shuffle = true }) {
   const { data: appData } = useAppData();
   const { user } = useStore();
   const quizBank = appData?.quizBank;
-  const TOTAL = 10;
+  const shouldLimit = typeof limit === 'number' && Number.isFinite(limit) && limit > 0;
+  const shouldShuffle = !!shuffle;
 
   const rows = useMemo(() => {
     if (!quizBank || !subjectCode) return [];
@@ -51,9 +52,9 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
       });
     }
     
-    // Shuffle and cap at 10 questions
-    return shuffleArray(unitRows).slice(0, TOTAL);
-  }, [quizBank, subjectCode, unitId, chapterNumber, subchapterNumber]);
+    const base = shouldShuffle ? shuffleArray(unitRows) : unitRows;
+    return shouldLimit ? base.slice(0, limit) : base;
+  }, [quizBank, subjectCode, unitId, chapterNumber, subchapterNumber, shouldShuffle, shouldLimit, limit]);
 
   const items = useMemo(() => {
     if (!rows.length) return [];
@@ -138,7 +139,7 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
             <h3 className="quiz-card__heading">Results</h3>
           </div>
         </div>
-        <p className="text-muted">You scored <strong>{score}</strong> out of <strong>{items.length || TOTAL}</strong>.</p>
+        <p className="text-muted">You scored <strong>{score}</strong> out of <strong>{items.length}</strong>.</p>
         <div className="quiz-card__controls">
           <button className="button button--primary button--sm" onClick={() => {
             // restart

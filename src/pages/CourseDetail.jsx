@@ -246,6 +246,8 @@ export default function CourseDetail() {
                       chapterNumber={activeModuleData?.unit_no}
                       courseId={courseId}
                       lessonId={activeLessonData?.id}
+                      limit={null}
+                      shuffle={false}
                     />
                   </div>
                 ) : primaryVideo ? (
