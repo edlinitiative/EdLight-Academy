@@ -2037,6 +2037,12 @@ body {
     display: inline-flex;
     align-items: center;
   }
+
+  /* Exam take question nav buttons aren't .button */
+  .exam-take__nav-btn {
+    min-height: 44px;
+    padding: 6px 4px;
+  }
   
   /* Better tap feedback */
   .button,

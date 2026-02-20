@@ -7854,6 +7854,31 @@ textarea.input-field {
 	margin-top: 1.25rem;
 }
 
+.exam-take__modal-jump {
+	margin-top: 0.9rem;
+	display: grid;
+	gap: 0.55rem;
+}
+
+.exam-take__modal-jump-title {
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: var(--text-500);
+}
+
+.exam-take__modal-jump-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+}
+
+.exam-take__modal-jump-more {
+	font-size: 0.8rem;
+	font-weight: 700;
+	color: var(--text-400);
+}
+
 /* ── Floating passage button ── */
 
 .exam-take__passage-btn {

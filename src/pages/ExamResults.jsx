@@ -1,11 +1,20 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import useStore from '../contexts/store';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
 import { TRACK_BY_CODE } from '../config/trackConfig';
+import { normalizeExamCatalog, resolveExamFromCatalog } from '../utils/examCatalog';
+import { loadExamResult } from '../services/examResults';
 import {
+  flattenQuestions,
+  gradeExam,
+  normalizeExamTitle,
+  normalizeLevel,
+  normalizeSubject,
   questionTypeMeta,
   subjectColor,
   QUESTION_TYPE_META,
@@ -58,23 +67,105 @@ function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
 const ExamResults = () => {
   const { level, examId } = useParams();
   const navigate = useNavigate();
+  const userId = useStore((s) => s.user?.uid);
 
-  // Read result from sessionStorage
-  const stored = useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem(`exam-result-${examId}`);
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
+  // Reuse the shared exam-catalog query cache
+  const { data: rawExams } = useQuery({
+    queryKey: ['exam-catalog'],
+    queryFn: async () => {
+      const res = await fetch('/exam_catalog.json');
+      if (!res.ok) throw new Error('Failed to load exam catalog');
+      const data = await res.json();
+      return normalizeExamCatalog(data);
+    },
+    staleTime: Infinity,
+  });
+
+  const exams = useMemo(() => normalizeExamCatalog(rawExams), [rawExams]);
+  const resolved = useMemo(() => resolveExamFromCatalog(exams, examId), [exams, examId]);
+  const exam = resolved.exam;
+  const idx = resolved.idx;
+  const examKey = exam?.exam_id || (Number.isFinite(idx) ? String(idx) : null);
+
+  const [stored, setStored] = useState(null);
+  const [remoteLoading, setRemoteLoading] = useState(false);
+
+  // Prefer sessionStorage (fast), fallback to Firestore (cross-device)
+  useEffect(() => {
+    // 1) sessionStorage: try a few keys for backward compatibility
+    const tryKeys = [];
+    if (examId) tryKeys.push(`exam-result-${examId}`);
+    if (examKey && examKey !== examId) tryKeys.push(`exam-result-${examKey}`);
+    if (Number.isFinite(idx)) tryKeys.push(`exam-result-${idx}`);
+
+    for (const key of tryKeys) {
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        setStored(parsed);
+        return;
+      } catch {
+        // keep trying
+      }
     }
-  }, [examId]);
+
+    // 2) Firestore fallback
+    if (!userId || !examKey || !exam) return;
+    let cancelled = false;
+    setRemoteLoading(true);
+    (async () => {
+      try {
+        const docData = await loadExamResult(userId, examKey);
+        if (cancelled) return;
+        if (!docData) return;
+
+        const questions = flattenQuestions(exam);
+        const answers = docData.answers || {};
+        const pre = docData.preGradedResults || {};
+
+        const track = docData.track || '';
+        const subject = normalizeSubject(exam.subject);
+        const result = gradeExam(questions, answers, pre, { track, subject });
+
+        // Ensure every row has the question object (pre-graded entries omit it)
+        const mergedResults = (result.results || []).map((r, i) => {
+          if (r && r.question) return r;
+          return {
+            ...r,
+            question: questions[i],
+            userAnswer: r?.userAnswer ?? answers[i] ?? null,
+          };
+        });
+
+        setStored({
+          examIndex: idx,
+          examId: examKey,
+          examTitle: docData.exam_title || normalizeExamTitle(exam),
+          subject,
+          level: normalizeLevel(exam.level),
+          track,
+          result: { ...result, results: mergedResults },
+          timestamp: docData.submitted_at_ms || Date.now(),
+        });
+      } finally {
+        if (!cancelled) setRemoteLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [examId, examKey, idx, userId, exam]);
 
   if (!stored) {
     return (
       <section className="section">
         <div className="container">
           <div className="card card--message">
-            <p>Aucun résultat trouvé pour cet examen.</p>
+            <p>
+              {remoteLoading ? 'Chargement des résultats…' : 'Aucun résultat trouvé pour cet examen.'}
+            </p>
             <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
               ← Retour aux examens
             </button>

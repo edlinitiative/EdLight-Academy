@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
+import { normalizeExamCatalog } from '../utils/examCatalog';
 import {
   buildExamIndex,
   subjectColor,
@@ -20,8 +21,7 @@ function useExamCatalog() {
       const res = await fetch('/exam_catalog.json');
       if (!res.ok) throw new Error('Failed to load exam catalog');
       const data = await res.json();
-      // The catalog is a flat array; return as-is
-      return Array.isArray(data) ? data : Object.values(data).flat();
+      return normalizeExamCatalog(data);
     },
     staleTime: Infinity, // static asset, never re-fetch
   });
@@ -359,9 +359,12 @@ const ExamBrowser = () => {
             <div className="grid grid--exams exam-browser__grid">
               {visible.map((exam) => (
                 <ExamCard
-                  key={exam._idx}
+                  key={exam.exam_id || exam._idx}
                   exam={exam}
-                  onClick={() => navigate(`/exams/${level}/${exam._idx}`)}
+                  onClick={() => {
+                    const id = exam.exam_id || exam._idx;
+                    navigate(`/exams/${level}/${id}`);
+                  }}
                 />
               ))}
             </div>

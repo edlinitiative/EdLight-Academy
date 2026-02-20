@@ -2,11 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
+import { normalizeExamCatalog, isNumericId, resolveExamFromCatalog } from '../utils/examCatalog';
 import { TRACK_BY_CODE, parseTrackDirectives, getDirectiveForTrack } from '../config/trackConfig';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
 import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
+import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
+import { saveExamResult } from '../services/examResults';
 import {
   flattenQuestions,
   gradeExam,
@@ -181,7 +184,8 @@ function useExamCatalog() {
     queryFn: async () => {
       const res = await fetch('/exam_catalog.json');
       if (!res.ok) throw new Error('Failed to load exam catalog');
-      return res.json();
+      const data = await res.json();
+      return normalizeExamCatalog(data);
     },
     staleTime: Infinity,
   });
@@ -191,11 +195,24 @@ const ExamTake = () => {
   const { level, examId } = useParams();
   const navigate = useNavigate();
   const katexReady = useKatex();
+  const userId = useStore((s) => s.user?.uid);
 
   const { data: rawExams, isLoading, error } = useExamCatalog();
 
-  const idx = parseInt(examId, 10);
-  const exam = rawExams?.[idx];
+  const exams = useMemo(() => normalizeExamCatalog(rawExams), [rawExams]);
+  const resolved = useMemo(() => resolveExamFromCatalog(exams, examId), [exams, examId]);
+  const idx = resolved.idx;
+  const exam = resolved.exam;
+  const examKey = exam?.exam_id || (Number.isFinite(idx) ? String(idx) : null);
+
+  // If the URL uses a legacy numeric index and this exam has a stable exam_id,
+  // replace the URL with the canonical exam_id form (stable deep-links).
+  useEffect(() => {
+    if (!exam || !exam?.exam_id) return;
+    if (!isNumericId(examId)) return;
+    navigate(`/exams/${level}/${exam.exam_id}`, { replace: true });
+  }, [exam, examId, level, navigate]);
+
   const subject = useMemo(() => normalizeSubject(exam?.subject), [exam?.subject]);
   const color = useMemo(() => subjectColor(subject), [subject]);
   const questions = useMemo(() => (exam ? flattenQuestions(exam) : []), [exam]);
@@ -279,10 +296,179 @@ const ExamTake = () => {
   const durationMin = exam?.duration_minutes || 0;
   const [secondsLeft, setSecondsLeft] = useState(durationMin * 60);
   const timerRef = useRef(null);
+  const skipInitialTimerResetRef = useRef(false);
+
+  // Resume flow state
+  const [resumeDraft, setResumeDraft] = useState(null);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+  const resumeCheckedRef = useRef(false);
+  const startedAtMsRef = useRef(Date.now());
+
+  // Compact pre-graded results for persistence (avoid duplicating full question objects)
+  const compactQuestionResults = useMemo(() => {
+    const out = {};
+    for (const [k, v] of Object.entries(questionResults || {})) {
+      if (!v) continue;
+      // eslint-disable-next-line no-unused-vars
+      const { question, ...rest } = v;
+      out[k] = rest;
+    }
+    return out;
+  }, [questionResults]);
+
+  // Load existing draft attempt (one active attempt per exam)
+  useEffect(() => {
+    if (!userId || !examKey || !exam) return;
+    if (resumeCheckedRef.current) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const draft = await loadExamAttemptDraft(userId, examKey);
+        if (cancelled) return;
+        resumeCheckedRef.current = true;
+        if (!draft || draft.status !== 'in_progress') return;
+        const hasAnswers = draft.answers && Object.keys(draft.answers).length > 0;
+        if (!hasAnswers) return;
+        // Only prompt at the start (avoid overwriting an in-progress local session)
+        startedAtMsRef.current = draft.started_at_ms || Date.now();
+        setResumeDraft(draft);
+        setShowResumePrompt(true);
+      } catch (e) {
+        resumeCheckedRef.current = true;
+        console.warn('[ExamAttempt] Failed to load draft:', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, examKey, exam]);
+
+  const handleResume = useCallback(() => {
+    if (!resumeDraft) return;
+    skipInitialTimerResetRef.current = true;
+    setSubmitted(false);
+    setAnswers(resumeDraft.answers || {});
+    setQuestionResults(resumeDraft.questionResults || {});
+    if (resumeDraft.feedbackMode) setFeedbackMode(resumeDraft.feedbackMode);
+    if (Number.isFinite(resumeDraft.currentQ)) setCurrentQ(resumeDraft.currentQ);
+    if (typeof resumeDraft.secondsLeft === 'number' && resumeDraft.secondsLeft >= 0) {
+      setSecondsLeft(resumeDraft.secondsLeft);
+    }
+    setShowResumePrompt(false);
+    setViewState('active');
+  }, [resumeDraft]);
+
+  const handleConfirmRestart = useCallback(async () => {
+    setShowRestartConfirm(false);
+    setShowResumePrompt(false);
+    setResumeDraft(null);
+    startedAtMsRef.current = Date.now();
+
+    setSubmitted(false);
+    setAnswers({});
+    setQuestionResults({});
+    setCurrentQ(0);
+    setSecondsLeft(durationMin * 60);
+    setViewState('cover');
+
+    if (userId && examKey && exam) {
+      try {
+        await saveExamAttemptDraft(userId, examKey, {
+          exam_id: examKey,
+          level: normalizeLevel(exam.level),
+          subject: normalizeSubject(exam.subject),
+          exam_title: normalizeExamTitle(exam),
+          duration_minutes: durationMin || 0,
+          feedbackMode,
+          currentQ: 0,
+          secondsLeft: durationMin * 60,
+          answers: {},
+          questionResults: {},
+          started_at_ms: startedAtMsRef.current,
+        });
+      } catch (e) {
+        console.warn('[ExamAttempt] Failed to reset draft:', e);
+      }
+    }
+  }, [userId, examKey, exam, durationMin, feedbackMode]);
+
+  const resumeOverlays = (
+    <>
+      {showResumePrompt && resumeDraft && (
+        <div className="exam-take__overlay" onClick={() => setShowResumePrompt(false)}>
+          <div
+            className="exam-take__modal card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exam-resume-dialog-title"
+            aria-describedby="exam-resume-dialog-desc"
+          >
+            <h3 id="exam-resume-dialog-title">Reprendre votre examen ?</h3>
+            <p id="exam-resume-dialog-desc">
+              Nous avons trouvé une tentative en cours sur ce compte. Vous pouvez reprendre là où vous étiez,
+              ou recommencer (cela effacera votre progression enregistrée).
+            </p>
+            <div className="exam-take__modal-actions">
+              <button className="button button--primary" onClick={handleResume} type="button">
+                Reprendre
+              </button>
+              <button
+                className="button button--ghost"
+                onClick={() => {
+                  setShowResumePrompt(false);
+                  setShowRestartConfirm(true);
+                }}
+                type="button"
+              >
+                Recommencer
+              </button>
+              <button className="button button--ghost" onClick={() => setShowResumePrompt(false)} type="button">
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRestartConfirm && (
+        <div className="exam-take__overlay" onClick={() => setShowRestartConfirm(false)}>
+          <div
+            className="exam-take__modal card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exam-restart-dialog-title"
+            aria-describedby="exam-restart-dialog-desc"
+          >
+            <h3 id="exam-restart-dialog-title">Recommencer l'examen ?</h3>
+            <p id="exam-restart-dialog-desc" className="exam-take__modal-warning">
+              ⚠️ Cette action effacera vos réponses enregistrées pour cet examen.
+            </p>
+            <div className="exam-take__modal-actions">
+              <button className="button button--ghost" onClick={() => setShowRestartConfirm(false)} type="button">
+                Annuler
+              </button>
+              <button className="button button--primary" onClick={handleConfirmRestart} type="button">
+                Oui, recommencer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   useEffect(() => {
     if (!durationMin || submitted || viewState !== 'active') return;
-    setSecondsLeft(durationMin * 60);
+    if (skipInitialTimerResetRef.current) {
+      skipInitialTimerResetRef.current = false;
+    } else {
+      setSecondsLeft(durationMin * 60);
+    }
     timerRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -294,6 +480,52 @@ const ExamTake = () => {
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [durationMin, submitted, viewState]);
+
+  // Persist draft periodically (throttled) while the exam is active
+  const saveDraftTimerRef = useRef(null);
+  const timeBucket = Math.floor((secondsLeft || 0) / 15);
+
+  useEffect(() => {
+    if (!userId || !examKey || !exam) return;
+    if (submitted || viewState !== 'active') return;
+
+    // Debounce saves so we don't write on every keystroke
+    if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
+    saveDraftTimerRef.current = setTimeout(() => {
+      saveExamAttemptDraft(userId, examKey, {
+        exam_id: examKey,
+        level: normalizeLevel(exam.level),
+        subject: normalizeSubject(exam.subject),
+        exam_title: normalizeExamTitle(exam),
+        duration_minutes: durationMin || 0,
+        feedbackMode,
+        currentQ,
+        secondsLeft,
+        answers,
+        // Only persist compacted pre-graded results (optional, mainly for immediate mode)
+        questionResults: feedbackMode === 'immediate' ? compactQuestionResults : {},
+        started_at_ms: startedAtMsRef.current,
+      }).catch((e) => {
+        console.warn('[ExamAttempt] Save draft failed:', e);
+      });
+    }, 800);
+
+    return () => {
+      if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    userId,
+    examKey,
+    submitted,
+    viewState,
+    currentQ,
+    feedbackMode,
+    timeBucket,
+    // answers/questionResults are the big ones; they change often
+    answers,
+    compactQuestionResults,
+  ]);
 
   // Auto-submit when timer hits 0
   useEffect(() => {
@@ -436,8 +668,7 @@ const ExamTake = () => {
     }
   }, [questions, answers, questionResults, subject]);
 
-  const answeredCount = Object.keys(answers).filter((k) => {
-    const v = answers[k];
+  const isAnswerFilled = (v) => {
     if (v == null || v === '') return false;
     // Proof steps stored as JSON — count as answered if any step has content or final answer
     if (typeof v === 'string' && (v.startsWith('{') || v.startsWith('['))) {
@@ -451,10 +682,18 @@ const ExamTake = () => {
         if (Array.isArray(parsed)) {
           return parsed.some((s) => s.math?.trim());
         }
-      } catch { /* not JSON */ }
+      } catch {
+        /* not JSON */
+      }
     }
     return true;
-  }).length;
+  };
+
+  const answeredCount = Object.keys(answers).filter((k) => isAnswerFilled(answers[k])).length;
+  const unansweredIndices = [];
+  for (let i = 0; i < questions.length; i += 1) {
+    if (!isAnswerFilled(answers[i])) unansweredIndices.push(i);
+  }
   const progressPct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
 
   // Keyboard navigation (move by group)
@@ -508,10 +747,12 @@ const ExamTake = () => {
       if (e.key !== 'Escape') return;
       if (showConfirm) setShowConfirm(false);
       if (showPassage) setShowPassage(false);
+      if (showResumePrompt) setShowResumePrompt(false);
+      if (showRestartConfirm) setShowRestartConfirm(false);
     };
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
-  }, [showConfirm, showPassage]);
+  }, [showConfirm, showPassage, showResumePrompt, showRestartConfirm]);
 
   // Track-specific section directive for the current user's track
   // NOTE: This useMemo MUST be before any early returns to comply with Rules of Hooks.
@@ -526,7 +767,7 @@ const ExamTake = () => {
   const trackInfo = userTrack ? TRACK_BY_CODE[userTrack] : null;
 
   // ── Submit ─────────────────────────────────────────────────────────────────
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     clearInterval(timerRef.current);
     setSubmitted(true);
 
@@ -543,9 +784,10 @@ const ExamTake = () => {
 
     // Store in sessionStorage for ExamResults page
     sessionStorage.setItem(
-      `exam-result-${idx}`,
+      `exam-result-${examKey}`,
       JSON.stringify({
         examIndex: idx,
+        examId: examKey,
         examTitle: normalizeExamTitle(exam),
         subject: examSubject,
         level: normalizeLevel(exam.level),
@@ -555,8 +797,30 @@ const ExamTake = () => {
       })
     );
 
-    navigate(`/exams/${level}/${idx}/results`);
-  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate]);
+    // Persist to Firestore for cross-device results/resume (best-effort)
+    if (userId && examKey) {
+      try {
+        await saveExamResult(userId, examKey, {
+          exam_id: examKey,
+          level: normalizeLevel(exam.level),
+          subject: examSubject,
+          exam_title: normalizeExamTitle(exam),
+          track: currentTrack || '',
+          feedbackMode,
+          answers,
+          preGradedResults: feedbackMode === 'immediate' ? compactQuestionResults : {},
+          submitted_at_ms: Date.now(),
+        });
+        await markExamAttemptSubmitted(userId, examKey, {
+          last_result_at_ms: Date.now(),
+        });
+      } catch (e) {
+        console.warn('[ExamResult] Failed to persist result:', e);
+      }
+    }
+
+    navigate(`/exams/${level}/${examKey}/results`);
+  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate, examKey, userId, compactQuestionResults]);
 
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
@@ -764,6 +1028,8 @@ const ExamTake = () => {
             <p className="exam-cover__cta-hint">Bonne chance ! 🍀</p>
           </div>
         </div>
+
+        {resumeOverlays}
       </section>
     );
   }
@@ -937,6 +1203,8 @@ const ExamTake = () => {
               <p className="exam-take__preview-cta-hint">Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀</p>
             </div>
           </div>
+
+          {resumeOverlays}
         </div>
       </section>
     );
@@ -1342,6 +1610,45 @@ const ExamTake = () => {
                 </span>
               )}
             </p>
+
+            {unansweredIndices.length > 0 && (
+              <div className="exam-take__modal-jump">
+                <div className="exam-take__modal-jump-title">Aller aux questions sans réponse :</div>
+                <div className="exam-take__modal-jump-buttons">
+                  <button
+                    className="button button--ghost button--sm"
+                    onClick={() => {
+                      const i = unansweredIndices[0];
+                      const targetGroup = questionGroups.find((g) => i >= g.start && i <= g.end);
+                      setCurrentQ(targetGroup ? targetGroup.start : i);
+                      setShowConfirm(false);
+                    }}
+                    type="button"
+                  >
+                    Prochaine sans réponse
+                  </button>
+                  {unansweredIndices.slice(0, 12).map((i) => (
+                    <button
+                      key={i}
+                      className="button button--ghost button--sm"
+                      onClick={() => {
+                        const targetGroup = questionGroups.find((g) => i >= g.start && i <= g.end);
+                        setCurrentQ(targetGroup ? targetGroup.start : i);
+                        setShowConfirm(false);
+                      }}
+                      type="button"
+                      aria-label={`Aller à la question ${formatQuestionLabel(questions[i], i)}`}
+                    >
+                      {formatNavLabel(questions[i], i)}
+                    </button>
+                  ))}
+                  {unansweredIndices.length > 12 && (
+                    <span className="exam-take__modal-jump-more">+{unansweredIndices.length - 12}</span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="exam-take__modal-actions">
               <button className="button button--ghost" onClick={() => setShowConfirm(false)} type="button">
                 Continuer l'examen
@@ -1349,9 +1656,9 @@ const ExamTake = () => {
               <button className="button button--primary" onClick={handleSubmit} type="button">
                 Soumettre maintenant
               </button>
-              </div>
             </div>
           </div>
+        </div>
       )}
 
       {/* Passage slide-over panel — kept for quick reference while scrolled down */}
@@ -1374,6 +1681,8 @@ const ExamTake = () => {
           </div>
         </div>
       )}
+
+      {resumeOverlays}
       </div>
       </section>
   );

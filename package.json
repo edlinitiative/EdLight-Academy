@@ -45,7 +45,8 @@
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
     "test": "jest",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "ensure:exam-ids": "node scripts/ensure_exam_ids.mjs"
   },
   "eslintConfig": {
     "extends": [
