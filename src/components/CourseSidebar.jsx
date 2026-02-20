@@ -7,7 +7,7 @@ function getLessonIcon(type) {
     case 'quiz':    return '📝';
     case 'reading': return '📖';
     case 'video':
-    default:        return '▶';
+    default:        return '';
   }
 }
 
@@ -176,6 +176,7 @@ export default function CourseSidebar({
                     {lessonsToShow.map(({ lsn, lidx }) => {
                       const isActiveLesson = isActiveModule && lidx === activeLesson;
                       const isCompleted = progress?.completedLessons?.includes(lsn.id) || false;
+                      const icon = getLessonIcon(lsn.type);
                       return (
                         <button
                           key={lsn.id ?? `${idx}-${lidx}`}
@@ -192,9 +193,11 @@ export default function CourseSidebar({
                             {isCompleted ? '✓' : `${idx + 1}.${lidx + 1}`}
                           </span>
                           <span className="lesson-list__meta">
-                            <span className="lesson-list__type-icon" aria-hidden>
-                              {getLessonIcon(lsn.type)}
-                            </span>
+                            {icon ? (
+                              <span className="lesson-list__type-icon" aria-hidden>
+                                {icon}
+                              </span>
+                            ) : null}
                             <span className="lesson-list__title">{lsn.title}</span>
                           </span>
                         </button>

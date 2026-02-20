@@ -1630,6 +1630,13 @@ textarea.input-field {
 	overflow-y: auto;
 	overflow-x: hidden;
 	flex: 1 1 auto;
+	scrollbar-width: none; /* Firefox: hide scrollbar, keep scroll */
+}
+
+/* WebKit: hide scrollbar, keep scroll */
+.lesson-list::-webkit-scrollbar {
+	width: 0;
+	height: 0;
 }
 
 .lesson-list__item {
@@ -1683,7 +1690,7 @@ textarea.input-field {
 
 .lesson-list__children {
 	margin: 0.25rem 0 0.5rem;
-	padding-left: 0.9rem;
+	padding-left: 0.65rem;
 	border-left: 1px solid rgba(10, 102, 194, 0.16);
 	overflow-x: hidden;
 	display: flex;
