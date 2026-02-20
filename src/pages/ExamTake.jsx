@@ -1054,7 +1054,7 @@ const ExamTake = () => {
             )}
           </div>
 
-          <div className="exam-take__preview-scroll">
+          <div className="exam-take__preview-scroll card">
             <p className="exam-take__preview-hint">
               Parcourez les questions ci-dessous, puis cliquez sur <strong>Commencer</strong> quand vous êtes prêt.
             </p>
