@@ -200,8 +200,8 @@ export default function CourseDetail() {
   }
 
   return (
-    <div className="section">
-      <div className="container">
+    <div className="section course-detail">
+      <div className="container course-detail__container">
         <div className="course-detail__layout">
           <div className="course-detail__column">
             <article className="lesson-card">

@@ -41,14 +41,12 @@ export default function CourseSidebar({
   onSelectLesson,
 }) {
   const [expandedModules, setExpandedModules] = useState(() => loadExpanded(courseId));
-  const [query, setQuery] = useState('');
   const activeLessonRef = useRef(null);
   const listRef = useRef(null);
 
-  // Reload persisted expansion + clear search when course changes
+  // Reload persisted expansion when course changes
   useEffect(() => {
     setExpandedModules(loadExpanded(courseId));
-    setQuery('');
   }, [courseId]);
 
   // Always keep the active module expanded when it changes
@@ -75,36 +73,15 @@ export default function CourseSidebar({
   const completedCount = progress?.completedLessons?.length || 0;
   const progressPct = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
-  // ─── Search filter ──────────────────────────────────────────────────────
-  const lowerQuery = query.toLowerCase().trim();
-
-  const renderRows = lowerQuery
-    ? modules
-        .map((module, idx) => {
-          const titleMatches = module.title?.toLowerCase().includes(lowerQuery);
-          const matchingLessons = (module.lessons || [])
-            .map((lsn, lidx) => ({ lsn, lidx }))
-            .filter(({ lsn }) => lsn.title?.toLowerCase().includes(lowerQuery));
-          if (!titleMatches && matchingLessons.length === 0) return null;
-          return {
-            module,
-            idx,
-            isExpanded: true,
-            lessonsToShow: titleMatches
-              ? (module.lessons || []).map((lsn, lidx) => ({ lsn, lidx }))
-              : matchingLessons,
-          };
-        })
-        .filter(Boolean)
-    : modules.map((module, idx) => ({
-        module,
-        idx,
-        isExpanded: expandedModules.has(idx),
-        lessonsToShow:
-          expandedModules.has(idx) && Array.isArray(module.lessons)
-            ? module.lessons.map((lsn, lidx) => ({ lsn, lidx }))
-            : null,
-      }));
+  const renderRows = modules.map((module, idx) => ({
+    module,
+    idx,
+    isExpanded: expandedModules.has(idx),
+    lessonsToShow:
+      expandedModules.has(idx) && Array.isArray(module.lessons)
+        ? module.lessons.map((lsn, lidx) => ({ lsn, lidx }))
+        : null,
+  }));
 
   // ─── Keyboard navigation ─────────────────────────────────────────────────
   const handleKeyDown = useCallback((e) => {
@@ -136,12 +113,6 @@ export default function CourseSidebar({
               </span>
             </div>
           )}
-
-          <p className="text-muted lesson-sidebar__description">
-            {isEnrolled
-              ? 'Track your progress across each module and revisit lessons anytime.'
-              : 'Preview the modules covered in this course. Enroll to unlock full lessons.'}
-          </p>
         </div>
         <button
           className="lesson-sidebar__close"
@@ -151,29 +122,6 @@ export default function CourseSidebar({
         >
           ✕
         </button>
-      </div>
-
-      {/* Search filter */}
-      <div className="lesson-sidebar__search">
-        <span className="lesson-sidebar__search-icon" aria-hidden>🔍</span>
-        <input
-          className="lesson-sidebar__search-input"
-          type="search"
-          placeholder="Search lessons…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search lessons"
-        />
-        {query && (
-          <button
-            className="lesson-sidebar__search-clear"
-            onClick={() => setQuery('')}
-            type="button"
-            aria-label="Clear search"
-          >
-            ✕
-          </button>
-        )}
       </div>
 
       <div className="lesson-list" ref={listRef} onKeyDown={handleKeyDown}>
@@ -198,11 +146,6 @@ export default function CourseSidebar({
                   aria-expanded={hasLessons ? isExpanded : undefined}
                   aria-controls={hasLessons ? childrenId : undefined}
                   onClick={() => {
-                    if (lowerQuery) {
-                      // In search mode navigate to the module's first lesson
-                      onSelectLesson(idx, 0);
-                      return;
-                    }
                     if (isActiveModule) {
                       setExpandedModules((prev) => {
                         const next = new Set(prev);
@@ -283,9 +226,7 @@ export default function CourseSidebar({
           })
         ) : (
           <div className="lesson-list__empty">
-            {lowerQuery
-              ? 'No lessons match your search.'
-              : 'Modules for this course will appear here shortly.'}
+            Modules for this course will appear here shortly.
           </div>
         )}
       </div>
