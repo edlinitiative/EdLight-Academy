@@ -7,6 +7,36 @@ import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
 import { onAuthStateChange, upsertUserDocument } from './services/firebase';
 
+const initViewportHeightVar = () => {
+  const root = document.documentElement;
+  let rafId = null;
+
+  const update = () => {
+    const height = window.visualViewport?.height ?? window.innerHeight;
+    root.style.setProperty('--vvh', `${height * 0.01}px`);
+  };
+
+  const schedule = () => {
+    if (rafId != null) return;
+    rafId = window.requestAnimationFrame(() => {
+      rafId = null;
+      update();
+    });
+  };
+
+  update();
+
+  window.addEventListener('resize', schedule, { passive: true });
+  window.addEventListener('orientationchange', schedule, { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', schedule, { passive: true });
+    window.visualViewport.addEventListener('scroll', schedule, { passive: true });
+  }
+};
+
+// Keep iOS Safari viewport/keyboard quirks from breaking vh-based layouts.
+initViewportHeightVar();
+
 // Initialize internationalization
 initI18n();
 

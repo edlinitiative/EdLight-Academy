@@ -33,6 +33,7 @@
 	--blur-backdrop: saturate(180%) blur(18px);
 	--font-sans: "Inter", "SF Pro Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 	--navbar-height: 72px;
+	--vvh: 1vh;
 	font-family: var(--font-sans);
 }
 
@@ -68,7 +69,7 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 100vh;
+	min-height: calc(var(--vvh, 1vh) * 100);
 }
 
 /* Skip-to-content link (accessibility) */
@@ -124,7 +125,7 @@ main {
 .app-shell {
 	display: flex;
 	flex-direction: column;
-	min-height: 100vh;
+	min-height: calc(var(--vvh, 1vh) * 100);
 }
 
 .app-shell__main {
@@ -328,7 +329,7 @@ main {
 	gap: 2rem;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 768px) {
 	.nav-links {
 		display: flex;
 	}
@@ -375,7 +376,7 @@ main {
 
 /* Make the home hero fill the viewport below the navbar and reduce inner spacing to avoid scroll */
 .hero--full {
-	height: calc(100vh - var(--navbar-height));
+	height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
 	display: flex;
 	align-items: center;
 	padding: clamp(1rem, 3vw, 1.5rem) 0; /* tighter to avoid overflow */
@@ -969,7 +970,7 @@ textarea.input-field {
 	backdrop-filter: blur(12px);
 	display: grid;
 	place-items: center;
-	padding: 1.5rem;
+	padding: calc(1.5rem + env(safe-area-inset-top)) calc(1.5rem + env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) calc(1.5rem + env(safe-area-inset-left));
 	z-index: 30;
 }
 
@@ -980,10 +981,10 @@ textarea.input-field {
 	border: 1px solid rgba(10, 102, 194, 0.2);
 	box-shadow: var(--shadow-xl);
 	position: relative;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+	max-height: calc(var(--vvh, 1vh) * 90);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 }
 
 .course-modal__header {
@@ -1509,8 +1510,9 @@ textarea.input-field {
 	top: 5rem; /* Fixed position below navbar */
 	right: calc((100vw - min(1480px, 98vw)) / 2); /* Match container's right margin */
 	width: min(320px, 25vw); /* Responsive width */
-	max-height: calc(100vh - 5rem);
-	overflow: hidden;
+	max-height: calc(var(--vvh, 1vh) * 100 - 5rem);
+	overflow-y: auto;
+	overflow-x: hidden;
 	z-index: 10;
 }
 
@@ -2077,6 +2079,9 @@ textarea.input-field {
 	box-shadow: var(--shadow-lg);
 	padding: clamp(1.8rem, 4vw, 2.3rem);
 	position: relative;
+	max-height: calc(var(--vvh, 1vh) * 92);
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
 }
 
 .auth-modal__header {
@@ -2325,7 +2330,7 @@ textarea.input-field {
 	align-self: start; /* keep aside sized to its content */
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
 	.practice-layout {
 		grid-template-columns: 1fr;
 	}
@@ -2398,59 +2403,13 @@ textarea.input-field {
 	opacity: 0.3;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 767px) {
 	.quiz-layout {
 		grid-template-columns: 1fr;
 	}
 }
 
-/* Full-height, non-scrolling Quizzes screen */
-.practice-screen {
-	/* Make this section fill the viewport below the sticky navbar */
-	min-height: calc(100vh - var(--navbar-height));
-	padding: clamp(1rem, 3vw, 1.5rem) 0; /* tighter to reduce overflow risk */
-}
-
-.practice-screen__inner {
-	display: grid;
-	grid-template-rows: auto 1fr; /* header + content */
-	min-height: inherit; /* propagate min-height to children */
-}
-
-.practice-screen__header {
-	display: grid;
-	gap: 0.4rem;
-	margin-bottom: 0.5rem;
-}
-
-.practice-screen__content {
-	/* Occupy the remaining height; prevent page scroll */
-	height: 100%;
-	overflow: hidden; /* contain scroll to internal regions */
-	/* Rebalance columns so the left (filters) is narrower and the right (quiz) is wider */
-	grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
-}
-
-.practice-screen__main {
-	height: 100%;
-	overflow: auto; /* enable internal scroll if needed */
-	display: grid;
-	place-items: start center; /* center quiz card while keeping top context */
-}
-
-.quiz-stage {
-	width: 100%;
-	max-width: 880px; /* give the quiz more breathing room */
-	padding: 0.5rem; /* breathing room for internal scrollbars */
-}
-
-.practice-screen__aside {
-	height: 100%;
-	overflow: auto; /* aside scrolls independently */
-	position: static; /* disable sticky to avoid layout overflow */
-	top: auto;
-	align-self: stretch;
-}
+/* (Removed) Unused .practice-screen* layout rules */
 
 /* Vertical filter layout for the aside */
 .quiz-selectors--vertical {
@@ -2609,7 +2568,7 @@ textarea.input-field {
 	display: none !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.navbar__inner {
 		padding: 0.85rem 0;
 	}
@@ -2667,7 +2626,7 @@ textarea.input-field {
 	box-shadow: var(--shadow-lg);
 	width: 100%;
 	max-width: 900px;
-	max-height: 90vh;
+	max-height: calc(var(--vvh, 1vh) * 90);
 	display: flex;
 	flex-direction: column;
 	animation: modalSlideIn 0.2s ease-out;
@@ -3727,6 +3686,7 @@ textarea.input-field {
 	margin: 0;
 	/* Truncate at 2 lines */
 	display: -webkit-box;
+	line-clamp: 2;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 	overflow: hidden;
@@ -3911,8 +3871,8 @@ textarea.input-field {
 	}
 
 	.exam-take__passage-btn {
-		bottom: 1rem;
-		right: 1rem;
+		bottom: calc(1rem + env(safe-area-inset-bottom));
+		right: calc(1rem + env(safe-area-inset-right));
 		padding: 0.55rem 0.9rem;
 		font-size: 0.8rem;
 	}
@@ -3953,7 +3913,7 @@ textarea.input-field {
 /* ── Full-bleed wrapper ── */
 .exam-cover {
 	position: relative;
-	min-height: 100vh;
+	min-height: calc(var(--vvh, 1vh) * 100);
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
@@ -4161,9 +4121,6 @@ textarea.input-field {
 	box-shadow:
 		0 1px 2px rgba(0,0,0,0.03),
 		0 6px 24px rgba(10,102,194,0.06);
-}
-.exam-cover__panel--sections {
-	/* when no rules, span full width */
 }
 .exam-cover__panel--sections:only-child,
 .exam-cover__body > .exam-cover__panel--sections:last-child {
@@ -4619,7 +4576,7 @@ textarea.input-field {
 .exam-take__nav-sections {
 	display: grid;
 	gap: 0.6rem;
-	max-height: calc(100vh - var(--navbar-height) - 200px);
+	max-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height) - 200px);
 	overflow-y: auto;
 	overflow-x: hidden;
 	padding-right: 0.2rem;
@@ -4919,7 +4876,7 @@ textarea.input-field {
 	border-bottom: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.exam-take__reading-passage-body {
 		padding: 1rem 1.1rem 1.15rem;
 	}
@@ -5044,7 +5001,7 @@ textarea.input-field {
 	border-radius: 999px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.instruction-renderer {
 		max-height: 240px;
 		padding: 0.85rem 1rem;
@@ -5536,7 +5493,7 @@ textarea.input-field {
 	font-size: 0.88rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.exam-take__question-card.card {
 		padding: 0.85rem;
 	}
@@ -5873,7 +5830,7 @@ textarea.input-field {
 	letter-spacing: 0.5px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.exam-take__preview-scroll {
 		padding: 0 0.25rem;
 	}
@@ -7883,8 +7840,8 @@ textarea.input-field {
 
 .exam-take__passage-btn {
 	position: fixed;
-	bottom: 1.5rem;
-	right: 1.5rem;
+	bottom: calc(1.5rem + env(safe-area-inset-bottom));
+	right: calc(1.5rem + env(safe-area-inset-right));
 	z-index: 100;
 	display: flex;
 	align-items: center;
@@ -7910,9 +7867,9 @@ textarea.input-field {
 
 .exam-take__passage-panel {
 	position: fixed;
-	top: 0;
+	top: env(safe-area-inset-top);
 	right: 0;
-	bottom: 0;
+	bottom: env(safe-area-inset-bottom);
 	width: min(520px, 90vw);
 	background: var(--surface);
 	box-shadow: -4px 0 32px rgba(0, 0, 0, 0.15);
@@ -8612,7 +8569,7 @@ textarea.input-field {
    Exam Responsive
    ======================================== */
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
 	.exam-browser__filters {
 		flex-direction: column;
 	}
@@ -9541,7 +9498,7 @@ textarea.input-field {
 	}
 
 	.exam-take__nav-sections {
-		max-height: calc(100vh - var(--navbar-height) - 200px);
+		max-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height) - 200px);
 	}
 
 	.exam-take__nav-section {
@@ -9635,7 +9592,7 @@ textarea.input-field {
 	border-radius: 1.25rem;
 	max-width: 620px;
 	width: 95%;
-	max-height: 90vh;
+	max-height: calc(var(--vvh, 1vh) * 90);
 	overflow-y: auto;
 	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 	animation: slideUp 0.3s ease-out;

@@ -208,7 +208,7 @@ function EditForm({ row, columns, onSave, onCancel }) {
         onClick={(e) => e.stopPropagation()} 
         style={{ 
           maxWidth: '1000px', 
-          maxHeight: '90vh', 
+          maxHeight: 'calc(var(--vvh, 1vh) * 90)', 
           width: '95vw',
           display: 'flex',
           flexDirection: 'column'
