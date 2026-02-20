@@ -304,7 +304,7 @@ const ExamBrowser = () => {
                     onClick={() => setTrackFilter(trackFilter === t.code ? '' : t.code)}
                     type="button"
                   >
-                    {t.icon} {t.shortLabel}
+                    {t.shortLabel}
                   </button>
                 ))}
                 {!userTrack && isAuthenticated && (
@@ -314,7 +314,7 @@ const ExamBrowser = () => {
                     onClick={() => setShowTrackSelector(true)}
                     type="button"
                   >
-                    ⚙️ Définir ma filière
+                    Définir ma filière
                   </button>
                 )}
               </div>
@@ -323,16 +323,13 @@ const ExamBrowser = () => {
             {/* Stat chips */}
             <div className="exam-browser__summary">
               <span className="exam-browser__stat-chip">
-                <span className="exam-browser__stat-icon">📋</span>
                 {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
               </span>
               <span className="exam-browser__stat-chip">
-                <span className="exam-browser__stat-icon">❓</span>
                 {summary.totalQ.toLocaleString()} question{summary.totalQ !== 1 ? 's' : ''}
               </span>
               {summary.gradable > 0 && (
                 <span className="exam-browser__stat-chip exam-browser__stat-chip--accent">
-                  <span className="exam-browser__stat-icon">✓</span>
                   {summary.gradable.toLocaleString()} auto-corrigée{summary.gradable !== 1 ? 's' : ''}
                 </span>
               )}
@@ -443,11 +440,11 @@ function ExamCard({ exam, onClick }) {
       <div className="exam-card__meta">
         <span className="exam-card__level">{exam._level}</span>
         {exam.duration_minutes > 0 && (
-          <span className="exam-card__duration">⏱ {exam.duration_minutes} min</span>
+          <span className="exam-card__duration">{exam.duration_minutes} min</span>
         )}
         {exam.language && (
           <span className="exam-card__lang">
-            {exam.language === 'fr' ? '🇫🇷' : exam.language === 'ht' ? '🇭🇹' : '🇬🇧'}
+            {exam.language === 'fr' ? 'FR' : exam.language === 'ht' ? 'HT' : 'EN'}
           </span>
         )}
       </div>
@@ -456,7 +453,7 @@ function ExamCard({ exam, onClick }) {
         <span>{stats.total} question{stats.total !== 1 ? 's' : ''}</span>
         {stats.gradable > 0 && (
           <span className="exam-card__gradable">
-            ✓ {stats.gradable} auto-corrigée{stats.gradable !== 1 ? 's' : ''}
+            {stats.gradable} auto-corrigée{stats.gradable !== 1 ? 's' : ''}
           </span>
         )}
       </div>
@@ -468,7 +465,7 @@ function ExamCard({ exam, onClick }) {
             const info = TRACK_BY_CODE[t];
             return (
               <span key={t} className="exam-card__track-chip">
-                {info?.icon || ''} {info?.shortLabel || t}
+                {info?.shortLabel || t}
               </span>
             );
           })}
@@ -481,7 +478,7 @@ function ExamCard({ exam, onClick }) {
             const meta = QUESTION_TYPE_META[type] || QUESTION_TYPE_META.unknown;
             return (
               <span key={type} className="exam-card__type-chip">
-                {meta.icon} {meta.label} ({count})
+                {meta.label} ({count})
               </span>
             );
           })}
