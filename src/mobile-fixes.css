@@ -1339,6 +1339,10 @@ body {
   .lesson-list__duration {
     display: none;
   }
+
+  .lesson-list__type-icon {
+    display: none;
+  }
   
   .lesson-list__chevron {
     font-size: 1rem;

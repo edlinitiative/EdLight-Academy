@@ -1667,20 +1667,19 @@ textarea.input-field {
 }
 
 .lesson-list__item {
-	display: flex;
+	display: grid;
+	grid-template-columns: 28px minmax(0, 1fr) max-content max-content max-content;
 	align-items: center;
-	justify-content: flex-start;
-	gap: 0.6rem;
-	/* Uniform height across all rows */
-	height: 36px;
-	padding: 0 0.8rem;
+	column-gap: 0.6rem;
+	row-gap: 0.2rem;
+	min-height: 38px;
+	padding: 0.35rem 0.8rem;
 	width: 100%; /* prevent overflow causing horizontal scroll */
 	border-radius: 12px;
 	border: 1px solid rgba(10, 102, 194, 0.1);
 	background: rgba(255, 255, 255, 0.7);
 	cursor: pointer;
 	transition: border 0.2s ease, background 0.2s ease, transform 0.2s ease;
-	flex-wrap: nowrap;
 }
 
 .lesson-list__item--active {
@@ -1705,6 +1704,13 @@ textarea.input-field {
 	gap: 0.5rem; /* match chapter spacing */
 	align-content: start; /* do not stretch items to fill height */
 	margin-top: 0.5rem; /* same gap between chapter and first subchapter */
+}
+
+.lesson-list__children .lesson-list__item {
+	min-height: 44px;
+	align-items: flex-start;
+	padding-top: 0.45rem;
+	padding-bottom: 0.45rem;
 }
 
 .lesson-list__index {
@@ -1736,37 +1742,42 @@ textarea.input-field {
 .lesson-list__meta {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	flex: 1 1 auto;
+	gap: 0.45rem;
 	min-width: 0; /* allow ellipsis */
-	overflow: hidden; /* contain children widths */
 }
 
 .lesson-list__title {
 	font-weight: 600;
 	font-size: 0.95rem;
-	flex: 1 1 auto;
 	min-width: 0; /* allow ellipsis */
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	text-align: left;
-	line-height: 1; /* avoid inflating parent height */
+	line-height: 1.2;
+}
+
+/* Allow lesson titles (children) to wrap to two lines so they don't feel "cut off" */
+.lesson-list__children .lesson-list__title {
+	white-space: normal;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	line-height: 1.25;
 }
 
 .lesson-list__duration {
 	font-size: 0.75rem;
 	color: var(--text-500);
-	flex: 0 0 auto;
 	white-space: nowrap;
-	line-height: 1; /* avoid inflating parent height */
+	line-height: 1.2;
+	justify-self: end;
 }
 
 .lesson-list__chevron {
-	margin-left: auto;
 	color: var(--text-500);
 	transition: transform 0.2s ease;
-	flex: 0 0 auto;
+	justify-self: end;
 }
 
 .is-expanded .lesson-list__chevron {
@@ -1786,7 +1797,7 @@ textarea.input-field {
 	padding: 0 8px;
 	display: inline-flex;
 	align-items: center;
-	flex: 0 0 auto; /* don’t stretch and push content width */
+	justify-self: end;
 }
 
 .lesson-list__empty {
@@ -1801,6 +1812,34 @@ textarea.input-field {
 @media (max-width: 960px) {
 	.course-detail__layout {
 		grid-template-columns: 1fr;
+	}
+
+	.course-detail__column {
+		max-width: 100%;
+	}
+
+	/* Mobile: sidebar becomes an off-canvas drawer toggled by JS */
+	.lesson-card__sidebar-toggle,
+	.lesson-sidebar__close,
+	.lesson-card__comments-toggle {
+		display: inline-flex;
+	}
+
+	.lesson-sidebar {
+		right: 0;
+		width: min(360px, 92vw);
+		max-height: calc(var(--vvh, 1vh) * 100 - 5rem);
+		transform: translateX(110%);
+		opacity: 0;
+		pointer-events: none;
+		transition: transform 0.25s ease, opacity 0.2s ease;
+		z-index: 50;
+	}
+
+	.lesson-sidebar.lesson-sidebar--visible {
+		transform: translateX(0);
+		opacity: 1;
+		pointer-events: auto;
 	}
 }
 

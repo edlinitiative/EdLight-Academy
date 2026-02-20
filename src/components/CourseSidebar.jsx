@@ -221,22 +221,22 @@ export default function CourseSidebar({
                   <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
                   <span className="lesson-list__meta">
                     <span className="lesson-list__title">{module.title}</span>
-                    <span className="lesson-list__duration">
-                      {module.duration
-                        ? `${module.duration} min`
-                        : module.readingTime
-                          ? `${module.readingTime} min read`
-                          : moduleCompletedCount !== null && moduleLessonCount > 0
-                            ? `${moduleCompletedCount} / ${moduleLessonCount}`
-                            : moduleLessonCount > 0
-                              ? `${moduleLessonCount} lesson${moduleLessonCount === 1 ? '' : 's'}`
-                              : 'Coming soon'}
-                    </span>
                   </span>
-                  <span className="lesson-list__chevron" aria-hidden>▸</span>
+                  <span className="lesson-list__duration">
+                    {module.duration
+                      ? `${module.duration} min`
+                      : module.readingTime
+                        ? `${module.readingTime} min read`
+                        : moduleCompletedCount !== null && moduleLessonCount > 0
+                          ? `${moduleCompletedCount} / ${moduleLessonCount}`
+                          : moduleLessonCount > 0
+                            ? `${moduleLessonCount} lesson${moduleLessonCount === 1 ? '' : 's'}`
+                            : 'Coming soon'}
+                  </span>
                   {isActiveModule && (!isExpanded || !hasLessons) && (
                     <span className="chip chip--ghost">Current</span>
                   )}
+                  <span className="lesson-list__chevron" aria-hidden>▸</span>
                 </button>
 
                 {lessonsToShow && (
@@ -264,13 +264,13 @@ export default function CourseSidebar({
                               {getLessonIcon(lsn.type)}
                             </span>
                             <span className="lesson-list__title">{lsn.title}</span>
-                            <span className="lesson-list__duration">
-                              {lsn.duration
-                                ? `${lsn.duration} min`
-                                : lsn.readingTime
-                                  ? `${lsn.readingTime} min read`
-                                  : ''}
-                            </span>
+                          </span>
+                          <span className="lesson-list__duration">
+                            {lsn.duration
+                              ? `${lsn.duration} min`
+                              : lsn.readingTime
+                                ? `${lsn.readingTime} min read`
+                                : ''}
                           </span>
                           {isActiveLesson && <span className="chip chip--ghost">Current</span>}
                         </button>
