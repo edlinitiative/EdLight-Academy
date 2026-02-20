@@ -1615,7 +1615,7 @@ textarea.input-field {
 
 .lesson-list__item {
 	display: grid;
-	grid-template-columns: 20px minmax(0, 1fr) max-content max-content max-content;
+	grid-template-columns: 20px minmax(0, 1fr);
 	align-items: center;
 	column-gap: 0.6rem;
 	row-gap: 0.2rem;
@@ -1645,11 +1645,11 @@ textarea.input-field {
 	align-items: start;
 	padding-top: 0.55rem;
 	padding-bottom: 0.55rem;
-	min-height: 48px;
+	min-height: 44px;
 }
 
 .lesson-list__item--lesson {
-	grid-template-columns: 20px minmax(0, 1fr) max-content max-content;
+	grid-template-columns: 20px minmax(0, 1fr);
 }
 
 .lesson-list__item--active {
@@ -1722,16 +1722,6 @@ textarea.input-field {
 	gap: 0.15rem;
 }
 
-.lesson-list__subtitle {
-	font-size: 0.78rem;
-	color: var(--text-500);
-	line-height: 1.25;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	max-width: 100%;
-}
-
 .lesson-list__title {
 	font-weight: 600;
 	font-size: 0.95rem;
@@ -1766,14 +1756,6 @@ textarea.input-field {
 	line-height: 1.25;
 }
 
-.lesson-list__duration {
-	font-size: 0.75rem;
-	color: var(--text-500);
-	white-space: nowrap;
-	line-height: 1.2;
-	justify-self: end;
-}
-
 .lesson-list__chevron {
 	color: var(--text-500);
 	transition: transform 0.2s ease;
@@ -1784,18 +1766,6 @@ textarea.input-field {
 	transform: rotate(90deg);
 }
 
-
-/* Prevent chips from causing height differences */
-.lesson-list__item .chip {
-	white-space: nowrap;
-	font-size: 0.7rem;
-	line-height: 1;
-	height: 24px;
-	padding: 0 8px;
-	display: inline-flex;
-	align-items: center;
-	justify-self: end;
-}
 
 .lesson-list__empty {
 	padding: 1rem;
