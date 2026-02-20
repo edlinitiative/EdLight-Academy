@@ -93,7 +93,6 @@ export default function CourseDetail() {
   useEffect(() => {
     setActiveModule(0);
     setActiveLesson(0);
-    setExpandedModules(new Set([0]));
   }, [courseId]);
 
   useEffect(() => {
