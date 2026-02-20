@@ -7,6 +7,7 @@ import UnitQuiz from '../components/UnitQuiz';
 import Comments from '../components/Comments';
 import FlashcardDeck from '../components/FlashcardDeck';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
+import CourseSidebar from '../components/CourseSidebar';
 import useStore from '../contexts/store';
 
 export default function CourseDetail() {
@@ -17,7 +18,6 @@ export default function CourseDetail() {
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showFlashcards, setShowFlashcards] = useState(false);
-  const [expandedModules, setExpandedModules] = useState(() => new Set([0]));
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
   const [showComments, setShowComments] = useState(false); // Mobile comments toggle
   const { isAuthenticated, enrolledCourses, user } = useStore();
@@ -106,11 +106,6 @@ export default function CourseDetail() {
     // reset lesson to the first when switching modules
     setActiveLesson(0);
     setShowQuiz(false);
-    setExpandedModules((prev) => {
-      const next = new Set(prev);
-      next.add(activeModule);
-      return next;
-    });
   }, [activeModule]);
 
   useEffect(() => {
@@ -213,7 +208,12 @@ export default function CourseDetail() {
             <article className="lesson-card">
               <header className="lesson-card__header">
                 <div className="lesson-card__header-content">
-                  <h1 className="lesson-card__title">{activeLessonData?.title || activeModuleData?.title || course.name}</h1>
+                  <h1
+                    className="lesson-card__title"
+                    onClick={() => setShowSidebar(true)}
+                  >
+                    {activeLessonData?.title || activeModuleData?.title || course.name}
+                  </h1>
                   {isEnrolled && progress && (
                     <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
                       {progress.totalPoints > 0 && (
@@ -396,116 +396,21 @@ export default function CourseDetail() {
             </div>
           </div>
 
-          {/* Sidebar - Collapsible on Mobile */}
-          <aside className={`lesson-sidebar ${showSidebar ? 'lesson-sidebar--visible' : ''}`}>
-            <div className="lesson-sidebar__header">
-              <div>
-                <h3 className="lesson-sidebar__heading">Course Content</h3>
-                <p className="text-muted lesson-sidebar__description">
-                  {isEnrolled
-                    ? 'Track your progress across each module and revisit lessons anytime.'
-                    : 'Preview the modules covered in this course. Enroll to unlock full lessons.'}
-                </p>
-              </div>
-              <button
-                className="lesson-sidebar__close"
-                onClick={() => setShowSidebar(false)}
-                type="button"
-                aria-label="Close sidebar"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="lesson-list">
-              {modules.length > 0 ? (
-                modules.map((module, idx) => {
-                  const isActiveModule = idx === activeModule;
-                  const hasLessons = Array.isArray(module.lessons) && module.lessons.length > 0;
-                  const isExpanded = expandedModules.has(idx);
-                  return (
-                    <div key={module.id ?? idx} className="lesson-list__group">
-                      <button
-                        className={`lesson-list__item ${isActiveModule ? 'lesson-list__item--active' : ''} ${isExpanded ? 'is-expanded' : ''}`}
-                        onClick={() => {
-                          if (isActiveModule) {
-                            setExpandedModules((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(idx)) next.delete(idx); else next.add(idx);
-                              return next;
-                            });
-                          } else {
-                            setActiveModule(idx);
-                            setActiveLesson(0);
-                            setExpandedModules((prev) => {
-                              const next = new Set(prev);
-                              next.add(idx);
-                              return next;
-                            });
-                          }
-                        }}
-                        type="button"
-                      >
-                        <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
-                        <span className="lesson-list__meta">
-                          <span className="lesson-list__title">{module.title}</span>
-                          <span className="lesson-list__duration">
-                            {module.duration
-                              ? `${module.duration} min`
-                              : module.readingTime
-                                ? `${module.readingTime} min read`
-                                : module.lessons?.length
-                                  ? `${module.lessons.length} lesson${module.lessons.length === 1 ? '' : 's'}`
-                                  : 'Coming soon'}
-                          </span>
-                        </span>
-                        <span className="lesson-list__chevron" aria-hidden>
-                          ▸
-                        </span>
-                        {isActiveModule && <span className="chip chip--ghost">Current</span>}
-                      </button>
-
-                      {isExpanded && hasLessons && (
-                        <div className="lesson-list__children">
-                          {module.lessons.map((lsn, lidx) => {
-                            const isActiveLesson = isActiveModule && lidx === activeLesson;
-                            const isCompleted = progress?.completedLessons?.includes(lsn.id) || false;
-                            return (
-                              <button
-                                key={lsn.id ?? `${idx}-${lidx}`}
-                                type="button"
-                                className={`lesson-list__item ${isActiveLesson ? 'lesson-list__item--active' : ''} ${isCompleted ? 'lesson-list__item--completed' : ''}`}
-                                onClick={() => {
-                                  setActiveModule(idx);
-                                  setActiveLesson(lidx);
-                                  setShowSidebar(false); // Close sidebar on mobile when lesson is clicked
-                                }}
-                              >
-                                <span className="lesson-list__index">
-                                  {isCompleted ? '✓' : `${idx + 1}.${lidx + 1}`}
-                                </span>
-                                <span className="lesson-list__meta">
-                                  <span className="lesson-list__title">{lsn.title}</span>
-                                  <span className="lesson-list__duration">
-                                    {lsn.duration ? `${lsn.duration} min` : (lsn.readingTime ? `${lsn.readingTime} min read` : '')}
-                                  </span>
-                                </span>
-                                {isActiveLesson && <span className="chip chip--ghost">Current</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="lesson-list__empty">
-                  Modules for this course will appear here shortly.
-                </div>
-              )}
-            </div>
-          </aside>
+          {/* Sidebar - extracted into CourseSidebar component */}
+          <CourseSidebar
+            courseId={courseId}
+            modules={modules}
+            activeModule={activeModule}
+            activeLesson={activeLesson}
+            progress={progress}
+            isEnrolled={isEnrolled}
+            isOpen={showSidebar}
+            onOpenChange={setShowSidebar}
+            onSelectLesson={(moduleIdx, lessonIdx) => {
+              setActiveModule(moduleIdx);
+              setActiveLesson(lessonIdx);
+            }}
+          />
         </div>
       </div>
       {/* Removed modal overlay; inline rendering used instead */}
