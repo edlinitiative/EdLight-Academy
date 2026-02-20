@@ -251,7 +251,27 @@ const ExamTake = () => {
   }, [questions]);
 
   // ── Exam intro / consignes extraction ─────────────────────────────────────
-  const [viewState, setViewState] = useState('cover'); // 'cover' | 'preview' | 'active'
+  const [viewState, setViewState] = useState('preview'); // 'preview' | 'active' | (legacy) 'cover'
+
+  const sectionSummary = useMemo(() => {
+    if (!exam) return [];
+    return (exam.sections || []).map((sec, i) => ({
+      title: sec.section_title || `Section ${i + 1}`,
+      qCount: (sec.questions || []).length,
+    }));
+  }, [exam]);
+
+  const totalQ = useMemo(() => sectionSummary.reduce((s, x) => s + x.qCount, 0), [sectionSummary]);
+
+  const ruleIcon = useCallback((rule) => {
+    const r = String(rule || '').toLowerCase();
+    if (r.includes('interdit')) return '🚫';
+    if (r.includes('silence')) return '🤫';
+    if (r.includes('obligatoire')) return '⚠️';
+    if (r.includes('durée') || r.includes('heure')) return '⏰';
+    if (r.includes('coefficient')) return '📊';
+    return 'ℹ️';
+  }, []);
 
   const examInfo = useMemo(() => {
     if (!exam) return null;
@@ -372,7 +392,7 @@ const ExamTake = () => {
     setQuestionResults({});
     setCurrentQ(0);
     setSecondsLeft(durationMin * 60);
-    setViewState('cover');
+    setViewState('preview');
 
     if (userId && examKey && exam) {
       try {
@@ -854,22 +874,6 @@ const ExamTake = () => {
 
   // ── Exam Intro splash ───────────────────────────────────────────────────
   if (viewState === 'cover') {
-    const sectionSummary = (exam.sections || []).map((sec, i) => ({
-      title: sec.section_title || `Section ${i + 1}`,
-      qCount: (sec.questions || []).length,
-    }));
-    const totalQ = sectionSummary.reduce((s, x) => s + x.qCount, 0);
-
-    const ruleIcon = (rule) => {
-      const r = rule.toLowerCase();
-      if (r.includes('interdit')) return '🚫';
-      if (r.includes('silence')) return '🤫';
-      if (r.includes('obligatoire')) return '⚠️';
-      if (r.includes('durée') || r.includes('heure')) return '⏰';
-      if (r.includes('coefficient')) return '📊';
-      return 'ℹ️';
-    };
-
     return (
       <section className="exam-cover" style={{ '--cover-accent': color }}>
         {/* Decorative background shapes */}
@@ -1041,8 +1045,8 @@ const ExamTake = () => {
         <div className="container">
           {/* Top bar — mobile-first compact */}
           <div className="exam-take__topbar exam-take__topbar--preview">
-            <button className="exam-take__back-btn" onClick={() => setViewState('cover')} type="button">
-              ← Retour
+            <button className="exam-take__back-btn" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
+              ← Examens
             </button>
             <div className="exam-take__topbar-center">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>
@@ -1055,6 +1059,124 @@ const ExamTake = () => {
           </div>
 
           <div className="exam-take__preview-scroll card">
+            {/* Inline intro (former cover) for a more uniform, single-flow layout */}
+            <div className="exam-take__preview-intro" style={{ '--cover-accent': color }}>
+              <div className="exam-cover__hero">
+                <div className="exam-cover__badge" style={{ background: color, color: '#fff' }}>
+                  {subject}
+                </div>
+                <h1 className="exam-cover__title">{normalizeExamTitle(exam)}</h1>
+                {exam.year && <p className="exam-cover__year">{exam.year}</p>}
+
+                <div className="exam-cover__stats">
+                  {durationMin > 0 && (
+                    <div className="exam-cover__stat">
+                      <span className="exam-cover__stat-value">{durationMin}</span>
+                      <span className="exam-cover__stat-label">minutes</span>
+                    </div>
+                  )}
+                  {exam.total_points > 0 && (
+                    <div className="exam-cover__stat">
+                      <span className="exam-cover__stat-value">{exam.total_points}</span>
+                      <span className="exam-cover__stat-label">points</span>
+                    </div>
+                  )}
+                  <div className="exam-cover__stat">
+                    <span className="exam-cover__stat-value">{totalQ}</span>
+                    <span className="exam-cover__stat-label">questions</span>
+                  </div>
+                  <div className="exam-cover__stat">
+                    <span className="exam-cover__stat-value">{sectionSummary.length}</span>
+                    <span className="exam-cover__stat-label">{sectionSummary.length > 1 ? 'sections' : 'section'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="exam-cover__body">
+                <div className="exam-cover__panel exam-cover__panel--sections">
+                  <h2 className="exam-cover__panel-heading">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                    Structure
+                  </h2>
+                  <ol className="exam-cover__section-list">
+                    {sectionSummary.map((sec, i) => (
+                      <li key={i} className="exam-cover__section-row">
+                        <span className="exam-cover__section-dot" style={{ background: color }} />
+                        <span className="exam-cover__section-name">{sec.title}</span>
+                        <span className="exam-cover__section-qty">{sec.qCount}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {examInfo?.rules?.length > 0 && (
+                  <div className="exam-cover__panel exam-cover__panel--rules">
+                    <h2 className="exam-cover__panel-heading">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Consignes
+                    </h2>
+                    <ul className="exam-cover__rules-list">
+                      {examInfo.rules.map((rule, i) => (
+                        <li key={i} className="exam-cover__rule-item">
+                          <span className="exam-cover__rule-icon">{ruleIcon(rule)}</span>
+                          <span>{rule}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="exam-cover__feedback-mode">
+                <h2 className="exam-cover__panel-heading">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Mode de correction
+                </h2>
+                <div className="exam-cover__feedback-options">
+                  <label
+                    className={`exam-cover__feedback-option ${feedbackMode === 'immediate' ? 'exam-cover__feedback-option--selected' : ''}`}
+                    style={feedbackMode === 'immediate' ? { borderColor: color, background: color + '0a' } : undefined}
+                  >
+                    <input
+                      type="radio"
+                      name="feedbackMode"
+                      value="immediate"
+                      checked={feedbackMode === 'immediate'}
+                      onChange={() => { setFeedbackMode('immediate'); localStorage.setItem('edlight-exam-feedback-mode', 'immediate'); }}
+                      className="exam-cover__feedback-radio"
+                    />
+                    <div className="exam-cover__feedback-content">
+                      <span className="exam-cover__feedback-icon">⚡</span>
+                      <div>
+                        <strong>Résultat immédiat</strong>
+                        <p>Voir la correction après chaque question</p>
+                      </div>
+                    </div>
+                  </label>
+                  <label
+                    className={`exam-cover__feedback-option ${feedbackMode === 'end' ? 'exam-cover__feedback-option--selected' : ''}`}
+                    style={feedbackMode === 'end' ? { borderColor: color, background: color + '0a' } : undefined}
+                  >
+                    <input
+                      type="radio"
+                      name="feedbackMode"
+                      value="end"
+                      checked={feedbackMode === 'end'}
+                      onChange={() => { setFeedbackMode('end'); localStorage.setItem('edlight-exam-feedback-mode', 'end'); }}
+                      className="exam-cover__feedback-radio"
+                    />
+                    <div className="exam-cover__feedback-content">
+                      <span className="exam-cover__feedback-icon">📋</span>
+                      <div>
+                        <strong>Résultat à la fin</strong>
+                        <p>Voir tous les résultats après avoir soumis l'examen</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <p className="exam-take__preview-hint">
               Parcourez les questions ci-dessous, puis cliquez sur <strong>Commencer</strong> quand vous êtes prêt.
             </p>
