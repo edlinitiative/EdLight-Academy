@@ -11,6 +11,16 @@ export default function DirectBankQuiz({ item, onScore }) {
   const [attempts, setAttempts] = useState(0);
   const maxAttempts = 3;
 
+  const derivedHints = useMemo(() => {
+    const base = Array.isArray(item?.hints) ? item.hints.filter(Boolean) : [];
+    if (base.length > 0) return base;
+    const fallback = [];
+    // Use feedback fields as progressive hints when structured hints are missing
+    if (item?.wrong) fallback.push(item.wrong);
+    if (item?.good && item.good !== item.wrong) fallback.push(item.good);
+    return fallback;
+  }, [item]);
+
   useEffect(() => {
     setSelected(null);
     setTextAns('');
@@ -57,7 +67,9 @@ export default function DirectBankQuiz({ item, onScore }) {
     return correct ? <span className="chip chip--success">✓ Correct</span> : <span className="chip chip--danger">Out of tries</span>;
   };
 
-  const hintToShow = !submitted && attempts > 0 && Array.isArray(item.hints) ? item.hints[Math.min(attempts - 1, item.hints.length - 1)] : '';
+  const hintToShow = !submitted && attempts > 0 && derivedHints.length
+    ? derivedHints[Math.min(attempts - 1, derivedHints.length - 1)]
+    : '';
   const correctAnswerDisplay = useMemo(() => {
     if (item.kind === 'mcq' || item.kind === 'tf') return item.correctLabel ?? (Array.isArray(item.options) ? item.options[item.correctIndex] : '');
     return item.correctText || '';
@@ -78,6 +90,12 @@ export default function DirectBankQuiz({ item, onScore }) {
 
       <div className="quiz-card__question" dangerouslySetInnerHTML={renderWithKatex(item.stem, katexReady)} />
 
+      {item.context ? (
+        <div className="hint-box" style={{ margin: '0.5rem 0' }}>
+          <strong>Contexte:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.context, katexReady)} />
+        </div>
+      ) : null}
+
       {(item.kind === 'mcq' || item.kind === 'tf') ? (
         <div className="quiz-card__options">
           {item.options.map((label, idx) => (
@@ -95,14 +113,19 @@ export default function DirectBankQuiz({ item, onScore }) {
           ))}
         </div>
       ) : (
-        <input
-          type="text"
-          className="input-field"
-          placeholder="Enter your answer"
-          value={textAns}
-          onChange={(e) => setTextAns(e.target.value)}
-          disabled={submitted}
-        />
+        <div className="exam-take__short-answer-wrap">
+          <textarea
+            className="exam-take__short-answer-input"
+            placeholder="Write your answer here…"
+            value={textAns}
+            onChange={(e) => setTextAns(e.target.value)}
+            disabled={submitted}
+            rows={3}
+          />
+          <div className="exam-take__short-answer-wordcount">
+            {(textAns || '').trim().split(/\s+/).filter(Boolean).length} word{(textAns || '').trim().split(/\s+/).filter(Boolean).length === 1 ? '' : 's'}
+          </div>
+        </div>
       )}
 
       {hintToShow && (

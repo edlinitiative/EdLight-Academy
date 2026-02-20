@@ -15,6 +15,12 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
 
   const rows = useMemo(() => {
     if (!quizBank || !subjectCode) return [];
+
+    const toInt = (v) => {
+      if (v == null || v === '') return null;
+      const m = String(v).match(/\d+/);
+      return m ? parseInt(m[0], 10) : null;
+    };
     
     let unitRows = [];
     
@@ -29,26 +35,24 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     // If still no rows and we have chapterNumber, try filtering by Chapter_Number field
     if (unitRows.length === 0 && chapterNumber != null) {
       const subjectRows = (quizBank.bySubject?.[subjectCode] || []).slice();
+      const targetChapter = toInt(chapterNumber);
       
       unitRows = subjectRows.filter((row) => {
         const chapterField = row.Chapter_Number || row.chapter_number || row.chapterNo || row.chapter || '';
-        const chapterStr = String(chapterField).trim();
-        
-        if (chapterStr === String(chapterNumber)) return true;
-        
-        const dotMatch = chapterStr.match(/^(\d+)[\.-]/);
-        if (dotMatch && dotMatch[1] === String(chapterNumber)) return true;
-        
-        return false;
+        const chapterInt = toInt(chapterField);
+        if (targetChapter == null || chapterInt == null) return false;
+        return chapterInt === targetChapter;
       });
     }
     
     // Filter by subchapter if provided (for video-specific practice)
     if (subchapterNumber != null && unitRows.length > 0) {
+      const targetSub = toInt(subchapterNumber);
       unitRows = unitRows.filter((row) => {
         const subchapterField = row.Subchapter_Number || row.subchapter_number || row.subchapterNo || '';
-        const subchapterStr = String(subchapterField).trim();
-        return subchapterStr && subchapterStr === String(subchapterNumber);
+        const subInt = toInt(subchapterField);
+        if (targetSub == null || subInt == null) return false;
+        return subInt === targetSub;
       });
     }
     

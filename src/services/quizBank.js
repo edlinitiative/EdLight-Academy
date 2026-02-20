@@ -459,10 +459,33 @@ function matchVideoForRow(row, videos) {
 }
 
 export function normalizeAndIndexQuizBank(rows, videos = []) {
+  const normalizeSubjectCode = (raw) => {
+    const s = String(raw || '').trim();
+    if (!s) return '';
+    const t = s.replace(/_/g, '-').replace(/\s+/g, '').toUpperCase();
+    const m = t.match(/^([A-Z]+)-?NS(IV|III|II|I|4|3|2|1)$/);
+    if (m) {
+      const subj = m[1];
+      const lvl = m[2];
+      const roman = lvl === '1' ? 'I' : lvl === '2' ? 'II' : lvl === '3' ? 'III' : lvl === '4' ? 'IV' : lvl;
+      return `${subj}-NS${roman}`;
+    }
+    // If already looks like SUBJ-LEVEL, keep best-effort normalization for subject.
+    const parts = t.split('-').filter(Boolean);
+    if (parts.length >= 2) return `${parts[0]}-${parts.slice(1).join('-')}`;
+    return t;
+  };
+
+  const chapterToUnitNo = (row) => {
+    const raw = String(pick(row, ['Chapter_Number', 'chapter_number', 'chapterNo', 'chapter'], '')).trim();
+    const m = raw.match(/\d+/);
+    return m ? m[0] : '';
+  };
+
   const rowsNorm = rows.map((r) => {
     const subjectCode = (() => {
       const code = (r.subject_code || r.course_code || '').toString().trim();
-      if (code) return code;
+      if (code) return normalizeSubjectCode(code);
       // derive
       const base = String(r.subject || '').toLowerCase();
       const subj = base.includes('chem') || base.includes('chim') ? 'CHEM'
@@ -485,6 +508,13 @@ export function normalizeAndIndexQuizBank(rows, videos = []) {
       if (m2) return m2[1];
       return '';
     })();
+
+    // If unit is not explicit, use Chapter_Number (the canonical unit index in regenerated quizzes)
+    if (!unitNo) {
+      const ch = chapterToUnitNo(r);
+      if (ch) unitNo = ch;
+    }
+
     let videoId = '';
     const mv = matchVideoForRow(r, videos);
     if (mv) {
