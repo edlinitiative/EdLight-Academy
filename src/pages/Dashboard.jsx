@@ -70,19 +70,35 @@ export default function Dashboard() {
 
         <div className="grid grid--metrics">
           <div className="metric-card">
-            <div className="metric-card__icon" aria-hidden>📚</div>
+            <div className="metric-card__icon" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+            </div>
             <span className="metric-card__eyebrow">Courses in progress</span>
             <span className="metric-card__value">{coursesInProgress}</span>
             <span className="metric-card__caption">Stay consistent to unlock mastery badges.</span>
           </div>
-          <div className="metric-card">
-            <div className="metric-card__icon" aria-hidden>✅</div>
+          <div className="metric-card metric-card--green">
+            <div className="metric-card__icon" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="m9 12 2 2 4-4"/>
+              </svg>
+            </div>
             <span className="metric-card__eyebrow">Quizzes completed</span>
             <span className="metric-card__value">{quizzesTaken}</span>
             <span className="metric-card__caption">Practice makes perfect — keep the streak alive.</span>
           </div>
-          <div className="metric-card">
-            <div className="metric-card__icon" aria-hidden>🎯</div>
+          <div className="metric-card metric-card--purple">
+            <div className="metric-card__icon" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+            </div>
             <span className="metric-card__eyebrow">Average score</span>
             <span className="metric-card__value">{avgScore}%</span>
             <span className="metric-card__caption">Aim for 85%+ to unlock advanced lessons.</span>
