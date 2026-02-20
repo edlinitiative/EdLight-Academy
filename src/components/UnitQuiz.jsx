@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import DirectBankQuiz from './DirectBankQuiz';
 import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';
 import { toDirectItemFromRow } from '../services/quizBank';
@@ -64,12 +64,14 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   const [score, setScore] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
   const [finished, setFinished] = useState(false);
+  const startedAtRef = useRef(Date.now());
 
   useEffect(() => {
     setIdx(0);
     setScore(0);
     setCanAdvance(false);
     setFinished(false);
+    startedAtRef.current = Date.now();
   }, [subjectCode, unitId]);
 
   // Track quiz completion
@@ -77,12 +79,13 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     if (finished && user?.uid && courseId && items.length > 0) {
       const quizId = `${subjectCode}-U${chapterNumber}${subchapterNumber ? `-L${subchapterNumber}` : ''}`;
       const percentage = (score / items.length) * 100;
+      const timeSpent = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
       
       trackQuizAttempt(user.uid, courseId, quizId, {
         score,
         totalQuestions: items.length,
         percentage,
-        timeSpent: 0 // Could track this with a timer if needed
+        timeSpent
       }).catch(err => {
         console.error('[UnitQuiz] Error tracking quiz attempt:', err);
       });

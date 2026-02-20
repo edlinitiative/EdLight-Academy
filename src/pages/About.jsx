@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSiteStatCards } from '../hooks/useSiteStats';
 
 const APPROACH_ITEMS = [
   {
@@ -48,13 +49,7 @@ const VALUES = [
 
 export default function About() {
   const navigate = useNavigate();
-
-  const stats = [
-    { number: '1,000+', label: 'Active Students' },
-    { number: '40+', label: 'Video Lessons' },
-    { number: '200+', label: 'Practice Exercises' },
-    { number: '4', label: 'Core Subjects' }
-  ];
+  const { cards, counts } = useSiteStatCards();
 
   return (
     <div className="section">
@@ -73,9 +68,9 @@ export default function About() {
 
         {/* Stats */}
         <section className="about-stats">
-          {stats.map((stat) => (
-            <div key={stat.label} className="card text-center">
-              <div className="about-stats__number">{stat.number}</div>
+          {cards.map((stat) => (
+            <div key={stat.key} className="card text-center">
+              <div className="about-stats__number">{stat.value}</div>
               <div className="about-stats__label">{stat.label}</div>
             </div>
           ))}
@@ -124,7 +119,9 @@ export default function About() {
         <section className="card about-cta text-center">
           <h2 className="section__title">Prêt à commencer ?</h2>
           <p className="text-muted" style={{ marginTop: '0.5rem', marginBottom: '1.5rem', fontSize: '1rem' }}>
-            Rejoignez plus de 1 000 élèves qui apprennent avec EdLight Academy.
+            {Number.isFinite(counts?.activeStudentsThisTerm) && counts.activeStudentsThisTerm >= 1000
+              ? `Rejoignez plus de ${new Intl.NumberFormat('en-US').format(Math.round(counts.activeStudentsThisTerm))} élèves qui apprennent avec EdLight Academy.`
+              : 'Rejoignez des élèves à travers Haïti qui apprennent avec EdLight Academy.'}
           </p>
           <button
             className="button button--primary button--pill"

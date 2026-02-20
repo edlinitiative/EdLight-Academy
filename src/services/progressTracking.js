@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import { notifyAchievement, notifyStreak } from './notificationService';
 
 /**
@@ -133,19 +133,67 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
   try {
     const progressRef = doc(db, 'users', userId, 'progress', courseId);
     const progressDoc = await getDoc(progressRef);
+
+    // Ensure progress doc exists so updateDoc doesn't fail on first-ever attempt.
+    if (!progressDoc.exists()) {
+      await setDoc(progressRef, {
+        courseId,
+        enrolledAt: serverTimestamp(),
+        lastAccessedAt: serverTimestamp(),
+        lastStudyDate: serverTimestamp(),
+        completedLessons: [],
+        watchedVideos: {},
+        quizAttempts: {},
+        totalPoints: 0,
+        badges: [],
+        currentStreak: 1,
+        longestStreak: 1
+      }, { merge: true });
+    }
+
+    // Write an immutable attempt document for long-term improvement tracking.
+    // Security rules should allow owner create/read and deny update/delete.
+    try {
+      const pct = typeof attemptData.percentage === 'number'
+        ? attemptData.percentage
+        : ((attemptData.score / attemptData.totalQuestions) * 100);
+      await addDoc(collection(db, 'users', userId, 'quizAttempts'), {
+        courseId,
+        quizId,
+        score: attemptData.score,
+        totalQuestions: attemptData.totalQuestions,
+        percentage: pct,
+        timeSpent: attemptData.timeSpent || 0,
+        attemptedAt: serverTimestamp(),
+        attemptedAtMs: Date.now()
+      });
+    } catch (attemptWriteError) {
+      console.warn('[Progress] Failed to write immutable quizAttempt doc:', attemptWriteError);
+    }
     
     const quizAttempts = progressDoc.exists() ? (progressDoc.data().quizAttempts || {}) : {};
     
     if (!quizAttempts[quizId]) {
       quizAttempts[quizId] = { attempts: [] };
     }
-    
-    quizAttempts[quizId].attempts.push({
+
+    // Keep only a small rolling window in the progress doc to avoid unbounded growth.
+    const nextAttempt = {
       attemptedAt: new Date(),
+      attemptedAtMs: Date.now(),
       score: attemptData.score,
       totalQuestions: attemptData.totalQuestions,
+      percentage: typeof attemptData.percentage === 'number'
+        ? attemptData.percentage
+        : ((attemptData.score / attemptData.totalQuestions) * 100),
       timeSpent: attemptData.timeSpent || 0
-    });
+    };
+    const existingAttempts = Array.isArray(quizAttempts[quizId].attempts)
+      ? quizAttempts[quizId].attempts
+      : [];
+    const MAX_EMBEDDED_ATTEMPTS = 20;
+    const trimmed = [...existingAttempts, nextAttempt].slice(-MAX_EMBEDDED_ATTEMPTS);
+    quizAttempts[quizId].attempts = trimmed;
     
     await updateDoc(progressRef, {
       quizAttempts,
@@ -154,7 +202,9 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
     });
     
     // Award points based on score
-    const percentage = (attemptData.score / attemptData.totalQuestions) * 100;
+    const percentage = typeof attemptData.percentage === 'number'
+      ? attemptData.percentage
+      : (attemptData.score / attemptData.totalQuestions) * 100;
     let points = 0;
     if (percentage >= 90) points = 50;
     else if (percentage >= 80) points = 40;

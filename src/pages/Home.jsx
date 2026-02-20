@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
+import { useSiteStatCards } from '../hooks/useSiteStats';
 
 export default function Home() {
   const navigate = useNavigate();
   const { toggleAuthModal, isAuthenticated } = useStore();
   const [heroSrc, setHeroSrc] = useState('/assets/student-hero.jpg');
+
+  const { cards, masteryRatePercent } = useSiteStatCards();
+
+  // Keep the hero card layout stable: show up to 2 metrics.
+  const preferredOrder = ['students', 'quizzes', 'videos', 'courses', 'exams', 'tracks'];
+  const ordered = preferredOrder
+    .map((k) => cards.find((c) => c.key === k))
+    .filter(Boolean);
+  const snapshotCards = ordered.slice(0, 2);
   
   // Home is a static, single-screen hero. No course listing here.
 
@@ -38,17 +48,17 @@ export default function Home() {
             <div className="hero-card">
               <div className="hero-card__header">
                 <span className="hero-card__badge">Live Academy Snapshot</span>
-                <span className="chip chip--success">92% mastery rate</span>
+                {Number.isFinite(masteryRatePercent)
+                  ? <span className="chip chip--success">{Math.round(masteryRatePercent)}% mastery rate</span>
+                  : null}
               </div>
               <div className="hero-card__metric">
-                <div className="hero-card__metric-item">
-                  <h4>1,200+</h4>
-                  <p>Active learners this term</p>
-                </div>
-                <div className="hero-card__metric-item">
-                  <h4>200+</h4>
-                  <p>Micro-quizzes to check understanding</p>
-                </div>
+                {snapshotCards.map((m) => (
+                  <div key={m.key} className="hero-card__metric-item">
+                    <h4>{m.value}</h4>
+                    <p>{m.label}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

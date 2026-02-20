@@ -1,0 +1,31 @@
+name: Update Site Stats
+
+on:
+  # 1st of every month at 03:00 UTC
+  schedule:
+    - cron: '0 3 1 * *'
+  # Also allow manual runs from the GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  update-stats:
+    name: Refresh siteStats/public in Firestore
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update site stats
+        run: npm run update:site-stats
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}

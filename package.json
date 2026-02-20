@@ -8,6 +8,7 @@
     "@tanstack/react-query": "^4.35.3",
     "axios": "^1.5.0",
     "firebase": "^12.4.0",
+    "firebase-admin": "^12.7.0",
     "i18next": "^23.5.1",
     "katex": "^0.16.28",
     "mathjs": "^15.1.1",
@@ -46,6 +47,7 @@
     "build": "webpack --mode production",
     "test": "jest",
     "lint": "eslint src",
+    "update:site-stats": "node scripts/update_site_stats.mjs",
     "ensure:exam-ids": "node scripts/ensure_exam_ids.mjs"
   },
   "eslintConfig": {
