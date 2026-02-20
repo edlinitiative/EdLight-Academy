@@ -7,7 +7,7 @@ const useStore = create(
       // User state
       user: null,
       isAuthenticated: false,
-      language: 'en', // Default to English
+      language: 'fr', // Langue par défaut : français
       hydrated: false,
       track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
       onboardingCompleted: false,

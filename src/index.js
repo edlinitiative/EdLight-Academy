@@ -7,6 +7,10 @@ import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
 import { onAuthStateChange, upsertUserDocument } from './services/firebase';
 
+function getDefaultStudentName(language) {
+  return language === 'ht' ? 'Elèv' : 'Élève';
+}
+
 const initViewportHeightVar = () => {
   const root = document.documentElement;
   let rafId = null;
@@ -51,6 +55,9 @@ root.render(
 // Ensure store marks as hydrated and syncs isAuthenticated from persisted user on boot
 setTimeout(() => {
   const state = useStore.getState();
+  if (state.language === 'en') {
+    useStore.setState({ language: 'fr' });
+  }
   if (!state.hydrated) {
     useStore.setState({ hydrated: true, isAuthenticated: !!state.user });
   } else if (state.isAuthenticated !== !!state.user) {
@@ -71,7 +78,7 @@ onAuthStateChange(async (user) => {
     
     setUser({
       uid: user.uid,
-      name: user.displayName || 'Student',
+      name: user.displayName || getDefaultStudentName(useStore.getState().language),
       email: user.email || '',
       picture: user.photoURL || '',
     });

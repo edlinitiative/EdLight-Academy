@@ -26,7 +26,9 @@ export default function DirectBankQuiz({ item, onScore }) {
       isCorrect = selected === item.correctIndex;
     } else {
       const norm = (s) => String(s || '').trim().toLowerCase();
-      isCorrect = norm(textAns) === norm(item.correctText);
+      const target = norm(item.correctText);
+      const alt = Array.isArray(item.alternatives) ? item.alternatives.map(norm).filter(Boolean) : [];
+      isCorrect = norm(textAns) === target || alt.includes(norm(textAns));
     }
     if (isCorrect) {
       setSubmitted(true);

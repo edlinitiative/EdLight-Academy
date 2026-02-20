@@ -188,6 +188,28 @@ export function toDirectItemFromRow(row) {
   const qTypeRaw = String(pick(row, ['question_type', 'type', 'qtype'], '')).trim().toLowerCase();
   const good = String(pick(row, ['good_response', 'good', 'explanation'], '')).trim();
   const wrong = String(pick(row, ['wrong_response', 'wrong', 'feedback'], '')).trim();
+  const alternatives = (() => {
+    const raw = pick(row, ['alternatives', 'acceptable_answers', 'acceptable', 'alts'], '');
+    if (!raw) return [];
+    // Prefer JSON array stored as string
+    if (typeof raw === 'string') {
+      const t = raw.trim();
+      if (!t) return [];
+      if (t.startsWith('[') && t.endsWith(']')) {
+        try {
+          const arr = JSON.parse(t);
+          if (Array.isArray(arr)) return arr.map((v) => String(v)).filter(Boolean);
+        } catch {
+          // fall through
+        }
+      }
+      // Fallback: pipe/semicolon separated
+      if (t.includes('|')) return t.split('|').map((s) => s.trim()).filter(Boolean);
+      if (t.includes(';')) return t.split(';').map((s) => s.trim()).filter(Boolean);
+    }
+    if (Array.isArray(raw)) return raw.map((v) => String(v)).filter(Boolean);
+    return [];
+  })();
   const hints = [];
   for (const hk of ['hint', 'hint1', 'hint_1', 'hint2', 'hint_2', 'hint3', 'hint_3', 'rationale']) {
     const h = pick(row, [hk], '');
@@ -252,7 +274,7 @@ export function toDirectItemFromRow(row) {
   }
 
   if (qTypeRaw === 'shortanswer' || qTypeRaw === 'short' || qTypeRaw === 'sa' || (labels.length === 0 && correctRaw)) {
-    return { kind: 'short', stem, context, correctText: correctRaw, hints, good, wrong };
+    return { kind: 'short', stem, context, correctText: correctRaw, alternatives, hints, good, wrong };
   }
 
   if (qTypeRaw === 'essay' || qTypeRaw === 'long-form' || qTypeRaw === 'long_form') {

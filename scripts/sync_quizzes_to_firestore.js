@@ -7,11 +7,16 @@ const fs = require('fs');
 const path = require('path');
 
 // Read the quiz CSV
-const csvPath = path.join(__dirname, '../private_data/edlight_quizzes.csv');
+const regeneratedPath = path.join(__dirname, '../private_data/edlight_quizzes_regenerated.csv');
+const legacyPath = path.join(__dirname, '../private_data/edlight_quizzes.csv');
+
+const csvPath = fs.existsSync(regeneratedPath) ? regeneratedPath : legacyPath;
 
 if (!fs.existsSync(csvPath)) {
   console.error('❌ Quiz CSV not found at:', csvPath);
-  console.log('💡 Make sure you have the quiz CSV in private_data/edlight_quizzes.csv');
+  console.log('💡 Expected one of:');
+  console.log('   - private_data/edlight_quizzes_regenerated.csv (preferred)');
+  console.log('   - private_data/edlight_quizzes.csv');
   process.exit(1);
 }
 

@@ -414,7 +414,7 @@ export async function addComment(threadKey, text, user) {
       threadKey,
       text: text.trim(),
       authorId: user.uid,
-      authorName: user.displayName || user.email?.split('@')[0] || 'Student',
+      authorName: user.displayName || user.email?.split('@')[0] || 'Élève',
       authorEmail: user.email,
       created_at: serverTimestamp(),
       updated_at: serverTimestamp(),
@@ -449,7 +449,7 @@ export async function addReply(commentId, text, user) {
     const replyData = {
       text: text.trim(),
       authorId: user.uid,
-      authorName: user.displayName || user.email?.split('@')[0] || 'Student',
+      authorName: user.displayName || user.email?.split('@')[0] || 'Élève',
       authorEmail: user.email,
       created_at: serverTimestamp(),
       updated_at: serverTimestamp()

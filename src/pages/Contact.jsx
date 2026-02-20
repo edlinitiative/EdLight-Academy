@@ -11,7 +11,7 @@ export default function Contact() {
   const handleSubmit = (e) => {
     e.preventDefault();
     // Build a mailto link so users can contact without a backend
-    const subj = encodeURIComponent(subject || `EdLight Academy Contact from ${name || 'Prospective Student'}`);
+    const subj = encodeURIComponent(subject || `EdLight Academy Contact de la part de ${name || 'Futur(e) élève / Elèv kap vini'}`);
     const bodyLines = [
       name ? `Name: ${name}` : null,
       email ? `Email: ${email}` : null,

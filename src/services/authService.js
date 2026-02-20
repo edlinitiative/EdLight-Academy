@@ -26,6 +26,11 @@ async function syncUserProfile(uid) {
   }
 }
 
+function getDefaultStudentName() {
+  const language = useStore.getState().language;
+  return language === 'ht' ? 'Elèv' : 'Élève';
+}
+
 export async function loginWithEmailPassword(email, password) {
   try {
     const result = await signIn(email, password);
@@ -39,7 +44,7 @@ export async function loginWithEmailPassword(email, password) {
     
     return {
       uid: user.uid,
-      name: user.displayName || 'Student',
+      name: user.displayName || getDefaultStudentName(),
       email: user.email || '',
       picture: user.photoURL || '',
     };
@@ -58,7 +63,7 @@ export async function registerWithEmailPassword(email, password, name) {
     
     return {
       uid: user.uid,
-      name: name || user.displayName || 'Student',
+      name: name || user.displayName || getDefaultStudentName(),
       email: user.email || '',
       picture: user.photoURL || '',
     };
@@ -83,7 +88,7 @@ export async function loginWithGoogle() {
     
     return {
       uid: user.uid,
-      name: user.displayName || 'Student',
+      name: user.displayName || getDefaultStudentName(),
       email: user.email || '',
       picture: user.photoURL || '',
     };
@@ -107,7 +112,7 @@ export function getAuthUser() {
   
   return {
     uid: user.uid,
-    name: user.displayName || 'Student',
+    name: user.displayName || getDefaultStudentName(),
     email: user.email || '',
     picture: user.photoURL || '',
   };

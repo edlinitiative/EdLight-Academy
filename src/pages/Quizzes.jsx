@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { useAppData } from '../hooks/useData';
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
+  const location = useLocation();
   const { data: appData } = useAppData();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
@@ -13,6 +15,9 @@ const Quizzes = () => {
   const [level, setLevel] = useState('');
   const [unit, setUnit] = useState('');
 
+  const [queryDefaultsApplied, setQueryDefaultsApplied] = useState(false);
+  const [pendingUnit, setPendingUnit] = useState(null);
+
   // Derived options
   const subjectOptions = useMemo(() => {
     const uniq = new Map();
@@ -21,6 +26,33 @@ const Quizzes = () => {
     const arr = Array.from(uniq.values());
     return arr.map((s) => ({ value: s, label: friendly[s] || s }));
   }, [courses]);
+
+  const queryDefaults = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      course: (params.get('course') || '').trim(),
+      unit: (params.get('unit') || '').trim(),
+    };
+  }, [location.search]);
+
+  // Apply deep-link defaults once (e.g. /quizzes?course=CHEM-NSII&unit=U3)
+  useEffect(() => {
+    if (queryDefaultsApplied) return;
+    if (!subjectOptions.length) return;
+
+    const { course, unit: qUnit } = queryDefaults;
+    if (course) {
+      const [subj, lvl] = course.split('-');
+      if (subj) setSubjectBase(subj);
+      if (lvl) setLevel(lvl);
+    }
+
+    if (qUnit) {
+      setPendingUnit(qUnit);
+    }
+
+    setQueryDefaultsApplied(true);
+  }, [queryDefaultsApplied, queryDefaults, subjectOptions]);
 
   // Initialize defaults when data loads
   useEffect(() => {
@@ -55,10 +87,24 @@ const Quizzes = () => {
   }, [courses, courseCode]);
 
   useEffect(() => {
+    const normalize = (v) => String(v || '').trim().toLowerCase();
+
+    if (pendingUnit) {
+      const target = normalize(pendingUnit);
+      const match = unitOptions.find((o) => normalize(o.value) === target || normalize(o.label) === target);
+      if (match) {
+        setUnit(match.value);
+        setPendingUnit(null);
+        return;
+      }
+      // Don't override unit while waiting for options to catch up.
+      if (unit) return;
+    }
+
     if (!unitOptions.find((o) => o.value === unit)?.value) {
       setUnit(unitOptions[0]?.value || '');
     }
-  }, [unitOptions, unit]);
+  }, [unitOptions, unit, pendingUnit]);
 
   // Availability counts
   const counts = useMemo(() => {

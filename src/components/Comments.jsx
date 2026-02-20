@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addComment, addReply, subscribeToComments, subscribeToReplies } from '../services/firebase';
 import { getCurrentUser } from '../services/firebase';
+import useStore from '../contexts/store';
 
 function timeAgo(timestamp) {
   // Handle Firestore Timestamp objects
@@ -27,6 +28,8 @@ function timeAgo(timestamp) {
 }
 
 export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) {
+  const language = useStore((s) => s.language);
+  const defaultAuthorName = language === 'ht' ? 'Elèv' : 'Élève';
   const [comments, setComments] = useState([]);
   const [commentReplies, setCommentReplies] = useState({}); // {commentId: [replies]}
   const [draft, setDraft] = useState('');
@@ -165,7 +168,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
                 <div className="comment__avatar" aria-hidden>💬</div>
                 <div className="comment__body">
                   <div className="comment__meta">
-                    <strong>{c.authorName || 'Student'}</strong>
+                    <strong>{c.authorName || defaultAuthorName}</strong>
                     <span className="text-muted">· {timeAgo(c.created_at)}</span>
                   </div>
                   <div className="comment__text">{c.text}</div>
@@ -189,7 +192,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
                           <div className="comment__avatar" aria-hidden>↳</div>
                           <div className="comment__body">
                             <div className="comment__meta">
-                              <strong>{r.authorName || 'Student'}</strong>
+                              <strong>{r.authorName || defaultAuthorName}</strong>
                               <span className="text-muted">· {timeAgo(r.created_at)}</span>
                             </div>
                             <div className="comment__text">{r.text}</div>
