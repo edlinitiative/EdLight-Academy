@@ -1315,6 +1315,12 @@ body {
     min-width: 0;
     overflow: hidden;
   }
+
+  .lesson-list__subtitle {
+    font-size: 12px;
+    line-height: 1.2;
+    color: #6b7280;
+  }
   
   .lesson-list__title {
     font-size: 0.9375rem;
@@ -1333,6 +1339,10 @@ body {
   
   .lesson-list__item--active .lesson-list__title {
     color: var(--primary-600);
+    font-weight: 600;
+  }
+
+  .lesson-list__item--module.lesson-list__item--active .lesson-list__title {
     font-weight: 700;
   }
   
@@ -1376,7 +1386,7 @@ body {
     }
   }
   
-  .lesson-list__children .lesson-list__item {
+  .lesson-list__children .lesson-list__item--lesson {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
     min-height: 48px;
@@ -1385,11 +1395,11 @@ body {
     align-items: flex-start;
   }
   
-  .lesson-list__children .lesson-list__item:last-child {
+  .lesson-list__children .lesson-list__item--lesson:last-child {
     border-bottom: none;
   }
   
-  .lesson-list__children .lesson-list__item:active {
+  .lesson-list__children .lesson-list__item--lesson:active {
     background: #f5f5f5;
   }
   

@@ -181,6 +181,7 @@ export default function CourseSidebar({
           renderRows.map(({ module, idx, isExpanded, lessonsToShow }) => {
             const isActiveModule = idx === activeModule;
             const hasLessons = Array.isArray(module.lessons) && module.lessons.length > 0;
+            const childrenId = `module-lessons-${module.id ?? idx}`;
             const moduleLessonCount = module.lessons?.length || 0;
             const moduleCompletedCount =
               isEnrolled && progress
@@ -193,7 +194,9 @@ export default function CourseSidebar({
               <div key={module.id ?? idx} className="lesson-list__group">
                 <button
                   data-nav
-                  className={`lesson-list__item ${isActiveModule ? 'lesson-list__item--active' : ''} ${isExpanded ? 'is-expanded' : ''}`}
+                  className={`lesson-list__item lesson-list__item--module ${isActiveModule ? 'lesson-list__item--active' : ''} ${isExpanded ? 'is-expanded' : ''}`}
+                  aria-expanded={hasLessons ? isExpanded : undefined}
+                  aria-controls={hasLessons ? childrenId : undefined}
                   onClick={() => {
                     if (lowerQuery) {
                       // In search mode navigate to the module's first lesson
@@ -221,26 +224,23 @@ export default function CourseSidebar({
                   <span className="lesson-list__index">{String(idx + 1).padStart(2, '0')}</span>
                   <span className="lesson-list__meta">
                     <span className="lesson-list__title">{module.title}</span>
+                    <span className="lesson-list__subtitle">
+                      {module.duration
+                        ? `${module.duration} min`
+                        : module.readingTime
+                          ? `${module.readingTime} min read`
+                          : moduleCompletedCount !== null && moduleLessonCount > 0
+                            ? `${moduleCompletedCount} / ${moduleLessonCount} completed`
+                            : moduleLessonCount > 0
+                              ? `${moduleLessonCount} lesson${moduleLessonCount === 1 ? '' : 's'}`
+                              : 'Coming soon'}
+                    </span>
                   </span>
-                  <span className="lesson-list__duration">
-                    {module.duration
-                      ? `${module.duration} min`
-                      : module.readingTime
-                        ? `${module.readingTime} min read`
-                        : moduleCompletedCount !== null && moduleLessonCount > 0
-                          ? `${moduleCompletedCount} / ${moduleLessonCount}`
-                          : moduleLessonCount > 0
-                            ? `${moduleLessonCount} lesson${moduleLessonCount === 1 ? '' : 's'}`
-                            : 'Coming soon'}
-                  </span>
-                  {isActiveModule && (!isExpanded || !hasLessons) && (
-                    <span className="chip chip--ghost">Current</span>
-                  )}
                   <span className="lesson-list__chevron" aria-hidden>▸</span>
                 </button>
 
                 {lessonsToShow && (
-                  <div className="lesson-list__children">
+                  <div className="lesson-list__children" id={childrenId}>
                     {lessonsToShow.map(({ lsn, lidx }) => {
                       const isActiveLesson = isActiveModule && lidx === activeLesson;
                       const isCompleted = progress?.completedLessons?.includes(lsn.id) || false;
@@ -250,7 +250,7 @@ export default function CourseSidebar({
                           data-nav
                           ref={isActiveLesson ? activeLessonRef : null}
                           type="button"
-                          className={`lesson-list__item ${isActiveLesson ? 'lesson-list__item--active' : ''} ${isCompleted ? 'lesson-list__item--completed' : ''}`}
+                          className={`lesson-list__item lesson-list__item--lesson ${isActiveLesson ? 'lesson-list__item--active' : ''} ${isCompleted ? 'lesson-list__item--completed' : ''}`}
                           onClick={() => {
                             onSelectLesson(idx, lidx);
                             onOpenChange(false);
