@@ -31,6 +31,30 @@ export function Navbar() {
     }
   }, [showUserDropdown]);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setShowMobileMenu(false);
+  }, [pathname]);
+
+  // Lock scroll when mobile menu is open + allow ESC to close
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setShowMobileMenu(false);
+    };
+
+    if (showMobileMenu) {
+      document.body.classList.add('no-scroll');
+      document.addEventListener('keydown', onKeyDown);
+      return () => {
+        document.body.classList.remove('no-scroll');
+        document.removeEventListener('keydown', onKeyDown);
+      };
+    }
+
+    document.body.classList.remove('no-scroll');
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [showMobileMenu]);
+
   const handleLogout = async () => {
     try {
       await logoutUser();
@@ -55,10 +79,12 @@ export function Navbar() {
         </Link>
 
         {/* Mobile Menu Toggle Button */}
-        <button 
+        <button
           className="mobile-menu-toggle"
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
-          aria-label="Toggle menu"
+          onClick={() => setShowMobileMenu((v) => !v)}
+          aria-label={showMobileMenu ? 'Fermer le menu' : 'Ouvrir le menu'}
+          aria-controls="primary-navigation"
+          aria-expanded={showMobileMenu}
         >
           {showMobileMenu ? (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -74,7 +100,7 @@ export function Navbar() {
           )}
         </button>
 
-        <nav className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`}>
+        <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`}>
           <Link 
             to="/courses" 
             className={['nav-link', isActive('/courses') ? 'active' : ''].join(' ')}

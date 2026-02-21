@@ -2185,6 +2185,20 @@ body {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(8px);
   }
+
+  .logo,
+  .logo__text {
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .logo__image {
+    /* Use the existing blue logo asset, but render it white on dark */
+    filter: brightness(0) invert(1);
+  }
+
+  .mobile-menu-toggle {
+    color: rgba(255, 255, 255, 0.95);
+  }
   
   .modal,
   .modal__content {
