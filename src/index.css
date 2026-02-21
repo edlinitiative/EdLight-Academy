@@ -1453,6 +1453,27 @@ textarea.input-field {
 	border-color: rgba(0, 0, 0, 0.2);
 }
 
+/* Under-video nav/actions: flat (no boxed background) */
+.lesson-card__nav .lesson-card__nav-flat {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+}
+
+.lesson-card__nav .lesson-card__nav-flat:hover:not(:disabled) {
+	transform: none;
+	box-shadow: none;
+	background: transparent;
+	color: var(--primary-600);
+}
+
+.lesson-card__nav .lesson-card__nav-flat.button--primary {
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	color: var(--primary-600);
+}
+
 .lesson-card__lessons {
 	display: grid;
 	gap: 1rem;

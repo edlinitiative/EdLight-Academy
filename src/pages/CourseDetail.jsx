@@ -284,7 +284,7 @@ export default function CourseDetail() {
                 {(prevTarget || nextTarget) && (
                   <div className="lesson-card__nav-group lesson-card__nav-group--navigation">
                     <button
-                      className="button button--ghost button--sm"
+                      className="button button--ghost button--sm lesson-card__nav-flat"
                       onClick={() => {
                         if (prevTarget) {
                           setActiveModule(prevTarget.module);
@@ -297,7 +297,7 @@ export default function CourseDetail() {
                       ← Previous
                     </button>
                     <button
-                      className="button button--ghost button--sm"
+                      className="button button--ghost button--sm lesson-card__nav-flat"
                       onClick={() => {
                         if (nextTarget) {
                           setActiveModule(nextTarget.module);
@@ -326,19 +326,17 @@ export default function CourseDetail() {
                   {hasQuiz && (
                     <>
                       <button
-                        className="button button--ghost button--sm"
+                        className="button button--ghost button--sm lesson-card__nav-flat"
                         onClick={() => setShowFlashcards(true)}
                         title="Study with flashcards"
                       >
-                        <span className="button-icon">📇</span>
                         <span className="button-text">Flashcards</span>
                       </button>
                       <button
-                        className="button button--primary button--sm"
+                        className="button button--primary button--sm lesson-card__nav-flat"
                         onClick={() => setShowQuiz(true)}
                         title="Practice with quiz"
                       >
-                        <span className="button-icon">📝</span>
                         <span className="button-text">Practice</span>
                       </button>
                     </>

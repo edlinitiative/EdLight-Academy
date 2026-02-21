@@ -989,6 +989,23 @@ body {
     color: var(--primary-600);
     transition: all 0.2s ease;
   }
+
+  /* Under-video nav/actions: flat (no boxed background) */
+  .lesson-card__nav .lesson-card__nav-flat {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .lesson-card__nav .lesson-card__nav-flat:active:not(:disabled) {
+    background: transparent !important;
+    transform: none;
+    box-shadow: none !important;
+  }
+
+  .lesson-card__nav .lesson-card__nav-flat.button--primary {
+    color: var(--primary-600);
+  }
   
   .lesson-card__nav-group--navigation .button:active:not(:disabled) {
     background: var(--primary-600);
@@ -1072,16 +1089,9 @@ body {
   
   /* Show only icons on very small screens */
   @media (max-width: 360px) {
-    .lesson-card__nav-group--actions .button-text {
-      display: none;
-    }
-    
-    .lesson-card__nav-group--actions .button-icon {
-      font-size: 1.5rem;
-    }
-    
-    .lesson-card__nav-group--actions .button {
-      min-height: 52px;
+    /* Keep text visible for the under-video controls (icons removed) */
+    .lesson-card__nav .lesson-card__nav-flat .button-text {
+      display: inline;
     }
   }
   
