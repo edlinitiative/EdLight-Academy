@@ -333,7 +333,7 @@ export default function CourseDetail() {
                         <span className="button-text">Flashcards</span>
                       </button>
                       <button
-                        className="button button--primary button--sm lesson-card__nav-flat"
+                        className="button button--primary button--sm"
                         onClick={() => setShowQuiz(true)}
                         title="Practice with quiz"
                       >

@@ -1362,10 +1362,10 @@ textarea.input-field {
 	gap: 1rem;
 	align-items: stretch;
 	margin-top: 1.5rem;
-	padding: 1.25rem;
-	background: linear-gradient(135deg, rgba(10, 102, 194, 0.03) 0%, rgba(10, 102, 194, 0.01) 100%);
-	border-radius: 16px;
-	border: 1.5px solid rgba(10, 102, 194, 0.08);
+	padding: 0;
+	background: transparent;
+	border-radius: 0;
+	border: none;
 }
 
 .lesson-card__nav-group {
