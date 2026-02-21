@@ -10,7 +10,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { data, isLoading } = useAppData();
   const { user, enrolledCourses } = useStore();
-  const { progress: allCourseProgress } = useAllProgress();
+  const { progress: allCourseProgress, loading: progressLoading } = useAllProgress();
 
   const toMs = (value) => {
     if (!value) return 0;

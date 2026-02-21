@@ -3,7 +3,7 @@ import { useAllProgress } from '../hooks/useProgress';
 import { calculateCompletionPercentage } from '../hooks/useProgress';
 
 export default function ProgressDashboard() {
-  const { allProgress, loading } = useAllProgress();
+  const { progress: allProgress, loading } = useAllProgress();
 
   if (loading) {
     return (

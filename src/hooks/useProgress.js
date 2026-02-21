@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCourseProgress, getAllUserProgress } from '../services/progressTracking';
 import useStore from '../contexts/store';
+import { getCurrentUser } from '../services/firebase';
 
 /**
  * Hook to get and track user's progress for a specific course
@@ -11,7 +12,10 @@ export function useCourseProgress(courseId) {
   const { user } = useStore();
   
   useEffect(() => {
-    if (!user?.uid || !courseId) {
+    const firebaseUser = getCurrentUser();
+    const authedUid = firebaseUser?.uid;
+
+    if (!user?.uid || !courseId || !authedUid || authedUid !== user.uid) {
       setProgress(null);
       setLoading(false);
       return;
@@ -39,7 +43,10 @@ export function useAllProgress() {
   const { user } = useStore();
   
   useEffect(() => {
-    if (!user?.uid) {
+    const firebaseUser = getCurrentUser();
+    const authedUid = firebaseUser?.uid;
+
+    if (!user?.uid || !authedUid || authedUid !== user.uid) {
       setProgress([]);
       setLoading(false);
       return;
