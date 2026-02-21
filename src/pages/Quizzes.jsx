@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { useAppData } from '../hooks/useData';
+import { useTranslation } from 'react-i18next';
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const { data: appData } = useAppData();
   const quizBank = appData?.quizBank;
@@ -22,10 +24,15 @@ const Quizzes = () => {
   const subjectOptions = useMemo(() => {
     const uniq = new Map();
     for (const c of courses) uniq.set(c.subject, c.subject);
-    const friendly = { CHEM: 'Chemistry', PHYS: 'Physics', MATH: 'Mathematics', ECON: 'Economics' };
+    const friendly = {
+      CHEM: t('subjects.CHEM', 'Chimie'),
+      PHYS: t('subjects.PHYS', 'Physique'),
+      MATH: t('subjects.MATH', 'Mathématiques'),
+      ECON: t('subjects.ECON', 'Économie'),
+    };
     const arr = Array.from(uniq.values());
     return arr.map((s) => ({ value: s, label: friendly[s] || s }));
-  }, [courses]);
+  }, [courses, i18n.language, t]);
 
   const queryDefaults = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -125,7 +132,7 @@ const Quizzes = () => {
       setBankDirectItem(null);
       setBankMessage('');
       if (!quizBank || !courseCode || !unit) {
-        setBankMessage('Select a course, grade, and unit to begin.');
+        setBankMessage(t('quizzes.selectToBegin', 'Choisissez un cours, un niveau et une unité pour commencer.'));
         return;
       }
       const { pickRandomQuestion, toDirectItemFromRow } = require('../services/quizBank');
@@ -135,14 +142,14 @@ const Quizzes = () => {
         row = quizBank.rows[idx];
       }
       if (!row) {
-        setBankMessage('No curriculum practice available for this selection yet.');
+        setBankMessage(t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.'));
         return;
       }
       const direct = toDirectItemFromRow(row);
       setBankDirectItem(direct);
     } catch (e) {
       console.error('Curriculum practice failed', e);
-      setBankMessage('Unable to load curriculum practice right now.');
+      setBankMessage(t('quizzes.unableToLoad', 'Impossible de charger les exercices pour le moment.'));
     } finally {
       setIsLoadingBank(false);
     }
@@ -153,9 +160,9 @@ const Quizzes = () => {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Practice Hub</span>
-            <h1>Curriculum Practice</h1>
-            <p className="text-muted">Choose your course, grade, and unit to practice with targeted questions. Get up to three tries with helpful hints.</p>
+            <span className="page-header__eyebrow">{t('quizzes.practiceHub', 'Espace d\'exercices')}</span>
+            <h1>{t('quizzes.curriculumPractice', 'Exercices du programme')}</h1>
+            <p className="text-muted">{t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}</p>
           </div>
         </div>
 
@@ -163,10 +170,10 @@ const Quizzes = () => {
           {/* Filters Section */}
           <div className="quiz-filters">
             <div className="card">
-              <h3 className="card__title">Select Practice Area</h3>
+              <h3 className="card__title">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</h3>
               <div className="quiz-selectors">
                 <div className="form-group">
-                  <label className="label">Course</label>
+                  <label className="label">{t('quizzes.course', 'Matière')}</label>
                   <select className="input-field" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
                     {subjectOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -174,7 +181,7 @@ const Quizzes = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="label">Grade Level</label>
+                  <label className="label">{t('quizzes.gradeLevel', 'Niveau')}</label>
                   <select className="input-field" value={level} onChange={(e) => setLevel(e.target.value)}>
                     {levelOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -182,7 +189,7 @@ const Quizzes = () => {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="label">Unit</label>
+                  <label className="label">{t('quizzes.unit', 'Unité')}</label>
                   <select className="input-field" value={unit} onChange={(e) => setUnit(e.target.value)}>
                     {unitOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -194,7 +201,7 @@ const Quizzes = () => {
               {/* Status chips */}
               <div className="quiz-status">
                 <span className="chip chip--success">
-                  {counts.count} question{counts.count === 1 ? '' : 's'} available
+                  {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}
                 </span>
                 {subjectBase && level && (
                   <span className="chip">
@@ -210,17 +217,17 @@ const Quizzes = () => {
                 disabled={isLoadingBank}
                 style={{ width: '100%', marginTop: '1rem' }}
               >
-                {isLoadingBank ? 'Loading…' : (bankDirectItem ? 'Next Question' : 'Start Practice')}
+                {isLoadingBank ? t('common.loading', 'Chargement…') : (bankDirectItem ? t('quizzes.nextQuestion', 'Question suivante') : t('quizzes.startPractice', 'Commencer'))}
               </button>
             </div>
 
             {/* Help cards */}
             <div className="card card--compact">
-              <h3 className="card__title">How It Works</h3>
+              <h3 className="card__title">{t('quizzes.howItWorks', 'Comment ça marche')}</h3>
               <ul className="list--bulleted text-muted">
-                <li>Three tries per question</li>
-                <li>Progressive hints after each incorrect answer</li>
-                <li>Full explanation revealed after third try</li>
+                <li>{t('quizzes.howItWorksTry', 'Trois essais par question')}</li>
+                <li>{t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse')}</li>
+                <li>{t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai')}</li>
               </ul>
             </div>
           </div>
@@ -234,9 +241,9 @@ const Quizzes = () => {
             ) : (
               <div className="card quiz-placeholder">
                 <div className="quiz-placeholder__content">
-                  <h3>Ready to Practice?</h3>
+                  <h3>{t('quizzes.ready', 'Prêt à vous entraîner ?')}</h3>
                   <p className="text-muted">
-                    {bankMessage || 'Select a course, grade, and unit, then click "Start Practice" to begin.'}
+                    {bankMessage || t('quizzes.readyBody', 'Choisissez un cours, un niveau et une unité, puis cliquez sur « Commencer » pour démarrer.')}
                   </p>
                   {!bankMessage && (
                     <div className="quiz-placeholder__icon">📚</div>

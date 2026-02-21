@@ -5,8 +5,10 @@ import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
 import { shuffleArray } from '../utils/shared';
 import useStore from '../contexts/store';
+import { useTranslation } from 'react-i18next';
 
 export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose, limit = 10, shuffle = true }) {
+  const { t } = useTranslation();
   const { data: appData } = useAppData();
   const { user } = useStore();
   const quizBank = appData?.quizBank;
@@ -128,8 +130,8 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   if (!subjectCode) {
     return (
       <div className="card">
-        <h3>Unit Quiz</h3>
-        <p className="text-muted">Choose a course and unit to start a 10-question quiz.</p>
+        <h3>{t('quizzes.unitQuiz', 'Quiz de l\'unité')}</h3>
+        <p className="text-muted">{t('quizzes.unitQuizSelect', 'Choisissez un cours et une unité pour démarrer un quiz de 10 questions.')}</p>
       </div>
     );
   }
@@ -139,11 +141,11 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
       <div className="card" style={{ padding: '1rem' }}>
         <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
           <div className="quiz-card__title">
-            <span className="quiz-card__label">Unit Quiz</span>
-            <h3 className="quiz-card__heading">Results</h3>
+            <span className="quiz-card__label">{t('quizzes.unitQuiz', 'Quiz de l\'unité')}</span>
+            <h3 className="quiz-card__heading">{t('quizzes.results', 'Résultats')}</h3>
           </div>
         </div>
-        <p className="text-muted">You scored <strong>{score}</strong> out of <strong>{items.length}</strong>.</p>
+        <p className="text-muted">{t('quizzes.scoreOutOf', 'Votre score : {{score}} sur {{total}}.', { score, total: items.length })}</p>
         <div className="quiz-card__controls">
           <button className="button button--primary button--sm" onClick={() => {
             // restart
@@ -151,9 +153,9 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
             setScore(0);
             setCanAdvance(false);
             setFinished(false);
-          }}>Retry Quiz</button>
+          }}>{t('quizzes.retry', 'Recommencer')}</button>
           {onClose && (
-            <button className="button button--ghost button--sm" onClick={onClose}>Close</button>
+            <button className="button button--ghost button--sm" onClick={onClose}>{t('common.close', 'Fermer')}</button>
           )}
         </div>
       </div>
@@ -163,10 +165,10 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   if (!items.length) {
     return (
       <div className="card">
-        <h3>Unit Quiz</h3>
+        <h3>{t('quizzes.unitQuiz', 'Quiz de l\'unité')}</h3>
         <p className="text-muted">
-          No questions available for this chapter yet. 
-          {chapterNumber && ` (Chapter ${chapterNumber})`}
+          {t('quizzes.noQuestions', 'Aucune question disponible pour ce chapitre pour le moment.')}
+          {chapterNumber && ` (${t('courses.chapter', 'Chapitre')} ${chapterNumber})`}
         </p>
         {process.env.NODE_ENV === 'development' && (
           <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#f5f5f5', fontSize: '0.75rem' }}>
@@ -188,8 +190,8 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     <div className="card" style={{ padding: '1rem' }}>
       <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
         <div className="quiz-card__title">
-          <span className="quiz-card__label">Unit Quiz</span>
-          <h3 className="quiz-card__heading">Question {idx + 1}</h3>
+          <span className="quiz-card__label">{t('quizzes.unitQuiz', 'Quiz de l\'unité')}</span>
+          <h3 className="quiz-card__heading">{t('quizzes.questionN', 'Question {{n}}', { n: idx + 1 })}</h3>
         </div>
         <span className="chip chip--ghost">{progress}</span>
       </div>
@@ -203,10 +205,10 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
           onClick={goNext}
           disabled={!canAdvance}
         >
-          {idx + 1 >= items.length ? 'Finish' : 'Next'}
+          {idx + 1 >= items.length ? t('quizzes.finish', 'Terminer') : t('common.next', 'Suivant')}
         </button>
         {onClose && (
-          <button type="button" className="button button--ghost button--sm" onClick={onClose}>Close</button>
+          <button type="button" className="button button--ghost button--sm" onClick={onClose}>{t('common.close', 'Fermer')}</button>
         )}
       </div>
     </div>

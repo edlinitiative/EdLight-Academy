@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ export default function CourseSidebar({
   onOpenChange,
   onSelectLesson,
 }) {
+  const { t } = useTranslation();
   const [expandedModules, setExpandedModules] = useState(() => loadExpanded(courseId));
   const activeLessonRef = useRef(null);
   const listRef = useRef(null);
@@ -97,7 +99,7 @@ export default function CourseSidebar({
     <aside className={`lesson-sidebar ${isOpen ? 'lesson-sidebar--visible' : ''}`}>
       <div className="lesson-sidebar__header">
         <div>
-          <h3 className="lesson-sidebar__heading">Course Content</h3>
+          <h3 className="lesson-sidebar__heading">{t('courses.courseContent', 'Contenu du cours')}</h3>
 
           {/* Overall progress bar — enrolled users with at least one completed lesson */}
           {isEnrolled && progress && completedCount > 0 && (
@@ -109,7 +111,10 @@ export default function CourseSidebar({
                 />
               </div>
               <span className="lesson-sidebar__progress-label text-muted">
-                {completedCount} of {totalLessons} lessons completed
+                {t('courses.lessonsCompletedProgress', '{{completed}} sur {{total}} leçons terminées', {
+                  completed: completedCount,
+                  total: totalLessons,
+                })}
               </span>
             </div>
           )}
@@ -118,7 +123,7 @@ export default function CourseSidebar({
           className="lesson-sidebar__close"
           onClick={() => onOpenChange(false)}
           type="button"
-          aria-label="Close sidebar"
+          aria-label={t('courses.closeSidebar', 'Fermer le menu')}
         >
           ✕
         </button>
@@ -209,7 +214,7 @@ export default function CourseSidebar({
           })
         ) : (
           <div className="lesson-list__empty">
-            Modules for this course will appear here shortly.
+            {t('courses.sidebarEmpty', 'Les modules de ce cours apparaîtront ici bientôt.')}
           </div>
         )}
       </div>

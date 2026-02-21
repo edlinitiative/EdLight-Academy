@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
+import { useTranslation } from 'react-i18next';
 
 export default function DirectBankQuiz({ item, onScore }) {
+  const { t } = useTranslation();
   const katexReady = useKatex();
   const [selected, setSelected] = useState(null);
   const [textAns, setTextAns] = useState('');
@@ -62,9 +64,11 @@ export default function DirectBankQuiz({ item, onScore }) {
   const Status = () => {
     if (!submitted) {
       const left = maxAttempts - attempts;
-      return <span className="chip chip--ghost">{left} {left === 1 ? 'try' : 'tries'} left</span>;
+      return <span className="chip chip--ghost">{t('quizzes.triesLeft', '{{count}} essai restant', { count: left })}</span>;
     }
-    return correct ? <span className="chip chip--success">✓ Correct</span> : <span className="chip chip--danger">Out of tries</span>;
+    return correct
+      ? <span className="chip chip--success">✓ {t('quizzes.correctChip', 'Correct')}</span>
+      : <span className="chip chip--danger">{t('quizzes.outOfTries', 'Plus d\'essais')}</span>;
   };
 
   const hintToShow = !submitted && attempts > 0 && derivedHints.length
@@ -83,7 +87,7 @@ export default function DirectBankQuiz({ item, onScore }) {
     <div className="card" style={{ padding: '1rem' }}>
       <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
         <div className="quiz-card__title">
-          <span className="quiz-card__label">Curriculum Practice</span>
+          <span className="quiz-card__label">{t('quizzes.curriculumPractice', 'Exercices du programme')}</span>
         </div>
         <Status />
       </div>
@@ -92,7 +96,7 @@ export default function DirectBankQuiz({ item, onScore }) {
 
       {item.context ? (
         <div className="hint-box" style={{ margin: '0.5rem 0' }}>
-          <strong>Contexte:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.context, katexReady)} />
+          <strong>{t('quizzes.context', 'Contexte')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.context, katexReady)} />
         </div>
       ) : null}
 
@@ -116,21 +120,24 @@ export default function DirectBankQuiz({ item, onScore }) {
         <div className="exam-take__short-answer-wrap">
           <textarea
             className="exam-take__short-answer-input"
-            placeholder="Write your answer here…"
+            placeholder={t('quizzes.writeAnswerHere', 'Écrivez votre réponse ici…')}
             value={textAns}
             onChange={(e) => setTextAns(e.target.value)}
             disabled={submitted}
             rows={3}
           />
           <div className="exam-take__short-answer-wordcount">
-            {(textAns || '').trim().split(/\s+/).filter(Boolean).length} word{(textAns || '').trim().split(/\s+/).filter(Boolean).length === 1 ? '' : 's'}
+            {(() => {
+              const wc = (textAns || '').trim().split(/\s+/).filter(Boolean).length;
+              return t('quizzes.wordCount', '{{count}} mot', { count: wc });
+            })()}
           </div>
         </div>
       )}
 
       {hintToShow && (
         <div className="hint-box" style={{ margin: '0.5rem 0' }}>
-          <strong>Hint:</strong> <span dangerouslySetInnerHTML={renderWithKatex(hintToShow, katexReady)} />
+          <strong>{t('quizzes.hint', 'Indice')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(hintToShow, katexReady)} />
         </div>
       )}
 
@@ -141,7 +148,9 @@ export default function DirectBankQuiz({ item, onScore }) {
           onClick={handleCheck}
           disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf') ? selected === null : textAns.trim().length === 0)}
         >
-          {submitted ? 'Answered' : (attempts > 0 ? 'Try Again' : 'Check Answer')}
+          {submitted
+            ? t('quizzes.answered', 'Répondu')
+            : (attempts > 0 ? t('quizzes.tryAgain', 'Réessayer') : t('quizzes.check', 'Vérifier'))}
         </button>
       </div>
 
@@ -150,23 +159,23 @@ export default function DirectBankQuiz({ item, onScore }) {
           {correct ? (
             <div>
               <div style={{ marginBottom: '0.5rem' }}>
-                <strong>Correct!</strong> {correctAnswerDisplay ? (
+                <strong>{t('quizzes.correct', 'Correct !')}</strong> {correctAnswerDisplay ? (
                   <>
-                    {' '}<em>Answer:</em> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
+                    {' '}<em>{t('quizzes.answerLabel', 'Réponse')}:</em> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
                   </>
                 ) : null}
               </div>
               {item.good && (
-                <div><strong>Explanation:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good, katexReady)} /></div>
+                <div><strong>{t('quizzes.explanation', 'Explication')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good, katexReady)} /></div>
               )}
             </div>
           ) : (
             <div>
               <div style={{ marginBottom: '0.5rem' }}>
-                <strong>Correct answer:</strong> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
+                <strong>{t('quizzes.correctAnswerLabel', 'Bonne réponse')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(correctAnswerDisplay, katexReady)} />
               </div>
               {(item.good || item.wrong) && (
-                <div><strong>Explanation:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good || item.wrong, katexReady)} /></div>
+                <div><strong>{t('quizzes.explanation', 'Explication')}:</strong> <span dangerouslySetInnerHTML={renderWithKatex(item.good || item.wrong, katexReady)} /></div>
               )}
             </div>
           )}

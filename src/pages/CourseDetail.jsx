@@ -9,8 +9,10 @@ import FlashcardDeck from '../components/FlashcardDeck';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import useStore from '../contexts/store';
+import { useTranslation } from 'react-i18next';
 
 export default function CourseDetail() {
+  const { t } = useTranslation();
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useAppData();
@@ -188,10 +190,10 @@ export default function CourseDetail() {
       <div className="section">
         <div className="container">
           <div className="card card--message">
-            <h2 className="section__title">This course is not available</h2>
-            <p className="text-muted">We couldn&apos;t find the course you were looking for.</p>
+            <h2 className="section__title">{t('courses.notAvailableTitle', 'Ce cours n\'est pas disponible')}</h2>
+            <p className="text-muted">{t('courses.notAvailableBody', 'Nous n\'avons pas trouvé le cours que vous cherchez.')}</p>
             <button className="button button--primary button--pill" onClick={() => navigate('/courses')}>
-              Return to Course List
+              {t('courses.returnToCatalog', 'Retour au catalogue')}
             </button>
           </div>
         </div>
@@ -216,13 +218,13 @@ export default function CourseDetail() {
                   {isEnrolled && progress && (
                     <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
                       {progress.totalPoints > 0 && (
-                        <span className="chip chip--primary">🎯 {progress.totalPoints} pts</span>
+                        <span className="chip chip--primary">🎯 {progress.totalPoints} {t('common.pointsShort', 'pts')}</span>
                       )}
                       {progress.currentStreak > 0 && (
-                        <span className="chip chip--warning">🔥 {progress.currentStreak} day streak</span>
+                        <span className="chip chip--warning">🔥 {progress.currentStreak} {t('courses.dayStreak', 'jours de série')}</span>
                       )}
                       {progress.completedLessons?.length > 0 && (
-                        <span className="chip chip--success">✓ {progress.completedLessons.length} completed</span>
+                        <span className="chip chip--success">✓ {progress.completedLessons.length} {t('courses.completedLower', 'terminés')}</span>
                       )}
                     </div>
                   )}
@@ -234,7 +236,7 @@ export default function CourseDetail() {
                   onClick={() => setShowSidebar(!showSidebar)}
                   type="button"
                 >
-                  {showSidebar ? '✕ Close' : '📚 Course Content'}
+                  {showSidebar ? `✕ ${t('common.close', 'Fermer')}` : `📚 ${t('courses.courseContent', 'Contenu du cours')}`}
                 </button>
               </header>
 
@@ -268,7 +270,7 @@ export default function CourseDetail() {
                   )
                 ) : (
                   <div className="lesson-card__placeholder">
-                    Video content will appear here once available.
+                    {t('courses.videoPlaceholder', 'Le contenu vidéo apparaîtra ici dès qu\'il sera disponible.')}
                   </div>
                 )}
               </div>
@@ -294,7 +296,7 @@ export default function CourseDetail() {
                       }}
                       disabled={!prevTarget}
                     >
-                      ← Previous
+                      ← {t('common.previous', 'Précédent')}
                     </button>
                     <button
                       className="button button--ghost button--sm lesson-card__nav-flat"
@@ -307,7 +309,7 @@ export default function CourseDetail() {
                       }}
                       disabled={!nextTarget}
                     >
-                      Next →
+                      {t('common.next', 'Suivant')} →
                     </button>
                   </div>
                 )}
@@ -320,7 +322,7 @@ export default function CourseDetail() {
                       onClick={handleMarkComplete}
                       disabled={isLessonCompleted}
                     >
-                      {isLessonCompleted ? '✓ Completed' : 'Mark Complete'}
+                      {isLessonCompleted ? `✓ ${t('courses.completed', 'Terminé')}` : t('courses.markComplete', 'Marquer comme terminé')}
                     </button>
                   )}
                   {hasQuiz && (
@@ -328,16 +330,16 @@ export default function CourseDetail() {
                       <button
                         className="button button--ghost button--sm lesson-card__nav-flat"
                         onClick={() => setShowFlashcards(true)}
-                        title="Study with flashcards"
+                        title={t('courses.flashcardsTitle', 'Étudier avec des flashcards')}
                       >
-                        <span className="button-text">Flashcards</span>
+                        <span className="button-text">{t('courses.flashcards', 'Flashcards')}</span>
                       </button>
                       <button
                         className="button button--primary button--sm"
                         onClick={() => setShowQuiz(true)}
-                        title="Practice with quiz"
+                        title={t('courses.practiceTitle', 'S\'entraîner avec un quiz')}
                       >
-                        <span className="button-text">Practice</span>
+                        <span className="button-text">{t('courses.practice', 'Exercices')}</span>
                       </button>
                     </>
                   )}
@@ -376,7 +378,7 @@ export default function CourseDetail() {
                 type="button"
               >
                 <span className="lesson-card__comments-title">
-                  💬 Discussion & Comments
+                  💬 {t('courses.discussionComments', 'Discussion & commentaires')}
                 </span>
                 <span className="lesson-card__comments-chevron">
                   {showComments ? '▼' : '▶'}
