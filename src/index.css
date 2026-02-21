@@ -1057,22 +1057,22 @@ textarea.input-field {
 
 .course-card__footer {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 1rem;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-top: auto;
 }
 
 .course-card__actions {
 	display: flex;
-	align-items: stretch; /* Make buttons same width */
-	flex-direction: column; /* stack Start above Details */
+	align-items: center;
+	flex-direction: row;
 	gap: 0.5rem;
-	flex: 0 0 auto;
 }
 
 .course-card__actions .button,
 .course-card__actions .course-card__cta {
-	width: 100%; /* Ensure both buttons take full width */
+	flex: 1;
+	justify-content: center;
 }
 
 .course-progress {

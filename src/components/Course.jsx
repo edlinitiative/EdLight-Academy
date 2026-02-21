@@ -48,14 +48,6 @@ export function CourseCard({ course, onPreview }) {
     navigate(`/courses/${course.id}`);
   };
 
-  const progressHeadline = isEnrolled
-    ? t('courses.progressPercent', { percent: progressPercent })
-    : `${t('courses.lessonsCount', { count: lessonsCount || course.videoCount || 0 })} • ${durationLabel}`;
-
-  const progressCaption = isEnrolled
-    ? t('courses.lessonsCompletedProgress', { completed, total })
-    : t('courses.guidedPathCaption');
-
   return (
     <article className="course-card">
       <div className="course-card__head">
@@ -67,19 +59,23 @@ export function CourseCard({ course, onPreview }) {
       <p className="course-card__description">{course.description}</p>
 
       <div className="course-card__meta">
-        <span className="course-meta__item"><strong>{units.length}</strong> {t('courses.modulesCount', { count: units.length })}</span>
-        <span className="course-meta__item"><strong>{lessonsCount || course.videoCount}</strong> {t('courses.lessonsCount', { count: lessonsCount || course.videoCount || 0 })}</span>
-        <span className="course-meta__item"><strong>{durationLabel}</strong></span>
+        <span className="course-meta__item"><strong>{units.length}</strong> {t('courses.modules')}</span>
+        <span className="course-meta__item"><strong>{lessonsCount || course.videoCount}</strong> {t('courses.lessons')}</span>
+        <span className="course-meta__item">{durationLabel}</span>
       </div>
 
       <div className="course-card__footer">
-        <div className="course-progress">
-          <span>{progressHeadline}</span>
-          <div className="progress-bar">
-            <span className="progress-bar__fill" style={{ width: `${isEnrolled ? progressPercent : 12}%` }} />
+        {isEnrolled && (
+          <div className="course-progress">
+            <span>{t('courses.progressPercent', { percent: progressPercent })}</span>
+            <div className="progress-bar">
+              <span className="progress-bar__fill" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+              {t('courses.lessonsCompletedProgress', { completed, total })}
+            </span>
           </div>
-          <span className="text-muted" style={{ fontSize: '0.8rem' }}>{progressCaption}</span>
-        </div>
+        )}
 
         <div className="course-card__actions">
           <button className="button button--primary button--pill" onClick={handleStart}>
