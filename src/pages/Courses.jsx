@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppData } from '../hooks/useData';
 import { CourseCard, CourseModal } from '../components/Course';
 import useStore from '../contexts/store';
+import { useTranslation } from 'react-i18next';
 
 export default function Courses() {
   const navigate = useNavigate();
@@ -10,10 +11,11 @@ export default function Courses() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [filter, setFilter] = useState('all');
   const { enrolledCourses, isAuthenticated } = useStore();
+  const { t } = useTranslation();
   
   const filterLabels = {
-    all: 'All',
-    enrolled: 'My Courses',
+    all: t('common.all'),
+    enrolled: t('courses.myCourses'),
     NSI: 'NS I',
     NSII: 'NS II',
     NSIII: 'NS III',
@@ -75,9 +77,9 @@ export default function Courses() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Course Catalog</span>
-            <h1>Explore the EdLight Academy Curriculum</h1>
-            <p className="text-muted">Filter by level or return to the lessons you already started.</p>
+            <span className="page-header__eyebrow">{t('courses.catalog')}</span>
+            <h1 className="page-header__title">{t('courses.catalogTitle')}</h1>
+            <p className="page-header__subtitle">{t('courses.catalogSubtitle')}</p>
           </div>
           <div className="page-header__actions">
             <div className="filter-group">
@@ -97,7 +99,7 @@ export default function Courses() {
               className="button button--ghost button--pill"
               onClick={() => navigate('/dashboard')}
             >
-              View Dashboard
+              {t('courses.viewDashboard')}
             </button>
           </div>
         </div>
@@ -114,11 +116,11 @@ export default function Courses() {
           </div>
         ) : (
           <div className="card text-center" style={{ padding: '3rem 2.5rem' }}>
-            <h3 className="course-card__title" style={{ marginBottom: '0.5rem' }}>No courses match this filter yet</h3>
-            <p className="text-muted">Adjust the filters or head back to the full catalog.</p>
+            <h3 className="course-card__title" style={{ marginBottom: '0.5rem' }}>{t('courses.noCoursesTitle')}</h3>
+            <p className="text-muted">{t('courses.noCoursesSubtitle')}</p>
             <div style={{ marginTop: '1.5rem' }}>
               <button className="button button--primary button--pill" onClick={() => setFilter('all')}>
-                Reset Filters
+                {t('courses.resetFilters')}
               </button>
             </div>
           </div>

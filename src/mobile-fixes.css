@@ -115,24 +115,60 @@ body {
     z-index: 1001;
     overflow-y: auto;
   }
+
+  /* Replace pseudo header spacer with a real header (includes a close button) */
+  .nav-links::before {
+    content: none;
+    display: none;
+  }
+
+  .nav-links__header {
+    height: var(--navbar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .nav-links__title {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-900);
+    font-size: 1rem;
+  }
+
+  .nav-links__close {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #111827;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 10px;
+  }
+
+  .nav-links__close:active {
+    background: #fafafa;
+  }
   
   .nav-links--mobile-open {
     right: 0;
   }
   
-  /* Menu header with close button */
-  .nav-links::before {
-    content: '';
-    display: block;
-    height: var(--navbar-height);
-    border-bottom: 1px solid #f3f4f6;
-    flex-shrink: 0;
-  }
-  
   .nav-link {
     width: 100%;
-    padding: 1.125rem 1.5rem;
-    font-size: 1rem;
+    padding: clamp(1rem, 3.5vw, 1.125rem) clamp(1.15rem, 4.6vw, 1.5rem);
+    font-size: clamp(0.98rem, 3.2vw, 1.05rem);
     font-weight: 500;
     color: #6b7280;
     border-radius: 0;
@@ -238,6 +274,17 @@ body {
     font-size: 0.875rem;
     padding: 0.625rem 1rem;
     white-space: nowrap;
+  }
+
+  /* Prevent iOS Safari auto-zoom on focus (needs >= 16px font-size) */
+  .input-field,
+  input,
+  select,
+  textarea,
+  .exam-browser__select,
+  .exam-browser__search,
+  .exam-take__short-answer-input {
+    font-size: clamp(16px, 4.2vw, 18px) !important;
   }
   
   /* Hero section */

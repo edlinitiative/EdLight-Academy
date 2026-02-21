@@ -92,6 +92,18 @@ export default function CourseDetail() {
     }
   }, [hydrated, isAuthenticated]);
 
+  // Prevent background page scrolling when the mobile course drawer is open
+  useEffect(() => {
+    const isMobile = typeof window !== 'undefined'
+      ? window.matchMedia?.('(max-width: 960px)')?.matches
+      : false;
+
+    if (isMobile && showSidebar) document.body.classList.add('no-scroll');
+    else document.body.classList.remove('no-scroll');
+
+    return () => document.body.classList.remove('no-scroll');
+  }, [showSidebar]);
+
   useEffect(() => {
     setActiveModule(0);
     setActiveLesson(0);

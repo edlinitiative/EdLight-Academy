@@ -697,10 +697,10 @@ main {
 	align-items: center;
 	justify-content: center;
 	gap: 0.6rem;
-	padding: 0.65rem 1.2rem;
+	padding: clamp(0.58rem, 1.7vw, 0.72rem) clamp(1rem, 3.4vw, 1.25rem);
 	border-radius: 999px;
 	font-weight: 600;
-	font-size: 0.95rem;
+	font-size: clamp(0.92rem, 2.6vw, 0.98rem);
 	border: none;
 	cursor: pointer;
 	transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -749,8 +749,8 @@ main {
 }
 
 .button--sm {
-	padding: 0.45rem 0.85rem;
-	font-size: 0.85rem;
+	padding: clamp(0.4rem, 1.2vw, 0.5rem) clamp(0.75rem, 2.6vw, 0.95rem);
+	font-size: clamp(0.82rem, 2.4vw, 0.9rem);
 }
 
 /* Chips */
@@ -758,9 +758,9 @@ main {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.3rem 0.65rem;
+	padding: clamp(0.26rem, 1vw, 0.34rem) clamp(0.55rem, 2vw, 0.7rem);
 	border-radius: 999px;
-	font-size: 0.8rem;
+	font-size: clamp(0.78rem, 2.2vw, 0.86rem);
 	font-weight: 600;
 	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
@@ -846,18 +846,19 @@ a.card:hover,
 
 .label {
 	font-weight: 600;
-	font-size: 0.9rem;
+	font-size: clamp(0.9rem, 2.5vw, 0.95rem);
 	color: var(--text-700);
 }
 
 .input-field {
 	appearance: none;
 	width: 100%;
-	padding: 0.65rem 0.85rem;
+	padding: clamp(0.6rem, 1.7vw, 0.75rem) clamp(0.8rem, 2.4vw, 0.95rem);
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border);
 	background: rgba(255, 255, 255, 0.9);
 	color: var(--text-900);
+	font-size: clamp(1rem, 2.7vw, 1.05rem);
 	outline: none;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -1004,16 +1005,16 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.5rem;
-	padding: 0.35rem 0.75rem;
+	padding: clamp(0.3rem, 1vw, 0.38rem) clamp(0.65rem, 2.2vw, 0.8rem);
 	border-radius: 999px;
-	font-size: 0.8rem;
+	font-size: clamp(0.78rem, 2.2vw, 0.86rem);
 	font-weight: 600;
 	color: var(--primary-600);
 	background: rgba(10, 102, 194, 0.12);
 }
 
 .course-card__title {
-	font-size: 1.2rem;
+	font-size: clamp(1.1rem, 3.2vw, 1.25rem);
 	font-weight: 700;
 	line-height: 1.35;
 	letter-spacing: -0.02em;
@@ -1022,7 +1023,7 @@ textarea.input-field {
 
 .course-card__description {
 	color: var(--text-500);
-	font-size: 0.95rem;
+	font-size: clamp(0.95rem, 2.7vw, 1rem);
 	line-height: 1.6;
 	max-width: 34ch;
 }
@@ -1041,7 +1042,7 @@ textarea.input-field {
 	border-radius: 10px;
 	background: rgba(15, 23, 42, 0.04);
 	color: var(--text-500);
-	font-size: 0.85rem;
+	font-size: clamp(0.82rem, 2.4vw, 0.9rem);
 	font-weight: 500;
 }
 
@@ -1072,7 +1073,7 @@ textarea.input-field {
 .course-progress {
 	display: grid;
 	gap: 0.3rem;
-	font-size: 0.8rem;
+	font-size: clamp(0.8rem, 2.2vw, 0.88rem);
 	color: var(--text-500);
 }
 
@@ -1096,12 +1097,12 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
-	padding: 0.65rem 1.2rem; /* Match button size */
+	padding: clamp(0.58rem, 1.7vw, 0.72rem) clamp(1rem, 3.4vw, 1.25rem); /* Match button size */
 	border-radius: 999px;
 	background: rgba(10, 102, 194, 0.14);
 	color: var(--primary-600);
 	font-weight: 600;
-	font-size: 0.95rem; /* Match button font size */
+	font-size: clamp(0.92rem, 2.6vw, 0.98rem); /* Match button font size */
 	transition: transform 0.2s ease, background 0.2s ease;
 }
 
@@ -1676,12 +1677,17 @@ textarea.input-field {
 	gap: 0;
 	/* Fixed positioning - completely unscrollable */
 	position: fixed;
-	top: 5rem; /* Fixed position below navbar */
+	top: var(--navbar-height); /* Fixed position below navbar */
 	right: calc((100vw - min(1480px, 98vw)) / 2); /* Match container's right margin */
 	width: min(320px, 25vw); /* Responsive width */
-	max-height: calc(var(--vvh, 1vh) * 100 - 5rem);
+	max-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
 	overflow: hidden;
 	z-index: 10;
+}
+
+/* Backdrop for mobile off-canvas course sidebar (hidden by default) */
+.lesson-sidebar__backdrop {
+	display: none;
 }
 
 /* Hide mobile-only elements on desktop */
@@ -1963,13 +1969,34 @@ textarea.input-field {
 
 	.lesson-sidebar {
 		right: 0;
+		top: var(--navbar-height);
 		width: min(360px, 92vw);
-		max-height: calc(var(--vvh, 1vh) * 100 - 5rem);
+		max-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
 		transform: translateX(110%);
 		opacity: 0;
 		pointer-events: none;
 		transition: transform 0.25s ease, opacity 0.2s ease;
 		z-index: 50;
+	}
+
+	.lesson-sidebar__backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.4);
+		z-index: 49;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s ease;
+	}
+
+	.lesson-sidebar__backdrop--visible {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	.lesson-list {
+		padding-bottom: calc(0.6rem + env(safe-area-inset-bottom));
 	}
 
 	.lesson-sidebar.lesson-sidebar--visible {
@@ -2420,9 +2447,9 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	padding: 0.4rem 0.95rem;
+	padding: clamp(0.35rem, 1.2vw, 0.48rem) clamp(0.8rem, 2.7vw, 1.05rem);
 	border-radius: 999px;
-	font-size: 0.85rem;
+	font-size: clamp(0.82rem, 2.4vw, 0.9rem);
 	font-weight: 600;
 	color: var(--primary-600);
 	background: transparent;

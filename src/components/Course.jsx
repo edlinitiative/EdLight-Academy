@@ -1,18 +1,16 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
+import { useTranslation } from 'react-i18next';
 
 export function CourseCard({ course, onPreview }) {
   const { enrolledCourses, progress, isAuthenticated } = useStore();
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
   const navigate = useNavigate();
-
-  const subjectNames = {
-    CHEM: 'Chemistry',
-    PHYS: 'Physics',
-    MATH: 'Mathematics',
-    ECON: 'Economics'
-  };
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const isCreole = language === 'ht';
+  const isFrench = language === 'fr';
 
   const units = course.modules || [];
   const lessonsCount = units.reduce((sum, unit) => sum + (unit.lessons?.length || 0), 0);
@@ -25,16 +23,20 @@ export function CourseCard({ course, onPreview }) {
 
   const formatDuration = (minutes) => {
     const totalMinutes = parseInt(minutes, 10) || 0;
-    if (!totalMinutes) return 'Self-paced';
+    if (!totalMinutes) return t('courses.selfPaced');
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
-    if (hours && mins) return `${hours} hr${hours > 1 ? 's' : ''} ${mins} min`;
-    if (hours) return `${hours} hr${hours > 1 ? 's' : ''}`;
-    return `${mins} min`;
+
+    const hourLabel = isFrench ? 'h' : (isCreole ? 'èdtan' : `hr${hours > 1 ? 's' : ''}`);
+    const minuteLabel = isFrench ? 'min' : (isCreole ? 'minit' : 'min');
+
+    if (hours && mins) return `${hours} ${hourLabel} ${mins} ${minuteLabel}`;
+    if (hours) return `${hours} ${hourLabel}`;
+    return `${mins} ${minuteLabel}`;
   };
 
   const levelLabel = course.level ? course.level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
-  const subjectLabel = subjectNames[course.subject] || course.subject;
+  const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
   const durationLabel = formatDuration(course.duration);
 
   const handleStart = () => {
@@ -47,26 +49,26 @@ export function CourseCard({ course, onPreview }) {
   };
 
   const progressHeadline = isEnrolled
-    ? `${progressPercent}% complete`
-    : `${lessonsCount || course.videoCount} lessons • ${durationLabel}`;
+    ? t('courses.progressPercent', { percent: progressPercent })
+    : `${t('courses.lessonsCount', { count: lessonsCount || course.videoCount || 0 })} • ${durationLabel}`;
 
   const progressCaption = isEnrolled
-    ? `${completed}/${total} lessons completed`
-    : 'Guided path with quizzes and mastery checks';
+    ? t('courses.lessonsCompletedProgress', { completed, total })
+    : t('courses.guidedPathCaption');
 
   return (
     <article className="course-card">
       <div className="course-card__head">
         <span className="course-card__badge">{subjectLabel} · {levelLabel}</span>
-        {isEnrolled && <span className="chip chip--success">Enrolled</span>}
+        {isEnrolled && <span className="chip chip--success">{t('courses.enrolled')}</span>}
       </div>
 
       <h3 className="course-card__title">{course.name}</h3>
       <p className="course-card__description">{course.description}</p>
 
       <div className="course-card__meta">
-        <span className="course-meta__item"><strong>{units.length}</strong> units</span>
-        <span className="course-meta__item"><strong>{lessonsCount || course.videoCount}</strong> lessons</span>
+        <span className="course-meta__item"><strong>{units.length}</strong> {t('courses.modulesCount', { count: units.length })}</span>
+        <span className="course-meta__item"><strong>{lessonsCount || course.videoCount}</strong> {t('courses.lessonsCount', { count: lessonsCount || course.videoCount || 0 })}</span>
         <span className="course-meta__item"><strong>{durationLabel}</strong></span>
       </div>
 
@@ -81,10 +83,10 @@ export function CourseCard({ course, onPreview }) {
 
         <div className="course-card__actions">
           <button className="button button--primary button--pill" onClick={handleStart}>
-            {isEnrolled ? 'Continue' : 'Start Course'}
+            {isEnrolled ? t('courses.continue') : t('courses.startCourse')}
           </button>
           <button className="course-card__cta" onClick={() => onPreview(course)}>
-            Course Details →
+            {t('courses.details')} →
           </button>
         </div>
       </div>
@@ -96,30 +98,31 @@ export function CourseModal({ course, onClose, onEnroll }) {
   const { isAuthenticated, enrolledCourses } = useStore();
   const navigate = useNavigate();
   const isEnrolled = enrolledCourses.some(c => c.id === course?.id);
+  const { t, i18n } = useTranslation();
+  const language = i18n.language;
+  const isCreole = language === 'ht';
+  const isFrench = language === 'fr';
 
   if (!course) return null;
 
   const units = course.modules || [];
   const lessonsCount = units.reduce((sum, unit) => sum + (unit.lessons?.length || 0), 0);
 
-  const subjectNames = {
-    CHEM: 'Chemistry',
-    PHYS: 'Physics',
-    MATH: 'Mathematics',
-    ECON: 'Economics'
-  };
-
   const levelLabel = course.level ? course.level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
-  const subjectLabel = subjectNames[course.subject] || course.subject;
+  const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
 
   const formatDuration = (minutes) => {
     const totalMinutes = parseInt(minutes, 10) || 0;
-    if (!totalMinutes) return 'Self-paced';
+    if (!totalMinutes) return t('courses.selfPaced');
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
-    if (hours && mins) return `${hours} hr${hours > 1 ? 's' : ''} ${mins} min`;
-    if (hours) return `${hours} hr${hours > 1 ? 's' : ''}`;
-    return `${mins} min`;
+
+    const hourLabel = isFrench ? 'h' : (isCreole ? 'èdtan' : `hr${hours > 1 ? 's' : ''}`);
+    const minuteLabel = isFrench ? 'min' : (isCreole ? 'minit' : 'min');
+
+    if (hours && mins) return `${hours} ${hourLabel} ${mins} ${minuteLabel}`;
+    if (hours) return `${hours} ${hourLabel}`;
+    return `${mins} ${minuteLabel}`;
   };
 
   const handleEnroll = () => {
@@ -146,11 +149,11 @@ export function CourseModal({ course, onClose, onEnroll }) {
             <h2 className="course-modal__title">{course.name}</h2>
             {course.instructor && (
               <p className="course-modal__instructor">
-                <span style={{ opacity: 0.7 }}>Taught by</span> <strong>{course.instructor}</strong>
+                <span style={{ opacity: 0.7 }}>{t('courses.taughtBy')}</span> <strong>{course.instructor}</strong>
               </p>
             )}
           </div>
-          <button className="course-modal__close" onClick={onClose} aria-label="Close">
+          <button className="course-modal__close" onClick={onClose} aria-label={t('common.close')}>
             ×
           </button>
         </header>
@@ -163,7 +166,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5"/>
               </svg>
               <div>
-                <span className="course-modal__meta-label">Duration</span>
+                <span className="course-modal__meta-label">{t('courses.duration')}</span>
                 <strong className="course-modal__meta-value">{formatDuration(course.duration)}</strong>
               </div>
             </div>
@@ -173,7 +176,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 <path d="M2 6h12" stroke="currentColor" strokeWidth="1.5"/>
               </svg>
               <div>
-                <span className="course-modal__meta-label">Units</span>
+                <span className="course-modal__meta-label">{t('courses.modules')}</span>
                 <strong className="course-modal__meta-value">{units.length}</strong>
               </div>
             </div>
@@ -182,7 +185,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 <path d="M2 8l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               <div>
-                <span className="course-modal__meta-label">Lessons</span>
+                <span className="course-modal__meta-label">{t('courses.lessons')}</span>
                 <strong className="course-modal__meta-value">{lessonsCount || course.videoCount || 0}</strong>
               </div>
             </div>
@@ -190,14 +193,14 @@ export function CourseModal({ course, onClose, onEnroll }) {
 
           {course.description && (
             <div className="course-modal__description">
-              <h3 className="course-modal__section-title">About This Course</h3>
+              <h3 className="course-modal__section-title">{t('courses.aboutThisCourse')}</h3>
               <p className="course-modal__descriptor">{course.description}</p>
             </div>
           )}
 
           {units.length > 0 && (
             <div className="course-modal__syllabus-wrapper">
-              <h3 className="course-modal__section-title">Course Syllabus</h3>
+              <h3 className="course-modal__section-title">{t('courses.syllabus')}</h3>
               <div className="course-modal__syllabus">
                 {units.map((unit, idx) => (
                   <div key={unit.id} className="syllabus-item">
@@ -206,7 +209,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                       <div className="syllabus-item__meta">
                         <strong className="syllabus-item__title">{unit.title}</strong>
                         <span className="syllabus-item__subtitle">
-                          {unit.lessons?.length || 0} lesson{(unit.lessons?.length || 0) !== 1 ? 's' : ''}
+                          {t('courses.lessonsCount', { count: unit.lessons?.length || 0 })}
                           {unit.duration && ` · ${formatDuration(unit.duration)}`}
                         </span>
                       </div>
@@ -232,7 +235,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 }}
                 style={{ flex: 1, minWidth: '150px' }}
               >
-                Continue Learning
+                {t('courses.continueLearning')}
               </button>
               <button
                 className="button button--secondary button--pill"
@@ -242,7 +245,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 }}
                 style={{ flex: 1, minWidth: '150px' }}
               >
-                View Dashboard
+                {t('courses.viewDashboard')}
               </button>
             </>
           ) : (
@@ -252,14 +255,14 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 onClick={handleEnroll}
                 style={{ flex: 1, minWidth: '150px' }}
               >
-                Enroll Now
+                {t('courses.enroll')}
               </button>
               <button 
                 className="button button--ghost button--pill" 
                 onClick={onClose}
                 style={{ flex: 1, minWidth: '150px' }}
               >
-                Maybe Later
+                {t('common.cancel')}
               </button>
             </>
           )}

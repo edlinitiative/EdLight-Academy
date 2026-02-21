@@ -54,7 +54,7 @@ export default function EssayQuiz({ item, onScore }) {
   }, [item]);
 
   return (
-    <div className="card" style={{ padding: '1rem' }}>
+    <div className="essay-quiz">
       <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
         <div className="quiz-card__title">
           <span className="quiz-card__label">Essay Question</span>

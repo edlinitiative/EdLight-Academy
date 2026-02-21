@@ -84,7 +84,7 @@ export default function DirectBankQuiz({ item, onScore }) {
   }
 
   return (
-    <div className="card" style={{ padding: '1rem' }}>
+    <div className="direct-bank-quiz">
       <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
         <div className="quiz-card__title">
           <span className="quiz-card__label">{t('quizzes.curriculumPractice', 'Exercices du programme')}</span>
