@@ -1646,21 +1646,19 @@ textarea.input-field {
 	min-height: 42px;
 	padding: 0.55rem 0.65rem;
 	width: 100%; /* prevent overflow causing horizontal scroll */
-	border-radius: 12px;
-	border: 1px solid transparent;
+	border-radius: 0;
+	border: none;
 	background: transparent;
 	cursor: pointer;
-	transition: border 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+	transition: box-shadow 0.15s ease, color 0.15s ease;
 }
 
 .lesson-list__item:hover {
-	background: rgba(10, 102, 194, 0.06);
-	border-color: rgba(10, 102, 194, 0.12);
+	background: transparent;
 }
 
 .lesson-list__item:focus-visible {
 	outline: none;
-	border-color: rgba(10, 102, 194, 0.35);
 	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.16);
 }
 
@@ -1674,13 +1672,11 @@ textarea.input-field {
 }
 
 .lesson-list__item--active {
-	border-color: rgba(10, 102, 194, 0.22);
-	background: rgba(10, 102, 194, 0.10);
+	background: transparent;
 }
 
 .lesson-list__item--completed {
-	background: rgba(34, 197, 94, 0.06);
-	border-color: rgba(34, 197, 94, 0.16);
+	background: transparent;
 }
 
 .lesson-list__item--completed .lesson-list__index {
@@ -1691,11 +1687,17 @@ textarea.input-field {
 .lesson-list__children {
 	margin: 0.25rem 0 0.5rem;
 	padding-left: 0.65rem;
-	border-left: 1px solid rgba(10, 102, 194, 0.16);
+	border-left: none;
 	overflow-x: hidden;
 	display: flex;
 	flex-direction: column;
 	gap: 0.15rem;
+}
+
+/* Active chapter/subchapter: highlight via text color only */
+.lesson-list__item--active .lesson-list__index,
+.lesson-list__item--active .lesson-list__title {
+	color: var(--primary-600);
 }
 
 .lesson-list__children .lesson-list__item--lesson {

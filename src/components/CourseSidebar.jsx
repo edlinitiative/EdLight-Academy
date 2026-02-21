@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 function getLessonIcon(type) {
   switch (type) {
-    case 'quiz':    return '📝';
+    case 'quiz':    return '';
     case 'reading': return '📖';
     case 'video':
     default:        return '';
@@ -168,7 +168,6 @@ export default function CourseSidebar({
                   <span className="lesson-list__meta">
                     <span className="lesson-list__title">{module.title}</span>
                   </span>
-                  <span className="lesson-list__chevron" aria-hidden>▸</span>
                 </button>
 
                 {lessonsToShow && (
