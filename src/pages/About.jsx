@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSiteStatCards } from '../hooks/useSiteStats';
+import useStore from '../contexts/store';
 
 const APPROACH_ITEMS = [
   {
@@ -9,8 +10,10 @@ const APPROACH_ITEMS = [
         <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
       </svg>
     ),
-    title: 'Short, focused videos',
-    desc: 'Each concept is explained in a clear, concise video so you can learn at your own pace.',
+    titleFr: 'Vidéos courtes et ciblées',
+    descFr: 'Chaque concept est expliqué dans une vidéo claire et concise, pour apprendre à votre rythme.',
+    titleHt: 'Videyo kout, byen klè',
+    descHt: 'Nou eksplike chak konsèp nan yon videyo kout e klè, pou ou aprann nan ritm pa ou.',
   },
   {
     icon: (
@@ -18,8 +21,10 @@ const APPROACH_ITEMS = [
         <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
       </svg>
     ),
-    title: 'Practice after every lesson',
-    desc: 'Targeted quiz questions after each lesson to check and reinforce understanding.',
+    titleFr: 'Pratique après chaque leçon',
+    descFr: 'Des questions ciblées après chaque leçon pour vérifier et renforcer la compréhension.',
+    titleHt: 'Pratik apre chak leson',
+    descHt: 'Kesyon pratik apre chak leson pou verifye epi ranfòse konpreyansyon.',
   },
   {
     icon: (
@@ -27,8 +32,10 @@ const APPROACH_ITEMS = [
         <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
       </svg>
     ),
-    title: 'Personalized progress tracking',
-    desc: 'Know exactly where you stand — per lesson, unit, and subject.',
+    titleFr: 'Suivi de progression personnalisé',
+    descFr: 'Voyez clairement où vous en êtes — par leçon, unité et matière.',
+    titleHt: 'Swivi pwogrè pèsonalize',
+    descHt: 'Konnen egzakteman kote ou ye — pa leson, pa inite, pa matyè.',
   },
   {
     icon: (
@@ -36,8 +43,10 @@ const APPROACH_ITEMS = [
         <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
       </svg>
     ),
-    title: 'Bilingual content',
-    desc: 'Learning resources available in French and Kreyòl to serve every Haitian student.',
+    titleFr: 'Contenu bilingue',
+    descFr: 'Des ressources en français et en kreyòl pour servir chaque élève haïtien.',
+    titleHt: 'Kontni 2 lang',
+    descHt: 'Resous an franse ak an kreyòl pou sèvi chak elèv ayisyen.',
   },
 ];
 
@@ -49,6 +58,8 @@ const VALUES = [
 
 export default function About() {
   const navigate = useNavigate();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
   const { cards, counts } = useSiteStatCards();
 
   return (
@@ -58,11 +69,15 @@ export default function About() {
         {/* Hero */}
         <section className="about-hero">
           <span className="page-header__eyebrow">Notre mission</span>
-          <h1 className="about-hero__title">Quality education for every Haitian student</h1>
+          <h1 className="about-hero__title">
+            {isCreole ? 'Bon jan edikasyon pou chak elèv ayisyen' : 'Une éducation de qualité pour chaque élève haïtien'}
+          </h1>
           <p className="about-hero__copy">
-            EdLight is building the infrastructure for accessible, high-quality STEM education
-            in Haiti — structured courses, official exam practice, and real-time progress
-            tracking, all in one place.
+            {isCreole ? (
+              <>EdLight ap bati enfrastrikti pou yon edikasyon syans (STEM) ki aksesib ak kalite ann Ayiti — kou ki byen estriktire, pratik egzamen ofisyèl, ak swivi pwogrè an tan reyèl, tout nan menm plas la.</>
+            ) : (
+              <>EdLight construit l’infrastructure pour une éducation STEM accessible et de qualité en Haïti — des cours structurés, des exercices d’examens officiels et un suivi de progression en temps réel, le tout au même endroit.</>
+            )}
           </p>
         </section>
 
@@ -78,14 +93,18 @@ export default function About() {
 
         {/* Approach */}
         <section style={{ marginBottom: 'clamp(2.5rem, 6vw, 4rem)' }}>
-          <h2 className="section__title" style={{ marginBottom: '1.75rem' }}>How we teach</h2>
+          <h2 className="section__title" style={{ marginBottom: '1.75rem' }}>
+            {isCreole ? 'Kijan nou anseye' : 'Notre approche pédagogique'}
+          </h2>
           <div className="about-approach">
             {APPROACH_ITEMS.map((item) => (
-              <div key={item.title} className="card about-approach__item">
+              <div key={item.titleFr} className="card about-approach__item">
                 <div className="about-approach__icon">{item.icon}</div>
                 <div>
-                  <div className="about-approach__text">{item.title}</div>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-500)', marginTop: '0.2rem', lineHeight: 1.55 }}>{item.desc}</p>
+                  <div className="about-approach__text">{isCreole ? item.titleHt : item.titleFr}</div>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-500)', marginTop: '0.2rem', lineHeight: 1.55 }}>
+                    {isCreole ? item.descHt : item.descFr}
+                  </p>
                 </div>
               </div>
             ))}
@@ -107,11 +126,11 @@ export default function About() {
 
         {/* Team */}
         <section className="about-team" style={{ marginBottom: 'clamp(2.5rem, 6vw, 4rem)' }}>
-          <h2 className="section__title">Our Team</h2>
+          <h2 className="section__title">{isCreole ? 'Ekip nou' : 'Notre équipe'}</h2>
           <p className="text-muted about-team__copy">
-            We are a dedicated team of Haitian teachers, educators, and engineers united
-            by one belief: every student deserves a world-class learning experience,
-            regardless of where they live.
+            {isCreole
+              ? 'Nou se yon ekip pwofesè, edikatè, ak enjenyè ayisyen ki angaje, ini sou yon sèl lide: chak elèv merite yon eksperyans aprantisaj kalite mondyal, kèlkeswa kote li rete.'
+              : 'Nous sommes une équipe engagée d’enseignants, d’éducateurs et d’ingénieurs haïtiens, unis par une conviction : chaque élève mérite une expérience d’apprentissage de classe mondiale, quel que soit son lieu de vie.'}
           </p>
         </section>
 
@@ -120,8 +139,12 @@ export default function About() {
           <h2 className="section__title">Prêt à commencer ?</h2>
           <p className="text-muted" style={{ marginTop: '0.5rem', marginBottom: '1.5rem', fontSize: '1rem' }}>
             {Number.isFinite(counts?.activeStudentsThisTerm) && counts.activeStudentsThisTerm >= 1000
-              ? `Rejoignez plus de ${new Intl.NumberFormat('en-US').format(Math.round(counts.activeStudentsThisTerm))} élèves qui apprennent avec EdLight Academy.`
-              : 'Rejoignez des élèves à travers Haïti qui apprennent avec EdLight Academy.'}
+              ? (isCreole
+                ? `Vin jwenn plis pase ${new Intl.NumberFormat('fr-FR').format(Math.round(counts.activeStudentsThisTerm))} elèv k ap aprann ak EdLight Academy.`
+                : `Rejoignez plus de ${new Intl.NumberFormat('fr-FR').format(Math.round(counts.activeStudentsThisTerm))} élèves qui apprennent avec EdLight Academy.`)
+              : (isCreole
+                ? 'Vin jwenn elèv atravè Ayiti k ap aprann ak EdLight Academy.'
+                : 'Rejoignez des élèves à travers Haïti qui apprennent avec EdLight Academy.')}
           </p>
           <button
             className="button button--primary button--pill"

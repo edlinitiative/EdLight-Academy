@@ -1,37 +1,69 @@
 import React from 'react';
+import useStore from '../contexts/store';
 
-const faqs = [
+const faqsFr = [
   {
-    q: 'How do I start learning?',
-    a: 'Click Start Learning on the home page to sign in, or browse Courses to pick a subject and NS level. Open a course to follow units and lessons.'
+    q: 'Comment commencer à apprendre ?',
+    a: 'Cliquez sur “Commencer” sur la page d’accueil pour vous connecter, ou explorez les cours pour choisir une matière et un niveau NS. Ouvrez un cours pour suivre les unités et les leçons.'
   },
   {
-    q: 'Where do I find practice questions?',
-    a: 'Open the Quizzes page for curriculum practice by course, grade (NS I–IV), and unit. Inside a course, you can also take a 10-question unit quiz after the last subchapter.'
+    q: 'Où trouver des questions de pratique ?',
+    a: 'Ouvrez la page Quiz pour la pratique par cours, niveau (NS I–IV) et unité. Dans un cours, vous pouvez aussi faire un “Quiz d’unité — 10 questions” après le dernier sous-chapitre.'
   },
   {
-    q: 'Why are there no questions for my unit?',
-    a: 'Some units are still being added. Try another unit in the same course or a different grade level. We add new questions weekly.'
+    q: 'Pourquoi n’y a-t-il pas de questions pour mon unité ?',
+    a: 'Certaines unités sont encore en cours d’ajout. Essayez une autre unité du même cours ou un autre niveau. De nouvelles questions sont ajoutées régulièrement.'
   },
   {
-    q: 'Do you support math formatting?',
-    a: 'Yes. Questions and explanations are rendered with math support so equations display correctly.'
+    q: 'Est-ce que le format mathématique est pris en charge ?',
+    a: 'Oui. Les questions et explications s’affichent avec le support mathématique afin que les équations s’affichent correctement.'
   },
   {
-    q: 'How do I report an issue or suggest content?',
-    a: 'Use the Contact Us page to send us a message. Include the course, unit, and a brief description of what you need.'
+    q: 'Comment signaler un problème ou suggérer du contenu ?',
+    a: 'Utilisez la page Contact pour nous envoyer un message. Indiquez le cours, l’unité et une brève description de ce dont vous avez besoin.'
+  }
+];
+
+const faqsHt = [
+  {
+    q: 'Kijan pou mwen kòmanse aprann?',
+    a: 'Klike “Kòmanse aprann” sou paj dakèy la pou konekte, oswa gade kou yo pou chwazi yon matyè ak nivo NS. Louvri yon kou pou swiv inite ak leson yo.'
+  },
+  {
+    q: 'Kote mwen jwenn kesyon pratik yo?',
+    a: 'Louvri paj Quiz yo pou pratik pa kou, nivo (NS I–IV), ak inite. Anndan yon kou, ou ka fè “Quiz Inite — 10 Kesyon” apre dènye sou-chapit la.'
+  },
+  {
+    q: 'Poukisa pa gen kesyon pou inite mwen an?',
+    a: 'Gen kèk inite nou poko fin ajoute. Esaye yon lòt inite nan menm kou a oswa yon lòt nivo. Nou ajoute nouvo kesyon regilyèman.'
+  },
+  {
+    q: 'Èske nou sipòte ekriti matematik?',
+    a: 'Wi. Kesyon ak eksplikasyon yo gen sipò pou fòmil matematik pou ekwasyon yo parèt byen.'
+  },
+  {
+    q: 'Kijan pou mwen rapòte yon pwoblèm oswa pwopoze kontni?',
+    a: 'Sèvi ak paj Kontak la pou voye yon mesaj. Mete kou a, inite a, epi yon ti deskripsyon sou sa ou bezwen an.'
   }
 ];
 
 export default function FAQ() {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const faqs = isCreole ? faqsHt : faqsFr;
+
   return (
     <section className="section">
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Quick answers</span>
-            <h1>Frequently Asked Questions</h1>
-            <p className="text-muted">Answers to common questions about courses, practice, and getting started.</p>
+            <span className="page-header__eyebrow">{isCreole ? 'Repons rapid' : 'Réponses rapides'}</span>
+            <h1>{isCreole ? 'Kesyon yo poze souvan (FAQ)' : 'Foire aux questions (FAQ)'}</h1>
+            <p className="text-muted">
+              {isCreole
+                ? 'Repons pou kesyon moun poze sou kou yo, pratik, ak kòmanse.'
+                : 'Réponses aux questions fréquentes sur les cours, la pratique et le démarrage.'}
+            </p>
           </div>
         </div>
 

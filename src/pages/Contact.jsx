@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import useStore from '../contexts/store';
 
 export default function Contact() {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -13,8 +16,8 @@ export default function Contact() {
     // Build a mailto link so users can contact without a backend
     const subj = encodeURIComponent(subject || `EdLight Academy Contact de la part de ${name || 'Futur(e) élève / Elèv kap vini'}`);
     const bodyLines = [
-      name ? `Name: ${name}` : null,
-      email ? `Email: ${email}` : null,
+      name ? `${isCreole ? 'Non' : 'Nom'}: ${name}` : null,
+      email ? `${isCreole ? 'Imèl' : 'Email'}: ${email}` : null,
       '',
       message || ''
     ].filter(Boolean);
@@ -28,9 +31,13 @@ export default function Contact() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">We'd love to hear from you</span>
-            <h1>Contact Us</h1>
-            <p className="text-muted">Have a question, partnership idea, or feedback? Send us a note and we’ll get back to you.</p>
+            <span className="page-header__eyebrow">{isCreole ? 'Nou vle tande ou' : 'Nous serions ravis de vous lire'}</span>
+            <h1>{isCreole ? 'Kontakte nou' : 'Contactez-nous'}</h1>
+            <p className="text-muted">
+              {isCreole
+                ? 'Ou gen yon kesyon, yon lide patenarya, oswa yon fidbak? Ekri nou, n ap reponn ou.'
+                : 'Une question, une idée de partenariat ou un retour ? Envoyez-nous un message, nous vous répondrons.'}
+            </p>
           </div>
         </div>
 
@@ -38,7 +45,7 @@ export default function Contact() {
           <form className="card" onSubmit={handleSubmit}>
             <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div className="field">
-                <label className="label" htmlFor="name">Your name</label>
+                <label className="label" htmlFor="name">{isCreole ? 'Non ou' : 'Votre nom'}</label>
                 <input
                   id="name"
                   name="name"
@@ -66,7 +73,7 @@ export default function Contact() {
               </div>
             </div>
             <div className="field" style={{ marginTop: '0.75rem' }}>
-              <label className="label" htmlFor="subject">Subject</label>
+              <label className="label" htmlFor="subject">{isCreole ? 'Sijè' : 'Sujet'}</label>
               <input
                 id="subject"
                 name="subject"
@@ -74,12 +81,12 @@ export default function Contact() {
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="I have a question about…"
+                placeholder={isCreole ? 'Mwen gen yon kesyon sou…' : 'J’ai une question à propos de…'}
                 autoComplete="off"
               />
             </div>
             <div className="field" style={{ marginTop: '0.75rem' }}>
-              <label className="label" htmlFor="message">Message</label>
+              <label className="label" htmlFor="message">{isCreole ? 'Mesaj' : 'Message'}</label>
               <textarea
                 id="message"
                 name="message"
@@ -87,20 +94,22 @@ export default function Contact() {
                 rows={6}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="How can we help?"
+                placeholder={isCreole ? 'Kijan nou ka ede ou?' : 'Comment pouvons-nous aider ?'}
                 required
               />
-              <span className="field__hint">We usually reply within 1–2 business days.</span>
+              <span className="field__hint">
+                {isCreole ? 'Anjeneral, nou reponn nan 1–2 jou travay.' : 'Nous répondons généralement sous 1 à 2 jours ouvrés.'}
+              </span>
             </div>
             <div className="quiz-card__controls" style={{ marginTop: '0.9rem' }}>
-              <button type="submit" className="button button--primary button--pill">Send message</button>
+              <button type="submit" className="button button--primary button--pill">{isCreole ? 'Voye mesaj' : 'Envoyer'}</button>
               <a className="button button--ghost button--pill" href={`mailto:${supportEmail}`}>Email {supportEmail}</a>
             </div>
           </form>
 
           <aside className="practice-aside" style={{ position: 'static' }}>
             <div className="card card--compact">
-              <h3 className="card__title">Other ways to reach us</h3>
+              <h3 className="card__title">{isCreole ? 'Lòt fason pou jwenn nou' : 'Autres moyens de contact'}</h3>
               <ul className="list--bulleted text-muted">
                 <li>
                   Email: <a className="footer__link" href={`mailto:${supportEmail}`}>{supportEmail}</a>
@@ -111,8 +120,10 @@ export default function Contact() {
               </ul>
             </div>
             <div className="card card--compact">
-              <h3 className="card__title">Response time</h3>
-              <p className="text-muted" style={{ margin: 0 }}>We typically reply within 1–2 business days.</p>
+              <h3 className="card__title">{isCreole ? 'Tan repons' : 'Délai de réponse'}</h3>
+              <p className="text-muted" style={{ margin: 0 }}>
+                {isCreole ? 'Anjeneral, nou reponn nan 1–2 jou travay.' : 'Nous répondons généralement sous 1 à 2 jours ouvrés.'}
+              </p>
             </div>
           </aside>
         </div>

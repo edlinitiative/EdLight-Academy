@@ -1,14 +1,17 @@
 import React from 'react';
 import { useAllProgress } from '../hooks/useProgress';
 import { calculateCompletionPercentage } from '../hooks/useProgress';
+import useStore from '../contexts/store';
 
 export default function ProgressDashboard() {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
   const { progress: allProgress, loading } = useAllProgress();
 
   if (loading) {
     return (
       <div className="card">
-        <p className="text-muted">Loading progress...</p>
+        <p className="text-muted">{isCreole ? 'Ap chaje pwogrè…' : 'Chargement de la progression…'}</p>
       </div>
     );
   }
@@ -16,8 +19,8 @@ export default function ProgressDashboard() {
   if (!allProgress || allProgress.length === 0) {
     return (
       <div className="card">
-        <h3>Your Progress</h3>
-        <p className="text-muted">Start learning to track your progress!</p>
+        <h3>{isCreole ? 'Pwogrè ou' : 'Votre progression'}</h3>
+        <p className="text-muted">{isCreole ? 'Kòmanse aprann pou suiv pwogrè ou!' : 'Commencez à apprendre pour suivre votre progression !'}</p>
       </div>
     );
   }
@@ -32,38 +35,38 @@ export default function ProgressDashboard() {
   return (
     <div className="progress-dashboard">
       <div className="progress-dashboard__header">
-        <h2>Your Learning Journey</h2>
-        <p className="text-muted">Track your achievements and progress</p>
+        <h2>{isCreole ? 'Vwayaj aprantisaj ou' : 'Votre parcours d’apprentissage'}</h2>
+        <p className="text-muted">{isCreole ? 'Swiv reyalizasyon ak pwogrè ou' : 'Suivez vos réussites et votre progression'}</p>
       </div>
 
       <div className="progress-dashboard__stats">
         <div className="stat-card">
           <div className="stat-card__icon">🎯</div>
           <div className="stat-card__value">{totalPoints}</div>
-          <div className="stat-card__label">Total Points</div>
+          <div className="stat-card__label">{isCreole ? 'Total pwen' : 'Points totaux'}</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-card__icon">🏆</div>
           <div className="stat-card__value">{uniqueBadges.length}</div>
-          <div className="stat-card__label">Badges Earned</div>
+          <div className="stat-card__label">{isCreole ? 'Badj ou genyen' : 'Badges obtenus'}</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-card__icon">🔥</div>
           <div className="stat-card__value">{currentStreak}</div>
-          <div className="stat-card__label">Day Streak</div>
+          <div className="stat-card__label">{isCreole ? 'Seri jou' : 'Série de jours'}</div>
         </div>
 
         <div className="stat-card">
           <div className="stat-card__icon">📚</div>
           <div className="stat-card__value">{allProgress.length}</div>
-          <div className="stat-card__label">Active Courses</div>
+          <div className="stat-card__label">{isCreole ? 'Kou aktif' : 'Cours actifs'}</div>
         </div>
       </div>
 
       <div className="progress-dashboard__badges">
-        <h3>Recent Achievements</h3>
+        <h3>{isCreole ? 'Dènye reyalizasyon' : 'Réussites récentes'}</h3>
         {uniqueBadges.length > 0 ? (
           <div className="badge-grid">
             {uniqueBadges.slice(0, 6).map((badge) => (
@@ -72,18 +75,18 @@ export default function ProgressDashboard() {
                   {getBadgeIcon(badge)}
                 </div>
                 <div className="achievement-badge__name">
-                  {getBadgeName(badge)}
+                  {getBadgeName(badge, language)}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted">Complete quizzes and lessons to earn badges!</p>
+          <p className="text-muted">{isCreole ? 'Fè quiz ak leson pou ranmase badj!' : 'Terminez des quiz et des leçons pour gagner des badges !'}</p>
         )}
       </div>
 
       <div className="progress-dashboard__courses">
-        <h3>Course Progress</h3>
+        <h3>{isCreole ? 'Pwogrè pa kou' : 'Progression par cours'}</h3>
         <div className="course-progress-list">
           {allProgress.map((progress) => {
             const completedCount = progress.completedLessons?.length || 0;
@@ -96,9 +99,9 @@ export default function ProgressDashboard() {
                   <span className="course-progress-item__points">{progress.totalPoints || 0} pts</span>
                 </div>
                 <div className="course-progress-item__stats">
-                  <span className="text-muted">{completedCount} lessons completed</span>
+                  <span className="text-muted">{isCreole ? `${completedCount} leson fini` : `${completedCount} leçons terminées`}</span>
                   {progress.currentStreak > 0 && (
-                    <span className="course-progress-item__streak">🔥 {progress.currentStreak} day streak</span>
+                    <span className="course-progress-item__streak">🔥 {progress.currentStreak} {isCreole ? 'jou' : 'jours'}</span>
                   )}
                 </div>
               </div>
@@ -124,15 +127,29 @@ function getBadgeIcon(badgeId) {
   return icons[badgeId] || '🏅';
 }
 
-function getBadgeName(badgeId) {
-  const names = {
-    first_lesson: 'First Lesson',
-    quiz_enthusiast: 'Quiz Enthusiast',
-    perfectionist: 'Perfectionist',
-    point_collector: 'Point Collector',
-    week_streak: '7 Day Streak',
-    month_streak: '30 Day Streak',
-    legend_streak: '100 Day Streak',
+function getBadgeName(badgeId, language) {
+  const isCreole = language === 'ht';
+
+  const namesFr = {
+    first_lesson: 'Première leçon',
+    quiz_enthusiast: 'Passionné de quiz',
+    perfectionist: 'Perfectionniste',
+    point_collector: 'Collectionneur de points',
+    week_streak: 'Série de 7 jours',
+    month_streak: 'Série de 30 jours',
+    legend_streak: 'Série de 100 jours',
   };
-  return names[badgeId] || badgeId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  const namesHt = {
+    first_lesson: 'Premye leson',
+    quiz_enthusiast: 'Moun ki renmen quiz',
+    perfectionist: 'Pèfeksyonis',
+    point_collector: 'Ranmase pwen',
+    week_streak: 'Seri 7 jou',
+    month_streak: 'Seri 30 jou',
+    legend_streak: 'Seri 100 jou',
+  };
+
+  const label = (isCreole ? namesHt : namesFr)[badgeId];
+  return label || badgeId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
