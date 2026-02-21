@@ -102,7 +102,6 @@ export function Navbar() {
 
         <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`}>
           <div className="nav-links__header">
-            <span className="nav-links__title">Menu</span>
             <button
               type="button"
               className="nav-links__close"

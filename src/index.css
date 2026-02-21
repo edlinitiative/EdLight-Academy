@@ -368,6 +368,11 @@ main {
 	gap: 0.25rem;
 }
 
+/* Mobile nav overlay header should never appear in the desktop navbar */
+.nav-links__header {
+	display: none;
+}
+
 /* Ensure logo/nav are readable on dark backgrounds (dark theme) */
 [data-theme="dark"] .navbar {
 	background: rgba(15, 23, 42, 0.92);
