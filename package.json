@@ -48,7 +48,11 @@
     "test": "jest",
     "lint": "eslint src",
     "update:site-stats": "node scripts/update_site_stats.mjs",
-    "ensure:exam-ids": "node scripts/ensure_exam_ids.mjs"
+    "ensure:exam-ids": "node scripts/ensure_exam_ids.mjs",
+    "audit:exams": "node scripts/audit_exams.mjs",
+    "audit:exams:save": "node scripts/audit_exams.mjs --out artifacts/exam_pipeline/latest/audit",
+    "pipeline:exams": "bash scripts/run_exam_pipeline.sh",
+    "pipeline:exams:gemini": "bash scripts/run_exam_pipeline.sh --gemini"
   },
   "eslintConfig": {
     "extends": [

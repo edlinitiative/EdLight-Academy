@@ -38,4 +38,7 @@ yarn-error.log*
 # Private data (quizzes with answers)
 /private_data/
 *.swp
+
+# Pipeline run artifacts (audit reports, fix logs, snapshots)
+/artifacts/
 *.swo.env
