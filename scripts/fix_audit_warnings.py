@@ -13,6 +13,8 @@ Fixes applied (all deterministic, no AI):
   5. LEVEL_FIX         — missing level field inferred from context
   6. MCQ_LATEX_MATCH   — MCQ correct matched to option key via LaTeX-normalized text comparison
   7. MANUAL_REASON     — unanswerable questions (no correct, confirmed by model) get manual_reason field
+  8. INSTRUCTIONS_GEN  — missing section instructions generated from title pattern + question type
+  9. CALC_FINAL_ANSWER — multi-step calculation correct set to final_answer for direct auto-grading
 
 Usage:
   python3 scripts/fix_audit_warnings.py
@@ -39,6 +41,8 @@ stats = {
     "scaffold_truncated": 0,  # scaffold_blanks/answer_parts truncated
     "level_fixed":       0,   # level field inferred
     "manual_reason_set": 0,   # unanswerable questions flagged with manual_reason
+    "instructions_generated": 0,  # section instructions generated from title/type
+    "calc_final_set":    0,   # calculation correct set to final_answer
 }
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -335,6 +339,114 @@ def main():
 
                 # Mark unanswerable questions with manual_reason
                 mark_unanswerable(q)
+
+    # ── Fix 8: Generate missing section instructions ──────────────────────────
+    #
+    # Strategy (in priority order):
+    #   A. Title matches a known exam task pattern → use pattern-specific instruction
+    #   B. All questions in section share the same type → use type-specific instruction
+    #   C. Fallback → generic "Répondez aux questions suivantes."
+
+    # A: Title-to-instruction mapping (case-insensitive substring match)
+    TITLE_INSTRUCTIONS = [
+        # English
+        ("reading comprehension",  "Read the text carefully, then answer the following questions."),
+        ("error correction",       "Identify and correct the error in each sentence."),
+        ("sentence completion",    "Complete each sentence logically and grammatically."),
+        ("active/passive",         "Transform each sentence from active to passive voice (or vice versa)."),
+        ("vocabulary",             "Complete each sentence with the appropriate vocabulary word."),
+        ("fill in the blank",      "Fill in each blank with the correct word or expression."),
+        ("fill in",                "Fill in each blank with the correct word or expression."),
+        ("true or false",          "Indicate whether each statement is true or false."),
+        ("matching",               "Match each item in the left column with the corresponding item on the right."),
+        ("naming",                 "Name the items requested in each question."),
+        # French
+        ("compréhension de texte", "Lisez le texte ci-dessous puis répondez aux questions."),
+        ("compréhension",          "Lisez le texte attentivement puis répondez aux questions."),
+        ("vrai ou faux",           "Indiquez si chaque affirmation est vraie ou fausse."),
+        ("rédaction",              "Rédigez un texte structuré sur le sujet proposé."),
+        ("dictée",                 "Écoutez attentivement et écrivez le texte dicté."),
+        ("conjugaison",            "Conjuguez les verbes entre parenthèses au temps demandé."),
+        ("grammaire",              "Répondez aux questions de grammaire suivantes."),
+        ("orthographe",            "Corrigez les fautes d'orthographe dans chaque phrase."),
+        ("analyse",                "Analysez les éléments demandés dans chaque question."),
+        ("étude de texte",         "Lisez le texte ci-dessous puis répondez aux questions."),
+        # Haitian Creole
+        ("konpreyansyon",          "Li tèks la avèk atansyon, epi reponn kesyon yo."),
+        ("chwazi",                 "Chwazi repons ki kòrèk la pou chak kesyon."),
+        # Spanish
+        ("comprensión",            "Lea el texto con atención y luego responda las preguntas."),
+        ("verdadero o falso",      "Indique si cada afirmación es verdadera o falsa."),
+    ]
+
+    # B: Question-type to default instruction
+    TYPE_INSTRUCTIONS = {
+        "multiple_choice":  "Choisissez la bonne réponse pour chaque question.",
+        "multiple_select":  "Sélectionnez toutes les réponses correctes.",
+        "true_false":       "Indiquez si chaque affirmation est vraie ou fausse.",
+        "fill_blank":       "Complétez les espaces vides avec le mot ou l'expression approprié(e).",
+        "matching":         "Associez chaque élément avec son correspondant.",
+        "short_answer":     "Répondez brièvement à chaque question.",
+        "calculation":      "Effectuez les calculs demandés.",
+        "essay":            "Rédigez une réponse développée.",
+    }
+
+    GENERIC_INSTRUCTION = "Répondez aux questions suivantes."
+
+    for exam in data:
+        for sec in exam.get("sections") or []:
+            if (sec.get("instructions") or "").strip():
+                continue  # already has instructions
+
+            title = (sec.get("section_title") or "").strip().lower()
+            qs = sec.get("questions") or []
+            if not qs:
+                continue  # empty section, skip
+
+            instruction = None
+
+            # Strategy A: match title
+            for pattern, instr in TITLE_INSTRUCTIONS:
+                if pattern in title:
+                    instruction = instr
+                    break
+
+            # Strategy B: uniform question type
+            if not instruction:
+                types = set(q.get("type") for q in qs)
+                if len(types) == 1:
+                    single_type = list(types)[0]
+                    instruction = TYPE_INSTRUCTIONS.get(single_type)
+
+            # Strategy C: generic fallback
+            if not instruction:
+                instruction = GENERIC_INSTRUCTION
+
+            sec["instructions"] = instruction
+            stats["instructions_generated"] += 1
+
+    # ── Fix 9: Set correct = final_answer for multi-step calculations ─────────
+    #
+    # 992 calculation questions have answer_parts (multi-step work) but no `correct`.
+    # The frontend grading engine (examUtils.js gradeSingleQuestion) checks:
+    #   1. scaffold_text → gradeScaffoldBlanks (per-blank matching)
+    #   2. final_answer → answerMatches (single value comparison)
+    #   3. correct → checkAnswer (direct comparison)
+    # By setting correct = final_answer, we enable direct auto-grading via path 3
+    # while keeping the answer_parts for detailed solution display.
+
+    for exam in data:
+        for sec in exam.get("sections") or []:
+            for q in sec.get("questions") or []:
+                if q.get("type") != "calculation":
+                    continue
+                if q.get("correct"):          # already has correct
+                    continue
+                fa = (q.get("final_answer") or "").strip()
+                if not fa:
+                    continue
+                q["correct"] = fa
+                stats["calc_final_set"] += 1
 
     # ── Report ────────────────────────────────────────────────────────────────
     print()
