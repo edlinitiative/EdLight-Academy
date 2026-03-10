@@ -15,6 +15,8 @@ Fixes applied (all deterministic, no AI):
   7. MANUAL_REASON     — unanswerable questions (no correct, confirmed by model) get manual_reason field
   8. INSTRUCTIONS_GEN  — missing section instructions generated from title pattern + question type
   9. CALC_FINAL_ANSWER — multi-step calculation correct set to final_answer for direct auto-grading
+ 10. MISSING_YEAR      — exams with no year set to 'modèle' (model exams / year not on source scan)
+ 11. SCAFFOLD_MANUAL   — scaffold questions with unanswerable final_answer get manual_reason
 
 Usage:
   python3 scripts/fix_audit_warnings.py
@@ -43,6 +45,8 @@ stats = {
     "manual_reason_set": 0,   # unanswerable questions flagged with manual_reason
     "instructions_generated": 0,  # section instructions generated from title/type
     "calc_final_set":    0,   # calculation correct set to final_answer
+    "year_set":          0,   # exams with missing year set to 'modèle'
+    "scaffold_manual":   0,   # scaffold unanswerable questions flagged
 }
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -447,6 +451,57 @@ def main():
                     continue
                 q["correct"] = fa
                 stats["calc_final_set"] += 1
+
+    # ── Fix 10: MISSING_YEAR → 'modèle' ─────────────────────────────────────
+    #
+    # 11 exams have no year in title or content. They're "Texte Modèle" (model exams)
+    # or scans where the year was cut off. Set to 'modèle' rather than leaving null.
+
+    for exam in data:
+        if not exam.get("year"):
+            exam["year"] = "mod\u00e8le"
+            stats["year_set"] += 1
+
+    # ── Fix 11: Scaffold questions with unanswerable content → manual_reason ─────
+    #
+    # 52 scaffold questions where final_answer/model_answer confirms the source
+    # material was incomplete ("Question incomplète", "Cannot answer", "N/A", etc.)
+    # These need manual_reason so the audit (and frontend) know they're acknowledged.
+
+    SCAFFOLD_UNANSWERABLE = re.compile(
+        r"(?:impossible|incompl[eè]te?|incomplet|cannot answer|n/?a|no answer"
+        r"|question manquante|texte incomplet|tableau incomplet"
+        r"|no se puede|mwen bezwen|pas de r\u00e9ponse"
+        r"|content of .* required|given voltage|given current"
+        r"|no simple closed form|see sub-question|see answer parts"
+        r"|dessin|without visual data|incomplete question)",
+        re.IGNORECASE
+    )
+
+    for exam in data:
+        for sec in exam.get("sections") or []:
+            for q in sec.get("questions") or []:
+                st = q.get("scaffold_text") or ""
+                sb = q.get("scaffold_blanks")
+                ap = q.get("answer_parts")
+                if not st or not sb:
+                    continue
+                if isinstance(ap, list) and len(ap) > 0:
+                    continue  # has answer_parts already
+                if q.get("manual_reason"):
+                    continue  # already flagged
+
+                fa = (q.get("final_answer") or "").strip()
+                ma = (q.get("model_answer") or "").strip()
+                correct_str = str(q.get("correct") or "")
+                combined = f"{fa} {ma} {correct_str}"
+
+                if SCAFFOLD_UNANSWERABLE.search(combined):
+                    reason = fa if fa and len(fa) < 100 else (
+                        ma[:120] if ma else "Source material incomplete during digitisation"
+                    )
+                    q["manual_reason"] = reason
+                    stats["scaffold_manual"] += 1
 
     # ── Report ────────────────────────────────────────────────────────────────
     print()

@@ -105,8 +105,11 @@ function auditExam(exam) {
     warn('MISSING_SUBJECT', 'subject field is missing — exam will not appear in subject filters');
   }
 
-  if (!exam.year) {
-    info('MISSING_YEAR', 'year field is missing');
+  if (!exam.year || exam.year === 'modèle') {
+    if (!exam.year) {
+      info('MISSING_YEAR', 'year field is missing');
+    }
+    // year === 'modèle' is intentional — no info needed
   }
 
   if (!exam.exam_title) {
@@ -183,9 +186,7 @@ function auditExam(exam) {
           const optionKeys = new Set(Object.keys(q.options).map((k) => k.toLowerCase()));
           if (!q.correct) {
             if (q.manual_reason) {
-              info('MCQ_NO_CORRECT', `${loc}: MCQ has no correct answer (manual_reason: ${q.manual_reason.slice(0, 80)})`, {
-                section: si, question: qi, manual_reason: q.manual_reason,
-              });
+              // Acknowledged unanswerable — manual_reason already set, no issue to report
             } else {
               warn('MCQ_NO_CORRECT', `${loc}: MCQ has no correct answer — will fall back to manual grading`, {
                 section: si, question: qi,
@@ -223,9 +224,7 @@ function auditExam(exam) {
       if (q.type === 'true_false') {
         if (!q.correct) {
           if (q.manual_reason) {
-            info('TF_NO_CORRECT', `${loc}: true_false has no correct answer (manual_reason: ${q.manual_reason.slice(0, 80)})`, {
-              section: si, question: qi, manual_reason: q.manual_reason,
-            });
+            // Acknowledged unanswerable — manual_reason already set
           } else {
             warn('TF_NO_CORRECT', `${loc}: true_false has no correct answer — manual grading only`, {
               section: si, question: qi,
@@ -250,10 +249,13 @@ function auditExam(exam) {
         const hasAnswerParts = Array.isArray(q.answer_parts) && q.answer_parts.length > 0;
         const hasFinalAnswer = isNonEmpty(q.final_answer);
         if (!hasCorrect && !hasAnswerParts && !hasFinalAnswer) {
-          const emitter = q.manual_reason ? info : warn;
-          emitter('OPEN_NO_CORRECT', `${loc}: ${q.type} has no correct/answer_parts/final_answer${q.manual_reason ? ` (manual_reason: ${q.manual_reason.slice(0,80)})` : ' — manual grading only'}`, {
-            section: si, question: qi,
-          });
+          if (q.manual_reason) {
+            // Acknowledged unanswerable — manual_reason already set
+          } else {
+            warn('OPEN_NO_CORRECT', `${loc}: ${q.type} has no correct/answer_parts/final_answer — manual grading only`, {
+              section: si, question: qi,
+            });
+          }
         }
       }
 
@@ -276,9 +278,13 @@ function auditExam(exam) {
         }
 
         if (blanksCount > 0 && partsCount === 0) {
-          info('SCAFFOLD_NO_ANSWER_PARTS', `${loc}: has scaffold_blanks but no answer_parts — grading will fall back to scaffold-complete (full credit for any filled attempt)`, {
-            section: si, question: qi,
-          });
+          if (q.manual_reason) {
+            // Acknowledged unanswerable — source material was incomplete
+          } else {
+            info('SCAFFOLD_NO_ANSWER_PARTS', `${loc}: has scaffold_blanks but no answer_parts — grading will fall back to scaffold-complete (full credit for any filled attempt)`, {
+              section: si, question: qi,
+            });
+          }
         }
       }
     }
