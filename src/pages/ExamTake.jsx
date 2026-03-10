@@ -300,6 +300,7 @@ const ExamTake = () => {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Feedback mode: 'end' (default — see all results after submit)
@@ -789,16 +790,76 @@ const ExamTake = () => {
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     clearInterval(timerRef.current);
-    setSubmitted(true);
+    setSubmitting(true);
 
     // Get the user's track for coefficient-weighted scoring
     const currentTrack = useStore.getState().track;
     const examSubject = normalizeSubject(exam.subject);
 
-    // In immediate mode, pass pre-graded results so they aren't re-graded
+    // Collect pre-graded results from immediate mode
+    const preGraded = feedbackMode === 'immediate' ? { ...questionResults } : {};
+
+    // AI-grade essay / short_answer questions that weren't already pre-graded
+    const aiJobs = [];
+    questions.forEach((q, i) => {
+      if (preGraded[i]) return; // already graded
+      const userAnswer = answers[i];
+      if (userAnswer == null || userAnswer === '') return; // unanswered
+      if (q.type !== 'essay' && q.type !== 'short_answer') return; // not AI-gradable
+
+      // Build model reference the same way as gradeQuestionImmediate
+      let modelRef = q.model_answer || q.correct || '';
+      if (q.answer_parts && q.answer_parts.length > 0) {
+        const partsText = q.answer_parts.map(p =>
+          `${p.label}: ${p.answer}${p.alternatives && p.alternatives.length ? ' (also acceptable: ' + p.alternatives.join(', ') + ')' : ''}`
+        ).join('\n');
+        modelRef = modelRef ? modelRef + '\n\nKey expected points:\n' + partsText : partsText;
+      }
+      if (!modelRef) return; // nothing to grade against
+
+      aiJobs.push({ index: i, question: q, userAnswer, modelRef });
+    });
+
+    // Run all AI grading requests in parallel
+    if (aiJobs.length > 0) {
+      const settled = await Promise.allSettled(
+        aiJobs.map(async (job) => {
+          try {
+            const response = await fetch('/api/grade-essay', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                question: job.question._displayText || job.question.question,
+                context: job.question.sectionInstructions || '',
+                answer: job.userAnswer,
+                modelAnswer: job.modelRef,
+              }),
+            });
+            if (response.ok) {
+              return { index: job.index, essayResult: await response.json() };
+            }
+          } catch { /* network error — fall through */ }
+          return {
+            index: job.index,
+            essayResult: { isCorrect: false, feedback: 'Évaluation automatique indisponible.', score: 'N/A' },
+          };
+        })
+      );
+
+      for (const outcome of settled) {
+        if (outcome.status !== 'fulfilled') continue;
+        const { index, essayResult } = outcome.value;
+        const q = questions[index];
+        preGraded[index] = gradeSingleQuestion(q, answers[index], essayResult, { subject: examSubject });
+      }
+    }
+
+    setSubmitted(true);
+    setSubmitting(false);
+
     const result = gradeExam(
       questions, answers,
-      feedbackMode === 'immediate' ? questionResults : {},
+      preGraded,
       { track: currentTrack, subject: examSubject }
     );
 
@@ -828,7 +889,13 @@ const ExamTake = () => {
           track: currentTrack || '',
           feedbackMode,
           answers,
-          preGradedResults: feedbackMode === 'immediate' ? compactQuestionResults : {},
+          preGradedResults: Object.fromEntries(
+            Object.entries(preGraded).map(([k, v]) => [k, {
+              status: v.status,
+              result: v.result,
+              essayFeedback: v.essayFeedback || undefined,
+            }])
+          ),
           submitted_at_ms: Date.now(),
         });
         await markExamAttemptSubmitted(userId, examKey, {
@@ -840,7 +907,7 @@ const ExamTake = () => {
     }
 
     navigate(`/exams/${level}/${examKey}/results`);
-  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate, examKey, userId, compactQuestionResults]);
+  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate, examKey, userId]);
 
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
@@ -1772,11 +1839,15 @@ const ExamTake = () => {
             )}
 
             <div className="exam-take__modal-actions">
-              <button className="button button--ghost" onClick={() => setShowConfirm(false)} type="button">
+              <button className="button button--ghost" onClick={() => setShowConfirm(false)} type="button" disabled={submitting}>
                 Continuer l'examen
               </button>
-              <button className="button button--primary" onClick={handleSubmit} type="button">
-                Soumettre maintenant
+              <button className="button button--primary" onClick={handleSubmit} type="button" disabled={submitting}>
+                {submitting ? (
+                  <><span className="loading-spinner loading-spinner--inline" /> Évaluation en cours…</>
+                ) : (
+                  'Soumettre maintenant'
+                )}
               </button>
             </div>
           </div>
