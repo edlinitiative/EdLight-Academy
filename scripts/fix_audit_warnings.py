@@ -11,6 +11,8 @@ Fixes applied (all deterministic, no AI):
   3. MCQ_CLEAR         — MCQ correct is answer text not a key (unfixable by text match) → null
   4. SCAFFOLD_TRUNCATE — scaffold_blanks / answer_parts truncated to match {{N}} placeholder count
   5. LEVEL_FIX         — missing level field inferred from context
+  6. MCQ_LATEX_MATCH   — MCQ correct matched to option key via LaTeX-normalized text comparison
+  7. MANUAL_REASON     — unanswerable questions (no correct, confirmed by model) get manual_reason field
 
 Usage:
   python3 scripts/fix_audit_warnings.py
@@ -33,8 +35,10 @@ stats = {
     "tf_option_map":     0,   # TF a/b → vrai/faux via options lookup
     "tf_cleared":        0,   # TF correct cleared (non-string or unanswerable)
     "mcq_cleared":       0,   # MCQ correct cleared (answer text, no option match)
+    "mcq_latex_matched": 0,   # MCQ correct matched by LaTeX-normalized comparison
     "scaffold_truncated": 0,  # scaffold_blanks/answer_parts truncated
     "level_fixed":       0,   # level field inferred
+    "manual_reason_set": 0,   # unanswerable questions flagged with manual_reason
 }
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -44,6 +48,53 @@ PLACEHOLDER_RE = re.compile(r"\{\{\d+\}\}")
 def placeholder_count(text):
     """Count {{N}} placeholders in scaffold_text."""
     return len(PLACEHOLDER_RE.findall(text or ""))
+
+# ─── LaTeX text normalisation ─────────────────────────────────────────────────
+
+_LATEX_STRIP_RE = re.compile(
+    r"\\(?:text|mathrm|mathbf|mathit|textbf|operatorname)"
+    r"\{([^}]*)\}",  # \text{N.m} → N.m
+)
+_LATEX_CMD_RE = re.compile(r"\\(?:times|cdot|Omega|ohm|mu|alpha|beta|pi|sqrt|frac|left|right|,|;|:| )")  # common commands → space
+_LATEX_DOLLAR_RE = re.compile(r"\$+")  # strip $ delimiters
+_MULTI_SPACE_RE = re.compile(r"\s+")
+
+def strip_latex(text):
+    """Normalise LaTeX-rich text to plain for fuzzy comparison.
+
+    Examples:
+        '$5\\text{ nC}$'        → '5 nc'
+        '$82.07 \\Omega$'       → '82.07'
+        '$1.25 \\times 10^{-4}$' → '1.25 10 -4'
+    """
+    if not isinstance(text, str):
+        return ""
+    t = text
+    t = _LATEX_STRIP_RE.sub(r"\1", t)   # unwrap \text{…}
+    t = _LATEX_CMD_RE.sub(" ", t)       # drop known commands
+    t = _LATEX_DOLLAR_RE.sub("", t)     # strip $
+    t = t.replace("{", "").replace("}", "")  # leftover braces
+    t = t.replace("^", " ").replace("_", " ")
+    t = _MULTI_SPACE_RE.sub(" ", t).strip().lower()
+    return t
+
+# ─── Unanswerable-question detection ─────────────────────────────────────────
+
+UNANSWERABLE_PATTERNS = re.compile(
+    r"(?:"
+    r"no correct answer|impossible (?:à|a|de) répondre|erreur dans|aucune des options"
+    r"|no se puede responder|information insuffisante|mwen pa gen tèks"
+    r"|cannot be determined|tout mo yo se non"
+    r"|egzanp pou chak|fraz pou chak|dyagram pyebwa"
+    r")",
+    re.IGNORECASE,
+)
+
+def is_unanswerable(text):
+    """Return True if text confirms there's no deterministic correct answer."""
+    if not isinstance(text, str):
+        return False
+    return bool(UNANSWERABLE_PATTERNS.search(text))
 
 # Patterns that indicate a true/false question cannot be answered (text acting as correct)
 TF_UNANSWERABLE_PATTERNS = [
@@ -126,9 +177,10 @@ def fix_true_false(question):
 
 def fix_mcq_text_not_key(question):
     """
-    Clear MCQ correct that is answer text instead of an option key and
-    can't be mapped by fuzzy matching (already attempted by fix_all_exams.py).
-    These are 'none of the above' or data-error situations.
+    Fix 6: Try matching correct (answer text) to an option value via LaTeX-normalized
+    comparison. If that succeeds, set correct to the matching key.
+
+    Otherwise clear correct → manual grading.
     """
     correct = question.get("correct")
     options = question.get("options")
@@ -140,7 +192,17 @@ def fix_mcq_text_not_key(question):
     if is_option_key(correct, options):
         return
 
-    # clear it — grading will fall back to manual
+    # --- Fix 6: LaTeX-normalised match ---
+    correct_norm = strip_latex(correct)
+    if correct_norm:
+        for key, val in options.items():
+            val_norm = strip_latex(val)
+            if val_norm and (val_norm == correct_norm or correct_norm in val_norm or val_norm in correct_norm):
+                question["correct"] = key
+                stats["mcq_latex_matched"] += 1
+                return
+
+    # No match possible — clear it
     question["correct"] = None
     stats["mcq_cleared"] += 1
 
@@ -171,6 +233,39 @@ def fix_scaffold_mismatch(question):
         question["answer_parts"] = answer_parts[:n_placeholders]
 
 
+# ─── Fix 7: mark unanswerable questions ──────────────────────────────────────
+
+def mark_unanswerable(question):
+    """Add a `manual_reason` field when the question is confirmed unanswerable.
+
+    Conditions (all must hold):
+      - correct is null (no valid answer)
+      - type is one that the auditor flags (MCQ, TF, open auto-gradable)
+      - final_answer or model_answer contain an unanswerable indicator phrase
+      - manual_reason is not already set
+    """
+    if question.get("correct"):
+        return  # has a valid answer — not unanswerable
+    if question.get("manual_reason"):
+        return  # already flagged
+
+    # Only flag types that the auditor would raise a warning about
+    flaggable = {"multiple_choice", "true_false", "short_answer", "fill_blank", "calculation"}
+    if question.get("type") not in flaggable:
+        return
+
+    fa = (question.get("final_answer") or "").strip()
+    ma = (question.get("model_answer") or "").strip()
+
+    if is_unanswerable(fa) or is_unanswerable(ma):
+        # Pick the shortest human-readable reason
+        reason = fa if fa and len(fa) < 100 else (
+            ma[:120] if ma else "No valid answer found during digitisation"
+        )
+        question["manual_reason"] = reason
+        stats["manual_reason_set"] += 1
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -192,7 +287,36 @@ def main():
             exam["level"] = "baccalaureat"
             stats["level_fixed"] += 1
             print(f"  Level fixed: {ex_missing_id}")
-
+    # ── Fix 7b: Targeted manual_reason for confirmed unanswerable questions ──────
+    targeted = [
+        # Physics MCQs where computed answer doesn't match any option
+        ("ex_adc71f5f-720e-4626-b7ac-b962cdefcab9", 0, 7,
+         "Computed answer (5 nC) does not match any option (400/100/2√2/10 nC)"),
+        ("ex_adc71f5f-720e-4626-b7ac-b962cdefcab9", 0, 9,
+         "Computed answer (1.25e-4 N) does not match any option (malformed exponents)"),
+        ("ex_adc71f5f-720e-4626-b7ac-b962cdefcab9", 0, 10,
+         "Computed answer (82.07 Ω) does not match any option (20/99.6/21/10 Ω)"),
+        ("ex_adc71f5f-720e-4626-b7ac-b962cdefcab9", 0, 12,
+         "Computed answer (463.69) does not match any option (32√2 ≈ 45.25)"),
+        # Compound MCQ with multi-part answer_parts — not auto-gradable as single MCQ
+        ("ex_fa0f28a5-e811-48ff-91f9-b57fc3cf8fa1", 1, 1,
+         "Compound question with multiple sub-answers; cannot auto-grade as single MCQ"),
+        # True/false with no answer data at all
+        ("ex_e1f6b8ba-9494-4394-b938-739b5d13c33e", 4, 3,
+         "No answer data provided during digitisation"),
+    ]
+    for eid, si, qi, reason in targeted:
+        if eid in by_id:
+            _, exam = by_id[eid]
+            secs = exam.get("sections") or []
+            if si < len(secs):
+                qs = secs[si].get("questions") or []
+                if qi < len(qs):
+                    q = qs[qi]
+                    if not q.get("manual_reason"):
+                        q["manual_reason"] = reason
+                        stats["manual_reason_set"] += 1
+                        print(f"  manual_reason set: {eid[:24]} §{si} q{qi}")
     # ── Iterate all questions ─────────────────────────────────────────────────
     for exam in data:
         for sec in exam.get("sections") or []:
@@ -208,6 +332,9 @@ def main():
                 # Scaffold mismatch — applies to any type that has scaffold_text
                 if q.get("scaffold_text") and q.get("scaffold_blanks"):
                     fix_scaffold_mismatch(q)
+
+                # Mark unanswerable questions with manual_reason
+                mark_unanswerable(q)
 
     # ── Report ────────────────────────────────────────────────────────────────
     print()

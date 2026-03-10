@@ -142,6 +142,11 @@ function auditExam(exam) {
       info('NULL_SECTION_TITLE', `${secLabel}: section title is null/empty`, { section: si });
     }
 
+    const instr = (sec.instructions || '').trim();
+    if (!instr) {
+      info('MISSING_INSTRUCTIONS', `${secLabel}: has no instructions — students won't see directions for this section`, { section: si });
+    }
+
     const questions = sec.questions || [];
     if (questions.length === 0) {
       warn('EMPTY_SECTION', `${secLabel}: has no questions`, { section: si });
@@ -177,9 +182,15 @@ function auditExam(exam) {
         } else {
           const optionKeys = new Set(Object.keys(q.options).map((k) => k.toLowerCase()));
           if (!q.correct) {
-            warn('MCQ_NO_CORRECT', `${loc}: MCQ has no correct answer — will fall back to manual grading`, {
-              section: si, question: qi,
-            });
+            if (q.manual_reason) {
+              info('MCQ_NO_CORRECT', `${loc}: MCQ has no correct answer (manual_reason: ${q.manual_reason.slice(0, 80)})`, {
+                section: si, question: qi, manual_reason: q.manual_reason,
+              });
+            } else {
+              warn('MCQ_NO_CORRECT', `${loc}: MCQ has no correct answer — will fall back to manual grading`, {
+                section: si, question: qi,
+              });
+            }
           } else if (typeof q.correct !== 'string') {
             warn('MCQ_CORRECT_NOT_STRING', `${loc}: correct is ${typeof q.correct} (expected string key like "a", "b")`, {
               section: si, question: qi, correct: q.correct,
@@ -211,9 +222,15 @@ function auditExam(exam) {
 
       if (q.type === 'true_false') {
         if (!q.correct) {
-          warn('TF_NO_CORRECT', `${loc}: true_false has no correct answer — manual grading only`, {
-            section: si, question: qi,
-          });
+          if (q.manual_reason) {
+            info('TF_NO_CORRECT', `${loc}: true_false has no correct answer (manual_reason: ${q.manual_reason.slice(0, 80)})`, {
+              section: si, question: qi, manual_reason: q.manual_reason,
+            });
+          } else {
+            warn('TF_NO_CORRECT', `${loc}: true_false has no correct answer — manual grading only`, {
+              section: si, question: qi,
+            });
+          }
         } else if (typeof q.correct !== 'string') {
           warn('TF_INVALID_CORRECT', `${loc}: true_false correct is ${typeof q.correct} (expected string vrai/faux)`, {
             section: si, question: qi, correct: q.correct,
@@ -228,11 +245,13 @@ function auditExam(exam) {
       // ── Open-ended (fill_blank / calculation / short_answer) ──────────────
 
       if (['fill_blank', 'calculation', 'short_answer'].includes(q.type)) {
-        const hasCorrect = isNonEmpty(q.correct);
+        // correct can be a string OR a dict of sub-answers (multi-part questions)
+        const hasCorrect = isNonEmpty(q.correct) || (q.correct != null && typeof q.correct === 'object');
         const hasAnswerParts = Array.isArray(q.answer_parts) && q.answer_parts.length > 0;
         const hasFinalAnswer = isNonEmpty(q.final_answer);
         if (!hasCorrect && !hasAnswerParts && !hasFinalAnswer) {
-          warn('OPEN_NO_CORRECT', `${loc}: ${q.type} has no correct/answer_parts/final_answer — manual grading only`, {
+          const emitter = q.manual_reason ? info : warn;
+          emitter('OPEN_NO_CORRECT', `${loc}: ${q.type} has no correct/answer_parts/final_answer${q.manual_reason ? ` (manual_reason: ${q.manual_reason.slice(0,80)})` : ' — manual grading only'}`, {
             section: si, question: qi,
           });
         }
