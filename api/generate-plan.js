@@ -99,7 +99,8 @@ export default async function handler(req, res) {
     tips: [
       'Commencez par les matières où vous avez le plus de difficulté.',
       'Révisez les matières à fort coefficient en priorité.',
-      'Pratiquez au moins un examen par jour.',
+      'Alternez entre examens, exercices pratiques et vidéos pour varier.',
+      'Pratiquez au moins un examen ou exercice par jour.',
       'Utilisez les indices (hints) avant de regarder les corrections.',
     ],
     schedule: [],
@@ -140,6 +141,8 @@ Rules:
 3. Mix difficult and easy exams each day for motivation.
 4. Include rest days (1/week recommended).
 5. Build complexity gradually (easier exams first, harder later).
+6. Mix task types: use "exam" for full exam practice, "practice" for short quiz exercises, and "video" for watching lesson videos.
+7. Start each subject with a video, then practice exercises, then full exams.
 
 Return ONLY valid JSON:
 {
@@ -152,6 +155,7 @@ Return ONLY valid JSON:
     {
       "week": 1,
       "day": 1,
+      "type": "exam | practice | video",
       "subject": "exact canonical subject name",
       "focusArea": "specific topic like 'Dérivées' or 'Acides & Bases'",
       "examDifficulty": 1-5,

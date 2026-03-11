@@ -10,6 +10,7 @@ import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
+import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
 import {
   flattenQuestions,
   gradeExam,
@@ -903,6 +904,19 @@ const ExamTake = () => {
         });
       } catch (e) {
         console.warn('[ExamResult] Failed to persist result:', e);
+      }
+
+      // Update study plan SRS if exam is in the active plan (best-effort)
+      try {
+        const activePlan = await loadActiveStudyPlan(userId);
+        if (activePlan?.tasks?.some((t) => t.examId === examKey)) {
+          await recordTaskResult(userId, activePlan.id, examKey, {
+            scorePct: result.percentage ?? 0,
+            answeredAt: Date.now(),
+          });
+        }
+      } catch (e) {
+        console.warn('[StudyPlan] Failed to record task result:', e);
       }
     }
 

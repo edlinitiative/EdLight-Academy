@@ -216,7 +216,9 @@ export async function recordTaskResult(uid, planId, taskId, result) {
   if (!plan) return;
 
   const tasks = plan.tasks || [];
-  const idx = tasks.findIndex((t) => t.examId === taskId);
+  // Support both exam tasks (matched by examId) and practice/video tasks (matched by taskId)
+  let idx = tasks.findIndex((t) => t.examId === taskId);
+  if (idx === -1) idx = tasks.findIndex((t) => t.taskId === taskId);
   if (idx === -1) return;
 
   const task = tasks[idx];
@@ -358,6 +360,7 @@ export function buildTasksFromExams(exams, coefficients = {}, existingResults = 
     }
 
     return {
+      type: 'exam',
       examId,
       subject,
       difficulty,
@@ -396,4 +399,184 @@ export function sortTasksByPriority(tasks) {
     // Then by next review date
     return (a.nextReviewMs || 0) - (b.nextReviewMs || 0);
   });
+}
+
+// ─── Practice (quiz-bank) task generation ───────────────────────────────────
+
+/**
+ * Build practice tasks from the quiz bank index.
+ *
+ * @param {Object} quizBankIndex — { bySubject: { 'CHEM-NSI': row[] }, byUnit: { ... } }
+ * @param {Object} coefficients  — { subject → coefficient } from trackConfig
+ * @param {string[]} trackSubjects — canonical subject names for the user's track
+ * @param {number} maxPerSubject — max practice sets per subject (default 3)
+ * @returns {Object[]} practice tasks
+ */
+export function buildPracticeTasksFromQuizBank(
+  quizBankIndex,
+  coefficients = {},
+  trackSubjects = [],
+  maxPerSubject = 3,
+) {
+  if (!quizBankIndex?.bySubject) return [];
+
+  const now = Date.now();
+  const tasks = [];
+
+  // Map bac-exam subject names to quiz-bank codes
+  // Quiz bank uses codes like 'CHEM-NSI', bac subjects are like 'Chimie'
+  const SUBJECT_TO_CODE_PREFIX = {
+    chimie: 'CHEM', physique: 'PHYS', mathématiques: 'MATH', mathematiques: 'MATH',
+    économie: 'ECON', economie: 'ECON', 'sciences physiques': 'PHYS',
+    'svt': 'CHEM', biologie: 'CHEM',
+  };
+
+  const bankKeys = Object.keys(quizBankIndex.bySubject);
+
+  for (const subject of trackSubjects) {
+    const normSubj = subject.toLowerCase().trim();
+    const prefix = SUBJECT_TO_CODE_PREFIX[normSubj] || subject.toUpperCase().slice(0, 4);
+
+    // Find matching quiz-bank subject codes (e.g. CHEM-NSI, CHEM-NSII)
+    const matchingCodes = bankKeys.filter((k) => k.startsWith(prefix));
+    if (matchingCodes.length === 0) continue;
+
+    const coeff = coefficients[subject] || 1;
+    let practiceCount = 0;
+
+    for (const code of matchingCodes) {
+      if (practiceCount >= maxPerSubject) break;
+      const rows = quizBankIndex.bySubject[code] || [];
+      if (rows.length === 0) continue;
+
+      // Find available units for this subject code
+      const unitKeys = Object.keys(quizBankIndex.byUnit || {}).filter((k) =>
+        k.startsWith(code + '|'),
+      );
+
+      if (unitKeys.length > 0) {
+        // Create one practice task per unit (up to maxPerSubject)
+        for (const unitKey of unitKeys) {
+          if (practiceCount >= maxPerSubject) break;
+          const unitRows = quizBankIndex.byUnit[unitKey] || [];
+          if (unitRows.length < 2) continue; // skip units with very few questions
+
+          const unitId = unitKey.split('|')[1] || ''; // e.g. 'U3'
+          const sampleRow = unitRows[0];
+          const chapterTitle = sampleRow.Chapter_Title || sampleRow.chapter_title || sampleRow.video_title || '';
+
+          tasks.push({
+            type: 'practice',
+            taskId: `practice-${code}-${unitId}`,
+            subject,
+            subjectCode: code,
+            unitId,
+            unitTitle: chapterTitle,
+            questionCount: unitRows.length,
+            difficulty: 3, // default medium
+            coefficient: coeff,
+            priority: Math.round(((coeff / 5) * 0.3 + 0.4) * 100) / 100,
+            status: 'active',
+            interval: 0,
+            ease: DEFAULT_EASE,
+            repetitions: 0,
+            nextReviewMs: now + DAY_MS * practiceCount, // stagger across days
+            history: [],
+            lastPracticedMs: null,
+          });
+          practiceCount++;
+        }
+      } else {
+        // No unit breakdown — create a single practice task for this subject code
+        tasks.push({
+          type: 'practice',
+          taskId: `practice-${code}`,
+          subject,
+          subjectCode: code,
+          unitId: '',
+          unitTitle: '',
+          questionCount: rows.length,
+          difficulty: 3,
+          coefficient: coeff,
+          priority: Math.round(((coeff / 5) * 0.3 + 0.4) * 100) / 100,
+          status: 'active',
+          interval: 0,
+          ease: DEFAULT_EASE,
+          repetitions: 0,
+          nextReviewMs: now,
+          history: [],
+          lastPracticedMs: null,
+        });
+        practiceCount++;
+      }
+    }
+  }
+
+  return tasks;
+}
+
+/**
+ * Build video-watching tasks from courses relevant to the user's track.
+ *
+ * @param {Object[]} courses — app-data courses array
+ * @param {string[]} trackSubjects — canonical subject names for the user's track
+ * @param {number} maxPerSubject — max video tasks per subject
+ * @returns {Object[]} video tasks
+ */
+export function buildVideoTasks(courses = [], trackSubjects = [], maxPerSubject = 3) {
+  const now = Date.now();
+  const tasks = [];
+
+  const SUBJECT_TO_CODE_PREFIX = {
+    chimie: 'CHEM', physique: 'PHYS', mathématiques: 'MATH', mathematiques: 'MATH',
+    économie: 'ECON', economie: 'ECON',
+  };
+
+  for (const subject of trackSubjects) {
+    const normSubj = subject.toLowerCase().trim();
+    const prefix = SUBJECT_TO_CODE_PREFIX[normSubj] || subject.toUpperCase().slice(0, 4);
+
+    const matchingCourses = courses.filter((c) =>
+      (c.subject || '').toUpperCase().startsWith(prefix) ||
+      (c.code || '').toUpperCase().startsWith(prefix),
+    );
+
+    let videoCount = 0;
+    for (const course of matchingCourses) {
+      if (videoCount >= maxPerSubject) break;
+      const modules = course.modules || [];
+      for (const mod of modules) {
+        if (videoCount >= maxPerSubject) break;
+        const videoLessons = (mod.lessons || []).filter(
+          (l) => l.type === 'video' && l.videoUrl,
+        );
+        for (const lesson of videoLessons) {
+          if (videoCount >= maxPerSubject) break;
+          tasks.push({
+            type: 'video',
+            taskId: `video-${lesson.id || course.id + '-' + mod.id}`,
+            subject,
+            courseCode: course.code || course.id,
+            courseTitle: course.name || '',
+            videoTitle: lesson.title || '',
+            videoUrl: lesson.videoUrl || '',
+            duration: lesson.duration || 15,
+            difficulty: 1,
+            coefficient: 1,
+            priority: 0.2,
+            status: 'active',
+            interval: 0,
+            ease: DEFAULT_EASE,
+            repetitions: 0,
+            nextReviewMs: now,
+            history: [],
+            lastPracticedMs: null,
+          });
+          videoCount++;
+        }
+      }
+    }
+  }
+
+  return tasks;
 }

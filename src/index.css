@@ -10655,6 +10655,24 @@ textarea.input-field {
 	min-width: 0;
 }
 
+.study-plan-task__type-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.study-plan-task__type-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-size: 0.7rem;
+	font-weight: 600;
+	padding: 0.15rem 0.5rem;
+	border-radius: 999px;
+	white-space: nowrap;
+	letter-spacing: 0.02em;
+}
+
 .study-plan-task__subject {
 	font-size: 0.75rem;
 	font-weight: 600;
@@ -10687,6 +10705,19 @@ textarea.input-field {
 .study-plan-task__difficulty {
 	font-size: 0.85rem;
 	letter-spacing: 0.05em;
+}
+
+.study-plan-task__duration {
+	font-size: 0.8rem;
+	color: var(--text-500);
+	white-space: nowrap;
+}
+
+.study-plan-task__qcount {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--text-600);
+	white-space: nowrap;
 }
 
 .study-plan-task__score {

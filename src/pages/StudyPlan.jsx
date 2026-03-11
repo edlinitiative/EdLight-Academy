@@ -15,6 +15,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
+import { useAppData } from '../hooks/useData';
 import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
@@ -86,6 +87,10 @@ export default function StudyPlan() {
 
   const { data: allExams, isLoading: examsLoading } = useExamCatalog();
   const { data: existingResults = {}, isLoading: resultsLoading } = useExamResultsForPlan();
+  const { data: appData, isLoading: appDataLoading } = useAppData();
+
+  const quizBankIndex = appData?.quizBank || null;
+  const courses = appData?.courses || [];
 
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
@@ -159,6 +164,8 @@ export default function StudyPlan() {
         coefficients,
         existingResults,
         aiPlan,
+        quizBankIndex,
+        courses,
       });
     } catch (err) {
       console.error('Plan generation failed:', err);
@@ -166,7 +173,7 @@ export default function StudyPlan() {
     } finally {
       setGenerating(false);
     }
-  }, [track, trackExams, coefficients, existingResults, allExams, generatePlan]);
+  }, [track, trackExams, coefficients, existingResults, allExams, generatePlan, quizBankIndex, courses]);
 
   // ── Not authenticated ─────────────────────────────────────────────
   if (!isAuthenticated) {
@@ -209,7 +216,7 @@ export default function StudyPlan() {
   }
 
   // ── Loading states ────────────────────────────────────────────────
-  if (planLoading || examsLoading || resultsLoading) {
+  if (planLoading || examsLoading || resultsLoading || appDataLoading) {
     return (
       <div className="study-plan-page">
         <div className="study-plan-loading">
@@ -362,13 +369,10 @@ export default function StudyPlan() {
           <div className="study-plan-task-list">
             {todayTasks.map((task) => (
               <TaskCard
-                key={task.examId}
+                key={task.examId || task.taskId}
                 task={task}
                 isCreole={isCreole}
-                onNavigate={() => {
-                  const urlLevel = URL_LEVEL_MAP[task.level] || 'terminale';
-                  navigate(`/exams/${urlLevel}/${task.examId}`);
-                }}
+                onNavigate={() => navigateToTask(task, navigate)}
               />
             ))}
           </div>
@@ -385,14 +389,11 @@ export default function StudyPlan() {
           <div className="study-plan-task-list study-plan-task-list--compact">
             {upcomingTasks.slice(0, 10).map((task) => (
               <TaskCard
-                key={task.examId}
+                key={task.examId || task.taskId}
                 task={task}
                 isCreole={isCreole}
                 compact
-                onNavigate={() => {
-                  const urlLevel = URL_LEVEL_MAP[task.level] || 'terminale';
-                  navigate(`/exams/${urlLevel}/${task.examId}`);
-                }}
+                onNavigate={() => navigateToTask(task, navigate)}
               />
             ))}
           </div>
@@ -467,10 +468,57 @@ export default function StudyPlan() {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
+/** Route to the correct page based on task type */
+function navigateToTask(task, navigate) {
+  const type = task.type || 'exam';
+  if (type === 'practice') {
+    // Navigate to quiz practice page with subject code pre-filled
+    const code = task.subjectCode || '';
+    const unitId = task.unitId || '';
+    const params = new URLSearchParams();
+    if (code) params.set('course', code);
+    if (unitId) params.set('unit', unitId);
+    navigate(`/quizzes?${params.toString()}`);
+  } else if (type === 'video') {
+    // Navigate to course detail or open video directly
+    const courseCode = task.courseCode || '';
+    if (courseCode) {
+      navigate(`/courses/${courseCode}`);
+    } else if (task.videoUrl) {
+      window.open(task.videoUrl, '_blank', 'noopener');
+    }
+  } else {
+    // Default: exam
+    const urlLevel = URL_LEVEL_MAP[task.level] || 'terminale';
+    navigate(`/exams/${urlLevel}/${task.examId}`);
+  }
+}
+
+/** Icons and labels per task type */
+const TASK_TYPE_META = {
+  exam: { icon: '📝', label: 'Examen', labelHt: 'Egzamen', color: '#ef4444' },
+  practice: { icon: '✏️', label: 'Exercice', labelHt: 'Egzèsis', color: '#3b82f6' },
+  video: { icon: '🎬', label: 'Vidéo', labelHt: 'Videyo', color: '#8b5cf6' },
+};
+
 function TaskCard({ task, isCreole, compact, onNavigate }) {
   const overdue = task.nextReviewMs && task.nextReviewMs < Date.now();
   const lastScore =
     task.history?.length > 0 ? task.history[task.history.length - 1].scorePct : null;
+  const taskType = task.type || 'exam';
+  const meta = TASK_TYPE_META[taskType] || TASK_TYPE_META.exam;
+
+  // Build display title based on task type
+  let displayTitle;
+  if (taskType === 'practice') {
+    displayTitle = task.unitTitle
+      ? `${task.unitTitle} (${task.questionCount || '?'} questions)`
+      : `${task.subjectCode || task.subject} — ${task.questionCount || '?'} questions`;
+  } else if (taskType === 'video') {
+    displayTitle = task.videoTitle || task.courseTitle || 'Vidéo';
+  } else {
+    displayTitle = task.examTitle || task.examId;
+  }
 
   return (
     <div
@@ -481,27 +529,47 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
       onKeyDown={(e) => e.key === 'Enter' && onNavigate()}
     >
       <div className="study-plan-task__left">
-        <span
-          className="study-plan-task__subject"
-          style={{ color: subjectColor(task.subject) }}
-        >
-          {task.subject}
-        </span>
+        <div className="study-plan-task__type-row">
+          <span
+            className="study-plan-task__type-badge"
+            style={{ backgroundColor: meta.color + '18', color: meta.color }}
+          >
+            {meta.icon} {isCreole ? meta.labelHt : meta.label}
+          </span>
+          <span
+            className="study-plan-task__subject"
+            style={{ color: subjectColor(task.subject) }}
+          >
+            {task.subject}
+          </span>
+        </div>
         <span className="study-plan-task__title">
-          {task.examTitle || task.examId}
+          {displayTitle}
         </span>
         {task.aiFocusArea && (
           <span className="study-plan-task__focus">{task.aiFocusArea}</span>
         )}
       </div>
       <div className="study-plan-task__right">
-        <span
-          className="study-plan-task__difficulty"
-          style={{ color: difficultyColor(task.difficulty) }}
-          title={difficultyLabel(task.difficulty)}
-        >
-          {'★'.repeat(task.difficulty)}{'☆'.repeat(5 - task.difficulty)}
-        </span>
+        {taskType === 'exam' && (
+          <span
+            className="study-plan-task__difficulty"
+            style={{ color: difficultyColor(task.difficulty) }}
+            title={difficultyLabel(task.difficulty)}
+          >
+            {'★'.repeat(task.difficulty)}{'☆'.repeat(5 - task.difficulty)}
+          </span>
+        )}
+        {taskType === 'video' && task.duration && (
+          <span className="study-plan-task__duration">
+            ⏱ {task.duration} min
+          </span>
+        )}
+        {taskType === 'practice' && task.questionCount && (
+          <span className="study-plan-task__qcount">
+            {task.questionCount} Q
+          </span>
+        )}
         {lastScore !== null && (
           <span className="study-plan-task__score">
             {lastScore}%

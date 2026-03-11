@@ -19,6 +19,8 @@ import {
   getUpcomingTasks,
   computeSubjectMastery,
   buildTasksFromExams,
+  buildPracticeTasksFromQuizBank,
+  buildVideoTasks,
   sortTasksByPriority,
 } from '../services/studyPlanService';
 import { listRecentExamResults } from '../services/userActivity';
@@ -65,12 +67,27 @@ export function useStudyPlan() {
   );
 
   const generateMutation = useMutation({
-    mutationFn: async ({ exams, coefficients, existingResults, aiPlan }) => {
+    mutationFn: async ({ exams, coefficients, existingResults, aiPlan, quizBankIndex, courses }) => {
       if (!uid) throw new Error('Not authenticated');
 
       // Build tasks from exams, seeded with prior results & SRS
       const coeff = coefficients || TRACK_COEFFICIENTS[track] || {};
       let tasks = buildTasksFromExams(exams, coeff, existingResults || {});
+
+      // Build practice tasks from quiz bank (curriculum quizzes)
+      const trackSubjects = Object.keys(coeff);
+      if (quizBankIndex?.bySubject) {
+        const practiceTasks = buildPracticeTasksFromQuizBank(
+          quizBankIndex, coeff, trackSubjects, 3,
+        );
+        tasks = tasks.concat(practiceTasks);
+      }
+
+      // Build video-watching tasks from courses
+      if (courses?.length) {
+        const videoTasks = buildVideoTasks(courses, trackSubjects, 2);
+        tasks = tasks.concat(videoTasks);
+      }
 
       // If AI returned a schedule, reorder/annotate tasks to match
       if (aiPlan?.schedule?.length) {
