@@ -483,6 +483,28 @@ export default function Dashboard() {
 
         <div className="dashboard-section">
           <div className="dashboard-section__header">
+            <h2 className="dashboard-section__title">
+              📋 {isCreole ? 'Plan Etid' : 'Plan d\'Étude'}
+            </h2>
+            <button
+              className="chip chip--primary"
+              onClick={() => navigate('/study-plan')}
+              style={{ cursor: 'pointer', border: 'none' }}
+            >
+              {isCreole ? 'Wè plan' : 'Voir le plan'} →
+            </button>
+          </div>
+          <div className="dashboard-study-plan-cta" onClick={() => navigate('/study-plan')} style={{ cursor: 'pointer' }}>
+            <p className="text-muted">
+              {isCreole
+                ? 'Jwenn yon plan etid pèsonalize ak revizyon espase pou prepare bak ou.'
+                : 'Obtenez un plan d\'étude personnalisé avec révision espacée pour préparer votre bac.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="dashboard-section">
+          <div className="dashboard-section__header">
             <h2 className="dashboard-section__title">{isCreole ? 'Aktivite resan' : 'Activité récente'}</h2>
             {quizzesTaken > 0 && (
               <span className="chip chip--ghost">

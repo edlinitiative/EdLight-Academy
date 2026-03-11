@@ -145,6 +145,7 @@ export function Navbar() {
           
           {/* Mobile-only auth actions */}
           {isAuthenticated ? (
+            <>
             <Link 
               to="/dashboard" 
               className="nav-link nav-link--mobile-only"
@@ -152,6 +153,14 @@ export function Navbar() {
             >
               Tableau de bord
             </Link>
+            <Link 
+              to="/study-plan" 
+              className="nav-link nav-link--mobile-only"
+              onClick={() => setShowMobileMenu(false)}
+            >
+              📋 Plan d'étude
+            </Link>
+            </>
           ) : (
             <>
               <button 

@@ -24,6 +24,7 @@ const ExamBrowser = React.lazy(() => import('./pages/ExamBrowser'));
 const ExamTake = React.lazy(() => import('./pages/ExamTake'));
 const ExamResults = React.lazy(() => import('./pages/ExamResults'));
 const AnswerVerification = React.lazy(() => import('./pages/AnswerVerification'));
+const StudyPlan = React.lazy(() => import('./pages/StudyPlan'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -65,6 +66,7 @@ export default function App() {
                 <Route path="exams/:level" element={<ExamBrowser />} />
                 <Route path="exams/:level/:examId" element={<ExamTake />} />
                 <Route path="exams/:level/:examId/results" element={<ExamResults />} />
+                <Route path="study-plan" element={<StudyPlan />} />
               </Route>
             </Routes>
           </Suspense>
