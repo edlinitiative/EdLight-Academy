@@ -10538,6 +10538,14 @@ textarea.input-field {
 
 .study-plan-stat-card__icon {
 	font-size: 1.5rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--primary-500);
+}
+
+.study-plan-stat-card__icon svg {
+	stroke-width: 1.75;
 }
 
 .study-plan-stat-card__value {
@@ -10671,6 +10679,11 @@ textarea.input-field {
 	border-radius: 999px;
 	white-space: nowrap;
 	letter-spacing: 0.02em;
+	border: 1px solid;
+}
+
+.study-plan-task__type-badge svg {
+	stroke-width: 2;
 }
 
 .study-plan-task__subject {
@@ -10730,6 +10743,31 @@ textarea.input-field {
 	font-size: 0.8rem;
 	color: var(--text-500);
 	white-space: nowrap;
+}
+
+.study-plan-task__chevron {
+	color: var(--text-300);
+	flex-shrink: 0;
+	transition: color 0.15s, transform 0.15s;
+}
+
+.study-plan-task:hover .study-plan-task__chevron {
+	color: var(--primary-500);
+	transform: translateX(2px);
+}
+
+/* Lucide inline-icon utility */
+.inline-icon {
+	display: inline-block;
+	vertical-align: -0.15em;
+	margin-right: 0.15em;
+}
+
+.study-plan-loading__title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	justify-content: center;
 }
 
 /* Mastery grid */

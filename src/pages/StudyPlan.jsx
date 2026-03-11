@@ -13,6 +13,11 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Lock, GraduationCap, ClipboardList, Sparkles, CalendarDays, CalendarRange,
+  Timer, Trophy, Lightbulb, Target, CheckCircle2, BarChart3, RefreshCw, Trash2,
+  FileText, Pencil, Video, Clock, Hash, ChevronRight,
+} from 'lucide-react';
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
 import { useAppData } from '../hooks/useData';
@@ -180,7 +185,7 @@ export default function StudyPlan() {
     return (
       <div className="study-plan-page">
         <div className="study-plan-empty">
-          <span className="study-plan-empty__icon">🔒</span>
+          <span className="study-plan-empty__icon"><Lock size={40} /></span>
           <h2>{isCreole ? 'Konekte pou wè plan ou' : 'Connectez-vous pour voir votre plan'}</h2>
           <p>
             {isCreole
@@ -197,7 +202,7 @@ export default function StudyPlan() {
     return (
       <div className="study-plan-page">
         <div className="study-plan-empty">
-          <span className="study-plan-empty__icon">🎓</span>
+          <span className="study-plan-empty__icon"><GraduationCap size={40} /></span>
           <h2>{isCreole ? 'Chwazi filiyè ou anvan' : 'Choisissez votre filière d\'abord'}</h2>
           <p>
             {isCreole
@@ -233,7 +238,7 @@ export default function StudyPlan() {
       <div className="study-plan-page">
         <div className="study-plan-loading">
           <div className="spinner" />
-          <h2>✨ {isCreole ? 'Kreye plan etid ou...' : 'Création de votre plan d\'étude...'}</h2>
+          <h2 className="study-plan-loading__title"><Sparkles size={20} /> {isCreole ? 'Kreye plan etid ou...' : 'Création de votre plan d\'étude...'}</h2>
           <p>{isCreole ? 'Sa ap pran kèk segonn.' : 'Cela prendra quelques secondes.'}</p>
         </div>
       </div>
@@ -245,7 +250,7 @@ export default function StudyPlan() {
     return (
       <div className="study-plan-page">
         <div className="study-plan-empty">
-          <span className="study-plan-empty__icon">📋</span>
+          <span className="study-plan-empty__icon"><ClipboardList size={40} /></span>
           <h2>{isCreole ? 'Pa gen plan etid ankò' : 'Pas encore de plan d\'étude'}</h2>
           <p>
             {isCreole
@@ -283,7 +288,7 @@ export default function StudyPlan() {
               className="study-plan-header__badge"
               style={{ backgroundColor: trackInfo.color }}
             >
-              {trackInfo.icon} {trackInfo.shortLabel}
+              {trackInfo.shortLabel}
             </span>
           )}
         </div>
@@ -306,21 +311,21 @@ export default function StudyPlan() {
       {/* Stats cards */}
       <div className="study-plan-stats">
         <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon">📅</span>
+          <span className="study-plan-stat-card__icon"><CalendarDays size={22} /></span>
           <span className="study-plan-stat-card__value">{todayTasks.length}</span>
           <span className="study-plan-stat-card__label">
             {isCreole ? 'Jodi a' : 'Aujourd\'hui'}
           </span>
         </div>
         <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon">📆</span>
+          <span className="study-plan-stat-card__icon"><CalendarRange size={22} /></span>
           <span className="study-plan-stat-card__value">{upcomingTasks.length}</span>
           <span className="study-plan-stat-card__label">
             {isCreole ? '7 jou kap vini' : '7 prochains jours'}
           </span>
         </div>
         <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon">⏱️</span>
+          <span className="study-plan-stat-card__icon"><Timer size={22} /></span>
           <span className="study-plan-stat-card__value">
             {plan.dailyTargetMinutes || 90}
           </span>
@@ -329,7 +334,7 @@ export default function StudyPlan() {
           </span>
         </div>
         <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon">🏆</span>
+          <span className="study-plan-stat-card__icon"><Trophy size={22} /></span>
           <span className="study-plan-stat-card__value">{masteredCount}</span>
           <span className="study-plan-stat-card__label">
             {isCreole ? 'Metrize' : 'Maîtrisés'}
@@ -340,7 +345,7 @@ export default function StudyPlan() {
       {/* Tips */}
       {plan.tips?.length > 0 && (
         <section className="study-plan-tips">
-          <h3>💡 {isCreole ? 'Konsèy' : 'Conseils'}</h3>
+          <h3><Lightbulb size={18} className="inline-icon" /> {isCreole ? 'Konsèy' : 'Conseils'}</h3>
           <ul>
             {plan.tips.map((tip, i) => (
               <li key={i}>{tip}</li>
@@ -352,7 +357,7 @@ export default function StudyPlan() {
       {/* Today's Tasks */}
       <section className="study-plan-section">
         <h2>
-          🎯 {isCreole ? 'Travay jodi a' : 'Travail du jour'}
+          <Target size={20} className="inline-icon" /> {isCreole ? 'Travay jodi a' : 'Travail du jour'}
           {todayTasks.length > 0 && (
             <span className="study-plan-section__count">{todayTasks.length}</span>
           )}
@@ -360,7 +365,7 @@ export default function StudyPlan() {
         {todayTasks.length === 0 ? (
           <div className="study-plan-empty-section">
             <p>
-              ✅ {isCreole
+              <CheckCircle2 size={16} className="inline-icon" /> {isCreole
                 ? 'Ou ajou! Pa gen anyen pou jodi a.'
                 : 'Vous êtes à jour ! Rien de prévu pour aujourd\'hui.'}
             </p>
@@ -383,7 +388,7 @@ export default function StudyPlan() {
       {upcomingTasks.length > 0 && (
         <section className="study-plan-section">
           <h2>
-            📆 {isCreole ? 'Semèn kap vini an' : 'Semaine à venir'}
+            <CalendarRange size={20} className="inline-icon" /> {isCreole ? 'Semèn kap vini an' : 'Semaine à venir'}
             <span className="study-plan-section__count">{upcomingTasks.length}</span>
           </h2>
           <div className="study-plan-task-list study-plan-task-list--compact">
@@ -403,7 +408,7 @@ export default function StudyPlan() {
       {/* Subject Mastery */}
       {Object.keys(mastery).length > 0 && (
         <section className="study-plan-section">
-          <h2>📊 {isCreole ? 'Metrize pa Matyè' : 'Maîtrise par Matière'}</h2>
+          <h2><BarChart3 size={20} className="inline-icon" /> {isCreole ? 'Metrize pa Matyè' : 'Maîtrise par Matière'}</h2>
           <div className="study-plan-mastery-grid">
             {Object.entries(mastery)
               .sort((a, b) => (coefficients[b[0]] || 1) - (coefficients[a[0]] || 1))
@@ -422,13 +427,13 @@ export default function StudyPlan() {
       {/* Actions */}
       <section className="study-plan-actions">
         <button className="btn btn--outline" onClick={handleGenerate}>
-          🔄 {isCreole ? 'Rejenere Plan' : 'Régénérer le Plan'}
+          <RefreshCw size={16} className="inline-icon" /> {isCreole ? 'Rejenere Plan' : 'Régénérer le Plan'}
         </button>
         <button
           className="btn btn--outline btn--danger"
           onClick={() => setShowConfirmDelete(true)}
         >
-          🗑️ {isCreole ? 'Siprime Plan' : 'Supprimer le Plan'}
+          <Trash2 size={16} className="inline-icon" /> {isCreole ? 'Siprime Plan' : 'Supprimer le Plan'}
         </button>
       </section>
 
@@ -494,11 +499,11 @@ function navigateToTask(task, navigate) {
   }
 }
 
-/** Icons and labels per task type */
+/** Icon components per task type */
 const TASK_TYPE_META = {
-  exam: { icon: '📝', label: 'Examen', labelHt: 'Egzamen', color: '#ef4444' },
-  practice: { icon: '✏️', label: 'Exercice', labelHt: 'Egzèsis', color: '#3b82f6' },
-  video: { icon: '🎬', label: 'Vidéo', labelHt: 'Videyo', color: '#8b5cf6' },
+  exam:     { Icon: FileText, label: 'Examen',   labelHt: 'Egzamen', color: '#ef4444' },
+  practice: { Icon: Pencil,   label: 'Exercice', labelHt: 'Egzèsis', color: '#3b82f6' },
+  video:    { Icon: Video,    label: 'Vidéo',    labelHt: 'Videyo',  color: '#8b5cf6' },
 };
 
 function TaskCard({ task, isCreole, compact, onNavigate }) {
@@ -507,6 +512,7 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
     task.history?.length > 0 ? task.history[task.history.length - 1].scorePct : null;
   const taskType = task.type || 'exam';
   const meta = TASK_TYPE_META[taskType] || TASK_TYPE_META.exam;
+  const TypeIcon = meta.Icon;
 
   // Build display title based on task type
   let displayTitle;
@@ -532,9 +538,9 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
         <div className="study-plan-task__type-row">
           <span
             className="study-plan-task__type-badge"
-            style={{ backgroundColor: meta.color + '18', color: meta.color }}
+            style={{ backgroundColor: meta.color + '14', color: meta.color, borderColor: meta.color + '30' }}
           >
-            {meta.icon} {isCreole ? meta.labelHt : meta.label}
+            <TypeIcon size={13} /> {isCreole ? meta.labelHt : meta.label}
           </span>
           <span
             className="study-plan-task__subject"
@@ -562,12 +568,12 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
         )}
         {taskType === 'video' && task.duration && (
           <span className="study-plan-task__duration">
-            ⏱ {task.duration} min
+            <Clock size={13} className="inline-icon" /> {task.duration} min
           </span>
         )}
         {taskType === 'practice' && task.questionCount && (
           <span className="study-plan-task__qcount">
-            {task.questionCount} Q
+            <Hash size={13} className="inline-icon" /> {task.questionCount}
           </span>
         )}
         {lastScore !== null && (
@@ -580,6 +586,7 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
             ? (isCreole ? 'Anreta!' : 'En retard !')
             : formatDate(task.nextReviewMs)}
         </span>
+        <ChevronRight size={16} className="study-plan-task__chevron" />
       </div>
     </div>
   );
