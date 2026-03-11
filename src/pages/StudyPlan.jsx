@@ -15,8 +15,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Lock, GraduationCap, ClipboardList, Sparkles, CalendarDays, CalendarRange,
-  Timer, Trophy, Lightbulb, Target, CheckCircle2, BarChart3, RefreshCw, Trash2,
-  FileText, Pencil, Video, Clock, Hash, ChevronRight,
+  Timer, Lightbulb, Target, CheckCircle2, BarChart3, RefreshCw, Trash2,
+  FileText, Pencil, Video, ChevronRight, Flame, Play,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
@@ -183,9 +183,9 @@ export default function StudyPlan() {
   // ── Not authenticated ─────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <div className="study-plan-page">
-        <div className="study-plan-empty">
-          <span className="study-plan-empty__icon"><Lock size={40} /></span>
+      <div className="sp">
+        <div className="sp-empty">
+          <span className="sp-empty__icon"><Lock size={40} /></span>
           <h2>{isCreole ? 'Konekte pou wè plan ou' : 'Connectez-vous pour voir votre plan'}</h2>
           <p>
             {isCreole
@@ -200,9 +200,9 @@ export default function StudyPlan() {
   // ── No track selected ────────────────────────────────────────────
   if (!track) {
     return (
-      <div className="study-plan-page">
-        <div className="study-plan-empty">
-          <span className="study-plan-empty__icon"><GraduationCap size={40} /></span>
+      <div className="sp">
+        <div className="sp-empty">
+          <span className="sp-empty__icon"><GraduationCap size={40} /></span>
           <h2>{isCreole ? 'Chwazi filiyè ou anvan' : 'Choisissez votre filière d\'abord'}</h2>
           <p>
             {isCreole
@@ -223,8 +223,8 @@ export default function StudyPlan() {
   // ── Loading states ────────────────────────────────────────────────
   if (planLoading || examsLoading || resultsLoading || appDataLoading) {
     return (
-      <div className="study-plan-page">
-        <div className="study-plan-loading">
+      <div className="sp">
+        <div className="sp-loading">
           <div className="spinner" />
           <p>{isCreole ? 'Chajman...' : 'Chargement du plan d\'étude...'}</p>
         </div>
@@ -235,10 +235,10 @@ export default function StudyPlan() {
   // ── Generating state ──────────────────────────────────────────────
   if (generating || isGenerating) {
     return (
-      <div className="study-plan-page">
-        <div className="study-plan-loading">
+      <div className="sp">
+        <div className="sp-loading">
           <div className="spinner" />
-          <h2 className="study-plan-loading__title"><Sparkles size={20} /> {isCreole ? 'Kreye plan etid ou...' : 'Création de votre plan d\'étude...'}</h2>
+          <h2 className="sp-loading__title"><Sparkles size={20} /> {isCreole ? 'Kreye plan etid ou...' : 'Création de votre plan d\'étude...'}</h2>
           <p>{isCreole ? 'Sa ap pran kèk segonn.' : 'Cela prendra quelques secondes.'}</p>
         </div>
       </div>
@@ -248,16 +248,16 @@ export default function StudyPlan() {
   // ── No plan yet (auto-gen didn't trigger) ─────────────────────────
   if (!hasPlan) {
     return (
-      <div className="study-plan-page">
-        <div className="study-plan-empty">
-          <span className="study-plan-empty__icon"><ClipboardList size={40} /></span>
+      <div className="sp">
+        <div className="sp-empty">
+          <span className="sp-empty__icon"><ClipboardList size={40} /></span>
           <h2>{isCreole ? 'Pa gen plan etid ankò' : 'Pas encore de plan d\'étude'}</h2>
           <p>
             {isCreole
               ? 'Kreye yon plan pèsonalize baze sou filiyè ou ak pèfòmans ou.'
               : 'Créez un plan personnalisé basé sur votre filière et vos performances.'}
           </p>
-          {genError && <p className="study-plan-error">{genError}</p>}
+          {genError && <p className="sp-error">{genError}</p>}
           <button className="btn btn--primary" onClick={handleGenerate}>
             {isCreole ? 'Kreye Plan' : 'Créer mon Plan'}
           </button>
@@ -267,200 +267,208 @@ export default function StudyPlan() {
   }
 
   // ═════════════════════════════════════════════════════════════════════
-  // Main plan view
+  // Main plan view — dashboard layout
   // ═════════════════════════════════════════════════════════════════════
 
+  // Pick the most urgent task for the hero card
+  const heroTask = todayTasks[0] || null;
+  const remainingToday = todayTasks.slice(1);
+
   return (
-    <div className="study-plan-page">
-      {/* Header */}
-      <header className="study-plan-header">
-        <div className="study-plan-header__top">
-          <div>
-            <h1 className="study-plan-header__title">
-              {plan.title || (isCreole ? 'Plan Etid' : 'Plan d\'Étude')}
-            </h1>
-            {plan.description && (
-              <p className="study-plan-header__desc">{plan.description}</p>
-            )}
-          </div>
+    <div className="sp">
+      {/* ── Top bar: title + track badge + actions ─────────────── */}
+      <header className="sp-topbar">
+        <div className="sp-topbar__left">
+          <h1 className="sp-topbar__title">
+            {plan.title || (isCreole ? 'Plan Etid' : 'Plan d\'Étude')}
+          </h1>
           {trackInfo && (
-            <span
-              className="study-plan-header__badge"
-              style={{ backgroundColor: trackInfo.color }}
-            >
+            <span className="sp-topbar__badge" style={{ backgroundColor: trackInfo.color }}>
               {trackInfo.shortLabel}
             </span>
           )}
         </div>
-
-        {/* Progress bar */}
-        <div className="study-plan-progress">
-          <div className="study-plan-progress__bar">
-            <div
-              className="study-plan-progress__fill"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-          <span className="study-plan-progress__text">
-            {masteredCount}/{totalTasks}{' '}
-            {isCreole ? 'metrize' : 'maîtrisés'} ({progressPct}%)
-          </span>
+        <div className="sp-topbar__actions">
+          <button className="sp-btn sp-btn--ghost" onClick={handleGenerate} title={isCreole ? 'Rejenere' : 'Régénérer'}>
+            <RefreshCw size={16} />
+          </button>
+          <button className="sp-btn sp-btn--ghost sp-btn--danger" onClick={() => setShowConfirmDelete(true)} title={isCreole ? 'Siprime' : 'Supprimer'}>
+            <Trash2 size={16} />
+          </button>
         </div>
       </header>
 
-      {/* Stats cards */}
-      <div className="study-plan-stats">
-        <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon"><CalendarDays size={22} /></span>
-          <span className="study-plan-stat-card__value">{todayTasks.length}</span>
-          <span className="study-plan-stat-card__label">
-            {isCreole ? 'Jodi a' : 'Aujourd\'hui'}
-          </span>
-        </div>
-        <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon"><CalendarRange size={22} /></span>
-          <span className="study-plan-stat-card__value">{upcomingTasks.length}</span>
-          <span className="study-plan-stat-card__label">
-            {isCreole ? '7 jou kap vini' : '7 prochains jours'}
-          </span>
-        </div>
-        <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon"><Timer size={22} /></span>
-          <span className="study-plan-stat-card__value">
-            {plan.dailyTargetMinutes || 90}
-          </span>
-          <span className="study-plan-stat-card__label">
-            {isCreole ? 'min/jou' : 'min/jour'}
-          </span>
-        </div>
-        <div className="study-plan-stat-card">
-          <span className="study-plan-stat-card__icon"><Trophy size={22} /></span>
-          <span className="study-plan-stat-card__value">{masteredCount}</span>
-          <span className="study-plan-stat-card__label">
-            {isCreole ? 'Metrize' : 'Maîtrisés'}
-          </span>
-        </div>
-      </div>
+      {/* ── Dashboard grid ─────────────────────────────────────── */}
+      <div className="sp-dashboard">
 
-      {/* Tips */}
-      {plan.tips?.length > 0 && (
-        <section className="study-plan-tips">
-          <h3><Lightbulb size={18} className="inline-icon" /> {isCreole ? 'Konsèy' : 'Conseils'}</h3>
-          <ul>
-            {plan.tips.map((tip, i) => (
-              <li key={i}>{tip}</li>
-            ))}
-          </ul>
-        </section>
-      )}
+        {/* ──── MAIN COLUMN ──────────────────────────────────── */}
+        <main className="sp-main">
 
-      {/* Today's Tasks */}
-      <section className="study-plan-section">
-        <h2>
-          <Target size={20} className="inline-icon" /> {isCreole ? 'Travay jodi a' : 'Travail du jour'}
-          {todayTasks.length > 0 && (
-            <span className="study-plan-section__count">{todayTasks.length}</span>
+          {/* Hero: Next task to do */}
+          {heroTask ? (
+            <div
+              className="sp-hero"
+              onClick={() => navigateToTask(heroTask, navigate)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && navigateToTask(heroTask, navigate)}
+            >
+              <div className="sp-hero__content">
+                <span className="sp-hero__eyebrow">
+                  <Flame size={14} /> {isCreole ? 'Pwochen travay' : 'Prochaine tâche'}
+                </span>
+                <h2 className="sp-hero__title">
+                  {heroTask.examTitle || heroTask.unitTitle || heroTask.videoTitle || heroTask.examId}
+                </h2>
+                <div className="sp-hero__meta">
+                  <HeroTypeBadge task={heroTask} isCreole={isCreole} />
+                  <span style={{ color: subjectColor(heroTask.subject) }} className="sp-hero__subject">
+                    {heroTask.subject}
+                  </span>
+                  {heroTask.aiFocusArea && (
+                    <span className="sp-hero__focus">{heroTask.aiFocusArea}</span>
+                  )}
+                </div>
+              </div>
+              <button className="sp-hero__go">
+                <Play size={20} />
+              </button>
+            </div>
+          ) : (
+            <div className="sp-hero sp-hero--done">
+              <CheckCircle2 size={28} />
+              <div>
+                <h2 className="sp-hero__title">{isCreole ? 'Ou ajou!' : 'Vous êtes à jour !'}</h2>
+                <p className="sp-hero__subtitle">
+                  {isCreole ? 'Pa gen anyen pou jodi a.' : 'Rien de prévu pour aujourd\'hui.'}
+                </p>
+              </div>
+            </div>
           )}
-        </h2>
-        {todayTasks.length === 0 ? (
-          <div className="study-plan-empty-section">
-            <p>
-              <CheckCircle2 size={16} className="inline-icon" /> {isCreole
-                ? 'Ou ajou! Pa gen anyen pou jodi a.'
-                : 'Vous êtes à jour ! Rien de prévu pour aujourd\'hui.'}
-            </p>
-          </div>
-        ) : (
-          <div className="study-plan-task-list">
-            {todayTasks.map((task) => (
-              <TaskCard
-                key={task.examId || task.taskId}
-                task={task}
-                isCreole={isCreole}
-                onNavigate={() => navigateToTask(task, navigate)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
 
-      {/* Upcoming */}
-      {upcomingTasks.length > 0 && (
-        <section className="study-plan-section">
-          <h2>
-            <CalendarRange size={20} className="inline-icon" /> {isCreole ? 'Semèn kap vini an' : 'Semaine à venir'}
-            <span className="study-plan-section__count">{upcomingTasks.length}</span>
-          </h2>
-          <div className="study-plan-task-list study-plan-task-list--compact">
-            {upcomingTasks.slice(0, 10).map((task) => (
-              <TaskCard
-                key={task.examId || task.taskId}
-                task={task}
-                isCreole={isCreole}
-                compact
-                onNavigate={() => navigateToTask(task, navigate)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+          {/* Today's remaining tasks */}
+          {remainingToday.length > 0 && (
+            <section className="sp-section">
+              <div className="sp-section__header">
+                <h3><Target size={18} /> {isCreole ? 'Travay jodi a' : 'Aujourd\'hui'}</h3>
+                <span className="sp-pill">{todayTasks.length}</span>
+              </div>
+              <div className="sp-task-grid">
+                {remainingToday.map((task) => (
+                  <TaskCard
+                    key={task.examId || task.taskId}
+                    task={task}
+                    isCreole={isCreole}
+                    onNavigate={() => navigateToTask(task, navigate)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
-      {/* Subject Mastery */}
-      {Object.keys(mastery).length > 0 && (
-        <section className="study-plan-section">
-          <h2><BarChart3 size={20} className="inline-icon" /> {isCreole ? 'Metrize pa Matyè' : 'Maîtrise par Matière'}</h2>
-          <div className="study-plan-mastery-grid">
-            {Object.entries(mastery)
-              .sort((a, b) => (coefficients[b[0]] || 1) - (coefficients[a[0]] || 1))
-              .map(([subject, data]) => (
-                <MasteryBar
-                  key={subject}
-                  subject={subject}
-                  data={data}
-                  coefficient={coefficients[subject] || 1}
-                />
-              ))}
-          </div>
-        </section>
-      )}
+          {/* Upcoming week */}
+          {upcomingTasks.length > 0 && (
+            <section className="sp-section">
+              <div className="sp-section__header">
+                <h3><CalendarRange size={18} /> {isCreole ? 'Semèn kap vini an' : 'Semaine à venir'}</h3>
+                <span className="sp-pill">{upcomingTasks.length}</span>
+              </div>
+              <div className="sp-task-grid sp-task-grid--compact">
+                {upcomingTasks.slice(0, 8).map((task) => (
+                  <TaskCard
+                    key={task.examId || task.taskId}
+                    task={task}
+                    isCreole={isCreole}
+                    compact
+                    onNavigate={() => navigateToTask(task, navigate)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </main>
 
-      {/* Actions */}
-      <section className="study-plan-actions">
-        <button className="btn btn--outline" onClick={handleGenerate}>
-          <RefreshCw size={16} className="inline-icon" /> {isCreole ? 'Rejenere Plan' : 'Régénérer le Plan'}
-        </button>
-        <button
-          className="btn btn--outline btn--danger"
-          onClick={() => setShowConfirmDelete(true)}
-        >
-          <Trash2 size={16} className="inline-icon" /> {isCreole ? 'Siprime Plan' : 'Supprimer le Plan'}
-        </button>
-      </section>
+        {/* ──── SIDEBAR ──────────────────────────────────────── */}
+        <aside className="sp-sidebar">
+
+          {/* Progress ring */}
+          <div className="sp-progress-card">
+            <ProgressRing pct={progressPct} />
+            <div className="sp-progress-card__text">
+              <span className="sp-progress-card__big">{progressPct}%</span>
+              <span className="sp-progress-card__label">
+                {masteredCount}/{totalTasks} {isCreole ? 'metrize' : 'maîtrisés'}
+              </span>
+            </div>
+          </div>
+
+          {/* Quick stats */}
+          <div className="sp-quick-stats">
+            <div className="sp-qstat">
+              <CalendarDays size={16} />
+              <span className="sp-qstat__val">{todayTasks.length}</span>
+              <span className="sp-qstat__label">{isCreole ? 'jodi a' : 'aujourd\'hui'}</span>
+            </div>
+            <div className="sp-qstat">
+              <CalendarRange size={16} />
+              <span className="sp-qstat__val">{upcomingTasks.length}</span>
+              <span className="sp-qstat__label">{isCreole ? '7 jou' : '7 jours'}</span>
+            </div>
+            <div className="sp-qstat">
+              <Timer size={16} />
+              <span className="sp-qstat__val">{plan.dailyTargetMinutes || 90}</span>
+              <span className="sp-qstat__label">min/{isCreole ? 'jou' : 'jour'}</span>
+            </div>
+          </div>
+
+          {/* Subject mastery */}
+          {Object.keys(mastery).length > 0 && (
+            <div className="sp-card">
+              <h4 className="sp-card__title">
+                <BarChart3 size={16} /> {isCreole ? 'Metrize' : 'Maîtrise'}
+              </h4>
+              <div className="sp-mastery-list">
+                {Object.entries(mastery)
+                  .sort((a, b) => (coefficients[b[0]] || 1) - (coefficients[a[0]] || 1))
+                  .map(([subject, data]) => (
+                    <MasteryRow
+                      key={subject}
+                      subject={subject}
+                      data={data}
+                      coefficient={coefficients[subject] || 1}
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tips */}
+          {plan.tips?.length > 0 && (
+            <div className="sp-card sp-card--tips">
+              <h4 className="sp-card__title">
+                <Lightbulb size={16} /> {isCreole ? 'Konsèy' : 'Conseils'}
+              </h4>
+              <ul className="sp-tips-list">
+                {plan.tips.slice(0, 4).map((tip, i) => (
+                  <li key={i}>{tip}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </aside>
+      </div>
 
       {/* Delete confirmation */}
       {showConfirmDelete && (
-        <div className="study-plan-modal-overlay" onClick={() => setShowConfirmDelete(false)}>
-          <div className="study-plan-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={() => setShowConfirmDelete(false)}>
+          <div className="sp-modal" onClick={(e) => e.stopPropagation()}>
             <h3>{isCreole ? 'Siprime plan sa a?' : 'Supprimer ce plan ?'}</h3>
-            <p>
-              {isCreole
-                ? 'Aksyon sa a pa ka defèt.'
-                : 'Cette action est irréversible.'}
-            </p>
-            <div className="study-plan-modal__actions">
-              <button
-                className="btn btn--outline"
-                onClick={() => setShowConfirmDelete(false)}
-              >
+            <p>{isCreole ? 'Aksyon sa a pa ka defèt.' : 'Cette action est irréversible.'}</p>
+            <div className="sp-modal__actions">
+              <button className="btn btn--outline" onClick={() => setShowConfirmDelete(false)}>
                 {isCreole ? 'Anile' : 'Annuler'}
               </button>
-              <button
-                className="btn btn--danger"
-                onClick={async () => {
-                  await deletePlan();
-                  setShowConfirmDelete(false);
-                }}
-              >
+              <button className="btn btn--danger" onClick={async () => { await deletePlan(); setShowConfirmDelete(false); }}>
                 {isCreole ? 'Siprime' : 'Supprimer'}
               </button>
             </div>
@@ -506,6 +514,36 @@ const TASK_TYPE_META = {
   video:    { Icon: Video,    label: 'Vidéo',    labelHt: 'Videyo',  color: '#8b5cf6' },
 };
 
+/** SVG progress ring */
+function ProgressRing({ pct, size = 80, stroke = 6 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (circ * Math.min(pct, 100)) / 100;
+  return (
+    <svg width={size} height={size} className="sp-ring">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="var(--border)" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+        stroke="var(--primary-500)" strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 0.8s ease', transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }} />
+    </svg>
+  );
+}
+
+/** Type badge shown on the hero card */
+function HeroTypeBadge({ task, isCreole }) {
+  const taskType = task.type || 'exam';
+  const meta = TASK_TYPE_META[taskType] || TASK_TYPE_META.exam;
+  const TypeIcon = meta.Icon;
+  return (
+    <span className="sp-hero__badge" style={{ backgroundColor: meta.color + '14', color: meta.color, borderColor: meta.color + '30' }}>
+      <TypeIcon size={13} /> {isCreole ? meta.labelHt : meta.label}
+    </span>
+  );
+}
+
 function TaskCard({ task, isCreole, compact, onNavigate }) {
   const overdue = task.nextReviewMs && task.nextReviewMs < Date.now();
   const lastScore =
@@ -514,109 +552,73 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
   const meta = TASK_TYPE_META[taskType] || TASK_TYPE_META.exam;
   const TypeIcon = meta.Icon;
 
-  // Build display title based on task type
   let displayTitle;
   if (taskType === 'practice') {
-    displayTitle = task.unitTitle
-      ? `${task.unitTitle} (${task.questionCount || '?'} questions)`
-      : `${task.subjectCode || task.subject} — ${task.questionCount || '?'} questions`;
+    displayTitle = task.unitTitle || `${task.subjectCode || task.subject}`;
   } else if (taskType === 'video') {
     displayTitle = task.videoTitle || task.courseTitle || 'Vidéo';
   } else {
     displayTitle = task.examTitle || task.examId;
   }
 
+  // Secondary info line
+  let secondaryInfo = '';
+  if (taskType === 'practice' && task.questionCount) secondaryInfo = `${task.questionCount} questions`;
+  if (taskType === 'video' && task.duration) secondaryInfo = `${task.duration} min`;
+
   return (
     <div
-      className={`study-plan-task ${compact ? 'study-plan-task--compact' : ''} ${overdue ? 'study-plan-task--overdue' : ''}`}
+      className={`sp-task ${compact ? 'sp-task--compact' : ''} ${overdue ? 'sp-task--overdue' : ''}`}
       onClick={onNavigate}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onNavigate()}
     >
-      <div className="study-plan-task__left">
-        <div className="study-plan-task__type-row">
-          <span
-            className="study-plan-task__type-badge"
-            style={{ backgroundColor: meta.color + '14', color: meta.color, borderColor: meta.color + '30' }}
-          >
-            <TypeIcon size={13} /> {isCreole ? meta.labelHt : meta.label}
-          </span>
-          <span
-            className="study-plan-task__subject"
-            style={{ color: subjectColor(task.subject) }}
-          >
-            {task.subject}
-          </span>
+      {/* Left accent bar */}
+      <div className="sp-task__accent" style={{ backgroundColor: meta.color }} />
+
+      <div className="sp-task__body">
+        <div className="sp-task__top-row">
+          <span className="sp-task__type-icon" style={{ color: meta.color }}><TypeIcon size={15} /></span>
+          <span className="sp-task__subject" style={{ color: subjectColor(task.subject) }}>{task.subject}</span>
+          {overdue && <span className="sp-task__overdue-tag">{isCreole ? 'Anreta' : 'En retard'}</span>}
         </div>
-        <span className="study-plan-task__title">
-          {displayTitle}
-        </span>
-        {task.aiFocusArea && (
-          <span className="study-plan-task__focus">{task.aiFocusArea}</span>
+        <span className="sp-task__title">{displayTitle}</span>
+        {(secondaryInfo || task.aiFocusArea) && (
+          <span className="sp-task__secondary">
+            {task.aiFocusArea || secondaryInfo}
+          </span>
         )}
       </div>
-      <div className="study-plan-task__right">
+
+      <div className="sp-task__end">
+        {lastScore !== null && (
+          <span className="sp-task__score">{lastScore}%</span>
+        )}
         {taskType === 'exam' && (
-          <span
-            className="study-plan-task__difficulty"
-            style={{ color: difficultyColor(task.difficulty) }}
-            title={difficultyLabel(task.difficulty)}
-          >
+          <span className="sp-task__stars" style={{ color: difficultyColor(task.difficulty) }} title={difficultyLabel(task.difficulty)}>
             {'★'.repeat(task.difficulty)}{'☆'.repeat(5 - task.difficulty)}
           </span>
         )}
-        {taskType === 'video' && task.duration && (
-          <span className="study-plan-task__duration">
-            <Clock size={13} className="inline-icon" /> {task.duration} min
-          </span>
-        )}
-        {taskType === 'practice' && task.questionCount && (
-          <span className="study-plan-task__qcount">
-            <Hash size={13} className="inline-icon" /> {task.questionCount}
-          </span>
-        )}
-        {lastScore !== null && (
-          <span className="study-plan-task__score">
-            {lastScore}%
-          </span>
-        )}
-        <span className="study-plan-task__date">
-          {overdue
-            ? (isCreole ? 'Anreta!' : 'En retard !')
-            : formatDate(task.nextReviewMs)}
-        </span>
-        <ChevronRight size={16} className="study-plan-task__chevron" />
+        <span className="sp-task__date">{formatDate(task.nextReviewMs)}</span>
+        <ChevronRight size={16} className="sp-task__chevron" />
       </div>
     </div>
   );
 }
 
-function MasteryBar({ subject, data, coefficient }) {
+/** Compact mastery row for sidebar */
+function MasteryRow({ subject, data, coefficient }) {
   return (
-    <div className="study-plan-mastery">
-      <div className="study-plan-mastery__header">
-        <span
-          className="study-plan-mastery__subject"
-          style={{ color: subjectColor(subject) }}
-        >
+    <div className="sp-mastery-row">
+      <div className="sp-mastery-row__head">
+        <span className="sp-mastery-row__subject" style={{ color: subjectColor(subject) }}>
           {subject}
         </span>
-        <span className="study-plan-mastery__coeff" title="Coefficient Bac">
-          ×{coefficient}
-        </span>
+        <span className="sp-mastery-row__pct">{data.masteredPct || 0}%</span>
       </div>
-      <div className="study-plan-mastery__bar-wrap">
-        <div
-          className="study-plan-mastery__bar"
-          style={{ width: `${data.masteredPct || 0}%` }}
-        />
-      </div>
-      <div className="study-plan-mastery__stats">
-        <span>
-          {data.mastered}/{data.total} maîtrisés
-        </span>
-        {data.attempts > 0 && <span>·  Moy. {data.pct}%</span>}
+      <div className="sp-mastery-row__track">
+        <div className="sp-mastery-row__fill" style={{ width: `${data.masteredPct || 0}%` }} />
       </div>
     </div>
   );
