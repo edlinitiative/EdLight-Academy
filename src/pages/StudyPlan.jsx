@@ -43,15 +43,21 @@ function useExamCatalog() {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatDate(ms) {
+function formatDate(ms, isCreole) {
   if (!ms) return '—';
-  return new Date(ms).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-  });
+  const d = new Date(ms);
+  if (isCreole) {
+    const months = ['jan','fev','mas','avr','me','jen','jiy','out','sep','okt','nov','des'];
+    return `${d.getDate()} ${months[d.getMonth()]}`;
+  }
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
-function difficultyLabel(d) {
+function difficultyLabel(d, isCreole) {
+  if (isCreole) {
+    const labels = { 1: 'Trè fasil', 2: 'Fasil', 3: 'Mwayen', 4: 'Difisil', 5: 'Trè difisil' };
+    return labels[d] || 'Mwayen';
+  }
   const labels = { 1: 'Très facile', 2: 'Facile', 3: 'Moyen', 4: 'Difficile', 5: 'Très difficile' };
   return labels[d] || 'Moyen';
 }
@@ -556,14 +562,14 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
   if (taskType === 'practice') {
     displayTitle = task.unitTitle || `${task.subjectCode || task.subject}`;
   } else if (taskType === 'video') {
-    displayTitle = task.videoTitle || task.courseTitle || 'Vidéo';
+    displayTitle = task.videoTitle || task.courseTitle || (isCreole ? 'Videyo' : 'Vidéo');
   } else {
     displayTitle = task.examTitle || task.examId;
   }
 
   // Secondary info line
   let secondaryInfo = '';
-  if (taskType === 'practice' && task.questionCount) secondaryInfo = `${task.questionCount} questions`;
+  if (taskType === 'practice' && task.questionCount) secondaryInfo = `${task.questionCount} ${isCreole ? 'kesyon' : 'questions'}`;
   if (taskType === 'video' && task.duration) secondaryInfo = `${task.duration} min`;
 
   return (
@@ -596,11 +602,11 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
           <span className="sp-task__score">{lastScore}%</span>
         )}
         {taskType === 'exam' && (
-          <span className="sp-task__stars" style={{ color: difficultyColor(task.difficulty) }} title={difficultyLabel(task.difficulty)}>
+          <span className="sp-task__stars" style={{ color: difficultyColor(task.difficulty) }} title={difficultyLabel(task.difficulty, isCreole)}>
             {'★'.repeat(task.difficulty)}{'☆'.repeat(5 - task.difficulty)}
           </span>
         )}
-        <span className="sp-task__date">{formatDate(task.nextReviewMs)}</span>
+        <span className="sp-task__date">{formatDate(task.nextReviewMs, isCreole)}</span>
         <ChevronRight size={16} className="sp-task__chevron" />
       </div>
     </div>
