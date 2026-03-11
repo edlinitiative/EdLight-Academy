@@ -1271,10 +1271,10 @@ const ExamTake = () => {
                   </div>
 
                   {/* Reading passage */}
-                  {cleanInstructions && cleanInstructions.length > 200 && (
+                  {(section.passage || (cleanInstructions && cleanInstructions.length > 200)) && (
                     <div className="exam-take__preview-passage">
                       <div className="exam-take__preview-passage-label">📖 Texte de référence</div>
-                      <InstructionRenderer text={cleanInstructions} />
+                      <InstructionRenderer text={section.passage || cleanInstructions} />
                     </div>
                   )}
 
@@ -1425,6 +1425,10 @@ const ExamTake = () => {
     ? (cleanedEntry._cleanInstructions || '')
     : (question.sectionInstructions || '');
 
+  // Explicit passage text attached to the section (e.g. reading comprehension)
+  const currentSection = (exam.sections || [])[currentSectionIdx];
+  const sectionPassage = currentSection?.passage || '';
+
   return (
     <section className="section exam-take">
       <div className="container">
@@ -1573,8 +1577,8 @@ const ExamTake = () => {
           )}
 
           {/* Reading passage panel — always visible for comprehension sections */}
-          {cleanInstructions && cleanInstructions.length > 200 && (
-            <ReadingPassage text={cleanInstructions} />
+          {(sectionPassage || (cleanInstructions && cleanInstructions.length > 200)) && (
+            <ReadingPassage text={sectionPassage || cleanInstructions} />
           )}
 
           {/* Sub-exercise directive header — shown once for the group */}
@@ -1855,7 +1859,7 @@ const ExamTake = () => {
       )}
 
       {/* Passage slide-over panel — kept for quick reference while scrolled down */}
-      {showPassage && cleanInstructions && cleanInstructions.length > 200 && (
+      {showPassage && (sectionPassage || (cleanInstructions && cleanInstructions.length > 200)) && (
         <div className="exam-take__overlay" onClick={() => setShowPassage(false)}>
           <div
             className="exam-take__passage-panel"
@@ -1869,7 +1873,7 @@ const ExamTake = () => {
               <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
             </div>
             <div className="exam-take__passage-panel-body">
-              <InstructionRenderer text={cleanInstructions} />
+              <InstructionRenderer text={sectionPassage || cleanInstructions} />
             </div>
           </div>
         </div>
