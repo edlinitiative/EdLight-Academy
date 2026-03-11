@@ -106,6 +106,10 @@ export default function StudyPlan() {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [activeTab, setActiveTab] = useState('today');
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [showAllMastery, setShowAllMastery] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const trackInfo = TRACK_BY_CODE[track] || null;
   const coefficients = TRACK_COEFFICIENTS[track] || {};
@@ -279,12 +283,6 @@ export default function StudyPlan() {
   // Pick the most urgent task for the hero card
   const heroTask = todayTasks[0] || null;
   const remainingToday = todayTasks.slice(1);
-
-  // Tabbed task list + show-more state
-  const [activeTab, setActiveTab] = useState('today');
-  const [showAllTasks, setShowAllTasks] = useState(false);
-  const [showAllMastery, setShowAllMastery] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const TASK_CAP = 4;
   const MASTERY_CAP = 3;
