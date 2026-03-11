@@ -10431,7 +10431,7 @@ textarea.input-field {
 .sp {
 	max-width: 1120px;
 	margin: 0 auto;
-	padding: 1.5rem 1.25rem 4rem;
+	padding: 1.5rem 1.25rem 2rem;
 }
 
 /* ── Loading / empty / error states ─────────────────────── */
@@ -10466,7 +10466,7 @@ textarea.input-field {
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	margin-bottom: 1.5rem;
+	margin-bottom: 1.25rem;
 }
 .sp-topbar__left {
 	display: flex;
@@ -10475,7 +10475,7 @@ textarea.input-field {
 	min-width: 0;
 }
 .sp-topbar__title {
-	font-size: 1.35rem;
+	font-size: 1.25rem;
 	font-weight: 700;
 	color: var(--text-900);
 	margin: 0;
@@ -10522,14 +10522,20 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-width: 1.5rem;
-	height: 1.5rem;
-	padding: 0 0.4rem;
+	min-width: 1.4rem;
+	height: 1.4rem;
+	padding: 0 0.35rem;
 	border-radius: 999px;
 	background: var(--primary-500);
 	color: #fff;
-	font-size: 0.75rem;
+	font-size: 0.7rem;
 	font-weight: 700;
+}
+.sp-pill--sm {
+	min-width: 1.15rem;
+	height: 1.15rem;
+	padding: 0 0.25rem;
+	font-size: 0.65rem;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -10537,8 +10543,8 @@ textarea.input-field {
    ═══════════════════════════════════════════════════════════ */
 .sp-dashboard {
 	display: grid;
-	grid-template-columns: 1fr 280px;
-	gap: 1.5rem;
+	grid-template-columns: 1fr 270px;
+	gap: 1.25rem;
 	align-items: start;
 }
 
@@ -10546,7 +10552,7 @@ textarea.input-field {
 .sp-main {
 	display: flex;
 	flex-direction: column;
-	gap: 1.5rem;
+	gap: 1rem;
 	min-width: 0;
 }
 
@@ -10556,7 +10562,7 @@ textarea.input-field {
 	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
-	padding: 1.25rem 1.5rem;
+	padding: 1rem 1.25rem;
 	background: linear-gradient(135deg, var(--primary-500), var(--primary-600, #2563eb));
 	border-radius: var(--radius-md, 12px);
 	color: #fff;
@@ -10570,44 +10576,48 @@ textarea.input-field {
 }
 .sp-hero--done {
 	background: var(--surface);
-	color: var(--text-700);
+	color: var(--text-600);
 	cursor: default;
 	box-shadow: none;
 	border: 1px solid var(--border);
-	gap: 0.75rem;
+	padding: 0.6rem 1rem;
+	gap: 0.5rem;
+	justify-content: flex-start;
 }
 .sp-hero--done:hover { transform: none; box-shadow: none; }
 .sp-hero--done svg { color: var(--success-500); flex-shrink: 0; }
+.sp-hero__done-text {
+	font-size: 0.88rem;
+	font-weight: 500;
+}
 .sp-hero__content {
 	display: flex;
 	flex-direction: column;
-	gap: 0.35rem;
+	gap: 0.25rem;
 	min-width: 0;
 }
 .sp-hero__eyebrow {
 	display: flex;
 	align-items: center;
 	gap: 0.35rem;
-	font-size: 0.78rem;
+	font-size: 0.72rem;
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	opacity: 0.85;
 }
 .sp-hero__title {
-	font-size: 1.15rem;
+	font-size: 1.05rem;
 	font-weight: 700;
 	margin: 0;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
-.sp-hero--done .sp-hero__title { font-size: 1.05rem; }
-.sp-hero__subtitle { margin: 0; font-size: 0.88rem; opacity: 0.7; }
 .sp-hero__meta {
 	display: flex;
 	align-items: center;
-	gap: 0.6rem;
+	gap: 0.5rem;
 	flex-wrap: wrap;
 }
 .sp-hero__badge {
@@ -10632,8 +10642,8 @@ textarea.input-field {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 48px;
-	height: 48px;
+	width: 42px;
+	height: 42px;
 	border-radius: 50%;
 	border: 2px solid rgba(255, 255, 255, 0.4);
 	background: rgba(255, 255, 255, 0.15);
@@ -10647,39 +10657,76 @@ textarea.input-field {
 	border-color: rgba(255, 255, 255, 0.6);
 }
 
-/* ── Section (today / upcoming) ─────────────────────────── */
+/* ── Tabs ────────────────────────────────────────────────── */
+.sp-tabs {
+	display: flex;
+	gap: 0.25rem;
+	border-bottom: 2px solid var(--border);
+	margin-bottom: 0.5rem;
+}
+.sp-tabs__btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.5rem 0.85rem;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	cursor: pointer;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-400);
+	transition: color 0.15s, border-color 0.15s;
+}
+.sp-tabs__btn:hover { color: var(--text-700); }
+.sp-tabs__btn--active {
+	color: var(--primary-600, var(--primary-500));
+	border-bottom-color: var(--primary-500);
+}
+
+/* ── Section ─────────────────────────────────────────────── */
 .sp-section {
 	display: flex;
 	flex-direction: column;
-	gap: 0.65rem;
-}
-.sp-section__header {
-	display: flex;
-	align-items: center;
 	gap: 0.5rem;
 }
-.sp-section__header h3 {
-	display: flex;
-	align-items: center;
-	gap: 0.4rem;
-	font-size: 1rem;
-	font-weight: 700;
-	color: var(--text-800);
-	margin: 0;
+.sp-section__empty {
+	text-align: center;
+	padding: 1.5rem 1rem;
+	color: var(--text-400);
+	font-size: 0.88rem;
 }
+
+/* ── Show more button ───────────────────────────────────── */
+.sp-show-more {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--primary-500);
+	font-size: 0.82rem;
+	font-weight: 600;
+	padding: 0.35rem 0;
+	transition: color 0.15s;
+}
+.sp-show-more:hover { color: var(--primary-700, #1d4ed8); }
+.sp-show-more--sm { font-size: 0.75rem; margin-top: 0.35rem; }
 
 /* ── Task grid & task cards ─────────────────────────────── */
 .sp-task-grid {
 	display: flex;
 	flex-direction: column;
-	gap: 0.4rem;
+	gap: 0.3rem;
 }
 
 .sp-task {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
-	padding: 0.75rem 0.85rem;
+	gap: 0.65rem;
+	padding: 0.55rem 0.75rem;
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
@@ -10693,7 +10740,7 @@ textarea.input-field {
 	box-shadow: 0 2px 10px rgba(10, 102, 194, 0.08);
 	transform: translateY(-1px);
 }
-.sp-task--compact { padding: 0.55rem 0.85rem; }
+.sp-task--compact { padding: 0.45rem 0.75rem; }
 .sp-task--overdue { border-color: var(--danger-300); }
 .sp-task__accent {
 	position: absolute;
@@ -10783,17 +10830,27 @@ textarea.input-field {
 .sp-sidebar {
 	display: flex;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 0.75rem;
 	position: sticky;
 	top: 5rem;
 }
+
+/* ── Sidebar details toggle (mobile collapsible) ────────── */
+.sp-sidebar__details { display: contents; }
+.sp-sidebar__toggle { display: none; }
+.sp-sidebar__collapsible { display: contents; }
+.sp-sidebar__chevron {
+	transition: transform 0.2s;
+	margin-left: auto;
+}
+.sp-sidebar__chevron--open { transform: rotate(180deg); }
 
 /* ── Progress ring card ─────────────────────────────────── */
 .sp-progress-card {
 	display: flex;
 	align-items: center;
-	gap: 0.85rem;
-	padding: 1rem;
+	gap: 0.75rem;
+	padding: 0.85rem;
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-sm);
@@ -10950,23 +11007,41 @@ textarea.input-field {
 	}
 	.sp-sidebar {
 		position: static;
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: 0.75rem;
 	}
-	.sp-progress-card,
-	.sp-quick-stats { grid-column: span 2; }
+	/* Show collapsible toggle, hide details by default */
+	.sp-sidebar__details { display: block; }
+	.sp-sidebar__toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		width: 100%;
+		padding: 0.6rem 0.85rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		font-size: 0.85rem;
+		font-weight: 600;
+		color: var(--text-700);
+	}
+	.sp-sidebar__collapsible {
+		display: none;
+	}
+	.sp-sidebar__collapsible--open {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-top: 0.5rem;
+	}
 }
 
 @media (max-width: 480px) {
-	.sp { padding: 1rem 0.75rem 3rem; }
-	.sp-topbar { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-	.sp-hero { padding: 1rem; }
-	.sp-hero__title { font-size: 1rem; }
-	.sp-sidebar { grid-template-columns: 1fr; }
-	.sp-progress-card,
-	.sp-quick-stats { grid-column: span 1; }
-	.sp-task__title { max-width: 180px; }
+	.sp { padding: 1rem 0.75rem 1.5rem; }
+	.sp-topbar { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+	.sp-hero { padding: 0.75rem 1rem; }
+	.sp-hero__title { font-size: 0.95rem; }
+	.sp-task__title { max-width: 170px; }
 	.sp-task__stars,
 	.sp-task__date { display: none; }
+	.sp-tabs__btn { padding: 0.4rem 0.65rem; font-size: 0.8rem; }
 }

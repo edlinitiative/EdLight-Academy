@@ -16,7 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Lock, GraduationCap, ClipboardList, Sparkles, CalendarDays, CalendarRange,
   Timer, Lightbulb, Target, CheckCircle2, BarChart3, RefreshCw, Trash2,
-  FileText, Pencil, Video, ChevronRight, Flame, Play,
+  FileText, Pencil, Video, ChevronRight, ChevronDown, Flame, Play,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
@@ -280,9 +280,26 @@ export default function StudyPlan() {
   const heroTask = todayTasks[0] || null;
   const remainingToday = todayTasks.slice(1);
 
+  // Tabbed task list + show-more state
+  const [activeTab, setActiveTab] = useState('today');
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [showAllMastery, setShowAllMastery] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const TASK_CAP = 4;
+  const MASTERY_CAP = 3;
+
+  const tabTasks = activeTab === 'today' ? remainingToday : upcomingTasks;
+  const visibleTasks = showAllTasks ? tabTasks : tabTasks.slice(0, TASK_CAP);
+  const hasMoreTasks = tabTasks.length > TASK_CAP;
+
+  const masteryEntries = Object.entries(mastery)
+    .sort((a, b) => (a[1].masteredPct || 0) - (b[1].masteredPct || 0));
+  const visibleMastery = showAllMastery ? masteryEntries : masteryEntries.slice(0, MASTERY_CAP);
+
   return (
     <div className="sp">
-      {/* ── Top bar: title + track badge + actions ─────────────── */}
+      {/* ── Top bar ────────────────────────────────────────── */}
       <header className="sp-topbar">
         <div className="sp-topbar__left">
           <h1 className="sp-topbar__title">
@@ -304,13 +321,13 @@ export default function StudyPlan() {
         </div>
       </header>
 
-      {/* ── Dashboard grid ─────────────────────────────────────── */}
+      {/* ── Dashboard grid ─────────────────────────────────── */}
       <div className="sp-dashboard">
 
-        {/* ──── MAIN COLUMN ──────────────────────────────────── */}
+        {/* ──── MAIN COLUMN ────────────────────────────────── */}
         <main className="sp-main">
 
-          {/* Hero: Next task to do */}
+          {/* Hero: Next task */}
           {heroTask ? (
             <div
               className="sp-hero"
@@ -342,62 +359,69 @@ export default function StudyPlan() {
             </div>
           ) : (
             <div className="sp-hero sp-hero--done">
-              <CheckCircle2 size={28} />
-              <div>
-                <h2 className="sp-hero__title">{isCreole ? 'Ou ajou!' : 'Vous êtes à jour !'}</h2>
-                <p className="sp-hero__subtitle">
-                  {isCreole ? 'Pa gen anyen pou jodi a.' : 'Rien de prévu pour aujourd\'hui.'}
-                </p>
-              </div>
+              <CheckCircle2 size={20} />
+              <span className="sp-hero__done-text">
+                {isCreole ? 'Ou ajou — pa gen anyen pou jodi a!' : 'Vous êtes à jour — rien de prévu aujourd\'hui !'}
+              </span>
             </div>
           )}
 
-          {/* Today's remaining tasks */}
-          {remainingToday.length > 0 && (
-            <section className="sp-section">
-              <div className="sp-section__header">
-                <h3><Target size={18} /> {isCreole ? 'Travay jodi a' : 'Aujourd\'hui'}</h3>
-                <span className="sp-pill">{todayTasks.length}</span>
-              </div>
-              <div className="sp-task-grid">
-                {remainingToday.map((task) => (
-                  <TaskCard
-                    key={task.examId || task.taskId}
-                    task={task}
-                    isCreole={isCreole}
-                    onNavigate={() => navigateToTask(task, navigate)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+          {/* ── Tabbed task section ────────────────────────── */}
+          <section className="sp-section">
+            <div className="sp-tabs">
+              <button
+                className={`sp-tabs__btn ${activeTab === 'today' ? 'sp-tabs__btn--active' : ''}`}
+                onClick={() => { setActiveTab('today'); setShowAllTasks(false); }}
+              >
+                <Target size={15} />
+                {isCreole ? 'Jodi a' : 'Aujourd\'hui'}
+                <span className="sp-pill sp-pill--sm">{todayTasks.length}</span>
+              </button>
+              <button
+                className={`sp-tabs__btn ${activeTab === 'week' ? 'sp-tabs__btn--active' : ''}`}
+                onClick={() => { setActiveTab('week'); setShowAllTasks(false); }}
+              >
+                <CalendarRange size={15} />
+                {isCreole ? 'Semèn' : 'Semaine'}
+                <span className="sp-pill sp-pill--sm">{upcomingTasks.length}</span>
+              </button>
+            </div>
 
-          {/* Upcoming week */}
-          {upcomingTasks.length > 0 && (
-            <section className="sp-section">
-              <div className="sp-section__header">
-                <h3><CalendarRange size={18} /> {isCreole ? 'Semèn kap vini an' : 'Semaine à venir'}</h3>
-                <span className="sp-pill">{upcomingTasks.length}</span>
-              </div>
-              <div className="sp-task-grid sp-task-grid--compact">
-                {upcomingTasks.slice(0, 8).map((task) => (
+            {visibleTasks.length > 0 ? (
+              <div className="sp-task-grid">
+                {visibleTasks.map((task) => (
                   <TaskCard
                     key={task.examId || task.taskId}
                     task={task}
                     isCreole={isCreole}
-                    compact
+                    compact={activeTab === 'week'}
                     onNavigate={() => navigateToTask(task, navigate)}
                   />
                 ))}
               </div>
-            </section>
-          )}
+            ) : (
+              <p className="sp-section__empty">
+                {activeTab === 'today'
+                  ? (isCreole ? 'Pa gen lòt travay jodi a.' : 'Aucune autre tâche aujourd\'hui.')
+                  : (isCreole ? 'Pa gen travay pou semèn kap vini an.' : 'Aucune tâche cette semaine.')}
+              </p>
+            )}
+
+            {hasMoreTasks && !showAllTasks && (
+              <button className="sp-show-more" onClick={() => setShowAllTasks(true)}>
+                <ChevronDown size={14} />
+                {isCreole
+                  ? `Wè ${tabTasks.length - TASK_CAP} anplis`
+                  : `Voir ${tabTasks.length - TASK_CAP} de plus`}
+              </button>
+            )}
+          </section>
         </main>
 
-        {/* ──── SIDEBAR ──────────────────────────────────────── */}
+        {/* ──── SIDEBAR ────────────────────────────────────── */}
         <aside className="sp-sidebar">
 
-          {/* Progress ring */}
+          {/* Progress ring — always visible */}
           <div className="sp-progress-card">
             <ProgressRing pct={progressPct} />
             <div className="sp-progress-card__text">
@@ -408,7 +432,7 @@ export default function StudyPlan() {
             </div>
           </div>
 
-          {/* Quick stats */}
+          {/* Quick stats — always visible */}
           <div className="sp-quick-stats">
             <div className="sp-qstat">
               <CalendarDays size={16} />
@@ -427,40 +451,57 @@ export default function StudyPlan() {
             </div>
           </div>
 
-          {/* Subject mastery */}
-          {Object.keys(mastery).length > 0 && (
-            <div className="sp-card">
-              <h4 className="sp-card__title">
-                <BarChart3 size={16} /> {isCreole ? 'Metrize' : 'Maîtrise'}
-              </h4>
-              <div className="sp-mastery-list">
-                {Object.entries(mastery)
-                  .sort((a, b) => (coefficients[b[0]] || 1) - (coefficients[a[0]] || 1))
-                  .map(([subject, data]) => (
-                    <MasteryRow
-                      key={subject}
-                      subject={subject}
-                      data={data}
-                      coefficient={coefficients[subject] || 1}
-                    />
-                  ))}
-              </div>
-            </div>
-          )}
+          {/* Collapsible on mobile: mastery + tips */}
+          <div className="sp-sidebar__details">
+            <button className="sp-sidebar__toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <BarChart3 size={15} />
+              {isCreole ? 'Detay & Metrize' : 'Détails & Maîtrise'}
+              <ChevronDown size={14} className={`sp-sidebar__chevron ${sidebarOpen ? 'sp-sidebar__chevron--open' : ''}`} />
+            </button>
 
-          {/* Tips */}
-          {plan.tips?.length > 0 && (
-            <div className="sp-card sp-card--tips">
-              <h4 className="sp-card__title">
-                <Lightbulb size={16} /> {isCreole ? 'Konsèy' : 'Conseils'}
-              </h4>
-              <ul className="sp-tips-list">
-                {plan.tips.slice(0, 4).map((tip, i) => (
-                  <li key={i}>{tip}</li>
-                ))}
-              </ul>
+            <div className={`sp-sidebar__collapsible ${sidebarOpen ? 'sp-sidebar__collapsible--open' : ''}`}>
+              {/* Subject mastery — capped at 3 weakest */}
+              {masteryEntries.length > 0 && (
+                <div className="sp-card">
+                  <h4 className="sp-card__title">
+                    <BarChart3 size={16} /> {isCreole ? 'Metrize' : 'Maîtrise'}
+                  </h4>
+                  <div className="sp-mastery-list">
+                    {visibleMastery.map(([subject, data]) => (
+                      <MasteryRow
+                        key={subject}
+                        subject={subject}
+                        data={data}
+                        coefficient={coefficients[subject] || 1}
+                      />
+                    ))}
+                  </div>
+                  {masteryEntries.length > MASTERY_CAP && !showAllMastery && (
+                    <button className="sp-show-more sp-show-more--sm" onClick={() => setShowAllMastery(true)}>
+                      <ChevronDown size={12} />
+                      {isCreole
+                        ? `${masteryEntries.length - MASTERY_CAP} anplis`
+                        : `${masteryEntries.length - MASTERY_CAP} de plus`}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Tips — capped at 3 */}
+              {plan.tips?.length > 0 && (
+                <div className="sp-card sp-card--tips">
+                  <h4 className="sp-card__title">
+                    <Lightbulb size={16} /> {isCreole ? 'Konsèy' : 'Conseils'}
+                  </h4>
+                  <ul className="sp-tips-list">
+                    {plan.tips.slice(0, 3).map((tip, i) => (
+                      <li key={i}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </aside>
       </div>
 
