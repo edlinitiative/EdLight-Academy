@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import {
   doc,
   getDoc,
@@ -16,15 +16,20 @@ function cleanUndefined(obj) {
   return out;
 }
 
+/** Returns true only when Firebase Auth has a valid signed-in user. */
+function hasFirebaseAuth() {
+  return !!auth.currentUser;
+}
+
 export async function loadExamAttemptDraft(userId, examId) {
-  if (!userId || !examId) return null;
+  if (!userId || !examId || !hasFirebaseAuth()) return null;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data() : null;
 }
 
 export async function saveExamAttemptDraft(userId, examId, draft) {
-  if (!userId || !examId) return;
+  if (!userId || !examId || !hasFirebaseAuth()) return;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
 
   const payload = cleanUndefined({
@@ -38,7 +43,7 @@ export async function saveExamAttemptDraft(userId, examId, draft) {
 }
 
 export async function markExamAttemptSubmitted(userId, examId, extra = {}) {
-  if (!userId || !examId) return;
+  if (!userId || !examId || !hasFirebaseAuth()) return;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
   await setDoc(ref, {
     status: 'submitted',
