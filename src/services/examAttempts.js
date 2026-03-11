@@ -5,6 +5,7 @@ import {
   setDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+import { recordActivity as recordStreakActivity } from './streakService';
 
 function cleanUndefined(obj) {
   if (!obj || typeof obj !== 'object') return obj;
@@ -53,4 +54,7 @@ export async function markExamAttemptSubmitted(userId, examId, extra = {}) {
     updated_at_ms: Date.now(),
     ...cleanUndefined(extra),
   }, { merge: true });
+
+  // Record global cross-course streak
+  recordStreakActivity(userId).catch(() => {});
 }

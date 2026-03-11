@@ -64,6 +64,11 @@ service cloud.firestore {
       match /studyPlans/{planId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // Global streak data
+      match /streaks/{streakId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // Public site-wide stats document (for homepage/about metrics)

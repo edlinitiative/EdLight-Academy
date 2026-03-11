@@ -2,10 +2,12 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { AuthModal } from './Auth';
+import { StreakMilestoneModal } from './Streak';
 import useStore from '../contexts/store';
 
 export function Layout() {
-  const { showAuthModal, toggleAuthModal } = useStore();
+  const { showAuthModal, toggleAuthModal, language } = useStore();
+  const isCreole = language === 'ht';
   // Footer intentionally hidden site-wide per request
 
   return (
@@ -18,6 +20,7 @@ export function Layout() {
         <Outlet />
       </main>
       {showAuthModal && <AuthModal onClose={() => toggleAuthModal()} />}
+      <StreakMilestoneModal isCreole={isCreole} />
     </div>
   );
 }

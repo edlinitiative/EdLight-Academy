@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
+import { StreakBadge } from './Streak';
 
 export function Navbar() {
   const navigate = useNavigate();
@@ -136,6 +137,13 @@ export function Navbar() {
             Examens
           </Link>
           <Link 
+            to="/trivia" 
+            className={['nav-link', isActive('/trivia') ? 'active' : ''].join(' ')}
+            onClick={() => setShowMobileMenu(false)}
+          >
+            🎮 Trivia
+          </Link>
+          <Link 
             to="/about" 
             className={['nav-link', isActive('/about') ? 'active' : ''].join(' ')}
             onClick={() => setShowMobileMenu(false)}
@@ -197,6 +205,8 @@ export function Navbar() {
         <div className="nav-actions">
           {isAuthenticated ? (
             <>
+              <StreakBadge />
+
               <button 
                 className="button button--ghost button--pill nav-actions__dashboard"
                 onClick={() => navigate('/dashboard')}

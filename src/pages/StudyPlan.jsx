@@ -21,6 +21,8 @@ import {
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
 import { useAppData } from '../hooks/useData';
+import { useStreak } from '../hooks/useStreak';
+import { StreakWidget } from '../components/Streak';
 import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
@@ -99,6 +101,7 @@ export default function StudyPlan() {
   const { data: allExams, isLoading: examsLoading } = useExamCatalog();
   const { data: existingResults = {}, isLoading: resultsLoading } = useExamResultsForPlan();
   const { data: appData, isLoading: appDataLoading } = useAppData();
+  const { recordActivity: recordStreakActivity } = useStreak();
 
   const quizBankIndex = appData?.quizBank || null;
   const courses = appData?.courses || [];
@@ -126,6 +129,13 @@ export default function StudyPlan() {
   // ── Auto-generate on first visit ──────────────────────────────────
   const shouldAutoGenerate =
     isAuthenticated && track && !hasPlan && !planLoading && !generating && !examsLoading && trackExams.length > 0;
+
+  // Record streak when viewing the study plan (user is actively studying)
+  useEffect(() => {
+    if (isAuthenticated && hasPlan) {
+      recordStreakActivity();
+    }
+  }, [isAuthenticated, hasPlan, recordStreakActivity]);
 
   useEffect(() => {
     if (shouldAutoGenerate) {
@@ -448,6 +458,9 @@ export default function StudyPlan() {
               <span className="sp-qstat__label">min/{isCreole ? 'jou' : 'jour'}</span>
             </div>
           </div>
+
+          {/* Streak widget */}
+          <StreakWidget isCreole={isCreole} />
 
           {/* Collapsible on mobile: mastery + tips */}
           <div className="sp-sidebar__details">

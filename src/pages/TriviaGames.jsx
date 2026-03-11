@@ -1,0 +1,369 @@
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import useStore from '../contexts/store';
+import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import './TriviaGames.css';
+
+/* ─── Utility: shuffle an array (Fisher-Yates) ─── */
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* ─── Category Selection Screen ─── */
+function CategoryPicker({ onSelect, isCreole }) {
+  return (
+    <div className="trivia-landing">
+      <header className="trivia-landing__header">
+        <span className="trivia-landing__eyebrow">
+          {isCreole ? 'Jeu Edikasyon' : 'Jeux Éducatifs'}
+        </span>
+        <h1 className="trivia-landing__title">
+          🎮 {isCreole ? 'Trivia — Teste Konesans Ou' : 'Trivia — Testez vos connaissances'}
+        </h1>
+        <p className="trivia-landing__subtitle">
+          {isCreole
+            ? 'Chwazi yon kategori epi reponn kesyon yo pou vin pi entelijan!'
+            : 'Choisissez une catégorie et répondez aux questions pour apprendre en vous amusant !'}
+        </p>
+      </header>
+
+      <div className="trivia-landing__grid">
+        {TRIVIA_CATEGORIES.map((cat) => (
+          <button
+            key={cat.id}
+            className="trivia-cat-card"
+            style={{ '--cat-color': cat.color }}
+            onClick={() => onSelect(cat.id)}
+          >
+            <div className="trivia-cat-card__accent" />
+            <div className="trivia-cat-card__body">
+              <span className="trivia-cat-card__icon">{cat.icon}</span>
+              <h2 className="trivia-cat-card__name">{isCreole ? cat.nameHt : cat.name}</h2>
+              <p className="trivia-cat-card__desc">{isCreole ? cat.descriptionHt : cat.description}</p>
+              <span className="trivia-cat-card__count">
+                {TRIVIA_QUESTIONS[cat.id].length} {isCreole ? 'kesyon' : 'questions'}
+              </span>
+            </div>
+            <div className="trivia-cat-card__footer">
+              <span className="trivia-cat-card__cta">
+                {isCreole ? 'Jwe →' : 'Jouer →'}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Difficulty / Round Size Picker ─── */
+function RoundPicker({ category, onStart, onBack, isCreole }) {
+  const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
+  const total = TRIVIA_QUESTIONS[category].length;
+
+  const rounds = [
+    { count: 10, label: isCreole ? 'Rapid — 10 kesyon' : 'Rapide — 10 questions', icon: '⚡' },
+    { count: 25, label: isCreole ? 'Mwayen — 25 kesyon' : 'Moyen — 25 questions', icon: '📝' },
+    { count: 50, label: isCreole ? 'Difisil — 50 kesyon' : 'Difficile — 50 questions', icon: '🔥' },
+    { count: total, label: isCreole ? `Tout — ${total} kesyon` : `Tout — ${total} questions`, icon: '🏆' },
+  ].filter((r) => r.count <= total);
+
+  return (
+    <div className="trivia-round-picker">
+      <button className="trivia-back-btn" onClick={onBack}>
+        ← {isCreole ? 'Retounen' : 'Retour'}
+      </button>
+      <div className="trivia-round-picker__header">
+        <span className="trivia-round-picker__icon">{cat.icon}</span>
+        <h2>{isCreole ? cat.nameHt : cat.name}</h2>
+        <p>{isCreole ? 'Chwazi konbyen kesyon ou vle reponn' : 'Choisissez le nombre de questions'}</p>
+      </div>
+      <div className="trivia-round-picker__options">
+        {rounds.map((r) => (
+          <button
+            key={r.count}
+            className="trivia-round-btn"
+            style={{ '--cat-color': cat.color }}
+            onClick={() => onStart(r.count)}
+          >
+            <span className="trivia-round-btn__icon">{r.icon}</span>
+            <span>{r.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Active Game Screen ─── */
+function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
+  const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
+  const questions = useMemo(() => shuffle(TRIVIA_QUESTIONS[category]).slice(0, count), [category, count]);
+
+  const [current, setCurrent] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [score, setScore] = useState(0);
+  const [answered, setAnswered] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(15);
+  const timerRef = useRef(null);
+
+  const q = questions[current];
+  const progress = ((current) / questions.length) * 100;
+
+  // Timer logic
+  useEffect(() => {
+    setTimeLeft(15);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          // Auto-answer wrong on timeout
+          setAnswered(true);
+          setSelected(-1); // no selection
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [current]);
+
+  const handleSelect = useCallback(
+    (idx) => {
+      if (answered) return;
+      clearInterval(timerRef.current);
+      setSelected(idx);
+      setAnswered(true);
+      if (idx === q.answer) setScore((s) => s + 1);
+    },
+    [answered, q]
+  );
+
+  const handleNext = useCallback(() => {
+    if (current + 1 >= questions.length) {
+      onFinish(score, questions.length);
+      return;
+    }
+    setCurrent((c) => c + 1);
+    setSelected(null);
+    setAnswered(false);
+  }, [current, questions.length, onFinish, score]);
+
+  const optionClass = (idx) => {
+    const base = 'trivia-option';
+    if (!answered) return `${base}${selected === idx ? ` ${base}--selected` : ''}`;
+    if (idx === q.answer) return `${base} ${base}--correct`;
+    if (idx === selected) return `${base} ${base}--wrong`;
+    return `${base} ${base}--dimmed`;
+  };
+
+  return (
+    <div className="trivia-quiz" style={{ '--cat-color': cat.color }}>
+      <div className="trivia-quiz__top-bar">
+        <button className="trivia-back-btn trivia-back-btn--sm" onClick={onBack}>
+          ✕
+        </button>
+        <div className="trivia-quiz__progress-wrap">
+          <div className="trivia-quiz__progress-bar">
+            <div className="trivia-quiz__progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="trivia-quiz__counter">
+            {current + 1} / {questions.length}
+          </span>
+        </div>
+        <div className="trivia-quiz__score-badge">
+          ⭐ {score}
+        </div>
+      </div>
+
+      <div className="trivia-quiz__timer-ring" data-urgent={timeLeft <= 5 ? 'true' : undefined}>
+        <span>{timeLeft}</span>
+      </div>
+
+      <div className="trivia-quiz__question-card">
+        <h2 className="trivia-quiz__question">
+          {isCreole ? q.qHt : q.q}
+        </h2>
+      </div>
+
+      <div className="trivia-quiz__options">
+        {q.options.map((opt, idx) => (
+          <button
+            key={idx}
+            className={optionClass(idx)}
+            onClick={() => handleSelect(idx)}
+            disabled={answered}
+          >
+            <span className="trivia-option__letter">
+              {String.fromCharCode(65 + idx)}
+            </span>
+            <span className="trivia-option__text">{opt}</span>
+            {answered && idx === q.answer && (
+              <span className="trivia-option__icon">✓</span>
+            )}
+            {answered && idx === selected && idx !== q.answer && (
+              <span className="trivia-option__icon">✗</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {answered && (
+        <button className="trivia-next-btn" onClick={handleNext}>
+          {current + 1 >= questions.length
+            ? (isCreole ? 'Wè rezilta' : 'Voir les résultats')
+            : (isCreole ? 'Pwochen kesyon →' : 'Question suivante →')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ─── Results Screen ─── */
+function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
+  const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
+  const pct = Math.round((score / total) * 100);
+
+  let emoji, message, messageHt;
+  if (pct >= 90) {
+    emoji = '🏆';
+    message = 'Excellent ! Vous êtes un champion !';
+    messageHt = 'Ekselan! Ou se yon chanpyon!';
+  } else if (pct >= 70) {
+    emoji = '🌟';
+    message = 'Très bien ! Continuez comme ça !';
+    messageHt = 'Trè byen! Kontinye konsa!';
+  } else if (pct >= 50) {
+    emoji = '👍';
+    message = 'Pas mal ! Vous pouvez vous améliorer.';
+    messageHt = 'Pa mal! Ou ka amelyore.';
+  } else {
+    emoji = '💪';
+    message = 'Courage ! Réessayez pour progresser.';
+    messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
+  }
+
+  return (
+    <div className="trivia-results" style={{ '--cat-color': cat.color }}>
+      <div className="trivia-results__card">
+        <span className="trivia-results__emoji">{emoji}</span>
+        <h2 className="trivia-results__title">
+          {isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
+        </h2>
+        <div className="trivia-results__score-ring">
+          <svg viewBox="0 0 120 120" className="trivia-results__ring-svg">
+            <circle cx="60" cy="60" r="52" className="trivia-results__ring-bg" />
+            <circle
+              cx="60" cy="60" r="52"
+              className="trivia-results__ring-fill"
+              style={{
+                strokeDasharray: `${(pct / 100) * 327} 327`,
+              }}
+            />
+          </svg>
+          <span className="trivia-results__pct">{pct}%</span>
+        </div>
+        <p className="trivia-results__detail">
+          {score} / {total} {isCreole ? 'kòrèk' : 'correct'}
+        </p>
+        <p className="trivia-results__message">
+          {isCreole ? messageHt : message}
+        </p>
+        <div className="trivia-results__actions">
+          <button className="button button--primary button--pill" onClick={onReplay}>
+            🔄 {isCreole ? 'Jwe ankò' : 'Rejouer'}
+          </button>
+          <button className="button button--ghost button--pill" onClick={onHome}>
+            ← {isCreole ? 'Kategori yo' : 'Catégories'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Trivia Page ─── */
+export default function TriviaGames() {
+  const { language } = useStore();
+  const isCreole = language === 'ht';
+
+  // States: 'pick' | 'round' | 'play' | 'results'
+  const [screen, setScreen] = useState('pick');
+  const [category, setCategory] = useState(null);
+  const [roundCount, setRoundCount] = useState(10);
+  const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+
+  const handleCategorySelect = (catId) => {
+    setCategory(catId);
+    setScreen('round');
+  };
+
+  const handleStart = (count) => {
+    setRoundCount(count);
+    setScreen('play');
+  };
+
+  const handleFinish = (score, total) => {
+    setFinalScore({ score, total });
+    setScreen('results');
+  };
+
+  const handleReplay = () => {
+    setScreen('round');
+  };
+
+  const handleHome = () => {
+    setScreen('pick');
+    setCategory(null);
+  };
+
+  const handleBack = () => {
+    if (screen === 'round') {
+      setScreen('pick');
+      setCategory(null);
+    } else if (screen === 'play') {
+      setScreen('round');
+    }
+  };
+
+  return (
+    <div className="trivia-page">
+      {screen === 'pick' && (
+        <CategoryPicker onSelect={handleCategorySelect} isCreole={isCreole} />
+      )}
+      {screen === 'round' && (
+        <RoundPicker
+          category={category}
+          onStart={handleStart}
+          onBack={handleBack}
+          isCreole={isCreole}
+        />
+      )}
+      {screen === 'play' && (
+        <TriviaQuiz
+          key={`${category}-${roundCount}-${Date.now()}`}
+          category={category}
+          count={roundCount}
+          onFinish={handleFinish}
+          onBack={handleBack}
+          isCreole={isCreole}
+        />
+      )}
+      {screen === 'results' && (
+        <TriviaResults
+          category={category}
+          score={finalScore.score}
+          total={finalScore.total}
+          onReplay={handleReplay}
+          onHome={handleHome}
+          isCreole={isCreole}
+        />
+      )}
+    </div>
+  );
+}

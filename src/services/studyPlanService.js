@@ -34,6 +34,7 @@ import {
   limit,
   serverTimestamp,
 } from 'firebase/firestore';
+import { recordActivity as recordStreakActivity } from './streakService';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -241,6 +242,9 @@ export async function recordTaskResult(uid, planId, taskId, result) {
   };
 
   await updateStudyPlan(uid, planId, { tasks });
+
+  // Record global cross-course streak
+  recordStreakActivity(uid).catch(() => {});
 }
 
 /**

@@ -1,6 +1,7 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import { notifyAchievement, notifyStreak } from './notificationService';
+import { recordActivity as recordStreakActivity } from './streakService';
 
 /**
  * Progress tracking data structure in Firestore:
@@ -84,6 +85,9 @@ export async function trackVideoProgress(userId, courseId, videoId, watchData) {
     
     // Update streak using the PREVIOUS date (before we overwrote it)
     await updateStreak(userId, courseId, previousLastStudyDate);
+
+    // Record global cross-course streak
+    recordStreakActivity(userId).catch(() => {});
     
   } catch (error) {
     console.error('[Progress] Error tracking video:', error);
@@ -216,6 +220,9 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
     
     // Check for achievements
     await checkAchievements(userId, courseId);
+
+    // Record global cross-course streak
+    recordStreakActivity(userId).catch(() => {});
     
   } catch (error) {
     console.error('[Progress] Error tracking quiz attempt:', error);
