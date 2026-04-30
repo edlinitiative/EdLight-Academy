@@ -9,7 +9,7 @@ export default function Home() {
   const isCreole = language === 'ht';
   const [heroSrc, setHeroSrc] = useState('/assets/student-hero.jpg');
 
-  const { cards, masteryRatePercent, isLoading } = useSiteStatCards();
+  const { cards, masteryRatePercent } = useSiteStatCards();
 
   // Keep the hero card layout stable: show up to 2 metrics.
   const preferredOrder = ['students', 'quizzes', 'videos', 'courses', 'exams', 'tracks'];
