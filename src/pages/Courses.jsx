@@ -77,7 +77,6 @@ export default function Courses() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">{t('courses.catalog')}</span>
             <h1 className="page-header__title">{t('courses.catalogTitle')}</h1>
             <p className="page-header__subtitle">{t('courses.catalogSubtitle')}</p>
           </div>
@@ -94,13 +93,6 @@ export default function Courses() {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              className="button button--ghost button--pill"
-              onClick={() => navigate('/dashboard')}
-            >
-              {t('courses.viewDashboard')}
-            </button>
           </div>
         </div>
 

@@ -35,6 +35,9 @@ yarn-error.log*
 .idea/
 .vscode/
 
+# Claude Code
+.claude/
+
 # Private data (quizzes with answers)
 /private_data/
 *.swp
