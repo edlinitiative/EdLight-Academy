@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { X, Check, BookOpen } from 'lucide-react';
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────
 
 function getLessonIcon(type) {
   switch (type) {
-    case 'quiz':    return '';
-    case 'reading': return '📖';
+    case 'quiz':    return null;
+    case 'reading': return <BookOpen size={14} />;
     case 'video':
-    default:        return '';
+    default:        return null;
   }
 }
 
@@ -132,7 +133,7 @@ export default function CourseSidebar({
             type="button"
             aria-label={t('courses.closeSidebar', 'Fermer le menu')}
           >
-            ✕
+            <X size={18} />
           </button>
         </div>
 
@@ -194,7 +195,7 @@ export default function CourseSidebar({
                             }}
                           >
                             <span className="lesson-list__index">
-                              {isCompleted ? '✓' : `${idx + 1}.${lidx + 1}`}
+                              {isCompleted ? <Check size={14} /> : `${idx + 1}.${lidx + 1}`}
                             </span>
                             <span className="lesson-list__meta">
                               {icon ? (

@@ -342,6 +342,19 @@ function buildCurrencyQs(data) {
   });
 }
 
+function flagEmojiToIso(flag) {
+  if (!flag) return null;
+  // Flag emojis are two regional indicator symbols (U+1F1E6 = 'A', etc.)
+  const codePoints = [...flag].map((c) => c.codePointAt(0));
+  if (codePoints.length < 2) return null;
+  const A = 0x1f1e6;
+  const Z = 0x1f1ff;
+  if (codePoints[0] < A || codePoints[0] > Z || codePoints[1] < A || codePoints[1] > Z) return null;
+  const a = String.fromCharCode(65 + (codePoints[0] - A));
+  const b = String.fromCharCode(65 + (codePoints[1] - A));
+  return (a + b).toLowerCase();
+}
+
 function buildFlagQs(data) {
   const allNames = data.map((c) => c.name);
   return data
@@ -349,9 +362,12 @@ function buildFlagQs(data) {
     .map((c) => {
       const distractors = pickDistractors(c.name, allNames);
       const { options, answer } = buildOptions(c.name, distractors);
+      const iso = flagEmojiToIso(c.flag);
       return {
-        q: `De quel pays est ce drapeau : ${c.flag} ?`,
-        qHt: `Ki peyi ki gen drapo sa a : ${c.flag} ?`,
+        q: `De quel pays est ce drapeau ?`,
+        qHt: `Ki peyi ki gen drapo sa a ?`,
+        flag: c.flag,
+        flagIso: iso,
         options,
         answer,
       };

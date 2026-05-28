@@ -378,6 +378,25 @@
   text-align: center;
 }
 
+.trivia-quiz__flag {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.trivia-quiz__flag-img {
+  max-width: 220px;
+  width: 60%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.trivia-quiz__flag-emoji {
+  font-size: 5rem;
+  line-height: 1;
+}
+
 .trivia-quiz__question {
   font-weight: 700;
   color: var(--text-900);

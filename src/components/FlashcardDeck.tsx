@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Shuffle, Lightbulb, Frown, Check } from 'lucide-react';
 import { useAppData } from '../hooks/useData';
 import { useKatex, renderWithKatex, shuffleArray } from '../utils/shared';
 
@@ -160,7 +161,7 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
         </div>
         <div className="flashcard-deck__actions">
           <button className="button button--ghost button--sm" onClick={shuffle} title="Shuffle cards">
-            🔀 Shuffle
+            <Shuffle size={16} /> Shuffle
           </button>
           <button className="button button--ghost button--sm" onClick={onClose}>
             Close
@@ -180,7 +181,7 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
                 className="flashcard__content"
                 dangerouslySetInnerHTML={renderWithKatex(currentCard.question, katexReady)}
               />
-              <div className="flashcard__hint-text">💡 Click to reveal answer</div>
+              <div className="flashcard__hint-text"><Lightbulb size={14} /> Click to reveal answer</div>
             </div>
             <div className="flashcard__back">
               <div className="flashcard__label">Answer</div>
@@ -219,14 +220,14 @@ export default function FlashcardDeck({ subjectCode, chapterNumber, subchapterNu
               onClick={markDifficult}
               title="Mark as difficult to review later"
             >
-              😕 Hard
+              <Frown size={16} /> Hard
             </button>
             <button 
               className={`button button--sm ${isMastered ? 'button--success' : 'button--ghost'}`}
               onClick={markMastered}
               title="Mark as mastered"
             >
-              ✓ Got it!
+              <Check size={16} /> Got it!
             </button>
           </div>
 

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { Lightbulb, Play, Pause, Rewind, FastForward, Volume2, Volume1, VolumeX, Maximize, Minimize } from 'lucide-react';
 
 export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
   const videoRef = useRef(null);
@@ -182,7 +183,7 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
           style={{ width: '100%', height: '100%', border: 'none' }}
         />
         <div className="video-player__youtube-note">
-          <small>💡 Tip: Use YouTube's playback speed controls (Settings → Playback speed)</small>
+          <small><Lightbulb size={14} /> Tip: Use YouTube's playback speed controls (Settings → Playback speed)</small>
         </div>
       </div>
     );
@@ -226,7 +227,7 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
                 onClick={togglePlay}
                 title={isPlaying ? 'Pause' : 'Play'}
               >
-                {isPlaying ? '⏸' : '▶️'}
+                {isPlaying ? <Pause size={18} /> : <Play size={18} />}
               </button>
 
               {/* Skip buttons */}
@@ -235,14 +236,14 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
                 onClick={() => skipTime(-10)}
                 title="Rewind 10s"
               >
-                ⏪
+                <Rewind size={18} />
               </button>
               <button 
                 className="video-player__button"
                 onClick={() => skipTime(10)}
                 title="Forward 10s"
               >
-                ⏩
+                <FastForward size={18} />
               </button>
 
               {/* Volume */}
@@ -251,7 +252,7 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
                 onClick={toggleMute}
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+                {isMuted || volume === 0 ? <VolumeX size={18} /> : volume < 0.5 ? <Volume1 size={18} /> : <Volume2 size={18} />}
               </button>
               <input
                 type="range"
@@ -292,7 +293,7 @@ export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
                 onClick={toggleFullscreen}
                 title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
               >
-                {isFullscreen ? '✕' : '⛶'}
+                {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
               </button>
             </div>
           </div>

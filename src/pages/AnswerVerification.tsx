@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import {
   normalizeSubject,
@@ -236,7 +237,7 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
   const section = item.section;
   const subject = normalizeSubject(exam.subject || '');
   const color = subjectColor(subject);
-  const typeMeta = QUESTION_TYPE_META[q.type] || { icon: '❓', label: q.type };
+  const typeMeta = QUESTION_TYPE_META[q.type] || { icon: 'HelpCircle', label: q.type };
 
   // Local editable state for answer_parts
   const [editedParts, setEditedParts] = useState(null);
@@ -280,7 +281,7 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
             {subject}
           </span>
           <span className="av-card__type">
-            {typeMeta.icon} {typeMeta.label}
+            <Icon name={typeMeta.icon} size={14} /> {typeMeta.label}
           </span>
           <span className="av-card__exam-title" title={exam.title}>
             {exam.title?.substring(0, 60)}{exam.title?.length > 60 ? '…' : ''}

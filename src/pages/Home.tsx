@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BookOpen, Target, PenLine, BarChart3, Flame, Sparkles, Check, Book, Triangle } from 'lucide-react';
 import useStore from '../contexts/store';
 import './Home.css';
 
@@ -26,10 +27,10 @@ export default function Home() {
   ];
 
   const pillars = [
-    { eyebrow: '01', icon: '📚', title: t('Cours structurés', 'Kou estriktire'), desc: t('Une progression claire du NS I au NS IV, alignée sur les programmes officiels.', 'Yon pwogresyon klè soti NS I rive NS IV, daprè pwogram ofisyèl yo.') },
-    { eyebrow: '02', icon: '🎯', title: t('Quiz adaptatifs', 'Quiz adaptatif'), desc: t('Des questions ciblées qui s’ajustent à votre niveau et renforcent vos lacunes.', 'Kesyon ki ajiste ak nivo ou epi ranfòse pwen fèb yo.') },
-    { eyebrow: '03', icon: '📝', title: t('Examens blancs', 'Egzamen blan'), desc: t('Simulez le Bac dans des conditions réelles, avec correction détaillée.', 'Simile Bak la nan kondisyon reyèl ak koreksyon detaye.') },
-    { eyebrow: '04', icon: '📊', title: t('Suivi premium', 'Swivi premye klas'), desc: t('Tableaux de bord, streaks et plans d’étude personnalisés.', 'Tablo de bò, seri jou ak plan etid pèsonalize.') },
+    { eyebrow: '01', icon: <BookOpen size={22} strokeWidth={1.8} />, title: t('Cours structurés', 'Kou estriktire'), desc: t('Une progression claire du NS I au NS IV, alignée sur les programmes officiels.', 'Yon pwogresyon klè soti NS I rive NS IV, daprè pwogram ofisyèl yo.') },
+    { eyebrow: '02', icon: <Target size={22} strokeWidth={1.8} />, title: t('Quiz adaptatifs', 'Quiz adaptatif'), desc: t('Des questions ciblées qui s’ajustent à votre niveau et renforcent vos lacunes.', 'Kesyon ki ajiste ak nivo ou epi ranfòse pwen fèb yo.') },
+    { eyebrow: '03', icon: <PenLine size={22} strokeWidth={1.8} />, title: t('Examens blancs', 'Egzamen blan'), desc: t('Simulez le Bac dans des conditions réelles, avec correction détaillée.', 'Simile Bak la nan kondisyon reyèl ak koreksyon detaye.') },
+    { eyebrow: '04', icon: <BarChart3 size={22} strokeWidth={1.8} />, title: t('Suivi premium', 'Swivi premye klas'), desc: t('Tableaux de bord, streaks et plans d’étude personnalisés.', 'Tablo de bò, seri jou ak plan etid pèsonalize.') },
   ];
 
   const stats = [
@@ -121,8 +122,8 @@ export default function Home() {
                   <span className="lp-hero__chip-dot" />
                   {t('Quiz Physique · 8/10', 'Quiz Fizik · 8/10')}
                 </div>
-                <div className="lp-hero__chip lp-hero__chip--b">🔥 {t('Série de 12 jours', 'Seri 12 jou')}</div>
-                <div className="lp-hero__chip lp-hero__chip--c">✦ {t('Plan d’étude prêt', 'Plan etid pare')}</div>
+                <div className="lp-hero__chip lp-hero__chip--b"><Flame size={14} strokeWidth={2.2} /> {t('Série de 12 jours', 'Seri 12 jou')}</div>
+                <div className="lp-hero__chip lp-hero__chip--c"><Sparkles size={14} strokeWidth={2.2} /> {t('Plan d’étude prêt', 'Plan etid pare')}</div>
               </div>
             </div>
           </div>
@@ -221,10 +222,10 @@ export default function Home() {
                 <span className="lp-text-accent">{t('une grande école.', 'yon gwo lekòl.')}</span>
               </h2>
               <ul className="lp-checklist">
-                <li><span className="lp-check">✓</span> {t('Vidéos HD avec sous-titres en français et créole', 'Videyo HD ak soustit an franse ak kreyòl')}</li>
-                <li><span className="lp-check">✓</span> {t('Quiz qui s’adaptent à votre niveau', 'Quiz ki ajiste ak nivo ou')}</li>
-                <li><span className="lp-check">✓</span> {t('Corrections rédigées par des enseignants', 'Koreksyon ekri pa pwofesè')}</li>
-                <li><span className="lp-check">✓</span> {t('Plan d’étude hebdomadaire personnalisé', 'Plan etid chak semèn pèsonalize')}</li>
+                <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Vidéos HD avec sous-titres en français et créole', 'Videyo HD ak soustit an franse ak kreyòl')}</li>
+                <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Quiz qui s’adaptent à votre niveau', 'Quiz ki ajiste ak nivo ou')}</li>
+                <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Corrections rédigées par des enseignants', 'Koreksyon ekri pa pwofesè')}</li>
+                <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Plan d’étude hebdomadaire personnalisé', 'Plan etid chak semèn pèsonalize')}</li>
               </ul>
               <div className="lp-hero__actions">
                 <button className="lp-btn lp-btn--primary" onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}>
@@ -260,9 +261,9 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="lp-panel__chips">
-                    <span className="lp-chip lp-chip--ok">🔥 12 {t('jours', 'jou')}</span>
-                    <span className="lp-chip">📘 Physique · 88%</span>
-                    <span className="lp-chip">📐 Maths · 76%</span>
+                    <span className="lp-chip lp-chip--ok"><Flame size={14} strokeWidth={2.2} /> 12 {t('jours', 'jou')}</span>
+                    <span className="lp-chip"><Book size={14} strokeWidth={2.2} /> Physique · 88%</span>
+                    <span className="lp-chip"><Triangle size={14} strokeWidth={2.2} /> Maths · 76%</span>
                   </div>
                 </div>
               </div>

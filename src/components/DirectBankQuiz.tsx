@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
 import { useTranslation } from 'react-i18next';
@@ -67,7 +68,7 @@ export default function DirectBankQuiz({ item, onScore }) {
       return <span className="chip chip--ghost">{t('quizzes.triesLeft', '{{count}} essai restant', { count: left })}</span>;
     }
     return correct
-      ? <span className="chip chip--success">✓ {t('quizzes.correctChip', 'Correct')}</span>
+      ? <span className="chip chip--success"><Check size={14} /> {t('quizzes.correctChip', 'Correct')}</span>
       : <span className="chip chip--danger">{t('quizzes.outOfTries', 'Plus d\'essais')}</span>;
   };
 

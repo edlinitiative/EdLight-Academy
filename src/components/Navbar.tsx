@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ClipboardList } from 'lucide-react';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
@@ -199,7 +200,7 @@ export function Navbar() {
               className="nav-link nav-link--mobile-only"
               onClick={() => setShowMobileMenu(false)}
             >
-              📋 Plan d'étude
+              <ClipboardList size={16} /> Plan d'étude
             </Link>
             </>
           ) : (

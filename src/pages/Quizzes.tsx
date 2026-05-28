@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { useAppData } from '../hooks/useData';
 import { useTranslation } from 'react-i18next';
@@ -245,7 +246,7 @@ const Quizzes = () => {
                     {bankMessage || t('quizzes.readyBody', 'Choisissez un cours, un niveau et une unité, puis cliquez sur « Commencer » pour démarrer.')}
                   </p>
                   {!bankMessage && (
-                    <div className="quiz-placeholder__icon">📚</div>
+                    <div className="quiz-placeholder__icon"><BookOpen size={36} /></div>
                   )}
                 </div>
               </div>

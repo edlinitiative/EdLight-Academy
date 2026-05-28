@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { GraduationCap, Lightbulb } from 'lucide-react';
 import useStore from '../contexts/store';
 import { updateUserTrack } from '../services/firebase';
 import { TRACKS } from '../config/trackConfig';
@@ -52,7 +53,7 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
   const content = (
     <div className="track-selector">
       <div className="track-selector__header">
-        <span className="track-selector__icon">🎓</span>
+        <span className="track-selector__icon"><GraduationCap size={28} /></span>
         <h2 className="track-selector__title">
           {currentTrack ? 'Changer de filière' : 'Choisissez votre filière'}
         </h2>
@@ -114,7 +115,7 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
       </div>
 
       <p className="track-selector__hint">
-        💡 Vous pourrez changer de filière à tout moment depuis votre profil.
+        <Lightbulb size={14} /> Vous pourrez changer de filière à tout moment depuis votre profil.
       </p>
     </div>
   );

@@ -14,8 +14,8 @@ export default function Courses() {
   const { t } = useTranslation();
   
   const filterLabels = {
-    all: t('common.all'),
-    enrolled: t('courses.myCourses'),
+    all: t('common.all', 'Tout'),
+    enrolled: t('courses.myCourses', 'Mes cours'),
     NSI: 'NS I',
     NSII: 'NS II',
     NSIII: 'NS III',

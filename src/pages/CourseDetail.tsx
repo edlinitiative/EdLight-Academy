@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Target, Flame, Check, X, BookOpen, MessageCircle } from 'lucide-react';
 import { useAppData } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
@@ -230,13 +231,13 @@ export default function CourseDetail() {
                   {isEnrolled && progress && (
                     <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
                       {progress.totalPoints > 0 && (
-                        <span className="chip chip--primary">🎯 {progress.totalPoints} {t('common.pointsShort', 'pts')}</span>
+                        <span className="chip chip--primary"><Target size={14} /> {progress.totalPoints} {t('common.pointsShort', 'pts')}</span>
                       )}
                       {progress.currentStreak > 0 && (
-                        <span className="chip chip--warning">🔥 {progress.currentStreak} {t('courses.dayStreak', 'jours de série')}</span>
+                        <span className="chip chip--warning"><Flame size={14} /> {progress.currentStreak} {t('courses.dayStreak', 'jours de série')}</span>
                       )}
                       {progress.completedLessons?.length > 0 && (
-                        <span className="chip chip--success">✓ {progress.completedLessons.length} {t('courses.completedLower', 'terminés')}</span>
+                        <span className="chip chip--success"><Check size={14} /> {progress.completedLessons.length} {t('courses.completedLower', 'terminés')}</span>
                       )}
                     </div>
                   )}
@@ -248,7 +249,7 @@ export default function CourseDetail() {
                   onClick={() => setShowSidebar(!showSidebar)}
                   type="button"
                 >
-                  {showSidebar ? `✕ ${t('common.close', 'Fermer')}` : `📚 ${t('courses.courseContent', 'Contenu du cours')}`}
+                  {showSidebar ? <><X size={14} /> {t('common.close', 'Fermer')}</> : <><BookOpen size={14} /> {t('courses.courseContent', 'Contenu du cours')}</>}
                 </button>
               </header>
 
@@ -334,7 +335,7 @@ export default function CourseDetail() {
                       onClick={handleMarkComplete}
                       disabled={isLessonCompleted}
                     >
-                      {isLessonCompleted ? `✓ ${t('courses.completed', 'Terminé')}` : t('courses.markComplete', 'Marquer comme terminé')}
+                      {isLessonCompleted ? <><Check size={14} /> {t('courses.completed', 'Terminé')}</> : t('courses.markComplete', 'Marquer comme terminé')}
                     </button>
                   )}
                   {hasQuiz && (
@@ -390,7 +391,7 @@ export default function CourseDetail() {
                 type="button"
               >
                 <span className="lesson-card__comments-title">
-                  💬 {t('courses.discussionComments', 'Discussion & commentaires')}
+                  <MessageCircle size={18} /> {t('courses.discussionComments', 'Discussion & commentaires')}
                 </span>
                 <span className="lesson-card__comments-chevron">
                   {showComments ? '▼' : '▶'}
