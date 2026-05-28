@@ -452,15 +452,15 @@ export function subjectColor(subject) {
 // ─── Question type metadata ─────────────────────────────────────────────────
 
 export const QUESTION_TYPE_META = {
-  multiple_choice: { icon: '🔘', label: 'QCM', gradable: true },
-  multiple_select: { icon: '☑️', label: 'QCM (plusieurs)', gradable: true },
-  true_false: { icon: '✅', label: 'Vrai/Faux', gradable: true },
-  fill_blank: { icon: '✏️', label: 'Compléter', gradable: true },
-  calculation: { icon: '🧮', label: 'Calcul', gradable: true },
-  short_answer: { icon: '📝', label: 'Réponse courte', gradable: true },
-  essay: { icon: '📄', label: 'Rédaction', gradable: false },
-  matching: { icon: '🔗', label: 'Appariement', gradable: false },
-  unknown: { icon: '❓', label: 'Autre', gradable: false },
+  multiple_choice: { icon: 'Circle', label: 'QCM', gradable: true },
+  multiple_select: { icon: 'CheckSquare', label: 'QCM (plusieurs)', gradable: true },
+  true_false: { icon: 'CheckCircle', label: 'Vrai/Faux', gradable: true },
+  fill_blank: { icon: 'Pencil', label: 'Compléter', gradable: true },
+  calculation: { icon: 'Calculator', label: 'Calcul', gradable: true },
+  short_answer: { icon: 'PenLine', label: 'Réponse courte', gradable: true },
+  essay: { icon: 'FileText', label: 'Rédaction', gradable: false },
+  matching: { icon: 'Link', label: 'Appariement', gradable: false },
+  unknown: { icon: 'HelpCircle', label: 'Autre', gradable: false },
 };
 
 export function questionTypeMeta(type) {

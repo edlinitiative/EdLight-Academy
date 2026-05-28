@@ -1,4 +1,5 @@
 import React from 'react';
+import { Target, Trophy, Flame, BookOpen, GraduationCap, PenLine, Award, Gem, Zap, Crown, Medal } from 'lucide-react';
 import { useAllProgress } from '../hooks/useProgress';
 import { calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
@@ -41,25 +42,25 @@ export default function ProgressDashboard() {
 
       <div className="progress-dashboard__stats">
         <div className="stat-card">
-          <div className="stat-card__icon">🎯</div>
+          <div className="stat-card__icon"><Target size={28} /></div>
           <div className="stat-card__value">{totalPoints}</div>
           <div className="stat-card__label">{isCreole ? 'Total pwen' : 'Points totaux'}</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon">🏆</div>
+          <div className="stat-card__icon"><Trophy size={28} /></div>
           <div className="stat-card__value">{uniqueBadges.length}</div>
           <div className="stat-card__label">{isCreole ? 'Badj ou genyen' : 'Badges obtenus'}</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon">🔥</div>
+          <div className="stat-card__icon"><Flame size={28} /></div>
           <div className="stat-card__value">{currentStreak}</div>
           <div className="stat-card__label">{isCreole ? 'Seri jou' : 'Série de jours'}</div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-card__icon">📚</div>
+          <div className="stat-card__icon"><BookOpen size={28} /></div>
           <div className="stat-card__value">{allProgress.length}</div>
           <div className="stat-card__label">{isCreole ? 'Kou aktif' : 'Cours actifs'}</div>
         </div>
@@ -101,7 +102,7 @@ export default function ProgressDashboard() {
                 <div className="course-progress-item__stats">
                   <span className="text-muted">{isCreole ? `${completedCount} leson fini` : `${completedCount} leçons terminées`}</span>
                   {progress.currentStreak > 0 && (
-                    <span className="course-progress-item__streak">🔥 {progress.currentStreak} {isCreole ? 'jou' : 'jours'}</span>
+                    <span className="course-progress-item__streak"><Flame size={14} /> {progress.currentStreak} {isCreole ? 'jou' : 'jours'}</span>
                   )}
                 </div>
               </div>
@@ -115,16 +116,17 @@ export default function ProgressDashboard() {
 
 // Helper functions for badge display
 function getBadgeIcon(badgeId) {
-  const icons = {
-    first_lesson: '🎓',
-    quiz_enthusiast: '📝',
-    perfectionist: '💯',
-    point_collector: '💎',
-    week_streak: '🔥',
-    month_streak: '⚡',
-    legend_streak: '👑',
+  const map = {
+    first_lesson: GraduationCap,
+    quiz_enthusiast: PenLine,
+    perfectionist: Award,
+    point_collector: Gem,
+    week_streak: Flame,
+    month_streak: Zap,
+    legend_streak: Crown,
   };
-  return icons[badgeId] || '🏅';
+  const Cmp = map[badgeId] || Medal;
+  return <Cmp size={22} />;
 }
 
 function getBadgeName(badgeId, language) {

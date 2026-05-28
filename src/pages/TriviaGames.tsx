@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Gamepad2, Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import './TriviaGames.css';
@@ -23,7 +24,7 @@ function CategoryPicker({ onSelect, isCreole }) {
           {isCreole ? 'Jeu Edikasyon' : 'Jeux Éducatifs'}
         </span>
         <h1 className="trivia-landing__title">
-          🎮 {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
+          <Gamepad2 size={28} /> {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
         </h1>
         <p className="trivia-landing__subtitle">
           {isCreole
@@ -67,10 +68,10 @@ function RoundPicker({ category, onStart, onBack, isCreole }) {
   const total = TRIVIA_QUESTIONS[category].length;
 
   const rounds = [
-    { count: 10, label: isCreole ? 'Rapid, 10 kesyon' : 'Rapide, 10 questions', icon: '⚡' },
-    { count: 25, label: isCreole ? 'Mwayen, 25 kesyon' : 'Moyen, 25 questions', icon: '📝' },
-    { count: 50, label: isCreole ? 'Difisil, 50 kesyon' : 'Difficile, 50 questions', icon: '🔥' },
-    { count: total, label: isCreole ? `Tout, ${total} kesyon` : `Tout, ${total} questions`, icon: '🏆' },
+    { count: 10, label: isCreole ? 'Rapid, 10 kesyon' : 'Rapide, 10 questions', icon: <Zap size={18} /> },
+    { count: 25, label: isCreole ? 'Mwayen, 25 kesyon' : 'Moyen, 25 questions', icon: <PenLine size={18} /> },
+    { count: 50, label: isCreole ? 'Difisil, 50 kesyon' : 'Difficile, 50 questions', icon: <Flame size={18} /> },
+    { count: total, label: isCreole ? `Tout, ${total} kesyon` : `Tout, ${total} questions`, icon: <Trophy size={18} /> },
   ].filter((r) => r.count <= total);
 
   return (
@@ -166,7 +167,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
     <div className="trivia-quiz" style={{ '--cat-color': cat.color }}>
       <div className="trivia-quiz__top-bar">
         <button className="trivia-back-btn trivia-back-btn--sm" onClick={onBack}>
-          ✕
+          <X size={18} />
         </button>
         <div className="trivia-quiz__progress-wrap">
           <div className="trivia-quiz__progress-bar">
@@ -177,7 +178,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
           </span>
         </div>
         <div className="trivia-quiz__score-badge">
-          ⭐ {score}
+          <Star size={16} /> {score}
         </div>
       </div>
 
@@ -204,10 +205,10 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
             </span>
             <span className="trivia-option__text">{opt}</span>
             {answered && idx === q.answer && (
-              <span className="trivia-option__icon">✓</span>
+              <span className="trivia-option__icon"><Check size={16} /></span>
             )}
             {answered && idx === selected && idx !== q.answer && (
-              <span className="trivia-option__icon">✗</span>
+              <span className="trivia-option__icon"><X size={16} /></span>
             )}
           </button>
         ))}
@@ -229,21 +230,21 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
   const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
   const pct = Math.round((score / total) * 100);
 
-  let emoji, message, messageHt;
+  let IconCmp, message, messageHt;
   if (pct >= 90) {
-    emoji = '🏆';
+    IconCmp = Trophy;
     message = 'Excellent ! Vous êtes un champion !';
     messageHt = 'Ekselan! Ou se yon chanpyon!';
   } else if (pct >= 70) {
-    emoji = '🌟';
+    IconCmp = Star;
     message = 'Très bien ! Continuez comme ça !';
     messageHt = 'Trè byen! Kontinye konsa!';
   } else if (pct >= 50) {
-    emoji = '👍';
+    IconCmp = ThumbsUp;
     message = 'Pas mal ! Vous pouvez vous améliorer.';
     messageHt = 'Pa mal! Ou ka amelyore.';
   } else {
-    emoji = '💪';
+    IconCmp = Dumbbell;
     message = 'Courage ! Réessayez pour progresser.';
     messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
   }
@@ -251,7 +252,7 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
   return (
     <div className="trivia-results" style={{ '--cat-color': cat.color }}>
       <div className="trivia-results__card">
-        <span className="trivia-results__emoji">{emoji}</span>
+        <span className="trivia-results__emoji"><IconCmp size={48} /></span>
         <h2 className="trivia-results__title">
           {isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
         </h2>
@@ -276,7 +277,7 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
         </p>
         <div className="trivia-results__actions">
           <button className="button button--primary button--pill" onClick={onReplay}>
-            🔄 {isCreole ? 'Jwe ankò' : 'Rejouer'}
+            <RefreshCw size={16} /> {isCreole ? 'Jwe ankò' : 'Rejouer'}
           </button>
           <button className="button button--ghost button--pill" onClick={onHome}>
             ← {isCreole ? 'Kategori yo' : 'Catégories'}

@@ -12996,3 +12996,16 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 
 /* Make sure the radio option lays out the ✓ / ✕ marker correctly */
 .radio-option { display: flex; align-items: center; gap: 0.6rem; }
+
+/* ============================================================
+   Lucide inline icons — keep them aligned with surrounding text
+   ============================================================ */
+.lucide-inline {
+	display: inline-flex;
+	vertical-align: -0.15em;
+	flex-shrink: 0;
+	stroke-width: 2;
+}
+.lp-hero__chip .lucide-inline,
+.lp-chip .lucide-inline,
+.chip .lucide-inline { margin-right: 0.35rem; }

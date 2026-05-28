@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { RefreshCw, GraduationCap } from 'lucide-react';
 import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle } from '../services/authService';
 
@@ -265,7 +266,7 @@ export function UserDropdown({ user, onLogout }) {
             setShowTrackSelector(true);
           }}
         >
-          {track ? '🔄 Changer de filière' : '🎓 Choisir ma filière'}
+          {track ? <><RefreshCw size={14} /> Changer de filière</> : <><GraduationCap size={14} /> Choisir ma filière</>}
         </button>
         <div className="dropdown__divider" />
         <button className="dropdown__item" onClick={onLogout}>

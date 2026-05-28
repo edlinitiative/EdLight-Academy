@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Flame, Target, ClipboardList } from 'lucide-react';
 import { useAppData } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
@@ -277,8 +278,8 @@ export default function Dashboard() {
                         </div>
                         <div className="dashboard-course-row__kpis">
                           <span className="chip chip--ghost">{progressLoading ? '—' : `${percent}%`}</span>
-                          {streak > 0 && <span className="chip chip--warning">🔥 {streak}</span>}
-                          {points > 0 && <span className="chip chip--primary">🎯 {points}</span>}
+                          {streak > 0 && <span className="chip chip--warning"><Flame size={14} /> {streak}</span>}
+                          {points > 0 && <span className="chip chip--primary"><Target size={14} /> {points}</span>}
                         </div>
                       </div>
 
@@ -484,7 +485,7 @@ export default function Dashboard() {
         <div className="dashboard-section">
           <div className="dashboard-section__header">
             <h2 className="dashboard-section__title">
-              📋 {isCreole ? 'Plan Etid' : 'Plan d\'Étude'}
+              <ClipboardList size={16} /> {isCreole ? 'Plan Etid' : 'Plan d\'Étude'}
             </h2>
             <button
               className="chip chip--primary"

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
 import { addComment, addReply, subscribeToComments, subscribeToReplies } from '../services/firebase';
 import { getCurrentUser } from '../services/firebase';
 import useStore from '../contexts/store';
@@ -178,7 +179,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
             const replies = commentReplies[c.id] || [];
             return (
               <div key={c.id} className="comment">
-                <div className="comment__avatar" aria-hidden>💬</div>
+                <div className="comment__avatar" aria-hidden><MessageCircle size={18} /></div>
                 <div className="comment__body">
                   <div className="comment__meta">
                     <strong>{c.authorName || defaultAuthorName}</strong>

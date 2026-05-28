@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { X, Check, Trophy, Flame, Megaphone, PartyPopper, Repeat, Trash2, Clock } from 'lucide-react';
 import useStore from '../contexts/store';
 import { 
   getUnreadNotifications, 
@@ -95,7 +96,7 @@ export default function NotificationCenter({ onClose }) {
       <div className="notification-center">
         <div className="notification-center__header">
           <h3>Notifications</h3>
-          <button className="button button--ghost button--sm" onClick={onClose}>✕</button>
+          <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
         </div>
         <div className="notification-center__loading">
           <div className="loading-spinner" />
@@ -108,7 +109,7 @@ export default function NotificationCenter({ onClose }) {
     <div className="notification-center">
       <div className="notification-center__header">
         <h3>Notifications & Reminders</h3>
-        <button className="button button--ghost button--sm" onClick={onClose}>✕</button>
+        <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
       </div>
 
       <div className="notification-center__tabs">
@@ -148,8 +149,8 @@ export default function NotificationCenter({ onClose }) {
                 {notifications.map(notif => (
                   <div key={notif.id} className="notification-item">
                     <div className="notification-item__icon">
-                      {notif.type === 'achievement' ? '🏆' : 
-                       notif.type === 'streak' ? '🔥' : '📢'}
+                      {notif.type === 'achievement' ? <Trophy size={20} /> : 
+                       notif.type === 'streak' ? <Flame size={20} /> : <Megaphone size={20} />}
                     </div>
                     <div className="notification-item__content">
                       <div className="notification-item__title">{notif.title}</div>
@@ -163,14 +164,14 @@ export default function NotificationCenter({ onClose }) {
                       onClick={() => handleMarkRead(notif.id)}
                       title="Dismiss"
                     >
-                      ✓
+                      <Check size={16} />
                     </button>
                   </div>
                 ))}
               </>
             ) : (
               <div className="notification-empty">
-                <p>🎉 You're all caught up!</p>
+                <p><PartyPopper size={18} /> You're all caught up!</p>
                 <p className="text-muted">No new notifications</p>
               </div>
             )}
@@ -194,7 +195,7 @@ export default function NotificationCenter({ onClose }) {
                     <div className="reminder-item__title">{reminder.title}</div>
                     <div className="reminder-item__message">{reminder.message}</div>
                     <div className="reminder-item__schedule">
-                      {reminder.recurring && '🔁 Recurring • '}
+                      {reminder.recurring && <><Repeat size={12} /> Recurring • </>}
                       Scheduled: {new Date(reminder.scheduledFor).toLocaleString()}
                     </div>
                   </div>
@@ -203,13 +204,13 @@ export default function NotificationCenter({ onClose }) {
                     onClick={() => handleDeleteReminder(reminder.id)}
                     title="Delete reminder"
                   >
-                    🗑️
+                    <Trash2 size={16} />
                   </button>
                 </div>
               ))
             ) : (
               <div className="notification-empty">
-                <p>⏰ No active reminders</p>
+                <p><Clock size={18} /> No active reminders</p>
                 <p className="text-muted">Create a reminder to stay on track</p>
               </div>
             )}

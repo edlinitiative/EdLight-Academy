@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { BookOpen, Trophy, ThumbsUp, Dumbbell, BarChart3, Clock, Lightbulb, RefreshCw, PenLine, Target, Check, X, Eye } from 'lucide-react';
 import useStore from '../contexts/store';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
+import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
 import { TRACK_BY_CODE } from '../config/trackConfig';
@@ -40,7 +42,7 @@ function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
           <div key={i} className={`scaffold-result__item ${hasGrading ? (isCorrect ? 'scaffold-result__item--correct' : 'scaffold-result__item--incorrect') : ''}`}>
             <span className="scaffold-result__label">{blank.label || `#${i + 1}`} :</span>
             <span className={`scaffold-result__value ${hasGrading ? (isCorrect ? 'scaffold-result__value--correct' : 'scaffold-result__value--incorrect') : ''}`}>
-              {hasGrading && (isCorrect ? '✓ ' : '✗ ')}
+              {hasGrading && (isCorrect ? <Check size={14} /> : <X size={14} />)}{' '}
               {values[i] || '—'}
             </span>
             {hasGrading && !isCorrect && br.expectedAnswer && (
@@ -54,7 +56,7 @@ function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
       {/* Show model answer (full solution) when available */}
       {modelAnswer && (
         <details className="scaffold-result__solution">
-          <summary className="scaffold-result__solution-toggle">📖 Voir la solution complète</summary>
+          <summary className="scaffold-result__solution-toggle"><BookOpen size={14} /> Voir la solution complète</summary>
           <div className="scaffold-result__solution-body">
             <InstructionRenderer text={modelAnswer} />
           </div>
@@ -187,7 +189,7 @@ const ExamResults = () => {
 
   // Grade label
   const gradeLabel = pct >= 80 ? 'Excellent !' : pct >= 60 ? 'Bien' : pct >= 40 ? 'Passable' : 'À améliorer';
-  const gradeEmoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : pct >= 40 ? '📖' : '💪';
+  const GradeIcon = pct >= 80 ? Trophy : pct >= 60 ? ThumbsUp : pct >= 40 ? BookOpen : Dumbbell;
 
   const ringColor = pct >= 60 ? 'var(--success-500)' : pct >= 40 ? 'var(--warning-500)' : 'var(--danger-500)';
 
@@ -224,7 +226,7 @@ const ExamResults = () => {
           </svg>
           <div className="exam-results__score-text">
             <span className="exam-results__score-pct">{pct}%</span>
-            <span className="exam-results__score-label">{gradeEmoji} {gradeLabel}</span>
+            <span className="exam-results__score-label"><GradeIcon size={16} /> {gradeLabel}</span>
           </div>
         </div>
 
@@ -262,7 +264,7 @@ const ExamResults = () => {
         {summary.coefficient && summary.coefficient > 1 && trackInfo && (
           <div className="exam-results__weighted">
             <h3 className="exam-results__weighted-title">
-              📊 Score pondéré, Filière {trackInfo.icon} {trackInfo.shortLabel}
+              <BarChart3 size={16} /> Score pondéré, Filière {trackInfo.icon} {trackInfo.shortLabel}
             </h3>
             <div className="exam-results__weighted-row">
               <span>Coefficient {subject}</span>
@@ -289,7 +291,7 @@ const ExamResults = () => {
               <div className="exam-results__item-header">
                 <span className="exam-results__item-number">{r.question._displayNumber || `Q${i + 1}`}</span>
                 <span className="exam-results__item-type">
-                  {meta.icon} {meta.label}
+                  <Icon name={meta.icon} size={14} /> {meta.label}
                 </span>
                 <StatusBadge status={r.status} />
                 {r.result.maxPoints > 0 && (
@@ -311,7 +313,7 @@ const ExamResults = () => {
               {/* Temporal context note */}
               {r.question.temporal_note && (
                 <div className="exam-take__temporal-note" style={{ margin: '0.5rem 0' }}>
-                  <span className="exam-take__temporal-note-icon">🕐</span>
+                  <span className="exam-take__temporal-note-icon"><Clock size={14} /></span>
                   <span className="exam-take__temporal-note-text">{r.question.temporal_note}</span>
                 </div>
               )}
@@ -348,7 +350,7 @@ const ExamResults = () => {
               {/* Model answer — show full solution for questions with answer_parts */}
               {!r.question.correct && r.question.model_answer && r.status !== 'scaffold-complete' && r.status !== 'partial' && (
                 <details className="exam-results__item-solution">
-                  <summary>📖 Voir la solution complète</summary>
+                  <summary><BookOpen size={14} /> Voir la solution complète</summary>
                   <div className="exam-results__item-solution-body">
                     <InstructionRenderer text={r.question.model_answer} />
                   </div>
@@ -358,7 +360,7 @@ const ExamResults = () => {
               {/* Multiple approaches for proofs/calculations */}
               {r.question.approaches && r.question.approaches.length > 1 && (
                 <details className="exam-results__item-approaches">
-                  <summary>🔄 Approches alternatives ({r.question.approaches.length})</summary>
+                  <summary><RefreshCw size={14} /> Approches alternatives ({r.question.approaches.length})</summary>
                   <div className="exam-results__item-approaches-body">
                     {r.question.approaches.map((approach, ai) => (
                       <div key={ai} className="exam-results__approach">
@@ -377,7 +379,7 @@ const ExamResults = () => {
               {/* Explanation */}
               {r.question.explanation && (
                 <div className="exam-results__item-explanation">
-                  💡 <InstructionRenderer text={r.question.explanation} inline />
+                  <Lightbulb size={14} /> <InstructionRenderer text={r.question.explanation} inline />
                 </div>
               )}
             </div>
@@ -392,10 +394,10 @@ const ExamResults = () => {
           onClick={() => navigate(`/exams/${level}/${examId}`)}
           type="button"
         >
-          🔄 Recommencer cet examen
+          <RefreshCw size={16} /> Recommencer cet examen
         </button>
         <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-          📝 Choisir un autre examen
+          <PenLine size={16} /> Choisir un autre examen
         </button>
       </div>
       </div>
@@ -470,10 +472,10 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
       {proofData.finalAnswer && (
         <div className={`ka-results__answer ${casVerdict ? (casVerdict.correct ? 'ka-results__answer--correct' : 'ka-results__answer--incorrect') : ''}`}>
           <div className="ka-results__answer-row">
-            <span className="ka-results__answer-label">🎯 Résultat final</span>
+            <span className="ka-results__answer-label"><Target size={14} /> Résultat final</span>
             {casVerdict && (
               <span className={`ka-results__cas ${casVerdict.correct ? 'ka-results__cas--correct' : 'ka-results__cas--incorrect'}`}>
-                {casVerdict.correct ? '✓ Correct' : '✗ Incorrect'}
+                {casVerdict.correct ? <><Check size={14} /> Correct</> : <><X size={14} /> Incorrect</>}
               </span>
             )}
           </div>
@@ -502,12 +504,12 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
 
 function StatusBadge({ status }) {
   const map = {
-    correct:            { label: '✓ Correct', cls: 'exam-results__badge--correct' },
-    incorrect:          { label: '✗ Incorrect', cls: 'exam-results__badge--incorrect' },
+    correct:            { label: <><Check size={12} /> Correct</>, cls: 'exam-results__badge--correct' },
+    incorrect:          { label: <><X size={12} /> Incorrect</>, cls: 'exam-results__badge--incorrect' },
     partial:            { label: '◐ Partiel', cls: 'exam-results__badge--partial' },
-    manual:             { label: '👁 Révision', cls: 'exam-results__badge--manual' },
+    manual:             { label: <><Eye size={12} /> Révision</>, cls: 'exam-results__badge--manual' },
     unanswered:         { label: '— Vide', cls: 'exam-results__badge--unanswered' },
-    'scaffold-complete': { label: '📝 Complété', cls: 'exam-results__badge--correct' },
+    'scaffold-complete': { label: <><PenLine size={12} /> Complété</>, cls: 'exam-results__badge--correct' },
   };
   const m = map[status] || map.unanswered;
   return <span className={`exam-results__badge ${m.cls}`}>{m.label}</span>;
