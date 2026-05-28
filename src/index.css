@@ -12258,8 +12258,15 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 	box-shadow: 0 8px 24px -16px rgba(0,0,0,0.18);
 }
 [data-theme="dark"] .filter-group { background: rgba(255,255,255,0.04); }
-.filter-pill { border-radius: 999px !important; padding: 0.5rem 0.95rem !important; font-size: 0.82rem !important; border: 0 !important; background: transparent !important; }
+.filter-pill { border-radius: 999px !important; padding: 0.5rem 0.95rem !important; font-size: 0.82rem !important; border: 0 !important; background: transparent !important; color: var(--text-700) !important; }
 .filter-pill:hover { background: color-mix(in srgb, var(--lp-accent) 8%, transparent) !important; color: var(--lp-accent) !important; }
+.filter-group .filter-pill--active,
+.filter-pill.filter-pill--active {
+	background: linear-gradient(135deg, #1e1b4b, var(--lp-accent)) !important;
+	color: #fff !important;
+	border-color: transparent !important;
+	box-shadow: 0 10px 22px -10px rgba(67, 56, 202, 0.5) !important;
+}
 
 /* ---------- Exam Landing ---------- */
 .exam-landing {

@@ -187,6 +187,21 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
       </div>
 
       <div className="trivia-quiz__question-card">
+        {q.flag && (
+          <div className="trivia-quiz__flag">
+            {q.flagIso ? (
+              <img
+                src={`https://flagcdn.com/w320/${q.flagIso}.png`}
+                srcSet={`https://flagcdn.com/w640/${q.flagIso}.png 2x`}
+                alt=""
+                className="trivia-quiz__flag-img"
+                loading="eager"
+              />
+            ) : (
+              <span className="trivia-quiz__flag-emoji" aria-hidden>{q.flag}</span>
+            )}
+          </div>
+        )}
         <h2 className="trivia-quiz__question">
           {isCreole ? q.qHt : q.q}
         </h2>
