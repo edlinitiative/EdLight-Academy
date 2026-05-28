@@ -8,7 +8,7 @@ const faqsFr = [
   },
   {
     q: 'Où trouver des questions de pratique ?',
-    a: 'Ouvrez la page Quiz pour la pratique par cours, niveau (NS I–IV) et unité. Dans un cours, vous pouvez aussi faire un “Quiz d’unité — 10 questions” après le dernier sous-chapitre.'
+    a: 'Ouvrez la page Quiz pour la pratique par cours, niveau (NS I–IV) et unité. Dans un cours, vous pouvez aussi faire un “Quiz d’unité, 10 questions” après le dernier sous-chapitre.'
   },
   {
     q: 'Pourquoi n’y a-t-il pas de questions pour mon unité ?',
@@ -31,7 +31,7 @@ const faqsHt = [
   },
   {
     q: 'Kote mwen jwenn kesyon pratik yo?',
-    a: 'Louvri paj Quiz yo pou pratik pa kou, nivo (NS I–IV), ak inite. Anndan yon kou, ou ka fè “Quiz Inite — 10 Kesyon” apre dènye sou-chapit la.'
+    a: 'Louvri paj Quiz yo pou pratik pa kou, nivo (NS I–IV), ak inite. Anndan yon kou, ou ka fè “Quiz Inite, 10 Kesyon” apre dènyè sou-chapit la.'
   },
   {
     q: 'Poukisa pa gen kesyon pou inite mwen an?',

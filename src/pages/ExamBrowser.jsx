@@ -204,7 +204,7 @@ const ExamBrowser = () => {
           <span className="page-header__eyebrow">Examens</span>
           <h1 className="page-header__title">{LEVEL_LABELS[level] || 'Examens Nationaux'}</h1>
           <p className="page-header__subtitle">
-            Banque d'examens officiels du MENFP{level ? ` — ${LEVEL_LABELS[level]}` : ''}
+            Banque d'examens officiels du MENFP{level ? `, ${LEVEL_LABELS[level]}` : ''}
           </p>
         </div>
 
@@ -422,7 +422,7 @@ function ExamCard({ exam, onClick }) {
       className="card exam-card"
       onClick={onClick}
       type="button"
-      aria-label={`${exam._subject} — ${title} (${exam._year || ''})`}
+      aria-label={`${exam._subject}, ${title} (${exam._year || ''})`}
       style={{ '--exam-accent': color }}
     >
       <div className="exam-card__header">

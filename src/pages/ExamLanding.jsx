@@ -43,7 +43,7 @@ const LEVELS = [
     to: '/exams/terminale',
     Icon: IconGradCap,
     heading: 'Terminale',
-    desc: 'Examens du baccalauréat haïtien. Toutes les matières, toutes les sessions — avec auto-correction intégrée.',
+    desc: 'Examens du baccalauréat haïtien. Toutes les matières, toutes les sessions, avec auto-correction intégrée.',
     badge: 'Baccalauréat',
     color: '#7c3aed',
   },

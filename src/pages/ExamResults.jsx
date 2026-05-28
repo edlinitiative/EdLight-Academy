@@ -201,7 +201,7 @@ const ExamResults = () => {
           </button>
           <h1 className="page-header__title">Résultats</h1>
           <p className="page-header__subtitle" style={{ color }}>
-            {subject} — {examTitle || 'Examen'} {storedLevel && `(${storedLevel})`}
+            {subject}, {examTitle || 'Examen'} {storedLevel && `(${storedLevel})`}
           </p>
         </div>
 
@@ -262,7 +262,7 @@ const ExamResults = () => {
         {summary.coefficient && summary.coefficient > 1 && trackInfo && (
           <div className="exam-results__weighted">
             <h3 className="exam-results__weighted-title">
-              📊 Score pondéré — Filière {trackInfo.icon} {trackInfo.shortLabel}
+              📊 Score pondéré, Filière {trackInfo.icon} {trackInfo.shortLabel}
             </h3>
             <div className="exam-results__weighted-row">
               <span>Coefficient {subject}</span>

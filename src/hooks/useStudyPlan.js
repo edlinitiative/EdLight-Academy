@@ -116,7 +116,7 @@ export function useStudyPlan() {
 
       const planData = {
         track: track || 'SVT',
-        title: aiPlan?.title || `Plan d'étude — ${track || 'SVT'}`,
+        title: aiPlan?.title || `Plan d'étude, ${track || 'SVT'}`,
         description: aiPlan?.description || '',
         tips: aiPlan?.tips || [],
         dailyTargetMinutes: aiPlan?.dailyTargetMinutes || 90,

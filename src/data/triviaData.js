@@ -12,8 +12,8 @@ export const TRIVIA_CATEGORIES = [
     nameHt: 'Kapital yo',
     icon: '🏛️',
     color: '#0A66C2',
-    description: 'Toutes les capitales du monde — 196 pays',
-    descriptionHt: 'Tout kapital nan mond lan — 196 peyi',
+    description: 'Toutes les capitales du monde, 196 pays',
+    descriptionHt: 'Tout kapital nan mond lan, 196 peyi',
   },
   {
     id: 'currencies',
@@ -21,8 +21,8 @@ export const TRIVIA_CATEGORIES = [
     nameHt: 'Lajan',
     icon: '💰',
     color: '#16a34a',
-    description: 'Toutes les monnaies du monde — 196 pays',
-    descriptionHt: 'Tout lajan nan mond lan — 196 peyi',
+    description: 'Toutes les monnaies du monde, 196 pays',
+    descriptionHt: 'Tout lajan nan mond lan, 196 peyi',
   },
   {
     id: 'flags',
@@ -30,8 +30,8 @@ export const TRIVIA_CATEGORIES = [
     nameHt: 'Drapo yo',
     icon: '🏳️',
     color: '#dc2626',
-    description: 'Tous les drapeaux du monde — 196 pays',
-    descriptionHt: 'Tout drapo nan mond lan — 196 peyi',
+    description: 'Tous les drapeaux du monde, 196 pays',
+    descriptionHt: 'Tout drapo nan mond lan, 196 peyi',
   },
 ];
 

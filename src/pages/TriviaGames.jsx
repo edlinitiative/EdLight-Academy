@@ -23,7 +23,7 @@ function CategoryPicker({ onSelect, isCreole }) {
           {isCreole ? 'Jeu Edikasyon' : 'Jeux Éducatifs'}
         </span>
         <h1 className="trivia-landing__title">
-          🎮 {isCreole ? 'Trivia — Teste Konesans Ou' : 'Trivia — Testez vos connaissances'}
+          🎮 {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
         </h1>
         <p className="trivia-landing__subtitle">
           {isCreole
@@ -67,10 +67,10 @@ function RoundPicker({ category, onStart, onBack, isCreole }) {
   const total = TRIVIA_QUESTIONS[category].length;
 
   const rounds = [
-    { count: 10, label: isCreole ? 'Rapid — 10 kesyon' : 'Rapide — 10 questions', icon: '⚡' },
-    { count: 25, label: isCreole ? 'Mwayen — 25 kesyon' : 'Moyen — 25 questions', icon: '📝' },
-    { count: 50, label: isCreole ? 'Difisil — 50 kesyon' : 'Difficile — 50 questions', icon: '🔥' },
-    { count: total, label: isCreole ? `Tout — ${total} kesyon` : `Tout — ${total} questions`, icon: '🏆' },
+    { count: 10, label: isCreole ? 'Rapid, 10 kesyon' : 'Rapide, 10 questions', icon: '⚡' },
+    { count: 25, label: isCreole ? 'Mwayen, 25 kesyon' : 'Moyen, 25 questions', icon: '📝' },
+    { count: 50, label: isCreole ? 'Difisil, 50 kesyon' : 'Difficile, 50 questions', icon: '🔥' },
+    { count: total, label: isCreole ? `Tout, ${total} kesyon` : `Tout, ${total} questions`, icon: '🏆' },
   ].filter((r) => r.count <= total);
 
   return (

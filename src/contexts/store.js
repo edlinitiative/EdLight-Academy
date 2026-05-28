@@ -11,6 +11,7 @@ const useStore = create(
       hydrated: false,
       track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
       onboardingCompleted: false,
+      theme: 'light', // 'light' | 'dark' — Night Shift
       
       // Course progress
       enrolledCourses: [],
@@ -29,6 +30,8 @@ const useStore = create(
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
       
       enrollInCourse: (course) =>
         set((state) => {
@@ -81,6 +84,7 @@ const useStore = create(
         language: state.language,
         track: state.track,
         onboardingCompleted: state.onboardingCompleted,
+        theme: state.theme,
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,
         quizAttempts: state.quizAttempts,
