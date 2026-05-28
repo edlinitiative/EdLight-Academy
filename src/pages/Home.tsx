@@ -53,7 +53,6 @@ export default function Home() {
         <div className="lp-hero__bg" aria-hidden="true">
           <div className="lp-hero__orb lp-hero__orb--a" />
           <div className="lp-hero__orb lp-hero__orb--b" />
-          <div className="lp-hero__grid-overlay" />
         </div>
 
         <div className="lp-container">
