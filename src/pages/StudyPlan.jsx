@@ -369,7 +369,7 @@ export default function StudyPlan() {
             <div className="sp-hero sp-hero--done">
               <CheckCircle2 size={20} />
               <span className="sp-hero__done-text">
-                {isCreole ? 'Ou ajou — pa gen anyen pou jodi a!' : 'Vous êtes à jour — rien de prévu aujourd\'hui !'}
+                {isCreole ? 'Ou ajou, pa gen anyen pou jodi a!' : 'Vous êtes à jour, rien de prévu aujourd\'hui !'}
               </span>
             </div>
           )}

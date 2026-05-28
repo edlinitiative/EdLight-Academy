@@ -345,7 +345,7 @@ export default function Dashboard() {
 
         <div className="dashboard-section">
           <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">{isCreole ? 'Quiz — pèfòmans' : 'Quiz — performance'}</h2>
+            <h2 className="dashboard-section__title">{isCreole ? 'Quiz, pèfòmans' : 'Quiz, performance'}</h2>
             <button className="button button--light button--pill" onClick={() => navigate('/quizzes')} type="button">
               {isCreole ? 'Ale nan quiz yo' : 'Aller aux quiz'}
             </button>
@@ -401,7 +401,7 @@ export default function Dashboard() {
 
         <div className="dashboard-section">
           <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">{isCreole ? 'Egzamen — aktivite' : 'Examens — activité'}</h2>
+            <h2 className="dashboard-section__title">{isCreole ? 'Egzamen, aktivite' : 'Examens, activité'}</h2>
             <button className="button button--light button--pill" onClick={() => navigate('/exams')} type="button">
               {isCreole ? 'Ale nan egzamen yo' : 'Aller aux examens'}
             </button>

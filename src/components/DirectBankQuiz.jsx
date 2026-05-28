@@ -102,19 +102,30 @@ export default function DirectBankQuiz({ item, onScore }) {
 
       {(item.kind === 'mcq' || item.kind === 'tf') ? (
         <div className="quiz-card__options">
-          {item.options.map((label, idx) => (
-            <label key={idx} className="radio-option">
-              <input
-                type="radio"
-                name="bank-answer"
-                value={idx}
-                checked={selected === idx}
-                onChange={() => setSelected(idx)}
-                disabled={submitted}
-              />
-              <span dangerouslySetInnerHTML={renderWithKatex(label, katexReady)} />
-            </label>
-          ))}
+          {item.options.map((label, idx) => {
+            const isCorrectOpt = idx === item.correctIndex;
+            const isSelectedOpt = selected === idx;
+            let stateClass = '';
+            if (submitted) {
+              if (isCorrectOpt) stateClass = 'radio-option--correct';
+              else if (isSelectedOpt) stateClass = 'radio-option--wrong';
+            } else if (attempts > 0 && isSelectedOpt && correct === false) {
+              stateClass = 'radio-option--wrong';
+            }
+            return (
+              <label key={idx} className={`radio-option ${stateClass}`.trim()}>
+                <input
+                  type="radio"
+                  name="bank-answer"
+                  value={idx}
+                  checked={selected === idx}
+                  onChange={() => setSelected(idx)}
+                  disabled={submitted}
+                />
+                <span dangerouslySetInnerHTML={renderWithKatex(label, katexReady)} />
+              </label>
+            );
+          })}
         </div>
       ) : (
         <div className="exam-take__short-answer-wrap">
@@ -155,7 +166,7 @@ export default function DirectBankQuiz({ item, onScore }) {
       </div>
 
       {submitted && (
-        <div className="quiz-card__explanation" style={{ marginTop: '0.75rem' }}>
+        <div className={`quiz-card__explanation quiz-card__explanation--${correct ? 'correct' : 'wrong'}`} style={{ marginTop: '0.75rem' }}>
           {correct ? (
             <div>
               <div style={{ marginBottom: '0.5rem' }}>

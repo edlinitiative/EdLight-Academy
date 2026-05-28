@@ -15,8 +15,32 @@ export function Navbar() {
     user, 
     showUserDropdown,
     toggleUserDropdown,
-    logout 
+    logout,
+    theme,
+    toggleTheme
   } = useStore();
+
+  const isDark = theme === 'dark';
+  const ThemeToggle = ({ className = '' }) => (
+    <button
+      type="button"
+      className={`theme-toggle ${className}`.trim()}
+      onClick={() => toggleTheme()}
+      aria-label={isDark ? 'Activer le mode clair' : 'Activer le mode nuit (Night Shift)'}
+      title={isDark ? 'Mode clair' : 'Night Shift'}
+    >
+      {isDark ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -157,6 +181,8 @@ export function Navbar() {
           >
             À propos
           </Link>
+
+          <ThemeToggle className="theme-toggle--mobile-only" />
           
           {/* Mobile-only auth actions */}
           {isAuthenticated ? (
@@ -210,6 +236,7 @@ export function Navbar() {
         )}
         
         <div className="nav-actions">
+          <ThemeToggle />
           {isAuthenticated ? (
             <>
               <StreakBadge />

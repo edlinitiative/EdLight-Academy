@@ -618,7 +618,7 @@ const ExamTake = () => {
       } catch {
         const result = gradeSingleQuestion(q, userAnswer, {
           isCorrect: false,
-          feedback: 'Erreur de connexion — votre réponse sera évaluée manuellement.',
+          feedback: 'Erreur de connexion, votre réponse sera évaluée manuellement.',
           score: 'N/A',
         }, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
@@ -1755,7 +1755,7 @@ const ExamTake = () => {
           {/* Group counter */}
           {groupQuestions.length > 1 && (
             <div className="exam-take__group-counter">
-              {groupQuestions[0]._subExGroup ? `Groupe ${groupQuestions[0]._subExGroup}` : 'Groupe'} — {groupQuestions.length} questions ({groupQuestions[0]._flatIdx + 1}–{groupQuestions[groupQuestions.length - 1]._flatIdx + 1} sur {questions.length})
+              {groupQuestions[0]._subExGroup ? `Groupe ${groupQuestions[0]._subExGroup}` : 'Groupe'}, {groupQuestions.length} questions ({groupQuestions[0]._flatIdx + 1}–{groupQuestions[groupQuestions.length - 1]._flatIdx + 1} sur {questions.length})
             </div>
           )}
 

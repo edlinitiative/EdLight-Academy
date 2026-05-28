@@ -33,9 +33,9 @@ const APPROACH_ITEMS = [
       </svg>
     ),
     titleFr: 'Suivi de progression personnalisé',
-    descFr: 'Voyez clairement où vous en êtes — par leçon, unité et matière.',
+    descFr: 'Voyez clairement où vous en êtes, par leçon, unité et matière.',
     titleHt: 'Swivi pwogrè pèsonalize',
-    descHt: 'Konnen egzakteman kote ou ye — pa leson, pa inite, pa matyè.',
+    descHt: 'Konnen egzakteman kote ou ye, pa leson, pa inite, pa matyè.',
   },
   {
     icon: (
@@ -51,9 +51,9 @@ const APPROACH_ITEMS = [
 ];
 
 const VALUES = [
-  { label: 'Accessibilité', desc: "L'éducation de qualité est un droit, pas un privilège." },
-  { label: 'Excellence', desc: 'Nous visons les meilleurs standards pédagogiques haïtiens et mondiaux.' },
-  { label: 'Communauté', desc: 'Construit par et pour les élèves et enseignants haïtiens.' },
+  { label: 'Accessibilité', labelHt: 'Aksesibilite', desc: "L'éducation de qualité est un droit, pas un privilège.", descHt: 'Edikasyon kalite se yon dwa, se pa yon privilèj.' },
+  { label: 'Excellence', labelHt: 'Eksèlans', desc: 'Nous visons les meilleurs standards pédagogiques haïtiens et mondiaux.', descHt: 'Nou vize pi bon estanda pedagojik ayisyen ak mondyal.' },
+  { label: 'Communauté', labelHt: 'Kominote', desc: 'Construit par et pour les élèves et enseignants haïtiens.', descHt: 'Konstwi pa ak pou elèv ak pwofesè ayisyen.' },
 ];
 
 export default function About() {
@@ -68,15 +68,17 @@ export default function About() {
 
         {/* Hero */}
         <section className="about-hero">
-          <span className="page-header__eyebrow">Notre mission</span>
+          <span className="page-header__eyebrow">
+            {isCreole ? 'Misyon nou' : 'Notre mission'}
+          </span>
           <h1 className="about-hero__title">
             {isCreole ? 'Bon jan edikasyon pou chak elèv ayisyen' : 'Une éducation de qualité pour chaque élève haïtien'}
           </h1>
           <p className="about-hero__copy">
             {isCreole ? (
-              <>EdLight ap bati enfrastrikti pou yon edikasyon syans (STEM) ki aksesib ak kalite ann Ayiti — kou ki byen estriktire, pratik egzamen ofisyèl, ak swivi pwogrè an tan reyèl, tout nan menm plas la.</>
+              <>EdLight ap bati enfrastrikti pou yon edikasyon syans (STEM) ki aksesib ak kalite ann Ayiti, kou ki byen estriktire, pratik egzamen ofisyèl, ak swivi pwogrè an tan reyèl, tout nan menm plas la.</>
             ) : (
-              <>EdLight construit l’infrastructure pour une éducation STEM accessible et de qualité en Haïti — des cours structurés, des exercices d’examens officiels et un suivi de progression en temps réel, le tout au même endroit.</>
+              <>EdLight construit l’infrastructure pour une éducation STEM accessible et de qualité en Haïti, des cours structurés, des exercices d’examens officiels et un suivi de progression en temps réel, le tout au même endroit.</>
             )}
           </p>
         </section>
@@ -113,12 +115,14 @@ export default function About() {
 
         {/* Values */}
         <section style={{ marginBottom: 'clamp(2.5rem, 6vw, 4rem)' }}>
-          <h2 className="section__title" style={{ marginBottom: '1.75rem' }}>Nos valeurs</h2>
+          <h2 className="section__title" style={{ marginBottom: '1.75rem' }}>
+            {isCreole ? 'Valè nou' : 'Nos valeurs'}
+          </h2>
           <div className="about-values">
             {VALUES.map((v) => (
               <div key={v.label} className="card about-values__item">
-                <h3 className="about-values__title">{v.label}</h3>
-                <p className="about-values__desc">{v.desc}</p>
+                <h3 className="about-values__title">{isCreole ? v.labelHt : v.label}</h3>
+                <p className="about-values__desc">{isCreole ? v.descHt : v.desc}</p>
               </div>
             ))}
           </div>
@@ -136,7 +140,9 @@ export default function About() {
 
         {/* CTA */}
         <section className="card about-cta text-center">
-          <h2 className="section__title">Prêt à commencer ?</h2>
+          <h2 className="section__title">
+            {isCreole ? 'Pare pou kòmanse ?' : 'Prêt à commencer ?'}
+          </h2>
           <p className="text-muted" style={{ marginTop: '0.5rem', marginBottom: '1.5rem', fontSize: '1rem' }}>
             {Number.isFinite(counts?.activeStudentsThisTerm) && counts.activeStudentsThisTerm >= 1000
               ? (isCreole
@@ -150,7 +156,7 @@ export default function About() {
             className="button button--primary button--pill"
             onClick={() => navigate('/courses')}
           >
-            Explorer les cours
+            {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
           </button>
         </section>
 

@@ -53,8 +53,8 @@ export default function Help() {
                 </li>
                 <li>
                   {isCreole
-                    ? 'Quiz Inite: louvri nenpòt kou epi chwazi “Quiz Inite — 10 Kesyon” apre dènye sou-chapit la.'
-                    : 'Quiz d’unité : ouvrez un cours et sélectionnez « Quiz d’unité — 10 questions » après le dernier sous-chapitre.'}
+                    ? 'Quiz Inite: louvri nenpòt kou epi chwazi “Quiz Inite, 10 Kesyon” apre dènye sou-chapit la.'
+                    : 'Quiz d’unité : ouvrez un cours et sélectionnez « Quiz d’unité, 10 questions » après le dernier sous-chapitre.'}
                 </li>
                 <li>
                   {isCreole
