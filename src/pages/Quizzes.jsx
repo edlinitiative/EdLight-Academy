@@ -156,11 +156,10 @@ const Quizzes = () => {
   };
 
   return (
-    <section className="section">
+    <section className="section quiz-page">
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">{t('quizzes.practiceHub', 'Espace d\'exercices')}</span>
             <h1>{t('quizzes.curriculumPractice', 'Exercices du programme')}</h1>
             <p className="text-muted">{t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}</p>
           </div>

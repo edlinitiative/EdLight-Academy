@@ -50,10 +50,11 @@ export function CourseCard({ course, onPreview }) {
 
   return (
     <article className="course-card">
-      <div className="course-card__head">
-        <span className="course-card__badge">{subjectLabel} · {levelLabel}</span>
-        {isEnrolled && <span className="chip chip--success">{t('courses.enrolled')}</span>}
-      </div>
+      {isEnrolled && (
+        <div className="course-card__head">
+          <span className="chip chip--success">{t('courses.enrolled')}</span>
+        </div>
+      )}
 
       <h3 className="course-card__title">{course.name}</h3>
       <p className="course-card__description">{course.description}</p>
