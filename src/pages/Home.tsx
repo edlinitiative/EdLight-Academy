@@ -50,11 +50,6 @@ export default function Home() {
     <div className="lp">
       {/* HERO */}
       <section className="lp-hero">
-        <div className="lp-hero__bg" aria-hidden="true">
-          <div className="lp-hero__orb lp-hero__orb--a" />
-          <div className="lp-hero__orb lp-hero__orb--b" />
-        </div>
-
         <div className="lp-container">
           <div className="lp-hero__layout">
             <div className="lp-hero__copy">
