@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyArY6rWXr3IoaZjSgreonwhvgKg1gQ4yZ4';
 const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -23,6 +23,25 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
  *   ]
  * }
  */
+
+interface ScaffoldBlank {
+  index: number;
+  label?: string;
+  userAnswer: string;
+  expectedAnswer: string;
+  alternatives?: string[];
+}
+
+interface GradeScaffoldBody {
+  question?: string;
+  blanks?: ScaffoldBlank[];
+}
+
+interface GradeResult {
+  index: number;
+  isCorrect: boolean;
+  feedback: string;
+}
 
 const PROMPT_TEMPLATE = `You are an expert Haitian high-school teacher grading short-answer blanks.
 The student filled in blanks for the question below. For each blank you receive:
@@ -49,20 +68,23 @@ BLANKS TO GRADE:
 {blanks}
 `;
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
 
-  const { question, blanks } = req.body;
+  const { question, blanks }: GradeScaffoldBody = req.body || {};
 
   if (!question || !blanks || !Array.isArray(blanks) || blanks.length === 0) {
-    return res.status(400).json({ error: 'Missing required fields: question, blanks[]' });
+    res.status(400).json({ error: 'Missing required fields: question, blanks[]' });
+    return;
   }
 
   // Cap batch size to avoid prompt bloat
   if (blanks.length > 20) {
-    return res.status(400).json({ error: 'Too many blanks (max 20)' });
+    res.status(400).json({ error: 'Too many blanks (max 20)' });
+    return;
   }
 
   try {
@@ -100,11 +122,11 @@ export default async function handler(req, res) {
 
     const body = await apiRes.json();
     const text = body.candidates[0].content.parts[0].text;
-    let results = JSON.parse(text);
+    let results: GradeResult[] = JSON.parse(text);
 
     // Ensure it's an array and has the expected shape
     if (!Array.isArray(results)) results = [results];
-    results = results.map(r => ({
+    results = results.map((r: Partial<GradeResult>) => ({
       index: r.index ?? 0,
       isCorrect: !!r.isCorrect,
       feedback: r.feedback || '',

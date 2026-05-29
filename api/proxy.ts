@@ -1,8 +1,9 @@
 // Simple proxy for JS/CSS assets to make them same-origin.
 // This helps in environments with restrictive CSP or network blocking of CDNs.
 
-/** @type {import('@vercel/node').VercelRequestHandler} */
-module.exports = async function handler(req, res) {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   try {
     const url = req.query.url;
     if (!url || Array.isArray(url)) {
@@ -29,6 +30,7 @@ module.exports = async function handler(req, res) {
     const buf = Buffer.from(await upstream.arrayBuffer());
     res.status(200).send(buf);
   } catch (e) {
-    res.status(500).json({ error: 'Proxy failure', message: e && e.message });
+    const message = e instanceof Error ? e.message : String(e);
+    res.status(500).json({ error: 'Proxy failure', message });
   }
-};
+}

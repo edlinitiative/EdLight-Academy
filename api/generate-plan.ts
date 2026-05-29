@@ -13,15 +13,47 @@
  * The client then maps those to actual exam IDs from the catalog.
  */
 
-export default async function handler(req, res) {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface PerformanceEntry {
+  avgScore?: number;
+  pct?: number;
+  attempts?: number;
+}
+
+interface PlanPreferences {
+  dailyMinutes?: number;
+  weeks?: number;
+}
+
+interface GeneratePlanBody {
+  track?: string;
+  subjects?: string[];
+  performance?: Record<string, PerformanceEntry>;
+  examCount?: number;
+  preferences?: PlanPreferences;
+}
+
+interface StudyPlan {
+  title: string;
+  description: string;
+  weeklyGoals: number;
+  dailyTargetMinutes: number;
+  tips: string[];
+  schedule: unknown[];
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   // ── Auth ────────────────────────────────────────────────────────────
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header' });
+    res.status(401).json({ error: 'Missing or invalid authorization header' });
+    return;
   }
 
   try {
@@ -39,11 +71,13 @@ export default async function handler(req, res) {
         },
       );
       if (!idResp.ok) {
-        return res.status(401).json({ error: 'Invalid authentication token' });
+        res.status(401).json({ error: 'Invalid authentication token' });
+        return;
       }
     }
   } catch {
-    return res.status(401).json({ error: 'Authentication verification failed' });
+    res.status(401).json({ error: 'Authentication verification failed' });
+    return;
   }
 
   // ── Input ───────────────────────────────────────────────────────────
@@ -53,9 +87,9 @@ export default async function handler(req, res) {
     performance = {},
     examCount = 20,
     preferences = {},
-  } = req.body || {};
+  }: GeneratePlanBody = req.body || {};
 
-  const sanitize = (s) =>
+  const sanitize = (s: string): string =>
     String(s)
       .replace(/[^a-zA-Z0-9\s\-'àèìòùâêîôûäëïöüéÉÈÊëçÇ&]/g, '')
       .slice(0, 200);
@@ -91,7 +125,7 @@ export default async function handler(req, res) {
   const weeksAvailable = preferences.weeks || 8;
 
   // ── Fallback plan (no API key) ─────────────────────────────────────
-  const fallbackPlan = () => ({
+  const fallbackPlan = (): StudyPlan => ({
     title: `Plan d'étude — ${safeTrack}`,
     description: `Plan personnalisé pour la filière ${safeTrack} sur ${weeksAvailable} semaines.`,
     weeklyGoals: weeksAvailable,
@@ -109,7 +143,8 @@ export default async function handler(req, res) {
   const OPENAI_KEY = process.env.edlight_chatgpt_api;
 
   if (!OPENAI_KEY) {
-    return res.status(200).json({ plan: fallbackPlan(), source: 'fallback' });
+    res.status(200).json({ plan: fallbackPlan(), source: 'fallback' });
+    return;
   }
 
   // ── AI generation ──────────────────────────────────────────────────
@@ -183,13 +218,14 @@ Return ONLY valid JSON:
     if (!resp.ok) {
       const errText = await resp.text();
       console.error('OpenAI error', resp.status, errText);
-      return res.status(200).json({ plan: fallbackPlan(), source: 'fallback' });
+      res.status(200).json({ plan: fallbackPlan(), source: 'fallback' });
+      return;
     }
 
     const data = await resp.json();
-    const raw = data?.choices?.[0]?.message?.content || '';
+    const raw: string = data?.choices?.[0]?.message?.content || '';
 
-    let parsed;
+    let parsed: StudyPlan | undefined;
     try {
       parsed = JSON.parse(raw);
     } catch {
@@ -201,12 +237,13 @@ Return ONLY valid JSON:
     }
 
     if (!parsed || !parsed.title) {
-      return res.status(200).json({ plan: fallbackPlan(), source: 'fallback-parse' });
+      res.status(200).json({ plan: fallbackPlan(), source: 'fallback-parse' });
+      return;
     }
 
-    return res.status(200).json({ plan: parsed, source: 'openai' });
+    res.status(200).json({ plan: parsed, source: 'openai' });
   } catch (err) {
     console.error('generate-plan error:', err);
-    return res.status(200).json({ plan: fallbackPlan(), source: 'fallback-error' });
+    res.status(200).json({ plan: fallbackPlan(), source: 'fallback-error' });
   }
 }

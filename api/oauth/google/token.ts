@@ -4,24 +4,35 @@
 // - GOOGLE_CLIENT_ID
 // - GOOGLE_CLIENT_SECRET
 
-module.exports = async (req, res) => {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface TokenPayload {
+  code?: string;
+  code_verifier?: string;
+  redirect_uri?: string;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'method_not_allowed' });
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
   }
 
   try {
-    const chunks = [];
-    for await (const chunk of req) chunks.push(chunk);
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
+    }
     const raw = Buffer.concat(chunks).toString('utf8');
 
-    let payload = {};
+    let payload: TokenPayload = {};
     const contentType = (req.headers['content-type'] || '').toLowerCase();
     if (contentType.includes('application/json')) {
       payload = raw ? JSON.parse(raw) : {};
     } else if (contentType.includes('application/x-www-form-urlencoded')) {
       const params = new URLSearchParams(raw);
-      payload = Object.fromEntries(params.entries());
+      payload = Object.fromEntries(params.entries()) as TokenPayload;
     } else {
       // try JSON by default
       payload = raw ? JSON.parse(raw) : {};
@@ -29,13 +40,15 @@ module.exports = async (req, res) => {
 
     const { code, code_verifier, redirect_uri } = payload;
     if (!code || !code_verifier || !redirect_uri) {
-      return res.status(400).json({ error: 'invalid_request', error_description: 'Missing code, code_verifier, or redirect_uri' });
+      res.status(400).json({ error: 'invalid_request', error_description: 'Missing code, code_verifier, or redirect_uri' });
+      return;
     }
 
     const client_id = process.env.GOOGLE_CLIENT_ID;
     const client_secret = process.env.GOOGLE_CLIENT_SECRET;
     if (!client_id || !client_secret) {
-      return res.status(500).json({ error: 'server_misconfigured', error_description: 'Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET' });
+      res.status(500).json({ error: 'server_misconfigured', error_description: 'Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET' });
+      return;
     }
 
     const body = new URLSearchParams({
@@ -55,9 +68,10 @@ module.exports = async (req, res) => {
 
     const text = await resp.text();
     if (!resp.ok) {
-      let details = text;
-      try { details = JSON.parse(text); } catch {}
-      return res.status(resp.status).json({ error: 'token_exchange_failed', details });
+      let details: unknown = text;
+      try { details = JSON.parse(text); } catch { /* keep raw text */ }
+      res.status(resp.status).json({ error: 'token_exchange_failed', details });
+      return;
     }
 
     res.setHeader('Cache-Control', 'no-store');
@@ -67,4 +81,4 @@ module.exports = async (req, res) => {
     console.error('oauth token exchange error', e);
     res.status(500).json({ error: 'internal_error' });
   }
-};
+}

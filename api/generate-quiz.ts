@@ -2,15 +2,43 @@
 // NOTE: For a real integration, set OPENAI_API_KEY in Vercel env vars
 // and call OpenAI APIs here, then map the response into a Perseus item.
 
-export default async function handler(req, res) {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+interface AIChoice {
+  content?: string;
+  text?: string;
+  correct?: boolean;
+}
+
+interface AIQuiz {
+  question?: string;
+  choices?: AIChoice[];
+  hints?: string[];
+  explanation?: string;
+}
+
+interface PerseusItem {
+  question: {
+    content: string;
+    images: Record<string, unknown>;
+    widgets: Record<string, unknown>;
+  };
+  answerArea: { calculator: boolean };
+  hints: Array<{ content: string }>;
+  itemDataVersion: { major: number; minor: number };
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
   // Verify Firebase auth token to prevent unauthorized access
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header' });
+    res.status(401).json({ error: 'Missing or invalid authorization header' });
+    return;
   }
 
   // Validate the token with Firebase Admin SDK (or Google's tokeninfo endpoint)
@@ -30,16 +58,18 @@ export default async function handler(req, res) {
         }
       );
       if (!idResp.ok) {
-        return res.status(401).json({ error: 'Invalid authentication token' });
+        res.status(401).json({ error: 'Invalid authentication token' });
+        return;
       }
     }
   } catch (authErr) {
-    return res.status(401).json({ error: 'Authentication verification failed' });
+    res.status(401).json({ error: 'Authentication verification failed' });
+    return;
   }
 
   const OPENAI_KEY = process.env.edlight_chatgpt_api;
 
-  const buildPerseusFromAI = (ai) => {
+  const buildPerseusFromAI = (ai: AIQuiz): PerseusItem => {
     const question = (ai.question || '').toString();
     const choices = Array.isArray(ai.choices) ? ai.choices : [];
     const hints = Array.isArray(ai.hints) ? ai.hints : [];
@@ -69,7 +99,7 @@ export default async function handler(req, res) {
     };
   };
 
-  const fallback = () => ({
+  const fallback = (): PerseusItem => ({
     question: {
       content: `What is the value of $x$ in $2x + 6 = 10$?\n\n[[☃ multiple-choice 1]]`,
       images: {},
@@ -99,16 +129,22 @@ export default async function handler(req, res) {
   });
 
   try {
-    const { topic = 'algebra', level = 'NS I', difficulty = 'easy' } = req.body || {};
+    const { topic = 'algebra', level = 'NS I', difficulty = 'easy' } = (req.body || {}) as {
+      topic?: string;
+      level?: string;
+      difficulty?: string;
+    };
 
     // Sanitize inputs to prevent prompt injection
-    const sanitize = (str) => String(str).replace(/[^a-zA-Z0-9\s\-'àèìòùâêîôûäëïöüéÈ]/g, '').slice(0, 100);
+    const sanitize = (str: string): string =>
+      String(str).replace(/[^a-zA-Z0-9\s\-'àèìòùâêîôûäëïöüéÈ]/g, '').slice(0, 100);
     const safeTopic = sanitize(topic);
     const safeLevel = sanitize(level);
     const safeDifficulty = sanitize(difficulty);
 
     if (!OPENAI_KEY) {
-      return res.status(200).json({ item: fallback(), meta: { topic: safeTopic, level: safeLevel, source: 'fallback' } });
+      res.status(200).json({ item: fallback(), meta: { topic: safeTopic, level: safeLevel, source: 'fallback' } });
+      return;
     }
 
     const prompt = [
@@ -140,13 +176,14 @@ export default async function handler(req, res) {
     if (!resp.ok) {
       const text = await resp.text();
       console.error('OpenAI error', resp.status, text);
-      return res.status(200).json({ item: fallback(), meta: { topic, level, source: 'fallback' } });
+      res.status(200).json({ item: fallback(), meta: { topic, level, source: 'fallback' } });
+      return;
     }
 
     const data = await resp.json();
-    const raw = data?.choices?.[0]?.message?.content || '';
+    const raw: string = data?.choices?.[0]?.message?.content || '';
 
-    let parsed;
+    let parsed: AIQuiz | undefined;
     try {
       parsed = JSON.parse(raw);
     } catch (e) {
@@ -159,13 +196,14 @@ export default async function handler(req, res) {
     }
 
     if (!parsed || !parsed.question || !Array.isArray(parsed.choices)) {
-      return res.status(200).json({ item: fallback(), meta: { topic, level, source: 'fallback-parse' } });
+      res.status(200).json({ item: fallback(), meta: { topic, level, source: 'fallback-parse' } });
+      return;
     }
 
     const item = buildPerseusFromAI(parsed);
-    return res.status(200).json({ item, meta: { topic, level, source: 'openai' } });
+    res.status(200).json({ item, meta: { topic, level, source: 'openai' } });
   } catch (err) {
     console.error(err);
-    return res.status(200).json({ item: fallback(), meta: { source: 'fallback-error' } });
+    res.status(200).json({ item: fallback(), meta: { source: 'fallback-error' } });
   }
 }

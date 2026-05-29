@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyArY6rWXr3IoaZjSgreonwhvgKg1gQ4yZ4';
 const GEMINI_MODEL = 'gemini-2.0-flash';
@@ -31,15 +31,24 @@ STUDENT'S ANSWER:
 {answer}
 `;
 
-export default async function handler(req, res) {
+interface GradeEssayBody {
+  question?: string;
+  answer?: string;
+  modelAnswer?: string;
+  context?: string;
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
   }
 
-  const { question, answer, modelAnswer, context } = req.body;
+  const { question, answer, modelAnswer, context }: GradeEssayBody = req.body || {};
 
   if (!question || !answer || !modelAnswer) {
-    return res.status(400).json({ error: 'Missing required fields: question, answer, modelAnswer' });
+    res.status(400).json({ error: 'Missing required fields: question, answer, modelAnswer' });
+    return;
   }
 
   try {
