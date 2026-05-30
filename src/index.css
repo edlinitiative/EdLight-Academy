@@ -5976,8 +5976,8 @@ textarea.input-field {
 	border: 1px solid rgba(239, 68, 68, 0.20);
 }
 .exam-take__feedback--manual {
-	background: rgba(99, 102, 241, 0.06);
-	border: 1px solid rgba(99, 102, 241, 0.18);
+	background: rgba(86, 69, 212, 0.06);
+	border: 1px solid rgba(86, 69, 212, 0.18);
 }
 .exam-take__feedback--unanswered {
 	background: rgba(100, 116, 139, 0.06);
@@ -6004,11 +6004,11 @@ textarea.input-field {
 .exam-take__feedback--correct .exam-take__feedback-banner { color: #16a34a; }
 .exam-take__feedback--partial .exam-take__feedback-banner { color: #d97706; }
 .exam-take__feedback--incorrect .exam-take__feedback-banner { color: #dc2626; }
-.exam-take__feedback--manual .exam-take__feedback-banner { color: #6366f1; }
+.exam-take__feedback--manual .exam-take__feedback-banner { color: #5645d4; }
 
 /* Essay AI feedback */
 .exam-take__feedback-essay {
-	background: rgba(99, 102, 241, 0.05);
+	background: rgba(86, 69, 212, 0.05);
 	border-radius: 8px;
 	padding: 0.65rem 0.85rem;
 	margin-bottom: 0.5rem;
@@ -6150,8 +6150,8 @@ textarea.input-field {
 }
 .exam-take__short-answer-input:focus {
 	outline: none;
-	border-color: var(--primary, #6366f1);
-	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+	border-color: var(--primary, #5645d4);
+	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.12);
 }
 .exam-take__short-answer-input:disabled {
 	opacity: 0.6;
@@ -6905,8 +6905,8 @@ textarea.input-field {
 	transition: border-color 0.15s, box-shadow 0.15s;
 }
 .ka-scaffold__text-input:focus {
-	border-color: #6366f1;
-	box-shadow: 0 0 0 3px rgba(99,102,241,0.13);
+	border-color: #5645d4;
+	box-shadow: 0 0 0 3px rgba(86, 69, 212,0.13);
 }
 .ka-scaffold__text-input:disabled {
 	background: #f3f4f6;
@@ -6934,7 +6934,7 @@ textarea.input-field {
 .ka-scaffold__ai-loading {
 	margin-top: 0.3rem;
 	font-size: 0.82rem;
-	color: #6366f1;
+	color: #5645d4;
 	display: flex;
 	align-items: center;
 	gap: 0.4rem;
@@ -6944,7 +6944,7 @@ textarea.input-field {
 	width: 14px;
 	height: 14px;
 	border: 2px solid #c7d2fe;
-	border-top-color: #6366f1;
+	border-top-color: #5645d4;
 	border-radius: 50%;
 	animation: ka-spin 0.6s linear infinite;
 }
@@ -7143,8 +7143,8 @@ textarea.input-field {
 	color: #e2e8f0;
 }
 [data-theme="dark"] .ka-scaffold__text-input:focus {
-	border-color: #818cf8;
-	box-shadow: 0 0 0 3px rgba(129,140,248,0.18);
+	border-color: #8b7ce8;
+	box-shadow: 0 0 0 3px rgba(139, 124, 232,0.18);
 }
 [data-theme="dark"] .ka-scaffold__text-input:disabled {
 	background: #181a20;
@@ -7176,7 +7176,7 @@ textarea.input-field {
 }
 [data-theme="dark"] .ka-scaffold__field--pending .ka-scaffold__text-input,
 [data-theme="dark"] .ka-scaffold__field--pending .math-kb__input-row {
-	border-color: #6366f1;
+	border-color: #5645d4;
 	background: #1e1b4b;
 }
 
@@ -7373,7 +7373,7 @@ textarea.input-field {
 }
 .math-kb__sym-btn:hover {
 	background: #eef2ff;
-	border-color: #818cf8;
+	border-color: #8b7ce8;
 	color: #4338ca;
 	transform: scale(1.08);
 }
@@ -7388,8 +7388,8 @@ textarea.input-field {
 	border-color: #4b5563;
 }
 [data-theme="dark"] .math-kb--focused .math-kb__input-row {
-	border-color: #818cf8;
-	box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+	border-color: #8b7ce8;
+	box-shadow: 0 0 0 3px rgba(139, 124, 232, 0.15);
 }
 [data-theme="dark"] .math-kb__input {
 	color: #f3f4f6;
@@ -7429,7 +7429,7 @@ textarea.input-field {
 	color: #c7d2fe;
 }
 [data-theme="dark"] .math-kb__tab--active {
-	background: #6366f1;
+	background: #5645d4;
 	color: #fff;
 }
 [data-theme="dark"] .math-kb__sym-btn {
@@ -7439,7 +7439,7 @@ textarea.input-field {
 }
 [data-theme="dark"] .math-kb__sym-btn:hover {
 	background: #312e81;
-	border-color: #6366f1;
+	border-color: #5645d4;
 	color: #c7d2fe;
 }
 
@@ -7892,7 +7892,7 @@ textarea.input-field {
 	font-size: 0.78rem;
 	font-weight: 700;
 	color: var(--primary-700);
-	background: rgba(99,102,241,0.08);
+	background: rgba(86, 69, 212,0.08);
 	padding: 0.3rem 0.7rem;
 	border-radius: 999px;
 	letter-spacing: 0.01em;
@@ -8003,7 +8003,7 @@ textarea.input-field {
 .ka-step--active .ka-step__dot {
 	border-color: var(--primary-500);
 	color: var(--primary-600);
-	box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+	box-shadow: 0 0 0 3px rgba(86, 69, 212,0.12);
 }
 
 .ka-step--done .ka-step__dot {
@@ -8056,8 +8056,8 @@ textarea.input-field {
 	gap: 0.35rem;
 	font-size: 0.78rem;
 	color: var(--primary-600);
-	background: rgba(99,102,241,0.05);
-	border: 1px solid rgba(99,102,241,0.12);
+	background: rgba(86, 69, 212,0.05);
+	border: 1px solid rgba(86, 69, 212,0.12);
 	border-radius: 8px;
 	padding: 0.4rem 0.65rem;
 	margin-bottom: 0.5rem;
@@ -8097,7 +8097,7 @@ textarea.input-field {
 .ka-step__input:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+	box-shadow: 0 0 0 3px rgba(86, 69, 212,0.1);
 }
 
 .ka-step__input::placeholder {
@@ -8116,7 +8116,7 @@ textarea.input-field {
 .ka-step__preview {
 	margin-top: 0.35rem;
 	padding: 0.4rem 0.65rem;
-	background: rgba(99,102,241,0.03);
+	background: rgba(86, 69, 212,0.03);
 	border-radius: 6px;
 	overflow-x: auto;
 }
@@ -8178,7 +8178,7 @@ textarea.input-field {
 .ka-proof__add-btn:hover {
 	border-color: var(--primary-400);
 	color: var(--primary-600);
-	background: rgba(99,102,241,0.04);
+	background: rgba(86, 69, 212,0.04);
 }
 
 .ka-proof__hint-btn {
@@ -9059,8 +9059,8 @@ textarea.input-field {
 	flex-wrap: wrap;
 	padding: 0.9rem 1.1rem;
 	border-radius: var(--radius-md);
-	background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.05));
-	border: 1px solid rgba(99, 102, 241, 0.2);
+	background: linear-gradient(135deg, rgba(86, 69, 212, 0.08), rgba(59, 130, 246, 0.05));
+	border: 1px solid rgba(86, 69, 212, 0.2);
 }
 
 .exam-results__focus-text {
@@ -9129,7 +9129,7 @@ textarea.input-field {
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: var(--review-accent, #6366f1);
+	color: var(--review-accent, #5645d4);
 }
 
 .review-session__counter {
@@ -9166,7 +9166,7 @@ textarea.input-field {
 
 .review-session__progress-fill {
 	height: 100%;
-	background: var(--review-accent, #6366f1);
+	background: var(--review-accent, #5645d4);
 	border-radius: 999px;
 	transition: width 0.4s ease;
 }
@@ -9181,8 +9181,8 @@ textarea.input-field {
 	display: inline-block;
 	font-size: 0.72rem;
 	font-weight: 700;
-	color: var(--review-accent, #6366f1);
-	background: color-mix(in srgb, var(--review-accent, #6366f1) 12%, transparent);
+	color: var(--review-accent, #5645d4);
+	background: color-mix(in srgb, var(--review-accent, #5645d4) 12%, transparent);
 	padding: 0.2rem 0.6rem;
 	border-radius: 100px;
 	margin-bottom: 0.7rem;
@@ -9213,20 +9213,20 @@ textarea.input-field {
 }
 
 .review-session__option:hover {
-	border-color: var(--review-accent, #6366f1);
+	border-color: var(--review-accent, #5645d4);
 }
 
 .review-session__option--selected {
-	border-color: var(--review-accent, #6366f1);
-	background: color-mix(in srgb, var(--review-accent, #6366f1) 8%, transparent);
+	border-color: var(--review-accent, #5645d4);
+	background: color-mix(in srgb, var(--review-accent, #5645d4) 8%, transparent);
 }
 
-.review-session__option input { accent-color: var(--review-accent, #6366f1); }
+.review-session__option input { accent-color: var(--review-accent, #5645d4); }
 
 .review-session__option-key {
 	font-weight: 800;
 	font-size: 0.82rem;
-	color: var(--review-accent, #6366f1);
+	color: var(--review-accent, #5645d4);
 	min-width: 1.1em;
 }
 
@@ -9251,9 +9251,9 @@ textarea.input-field {
 }
 
 .review-session__tf-btn--selected {
-	border-color: var(--review-accent, #6366f1);
-	background: color-mix(in srgb, var(--review-accent, #6366f1) 10%, transparent);
-	color: var(--review-accent, #6366f1);
+	border-color: var(--review-accent, #5645d4);
+	background: color-mix(in srgb, var(--review-accent, #5645d4) 10%, transparent);
+	color: var(--review-accent, #5645d4);
 }
 
 .review-session__text {
@@ -9267,7 +9267,7 @@ textarea.input-field {
 
 .review-session__text:focus {
 	outline: none;
-	border-color: var(--review-accent, #6366f1);
+	border-color: var(--review-accent, #5645d4);
 }
 
 .review-session__feedback {
@@ -9314,8 +9314,8 @@ textarea.input-field {
 
 .review-session__reveal-answer {
 	padding: 0.85rem 1rem;
-	background: color-mix(in srgb, var(--review-accent, #6366f1) 7%, transparent);
-	border: 1px solid color-mix(in srgb, var(--review-accent, #6366f1) 20%, transparent);
+	background: color-mix(in srgb, var(--review-accent, #5645d4) 7%, transparent);
+	border: 1px solid color-mix(in srgb, var(--review-accent, #5645d4) 20%, transparent);
 	border-radius: var(--radius-md, 10px);
 	font-size: 0.92rem;
 	color: var(--text-800);
@@ -9397,7 +9397,7 @@ textarea.input-field {
 .review-session__summary-score {
 	font-size: 1rem;
 	font-weight: 700;
-	color: var(--review-accent, #6366f1);
+	color: var(--review-accent, #5645d4);
 	margin-bottom: 0.5rem;
 }
 
@@ -12392,7 +12392,7 @@ textarea.input-field {
 
 /* Premium page-header title — subtle gradient on H1 */
 .page-header__title {
-	background: linear-gradient(135deg, var(--text-900) 0%, var(--primary-700) 60%, #6366f1 100%);
+	background: linear-gradient(135deg, var(--text-900) 0%, var(--primary-700) 60%, #5645d4 100%);
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
@@ -12411,7 +12411,7 @@ textarea.input-field {
 }
 .filter-pill:hover { transform: translateY(-1px); }
 .filter-pill--active {
-	background: linear-gradient(135deg, var(--primary-600), #6366f1);
+	background: linear-gradient(135deg, var(--primary-600), #5645d4);
 	color: #fff;
 	border-color: transparent;
 	box-shadow: 0 6px 16px rgba(86, 69, 212, 0.25);
@@ -12450,7 +12450,7 @@ body,
 
 /* Premium selection color */
 ::selection {
-	background: rgba(99, 102, 241, 0.28);
+	background: rgba(86, 69, 212, 0.28);
 	color: inherit;
 }
 [data-theme="dark"] ::selection { background: rgba(147, 197, 253, 0.30); }
@@ -12658,7 +12658,7 @@ body,
    ============================================================ */
 
 :root {
-	--lp-accent: #6366f1;
+	--lp-accent: #5645d4;
 	--lp-accent-2: #f59e0b;
 	--lp-accent-3: #10b981;
 	--lp-ink: var(--text-900);
@@ -12668,7 +12668,7 @@ body,
 }
 
 [data-theme="dark"] {
-	--lp-accent: #818cf8;
+	--lp-accent: #8b7ce8;
 	--lp-accent-2: #fbbf24;
 }
 
@@ -12682,7 +12682,7 @@ body {
 
 [data-theme="dark"] body {
 	background:
-		radial-gradient(1100px 600px at 8% -5%, rgba(99, 102, 241, 0.20) 0%, transparent 60%),
+		radial-gradient(1100px 600px at 8% -5%, rgba(86, 69, 212, 0.20) 0%, transparent 60%),
 		radial-gradient(900px 500px at 95% 5%, rgba(245, 158, 11, 0.10) 0%, transparent 55%),
 		radial-gradient(800px 500px at 50% 95%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
 		var(--background);

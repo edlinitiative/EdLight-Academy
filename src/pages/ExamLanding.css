@@ -9,8 +9,8 @@
   overflow: hidden;
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
   background:
-    radial-gradient(circle at 20% 15%, rgba(10, 102, 194, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(59, 155, 217, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 20% 15%, rgba(86, 69, 212, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(139, 124, 232, 0.07) 0%, transparent 40%),
     var(--background);
 }
 
@@ -20,8 +20,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(10, 102, 194, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(10, 102, 194, 0.032) 1px, transparent 1px);
+    linear-gradient(rgba(86, 69, 212, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(86, 69, 212, 0.032) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
@@ -47,7 +47,7 @@
   gap: 0.4rem;
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(86, 69, 212, 0.1);
   color: var(--primary-600);
   font-weight: 700;
   font-size: 0.78rem;
@@ -96,8 +96,8 @@
   text-decoration: none;
   color: inherit;
   box-shadow:
-    0 1px 2px rgba(10, 102, 194, 0.04),
-    0 6px 24px rgba(10, 102, 194, 0.08);
+    0 1px 2px rgba(86, 69, 212, 0.04),
+    0 6px 24px rgba(86, 69, 212, 0.08);
   transition:
     transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -107,9 +107,9 @@
 .level-card:hover {
   transform: translateY(-7px);
   box-shadow:
-    0 2px 4px rgba(10, 102, 194, 0.06),
-    0 20px 56px rgba(10, 102, 194, 0.14);
-  border-color: rgba(10, 102, 194, 0.22);
+    0 2px 4px rgba(86, 69, 212, 0.06),
+    0 20px 56px rgba(86, 69, 212, 0.14);
+  border-color: rgba(86, 69, 212, 0.22);
   text-decoration: none;
 }
 
@@ -170,8 +170,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.2rem;
-  border-top: 1px solid rgba(10, 102, 194, 0.07);
-  background: rgba(10, 102, 194, 0.025);
+  border-top: 1px solid rgba(86, 69, 212, 0.07);
+  background: rgba(86, 69, 212, 0.025);
 }
 
 .level-card__cta {
@@ -263,7 +263,7 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(6px);
-  border: 1px solid rgba(10, 102, 194, 0.10);
+  border: 1px solid rgba(86, 69, 212, 0.10);
 }
 
 .track-pick__head {

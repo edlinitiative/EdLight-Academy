@@ -5,19 +5,19 @@
    ========================================================== */
 
 .lp {
-  --lp-paper-50:  #fbf9f5;
-  --lp-paper-100: #f5f3ef;
-  --lp-paper-200: #e4e2de;
-  --lp-paper-300: #cec6b4;
-  --lp-ink-400:   #747683;
-  --lp-ink-700:   #444652;
-  --lp-ink-900:   #1b1c1a;
-  --lp-ink-deep:  #0d0b09;
+  --lp-paper-50:  #faf9f7;
+  --lp-paper-100: #f6f5f4;
+  --lp-paper-200: #e5e3df;
+  --lp-paper-300: #c8c4be;
+  --lp-ink-400:   #787671;
+  --lp-ink-700:   #4a4843;
+  --lp-ink-900:   #1a1a1a;
+  --lp-ink-deep:  #000000;
 
-  /* Warm sienna accent — distinct from the reference's navy */
-  --lp-accent:        #9a3412;
-  --lp-accent-hover:  #7c2d12;
-  --lp-accent-soft:   #fed7aa;
+  /* Notion warm-minimal purple accent (matches platform-wide theme) */
+  --lp-accent:        #5645d4;
+  --lp-accent-hover:  #4534b3;
+  --lp-accent-soft:   #e0ddf7;
 
   --lp-font-sans: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --lp-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -30,17 +30,17 @@
 }
 
 [data-theme="dark"] .lp {
-  --lp-paper-50:  #0d0b09;
-  --lp-paper-100: #15120e;
-  --lp-paper-200: #2a261f;
-  --lp-paper-300: #3a342a;
-  --lp-ink-400:   #8a8a85;
-  --lp-ink-700:   #c8c6c0;
-  --lp-ink-900:   #f3f0e8;
+  --lp-paper-50:  #191918;
+  --lp-paper-100: #1f1f1e;
+  --lp-paper-200: #2a2a28;
+  --lp-paper-300: #3a3a37;
+  --lp-ink-400:   #807d75;
+  --lp-ink-700:   #b8b5ad;
+  --lp-ink-900:   #ededec;
   --lp-ink-deep:  #ffffff;
-  --lp-accent:        #fb923c;
-  --lp-accent-hover:  #fdba74;
-  --lp-accent-soft:   #431407;
+  --lp-accent:        #8b7ce8;
+  --lp-accent-hover:  #9b8ff0;
+  --lp-accent-soft:   #2c2956;
 }
 
 .lp * { box-sizing: border-box; }
