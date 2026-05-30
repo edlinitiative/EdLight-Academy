@@ -180,7 +180,7 @@ body {
   }
   
   .nav-link.active {
-    background: rgba(10, 102, 194, 0.07);
+    background: rgba(86, 69, 212, 0.07);
     color: var(--primary-600);
     font-weight: 700;
     border-left: 3px solid var(--primary-500);
@@ -217,11 +217,11 @@ body {
   .nav-link--primary {
     font-weight: 700;
     color: var(--primary-600);
-    background: rgba(10, 102, 194, 0.06);
+    background: rgba(86, 69, 212, 0.06);
   }
   
   .nav-link--primary:active {
-    background: rgba(10, 102, 194, 0.12);
+    background: rgba(86, 69, 212, 0.12);
   }
   
   /* Backdrop overlay for mobile menu */
@@ -259,8 +259,8 @@ body {
     width: 40px;
     height: 40px;
     font-size: 0.875rem;
-    border: 2px solid rgba(10, 102, 194, 0.2);
-    box-shadow: 0 2px 6px rgba(10, 102, 194, 0.15);
+    border: 2px solid rgba(86, 69, 212, 0.2);
+    box-shadow: 0 2px 6px rgba(86, 69, 212, 0.15);
   }
   
   .nav-actions .button {
@@ -872,7 +872,7 @@ body {
     height: 32px;
     border-radius: 8px;
     border: none;
-    background: rgba(10, 102, 194, 0.1);
+    background: rgba(86, 69, 212, 0.1);
     color: var(--primary-600);
     font-size: 1.125rem;
     font-weight: 400;
@@ -885,7 +885,7 @@ body {
   }
   
   .lesson-sidebar__close:active {
-    background: rgba(10, 102, 194, 0.2);
+    background: rgba(86, 69, 212, 0.2);
     transform: scale(0.95);
   }
   
@@ -944,7 +944,7 @@ body {
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
     font-weight: 600;
-    border: 1.5px solid rgba(10, 102, 194, 0.3);
+    border: 1.5px solid rgba(86, 69, 212, 0.3);
     margin-top: 0.5rem;
   }
   
@@ -1018,8 +1018,8 @@ body {
     padding: 0.875rem 1rem;
     min-height: 48px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(10, 102, 194, 0.08) 0%, rgba(10, 102, 194, 0.04) 100%);
-    border: 1.5px solid rgba(10, 102, 194, 0.2);
+    background: linear-gradient(135deg, rgba(86, 69, 212, 0.08) 0%, rgba(86, 69, 212, 0.04) 100%);
+    border: 1.5px solid rgba(86, 69, 212, 0.2);
     color: var(--primary-600);
     transition: all 0.2s ease;
   }
@@ -1102,12 +1102,12 @@ body {
   }
   
   .lesson-card__nav-group--actions .button--primary {
-    box-shadow: 0 2px 8px rgba(10, 102, 194, 0.25);
+    box-shadow: 0 2px 8px rgba(86, 69, 212, 0.25);
   }
   
   .lesson-card__nav-group--actions .button--primary:active {
     transform: scale(0.98);
-    box-shadow: 0 1px 4px rgba(10, 102, 194, 0.3);
+    box-shadow: 0 1px 4px rgba(86, 69, 212, 0.3);
   }
   
   .lesson-card__nav-group--actions .button--ghost {
@@ -1160,7 +1160,7 @@ body {
   }
   
   .lesson-card__comments-toggle:active {
-    background: rgba(10, 102, 194, 0.05);
+    background: rgba(86, 69, 212, 0.05);
   }
   
   .lesson-card__comments-title {
@@ -1242,7 +1242,7 @@ body {
     gap: 1rem;
     padding: 1rem 1rem 0.875rem;
     padding-top: calc(1rem + var(--navbar-height) + env(safe-area-inset-top)); /* Account for navbar height */
-    border-bottom: 1px solid rgba(10, 102, 194, 0.12);
+    border-bottom: 1px solid rgba(86, 69, 212, 0.12);
     position: sticky;
     top: 0;
     background: var(--surface);
@@ -1271,7 +1271,7 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 8px;
-    border: 1px solid rgba(10, 102, 194, 0.18);
+    border: 1px solid rgba(86, 69, 212, 0.18);
     background: var(--surface);
     color: var(--text-600);
     font-size: 1.25rem;
@@ -1285,8 +1285,8 @@ body {
   }
   
   .lesson-sidebar__close:active {
-    background: rgba(10, 102, 194, 0.06);
-    border-color: rgba(10, 102, 194, 0.28);
+    background: rgba(86, 69, 212, 0.06);
+    border-color: rgba(86, 69, 212, 0.28);
   }
   
   .lesson-list {
@@ -1298,7 +1298,7 @@ body {
   .lesson-list__group {
     margin-bottom: 0;
     background: var(--surface);
-    border-bottom: 1px solid rgba(10, 102, 194, 0.08);
+    border-bottom: 1px solid rgba(86, 69, 212, 0.08);
   }
   
   /* Chapter/Module - Simple List Item */
@@ -1318,7 +1318,7 @@ body {
   }
   
   .lesson-list__item:active {
-    background: rgba(10, 102, 194, 0.06);
+    background: rgba(86, 69, 212, 0.06);
   }
   
   .lesson-list__item--active {
@@ -1449,7 +1449,7 @@ body {
   }
   
   .lesson-list__children .lesson-list__item--lesson:active {
-    background: rgba(10, 102, 194, 0.06);
+    background: rgba(86, 69, 212, 0.06);
   }
   
   .lesson-list__children .lesson-list__item--active {
@@ -2114,7 +2114,7 @@ body {
   .course-card,
   .chip,
   .badge {
-    -webkit-tap-highlight-color: rgba(10, 102, 194, 0.1);
+    -webkit-tap-highlight-color: rgba(86, 69, 212, 0.1);
   }
   
   /* Improve scroll performance */

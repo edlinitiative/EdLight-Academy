@@ -148,7 +148,7 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
     const fullSubjectCode = `${subjectCode}-${levelCode}`;
     
     // Get subject defaults (color, icon, name)
-    const subjectInfo = SUBJECT_DEFAULTS[subjectCode] || { color: '#0A66C2', icon: 'book', name: 'Course' };
+    const subjectInfo = SUBJECT_DEFAULTS[subjectCode] || { color: '#5645d4', icon: 'book', name: 'Course' };
     
     // Transform units from Firestore to modules for the app
     // Firestore structure: { unitId, title, order, lessons: [{lessonId, title, type, order}] }
