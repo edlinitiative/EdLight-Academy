@@ -7177,7 +7177,7 @@ textarea.input-field {
 [data-theme="dark"] .ka-scaffold__field--pending .ka-scaffold__text-input,
 [data-theme="dark"] .ka-scaffold__field--pending .math-kb__input-row {
 	border-color: #5645d4;
-	background: #1e1b4b;
+	background: #2a1f6b;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
@@ -7271,11 +7271,11 @@ textarea.input-field {
 }
 .math-kb__toggle:hover {
 	background: #eef2ff;
-	color: #4338ca;
+	color: #4534b3;
 }
 .math-kb__toggle--active {
 	background: #eef2ff;
-	color: #4338ca;
+	color: #4534b3;
 }
 
 /* Live KaTeX preview */
@@ -7336,14 +7336,14 @@ textarea.input-field {
 }
 .math-kb__tab:hover {
 	background: #eef2ff;
-	color: #4338ca;
+	color: #4534b3;
 }
 .math-kb__tab--active {
 	background: #4f46e5;
 	color: #fff;
 }
 .math-kb__tab--active:hover {
-	background: #4338ca;
+	background: #4534b3;
 	color: #fff;
 }
 
@@ -7374,7 +7374,7 @@ textarea.input-field {
 .math-kb__sym-btn:hover {
 	background: #eef2ff;
 	border-color: #8b7ce8;
-	color: #4338ca;
+	color: #4534b3;
 	transform: scale(1.08);
 }
 .math-kb__sym-btn:active {
@@ -7404,7 +7404,7 @@ textarea.input-field {
 }
 [data-theme="dark"] .math-kb__toggle:hover,
 [data-theme="dark"] .math-kb__toggle--active {
-	background: #1e1b4b;
+	background: #2a1f6b;
 	color: #a5b4fc;
 }
 [data-theme="dark"] .math-kb__preview {
@@ -7438,7 +7438,7 @@ textarea.input-field {
 	color: #e5e7eb;
 }
 [data-theme="dark"] .math-kb__sym-btn:hover {
-	background: #312e81;
+	background: #3a2a99;
 	border-color: #5645d4;
 	color: #c7d2fe;
 }
@@ -12762,21 +12762,21 @@ body {
 .card {
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	box-shadow: 0 1px 0 color-mix(in srgb, var(--lp-accent) 6%, transparent), 0 18px 40px -28px rgba(0,0,0,0.18) !important;
 }
 
 .course-card {
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	box-shadow: 0 1px 0 color-mix(in srgb, var(--lp-accent) 5%, transparent), 0 16px 36px -26px rgba(0,0,0,0.18) !important;
 	overflow: hidden;
 }
 .course-card:hover {
 	border-color: color-mix(in srgb, var(--lp-accent) 38%, var(--border)) !important;
 	transform: translateY(-4px);
-	box-shadow: 0 22px 48px -22px rgba(67, 56, 202, 0.28) !important;
+	box-shadow: 0 22px 48px -22px rgba(86, 69, 212, 0.28) !important;
 }
 
 .course-card__title {
@@ -12788,17 +12788,17 @@ body {
 	color: var(--text-600) !important;
 }
 
-/* Course actions — premium gradient + amber ghost (consistent with landing) */
+/* Course actions — flat solid accent (consistent with Notion buttons) */
 .course-card__actions .button--primary {
-	background: linear-gradient(135deg, #1e1b4b, #4338ca 60%, var(--lp-accent)) !important;
+	background: var(--primary-500) !important;
 	color: #fff !important;
 	border: none !important;
-	box-shadow: 0 14px 28px -12px rgba(67, 56, 202, 0.5), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+	box-shadow: var(--shadow-sm) !important;
 	letter-spacing: 0.01em;
 }
 .course-card__actions .button--primary:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 20px 34px -14px rgba(67, 56, 202, 0.6) !important;
+	background: var(--primary-700) !important;
+	box-shadow: var(--shadow-md) !important;
 }
 
 .course-card__cta {
@@ -12825,19 +12825,19 @@ body {
 }
 .filter-pill:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--lp-accent) 40%, var(--border)) !important; }
 .filter-pill--active {
-	background: linear-gradient(135deg, #1e1b4b, var(--lp-accent)) !important;
+	background: var(--primary-500) !important;
 	color: #fff !important;
 	border-color: transparent !important;
-	box-shadow: 0 10px 22px -10px rgba(67, 56, 202, 0.5) !important;
+	box-shadow: var(--shadow-sm) !important;
 }
 
-/* Buttons — premium variants used app-wide */
+/* Buttons — flat single-accent (Notion warm-minimal) */
 .button--primary {
-	background: linear-gradient(135deg, #1e1b4b, #4338ca 60%, var(--lp-accent)) !important;
+	background: var(--primary-500) !important;
 	color: #fff !important;
-	box-shadow: 0 14px 28px -12px rgba(67, 56, 202, 0.5), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+	box-shadow: var(--shadow-sm) !important;
 }
-.button--primary:hover { box-shadow: 0 20px 34px -14px rgba(67, 56, 202, 0.6) !important; }
+.button--primary:hover { background: var(--primary-700) !important; box-shadow: var(--shadow-md) !important; }
 
 .button--ghost {
 	background: var(--surface) !important;
@@ -12861,7 +12861,7 @@ body {
 /* Modal premium */
 .course-modal, .modal {
 	border: 1px solid var(--border) !important;
-	box-shadow: 0 40px 80px -30px rgba(67, 56, 202, 0.35), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
+	box-shadow: 0 40px 80px -30px rgba(86, 69, 212, 0.35), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
 }
 
 /* Section eyebrow upgrade — used on Courses/Exams/etc. */
@@ -12900,10 +12900,10 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 .filter-pill:hover { background: color-mix(in srgb, var(--lp-accent) 8%, transparent) !important; color: var(--lp-accent) !important; }
 .filter-group .filter-pill--active,
 .filter-pill.filter-pill--active {
-	background: linear-gradient(135deg, #1e1b4b, var(--lp-accent)) !important;
+	background: var(--primary-500) !important;
 	color: #fff !important;
 	border-color: transparent !important;
-	box-shadow: 0 10px 22px -10px rgba(67, 56, 202, 0.5) !important;
+	box-shadow: var(--shadow-sm) !important;
 }
 
 /* ---------- Exam Landing ---------- */
@@ -12939,13 +12939,13 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 .level-card {
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	backdrop-filter: none !important;
 	box-shadow: 0 1px 0 color-mix(in srgb, var(--lp-accent) 6%, transparent), 0 18px 40px -28px rgba(0,0,0,0.18) !important;
 }
 .level-card:hover {
 	border-color: color-mix(in srgb, var(--lp-accent) 35%, var(--border)) !important;
-	box-shadow: 0 28px 50px -22px rgba(67, 56, 202, 0.32) !important;
+	box-shadow: 0 28px 50px -22px rgba(86, 69, 212, 0.32) !important;
 }
 .level-card__heading {
 	font-family: var(--font-serif) !important;
@@ -12981,7 +12981,7 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 .trivia-cat-card {
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	box-shadow: 0 1px 0 color-mix(in srgb, var(--lp-accent) 6%, transparent), 0 18px 40px -28px rgba(0,0,0,0.18) !important;
 	color: var(--text-900) !important;
 }
@@ -12996,7 +12996,7 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 .trivia-round-picker, .trivia-quiz__question-card, .trivia-results__card {
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
-	border-radius: 22px !important;
+	border-radius: 16px !important;
 	color: var(--text-900) !important;
 }
 .trivia-option {
@@ -13042,8 +13042,8 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .auth-modal, .auth-modal__card {
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
-	border-radius: 22px !important;
-	box-shadow: 0 40px 80px -30px rgba(67, 56, 202, 0.4), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
+	border-radius: 16px !important;
+	box-shadow: 0 40px 80px -30px rgba(86, 69, 212, 0.4), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
 }
 
 /* Make sure dark-mode body gradient overrides any stale white */
@@ -13183,7 +13183,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 
 /* ---------- Cours catalog: course cards refinement ---------- */
 .course-card {
-	border-radius: 22px !important;
+	border-radius: 16px !important;
 	border: 1px solid var(--border) !important;
 	background: var(--surface) !important;
 	overflow: hidden !important;
@@ -13193,7 +13193,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .course-card:hover {
 	transform: translateY(-4px);
 	border-color: color-mix(in srgb, var(--lp-accent) 35%, var(--border)) !important;
-	box-shadow: 0 32px 60px -28px rgba(67, 56, 202, 0.32) !important;
+	box-shadow: 0 32px 60px -28px rgba(86, 69, 212, 0.32) !important;
 }
 .course-card__title {
 	font-family: var(--font-serif);
@@ -13213,7 +13213,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .quiz-filters .card,
 .quiz-panel .card {
-	border-radius: 22px !important;
+	border-radius: 16px !important;
 	border: 1px solid var(--border) !important;
 	background: var(--surface) !important;
 	box-shadow: 0 1px 0 color-mix(in srgb, var(--lp-accent) 6%, transparent), 0 18px 40px -28px rgba(0,0,0,0.18) !important;
@@ -13406,7 +13406,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .about-stats .card {
 	padding: 1.6rem 1.2rem !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	background:
 		linear-gradient(180deg, color-mix(in srgb, var(--lp-accent) 4%, transparent), transparent 60%),
 		var(--surface) !important;
@@ -13416,7 +13416,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .about-stats .card:hover {
 	transform: translateY(-3px);
-	box-shadow: 0 28px 50px -28px rgba(67, 56, 202, 0.3) !important;
+	box-shadow: 0 28px 50px -28px rgba(86, 69, 212, 0.3) !important;
 }
 .about-stats__number {
 	font-family: var(--font-serif);
@@ -13444,7 +13444,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	gap: 1rem;
 	align-items: flex-start;
 	padding: 1.4rem !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
 	box-shadow: 0 1px 0 color-mix(in srgb, var(--lp-accent) 5%, transparent), 0 14px 36px -28px rgba(0,0,0,0.18) !important;
@@ -13453,7 +13453,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .about-approach__item:hover {
 	transform: translateY(-3px);
 	border-color: color-mix(in srgb, var(--lp-accent) 30%, var(--border)) !important;
-	box-shadow: 0 22px 44px -26px rgba(67, 56, 202, 0.28) !important;
+	box-shadow: 0 22px 44px -26px rgba(86, 69, 212, 0.28) !important;
 }
 .about-approach__icon {
 	flex: 0 0 44px;
@@ -13478,7 +13478,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .about-values__item {
 	padding: 1.5rem !important;
-	border-radius: 20px !important;
+	border-radius: 16px !important;
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
 	position: relative;
@@ -13532,10 +13532,10 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	border-radius: 24px !important;
 	background:
 		radial-gradient(600px 280px at 30% 20%, rgba(245, 158, 11, 0.16), transparent 60%),
-		linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4338ca 100%) !important;
+		linear-gradient(135deg, #2a1f6b 0%, #3a2a99 55%, #4534b3 100%) !important;
 	border: 1px solid rgba(255,255,255,0.08) !important;
 	color: #f8fafc !important;
-	box-shadow: 0 40px 80px -30px rgba(67, 56, 202, 0.55) !important;
+	box-shadow: 0 40px 80px -30px rgba(86, 69, 212, 0.55) !important;
 	position: relative;
 	overflow: hidden;
 }
@@ -13557,7 +13557,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .about-cta .button--primary {
 	background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
-	color: #1e1b4b !important;
+	color: #2a1f6b !important;
 	border-color: transparent !important;
 	box-shadow: 0 18px 40px -16px rgba(245, 158, 11, 0.6) !important;
 }
