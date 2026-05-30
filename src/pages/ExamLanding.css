@@ -313,22 +313,22 @@
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 4px;
-  background: var(--track-color, #6366f1);
+  background: var(--track-color, #5645d4);
   opacity: 0.55;
   transition: width 0.18s ease, opacity 0.18s ease;
 }
 
 .track-pick__card:hover {
   transform: translateY(-3px);
-  border-color: var(--track-color, #6366f1);
+  border-color: var(--track-color, #5645d4);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
 }
 
 .track-pick__card:hover::before { width: 6px; opacity: 0.9; }
 
 .track-pick__card--active {
-  border-color: var(--track-color, #6366f1);
-  background: color-mix(in srgb, var(--track-color, #6366f1) 7%, #fff);
+  border-color: var(--track-color, #5645d4);
+  background: color-mix(in srgb, var(--track-color, #5645d4) 7%, #fff);
 }
 
 .track-pick__card--active::before { width: 6px; opacity: 1; }
@@ -354,7 +354,7 @@
   margin-top: 0.3rem;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--track-color, #6366f1);
+  color: var(--track-color, #5645d4);
 }
 
 @media (max-width: 520px) {
