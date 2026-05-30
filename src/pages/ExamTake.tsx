@@ -890,6 +890,7 @@ const ExamTake = () => {
           track: currentTrack || '',
           feedbackMode,
           answers,
+          summary: result.summary,
           preGradedResults: Object.fromEntries(
             Object.entries(preGraded).map(([k, v]) => [k, {
               status: v.status,
@@ -1292,6 +1293,11 @@ const ExamTake = () => {
                     </div>
                   )}
 
+                  {/* Missing passage notice (source text not digitized) */}
+                  {!section.passage && section.passage_missing && (
+                    <MissingPassageNotice reference={section.passage_reference || ''} />
+                  )}
+
                   {/* Questions organized by sub-exercise group (A, B, C, etc.) */}
                   {(() => {
                     // Build sub-groups: consecutive questions with same _subExGroup
@@ -1442,6 +1448,8 @@ const ExamTake = () => {
   // Explicit passage text attached to the section (e.g. reading comprehension)
   const currentSection = (exam.sections || [])[currentSectionIdx];
   const sectionPassage = currentSection?.passage || '';
+  const passageMissing = !sectionPassage && !!currentSection?.passage_missing;
+  const passageReference = currentSection?.passage_reference || '';
 
   return (
     <section className="section exam-take">
@@ -1593,6 +1601,11 @@ const ExamTake = () => {
           {/* Reading passage panel — always visible for comprehension sections */}
           {(sectionPassage || (cleanInstructions && cleanInstructions.length > 200)) && (
             <ReadingPassage text={sectionPassage || cleanInstructions} />
+          )}
+
+          {/* Honest notice when the original reading passage was never digitized */}
+          {passageMissing && (
+            <MissingPassageNotice reference={passageReference} />
           )}
 
           {/* Sub-exercise directive header — shown once for the group */}
@@ -1958,6 +1971,33 @@ function ReadingPassage({ text }) {
           <InstructionRenderer text={text} />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Missing-passage notice ───────────────────────────────────────────────────
+
+/**
+ * Honest, pedagogical notice shown when a comprehension section's original
+ * reading passage was never digitized. Rather than hide the questions or show
+ * a confusing buried note, we tell students plainly and reframe the section as
+ * useful exam-technique practice.
+ */
+function MissingPassageNotice({ reference }) {
+  return (
+    <div className="exam-take__missing-passage" role="note">
+      <div className="exam-take__missing-passage-head">
+        <span className="exam-take__missing-passage-icon" aria-hidden="true">📄</span>
+        <strong>Texte de lecture non disponible</strong>
+      </div>
+      <p className="exam-take__missing-passage-body">
+        {reference
+          ? <>Le texte de référence (« {reference} ») de cet examen officiel n’a pas été numérisé.{' '}</>
+          : <>Le texte de lecture de cet examen officiel n’a pas été numérisé.{' '}</>}
+        Les questions ci-dessous sont conservées pour vous entraîner au{' '}
+        <em>type de questions</em> et à la méthode de compréhension. Répondez à
+        partir du texte de votre épreuve papier si vous l’avez.
+      </p>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import InstructionRenderer from '../components/InstructionRenderer';
 import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
+import ReviewSession from '../components/ReviewSession';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog, resolveExamFromCatalog } from '../utils/examCatalog';
 import { loadExamResult } from '../services/examResults';
@@ -22,9 +23,53 @@ import {
   QUESTION_TYPE_META,
 } from '../utils/examUtils';
 
+// Statuses that mean the student has NOT yet mastered the question.
+const NEEDS_REVIEW = new Set(['incorrect', 'partial', 'unanswered']);
+const MASTERED = new Set(['correct', 'scaffold-complete']);
+
+/**
+ * Group graded results by a key (section title or competency) and compute a
+ * points-weighted mastery ratio for each group. Returns sorted groups
+ * (weakest first) so students immediately see where to focus.
+ */
+function computeMastery(results, keyFn) {
+  const groups = new Map();
+  for (const r of results) {
+    const key = keyFn(r) || '—';
+    const g = groups.get(key) || { key, earned: 0, total: 0, count: 0, review: 0 };
+    g.earned += r.result?.awarded || 0;
+    g.total += r.result?.maxPoints || 0;
+    g.count += 1;
+    if (NEEDS_REVIEW.has(r.status)) g.review += 1;
+    groups.set(key, g);
+  }
+  return [...groups.values()]
+    .map((g) => ({ ...g, pct: g.total > 0 ? Math.round((g.earned / g.total) * 100) : 0 }))
+    .sort((a, b) => a.pct - b.pct);
+}
+
+/** A single labelled mastery progress bar. */
+function MasteryBar({ label, pct, count, review }) {
+  const tone = pct >= 75 ? 'good' : pct >= 50 ? 'mid' : 'low';
+  return (
+    <div className="exam-results__mastery-row">
+      <div className="exam-results__mastery-head">
+        <span className="exam-results__mastery-label" title={label}>{label}</span>
+        <span className={`exam-results__mastery-pct exam-results__mastery-pct--${tone}`}>{pct}%</span>
+      </div>
+      <div className="exam-results__mastery-track">
+        <div className={`exam-results__mastery-fill exam-results__mastery-fill--${tone}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="exam-results__mastery-meta">
+        {count} question{count !== 1 ? 's' : ''}
+        {review > 0 && <> · <strong>{review} à revoir</strong></>}
+      </span>
+    </div>
+  );
+}
+
 /** Renders scaffold blank answers in the results view with per-blank grading */
-function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
-  let values = [];
+function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {  let values = [];
   try {
     const parsed = JSON.parse(answer);
     if (parsed && parsed.scaffold) values = parsed.scaffold;
@@ -91,6 +136,10 @@ const ExamResults = () => {
 
   const [stored, setStored] = useState(null);
   const [remoteLoading, setRemoteLoading] = useState(false);
+  // Detail list filter: 'all' | 'review' (mistakes) | 'mastered'
+  const [reviewFilter, setReviewFilter] = useState('all');
+  // Practice-your-mistakes session modal
+  const [practiceOpen, setPracticeOpen] = useState(false);
 
   // Prefer sessionStorage (fast), fallback to Firestore (cross-device)
   useEffect(() => {
@@ -193,6 +242,31 @@ const ExamResults = () => {
 
   const ringColor = pct >= 60 ? 'var(--success-500)' : pct >= 40 ? 'var(--warning-500)' : 'var(--danger-500)';
 
+  // ── Mastery breakdown (where to focus) ────────────────────────────────────
+  const masteryBySection = computeMastery(results, (r) => r.question.sectionTitle || 'Questions');
+  const masteryByType = computeMastery(results, (r) => questionTypeMeta(r.question.type).label);
+  const showSectionMastery = masteryBySection.length > 1;
+
+  // ── Review focus filter ───────────────────────────────────────────────────
+  const indexedResults = results.map((r, i) => ({ r, i }));
+  const reviewCount = results.filter((r) => NEEDS_REVIEW.has(r.status)).length;
+  const masteredCount = results.filter((r) => MASTERED.has(r.status)).length;
+  const filteredResults = indexedResults.filter(({ r }) => {
+    if (reviewFilter === 'review') return NEEDS_REVIEW.has(r.status);
+    if (reviewFilter === 'mastered') return MASTERED.has(r.status);
+    return true;
+  });
+
+  // Questions to re-practise (the ones not yet mastered)
+  const practiceItems = results.filter((r) => NEEDS_REVIEW.has(r.status) && r.question);
+
+  const focusOnMistakes = () => {
+    setReviewFilter('review');
+    setTimeout(() => {
+      document.querySelector('.exam-results__details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
   return (
     <section className="section exam-results">
       <div className="container">
@@ -280,11 +354,88 @@ const ExamResults = () => {
         )}
       </div>
 
+      {/* Mastery breakdown — where to focus next */}
+      <div className="exam-results__mastery">
+        <div className="exam-results__mastery-col">
+          <h2 className="exam-results__mastery-title">
+            <Target size={18} /> Maîtrise par compétence
+          </h2>
+          {masteryByType.map((g) => (
+            <MasteryBar key={g.key} label={g.key} pct={g.pct} count={g.count} review={g.review} />
+          ))}
+        </div>
+        {showSectionMastery && (
+          <div className="exam-results__mastery-col">
+            <h2 className="exam-results__mastery-title">
+              <BarChart3 size={18} /> Maîtrise par section
+            </h2>
+            {masteryBySection.map((g) => (
+              <MasteryBar key={g.key} label={g.key} pct={g.pct} count={g.count} review={g.review} />
+            ))}
+          </div>
+        )}
+        {reviewCount > 0 && (
+          <div className="exam-results__focus-cta">
+            <div className="exam-results__focus-text">
+              <strong>{reviewCount} question{reviewCount !== 1 ? 's' : ''} à revoir.</strong>{' '}
+              Concentrez-vous sur vos erreurs pour progresser plus vite.
+            </div>
+            <div className="exam-results__focus-actions">
+              <button className="button button--primary button--sm" onClick={() => setPracticeOpen(true)} type="button">
+                <Target size={15} /> M'entraîner ({reviewCount})
+              </button>
+              <button className="button button--ghost button--sm" onClick={focusOnMistakes} type="button">
+                <Eye size={15} /> Voir mes erreurs
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Detailed results */}
       <div className="exam-results__details">
-        <h2 className="exam-results__details-title">Détails par question</h2>
+        <div className="exam-results__details-head">
+          <h2 className="exam-results__details-title">Détails par question</h2>
+          <div className="exam-results__filter-chips" role="tablist" aria-label="Filtrer les questions">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={reviewFilter === 'all'}
+              className={`exam-results__filter-chip ${reviewFilter === 'all' ? 'exam-results__filter-chip--active' : ''}`}
+              onClick={() => setReviewFilter('all')}
+            >
+              Toutes ({results.length})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={reviewFilter === 'review'}
+              className={`exam-results__filter-chip exam-results__filter-chip--review ${reviewFilter === 'review' ? 'exam-results__filter-chip--active' : ''}`}
+              onClick={() => setReviewFilter('review')}
+              disabled={reviewCount === 0}
+            >
+              À revoir ({reviewCount})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={reviewFilter === 'mastered'}
+              className={`exam-results__filter-chip exam-results__filter-chip--mastered ${reviewFilter === 'mastered' ? 'exam-results__filter-chip--active' : ''}`}
+              onClick={() => setReviewFilter('mastered')}
+              disabled={masteredCount === 0}
+            >
+              Réussies ({masteredCount})
+            </button>
+          </div>
+        </div>
 
-        {results.map((r, i) => {
+        {filteredResults.length === 0 && (
+          <div className="card card--message exam-results__filter-empty">
+            <p>Aucune question dans cette catégorie.</p>
+          </div>
+        )}
+
+        {filteredResults.map(({ r, i }) => {
           const meta = questionTypeMeta(r.question.type);
           return (
             <div key={i} className={`card exam-results__item exam-results__item--${r.status}`}>
@@ -396,11 +547,26 @@ const ExamResults = () => {
         >
           <RefreshCw size={16} /> Recommencer cet examen
         </button>
+        {reviewCount > 0 && (
+          <button className="button button--secondary" onClick={() => setPracticeOpen(true)} type="button">
+            <Target size={16} /> M'entraîner sur mes {reviewCount} erreur{reviewCount !== 1 ? 's' : ''}
+          </button>
+        )}
         <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
           <PenLine size={16} /> Choisir un autre examen
         </button>
       </div>
       </div>
+
+      {/* Practice-your-mistakes session */}
+      {practiceOpen && practiceItems.length > 0 && (
+        <ReviewSession
+          items={practiceItems}
+          color={color}
+          subject={subject}
+          onClose={() => setPracticeOpen(false)}
+        />
+      )}
     </section>
   );
 };

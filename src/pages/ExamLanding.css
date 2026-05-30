@@ -251,3 +251,114 @@
     font-size: 0.7rem;
   }
 }
+
+/* ── Filière quick-pick band ────────────────────────────────────────────── */
+.track-pick {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1000px;
+  margin: clamp(1.5rem, 4vw, 2.5rem) auto 0;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(10, 102, 194, 0.10);
+}
+
+.track-pick__head {
+  text-align: center;
+  margin-bottom: 1.1rem;
+}
+
+.track-pick__title {
+  font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+  font-weight: 800;
+  color: var(--text-900, #0f172a);
+  margin: 0 0 0.35rem;
+}
+
+.track-pick__subtitle {
+  font-size: 0.9rem;
+  color: var(--text-600, #475569);
+  max-width: 52ch;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.track-pick__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.track-pick__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem 1rem;
+  text-align: left;
+  border-radius: 14px;
+  border: 1.5px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  overflow: hidden;
+}
+
+.track-pick__card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--track-color, #6366f1);
+  opacity: 0.55;
+  transition: width 0.18s ease, opacity 0.18s ease;
+}
+
+.track-pick__card:hover {
+  transform: translateY(-3px);
+  border-color: var(--track-color, #6366f1);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
+}
+
+.track-pick__card:hover::before { width: 6px; opacity: 0.9; }
+
+.track-pick__card--active {
+  border-color: var(--track-color, #6366f1);
+  background: color-mix(in srgb, var(--track-color, #6366f1) 7%, #fff);
+}
+
+.track-pick__card--active::before { width: 6px; opacity: 1; }
+
+.track-pick__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.track-pick__label {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-900, #0f172a);
+}
+
+.track-pick__desc {
+  font-size: 0.76rem;
+  color: var(--text-500, #64748b);
+  line-height: 1.4;
+}
+
+.track-pick__current {
+  margin-top: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--track-color, #6366f1);
+}
+
+@media (max-width: 520px) {
+  .track-pick__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

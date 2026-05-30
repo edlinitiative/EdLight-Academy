@@ -1,5 +1,7 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import useStore from '../contexts/store';
+import { TRACKS } from '../config/trackConfig';
 import './ExamLanding.css';
 
 const IconBook = () => (
@@ -58,6 +60,17 @@ const LEVELS = [
 ];
 
 const ExamLanding = () => {
+  const navigate = useNavigate();
+  const userTrack = useStore((s) => s.track);
+  const setTrack = useStore((s) => s.setTrack);
+  const setOnboardingCompleted = useStore((s) => s.setOnboardingCompleted);
+
+  const pickTrack = (code) => {
+    setTrack(code);
+    setOnboardingCompleted(true);
+    navigate('/exams/terminale');
+  };
+
   return (
     <div className="exam-landing">
       <header className="exam-landing__header">
@@ -90,6 +103,37 @@ const ExamLanding = () => {
           </Link>
         ))}
       </div>
+
+      {/* Filière quick-pick — sets the Bac track so scores are coefficient-weighted */}
+      <section className="track-pick" aria-label="Choisir votre filière du Baccalauréat">
+        <div className="track-pick__head">
+          <h2 className="track-pick__title">Vous préparez le Baccalauréat ?</h2>
+          <p className="track-pick__subtitle">
+            Choisissez votre filière pour des examens ciblés et des scores pondérés
+            selon les coefficients officiels.
+          </p>
+        </div>
+        <div className="track-pick__grid">
+          {TRACKS.map((t) => {
+            const active = userTrack === t.code;
+            return (
+              <button
+                key={t.code}
+                type="button"
+                className={`track-pick__card ${active ? 'track-pick__card--active' : ''}`}
+                style={{ '--track-color': t.color }}
+                onClick={() => pickTrack(t.code)}
+                aria-pressed={active}
+              >
+                <span className="track-pick__icon" aria-hidden="true">{t.icon}</span>
+                <span className="track-pick__label">{t.shortLabel}</span>
+                <span className="track-pick__desc">{t.description}</span>
+                {active && <span className="track-pick__current">Votre filière ✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 };

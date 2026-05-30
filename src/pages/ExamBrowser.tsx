@@ -5,6 +5,7 @@ import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
 import { normalizeExamCatalog } from '../utils/examCatalog';
+import { loadAllExamResultSummaries } from '../services/examResults';
 import {
   buildExamIndex,
   subjectColor,
@@ -12,6 +13,19 @@ import {
 } from '../utils/examUtils';
 
 const PAGE_SIZE = 24;
+
+/** Map the numeric difficulty (1–5) to a 3-tier label + tone for display. */
+const DIFFICULTY_META = {
+  1: { label: 'Facile', tier: 'easy' },
+  2: { label: 'Facile', tier: 'easy' },
+  3: { label: 'Moyen', tier: 'medium' },
+  4: { label: 'Difficile', tier: 'hard' },
+  5: { label: 'Difficile', tier: 'hard' },
+};
+
+function difficultyMeta(d) {
+  return DIFFICULTY_META[d] || null;
+}
 
 /** Fetch and cache the exam catalog (flat array of exam objects) */
 function useExamCatalog() {
@@ -25,6 +39,59 @@ function useExamCatalog() {
     },
     staleTime: Infinity, // static asset, never re-fetch
   });
+}
+
+/**
+ * Build a map of `examId -> { percentage, attempted }` from two sources:
+ *   1. Firestore (signed-in users, cross-device)
+ *   2. sessionStorage (works for everyone in the current session)
+ * Used to surface "already done / best score" badges on exam cards.
+ */
+function useExamAttempts() {
+  const userId = useStore((s) => s.user?.uid);
+
+  // Remote summaries for authenticated users
+  const { data: remote } = useQuery({
+    queryKey: ['exam-attempts', userId],
+    queryFn: () => loadAllExamResultSummaries(userId),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+
+  return useMemo(() => {
+    const map = {};
+    const add = (id, percentage, ms) => {
+      if (id == null) return;
+      const key = String(id);
+      const pct = typeof percentage === 'number' ? percentage : null;
+      const prev = map[key];
+      // Keep the best score seen across sources
+      if (!prev || (pct != null && (prev.percentage == null || pct > prev.percentage))) {
+        map[key] = { percentage: pct, attempted: true, submittedAtMs: ms ?? prev?.submittedAtMs ?? null };
+      }
+    };
+
+    // 1. Firestore summaries
+    if (remote) {
+      for (const [id, info] of Object.entries(remote)) {
+        add(id, info?.percentage, info?.submittedAtMs);
+      }
+    }
+
+    // 2. sessionStorage scan (exam-result-<id>)
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (!k || !k.startsWith('exam-result-')) continue;
+        const raw = sessionStorage.getItem(k);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        add(parsed.examId ?? k.slice('exam-result-'.length), parsed.result?.summary?.percentage, parsed.timestamp);
+      }
+    } catch { /* sessionStorage may be unavailable */ }
+
+    return map;
+  }, [remote]);
 }
 
 /** Map URL path segments to the raw level values used in exam_catalog.json */
@@ -46,6 +113,7 @@ const ExamBrowser = () => {
   const { level } = useParams(); // Get level from URL
 
   const { data: allExams, isLoading, error } = useExamCatalog();
+  const attempts = useExamAttempts();
 
   // Track state
   const userTrack = useStore((s) => s.track);
@@ -101,18 +169,24 @@ const ExamBrowser = () => {
   // Filter state
   const [subjectFilter, setSubjectFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
+  const [difficultyFilter, setDifficultyFilter] = useState(''); // '' | 'easy' | 'medium' | 'hard'
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState(''); // '' | 'todo' | 'done'
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const hasActiveFilters = subjectFilter || yearFilter || search.trim() || trackFilter;
+  const hasActiveFilters = subjectFilter || yearFilter || search.trim() || trackFilter || statusFilter || difficultyFilter;
 
   const clearFilters = useCallback(() => {
     setSubjectFilter('');
     setYearFilter('');
     setSearch('');
     setTrackFilter('');
+    setStatusFilter('');
+    setDifficultyFilter('');
     setVisibleCount(PAGE_SIZE);
   }, []);
+
+  const examKeyOf = useCallback((e) => String(e.exam_id ?? e._idx), []);
 
   // Filtered list
   const filtered = useMemo(() => {
@@ -129,6 +203,15 @@ const ExamBrowser = () => {
 
     if (subjectFilter) list = list.filter((e) => e._subject === subjectFilter);
     if (yearFilter) list = list.filter((e) => e._year === Number(yearFilter));
+    if (difficultyFilter) {
+      list = list.filter((e) => difficultyMeta(e.difficulty)?.tier === difficultyFilter);
+    }
+    if (statusFilter) {
+      list = list.filter((e) => {
+        const done = !!attempts[examKeyOf(e)];
+        return statusFilter === 'done' ? done : !done;
+      });
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -141,12 +224,12 @@ const ExamBrowser = () => {
 
     // Sort: newest first
     return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
-  }, [index, subjectFilter, yearFilter, search, trackFilter, isTerminale]);
+  }, [index, subjectFilter, yearFilter, difficultyFilter, search, trackFilter, isTerminale, statusFilter, attempts, examKeyOf]);
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [subjectFilter, yearFilter, search, trackFilter]);
+  }, [subjectFilter, yearFilter, difficultyFilter, search, trackFilter, statusFilter]);
 
   // Paginated subset
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
@@ -156,8 +239,9 @@ const ExamBrowser = () => {
   const summary = useMemo(() => {
     const totalQ = filtered.reduce((s, e) => s + (e._questionCount || 0), 0);
     const gradable = filtered.reduce((s, e) => s + (e._autoGradable || 0), 0);
-    return { exams: filtered.length, totalQ, gradable };
-  }, [filtered]);
+    const done = filtered.reduce((s, e) => s + (attempts[examKeyOf(e)] ? 1 : 0), 0);
+    return { exams: filtered.length, totalQ, gradable, done };
+  }, [filtered, attempts, examKeyOf]);
 
   // Unique subjects and years for filter dropdowns (from level-filtered index)
   const subjects = index?.subjects || [];
@@ -241,6 +325,22 @@ const ExamBrowser = () => {
                   {years.map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
+                </select>
+              </div>
+
+              {/* Difficulty */}
+              <div className="exam-browser__field">
+                <span className="exam-browser__label">Difficulté</span>
+                <select
+                  className="exam-browser__select"
+                  value={difficultyFilter}
+                  onChange={(e) => setDifficultyFilter(e.target.value)}
+                  aria-label="Filtrer par difficulté"
+                >
+                  <option value="">Toutes</option>
+                  <option value="easy">Facile</option>
+                  <option value="medium">Moyen</option>
+                  <option value="hard">Difficile</option>
                 </select>
               </div>
 
@@ -333,6 +433,37 @@ const ExamBrowser = () => {
                   {summary.gradable.toLocaleString()} auto-corrigée{summary.gradable !== 1 ? 's' : ''}
                 </span>
               )}
+              {summary.done > 0 && (
+                <span className="exam-browser__stat-chip exam-browser__stat-chip--done">
+                  {summary.done} déjà fait{summary.done !== 1 ? 's' : ''}
+                </span>
+              )}
+
+              {/* Status filter — done / to do */}
+              <div className="exam-browser__status-filter" role="group" aria-label="Filtrer par statut">
+                <button
+                  type="button"
+                  className={`exam-browser__status-chip ${!statusFilter ? 'exam-browser__status-chip--active' : ''}`}
+                  onClick={() => setStatusFilter('')}
+                >
+                  Tous
+                </button>
+                <button
+                  type="button"
+                  className={`exam-browser__status-chip ${statusFilter === 'todo' ? 'exam-browser__status-chip--active' : ''}`}
+                  onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
+                >
+                  À faire
+                </button>
+                <button
+                  type="button"
+                  className={`exam-browser__status-chip ${statusFilter === 'done' ? 'exam-browser__status-chip--active' : ''}`}
+                  onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
+                  disabled={summary.done === 0 && statusFilter !== 'done'}
+                >
+                  Terminés
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -358,6 +489,7 @@ const ExamBrowser = () => {
                 <ExamCard
                   key={exam.exam_id || exam._idx}
                   exam={exam}
+                  attempt={attempts[examKeyOf(exam)]}
                   onClick={() => {
                     const id = exam.exam_id || exam._idx;
                     navigate(`/exams/${level}/${id}`);
@@ -403,7 +535,7 @@ const ExamBrowser = () => {
 
 // ── Exam Card Component ──────────────────────────────────────────────────────
 
-function ExamCard({ exam, onClick }) {
+function ExamCard({ exam, onClick, attempt }) {
   const color = subjectColor(exam._subject);
   const stats = {
     total: exam._questionCount,
@@ -417,12 +549,18 @@ function ExamCard({ exam, onClick }) {
 
   const title = exam._title || exam.exam_title || 'Examen';
 
+  // Attempt badge: best score (if known) or a generic "done" marker
+  const pct = attempt && typeof attempt.percentage === 'number' ? attempt.percentage : null;
+  const scoreTone = pct == null ? '' : pct >= 60 ? '--good' : pct >= 40 ? '--mid' : '--low';
+
+  const diff = difficultyMeta(exam.difficulty);
+
   return (
     <button
-      className="card exam-card"
+      className={`card exam-card ${attempt ? 'exam-card--done' : ''}`}
       onClick={onClick}
       type="button"
-      aria-label={`${exam._subject}, ${title} (${exam._year || ''})`}
+      aria-label={`${exam._subject}, ${title} (${exam._year || ''})${attempt ? ', déjà fait' : ''}`}
       style={{ '--exam-accent': color }}
     >
       <div className="exam-card__header">
@@ -435,12 +573,24 @@ function ExamCard({ exam, onClick }) {
         {exam._year > 0 && <span className="exam-card__year">{exam._year}</span>}
       </div>
 
+      {attempt && (
+        <div className={`exam-card__attempt exam-card__attempt${scoreTone}`}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+          {pct != null ? `Meilleur score : ${pct}%` : 'Déjà fait'}
+        </div>
+      )}
+
       <h3 className="exam-card__title" title={title}>{title}</h3>
 
       <div className="exam-card__meta">
         <span className="exam-card__level">{exam._level}</span>
         {exam.duration_minutes > 0 && (
           <span className="exam-card__duration">{exam.duration_minutes} min</span>
+        )}
+        {diff && (
+          <span className={`exam-card__difficulty exam-card__difficulty--${diff.tier}`}>
+            {diff.label}
+          </span>
         )}
         {exam.language && (
           <span className="exam-card__lang">
@@ -486,7 +636,7 @@ function ExamCard({ exam, onClick }) {
       )}
 
       <div className="exam-card__cta">
-        <span className="exam-card__cta-text">Commencer →</span>
+        <span className="exam-card__cta-text">{attempt ? 'Refaire →' : 'Commencer →'}</span>
       </div>
     </button>
   );

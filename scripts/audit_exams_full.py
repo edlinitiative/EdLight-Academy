@@ -112,9 +112,16 @@ def audit_exam(args):
             if re.search(r'\b(in the text|from the text|dans le texte|du texte|the passage|according to the text|d.après le texte)\b', q.get('question',''), re.I)
         )
         if read_text_kw and not passage and len(instr) < 300 and text_refs_in_qs > 0:
-            add(SEV_HIGH, 'INSTRUCTIONS',
-                f"Section references reading a text ({text_refs_in_qs} Qs cite it) but has no passage or long instructions",
-                si)
+            # If the section is explicitly flagged as having a non-digitized
+            # passage, this is known/handled (UI shows an honest notice) — INFO.
+            if sec.get('passage_missing'):
+                add(SEV_INFO, 'INSTRUCTIONS',
+                    f"Source passage not digitized (handled): {text_refs_in_qs} Qs reference it",
+                    si)
+            else:
+                add(SEV_HIGH, 'INSTRUCTIONS',
+                    f"Section references reading a text ({text_refs_in_qs} Qs cite it) but has no passage or long instructions",
+                    si)
 
         # ── Question-level checks ────────────────────────────────────────
         for qi, q in enumerate(qs):
@@ -226,10 +233,17 @@ def audit_exam(args):
                     if len(model_answer.strip()) < 10:
                         add(SEV_MEDIUM, 'AI_GRADING',
                             f'model_answer is very short ({len(model_answer)} chars)', si, qnum)
-                    # Check if model_answer is just the question repeated
-                    if normalize(model_answer)[:50] == normalize(qtext)[:50] and len(model_answer) > 20:
-                        add(SEV_HIGH, 'AI_GRADING',
-                            'model_answer appears to be a copy of the question text', si, qnum)
+                    # Check if model_answer is JUST the question with no real answer added.
+                    # A legitimate "restate the question, then answer it" model answer starts
+                    # with the question text but adds substantial content — that is good practice
+                    # and must NOT be flagged. We only flag when almost nothing is added.
+                    nm, nq = normalize(model_answer), normalize(qtext)
+                    if len(model_answer) > 20 and nm[:40] == nq[:40]:
+                        added = len(nm) - len(nq) if nm.startswith(nq) else len(nm) - 40
+                        if added < 15:
+                            add(SEV_HIGH, 'AI_GRADING',
+                                'model_answer is essentially a copy of the question with no answer added',
+                                si, qnum)
 
                 # Scaffold quality
                 if scaffold_text:
