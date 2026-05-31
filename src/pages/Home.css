@@ -5,13 +5,13 @@
    ========================================================== */
 
 .lp {
-  --lp-paper-50:  #faf9f7;
-  --lp-paper-100: #f6f5f4;
-  --lp-paper-200: #e5e3df;
-  --lp-paper-300: #c8c4be;
-  --lp-ink-400:   #787671;
-  --lp-ink-700:   #4a4843;
-  --lp-ink-900:   #1a1a1a;
+  --lp-paper-50:  var(--background);
+  --lp-paper-100: var(--surface-muted);
+  --lp-paper-200: var(--border);
+  --lp-paper-300: var(--border-strong);
+  --lp-ink-400:   var(--text-500);
+  --lp-ink-700:   var(--text-600);
+  --lp-ink-900:   var(--text-900);
   --lp-ink-deep:  #000000;
 
   /* Notion warm-minimal purple accent (matches platform-wide theme) */
@@ -19,7 +19,7 @@
   --lp-accent-hover:  #4534b3;
   --lp-accent-soft:   #e0ddf7;
 
-  --lp-font-sans: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --lp-font-sans: var(--font-sans);
   --lp-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   background: var(--lp-paper-50);
@@ -30,13 +30,13 @@
 }
 
 [data-theme="dark"] .lp {
-  --lp-paper-50:  #191918;
-  --lp-paper-100: #1f1f1e;
-  --lp-paper-200: #2a2a28;
-  --lp-paper-300: #3a3a37;
-  --lp-ink-400:   #807d75;
-  --lp-ink-700:   #b8b5ad;
-  --lp-ink-900:   #ededec;
+  --lp-paper-50:  var(--background);
+  --lp-paper-100: var(--surface-muted);
+  --lp-paper-200: var(--border);
+  --lp-paper-300: var(--border-strong);
+  --lp-ink-400:   var(--text-500);
+  --lp-ink-700:   var(--text-600);
+  --lp-ink-900:   var(--text-900);
   --lp-ink-deep:  #ffffff;
   --lp-accent:        #8b7ce8;
   --lp-accent-hover:  #9b8ff0;
@@ -97,22 +97,22 @@
   padding: 0.75rem 1.5rem;
   font-size: 0.95rem;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 150ms, color 150ms, border-color 150ms;
+  transition: transform 180ms ease, background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
   white-space: nowrap;
 }
 .lp-btn--primary {
   background: var(--lp-accent);
   color: #fff;
 }
-.lp-btn--primary:hover { background: var(--lp-accent-hover); }
+.lp-btn--primary:hover { background: var(--lp-accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .lp-btn--ghost {
   background: transparent;
   color: var(--lp-ink-900);
   border-color: var(--lp-paper-200);
 }
-.lp-btn--ghost:hover { border-color: var(--lp-ink-900); }
+.lp-btn--ghost:hover { border-color: color-mix(in srgb, var(--lp-accent) 30%, var(--lp-paper-200)); color: var(--lp-accent); background: color-mix(in srgb, var(--lp-accent) 7%, transparent); }
 .lp-btn--lg { padding: 0.95rem 1.85rem; font-size: 1rem; }
 
 .lp-link {
@@ -316,12 +316,13 @@
 
 .lp-pillar {
   position: relative;
-  background: var(--lp-paper-50);
+  background: var(--surface);
   padding: 1.85rem 1.75rem;
   display: flex; flex-direction: column; gap: 0.85rem;
-  transition: background-color 200ms;
+  border-radius: var(--radius-lg);
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
-.lp-pillar:hover { background: var(--lp-paper-100); }
+.lp-pillar:hover { background: var(--surface); transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
 .lp-pillar__head {
   display: flex; align-items: center; justify-content: space-between;
@@ -366,15 +367,23 @@
 
 .lp-course {
   display: flex; flex-direction: column;
-  background: var(--lp-paper-50);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
   border: 1px solid var(--lp-paper-200);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: border-color 200ms, transform 200ms;
+  overflow: hidden;
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
 }
 .lp-course:hover {
-  border-color: var(--lp-ink-900);
+  border-color: color-mix(in srgb, var(--lp-accent) 32%, var(--lp-paper-200));
   transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
+.lp-course:focus-visible { outline: 2px solid var(--lp-accent); outline-offset: 3px; box-shadow: var(--focus-ring); }
 
 .lp-course__media {
   position: relative;
@@ -464,8 +473,10 @@
 .lp-experience__panel { position: relative; }
 .lp-panel {
   position: relative;
-  background: var(--lp-paper-50);
+  background: var(--surface);
   border: 1px solid var(--lp-paper-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 .lp-panel::before {
   content: "";

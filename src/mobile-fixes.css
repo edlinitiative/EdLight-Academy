@@ -37,8 +37,8 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: white;
-    border-bottom: 1px solid #f3f4f6;
+    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border);
     box-shadow: none;
   }
   
@@ -84,7 +84,7 @@ body {
     height: 40px;
     border: none;
     background: transparent;
-    color: #111827;
+    color: var(--text-900);
     cursor: pointer;
     padding: 0;
     margin: 0;
@@ -105,7 +105,7 @@ body {
     height: calc(var(--vvh, 1vh) * 100);
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
-    background: white;
+    background: var(--surface);
     box-shadow: none;
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
     display: flex;
@@ -128,9 +128,9 @@ body {
     align-items: center;
     justify-content: flex-end;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    background: white;
+    background: var(--surface);
     position: sticky;
     top: 0;
     z-index: 1;
@@ -144,14 +144,14 @@ body {
     justify-content: center;
     border: none;
     background: transparent;
-    color: #111827;
+    color: var(--text-900);
     cursor: pointer;
     padding: 0;
     border-radius: 10px;
   }
 
   .nav-links__close:active {
-    background: #fafafa;
+    background: var(--surface-muted);
   }
   
   .nav-links--mobile-open {
@@ -163,7 +163,7 @@ body {
     padding: clamp(1rem, 3.5vw, 1.125rem) clamp(1.15rem, 4.6vw, 1.5rem);
     font-size: clamp(0.98rem, 3.2vw, 1.05rem);
     font-weight: 500;
-    color: #6b7280;
+    color: var(--text-600);
     border-radius: 0;
     margin: 0;
     display: flex;
@@ -171,12 +171,12 @@ body {
     gap: 0;
     transition: all 0.15s ease;
     border: none;
-    border-bottom: 1px solid #f3f4f6;
-    background: white;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
   }
   
   .nav-link:active {
-    background: #fafafa;
+    background: var(--surface-muted);
   }
   
   .nav-link.active {
@@ -191,19 +191,19 @@ body {
     display: flex;
     margin-top: 0;
     padding-top: 1.125rem;
-    border-top: 1px solid #f3f4f6;
+    border-top: 1px solid var(--border);
   }
   
   .nav-link--mobile-only:first-of-type {
     margin-top: 1rem;
-    border-top: 4px solid #f3f4f6;
+    border-top: 4px solid var(--border);
   }
   
   .nav-link--button {
-    background: white;
+    background: var(--surface);
     border: none;
-    border-bottom: 1px solid #f3f4f6;
-    color: #6b7280;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-600);
     text-align: left;
     justify-content: flex-start;
     cursor: pointer;
@@ -211,7 +211,7 @@ body {
   }
   
   .nav-link--button:active {
-    background: #fafafa;
+    background: var(--surface-muted);
   }
   
   .nav-link--primary {
@@ -1111,13 +1111,13 @@ body {
   }
   
   .lesson-card__nav-group--actions .button--ghost {
-    background: white;
-    border: 1.5px solid #e2e8f0;
-    color: #334155;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text-700);
   }
   
   .lesson-card__nav-group--actions .button--ghost:active {
-    background: #f8fafc;
+    background: var(--surface-muted);
     transform: scale(0.98);
   }
   

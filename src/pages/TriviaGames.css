@@ -97,10 +97,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: saturate(160%) blur(18px);
-  -webkit-backdrop-filter: saturate(160%) blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
   text-decoration: none;
@@ -108,9 +106,7 @@
   cursor: pointer;
   text-align: left;
   font: inherit;
-  box-shadow:
-    0 1px 2px rgba(86, 69, 212, 0.04),
-    0 6px 24px rgba(86, 69, 212, 0.08);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -118,11 +114,9 @@
 }
 
 .trivia-cat-card:hover {
-  transform: translateY(-7px);
-  box-shadow:
-    0 2px 4px rgba(86, 69, 212, 0.06),
-    0 20px 56px rgba(86, 69, 212, 0.14);
-  border-color: rgba(86, 69, 212, 0.22);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--primary-500) 28%, var(--border));
 }
 
 .trivia-cat-card:focus-visible {

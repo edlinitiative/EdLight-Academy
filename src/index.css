@@ -13654,3 +13654,259 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .lp-hero__chip .lucide-inline,
 .lp-chip .lucide-inline,
 .chip .lucide-inline { margin-right: 0.35rem; }
+
+/* ============================================================
+   EdLight UI System — Cohesion pass
+   A final, intentional layer that makes the platform feel like
+   one warm-minimal education product instead of several legacy
+   design passes. Keep this layer token-driven and low-drama.
+   ============================================================ */
+
+:root {
+	--lp-accent: var(--primary-500);
+	--lp-accent-2: #d6b6f6;
+	--lp-accent-3: var(--success-500);
+	--lp-radius: var(--radius-lg);
+	--interactive-lift: translateY(-2px);
+	--focus-ring: 0 0 0 4px color-mix(in srgb, var(--primary-500) 16%, transparent);
+}
+
+[data-theme="dark"] {
+	--lp-accent: var(--primary-500);
+	--lp-accent-2: #3b3158;
+	--lp-accent-3: #34d399;
+}
+
+body {
+	background:
+		radial-gradient(900px 520px at 12% -8%, color-mix(in srgb, var(--primary-500) 7%, transparent) 0%, transparent 62%),
+		radial-gradient(700px 420px at 96% 2%, color-mix(in srgb, var(--primary-100) 45%, transparent) 0%, transparent 58%),
+		var(--background) !important;
+}
+
+[data-theme="dark"] body {
+	background:
+		radial-gradient(900px 520px at 12% -8%, color-mix(in srgb, var(--primary-500) 12%, transparent) 0%, transparent 62%),
+		radial-gradient(700px 420px at 96% 2%, color-mix(in srgb, var(--primary-100) 14%, transparent) 0%, transparent 58%),
+		var(--background) !important;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+	outline: 2px solid var(--primary-500);
+	outline-offset: 3px;
+	box-shadow: var(--focus-ring);
+}
+
+.page-header {
+	padding: clamp(0.25rem, 1vw, 0.5rem) 0 clamp(0.8rem, 2vw, 1.2rem) !important;
+}
+
+.page-header__eyebrow,
+.exam-landing__eyebrow,
+.trivia-landing__eyebrow {
+	border-radius: 999px !important;
+	background: color-mix(in srgb, var(--primary-500) 9%, var(--surface)) !important;
+	border: 1px solid color-mix(in srgb, var(--primary-500) 18%, var(--border)) !important;
+	color: var(--primary-600) !important;
+	font-family: var(--font-mono) !important;
+	font-size: 0.68rem !important;
+	font-weight: 650 !important;
+	letter-spacing: 0.12em !important;
+}
+
+.page-header__title,
+.exam-landing__title,
+.trivia-landing__title,
+.card__title,
+.course-card__title,
+.metric-card__value,
+.quiz-card__heading,
+.exam-card__title {
+	font-family: var(--font-sans) !important;
+	letter-spacing: -0.025em !important;
+}
+
+.card,
+.metric-card,
+.course-card,
+.quiz-card,
+.exam-card,
+.exam-browser__filters-card,
+.level-card,
+.trivia-cat-card,
+.trivia-quiz__question-card,
+.trivia-round-picker,
+.course-modal,
+.modal,
+.lp-course,
+.lp-pillar,
+.lp-panel {
+	background: var(--surface) !important;
+	border: 1px solid var(--border) !important;
+	border-radius: var(--radius-lg) !important;
+	box-shadow: var(--shadow-sm) !important;
+}
+
+.metric-card {
+	background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface-muted) 55%, var(--surface))) !important;
+}
+
+a.card:hover,
+button.card:hover,
+.card--interactive:hover,
+.course-card:hover,
+.exam-card:hover,
+.level-card:hover,
+.trivia-cat-card:hover,
+.lp-course:hover,
+.lp-pillar:hover {
+	transform: var(--interactive-lift) !important;
+	border-color: color-mix(in srgb, var(--primary-500) 32%, var(--border)) !important;
+	box-shadow: var(--shadow-md) !important;
+}
+
+.course-card__description,
+.quiz-card__prompt,
+.exam-card__meta,
+.level-card__description,
+.trivia-cat-card__description {
+	color: var(--text-600) !important;
+}
+
+.button,
+.lp-btn,
+.course-card__cta,
+.trivia-back-btn,
+.trivia-round-btn {
+	border-radius: var(--radius-sm) !important;
+	font-weight: 600 !important;
+	transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease !important;
+}
+
+.button--primary,
+.lp-btn--primary,
+.quiz-page .quiz-card__controls .button--primary,
+.course-card__actions .button--primary {
+	background: var(--primary-500) !important;
+	border-color: var(--primary-500) !important;
+	color: #fff !important;
+	box-shadow: var(--shadow-sm) !important;
+}
+
+.button--primary:hover,
+.lp-btn--primary:hover,
+.quiz-page .quiz-card__controls .button--primary:hover,
+.course-card__actions .button--primary:hover {
+	background: var(--primary-700) !important;
+	border-color: var(--primary-700) !important;
+	transform: translateY(-1px) !important;
+	box-shadow: var(--shadow-md) !important;
+}
+
+.button--ghost,
+.button--secondary,
+.lp-btn--ghost,
+.course-card__cta,
+.trivia-back-btn,
+.trivia-round-btn {
+	background: var(--surface) !important;
+	border: 1px solid var(--border) !important;
+	color: var(--text-800) !important;
+	box-shadow: none !important;
+}
+
+.button--ghost:hover,
+.button--secondary:hover,
+.lp-btn--ghost:hover,
+.course-card__cta:hover,
+.trivia-back-btn:hover,
+.trivia-round-btn:hover {
+	background: color-mix(in srgb, var(--primary-500) 7%, var(--surface)) !important;
+	border-color: color-mix(in srgb, var(--primary-500) 28%, var(--border)) !important;
+	color: var(--primary-600) !important;
+}
+
+.filter-group {
+	background: color-mix(in srgb, var(--surface) 92%, transparent) !important;
+	border: 1px solid var(--border) !important;
+	box-shadow: var(--shadow-sm) !important;
+}
+
+.filter-pill,
+.pill-tab,
+.segmented-tab {
+	border-radius: 999px !important;
+	font-weight: 600 !important;
+}
+
+.filter-pill--active,
+.filter-group .filter-pill--active,
+.filter-pill.filter-pill--active,
+.pill-tab-active,
+.segmented-tab-active {
+	background: var(--primary-500) !important;
+	border-color: var(--primary-500) !important;
+	color: #fff !important;
+	box-shadow: var(--shadow-sm) !important;
+}
+
+.input-field,
+input,
+select,
+textarea {
+	border-radius: var(--radius-sm) !important;
+}
+
+.input-field:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	border-color: var(--primary-500) !important;
+	box-shadow: var(--focus-ring) !important;
+}
+
+.exam-landing,
+.trivia-landing {
+	background:
+		radial-gradient(760px 420px at 12% -5%, color-mix(in srgb, var(--primary-500) 7%, transparent), transparent 64%),
+		var(--background) !important;
+}
+
+.exam-landing::before,
+.trivia-landing::before {
+	opacity: 0.55;
+}
+
+.level-card__accent,
+.trivia-cat-card__accent {
+	height: 3px !important;
+}
+
+.about-cta {
+	background:
+		radial-gradient(620px 300px at 24% 10%, color-mix(in srgb, var(--primary-100) 38%, transparent), transparent 62%),
+		linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--primary-50) 62%, var(--surface))) !important;
+	border: 1px solid color-mix(in srgb, var(--primary-500) 18%, var(--border)) !important;
+	color: var(--text-900) !important;
+	box-shadow: var(--shadow-lg) !important;
+}
+
+.about-cta .section__title,
+.about-cta .text-muted {
+	color: var(--text-900) !important;
+}
+
+.about-cta .button--primary {
+	background: var(--primary-500) !important;
+	color: #fff !important;
+	box-shadow: var(--shadow-sm) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		scroll-behavior: auto !important;
+		transition-duration: 0.001ms !important;
+	}
+}

@@ -185,7 +185,7 @@ export default function Home() {
 
           <div className="lp-courses__grid">
             {featured.map((c, i) => (
-              <article key={c.id} className="lp-course" data-reveal style={{ transitionDelay: `${i * 60}ms` }} onClick={() => navigate('/courses')}>
+              <button key={c.id} type="button" className="lp-course" data-reveal style={{ transitionDelay: `${i * 60}ms` }} onClick={() => navigate('/courses')} aria-label={`${t('Découvrir', 'Dekouvri')} ${c.name}`}>
                 <div className="lp-course__media">
                   <img src={subjectThumbs[c.subject]} alt={c.name} />
                   <span className={`lp-course__badge lp-course__badge--${c.subject.toLowerCase()}`}>{c.level}</span>
@@ -198,7 +198,7 @@ export default function Home() {
                     <span className="lp-course__cta">{t('Découvrir →', 'Dekouvri →')}</span>
                   </div>
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         </div>
