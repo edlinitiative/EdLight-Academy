@@ -4,7 +4,7 @@ import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
 export function CourseCard({ course, onPreview }) {
-  const { enrolledCourses, progress, isAuthenticated } = useStore();
+  const { enrolledCourses, progress } = useStore();
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -40,11 +40,8 @@ export function CourseCard({ course, onPreview }) {
   const durationLabel = formatDuration(course.duration);
 
   const handleStart = () => {
-    if (!isAuthenticated) {
-      useStore.getState().toggleAuthModal();
-      return;
-    }
-    // Navigate to the course detail page
+    // Navigate to the course detail page. Signed-out visitors may preview a
+    // few videos for free before being asked to create an account.
     navigate(`/courses/${course.id}`);
   };
 
@@ -92,7 +89,7 @@ export function CourseCard({ course, onPreview }) {
 }
 
 export function CourseModal({ course, onClose, onEnroll }) {
-  const { isAuthenticated, enrolledCourses } = useStore();
+  const { enrolledCourses } = useStore();
   const navigate = useNavigate();
   const isEnrolled = enrolledCourses.some(c => c.id === course?.id);
   const { t, i18n } = useTranslation();
@@ -123,10 +120,6 @@ export function CourseModal({ course, onClose, onEnroll }) {
   };
 
   const handleEnroll = () => {
-    if (!isAuthenticated) {
-      useStore.getState().toggleAuthModal();
-      return;
-    }
     onEnroll(course);
   };
 

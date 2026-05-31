@@ -9,7 +9,7 @@ import Comments from '../components/Comments';
 import FlashcardDeck from '../components/FlashcardDeck';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
-import useStore from '../contexts/store';
+import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
 export default function CourseDetail() {
@@ -24,6 +24,7 @@ export default function CourseDetail() {
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
   const [showComments, setShowComments] = useState(false); // Mobile comments toggle
   const { isAuthenticated, enrolledCourses, user } = useStore();
+  const freeVideoIds = useStore((s) => s.freeVideoIds);
   const { progress } = useCourseProgress(courseId);
 
   const course = data?.courses?.find((c) => c.id === courseId);
@@ -87,11 +88,32 @@ export default function CourseDetail() {
   const nextTarget = findNextTarget(activeModule, activeLesson);
 
   const hydrated = useStore(s => s.hydrated);
+
+  // Free-preview gating: signed-out visitors may watch up to FREE_VIDEO_LIMIT
+  // distinct video lessons before being asked to create an account.
+  const isVideoLesson = !!activeLessonData
+    && activeLessonData.type !== 'quiz'
+    && !!primaryVideo;
+  const currentVideoKey = isVideoLesson ? (activeLessonData?.id || primaryVideoRaw) : null;
+  const isCurrentVideoCounted = !!currentVideoKey && freeVideoIds.includes(currentVideoKey);
+  const videoLocked = !isAuthenticated
+    && isVideoLesson
+    && !isCurrentVideoCounted
+    && freeVideoIds.length >= FREE_VIDEO_LIMIT;
+  const freeVideosRemaining = Math.max(0, FREE_VIDEO_LIMIT - freeVideoIds.length);
+
   useEffect(() => {
-    if (hydrated && !isAuthenticated) {
-      useStore.getState().toggleAuthModal();
+    if (!hydrated || isAuthenticated) return;
+    if (!isVideoLesson || !currentVideoKey) return;
+    if (isCurrentVideoCounted) return;
+    if (freeVideoIds.length >= FREE_VIDEO_LIMIT) {
+      // Reached the free limit on a brand-new video — prompt sign up.
+      useStore.getState().setShowAuthModal(true);
+      return;
     }
-  }, [hydrated, isAuthenticated]);
+    // Count this video toward the free preview allowance.
+    useStore.getState().recordFreeVideoView(currentVideoKey);
+  }, [hydrated, isAuthenticated, isVideoLesson, currentVideoKey, isCurrentVideoCounted, freeVideoIds.length]);
 
   // Prevent background page scrolling when the mobile course drawer is open
   useEffect(() => {
@@ -254,7 +276,23 @@ export default function CourseDetail() {
               </header>
 
               <div className={`lesson-card__media ${activeLessonData?.type === 'quiz' ? 'lesson-card__media--quiz' : ''}`}>
-                {activeLessonData?.type === 'quiz' ? (
+                {videoLocked ? (
+                  <div className="lesson-card__gate">
+                    <div className="lesson-card__gate-icon" aria-hidden>🔒</div>
+                    <h3 className="lesson-card__gate-title">
+                      {t('courses.gateTitle', 'Créez un compte gratuit pour continuer')}
+                    </h3>
+                    <p className="lesson-card__gate-text">
+                      {t('courses.gateText', 'Vous avez profité de vos 3 vidéos gratuites. Inscrivez-vous gratuitement pour débloquer tous les cours, quiz et examens.')}
+                    </p>
+                    <button
+                      className="button button--primary button--pill"
+                      onClick={() => useStore.getState().setShowAuthModal(true)}
+                    >
+                      {t('courses.gateCta', 'Créer un compte gratuit')}
+                    </button>
+                  </div>
+                ) : activeLessonData?.type === 'quiz' ? (
                   <div className="lesson-card__quizwrap">
                     <UnitQuiz
                       subjectCode={course?.code}
@@ -287,6 +325,24 @@ export default function CourseDetail() {
                   </div>
                 )}
               </div>
+
+              {!isAuthenticated && !videoLocked && isVideoLesson && (
+                <div className="lesson-card__free-banner">
+                  {freeVideosRemaining > 0
+                    ? t('courses.freeRemaining', {
+                        count: freeVideosRemaining,
+                        defaultValue: `Aperçu gratuit · ${freeVideosRemaining} vidéo(s) restante(s). Inscrivez-vous pour un accès illimité.`,
+                      })
+                    : t('courses.freeLast', 'Dernière vidéo gratuite. Inscrivez-vous pour un accès illimité.')}
+                  <button
+                    type="button"
+                    className="lesson-card__free-banner-link"
+                    onClick={() => useStore.getState().setShowAuthModal(true)}
+                  >
+                    {t('courses.signUpFree', 'Créer un compte gratuit')}
+                  </button>
+                </div>
+              )}
 
               {activeDescription && (
                 <p className="lesson-card__description text-muted">

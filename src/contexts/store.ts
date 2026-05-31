@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Number of course videos an anonymous (signed-out) visitor may watch for free
+// before being asked to create an account.
+export const FREE_VIDEO_LIMIT = 3;
+
 const useStore = create(
   persist(
     (set, get) => ({
@@ -17,6 +21,7 @@ const useStore = create(
       enrolledCourses: [],
       progress: {}, // videoId -> { completed: boolean, watchTime: number }
       quizAttempts: {}, // quizId -> [{ score: number, date: Date }]
+      freeVideoIds: [], // distinct video lessons watched while signed out (free preview)
       
       // UI state
       currentCourse: null,
@@ -54,9 +59,18 @@ const useStore = create(
             [quizId]: [...(state.quizAttempts[quizId] || []), attempt]
           }
         })),
+
+      // Track a distinct video watched by a signed-out visitor (free preview).
+      recordFreeVideoView: (videoId) =>
+        set((state) => {
+          if (!videoId || state.isAuthenticated) return state;
+          if (state.freeVideoIds.includes(videoId)) return state;
+          return { freeVideoIds: [...state.freeVideoIds, videoId] };
+        }),
         
       setCurrentCourse: (course) => set({ currentCourse: course }),
       toggleAuthModal: () => set((state) => ({ showAuthModal: !state.showAuthModal })),
+      setShowAuthModal: (show) => set({ showAuthModal: !!show }),
       toggleUserDropdown: () => set((state) => ({ showUserDropdown: !state.showUserDropdown })),
       setShowUserDropdown: (show) => set({ showUserDropdown: show }),
       toggleCourseModal: () => set((state) => ({ showCourseModal: !state.showCourseModal })),
@@ -88,6 +102,7 @@ const useStore = create(
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,
         quizAttempts: state.quizAttempts,
+        freeVideoIds: state.freeVideoIds,
         hydrated: state.hydrated
       })
       // Note: Avoid using onRehydrateStorage here because set/get are out of scope.

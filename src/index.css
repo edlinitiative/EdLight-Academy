@@ -1519,6 +1519,68 @@ textarea.input-field {
 	color: var(--text-500);
 }
 
+/* Free-preview gate (shown to signed-out visitors after the free limit) */
+.lesson-card__gate {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.85rem;
+	height: 100%;
+	min-height: 280px;
+	padding: 2.5rem 1.5rem;
+	text-align: center;
+	background: var(--surface);
+}
+.lesson-card__gate-icon {
+	font-size: 2.25rem;
+	line-height: 1;
+}
+.lesson-card__gate-title {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--text-900);
+}
+.lesson-card__gate-text {
+	margin: 0;
+	max-width: 38ch;
+	color: var(--text-600);
+	line-height: 1.5;
+}
+.lesson-card__gate .button {
+	margin-top: 0.35rem;
+}
+
+/* Free-preview reminder banner (signed-out, still within free limit) */
+.lesson-card__free-banner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.85rem;
+	margin-top: 0.85rem;
+	padding: 0.7rem 0.95rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface-muted, var(--background));
+	color: var(--text-600);
+	font-size: 0.9rem;
+}
+.lesson-card__free-banner-link {
+	margin-left: auto;
+	border: none;
+	background: none;
+	padding: 0;
+	color: var(--primary-500);
+	font-weight: 600;
+	cursor: pointer;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+.lesson-card__free-banner-link:hover {
+	color: var(--primary-600, var(--primary-500));
+}
+
 .lesson-card__header {
 	display: grid;
 	gap: 0.6rem;

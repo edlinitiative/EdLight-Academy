@@ -63,11 +63,9 @@ export default function Courses() {
   });
 
   const handleEnroll = (course) => {
-    if (!isAuthenticated) {
-      useStore.getState().toggleAuthModal();
-      return;
+    if (isAuthenticated) {
+      useStore.getState().enrollInCourse(course);
     }
-    useStore.getState().enrollInCourse(course);
     setSelectedCourse(null);
     navigate(`/courses/${course.id}`);
   };
