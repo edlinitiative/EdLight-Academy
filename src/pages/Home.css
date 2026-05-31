@@ -235,17 +235,10 @@
   color: var(--lp-ink-700);
 }
 
-/* Editorial offset-shadow image frame */
+/* Bare hero image — no frame, border or offset shadow */
 .lp-hero__visual { position: relative; }
 .lp-hero__frame {
   position: relative;
-}
-.lp-hero__frame::before {
-  content: "";
-  position: absolute; inset: 0;
-  transform: translate(14px, 14px);
-  background: color-mix(in srgb, var(--lp-accent) 18%, transparent);
-  z-index: 0;
 }
 .lp-hero__frame > img {
   position: relative;
@@ -254,8 +247,6 @@
   aspect-ratio: 4 / 3;
   object-fit: cover;
   object-position: center;
-  background: var(--lp-paper-100);
-  border: 1px solid var(--lp-paper-200);
   z-index: 1;
 }
 
