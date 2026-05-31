@@ -5,7 +5,52 @@ import { persist } from 'zustand/middleware';
 // before being asked to create an account.
 export const FREE_VIDEO_LIMIT = 3;
 
-const useStore = create(
+/** Shape of the global application store (state + actions). */
+export interface AppState {
+  // User state
+  user: any;
+  isAuthenticated: boolean;
+  language: string;
+  hydrated: boolean;
+  track: string | null;
+  onboardingCompleted: boolean;
+  theme: 'light' | 'dark';
+
+  // Course progress
+  enrolledCourses: any[];
+  progress: Record<string, any>;
+  quizAttempts: Record<string, any[]>;
+  freeVideoIds: string[];
+
+  // UI state
+  currentCourse: any;
+  showAuthModal: boolean;
+  showUserDropdown: boolean;
+  showCourseModal: boolean;
+  activeTab: string;
+
+  // Actions
+  setUser: (user: any) => void;
+  setLanguage: (language: string) => void;
+  setTrack: (track: string | null) => void;
+  setOnboardingCompleted: (completed: boolean) => void;
+  setTheme: (theme: 'light' | 'dark') => void;
+  toggleTheme: () => void;
+  enrollInCourse: (course: any) => void;
+  updateProgress: (videoId: string, progress: any) => void;
+  recordQuizAttempt: (quizId: string, attempt: any) => void;
+  recordFreeVideoView: (videoId: string) => void;
+  setCurrentCourse: (course: any) => void;
+  toggleAuthModal: () => void;
+  setShowAuthModal: (show: boolean) => void;
+  toggleUserDropdown: () => void;
+  setShowUserDropdown: (show: boolean) => void;
+  toggleCourseModal: () => void;
+  setActiveTab: (tab: string) => void;
+  logout: () => void;
+}
+
+const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       // User state
