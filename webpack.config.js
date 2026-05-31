@@ -76,6 +76,11 @@ module.exports = {
           from: 'public/exam_catalog.json',
           to: 'exam_catalog.json',
           noErrorOnMissing: true
+        },
+        {
+          from: 'public/exam_catalog_index.json',
+          to: 'exam_catalog_index.json',
+          noErrorOnMissing: true
         }
       ]
     })

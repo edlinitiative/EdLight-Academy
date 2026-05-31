@@ -27,12 +27,14 @@ function difficultyMeta(d) {
   return DIFFICULTY_META[d] || null;
 }
 
-/** Fetch and cache the exam catalog (flat array of exam objects) */
+/** Fetch and cache the slim browse index (metadata only, ~280 KB).
+ *  The full catalog (~27 MB) is only loaded later when a specific exam is
+ *  opened in ExamTake/ExamResults, so browsing stays fast. */
 function useExamCatalog() {
   return useQuery({
-    queryKey: ['exam-catalog'],
+    queryKey: ['exam-catalog-index'],
     queryFn: async () => {
-      const res = await fetch('/exam_catalog.json');
+      const res = await fetch('/exam_catalog_index.json');
       if (!res.ok) throw new Error('Failed to load exam catalog');
       const data = await res.json();
       return normalizeExamCatalog(data);

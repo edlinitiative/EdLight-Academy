@@ -490,13 +490,21 @@ export function buildExamIndex(rawExams) {
     let autoGradable = 0;
     const typeCounts = {};
 
-    for (const sec of exam.sections || []) {
-      for (const q of sec.questions || []) {
-        qCount++;
-        const t = q.type || 'unknown';
-        typeCounts[t] = (typeCounts[t] || 0) + 1;
-        const meta = QUESTION_TYPE_META[t] || QUESTION_TYPE_META.unknown;
-        if ((meta.gradable && q.correct) || (q.answer_parts && q.answer_parts.length > 0)) autoGradable++;
+    const sections = exam.sections || [];
+    if (sections.length === 0 && exam._questionCount != null) {
+      // Slim browse index: counts were precomputed by generate_exam_index.py
+      qCount = exam._questionCount || 0;
+      autoGradable = exam._autoGradable || 0;
+      Object.assign(typeCounts, exam._typeCounts || {});
+    } else {
+      for (const sec of sections) {
+        for (const q of sec.questions || []) {
+          qCount++;
+          const t = q.type || 'unknown';
+          typeCounts[t] = (typeCounts[t] || 0) + 1;
+          const meta = QUESTION_TYPE_META[t] || QUESTION_TYPE_META.unknown;
+          if ((meta.gradable && q.correct) || (q.answer_parts && q.answer_parts.length > 0)) autoGradable++;
+        }
       }
     }
 
