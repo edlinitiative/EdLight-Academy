@@ -9,7 +9,7 @@
   overflow: hidden;
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
   background:
-    radial-gradient(circle at 20% 15%, rgba(86, 69, 212, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 20% 15%, rgba(10, 102, 194, 0.08) 0%, transparent 45%),
     radial-gradient(circle at 80% 80%, rgba(139, 124, 232, 0.07) 0%, transparent 40%),
     var(--background);
 }
@@ -20,8 +20,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(86, 69, 212, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(86, 69, 212, 0.032) 1px, transparent 1px);
+    linear-gradient(rgba(10, 102, 194, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 102, 194, 0.032) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
@@ -47,7 +47,7 @@
   gap: 0.4rem;
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  background: rgba(86, 69, 212, 0.1);
+  background: rgba(10, 102, 194, 0.1);
   color: var(--primary-600);
   font-weight: 700;
   font-size: 0.78rem;
@@ -164,8 +164,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.2rem;
-  border-top: 1px solid rgba(86, 69, 212, 0.07);
-  background: rgba(86, 69, 212, 0.025);
+  border-top: 1px solid rgba(10, 102, 194, 0.07);
+  background: rgba(10, 102, 194, 0.025);
 }
 
 .level-card__cta {
@@ -257,7 +257,7 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(6px);
-  border: 1px solid rgba(86, 69, 212, 0.10);
+  border: 1px solid rgba(10, 102, 194, 0.10);
 }
 
 .track-pick__head {
@@ -307,22 +307,22 @@
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 4px;
-  background: var(--track-color, #5645d4);
+  background: var(--track-color, #0A66C2);
   opacity: 0.55;
   transition: width 0.18s ease, opacity 0.18s ease;
 }
 
 .track-pick__card:hover {
   transform: translateY(-3px);
-  border-color: var(--track-color, #5645d4);
+  border-color: var(--track-color, #0A66C2);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
 }
 
 .track-pick__card:hover::before { width: 6px; opacity: 0.9; }
 
 .track-pick__card--active {
-  border-color: var(--track-color, #5645d4);
-  background: color-mix(in srgb, var(--track-color, #5645d4) 7%, #fff);
+  border-color: var(--track-color, #0A66C2);
+  background: color-mix(in srgb, var(--track-color, #0A66C2) 7%, #fff);
 }
 
 .track-pick__card--active::before { width: 6px; opacity: 1; }
@@ -348,7 +348,7 @@
   margin-top: 0.3rem;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--track-color, #5645d4);
+  color: var(--track-color, #0A66C2);
 }
 
 @media (max-width: 520px) {

@@ -14,10 +14,10 @@
   --lp-ink-900:   var(--text-900);
   --lp-ink-deep:  #000000;
 
-  /* Notion warm-minimal purple accent (matches platform-wide theme) */
-  --lp-accent:        #5645d4;
-  --lp-accent-hover:  #4534b3;
-  --lp-accent-soft:   #e0ddf7;
+  /* EdLight blue accent (matches platform-wide theme) */
+  --lp-accent:        #0A66C2;
+  --lp-accent-hover:  #07498C;
+  --lp-accent-soft:   #CFE2F7;
 
   --lp-font-sans: var(--font-sans);
   --lp-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -38,9 +38,9 @@
   --lp-ink-700:   var(--text-600);
   --lp-ink-900:   var(--text-900);
   --lp-ink-deep:  #ffffff;
-  --lp-accent:        #8b7ce8;
+  --lp-accent:        #4A93DD;
   --lp-accent-hover:  #9b8ff0;
-  --lp-accent-soft:   #2c2956;
+  --lp-accent-soft:   #0D2B47;
 }
 
 .lp * { box-sizing: border-box; }

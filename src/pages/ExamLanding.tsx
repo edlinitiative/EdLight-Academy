@@ -39,7 +39,7 @@ const LEVELS = [
     heading: '9e Année',
     desc: 'Examens officiels pour la 9ème année fondamentale. Annales complètes avec corrections détaillées.',
     badge: 'Fondamental',
-    color: '#5645d4',
+    color: '#0A66C2',
   },
   {
     to: '/exams/terminale',

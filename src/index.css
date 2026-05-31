@@ -1,7 +1,7 @@
 :root {
 	/* ── Notion "Warm Minimalism" theme ──────────────────────────────
 	   Calm warm-neutral canvas, near-black ink, hairline borders,
-	   soft minimal shadows and a confident purple accent. Variable
+	   soft minimal shadows and the confident EdLight blue accent. Variable
 	   names are preserved so the whole platform inherits the new look. */
 	--background: #faf9f7;          /* warm off-white page canvas */
 	--background-accent: #f3f1ec;   /* soft warm band */
@@ -10,14 +10,14 @@
 	--surface-elevated: rgba(255, 255, 255, 0.88);
 	--border: #e5e3df;              /* hairline */
 	--border-strong: #c8c4be;       /* hairline-strong */
-	--primary-50: #f0eefb;          /* lavender tints */
-	--primary-100: #e0ddf7;
-	--primary-400: #8b7ce8;
-	--primary-500: #5645d4;         /* Notion primary purple */
-	--primary-600: #4d3dc4;
-	--primary-700: #4534b3;         /* primary-pressed */
+	--primary-50: #E8F1FB;          /* EdLight blue tints */
+	--primary-100: #CFE2F7;
+	--primary-400: #4A93DD;
+	--primary-500: #0A66C2;         /* EdLight primary blue */
+	--primary-600: #0857A6;
+	--primary-700: #07498C;         /* primary-pressed */
 	/* Alias: shorthand --primary maps to the main brand colour */
-	--primary: #5645d4;
+	--primary: #0A66C2;
 	--text-900: #1a1a1a;            /* ink */
 	--text-800: #37352f;            /* charcoal */
 	--text-700: #4a4843;
@@ -59,8 +59,8 @@ body {
 	font-family: var(--font-sans);
 	font-size: 0.875rem;
 	background:
-		radial-gradient(circle at 15% 18%, rgba(86, 69, 212, 0.05) 0%, transparent 42%),
-		radial-gradient(circle at 88% 8%, rgba(86, 69, 212, 0.04) 0%, transparent 40%),
+		radial-gradient(circle at 15% 18%, rgba(10, 102, 194, 0.05) 0%, transparent 42%),
+		radial-gradient(circle at 88% 8%, rgba(10, 102, 194, 0.04) 0%, transparent 40%),
 		var(--background);
 	color: var(--text-900);
 	-webkit-font-smoothing: antialiased;
@@ -191,10 +191,10 @@ main {
 
 @keyframes pulseGlow {
 	0%, 100% {
-		box-shadow: 0 0 20px rgba(86, 69, 212, 0.3);
+		box-shadow: 0 0 20px rgba(10, 102, 194, 0.3);
 	}
 	50% {
-		box-shadow: 0 0 40px rgba(86, 69, 212, 0.6);
+		box-shadow: 0 0 40px rgba(10, 102, 194, 0.6);
 	}
 }
 
@@ -249,7 +249,7 @@ main {
 	align-items: center;
 	padding: 0.35rem 0.75rem;
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 	font-weight: 600;
 	font-size: 0.85rem;
@@ -308,7 +308,7 @@ main {
 	backdrop-filter: var(--blur-backdrop);
 	/* Fully opaque so the blue hero background never bleeds through */
 	background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.98) 100%);
-	border-bottom: 1px solid rgba(86, 69, 212, 0.18);
+	border-bottom: 1px solid rgba(10, 102, 194, 0.18);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
@@ -369,18 +369,18 @@ main {
 	justify-content: center;
 	width: 32px;
 	height: 32px;
-	border: 1px solid rgba(86, 69, 212, 0.16);
+	border: 1px solid rgba(10, 102, 194, 0.16);
 	background: rgba(255, 255, 255, 1);
 	color: var(--text-800);
 	cursor: pointer;
 	border-radius: 10px;
 	transition: all 0.2s ease;
-	box-shadow: 0 6px 18px rgba(86, 69, 212, 0.08);
+	box-shadow: 0 6px 18px rgba(10, 102, 194, 0.08);
 }
 
 .mobile-menu-toggle:hover {
-	background: rgba(86, 69, 212, 0.06);
-	border-color: rgba(86, 69, 212, 0.24);
+	background: rgba(10, 102, 194, 0.06);
+	border-color: rgba(10, 102, 194, 0.24);
 	color: var(--primary-700);
 }
 
@@ -390,7 +390,7 @@ main {
 
 .mobile-menu-toggle:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 4px rgba(86, 69, 212, 0.18), 0 8px 20px rgba(86, 69, 212, 0.10);
+	box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.18), 0 8px 20px rgba(10, 102, 194, 0.10);
 }
 
 .mobile-menu-backdrop {
@@ -417,7 +417,7 @@ main {
 	padding: 0.85rem;
 	border-radius: 16px;
 	background: rgba(255, 255, 255, 1);
-	border: 1px solid rgba(86, 69, 212, 0.16);
+	border: 1px solid rgba(10, 102, 194, 0.16);
 	box-shadow: var(--shadow-md);
 	backdrop-filter: var(--blur-backdrop);
 	transform: translateY(-6px);
@@ -472,7 +472,7 @@ main {
 
 [data-theme="dark"] .nav-link.active {
 	color: rgba(255, 255, 255, 0.98);
-	background: rgba(86, 69, 212, 0.22);
+	background: rgba(10, 102, 194, 0.22);
 }
 
 .nav-links--mobile-open {
@@ -496,12 +496,12 @@ main {
 
 .nav-link:hover {
 	color: var(--primary-700);
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 }
 
 .nav-link.active {
 	color: var(--primary-700);
-	background: rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.1);
 	font-weight: 700;
 }
 
@@ -516,7 +516,7 @@ main {
 .nav-link--button {
 	width: 100%;
 	justify-content: center;
-	border: 1px solid rgba(86, 69, 212, 0.14);
+	border: 1px solid rgba(10, 102, 194, 0.14);
 	background: rgba(255, 255, 255, 0.65);
 }
 
@@ -644,7 +644,7 @@ main {
 
 .hero-card {
 	position: relative;
-	background: linear-gradient(160deg, rgba(86, 69, 212, 0.5), rgba(14, 165, 233, 0.28));
+	background: linear-gradient(160deg, rgba(10, 102, 194, 0.5), rgba(14, 165, 233, 0.28));
 	border-radius: var(--radius-lg);
 	padding: clamp(1.2rem, 3.5vw, 1.8rem);
 	color: #ffffff;
@@ -735,7 +735,7 @@ main {
 	position: absolute;
 	inset: auto -30% -40% -10%;
 	height: 260px;
-	background: radial-gradient(circle, rgba(86, 69, 212, 0.28) 0%, transparent 60%);
+	background: radial-gradient(circle, rgba(10, 102, 194, 0.28) 0%, transparent 60%);
 }
 
 .hero-visual__grid {
@@ -803,12 +803,12 @@ main {
 }
 
 .button--ghost {
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 }
 
 .button--ghost:hover {
-	background: rgba(86, 69, 212, 0.18);
+	background: rgba(10, 102, 194, 0.18);
 }
 
 .button--secondary {
@@ -820,7 +820,7 @@ main {
 
 .button--secondary:hover {
 	background: var(--surface-muted);
-	border-color: rgba(86, 69, 212, 0.4);
+	border-color: rgba(10, 102, 194, 0.4);
 }
 
 .button--light {
@@ -847,7 +847,7 @@ main {
 	border-radius: 999px;
 	font-size: clamp(0.78rem, 2.2vw, 0.86rem);
 	font-weight: 600;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 }
 
@@ -862,7 +862,7 @@ main {
 }
 
 .chip--primary {
-	background: rgba(86, 69, 212, 0.14);
+	background: rgba(10, 102, 194, 0.14);
 	color: var(--primary-600);
 }
 
@@ -881,7 +881,7 @@ main {
 	background: var(--surface);
 	border-radius: var(--radius-lg);
 	padding: clamp(1.4rem, 3vw, 1.8rem);
-	border: 1px solid rgba(86, 69, 212, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.08);
 	box-shadow: var(--shadow-sm);
 	transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
@@ -958,7 +958,7 @@ a.card:hover,
 
 .input-field:focus {
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 4px rgba(86, 69, 212, 0.12);
+	box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.12);
 	background: #fff;
 }
 
@@ -982,7 +982,7 @@ textarea.input-field {
 	background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(219, 239, 255, 0.68));
 	border-radius: var(--radius-lg);
 	padding: clamp(1.4rem, 3vw, 1.9rem);
-	border: 1px solid rgba(86, 69, 212, 0.18);
+	border: 1px solid rgba(10, 102, 194, 0.18);
 	box-shadow: var(--shadow-sm);
 }
 .metric-card__icon {
@@ -992,7 +992,7 @@ textarea.input-field {
 	width: 44px;
 	height: 44px;
 	border-radius: var(--radius-sm);
-	background: rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.1);
 	color: var(--primary-600);
 	margin-bottom: 0.9rem;
 	flex-shrink: 0;
@@ -1057,7 +1057,7 @@ textarea.input-field {
 	padding: clamp(1.25rem, 2.8vw, 1.6rem);
 	border-radius: 0;
 	background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 251, 0.65));
-	border: 1px solid rgba(86, 69, 212, 0.1);
+	border: 1px solid rgba(10, 102, 194, 0.1);
 	box-shadow: var(--shadow-sm);
 	overflow: hidden;
 }
@@ -1083,7 +1083,7 @@ textarea.input-field {
 	font-size: clamp(0.68rem, 1.8vw, 0.75rem);
 	font-weight: 600;
 	color: var(--primary-600);
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 }
 
 .course-card__title {
@@ -1156,7 +1156,7 @@ textarea.input-field {
 	width: 100%;
 	height: 6px;
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.14);
+	background: rgba(10, 102, 194, 0.14);
 	overflow: hidden;
 }
 
@@ -1174,7 +1174,7 @@ textarea.input-field {
 	gap: 0.4rem;
 	padding: clamp(0.45rem, 1.4vw, 0.55rem) clamp(0.75rem, 2.5vw, 0.9rem);
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.14);
+	background: rgba(10, 102, 194, 0.14);
 	color: var(--primary-600);
 	font-weight: 600;
 	font-size: clamp(0.75rem, 2vw, 0.82rem);
@@ -1183,7 +1183,7 @@ textarea.input-field {
 
 .course-card__cta:hover {
 	transform: translateX(2px);
-	background: rgba(86, 69, 212, 0.22);
+	background: rgba(10, 102, 194, 0.22);
 }
 
 /* Course Modal */
@@ -1202,7 +1202,7 @@ textarea.input-field {
 	width: min(640px, 96vw);
 	border-radius: 24px;
 	background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(238, 241, 255, 0.95));
-	border: 1px solid rgba(86, 69, 212, 0.2);
+	border: 1px solid rgba(10, 102, 194, 0.2);
 	box-shadow: var(--shadow-xl);
 	position: relative;
 	max-height: calc(var(--vvh, 1vh) * 90);
@@ -1217,7 +1217,7 @@ textarea.input-field {
 	justify-content: space-between;
 	gap: 1.5rem;
 	padding: clamp(1.5rem, 4vw, 2rem);
-	border-bottom: 1px solid rgba(86, 69, 212, 0.12);
+	border-bottom: 1px solid rgba(10, 102, 194, 0.12);
 	flex-shrink: 0;
 }
 
@@ -1249,7 +1249,7 @@ textarea.input-field {
 
 .course-modal__close {
 	flex-shrink: 0;
-	background: rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.1);
 	color: var(--primary-600);
 	border: none;
 	width: 40px;
@@ -1265,7 +1265,7 @@ textarea.input-field {
 }
 
 .course-modal__close:hover {
-	background: rgba(86, 69, 212, 0.18);
+	background: rgba(10, 102, 194, 0.18);
 	transform: scale(1.05);
 }
 
@@ -1287,8 +1287,8 @@ textarea.input-field {
 .course-modal__meta-item {
 	padding: 1rem;
 	border-radius: 12px;
-	background: rgba(86, 69, 212, 0.08);
-	border: 1px solid rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.12);
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -1296,7 +1296,7 @@ textarea.input-field {
 }
 
 .course-modal__meta-item:hover {
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	transform: translateY(-2px);
 }
 
@@ -1360,7 +1360,7 @@ textarea.input-field {
 .syllabus-item {
 	padding: 1rem 1.25rem;
 	border-radius: 12px;
-	border: 1px solid rgba(86, 69, 212, 0.15);
+	border: 1px solid rgba(10, 102, 194, 0.15);
 	background: rgba(255, 255, 255, 0.8);
 	display: flex;
 	justify-content: space-between;
@@ -1371,7 +1371,7 @@ textarea.input-field {
 
 .syllabus-item:hover {
 	background: rgba(255, 255, 255, 1);
-	border-color: rgba(86, 69, 212, 0.25);
+	border-color: rgba(10, 102, 194, 0.25);
 	transform: translateX(4px);
 }
 
@@ -1389,7 +1389,7 @@ textarea.input-field {
 	border-radius: 10px;
 	display: grid;
 	place-items: center;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 	font-weight: 700;
 
@@ -1435,7 +1435,7 @@ textarea.input-field {
 
 .course-modal__footer {
 	padding: clamp(1.5rem, 4vw, 2rem);
-	border-top: 1px solid rgba(86, 69, 212, 0.12);
+	border-top: 1px solid rgba(10, 102, 194, 0.12);
 	display: flex;
 	flex-wrap: wrap;
 	gap: 1rem;
@@ -1462,7 +1462,7 @@ textarea.input-field {
 .lesson-card {
 	background: rgba(255, 255, 255, 0.85);
 	border-radius: var(--radius-lg);
-	border: 1px solid rgba(86, 69, 212, 0.12);
+	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
 	padding: clamp(1.2rem, 2.5vw, 1.6rem);
 	display: grid;
@@ -1643,7 +1643,7 @@ textarea.input-field {
 	border-radius: 12px;
 	transition: all 0.2s ease;
 	background: white;
-	border: 1.5px solid rgba(86, 69, 212, 0.15);
+	border: 1.5px solid rgba(10, 102, 194, 0.15);
 	color: var(--primary-600);
 }
 
@@ -1652,7 +1652,7 @@ textarea.input-field {
 	color: white;
 	border-color: var(--primary-600);
 	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(86, 69, 212, 0.2);
+	box-shadow: 0 4px 12px rgba(10, 102, 194, 0.2);
 }
 
 .lesson-card__nav-group--navigation .button:disabled {
@@ -1698,7 +1698,7 @@ textarea.input-field {
 }
 
 .lesson-card__nav-group--actions .button--primary {
-	box-shadow: 0 2px 8px rgba(86, 69, 212, 0.2);
+	box-shadow: 0 2px 8px rgba(10, 102, 194, 0.2);
 }
 
 .lesson-card__nav-group--actions .button--ghost {
@@ -1779,7 +1779,7 @@ textarea.input-field {
 	display: grid;
 	place-items: center;
 	font-weight: 600;
-	background: rgba(86, 69, 212, 0.18);
+	background: rgba(10, 102, 194, 0.18);
 	color: var(--primary-600);
 }
 
@@ -1844,7 +1844,7 @@ textarea.input-field {
 	justify-content: space-between;
 	gap: 1rem;
 	padding: 1rem 1rem 0.9rem;
-	border-bottom: 1px solid rgba(86, 69, 212, 0.12);
+	border-bottom: 1px solid rgba(10, 102, 194, 0.12);
 	background: var(--surface-elevated);
 	position: sticky;
 	top: 0;
@@ -1878,7 +1878,7 @@ textarea.input-field {
 .lesson-sidebar__progress-bar {
 	height: 6px;
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	overflow: hidden;
 }
 
@@ -1939,7 +1939,7 @@ textarea.input-field {
 
 .lesson-list__item:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.16);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.16);
 }
 
 .lesson-list__item--module {
@@ -2199,7 +2199,7 @@ textarea.input-field {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.1);
 	color: var(--primary-600);
 	flex-shrink: 0;
 }
@@ -2211,7 +2211,7 @@ textarea.input-field {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 	font-weight: 700;
 	font-size: 1.1rem;
@@ -2283,7 +2283,7 @@ textarea.input-field {
 	padding: clamp(1.6rem, 3vw, 2.1rem);
 	border-radius: var(--radius-lg);
 	background: linear-gradient(150deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 251, 0.72));
-	border: 1px solid rgba(86, 69, 212, 0.12);
+	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
 	display: grid;
 	gap: clamp(1rem, 2vw, 1.4rem);
@@ -2309,7 +2309,7 @@ textarea.input-field {
 	padding: 0.9rem 1.1rem;
 	border-radius: 14px;
 	background: rgba(255, 255, 255, 0.7);
-	border: 1px solid rgba(86, 69, 212, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.08);
 }
 
 .activity-item__meta {
@@ -2351,7 +2351,7 @@ textarea.input-field {
 .dashboard-empty {
 	padding: clamp(1rem, 3vw, 1.5rem) 1.5rem;
 	border-radius: var(--radius-lg);
-	border: 1.5px dashed rgba(86, 69, 212, 0.25);
+	border: 1.5px dashed rgba(10, 102, 194, 0.25);
 	background: linear-gradient(160deg, rgba(232, 244, 251, 0.5), rgba(255, 255, 255, 0.6));
 	text-align: center;
 	color: var(--text-500);
@@ -2371,7 +2371,7 @@ textarea.input-field {
 	padding: 0.85rem 1rem;
 	border-radius: 14px;
 	background: rgba(255, 255, 255, 0.7);
-	border: 1px solid rgba(86, 69, 212, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.08);
 }
 
 .dashboard-course-row__main {
@@ -2455,7 +2455,7 @@ textarea.input-field {
 .footer {
 	margin-top: clamp(2.5rem, 6vw, 4rem);
 	padding: clamp(1.5rem, 3vw, 2.5rem) 0;
-	border-top: 1px solid rgba(86, 69, 212, 0.12);
+	border-top: 1px solid rgba(10, 102, 194, 0.12);
 	background: rgba(255, 255, 255, 0.65);
 	backdrop-filter: var(--blur-backdrop);
 }
@@ -2592,7 +2592,7 @@ textarea.input-field {
 	background: rgba(255, 255, 255, 0.95);
 	backdrop-filter: var(--blur-backdrop);
 	box-shadow: var(--shadow-md);
-	border: 1px solid rgba(86, 69, 212, 0.12);
+	border: 1px solid rgba(10, 102, 194, 0.12);
 	z-index: 40;
 	display: grid;
 	gap: 0.45rem;
@@ -2619,12 +2619,12 @@ textarea.input-field {
 }
 
 .dropdown__item:hover {
-	background: rgba(86, 69, 212, 0.08);
+	background: rgba(10, 102, 194, 0.08);
 }
 
 .dropdown__divider {
 	height: 1px;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	margin: 0.2rem 0;
 }
 
@@ -2632,7 +2632,7 @@ textarea.input-field {
 	width: min(440px, 96vw);
 	border-radius: 24px;
 	background: linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(238, 241, 255, 0.94));
-	border: 1px solid rgba(86, 69, 212, 0.18);
+	border: 1px solid rgba(10, 102, 194, 0.18);
 	box-shadow: var(--shadow-lg);
 	padding: clamp(1.8rem, 4vw, 2.3rem);
 	position: relative;
@@ -2657,7 +2657,7 @@ textarea.input-field {
 
 .auth-modal__close {
 	border: none;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 	width: 36px;
 	height: 36px;
@@ -2669,7 +2669,7 @@ textarea.input-field {
 }
 
 .auth-modal__close:hover {
-	background: rgba(86, 69, 212, 0.18);
+	background: rgba(10, 102, 194, 0.18);
 }
 
 .auth-modal__tabs {
@@ -2677,7 +2677,7 @@ textarea.input-field {
 	gap: 0.5rem;
 	padding: 0.35rem;
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	margin-bottom: 1.8rem;
 }
 
@@ -2711,7 +2711,7 @@ textarea.input-field {
 	content: '';
 	flex: 1;
 	height: 1px;
-	background: rgba(86, 69, 212, 0.15);
+	background: rgba(10, 102, 194, 0.15);
 }
 
 .auth-divider__label {
@@ -2736,7 +2736,7 @@ textarea.input-field {
 	width: 100%;
 	padding: 0.65rem 0.9rem;
 	border-radius: 12px;
-	border: 1px solid rgba(86, 69, 212, 0.2);
+	border: 1px solid rgba(10, 102, 194, 0.2);
 	background: rgba(255, 255, 255, 0.9);
 	transition: border 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2744,7 +2744,7 @@ textarea.input-field {
 .form-input:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.18);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.18);
 }
 
 .form-message {
@@ -2788,8 +2788,8 @@ textarea.input-field {
 	margin-top: 1rem;
 	padding: 0.85rem 1rem;
 	border-radius: 14px;
-	border: 1px solid rgba(86, 69, 212, 0.14);
-	background: rgba(86, 69, 212, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.14);
+	background: rgba(10, 102, 194, 0.08);
 	color: var(--text-700);
 }
 
@@ -2882,8 +2882,8 @@ textarea.input-field {
 .quiz-card__explanation {
 	padding: 1rem 1.1rem;
 	border-radius: 14px;
-	background: rgba(86, 69, 212, 0.08);
-	border: 1px solid rgba(86, 69, 212, 0.16);
+	background: rgba(10, 102, 194, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.16);
 }
 
 /* Practice (Quizzes) page layout */
@@ -2939,11 +2939,11 @@ textarea.input-field {
 }
 
 .quiz-filters .card {
-	background: linear-gradient(160deg, rgba(86, 69, 212, 0.06), rgba(139, 124, 232, 0.03));
-	border: 1px solid rgba(86, 69, 212, 0.14);
+	background: linear-gradient(160deg, rgba(10, 102, 194, 0.06), rgba(139, 124, 232, 0.03));
+	border: 1px solid rgba(10, 102, 194, 0.14);
 	box-shadow:
-		0 1px 2px rgba(86, 69, 212, 0.04),
-		0 6px 20px rgba(86, 69, 212, 0.07);
+		0 1px 2px rgba(10, 102, 194, 0.04),
+		0 6px 20px rgba(10, 102, 194, 0.07);
 	padding: clamp(1rem, 2.5vw, 1.25rem);
 	border-radius: var(--radius-lg);
 }
@@ -2953,7 +2953,7 @@ textarea.input-field {
 	font-weight: 700;
 	color: var(--primary-700, #075985);
 	padding-bottom: 0.5rem;
-	border-bottom: 1px solid rgba(86, 69, 212, 0.1);
+	border-bottom: 1px solid rgba(10, 102, 194, 0.1);
 	margin-bottom: 0.25rem;
 }
 
@@ -2976,7 +2976,7 @@ textarea.input-field {
 .quiz-selectors select {
 	border-radius: var(--radius-md);
 	padding: 0.55rem 0.75rem;
-	border: 1.5px solid rgba(86, 69, 212, 0.18);
+	border: 1.5px solid rgba(10, 102, 194, 0.18);
 	background: #ffffff;
 	font-size: 0.8rem;
 	font-weight: 500;
@@ -2987,7 +2987,7 @@ textarea.input-field {
 .quiz-selectors .input-field:focus,
 .quiz-selectors select:focus {
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.1);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
 }
 
 .form-group {
@@ -3002,7 +3002,7 @@ textarea.input-field {
 	font-weight: 700;
 	padding: 0.6rem 1rem;
 	background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
-	box-shadow: 0 3px 0 var(--primary-700, #075985), 0 4px 12px rgba(86, 69, 212, 0.2);
+	box-shadow: 0 3px 0 var(--primary-700, #075985), 0 4px 12px rgba(10, 102, 194, 0.2);
 	transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
 }
 
@@ -3031,13 +3031,13 @@ textarea.input-field {
 }
 
 .quiz-status .chip--success {
-	background: rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.1);
 	color: var(--primary-700, #075985);
 }
 
 .quiz-filters .card--compact {
-	background: linear-gradient(160deg, rgba(86, 69, 212, 0.04), rgba(139, 124, 232, 0.02));
-	border: 1px solid rgba(86, 69, 212, 0.1);
+	background: linear-gradient(160deg, rgba(10, 102, 194, 0.04), rgba(139, 124, 232, 0.02));
+	border: 1px solid rgba(10, 102, 194, 0.1);
 	border-radius: var(--radius-lg);
 	padding: 0.85rem;
 }
@@ -3064,10 +3064,10 @@ textarea.input-field {
 }
 
 .quiz-panel .card {
-	border: 1px solid rgba(86, 69, 212, 0.12);
+	border: 1px solid rgba(10, 102, 194, 0.12);
 	box-shadow:
-		0 1px 2px rgba(86, 69, 212, 0.04),
-		0 6px 20px rgba(86, 69, 212, 0.07);
+		0 1px 2px rgba(10, 102, 194, 0.04),
+		0 6px 20px rgba(10, 102, 194, 0.07);
 	border-radius: var(--radius-lg);
 }
 
@@ -3077,10 +3077,10 @@ textarea.input-field {
 	align-items: center;
 	justify-content: center;
 	background:
-		radial-gradient(circle at 30% 20%, rgba(86, 69, 212, 0.06) 0%, transparent 50%),
+		radial-gradient(circle at 30% 20%, rgba(10, 102, 194, 0.06) 0%, transparent 50%),
 		radial-gradient(circle at 70% 80%, rgba(139, 124, 232, 0.05) 0%, transparent 40%),
-		linear-gradient(160deg, rgba(86, 69, 212, 0.04), rgba(139, 124, 232, 0.02));
-	border: 2px dashed rgba(86, 69, 212, 0.15);
+		linear-gradient(160deg, rgba(10, 102, 194, 0.04), rgba(139, 124, 232, 0.02));
+	border: 2px dashed rgba(10, 102, 194, 0.15);
 	border-radius: var(--radius-lg);
 }
 
@@ -3124,17 +3124,17 @@ textarea.input-field {
 }
 
 .quiz-page .quiz-card__question {
-	background: rgba(86, 69, 212, 0.04);
-	border-color: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.04);
+	border-color: rgba(10, 102, 194, 0.12);
 }
 
 .quiz-page .radio-option {
-	border-color: rgba(86, 69, 212, 0.16);
+	border-color: rgba(10, 102, 194, 0.16);
 }
 
 .quiz-page .radio-option:hover {
-	border-color: rgba(86, 69, 212, 0.32);
-	background: rgba(86, 69, 212, 0.06);
+	border-color: rgba(10, 102, 194, 0.32);
+	background: rgba(10, 102, 194, 0.06);
 }
 
 .quiz-page .radio-option input {
@@ -3142,13 +3142,13 @@ textarea.input-field {
 }
 
 .quiz-page .hint-box {
-	border-color: rgba(86, 69, 212, 0.15);
-	background: rgba(86, 69, 212, 0.04);
+	border-color: rgba(10, 102, 194, 0.15);
+	background: rgba(10, 102, 194, 0.04);
 }
 
 .quiz-page .quiz-card__explanation {
-	background: rgba(86, 69, 212, 0.04);
-	border-color: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.04);
+	border-color: rgba(10, 102, 194, 0.12);
 }
 
 .quiz-page .quiz-card__controls .button--primary {
@@ -3210,7 +3210,7 @@ textarea.input-field {
 	border-radius: 8px;
 	display: grid;
 	place-items: center;
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	color: var(--primary-600);
 
 }
@@ -3265,15 +3265,15 @@ textarea.input-field {
 	gap: 0.75rem;
 	padding: 0.75rem 1rem;
 	border-radius: 14px;
-	border: 1px solid rgba(86, 69, 212, 0.16);
+	border: 1px solid rgba(10, 102, 194, 0.16);
 	background: rgba(255, 255, 255, 0.85);
 	cursor: pointer;
 	transition: border 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
 .radio-option:hover {
-	border-color: rgba(86, 69, 212, 0.32);
-	background: rgba(86, 69, 212, 0.12);
+	border-color: rgba(10, 102, 194, 0.32);
+	background: rgba(10, 102, 194, 0.12);
 }
 
 .radio-option input {
@@ -3290,7 +3290,7 @@ textarea.input-field {
 
 /* Skeleton loading placeholders */
 .skeleton {
-	background: linear-gradient(90deg, rgba(86, 69, 212, 0.07) 25%, rgba(86, 69, 212, 0.12) 50%, rgba(86, 69, 212, 0.07) 75%);
+	background: linear-gradient(90deg, rgba(10, 102, 194, 0.07) 25%, rgba(10, 102, 194, 0.12) 50%, rgba(10, 102, 194, 0.07) 75%);
 	background-size: 200% 100%;
 	animation: skeleton-sweep 1.6s ease-in-out infinite;
 	border-radius: 8px;
@@ -3305,7 +3305,7 @@ textarea.input-field {
 	padding: clamp(1.6rem, 3vw, 1.9rem);
 	border-radius: var(--radius-lg);
 	background: var(--surface);
-	border: 1px solid rgba(86, 69, 212, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.08);
 	box-shadow: var(--shadow-sm);
 	display: flex;
 	flex-direction: column;
@@ -3323,7 +3323,7 @@ textarea.input-field {
 	padding: clamp(1.4rem, 3vw, 1.9rem);
 	border-radius: var(--radius-lg);
 	background: linear-gradient(160deg, rgba(255,255,255,0.9), rgba(219,239,255,0.68));
-	border: 1px solid rgba(86, 69, 212, 0.18);
+	border: 1px solid rgba(10, 102, 194, 0.18);
 	box-shadow: var(--shadow-sm);
 	display: flex;
 	flex-direction: column;
@@ -3339,7 +3339,7 @@ textarea.input-field {
 	width: 44px;
 	height: 44px;
 	border-radius: 999px;
-	border: 4px solid rgba(86, 69, 212, 0.15);
+	border: 4px solid rgba(10, 102, 194, 0.15);
 	border-top-color: var(--primary-600);
 	animation: spin 0.8s linear infinite;
 }
@@ -3508,8 +3508,8 @@ textarea.input-field {
 }
 
 .stat-card {
-	background: linear-gradient(135deg, rgba(86, 69, 212, 0.05), rgba(86, 69, 212, 0.02));
-	border: 1px solid rgba(86, 69, 212, 0.1);
+	background: linear-gradient(135deg, rgba(10, 102, 194, 0.05), rgba(10, 102, 194, 0.02));
+	border: 1px solid rgba(10, 102, 194, 0.1);
 	border-radius: 16px;
 	padding: 1.5rem;
 	text-align: center;
@@ -3518,7 +3518,7 @@ textarea.input-field {
 
 .stat-card:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 4px 12px rgba(86, 69, 212, 0.1);
+	box-shadow: 0 4px 12px rgba(10, 102, 194, 0.1);
 }
 
 .stat-card__icon {
@@ -3997,9 +3997,9 @@ textarea.input-field {
 	display: flex;
 	gap: 0.75rem;
 	padding: 0.75rem;
-	background: rgba(86, 69, 212, 0.04);
+	background: rgba(10, 102, 194, 0.04);
 	border-radius: 8px;
-	border: 1px solid rgba(86, 69, 212, 0.1);
+	border: 1px solid rgba(10, 102, 194, 0.1);
 	transition: transform 0.2s ease;
 }
 
@@ -4244,7 +4244,7 @@ textarea.input-field {
 .exam-browser__select:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.10), 0 1px 4px rgba(86, 69, 212, 0.08);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.10), 0 1px 4px rgba(10, 102, 194, 0.08);
 }
 
 /* Premium pill search input */
@@ -4293,7 +4293,7 @@ textarea.input-field {
 .exam-browser__search:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.10), 0 1px 4px rgba(86, 69, 212, 0.08);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.10), 0 1px 4px rgba(10, 102, 194, 0.08);
 }
 
 .exam-browser__search:focus::placeholder {
@@ -4334,7 +4334,7 @@ textarea.input-field {
 /* ─── Divider between controls and stats ─── */
 .exam-browser__divider {
 	height: 1px;
-	background: linear-gradient(90deg, transparent, rgba(86, 69, 212, 0.10) 20%, rgba(86, 69, 212, 0.10) 80%, transparent);
+	background: linear-gradient(90deg, transparent, rgba(10, 102, 194, 0.10) 20%, rgba(10, 102, 194, 0.10) 80%, transparent);
 	margin: 0;
 	border: none;
 }
@@ -4356,9 +4356,9 @@ textarea.input-field {
 	font-size: 0.78rem;
 	font-weight: 600;
 	font-family: var(--font-sans);
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 	color: var(--primary-700, #1d4ed8);
-	border: 1px solid rgba(86, 69, 212, 0.10);
+	border: 1px solid rgba(10, 102, 194, 0.10);
 	line-height: 1.3;
 	transition: background 0.2s, transform 0.15s;
 	white-space: nowrap;
@@ -4371,7 +4371,7 @@ textarea.input-field {
 }
 
 .exam-browser__stat-chip:hover {
-	background: rgba(86, 69, 212, 0.10);
+	background: rgba(10, 102, 194, 0.10);
 }
 
 .exam-browser__stat-chip--accent:hover {
@@ -4497,7 +4497,7 @@ textarea.input-field {
 	width: 100%;
 	font-family: var(--font-sans);
 	transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease, background 0.25s ease;
-	border: 1px solid rgba(86, 69, 212, 0.09);
+	border: 1px solid rgba(10, 102, 194, 0.09);
 	position: relative;
 	overflow: hidden;
 }
@@ -4516,7 +4516,7 @@ textarea.input-field {
 
 .exam-card:hover,
 .exam-card:focus-visible {
-	border-color: rgba(86, 69, 212, 0.22);
+	border-color: rgba(10, 102, 194, 0.22);
 	background: rgba(255, 255, 255, 0.95);
 	backdrop-filter: saturate(140%) blur(8px);
 	-webkit-backdrop-filter: saturate(140%) blur(8px);
@@ -4634,10 +4634,10 @@ textarea.input-field {
 	border-radius: 999px;
 	font-size: 0.7rem;
 	font-weight: 600;
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 	color: var(--text-500);
 	white-space: nowrap;
-	border: 1px solid rgba(86, 69, 212, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.08);
 }
 
 .exam-card__cta {
@@ -4678,7 +4678,7 @@ textarea.input-field {
 	appearance: none;
 	background: var(--surface);
 	color: var(--primary-600);
-	border: 1.5px solid rgba(86, 69, 212, 0.2);
+	border: 1.5px solid rgba(10, 102, 194, 0.2);
 	padding: 0.7rem 2rem;
 	border-radius: 999px;
 
@@ -4689,8 +4689,8 @@ textarea.input-field {
 }
 
 .exam-browser__load-btn:hover {
-	background: rgba(86, 69, 212, 0.06);
-	border-color: rgba(86, 69, 212, 0.35);
+	background: rgba(10, 102, 194, 0.06);
+	border-color: rgba(10, 102, 194, 0.35);
 	transform: translateY(-1px);
 	box-shadow: var(--shadow-sm);
 }
@@ -4847,8 +4847,8 @@ textarea.input-field {
 	position: absolute;
 	inset: 0;
 	background-image:
-		linear-gradient(rgba(86,69,212,0.035) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(86,69,212,0.035) 1px, transparent 1px);
+		linear-gradient(rgba(10, 102, 194,0.035) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(10, 102, 194,0.035) 1px, transparent 1px);
 	background-size: 48px 48px;
 	mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 0%, transparent 100%);
 	-webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black 0%, transparent 100%);
@@ -4924,7 +4924,7 @@ textarea.input-field {
 	padding: 2rem 2.25rem 1.75rem;
 	box-shadow:
 		0 1px 2px rgba(0,0,0,0.04),
-		0 8px 32px rgba(86,69,212,0.08);
+		0 8px 32px rgba(10, 102, 194,0.08);
 	display: flex;
 	flex-direction: column;
 	gap: 0.85rem;
@@ -5004,7 +5004,7 @@ textarea.input-field {
 	padding: 1.35rem 1.5rem;
 	box-shadow:
 		0 1px 2px rgba(0,0,0,0.03),
-		0 6px 24px rgba(86,69,212,0.06);
+		0 6px 24px rgba(10, 102, 194,0.06);
 }
 .exam-cover__panel--sections:only-child,
 .exam-cover__body > .exam-cover__panel--sections:last-child {
@@ -5327,7 +5327,7 @@ textarea.input-field {
 	color: var(--text-700);
 	padding: 0.3rem 0.75rem;
 	border-radius: var(--radius-sm);
-	background: rgba(86, 69, 212, 0.08);
+	background: rgba(10, 102, 194, 0.08);
 }
 
 .exam-take__timer--warning {
@@ -5357,11 +5357,11 @@ textarea.input-field {
 	backdrop-filter: saturate(140%) blur(12px);
 	-webkit-backdrop-filter: saturate(140%) blur(12px);
 	border-radius: var(--radius-md);
-	border: 1px solid rgba(86,69,212,0.10);
+	border: 1px solid rgba(10, 102, 194,0.10);
 	padding: 1rem 0.85rem;
 	box-shadow:
-		0 1px 2px rgba(86,69,212,0.04),
-		0 8px 24px rgba(86,69,212,0.07);
+		0 1px 2px rgba(10, 102, 194,0.04),
+		0 8px 24px rgba(10, 102, 194,0.07);
 	transition: box-shadow 0.3s ease;
 	min-width: 0;
 	width: 210px;
@@ -5370,8 +5370,8 @@ textarea.input-field {
 
 .exam-take__nav:hover {
 	box-shadow:
-		0 1px 2px rgba(86,69,212,0.05),
-		0 12px 32px rgba(86,69,212,0.10);
+		0 1px 2px rgba(10, 102, 194,0.05),
+		0 12px 32px rgba(10, 102, 194,0.10);
 }
 
 /* ── Progress ring header ──────────────────────────────────────── */
@@ -5398,7 +5398,7 @@ textarea.input-field {
 
 .exam-take__nav-ring-bg {
 	fill: none;
-	stroke: rgba(86,69,212,0.08);
+	stroke: rgba(10, 102, 194,0.08);
 	stroke-width: 3.5;
 }
 
@@ -5465,7 +5465,7 @@ textarea.input-field {
 	overflow-x: hidden;
 	padding-right: 0.2rem;
 	scrollbar-width: thin;
-	scrollbar-color: rgba(86,69,212,0.12) transparent;
+	scrollbar-color: rgba(10, 102, 194,0.12) transparent;
 	min-width: 0;
 	width: 100%;
 }
@@ -5475,7 +5475,7 @@ textarea.input-field {
 }
 
 .exam-take__nav-sections::-webkit-scrollbar-thumb {
-	background: rgba(86, 69, 212, 0.12);
+	background: rgba(10, 102, 194, 0.12);
 	border-radius: 4px;
 }
 
@@ -5527,7 +5527,7 @@ textarea.input-field {
 	font-variant-numeric: tabular-nums;
 	padding: 0.1rem 0.4rem;
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 	color: var(--text-400);
 	transition: all 0.25s;
 }
@@ -5572,10 +5572,10 @@ textarea.input-field {
 }
 
 .exam-take__nav-btn:hover {
-	background: rgba(86, 69, 212, 0.05);
+	background: rgba(10, 102, 194, 0.05);
 	border-color: var(--nav-accent, var(--primary-400));
 	transform: translateY(-1px);
-	box-shadow: 0 2px 6px rgba(86, 69, 212, 0.10);
+	box-shadow: 0 2px 6px rgba(10, 102, 194, 0.10);
 }
 
 .exam-take__nav-btn--current {
@@ -5636,7 +5636,7 @@ textarea.input-field {
 .exam-take__section-header {
 	margin-bottom: 1rem;
 	padding: 1rem;
-	background: rgba(86, 69, 212, 0.04);
+	background: rgba(10, 102, 194, 0.04);
 	border-radius: var(--radius-md);
 	border-left: 4px solid var(--primary-500);
 }
@@ -5685,7 +5685,7 @@ textarea.input-field {
 	margin-bottom: 1.25rem;
 	border-radius: var(--radius-md);
 	background: var(--surface);
-	border: 1.5px solid rgba(86, 69, 212, 0.12);
+	border: 1.5px solid rgba(10, 102, 194, 0.12);
 	box-shadow: var(--shadow-sm);
 	overflow: hidden;
 	transition: box-shadow 0.2s;
@@ -5700,15 +5700,15 @@ textarea.input-field {
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.75rem 1.15rem;
-	background: linear-gradient(135deg, rgba(86, 69, 212, 0.06), rgba(139, 124, 232, 0.04));
-	border-bottom: 1px solid rgba(86, 69, 212, 0.08);
+	background: linear-gradient(135deg, rgba(10, 102, 194, 0.06), rgba(139, 124, 232, 0.04));
+	border-bottom: 1px solid rgba(10, 102, 194, 0.08);
 	cursor: pointer;
 	user-select: none;
 	transition: background 0.15s;
 }
 
 .exam-take__reading-passage-bar:hover {
-	background: linear-gradient(135deg, rgba(86, 69, 212, 0.09), rgba(139, 124, 232, 0.06));
+	background: linear-gradient(135deg, rgba(10, 102, 194, 0.09), rgba(139, 124, 232, 0.06));
 }
 
 .exam-take__reading-passage-icon {
@@ -5737,7 +5737,7 @@ textarea.input-field {
 
 .exam-take__reading-passage-toggle:hover {
 	color: var(--primary-500);
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 }
 
 .exam-take__reading-passage-body {
@@ -5860,8 +5860,8 @@ textarea.input-field {
 .instruction-renderer {
 	margin-top: 0.5rem;
 	padding: 1rem 1.25rem;
-	background: rgba(86, 69, 212, 0.03);
-	border: 1px solid rgba(86, 69, 212, 0.08);
+	background: rgba(10, 102, 194, 0.03);
+	border: 1px solid rgba(10, 102, 194, 0.08);
 	border-radius: var(--radius-md);
 
 	line-height: 1.75;
@@ -5911,7 +5911,7 @@ textarea.input-field {
 }
 
 .instruction-renderer::-webkit-scrollbar-thumb {
-	background: rgba(86, 69, 212, 0.15);
+	background: rgba(10, 102, 194, 0.15);
 	border-radius: 999px;
 }
 
@@ -6038,8 +6038,8 @@ textarea.input-field {
 	border: 1px solid rgba(239, 68, 68, 0.20);
 }
 .exam-take__feedback--manual {
-	background: rgba(86, 69, 212, 0.06);
-	border: 1px solid rgba(86, 69, 212, 0.18);
+	background: rgba(10, 102, 194, 0.06);
+	border: 1px solid rgba(10, 102, 194, 0.18);
 }
 .exam-take__feedback--unanswered {
 	background: rgba(100, 116, 139, 0.06);
@@ -6066,11 +6066,11 @@ textarea.input-field {
 .exam-take__feedback--correct .exam-take__feedback-banner { color: #16a34a; }
 .exam-take__feedback--partial .exam-take__feedback-banner { color: #d97706; }
 .exam-take__feedback--incorrect .exam-take__feedback-banner { color: #dc2626; }
-.exam-take__feedback--manual .exam-take__feedback-banner { color: #5645d4; }
+.exam-take__feedback--manual .exam-take__feedback-banner { color: #0A66C2; }
 
 /* Essay AI feedback */
 .exam-take__feedback-essay {
-	background: rgba(86, 69, 212, 0.05);
+	background: rgba(10, 102, 194, 0.05);
 	border-radius: 8px;
 	padding: 0.65rem 0.85rem;
 	margin-bottom: 0.5rem;
@@ -6212,8 +6212,8 @@ textarea.input-field {
 }
 .exam-take__short-answer-input:focus {
 	outline: none;
-	border-color: var(--primary, #5645d4);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.12);
+	border-color: var(--primary, #0A66C2);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.12);
 }
 .exam-take__short-answer-input:disabled {
 	opacity: 0.6;
@@ -6495,7 +6495,7 @@ textarea.input-field {
 	align-items: center;
 	padding: 0.25rem 0.6rem;
 	border-radius: 999px;
-	background: rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.1);
 	color: var(--primary-600);
 	font-size: 0.82rem;
 	font-weight: 600;
@@ -6574,7 +6574,7 @@ textarea.input-field {
 	margin-bottom: 1rem;
 	background: none;
 	border: none;
-	border-left: 3px solid var(--primary-200, rgba(86, 69, 212, 0.2));
+	border-left: 3px solid var(--primary-200, rgba(10, 102, 194, 0.2));
 	border-radius: 0;
 }
 
@@ -6606,7 +6606,7 @@ textarea.input-field {
 .exam-take__preview-type-header {
 	margin-bottom: 1.25rem;
 	padding-bottom: 0.5rem;
-	border-bottom: 1.5px solid rgba(86, 69, 212, 0.12);
+	border-bottom: 1.5px solid rgba(10, 102, 194, 0.12);
 }
 
 .exam-take__preview-type-label {
@@ -6967,8 +6967,8 @@ textarea.input-field {
 	transition: border-color 0.15s, box-shadow 0.15s;
 }
 .ka-scaffold__text-input:focus {
-	border-color: #5645d4;
-	box-shadow: 0 0 0 3px rgba(86, 69, 212,0.13);
+	border-color: #0A66C2;
+	box-shadow: 0 0 0 3px rgba(10, 102, 194,0.13);
 }
 .ka-scaffold__text-input:disabled {
 	background: #f3f4f6;
@@ -6996,7 +6996,7 @@ textarea.input-field {
 .ka-scaffold__ai-loading {
 	margin-top: 0.3rem;
 	font-size: 0.82rem;
-	color: #5645d4;
+	color: #0A66C2;
 	display: flex;
 	align-items: center;
 	gap: 0.4rem;
@@ -7005,8 +7005,8 @@ textarea.input-field {
 	display: inline-block;
 	width: 14px;
 	height: 14px;
-	border: 2px solid #c7d2fe;
-	border-top-color: #5645d4;
+	border: 2px solid #B9D6F5;
+	border-top-color: #0A66C2;
 	border-radius: 50%;
 	animation: ka-spin 0.6s linear infinite;
 }
@@ -7030,8 +7030,8 @@ textarea.input-field {
 
 .ka-scaffold__field--pending .ka-scaffold__text-input,
 .ka-scaffold__field--pending .math-kb__input-row {
-	border-color: #a5b4fc;
-	background: #eef2ff;
+	border-color: #6FA8E3;
+	background: #E8F1FB;
 }
 
 /* ── Hint area — KA-style "Related content" / hint toggle ────────── */
@@ -7205,7 +7205,7 @@ textarea.input-field {
 	color: #e2e8f0;
 }
 [data-theme="dark"] .ka-scaffold__text-input:focus {
-	border-color: #8b7ce8;
+	border-color: #4A93DD;
 	box-shadow: 0 0 0 3px rgba(139, 124, 232,0.18);
 }
 [data-theme="dark"] .ka-scaffold__text-input:disabled {
@@ -7222,11 +7222,11 @@ textarea.input-field {
 	background: #2e0b0b;
 }
 [data-theme="dark"] .ka-scaffold__ai-loading {
-	color: #a5b4fc;
+	color: #6FA8E3;
 }
 [data-theme="dark"] .ka-scaffold__spinner {
 	border-color: #3730a3;
-	border-top-color: #a5b4fc;
+	border-top-color: #6FA8E3;
 }
 [data-theme="dark"] .ka-scaffold__ai-feedback--correct {
 	color: #6ee7a0;
@@ -7238,7 +7238,7 @@ textarea.input-field {
 }
 [data-theme="dark"] .ka-scaffold__field--pending .ka-scaffold__text-input,
 [data-theme="dark"] .ka-scaffold__field--pending .math-kb__input-row {
-	border-color: #5645d4;
+	border-color: #0A66C2;
 	background: #2a1f6b;
 }
 
@@ -7332,12 +7332,12 @@ textarea.input-field {
 	transition: all 0.15s;
 }
 .math-kb__toggle:hover {
-	background: #eef2ff;
-	color: #4534b3;
+	background: #E8F1FB;
+	color: #07498C;
 }
 .math-kb__toggle--active {
-	background: #eef2ff;
-	color: #4534b3;
+	background: #E8F1FB;
+	color: #07498C;
 }
 
 /* Live KaTeX preview */
@@ -7397,15 +7397,15 @@ textarea.input-field {
 	transition: all 0.1s;
 }
 .math-kb__tab:hover {
-	background: #eef2ff;
-	color: #4534b3;
+	background: #E8F1FB;
+	color: #07498C;
 }
 .math-kb__tab--active {
 	background: #4f46e5;
 	color: #fff;
 }
 .math-kb__tab--active:hover {
-	background: #4534b3;
+	background: #07498C;
 	color: #fff;
 }
 
@@ -7434,14 +7434,14 @@ textarea.input-field {
 	user-select: none;
 }
 .math-kb__sym-btn:hover {
-	background: #eef2ff;
-	border-color: #8b7ce8;
-	color: #4534b3;
+	background: #E8F1FB;
+	border-color: #4A93DD;
+	color: #07498C;
 	transform: scale(1.08);
 }
 .math-kb__sym-btn:active {
 	transform: scale(0.95);
-	background: #c7d2fe;
+	background: #B9D6F5;
 }
 
 /* ── MathKeyboard Dark Mode ────────────────────────────────────────────── */
@@ -7450,7 +7450,7 @@ textarea.input-field {
 	border-color: #4b5563;
 }
 [data-theme="dark"] .math-kb--focused .math-kb__input-row {
-	border-color: #8b7ce8;
+	border-color: #4A93DD;
 	box-shadow: 0 0 0 3px rgba(139, 124, 232, 0.15);
 }
 [data-theme="dark"] .math-kb__input {
@@ -7467,7 +7467,7 @@ textarea.input-field {
 [data-theme="dark"] .math-kb__toggle:hover,
 [data-theme="dark"] .math-kb__toggle--active {
 	background: #2a1f6b;
-	color: #a5b4fc;
+	color: #6FA8E3;
 }
 [data-theme="dark"] .math-kb__preview {
 	background: #16162a;
@@ -7488,10 +7488,10 @@ textarea.input-field {
 }
 [data-theme="dark"] .math-kb__tab:hover {
 	background: #252540;
-	color: #c7d2fe;
+	color: #B9D6F5;
 }
 [data-theme="dark"] .math-kb__tab--active {
-	background: #5645d4;
+	background: #0A66C2;
 	color: #fff;
 }
 [data-theme="dark"] .math-kb__sym-btn {
@@ -7501,8 +7501,8 @@ textarea.input-field {
 }
 [data-theme="dark"] .math-kb__sym-btn:hover {
 	background: #3a2a99;
-	border-color: #5645d4;
-	color: #c7d2fe;
+	border-color: #0A66C2;
+	color: #B9D6F5;
 }
 
 /* ── MathKeyboard Responsive ───────────────────────────────────────────── */
@@ -7789,13 +7789,13 @@ textarea.input-field {
 
 .exam-take__mcq-option:hover {
 	border-color: var(--primary-400);
-	background: rgba(86, 69, 212, 0.03);
+	background: rgba(10, 102, 194, 0.03);
 }
 
 .exam-take__mcq-option--selected {
 	border-color: var(--primary-500);
-	background: rgba(86, 69, 212, 0.06);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.06);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
 }
 
 .exam-take__mcq-radio {
@@ -7828,7 +7828,7 @@ textarea.input-field {
 	width: 26px;
 	height: 26px;
 	border-radius: 50%;
-	background: rgba(86, 69, 212, 0.08);
+	background: rgba(10, 102, 194, 0.08);
 	color: var(--primary-600);
 	font-size: 0.8rem;
 	font-weight: 700;
@@ -7869,8 +7869,8 @@ textarea.input-field {
 
 .exam-take__tf-option--selected {
 	border-color: var(--primary-500);
-	background: rgba(86, 69, 212, 0.06);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.1);
+	background: rgba(10, 102, 194, 0.06);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
 }
 
 .exam-take__tf-radio {
@@ -7893,7 +7893,7 @@ textarea.input-field {
 .exam-take__text-input:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.18);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.18);
 }
 
 .exam-take__essay-input {
@@ -7913,7 +7913,7 @@ textarea.input-field {
 .exam-take__essay-input:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212, 0.18);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.18);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -7954,7 +7954,7 @@ textarea.input-field {
 	font-size: 0.78rem;
 	font-weight: 700;
 	color: var(--primary-700);
-	background: rgba(86, 69, 212,0.08);
+	background: rgba(10, 102, 194,0.08);
 	padding: 0.3rem 0.7rem;
 	border-radius: 999px;
 	letter-spacing: 0.01em;
@@ -8065,7 +8065,7 @@ textarea.input-field {
 .ka-step--active .ka-step__dot {
 	border-color: var(--primary-500);
 	color: var(--primary-600);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212,0.12);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194,0.12);
 }
 
 .ka-step--done .ka-step__dot {
@@ -8118,8 +8118,8 @@ textarea.input-field {
 	gap: 0.35rem;
 	font-size: 0.78rem;
 	color: var(--primary-600);
-	background: rgba(86, 69, 212,0.05);
-	border: 1px solid rgba(86, 69, 212,0.12);
+	background: rgba(10, 102, 194,0.05);
+	border: 1px solid rgba(10, 102, 194,0.12);
 	border-radius: 8px;
 	padding: 0.4rem 0.65rem;
 	margin-bottom: 0.5rem;
@@ -8159,7 +8159,7 @@ textarea.input-field {
 .ka-step__input:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(86, 69, 212,0.1);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194,0.1);
 }
 
 .ka-step__input::placeholder {
@@ -8178,7 +8178,7 @@ textarea.input-field {
 .ka-step__preview {
 	margin-top: 0.35rem;
 	padding: 0.4rem 0.65rem;
-	background: rgba(86, 69, 212,0.03);
+	background: rgba(10, 102, 194,0.03);
 	border-radius: 6px;
 	overflow-x: auto;
 }
@@ -8240,7 +8240,7 @@ textarea.input-field {
 .ka-proof__add-btn:hover {
 	border-color: var(--primary-400);
 	color: var(--primary-600);
-	background: rgba(86, 69, 212,0.04);
+	background: rgba(10, 102, 194,0.04);
 }
 
 .ka-proof__hint-btn {
@@ -8655,7 +8655,7 @@ textarea.input-field {
 .exam-take__matching-select:focus {
 	outline: none;
 	border-color: var(--primary);
-	box-shadow: 0 0 0 2px rgba(86, 69, 212, 0.15);
+	box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.15);
 }
 
 .exam-take__no-options p {
@@ -8766,13 +8766,13 @@ textarea.input-field {
 	font-size: 0.85rem;
 	font-weight: 700;
 	cursor: pointer;
-	box-shadow: 0 4px 16px rgba(86, 69, 212, 0.3);
+	box-shadow: 0 4px 16px rgba(10, 102, 194, 0.3);
 	transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .exam-take__passage-btn:hover {
 	transform: translateY(-2px);
-	box-shadow: 0 6px 20px rgba(86, 69, 212, 0.4);
+	box-shadow: 0 6px 20px rgba(10, 102, 194, 0.4);
 }
 
 /* ── Passage slide-over panel ── */
@@ -8857,7 +8857,7 @@ textarea.input-field {
 	appearance: none;
 	border: none;
 	border-bottom: 2px solid var(--primary-400);
-	background: rgba(86, 69, 212, 0.04);
+	background: rgba(10, 102, 194, 0.04);
 	border-radius: 4px 4px 0 0;
 	padding: 0.1em 0.35em;
 	margin: 0 0.15em;
@@ -8880,12 +8880,12 @@ textarea.input-field {
 }
 
 .exam-take__inline-blank:hover {
-	background: rgba(86, 69, 212, 0.08);
+	background: rgba(10, 102, 194, 0.08);
 }
 
 .exam-take__inline-blank:focus {
 	border-bottom-color: var(--primary-600);
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 	box-shadow: 0 2px 0 0 var(--primary-500);
 }
 
@@ -8916,8 +8916,8 @@ textarea.input-field {
 	border: 1px solid rgba(255, 255, 255, 0.55);
 	border-radius: var(--radius-lg);
 	box-shadow:
-		0 1px 2px rgba(86, 69, 212, 0.04),
-		0 8px 28px rgba(86, 69, 212, 0.08);
+		0 1px 2px rgba(10, 102, 194, 0.04),
+		0 8px 28px rgba(10, 102, 194, 0.08);
 }
 
 .exam-results__score-ring {
@@ -9121,8 +9121,8 @@ textarea.input-field {
 	flex-wrap: wrap;
 	padding: 0.9rem 1.1rem;
 	border-radius: var(--radius-md);
-	background: linear-gradient(135deg, rgba(86, 69, 212, 0.08), rgba(59, 130, 246, 0.05));
-	border: 1px solid rgba(86, 69, 212, 0.2);
+	background: linear-gradient(135deg, rgba(10, 102, 194, 0.08), rgba(59, 130, 246, 0.05));
+	border: 1px solid rgba(10, 102, 194, 0.2);
 }
 
 .exam-results__focus-text {
@@ -9191,7 +9191,7 @@ textarea.input-field {
 	font-weight: 700;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: var(--review-accent, #5645d4);
+	color: var(--review-accent, #0A66C2);
 }
 
 .review-session__counter {
@@ -9228,7 +9228,7 @@ textarea.input-field {
 
 .review-session__progress-fill {
 	height: 100%;
-	background: var(--review-accent, #5645d4);
+	background: var(--review-accent, #0A66C2);
 	border-radius: 999px;
 	transition: width 0.4s ease;
 }
@@ -9243,8 +9243,8 @@ textarea.input-field {
 	display: inline-block;
 	font-size: 0.72rem;
 	font-weight: 700;
-	color: var(--review-accent, #5645d4);
-	background: color-mix(in srgb, var(--review-accent, #5645d4) 12%, transparent);
+	color: var(--review-accent, #0A66C2);
+	background: color-mix(in srgb, var(--review-accent, #0A66C2) 12%, transparent);
 	padding: 0.2rem 0.6rem;
 	border-radius: 100px;
 	margin-bottom: 0.7rem;
@@ -9275,20 +9275,20 @@ textarea.input-field {
 }
 
 .review-session__option:hover {
-	border-color: var(--review-accent, #5645d4);
+	border-color: var(--review-accent, #0A66C2);
 }
 
 .review-session__option--selected {
-	border-color: var(--review-accent, #5645d4);
-	background: color-mix(in srgb, var(--review-accent, #5645d4) 8%, transparent);
+	border-color: var(--review-accent, #0A66C2);
+	background: color-mix(in srgb, var(--review-accent, #0A66C2) 8%, transparent);
 }
 
-.review-session__option input { accent-color: var(--review-accent, #5645d4); }
+.review-session__option input { accent-color: var(--review-accent, #0A66C2); }
 
 .review-session__option-key {
 	font-weight: 800;
 	font-size: 0.82rem;
-	color: var(--review-accent, #5645d4);
+	color: var(--review-accent, #0A66C2);
 	min-width: 1.1em;
 }
 
@@ -9313,9 +9313,9 @@ textarea.input-field {
 }
 
 .review-session__tf-btn--selected {
-	border-color: var(--review-accent, #5645d4);
-	background: color-mix(in srgb, var(--review-accent, #5645d4) 10%, transparent);
-	color: var(--review-accent, #5645d4);
+	border-color: var(--review-accent, #0A66C2);
+	background: color-mix(in srgb, var(--review-accent, #0A66C2) 10%, transparent);
+	color: var(--review-accent, #0A66C2);
 }
 
 .review-session__text {
@@ -9329,7 +9329,7 @@ textarea.input-field {
 
 .review-session__text:focus {
 	outline: none;
-	border-color: var(--review-accent, #5645d4);
+	border-color: var(--review-accent, #0A66C2);
 }
 
 .review-session__feedback {
@@ -9376,8 +9376,8 @@ textarea.input-field {
 
 .review-session__reveal-answer {
 	padding: 0.85rem 1rem;
-	background: color-mix(in srgb, var(--review-accent, #5645d4) 7%, transparent);
-	border: 1px solid color-mix(in srgb, var(--review-accent, #5645d4) 20%, transparent);
+	background: color-mix(in srgb, var(--review-accent, #0A66C2) 7%, transparent);
+	border: 1px solid color-mix(in srgb, var(--review-accent, #0A66C2) 20%, transparent);
 	border-radius: var(--radius-md, 10px);
 	font-size: 0.92rem;
 	color: var(--text-800);
@@ -9459,7 +9459,7 @@ textarea.input-field {
 .review-session__summary-score {
 	font-size: 1rem;
 	font-weight: 700;
-	color: var(--review-accent, #5645d4);
+	color: var(--review-accent, #0A66C2);
 	margin-bottom: 0.5rem;
 }
 
@@ -9521,8 +9521,8 @@ textarea.input-field {
 }
 
 .exam-results__filter-chip--active {
-	background: var(--primary-600, #5645d4);
-	border-color: var(--primary-600, #5645d4);
+	background: var(--primary-600, #0A66C2);
+	border-color: var(--primary-600, #0A66C2);
 	color: #fff;
 }
 
@@ -9655,7 +9655,7 @@ textarea.input-field {
 
 	color: var(--text-700);
 	padding: 0.4rem 0.65rem;
-	background: rgba(86, 69, 212, 0.04);
+	background: rgba(10, 102, 194, 0.04);
 	border-radius: var(--radius-sm);
 	margin-bottom: 0.35rem;
 }
@@ -9693,10 +9693,10 @@ textarea.input-field {
 
 .figure-renderer {
 	margin: 0.75rem 0;
-	border: 1px solid rgba(86, 69, 212, 0.1);
+	border: 1px solid rgba(10, 102, 194, 0.1);
 	border-radius: var(--radius-md);
 	overflow: hidden;
-	background: rgba(86, 69, 212, 0.02);
+	background: rgba(10, 102, 194, 0.02);
 }
 
 .figure-renderer--compact {
@@ -9729,7 +9729,7 @@ textarea.input-field {
 }
 
 .figure-render__table th {
-	background: rgba(86, 69, 212, 0.08);
+	background: rgba(10, 102, 194, 0.08);
 	color: var(--text-900);
 	font-weight: 700;
 	padding: 0.55rem 0.75rem;
@@ -9745,7 +9745,7 @@ textarea.input-field {
 }
 
 .figure-render__table tr:nth-child(even) {
-	background: rgba(86, 69, 212, 0.02);
+	background: rgba(10, 102, 194, 0.02);
 }
 
 /* Graph figures */
@@ -11622,7 +11622,7 @@ textarea.input-field {
 }
 .sp-task:hover {
 	border-color: var(--primary-300);
-	box-shadow: 0 2px 10px rgba(86, 69, 212, 0.08);
+	box-shadow: 0 2px 10px rgba(10, 102, 194, 0.08);
 	transform: translateY(-1px);
 }
 .sp-task--compact { padding: 0.45rem 0.75rem; }
@@ -12109,7 +12109,7 @@ textarea.input-field {
 	gap: 0.3rem;
 	font-size: 0.72rem;
 	color: var(--primary-500);
-	background: rgba(86, 69, 212, 0.06);
+	background: rgba(10, 102, 194, 0.06);
 	padding: 0.3rem 0.55rem;
 	border-radius: 6px;
 }
@@ -12245,12 +12245,12 @@ textarea.input-field {
 	--border: rgba(255, 255, 255, 0.10);
 	--border-strong: rgba(255, 255, 255, 0.18);
 	--primary-50: #25224a;
-	--primary-100: #2c2956;
+	--primary-100: #0D2B47;
 	--primary-400: #9b8ff0;
-	--primary-500: #8b7ce8;
+	--primary-500: #4A93DD;
 	--primary-600: #7c6ee0;
 	--primary-700: #6a5cd0;
-	--primary: #8b7ce8;
+	--primary: #4A93DD;
 	--text-900: #ededec;
 	--text-800: #d6d4cf;
 	--text-700: #b8b5ad;
@@ -12370,7 +12370,7 @@ textarea.input-field {
 .home-hero::before {
 	top: -80px; left: -60px;
 	width: 320px; height: 320px;
-	background: radial-gradient(circle, rgba(86, 69, 212, 0.35), transparent 65%);
+	background: radial-gradient(circle, rgba(10, 102, 194, 0.35), transparent 65%);
 }
 .home-hero::after {
 	bottom: -100px; right: -60px;
@@ -12454,7 +12454,7 @@ textarea.input-field {
 
 /* Premium page-header title — subtle gradient on H1 */
 .page-header__title {
-	background: linear-gradient(135deg, var(--text-900) 0%, var(--primary-700) 60%, #5645d4 100%);
+	background: linear-gradient(135deg, var(--text-900) 0%, var(--primary-700) 60%, #0A66C2 100%);
 	-webkit-background-clip: text;
 	background-clip: text;
 	-webkit-text-fill-color: transparent;
@@ -12473,10 +12473,10 @@ textarea.input-field {
 }
 .filter-pill:hover { transform: translateY(-1px); }
 .filter-pill--active {
-	background: linear-gradient(135deg, var(--primary-600), #5645d4);
+	background: linear-gradient(135deg, var(--primary-600), #0A66C2);
 	color: #fff;
 	border-color: transparent;
-	box-shadow: 0 6px 16px rgba(86, 69, 212, 0.25);
+	box-shadow: 0 6px 16px rgba(10, 102, 194, 0.25);
 }
 
 /* Smooth theme transition for surfaces */
@@ -12512,7 +12512,7 @@ body,
 
 /* Premium selection color */
 ::selection {
-	background: rgba(86, 69, 212, 0.28);
+	background: rgba(10, 102, 194, 0.28);
 	color: inherit;
 }
 [data-theme="dark"] ::selection { background: rgba(147, 197, 253, 0.30); }
@@ -12720,7 +12720,7 @@ body,
    ============================================================ */
 
 :root {
-	--lp-accent: #5645d4;
+	--lp-accent: #0A66C2;
 	--lp-accent-2: #f59e0b;
 	--lp-accent-3: #10b981;
 	--lp-ink: var(--text-900);
@@ -12730,7 +12730,7 @@ body,
 }
 
 [data-theme="dark"] {
-	--lp-accent: #8b7ce8;
+	--lp-accent: #4A93DD;
 	--lp-accent-2: #fbbf24;
 }
 
@@ -12744,7 +12744,7 @@ body {
 
 [data-theme="dark"] body {
 	background:
-		radial-gradient(1100px 600px at 8% -5%, rgba(86, 69, 212, 0.20) 0%, transparent 60%),
+		radial-gradient(1100px 600px at 8% -5%, rgba(10, 102, 194, 0.20) 0%, transparent 60%),
 		radial-gradient(900px 500px at 95% 5%, rgba(245, 158, 11, 0.10) 0%, transparent 55%),
 		radial-gradient(800px 500px at 50% 95%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
 		var(--background);
@@ -12838,7 +12838,7 @@ body {
 .course-card:hover {
 	border-color: color-mix(in srgb, var(--lp-accent) 38%, var(--border)) !important;
 	transform: translateY(-4px);
-	box-shadow: 0 22px 48px -22px rgba(86, 69, 212, 0.28) !important;
+	box-shadow: 0 22px 48px -22px rgba(10, 102, 194, 0.28) !important;
 }
 
 .course-card__title {
@@ -12923,7 +12923,7 @@ body {
 /* Modal premium */
 .course-modal, .modal {
 	border: 1px solid var(--border) !important;
-	box-shadow: 0 40px 80px -30px rgba(86, 69, 212, 0.35), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
+	box-shadow: 0 40px 80px -30px rgba(10, 102, 194, 0.35), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
 }
 
 /* Section eyebrow upgrade — used on Courses/Exams/etc. */
@@ -13007,7 +13007,7 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 }
 .level-card:hover {
 	border-color: color-mix(in srgb, var(--lp-accent) 35%, var(--border)) !important;
-	box-shadow: 0 28px 50px -22px rgba(86, 69, 212, 0.32) !important;
+	box-shadow: 0 28px 50px -22px rgba(10, 102, 194, 0.32) !important;
 }
 .level-card__heading {
 	font-family: var(--font-serif) !important;
@@ -13105,7 +13105,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	background: var(--surface) !important;
 	border: 1px solid var(--border) !important;
 	border-radius: 16px !important;
-	box-shadow: 0 40px 80px -30px rgba(86, 69, 212, 0.4), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
+	box-shadow: 0 40px 80px -30px rgba(10, 102, 194, 0.4), 0 18px 40px -20px rgba(0,0,0,0.25) !important;
 }
 
 /* Make sure dark-mode body gradient overrides any stale white */
@@ -13255,7 +13255,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .course-card:hover {
 	transform: translateY(-4px);
 	border-color: color-mix(in srgb, var(--lp-accent) 35%, var(--border)) !important;
-	box-shadow: 0 32px 60px -28px rgba(86, 69, 212, 0.32) !important;
+	box-shadow: 0 32px 60px -28px rgba(10, 102, 194, 0.32) !important;
 }
 .course-card__title {
 	font-family: var(--font-serif);
@@ -13478,7 +13478,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 }
 .about-stats .card:hover {
 	transform: translateY(-3px);
-	box-shadow: 0 28px 50px -28px rgba(86, 69, 212, 0.3) !important;
+	box-shadow: 0 28px 50px -28px rgba(10, 102, 194, 0.3) !important;
 }
 .about-stats__number {
 	font-family: var(--font-serif);
@@ -13515,7 +13515,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .about-approach__item:hover {
 	transform: translateY(-3px);
 	border-color: color-mix(in srgb, var(--lp-accent) 30%, var(--border)) !important;
-	box-shadow: 0 22px 44px -26px rgba(86, 69, 212, 0.28) !important;
+	box-shadow: 0 22px 44px -26px rgba(10, 102, 194, 0.28) !important;
 }
 .about-approach__icon {
 	flex: 0 0 44px;
@@ -13594,10 +13594,10 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	border-radius: 24px !important;
 	background:
 		radial-gradient(600px 280px at 30% 20%, rgba(245, 158, 11, 0.16), transparent 60%),
-		linear-gradient(135deg, #2a1f6b 0%, #3a2a99 55%, #4534b3 100%) !important;
+		linear-gradient(135deg, #2a1f6b 0%, #3a2a99 55%, #07498C 100%) !important;
 	border: 1px solid rgba(255,255,255,0.08) !important;
 	color: #f8fafc !important;
-	box-shadow: 0 40px 80px -30px rgba(86, 69, 212, 0.55) !important;
+	box-shadow: 0 40px 80px -30px rgba(10, 102, 194, 0.55) !important;
 	position: relative;
 	overflow: hidden;
 }
@@ -13726,7 +13726,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 
 :root {
 	--lp-accent: var(--primary-500);
-	--lp-accent-2: #d6b6f6;
+	--lp-accent-2: #9ECBF2;
 	--lp-accent-3: var(--success-500);
 	--lp-radius: var(--radius-lg);
 	--interactive-lift: translateY(-2px);
