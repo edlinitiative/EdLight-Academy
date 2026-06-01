@@ -244,9 +244,11 @@
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  object-position: center;
+  height: auto;
+  object-fit: contain;
+  /* Blend the image's white backdrop into the warm page canvas so it reads
+     as a transparent cutout instead of a white block. */
+  mix-blend-mode: multiply;
   z-index: 1;
 }
 
