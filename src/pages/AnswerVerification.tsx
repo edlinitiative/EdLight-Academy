@@ -7,6 +7,7 @@ import {
   subjectColor,
   QUESTION_TYPE_META,
 } from '../utils/examUtils';
+import { fetchFullCatalog } from '../utils/examCatalog';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Answer Verification — Admin tool for reviewing & correcting AI answers
@@ -420,14 +421,11 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
 export default function AnswerVerification() {
   const queryClient = useQueryClient();
 
-  // Load catalog
+  // Load catalog. The 27 MB monolith is no longer deployed, so reconstruct it
+  // from the slim index + per-exam files (admin-only, runs on demand).
   const { data: catalog, isLoading, error } = useQuery({
-    queryKey: ['exam-catalog'],
-    queryFn: async () => {
-      const res = await fetch('/exam_catalog.json');
-      if (!res.ok) throw new Error('Failed to load exam catalog');
-      return res.json();
-    },
+    queryKey: ['exam-catalog-full'],
+    queryFn: () => fetchFullCatalog(),
     staleTime: Infinity,
   });
 
@@ -570,7 +568,7 @@ export default function AnswerVerification() {
       setSaveStatus('success');
 
       // Also update the react-query cache so other pages see the changes
-      queryClient.setQueryData(['exam-catalog'], workingCatalog);
+      queryClient.setQueryData(['exam-catalog-full'], workingCatalog);
     } catch (err) {
       console.error('Save failed:', err);
       setSaveStatus('error');

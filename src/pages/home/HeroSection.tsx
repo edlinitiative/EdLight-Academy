@@ -5,7 +5,7 @@ import { ArrowIcon, getStats, TFn } from './content';
 
 export default function HeroSection({ t }: { t: TFn }) {
   const navigate = useNavigate();
-  const [heroSrc, setHeroSrc] = useState('/assets/landing-hero.png');
+  const [heroSrc, setHeroSrc] = useState('/assets/landing-hero.webp');
   const stats = getStats(t);
 
   return (
@@ -62,7 +62,11 @@ export default function HeroSection({ t }: { t: TFn }) {
               <img
                 src={heroSrc}
                 alt={t('Élève haïtien apprenant en ligne', 'Elèv ayisyen k ap aprann sou entènèt')}
+                width={1200}
+                height={1091}
                 loading="eager"
+                decoding="async"
+                fetchPriority="high"
                 onError={(e) => {
                   if (heroSrc !== '/assets/student-hero.svg') {
                     setHeroSrc('/assets/student-hero.svg');

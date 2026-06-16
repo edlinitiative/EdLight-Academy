@@ -14,10 +14,10 @@ export function useT(): TFn {
 
 /** Subject thumbnail assets keyed by subject code. */
 export const subjectThumbs: Record<string, string> = {
-  PHYS: '/assets/physics-thumb.png',
+  PHYS: '/assets/physics-thumb.webp',
   CHEM: '/assets/chemistry-thumb.jpg',
-  MATH: '/assets/math-thumb.png',
-  ECON: '/assets/economy-thumb.png',
+  MATH: '/assets/math-thumb.webp',
+  ECON: '/assets/economy-thumb.webp',
 };
 
 export interface FeaturedCourse {

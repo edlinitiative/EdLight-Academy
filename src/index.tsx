@@ -3,9 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import './mobile-fixes.css';
+import './mobile-first.css';
 import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
-import { onAuthStateChange, upsertUserDocument } from './services/firebase';
+import { registerServiceWorker } from './utils/registerServiceWorker';
 
 function getDefaultStudentName(language) {
   return language === 'ht' ? 'Elèv' : 'Élève';
@@ -65,24 +66,50 @@ setTimeout(() => {
   }
 }, 0);
 
-// Sync Firebase auth state to app store
-onAuthStateChange(async (user) => {
-  const setUser = useStore.getState().setUser;
-  if (user) {
-    // Update last_seen in Firestore on session restore
-    try {
-      await upsertUserDocument(user, false);
-    } catch (error) {
-      console.error('Failed to update user document:', error);
-    }
-    
-    setUser({
-      uid: user.uid,
-      name: user.displayName || getDefaultStudentName(useStore.getState().language),
-      email: user.email || '',
-      picture: user.photoURL || '',
+// Sync Firebase auth state to app store.
+// Firebase (~600 KB) is imported DYNAMICALLY and scheduled AFTER first paint so
+// it never blocks initial render. The persisted user from the store already
+// drives the UI immediately, so there is no logged-out flash; Firebase simply
+// confirms/refreshes the session in the background.
+function bootstrapFirebaseAuth() {
+  import('./services/firebase')
+    .then(({ onAuthStateChange, upsertUserDocument }) => {
+      onAuthStateChange(async (user) => {
+        const setUser = useStore.getState().setUser;
+        if (user) {
+          // Update last_seen in Firestore on session restore
+          try {
+            await upsertUserDocument(user, false);
+          } catch (error) {
+            console.error('Failed to update user document:', error);
+          }
+
+          setUser({
+            uid: user.uid,
+            name: user.displayName || getDefaultStudentName(useStore.getState().language),
+            email: user.email || '',
+            picture: user.photoURL || '',
+          });
+        } else {
+          useStore.getState().logout();
+        }
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to initialize Firebase auth:', error);
     });
+}
+
+// Defer to browser idle time (with a safety timeout) so the SDK downloads
+// without competing with the first meaningful paint.
+if (typeof window !== 'undefined') {
+  const w = window as any;
+  if (typeof w.requestIdleCallback === 'function') {
+    w.requestIdleCallback(bootstrapFirebaseAuth, { timeout: 3000 });
   } else {
-    useStore.getState().logout();
+    setTimeout(bootstrapFirebaseAuth, 1);
   }
-});
+}
+
+// Register the PWA service worker (production only, after window load).
+registerServiceWorker();

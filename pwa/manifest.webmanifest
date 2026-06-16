@@ -1,0 +1,48 @@
+{
+  "name": "EdLight Academy",
+  "short_name": "EdLight",
+  "description": "Cours, quiz interactifs et examens blancs pour les élèves haïtiens.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#faf9f7",
+  "theme_color": "#0A66C2",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Examens blancs",
+      "short_name": "Examens",
+      "url": "/exams",
+      "description": "Parcourir et passer des examens blancs"
+    },
+    {
+      "name": "Cours",
+      "short_name": "Cours",
+      "url": "/courses",
+      "description": "Explorer le catalogue de cours"
+    }
+  ]
+}

@@ -20,13 +20,16 @@
  * }
  */
 
-import { db } from './firebase';
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
+// Firebase is imported DYNAMICALLY so the streak widget (rendered eagerly in
+// the navbar/layout) never pulls the ~600 KB Firestore SDK into the initial
+// bundle. It downloads on the first streak read/write for a signed-in user.
+async function loadFirestore() {
+  const [{ db }, fs] = await Promise.all([
+    import('./firebase'),
+    import('firebase/firestore'),
+  ]);
+  return { db, doc: fs.doc, getDoc: fs.getDoc, setDoc: fs.setDoc, serverTimestamp: fs.serverTimestamp };
+}
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -72,7 +75,7 @@ function trimActiveDays(days, limit = ACTIVE_DAYS_WINDOW) {
 
 // ─── Firestore ref helper ───────────────────────────────────────────────────
 
-function streakRef(uid) {
+function streakRef(db, doc, uid) {
   return doc(db, 'users', uid, 'streaks', 'global');
 }
 
@@ -85,7 +88,8 @@ function streakRef(uid) {
 export async function loadStreak(uid) {
   if (!uid) return defaultStreak();
   try {
-    const snap = await getDoc(streakRef(uid));
+    const { db, doc, getDoc } = await loadFirestore();
+    const snap = await getDoc(streakRef(db, doc, uid));
     if (!snap.exists()) return defaultStreak();
     return { ...defaultStreak(), ...snap.data() };
   } catch (err) {
@@ -107,6 +111,7 @@ export async function recordActivity(uid) {
   const today = todayStr();
 
   try {
+    const { db, doc, setDoc, serverTimestamp } = await loadFirestore();
     const current = await loadStreak(uid);
 
     // Already recorded today — no change
@@ -163,7 +168,7 @@ export async function recordActivity(uid) {
       updatedAt: serverTimestamp(),
     };
 
-    await setDoc(streakRef(uid), updatedStreak, { merge: true });
+    await setDoc(streakRef(db, doc, uid), updatedStreak, { merge: true });
 
     return { streak: { ...updatedStreak, updatedAt: new Date() }, newMilestones };
   } catch (err) {
@@ -179,9 +184,10 @@ export async function recordActivity(uid) {
 export async function awardStreakFreeze(uid) {
   if (!uid) return;
   try {
+    const { db, doc, setDoc, serverTimestamp } = await loadFirestore();
     const current = await loadStreak(uid);
     const freezes = Math.min((current.streakFreezes || 0) + 1, 2);
-    await setDoc(streakRef(uid), { streakFreezes: freezes, updatedAt: serverTimestamp() }, { merge: true });
+    await setDoc(streakRef(db, doc, uid), { streakFreezes: freezes, updatedAt: serverTimestamp() }, { merge: true });
   } catch (err) {
     console.error('[Streak] awardStreakFreeze error:', err);
   }

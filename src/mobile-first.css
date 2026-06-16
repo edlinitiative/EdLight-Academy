@@ -1,0 +1,152 @@
+/* =====================================================================
+   Mobile-first foundation  ·  EdLight Academy
+   ---------------------------------------------------------------------
+   A small, targeted baseline that makes the whole app friendlier on
+   small / touch screens and faster to render on low-end Android phones —
+   the primary EdLight audience in Haiti.
+
+   Loaded LAST (after index.css + mobile-fixes.css) so it can gently
+   reinforce the key mobile-first rules without rewriting the existing
+   stylesheet. Everything here is additive and scoped so desktop is
+   unchanged.
+   ===================================================================== */
+
+/* 1. Responsive media ------------------------------------------------- */
+/* Images/SVGs never overflow their container, and when we set explicit
+   width/height attributes (for layout stability) the image still scales
+   fluidly instead of distorting. */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+img[width][height] {
+  height: auto;
+}
+
+/* 2. Kill accidental horizontal scrolling from any wide child. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* In-page anchors (and the skip link) land below the sticky navbar. */
+html {
+  scroll-padding-top: calc(var(--navbar-height, 60px) + 0.5rem);
+}
+
+/* 3. Fluid headings --------------------------------------------------- */
+/* Long French / Kreyòl titles must not overflow a 320px screen. clamp()
+   keeps the desktop sizes while shrinking gracefully on phones. */
+.lp-hero__title {
+  font-size: clamp(1.9rem, 7vw, 3.5rem);
+  line-height: 1.12;
+}
+.page-header__title {
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.2;
+}
+h1,
+h2,
+.section__title,
+.lp-hero__title,
+.page-header__title,
+.exam-card__title,
+.course-card__title {
+  overflow-wrap: break-word;
+}
+
+/* 4. Thumb-friendly tap targets -------------------------------------- */
+/* Applies only to coarse (touch) pointers, so mouse/desktop density is
+   untouched. ~44px is the WCAG / Apple / Material minimum. */
+@media (pointer: coarse) {
+  .button,
+  .lp-btn,
+  .filter-pill,
+  .filter-chip,
+  .exam-card__cta,
+  .exam-browser__clear-btn,
+  .exam-browser__select,
+  .exam-browser__search,
+  .pagination button,
+  .nav-link,
+  .mobile-menu-toggle,
+  .theme-toggle {
+    min-height: 44px;
+  }
+
+  /* 16px inputs stop iOS Safari from auto-zooming when a field is focused. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+
+  /* Remove the legacy 300ms tap delay on interactive controls. */
+  a,
+  button,
+  .button,
+  .lp-btn,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+/* 5. Calmer + cheaper motion ----------------------------------------- */
+/* Honour reduced-motion and treat it as a performance default: low-end
+   phones render far faster without decorative animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Make sure scroll-reveal content is always shown if motion is reduced. */
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* 6. Off-screen render skipping -------------------------------------- */
+/* The exam catalog and course list can be long. content-visibility lets
+   the browser skip layout/paint for cards that aren't on screen yet — a
+   real scrolling-smoothness win on cheap devices. Guarded by @supports so
+   unsupported browsers are unaffected. */
+@supports (content-visibility: auto) {
+  .exam-card,
+  .lp-course,
+  .course-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 320px;
+  }
+}
+
+/* 7. Small-screen polish for the two key sections -------------------- */
+@media (max-width: 640px) {
+  /* Course filters: let the pills wrap into a tidy, tappable row instead
+     of squeezing onto one line. */
+  .page-header__actions {
+    width: 100%;
+  }
+  .filter-group {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  /* Single-column, full-width cards with comfortable gutters. */
+  .grid--courses {
+    grid-template-columns: 1fr;
+  }
+  .container,
+  .lp-container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}

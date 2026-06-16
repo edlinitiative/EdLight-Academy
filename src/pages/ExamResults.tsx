@@ -10,7 +10,7 @@ import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
 import ReviewSession from '../components/ReviewSession';
 import { TRACK_BY_CODE } from '../config/trackConfig';
-import { normalizeExamCatalog, resolveExamFromCatalog } from '../utils/examCatalog';
+import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
 import { loadExamResult } from '../services/examResults';
 import {
   flattenQuestions,
@@ -116,22 +116,16 @@ const ExamResults = () => {
   const navigate = useNavigate();
   const userId = useStore((s) => s.user?.uid);
 
-  // Reuse the shared exam-catalog query cache
-  const { data: rawExams } = useQuery({
-    queryKey: ['exam-catalog'],
-    queryFn: async () => {
-      const res = await fetch('/exam_catalog.json');
-      if (!res.ok) throw new Error('Failed to load exam catalog');
-      const data = await res.json();
-      return normalizeExamCatalog(data);
-    },
+  // Fetch ONLY this exam (a few KB) instead of the full 27 MB catalog.
+  const { data: exam } = useQuery({
+    queryKey: ['exam', examId],
+    queryFn: () => fetchSingleExam(examId),
+    enabled: examId != null,
     staleTime: Infinity,
   });
 
-  const exams = useMemo(() => normalizeExamCatalog(rawExams), [rawExams]);
-  const resolved = useMemo(() => resolveExamFromCatalog(exams, examId), [exams, examId]);
-  const exam = resolved.exam;
-  const idx = resolved.idx;
+  // Legacy numeric routes still resolve to the saved result index.
+  const idx = useMemo(() => (isNumericId(examId) ? parseInt(examId, 10) : null), [examId]);
   const examKey = exam?.exam_id || (Number.isFinite(idx) ? String(idx) : null);
 
   const [stored, setStored] = useState(null);

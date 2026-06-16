@@ -31,10 +31,13 @@ import { auth } from '../services/firebase';
 // ─── Local exam catalog hook (same pattern as ExamBrowser) ──────────────────
 
 function useExamCatalog() {
+  // Study-plan generation only needs per-exam metadata (subject, difficulty,
+  // exam_id, points). That all lives in the slim 277 KB index, so we load it
+  // instead of the full 27 MB catalog. Same queryKey as ExamBrowser -> shared cache.
   return useQuery({
-    queryKey: ['exam-catalog'],
+    queryKey: ['exam-catalog-index'],
     queryFn: async () => {
-      const res = await fetch('/exam_catalog.json');
+      const res = await fetch('/exam_catalog_index.json');
       if (!res.ok) throw new Error('Failed to load exam catalog');
       const data = await res.json();
       return normalizeExamCatalog(data);

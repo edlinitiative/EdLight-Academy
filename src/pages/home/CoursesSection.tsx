@@ -32,7 +32,14 @@ export default function CoursesSection({ t }: { t: TFn }) {
               aria-label={`${t('Découvrir', 'Dekouvri')} ${c.name}`}
             >
               <div className="lp-course__media">
-                <img src={subjectThumbs[c.subject]} alt={c.name} />
+                <img
+                  src={subjectThumbs[c.subject]}
+                  alt={c.name}
+                  width={760}
+                  height={425}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <span className={`lp-course__badge lp-course__badge--${String(c.subject).toLowerCase()}`}>{c.level}</span>
               </div>
               <div className="lp-course__body">

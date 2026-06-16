@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import useStore from '../contexts/store';
-import { db } from '../services/firebase';
-import { doc, getDoc } from 'firebase/firestore';
 
 /**
  * Route guard for admin-only pages.
  * Checks Firebase auth + Firestore user doc for role === 'admin'.
+ *
+ * Firebase is imported DYNAMICALLY inside the effect so this guard — which is
+ * referenced eagerly from App.tsx — does not pull the ~600 KB SDK into the
+ * initial bundle. The check only runs for authenticated users on admin routes.
  */
 export default function AdminRoute({ children }) {
   const { isAuthenticated, user } = useStore();
@@ -19,20 +21,28 @@ export default function AdminRoute({ children }) {
       return;
     }
 
+    let cancelled = false;
     const checkAdmin = async () => {
       try {
+        const [{ db }, { doc, getDoc }] = await Promise.all([
+          import('../services/firebase'),
+          import('firebase/firestore'),
+        ]);
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists() && userDoc.data().role === 'admin') {
+        if (!cancelled && userDoc.exists() && userDoc.data().role === 'admin') {
           setIsAdmin(true);
         }
       } catch (err) {
         console.error('Admin check failed:', err);
       } finally {
-        setChecking(false);
+        if (!cancelled) setChecking(false);
       }
     };
 
     checkAdmin();
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated, user?.uid]);
 
   if (checking) {

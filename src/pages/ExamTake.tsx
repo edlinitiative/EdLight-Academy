@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { normalizeExamCatalog, isNumericId, resolveExamFromCatalog } from '../utils/examCatalog';
+import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
 import { TRACK_BY_CODE, parseTrackDirectives, getDirectiveForTrack } from '../config/trackConfig';
 import FigureRenderer from '../components/FigureRenderer';
 import InstructionRenderer from '../components/InstructionRenderer';
@@ -178,16 +178,12 @@ function hasInlineBlanks(text) {
   return /_{4,}|\.{4,}/.test(text);
 }
 
-/** Shared catalog query — same queryKey so it shares cache with ExamBrowser */
-function useExamCatalog() {
+/** Fetch ONLY the exam being opened (a few KB) instead of the full 27 MB catalog. */
+function useExam(examIdParam) {
   return useQuery({
-    queryKey: ['exam-catalog'],
-    queryFn: async () => {
-      const res = await fetch('/exam_catalog.json');
-      if (!res.ok) throw new Error('Failed to load exam catalog');
-      const data = await res.json();
-      return normalizeExamCatalog(data);
-    },
+    queryKey: ['exam', examIdParam],
+    queryFn: () => fetchSingleExam(examIdParam),
+    enabled: examIdParam != null,
     staleTime: Infinity,
   });
 }
@@ -198,12 +194,10 @@ const ExamTake = () => {
   const katexReady = useKatex();
   const userId = useStore((s) => s.user?.uid);
 
-  const { data: rawExams, isLoading, error } = useExamCatalog();
+  const { data: exam, isLoading, error } = useExam(examId);
 
-  const exams = useMemo(() => normalizeExamCatalog(rawExams), [rawExams]);
-  const resolved = useMemo(() => resolveExamFromCatalog(exams, examId), [exams, examId]);
-  const idx = resolved.idx;
-  const exam = resolved.exam;
+  // Legacy numeric routes still resolve to the saved result index; exam_id routes use the id.
+  const idx = useMemo(() => (isNumericId(examId) ? parseInt(examId, 10) : null), [examId]);
   const examKey = exam?.exam_id || (Number.isFinite(idx) ? String(idx) : null);
 
   // If the URL uses a legacy numeric index and this exam has a stable exam_id,
