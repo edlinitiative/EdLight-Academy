@@ -4,28 +4,29 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AdminRoute from './components/AdminRoute';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
-// Lazy-loaded pages
-const Home = React.lazy(() => import('./pages/Home'));
-const Courses = React.lazy(() => import('./pages/Courses'));
-const CourseDetail = React.lazy(() => import('./pages/CourseDetail'));
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const Quizzes = React.lazy(() => import('./pages/Quizzes'));
-const About = React.lazy(() => import('./pages/About'));
-const Contact = React.lazy(() => import('./pages/Contact'));
-const FAQ = React.lazy(() => import('./pages/FAQ'));
-const Help = React.lazy(() => import('./pages/Help'));
-const Privacy = React.lazy(() => import('./pages/Privacy'));
-const Terms = React.lazy(() => import('./pages/Terms'));
-const Admin = React.lazy(() => import('./pages/Admin'));
-const CourseManager = React.lazy(() => import('./pages/CourseManager'));
-const ExamLanding = React.lazy(() => import('./pages/ExamLanding'));
-const ExamBrowser = React.lazy(() => import('./pages/ExamBrowser'));
-const ExamTake = React.lazy(() => import('./pages/ExamTake'));
-const ExamResults = React.lazy(() => import('./pages/ExamResults'));
-const AnswerVerification = React.lazy(() => import('./pages/AnswerVerification'));
-const StudyPlan = React.lazy(() => import('./pages/StudyPlan'));
-const TriviaGames = React.lazy(() => import('./pages/TriviaGames'));
+// Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
+const Home = lazyWithRetry(() => import('./pages/Home'));
+const Courses = lazyWithRetry(() => import('./pages/Courses'));
+const CourseDetail = lazyWithRetry(() => import('./pages/CourseDetail'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'));
+const About = lazyWithRetry(() => import('./pages/About'));
+const Contact = lazyWithRetry(() => import('./pages/Contact'));
+const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
+const Help = lazyWithRetry(() => import('./pages/Help'));
+const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
+const Terms = lazyWithRetry(() => import('./pages/Terms'));
+const Admin = lazyWithRetry(() => import('./pages/Admin'));
+const CourseManager = lazyWithRetry(() => import('./pages/CourseManager'));
+const ExamLanding = lazyWithRetry(() => import('./pages/ExamLanding'));
+const ExamBrowser = lazyWithRetry(() => import('./pages/ExamBrowser'));
+const ExamTake = lazyWithRetry(() => import('./pages/ExamTake'));
+const ExamResults = lazyWithRetry(() => import('./pages/ExamResults'));
+const AnswerVerification = lazyWithRetry(() => import('./pages/AnswerVerification'));
+const StudyPlan = lazyWithRetry(() => import('./pages/StudyPlan'));
+const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
 
 // Create a client
 const queryClient = new QueryClient({

@@ -331,6 +331,12 @@
   .nav-links__close {
     display: none !important;
   }
+
+  /* The lucide icons are intended only for the mobile drawer. On desktop the
+     top bar is a clean, text-only inline nav, so hide the per-link icons. */
+  .nav-links .nav-link__icon {
+    display: none !important;
+  }
 }
 
 /* ====================================================================

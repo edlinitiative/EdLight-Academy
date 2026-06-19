@@ -114,3 +114,38 @@ if (typeof window !== 'undefined') {
 
 // Register the PWA service worker (production only, after window load).
 registerServiceWorker();
+
+// Global safety net for stale deploys.
+// If any dynamic import slips past lazyWithRetry (e.g. a prefetch or a chunk
+// requested outside the router) and fails because its hashed file was removed
+// by a newer deploy, force a single guarded reload to pull the fresh shell.
+if (typeof window !== 'undefined') {
+  const RELOAD_KEY = 'edlight:chunk-reload-ts';
+  const looksLikeStaleChunk = (message: string) =>
+    /ChunkLoadError|Loading chunk \d+ failed|error loading dynamically imported module|Failed to fetch dynamically imported module|Importing a module script failed/i.test(
+      message,
+    );
+
+  const reloadOnce = () => {
+    try {
+      const last = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+      if (!last || Date.now() - last > 10_000) {
+        sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
+        window.location.reload();
+      }
+    } catch {
+      /* sessionStorage unavailable — skip to avoid reload loops */
+    }
+  };
+
+  window.addEventListener('error', (event) => {
+    const msg = event?.message || (event?.error && String(event.error)) || '';
+    if (looksLikeStaleChunk(msg)) reloadOnce();
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason: any = event?.reason;
+    const msg = (reason && (reason.message || String(reason))) || '';
+    if (looksLikeStaleChunk(msg)) reloadOnce();
+  });
+}
