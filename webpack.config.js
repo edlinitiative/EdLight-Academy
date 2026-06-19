@@ -114,8 +114,49 @@ module.exports = {
       '...',
       new CssMinimizerPlugin(),
     ],
+    // Pull the webpack runtime into its own tiny file so the app/vendor chunk
+    // hashes stay stable across deploys (returning visitors re-use cached JS).
+    runtimeChunk: 'single',
     splitChunks: {
-      chunks: 'all'
-    }
+      chunks: 'all',
+      // Generous request budgets so the named groups below are never merged
+      // back into one another (which is what caused the duplication below).
+      maxInitialRequests: 30,
+      maxAsyncRequests: 30,
+      cacheGroups: {
+        // Firebase (~300 KB minified) is only needed by data-driven routes.
+        // Forcing it into ONE named chunk stops every lazy route that touches
+        // Firestore from shipping its own private copy.
+        firebase: {
+          test: /[\\/]node_modules[\\/]@?firebase[\\/]/,
+          name: 'firebase',
+          priority: 40,
+          reuseExistingChunk: true,
+        },
+        // React core is shared by the shell and every route -> a single stable,
+        // cache-friendly chunk instead of a copy duplicated into async chunks.
+        react: {
+          test: /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
+          name: 'react',
+          priority: 30,
+          reuseExistingChunk: true,
+        },
+        // i18next was being duplicated into a lazy chunk; pin it to one file.
+        i18n: {
+          test: /[\\/]node_modules[\\/](i18next[-\w]*|react-i18next)[\\/]/,
+          name: 'i18n',
+          priority: 28,
+          reuseExistingChunk: true,
+        },
+        // react-markdown + its remark/micromark/mdast/unist/hast ecosystem is
+        // heavy and used by a few routes; collapse it into one shared chunk.
+        markdown: {
+          test: /[\\/]node_modules[\\/](react-markdown|remark[-\w]*|micromark[-\w]*|mdast[-\w]*|unist[-\w]*|hast[-\w]*|unified|bail|trough|vfile[-\w]*|property-information|space-separated-tokens|comma-separated-tokens|decode-named-character-reference|character-entities[-\w]*|html-void-elements|zwitch|web-namespaces|is-plain-obj)[\\/]/,
+          name: 'markdown',
+          priority: 25,
+          reuseExistingChunk: true,
+        },
+      },
+    },
   }
 };
