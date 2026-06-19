@@ -2317,6 +2317,113 @@ textarea.input-field {
 	padding: clamp(2rem, 6vw, 3rem);
 }
 
+/* About — hero CTAs */
+.about-hero__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.7rem;
+	justify-content: center;
+	margin-top: 0.4rem;
+}
+
+/* About — "how it works" numbered steps */
+.about-steps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: clamp(1rem, 2.5vw, 1.4rem);
+}
+
+.about-step {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: clamp(1.2rem, 2.6vw, 1.5rem);
+}
+
+.about-step__num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--primary-500) 12%, var(--surface));
+	color: var(--primary-600);
+	font-weight: 800;
+	font-size: 0.95rem;
+}
+
+.about-step__title {
+	margin: 0;
+	font-size: 1.02rem;
+	font-weight: 700;
+	color: var(--text-900);
+}
+
+.about-step__desc {
+	margin: 0;
+	font-size: 0.9rem;
+	line-height: 1.55;
+	color: var(--text-500);
+}
+
+/* About — offerings (what you get), clickable cards that link to sections */
+.about-offerings {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: clamp(1rem, 2.5vw, 1.4rem);
+}
+
+.about-offering {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.55rem;
+	padding: clamp(1.3rem, 2.8vw, 1.6rem);
+	text-align: left;
+	cursor: pointer;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.about-offering:hover {
+	transform: translateY(-2px);
+	border-color: color-mix(in srgb, var(--primary-500) 32%, var(--border)) !important;
+	box-shadow: var(--shadow-md) !important;
+}
+
+.about-offering__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 46px;
+	height: 46px;
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--primary-500) 10%, var(--surface));
+	color: var(--primary-600);
+	margin-bottom: 0.2rem;
+}
+
+.about-offering__title {
+	margin: 0;
+	font-size: 1.05rem;
+	font-weight: 700;
+	color: var(--text-900);
+}
+
+.about-offering__desc {
+	margin: 0;
+	font-size: 0.9rem;
+	line-height: 1.55;
+	color: var(--text-500);
+	flex: 1;
+}
+
+.about-offering__cta {
+	font-size: 0.85rem;
+	font-weight: 700;
+	color: var(--primary-600);
+}
+
 /* Dashboard */
 .dashboard-grid {
 	display: grid;
@@ -2336,6 +2443,19 @@ textarea.input-field {
 	box-shadow: var(--shadow-sm);
 	display: grid;
 	gap: clamp(1rem, 2vw, 1.4rem);
+}
+
+/* Two activity panels (quiz + exams) side by side on wide screens, stacked on
+   narrow ones — gives the dashboard a balanced, less-bloated single screen. */
+.dashboard-cols {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: clamp(1.4rem, 3vw, 2rem);
+	align-items: start;
+}
+
+.dashboard-cols > .dashboard-section {
+	margin: 0;
 }
 
 .dashboard-section__header {
@@ -4185,11 +4305,11 @@ textarea.input-field {
 .exam-browser__filters-card {
 	display: flex;
 	flex-direction: column;
-	gap: 0.9rem;
+	gap: 0.55rem;
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-lg);
-	padding: clamp(0.9rem, 2.4vw, 1.15rem);
+	padding: clamp(0.6rem, 1.6vw, 0.8rem);
 	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
@@ -4197,27 +4317,27 @@ textarea.input-field {
 .exam-browser__filters {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 0.75rem;
-	align-items: flex-end;
+	gap: 0.5rem;
+	align-items: center;
 }
 
-/* Field groups with labels */
+/* Field groups (label-less — the select's default option is self-describing) */
 .exam-browser__field {
 	display: flex;
 	flex-direction: column;
 	gap: 0.3rem;
-	flex: 1;
-	min-width: 0;
+	flex: 1 1 130px;
+	min-width: 120px;
 }
 
 .exam-browser__field--search {
-	flex: 2;
-	min-width: 200px;
+	flex: 2 1 200px;
+	min-width: 180px;
 }
 
 .exam-browser__field--actions {
 	flex: 0 0 auto;
-	align-self: flex-end;
+	align-self: center;
 }
 
 .exam-browser__label {
@@ -4232,7 +4352,7 @@ textarea.input-field {
 /* Selects — consistent with the site's input fields */
 .exam-browser__select {
 	appearance: none;
-	padding: 0.6rem 2.1rem 0.6rem 0.85rem;
+	padding: 0.5rem 2rem 0.5rem 0.8rem;
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border);
 	background:
@@ -4279,7 +4399,7 @@ textarea.input-field {
 
 .exam-browser__search {
 	width: 100%;
-	padding: 0.6rem 1rem 0.6rem 2.6rem;
+	padding: 0.5rem 1rem 0.5rem 2.6rem;
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border);
 	background: var(--surface);
@@ -4318,7 +4438,7 @@ textarea.input-field {
 	background: transparent;
 	color: var(--text-600);
 	border: 1px solid var(--border);
-	padding: 0.55rem 1rem;
+	padding: 0.5rem 0.85rem;
 	border-radius: var(--radius-md);
 	font-size: 0.8rem;
 	font-weight: 600;
@@ -4351,7 +4471,7 @@ textarea.input-field {
 .exam-browser__summary {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0.4rem;
 	flex-wrap: wrap;
 }
 
@@ -4359,9 +4479,9 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.3rem 0.75rem;
+	padding: 0.24rem 0.6rem;
 	border-radius: 100px;
-	font-size: 0.78rem;
+	font-size: 0.74rem;
 	font-weight: 600;
 	font-family: var(--font-sans);
 	background: rgba(10, 102, 194, 0.06);

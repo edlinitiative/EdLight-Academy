@@ -56,6 +56,74 @@ const VALUES = [
   { label: 'Communauté', labelHt: 'Kominote', desc: 'Construit par et pour les élèves et enseignants haïtiens.', descHt: 'Konstwi pa ak pou elèv ak pwofesè ayisyen.' },
 ];
 
+/* The concrete learning loop — explains how a student actually uses EdLight. */
+const STEPS = [
+  {
+    n: '1',
+    titleFr: 'Apprenez', titleHt: 'Aprann',
+    descFr: 'Regardez des leçons vidéo courtes, organisées par matière, niveau et unité.',
+    descHt: 'Gade leçon videyo kout, ki òganize pa matyè, nivò ak inite.',
+  },
+  {
+    n: '2',
+    titleFr: 'Pratiquez', titleHt: 'Pratike',
+    descFr: 'Renforcez chaque leçon avec des exercices ciblés et des indices progressifs.',
+    descHt: 'Ranfòse chak leçon ak egzèsis ki vize ak endis pwogresif.',
+  },
+  {
+    n: '3',
+    titleFr: 'Évaluez-vous', titleHt: 'Evalye tèt ou',
+    descFr: 'Passez de vrais examens officiels (9e, Bac, université) avec correction automatique.',
+    descHt: 'Pase vrè egzamen ofisyèl (9yèm, Bak, inivèsite) ak koreksyon otomatik.',
+  },
+  {
+    n: '4',
+    titleFr: 'Progressez', titleHt: 'Avanse',
+    descFr: 'Suivez vos résultats en temps réel et voyez exactement quoi réviser ensuite.',
+    descHt: 'Swiv rezilta ou an tan reyèl epi wè egzakteman kisa pou revize apè.',
+  },
+];
+
+/* What the platform actually offers — each links to the relevant section. */
+const OFFERINGS = [
+  {
+    to: '/courses',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      </svg>
+    ),
+    titleFr: 'Cours structurés', titleHt: 'Kou estriktire',
+    descFr: 'Des parcours complets en sciences et mathématiques, du fondamental au supérieur.',
+    descHt: 'Pakou konplè nan syans ak matematik, soti fondamantal rive siperye.',
+    ctaFr: 'Explorer les cours', ctaHt: 'Eksplore kou yo',
+  },
+  {
+    to: '/exams',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.657 2.686 3 6 3s6-1.343 6-3v-5"/>
+      </svg>
+    ),
+    titleFr: 'Examens officiels', titleHt: 'Egzamen ofisyèl',
+    descFr: 'La banque d’annales MENFP (9e, Baccalauréat, université) avec corrections détaillées.',
+    descHt: 'Bank annè MENFP (9yèm, Bakaloreya, inivèsite) ak koreksyon detaye.',
+    ctaFr: 'Voir les examens', ctaHt: 'Wè egzamen yo',
+  },
+  {
+    to: '/quizzes',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    ),
+    titleFr: 'Exercices & quiz', titleHt: 'Egzèsis & quiz',
+    descFr: 'Entraînez-vous par unité avec des indices, trois essais et des explications complètes.',
+    descHt: 'Antrene pa inite ak endis, twa esè ak eksplikasyon konplè.',
+    ctaFr: 'Commencer un quiz', ctaHt: 'Kòmanse yon quiz',
+  },
+];
+
 export default function About() {
   const navigate = useNavigate();
   const language = useStore((s) => s.language);
@@ -80,8 +148,14 @@ export default function About() {
             ) : (
               <>EdLight construit l’infrastructure pour une éducation STEM accessible et de qualité en Haïti, des cours structurés, des exercices d’examens officiels et un suivi de progression en temps réel, le tout au même endroit.</>
             )}
-          </p>
-        </section>
+          </p>          <div className="about-hero__actions">
+            <button className="button button--primary button--pill" onClick={() => navigate('/courses')}>
+              {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
+            </button>
+            <button className="button button--ghost button--pill" onClick={() => navigate('/exams')}>
+              {isCreole ? 'Wè egzamen yo' : 'Voir les examens'}
+            </button>
+          </div>        </section>
 
         {/* Stats */}
         <section className="about-stats">
@@ -91,6 +165,44 @@ export default function About() {
               <div className="about-stats__label">{stat.label}</div>
             </div>
           ))}
+        </section>
+
+        {/* How it works — the concrete learning loop */}
+        <section style={{ marginBottom: 'clamp(2.5rem, 6vw, 4rem)' }}>
+          <h2 className="section__title" style={{ marginBottom: '0.5rem' }}>
+            {isCreole ? 'Kijan sa mache' : 'Comment ça marche'}
+          </h2>
+          <p className="text-muted" style={{ marginBottom: '1.75rem', maxWidth: '46rem' }}>
+            {isCreole
+              ? 'Yon bouk aprantisaj senp ki mennen ou soti nan premye leçon an rive nan jou egzamen an.'
+              : "Une boucle d’apprentissage simple qui vous accompagne de la première leçon au jour de l’examen."}
+          </p>
+          <div className="about-steps">
+            {STEPS.map((step) => (
+              <div key={step.n} className="card about-step">
+                <span className="about-step__num">{step.n}</span>
+                <h3 className="about-step__title">{isCreole ? step.titleHt : step.titleFr}</h3>
+                <p className="about-step__desc">{isCreole ? step.descHt : step.descFr}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* What you get — offerings with links */}
+        <section style={{ marginBottom: 'clamp(2.5rem, 6vw, 4rem)' }}>
+          <h2 className="section__title" style={{ marginBottom: '1.75rem' }}>
+            {isCreole ? 'Sa ou jwenn' : 'Ce que vous obtenez'}
+          </h2>
+          <div className="about-offerings">
+            {OFFERINGS.map((o) => (
+              <button key={o.to} type="button" className="card about-offering" onClick={() => navigate(o.to)}>
+                <div className="about-offering__icon">{o.icon}</div>
+                <h3 className="about-offering__title">{isCreole ? o.titleHt : o.titleFr}</h3>
+                <p className="about-offering__desc">{isCreole ? o.descHt : o.descFr}</p>
+                <span className="about-offering__cta">{(isCreole ? o.ctaHt : o.ctaFr)} →</span>
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* Approach */}

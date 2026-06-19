@@ -344,6 +344,7 @@ export default function Dashboard() {
           <ProgressDashboard />
         </div>
 
+        <div className="dashboard-cols">
         <div className="dashboard-section">
           <div className="dashboard-section__header">
             <h2 className="dashboard-section__title">{isCreole ? 'Quiz, pèfòmans' : 'Quiz, performance'}</h2>
@@ -481,6 +482,7 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+        </div>{/* /dashboard-cols */}
 
         <div className="dashboard-section">
           <div className="dashboard-section__header">
@@ -502,53 +504,6 @@ export default function Dashboard() {
                 : 'Obtenez un plan d\'étude personnalisé avec révision espacée pour préparer votre bac.'}
             </p>
           </div>
-        </div>
-
-        <div className="dashboard-section">
-          <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">{isCreole ? 'Aktivite resan' : 'Activité récente'}</h2>
-            {quizzesTaken > 0 && (
-              <span className="chip chip--ghost">
-                {isCreole
-                  ? `Dènye ${Math.min(5, quizzesTaken)} aktivite quiz`
-                  : `Dernières ${Math.min(5, quizzesTaken)} activités quiz`}
-              </span>
-            )}
-          </div>
-
-          {quizzesTaken > 0 ? (
-            <div className="dashboard-activity">
-              {recentQuizActivityRows.map((a, index) => {
-                const pct = typeof a.percentage === 'number' ? Math.round(a.percentage) : 0;
-                const good = pct >= 80;
-                const label = a.quizId || (isCreole ? 'Quiz' : 'Quiz');
-                const dateMs = a.attemptedAtMs || a.attemptedAt_ms || a.date || Date.now();
-
-                return (
-                  <div key={`${a.quizId || 'quiz'}-${index}`} className="activity-item">
-                    <div className="activity-item__meta">
-                      <span className="activity-item__question">{label}</span>
-                      <span className="activity-item__date">{formatShortDate(dateMs, locale)}</span>
-                    </div>
-                    <span className={[
-                      'activity-item__tag',
-                      good ? 'activity-item__tag--success' : 'activity-item__tag--error'
-                    ].join(' ')}>
-                      {pct}%
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="dashboard-empty">
-              <p>
-                {isCreole
-                  ? 'Ou poko eseye okenn quiz. Fè yon quiz pou w wè rezime pèfòmans ou isit la.'
-                  : 'Aucun quiz tenté pour le moment. Faites un quiz pour voir ici un résumé de vos résultats.'}
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </section>

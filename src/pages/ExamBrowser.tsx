@@ -303,14 +303,13 @@ const ExamBrowser = () => {
             <div className="exam-browser__filters">
               {/* Subject */}
               <div className="exam-browser__field">
-                <span className="exam-browser__label">Matière</span>
                 <select
                   className="exam-browser__select"
                   value={subjectFilter}
                   onChange={(e) => setSubjectFilter(e.target.value)}
                   aria-label="Filtrer par matière"
                 >
-                  <option value="">Toutes</option>
+                  <option value="">Toutes les matières</option>
                   {subjects.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
@@ -319,14 +318,13 @@ const ExamBrowser = () => {
 
               {/* Year */}
               <div className="exam-browser__field">
-                <span className="exam-browser__label">Année</span>
                 <select
                   className="exam-browser__select"
                   value={yearFilter}
                   onChange={(e) => setYearFilter(e.target.value)}
                   aria-label="Filtrer par année"
                 >
-                  <option value="">Toutes</option>
+                  <option value="">Toutes les années</option>
                   {years.map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
@@ -335,14 +333,13 @@ const ExamBrowser = () => {
 
               {/* Difficulty */}
               <div className="exam-browser__field">
-                <span className="exam-browser__label">Difficulté</span>
                 <select
                   className="exam-browser__select"
                   value={difficultyFilter}
                   onChange={(e) => setDifficultyFilter(e.target.value)}
                   aria-label="Filtrer par difficulté"
                 >
-                  <option value="">Toutes</option>
+                  <option value="">Toute difficulté</option>
                   <option value="easy">Facile</option>
                   <option value="medium">Moyen</option>
                   <option value="hard">Difficile</option>
@@ -351,7 +348,6 @@ const ExamBrowser = () => {
 
               {/* Search */}
               <div className="exam-browser__field exam-browser__field--search">
-                <span className="exam-browser__label">Recherche</span>
                 <div className="exam-browser__search-wrap">
                   <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="11" cy="11" r="8" />
@@ -386,9 +382,6 @@ const ExamBrowser = () => {
                 </div>
               )}
             </div>
-
-            {/* Divider */}
-            <hr className="exam-browser__divider" />
 
             {/* Track filter chips — only for Terminale/Baccalauréat */}
             {isTerminale && (
@@ -607,7 +600,6 @@ function ExamCard({ exam, onClick, attempt }) {
       onClick={onClick}
       type="button"
       aria-label={`${subject}${topic ? ` — ${topic}` : ''}${exam._year ? `, ${exam._year}` : ''}${attempt ? ', déjà fait' : ''}`}
-      style={{ '--exam-accent': color }}
     >
       <div className="exam-card__header">
         <h3 className="exam-card__title" title={subject}>

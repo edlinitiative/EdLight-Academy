@@ -39,6 +39,26 @@ export function CourseCard({ course }) {
   const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
   const durationLabel = formatDuration(course.duration);
 
+  // Course names are frequently just "Subject Level" (e.g. "Chimie NS I"), which
+  // the coloured subject badge + level badge already convey. Pull out any
+  // DISTINCT topic so the title never repeats the badges; '' when the name is
+  // only subject + level.
+  const distinctTitle = React.useMemo(() => {
+    const esc = (v) => String(v || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let s = String(course.name || '').trim();
+    s = s.replace(/\bN\.?\s?S\.?\s?(IV|III|II|I)\b/gi, ' ');        // "NS I", "N.S. II"
+    s = s.replace(/\bniveau\s+secondaire\s+[ivx0-9]+/gi, ' ');         // "Niveau Secondaire ..."
+    if (subjectLabel) s = s.replace(new RegExp(`\\b${esc(subjectLabel)}\\b`, 'ig'), ' ');
+    if (course.subject) s = s.replace(new RegExp(`\\b${esc(course.subject)}\\b`, 'ig'), ' ');
+    return s.replace(/[·\-–—|,]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }, [course.name, course.subject, subjectLabel]);
+
+  const description = (course.description || '').trim();
+  // Lead with the distinct topic when there is one; otherwise let the
+  // description carry the card and only fall back to the subject if both are
+  // empty (so the card is never blank).
+  const heading = distinctTitle || (description ? '' : subjectLabel);
+
   const goToCourse = () => {
     // Open the course detail page directly. Signed-out visitors may preview a
     // few videos for free before being asked to create an account. The detail
@@ -77,8 +97,8 @@ export function CourseCard({ course }) {
         {isEnrolled && <span className="chip chip--success">{t('courses.enrolled')}</span>}
       </div>
 
-      <h3 className="course-card__title">{course.name}</h3>
-      <p className="course-card__description">{course.description}</p>
+      {heading && <h3 className="course-card__title">{heading}</h3>}
+      {description && <p className="course-card__description">{description}</p>}
 
       <div className="course-card__meta">
         <span className="course-meta__item"><strong>{units.length}</strong> {t('courses.modules')}</span>
