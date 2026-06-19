@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
 export function CourseCard({ course }) {
   const { enrolledCourses, progress } = useStore();
@@ -136,6 +139,15 @@ export function CourseModal({ course, onClose, onEnroll }) {
   const isCreole = language === 'ht';
   const isFrench = language === 'fr';
 
+  const modalRef = useRef(null);
+  const bodyRef = useRef(null);
+
+  // Lock background scroll, trap focus, and allow drag-down-to-dismiss (the
+  // body is the scroll area, so the pull only starts when it's at the top).
+  useBodyScrollLock();
+  useFocusTrap(modalRef);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: bodyRef });
+
   if (!course) return null;
 
   const units = course.modules || [];
@@ -164,7 +176,18 @@ export function CourseModal({ course, onClose, onEnroll }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <article className="course-modal" onClick={(e) => e.stopPropagation()}>
+      <article
+        className="course-modal"
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={course.name}
+        style={swipe.style}
+        onTouchStart={swipe.onTouchStart}
+        onTouchMove={swipe.onTouchMove}
+        onTouchEnd={swipe.onTouchEnd}
+      >
         <header className="course-modal__header">
           <div className="course-modal__header-content">
             <div className="course-modal__badges">
@@ -187,7 +210,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
           </button>
         </header>
 
-        <div className="course-modal__body">
+        <div className="course-modal__body" ref={bodyRef}>
           <section className="course-modal__meta">
             <div className="course-modal__meta-item">
               <svg className="course-modal__meta-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">

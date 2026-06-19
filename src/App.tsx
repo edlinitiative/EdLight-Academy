@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AdminRoute from './components/AdminRoute';
+import ScrollToTop from './components/ScrollToTop';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
@@ -43,6 +44,7 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
+          <ScrollToTop />
           <Suspense fallback={
             <div className="suspense-fallback">
               <div className="loading-spinner" />

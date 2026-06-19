@@ -17,6 +17,7 @@ import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /** Primary destinations shown in the desktop inline nav and the mobile drawer. */
 const NAV_ITEMS = [
@@ -32,6 +33,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const dropdownRef = useRef(null);
+  const navLinksRef = useRef(null);
   const {
     isAuthenticated,
     user,
@@ -67,6 +69,10 @@ export function Navbar() {
   );
 
   const closeMenu = () => setShowMobileMenu(false);
+
+  // Trap keyboard focus inside the drawer while it's open (mobile only — on
+  // desktop showMobileMenu stays false, so this is inert there).
+  useFocusTrap(navLinksRef, showMobileMenu);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -156,7 +162,7 @@ export function Navbar() {
           )}
         </button>
 
-        <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`}>
+        <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`} ref={navLinksRef}>
           {/* Drawer header (mobile only) */}
           <div className="nav-links__header nav-drawer__header">
             <Link to="/" className="nav-drawer__brand" onClick={closeMenu}>

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, GraduationCap } from 'lucide-react';
 import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle } from '../services/authService';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
 export function AuthModal({ onClose }) {
   const storeActiveTab = useStore(state => state.activeTab);
@@ -13,8 +16,14 @@ export function AuthModal({ onClose }) {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const modalRef = useRef(null);
-  
+
   const setUser = useStore(state => state.setUser);
+
+  // Lock the page behind the sheet, trap focus inside it, and enable
+  // drag-down-to-dismiss on touch — the .auth-modal element is the scroller.
+  useBodyScrollLock();
+  useFocusTrap(modalRef);
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
 
   // Close on Escape key
   useEffect(() => {
@@ -24,11 +33,6 @@ export function AuthModal({ onClose }) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
-
-  // Auto-focus modal on mount
-  useEffect(() => {
-    modalRef.current?.focus();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,7 +120,16 @@ export function AuthModal({ onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <div className="auth-modal" onClick={(e) => e.stopPropagation()} ref={modalRef} tabIndex={-1}>
+      <div
+        className="auth-modal"
+        onClick={(e) => e.stopPropagation()}
+        ref={modalRef}
+        tabIndex={-1}
+        style={swipe.style}
+        onTouchStart={swipe.onTouchStart}
+        onTouchMove={swipe.onTouchMove}
+        onTouchEnd={swipe.onTouchEnd}
+      >
         <div className="auth-modal__header">
           <h2 id="auth-modal-title" className="auth-modal__title">Welcome to EdLight</h2>
           <button className="auth-modal__close" onClick={onClose} aria-label="Close dialog">

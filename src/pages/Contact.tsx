@@ -41,9 +41,9 @@ export default function Contact() {
           </div>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
+        <div className="contact-layout">
           <form className="card" onSubmit={handleSubmit}>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="contact-form-row">
               <div className="field">
                 <label className="label" htmlFor="name">{isCreole ? 'Non ou' : 'Votre nom'}</label>
                 <input

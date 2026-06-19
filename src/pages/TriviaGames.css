@@ -609,3 +609,16 @@
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* On phones the fixed bottom tab bar (64px) sits over the viewport, so the
+   full-height trivia screens must subtract it too — otherwise centred content
+   hides partly behind the bar. */
+@media (max-width: 767px) {
+  .trivia-page,
+  .trivia-landing,
+  .trivia-results {
+    min-height: calc(
+      var(--vvh, 1vh) * 100 - var(--navbar-height) - var(--bottom-nav-height, 64px)
+    );
+  }
+}

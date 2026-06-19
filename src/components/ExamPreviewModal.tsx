@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { subjectColor, QUESTION_TYPE_META } from '../utils/examUtils';
 import { TRACK_BY_CODE } from '../config/trackConfig';
+import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 import InstructionRenderer from './InstructionRenderer';
 
 /** Map the numeric difficulty (1–5) to a 3-tier label + tone (mirrors ExamBrowser). */
@@ -47,6 +48,10 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
   });
 
   const startBtnRef = useRef(null);
+  const bodyRef = useRef(null);
+
+  // Drag the sheet down to dismiss on touch (only when the body is at the top).
+  const swipe = useSwipeToDismiss(onClose, { scrollRef: bodyRef });
 
   const startNow = useCallback(
     () => navigate(`/exams/${level || ''}/${id}`, { state: { autostart: true } }),
@@ -130,8 +135,11 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
     >
       <div
         className="exam-preview__panel"
-        style={{ '--exam-accent': color } as React.CSSProperties}
+        style={{ '--exam-accent': color, ...(swipe.style || {}) } as React.CSSProperties}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={swipe.onTouchStart}
+        onTouchMove={swipe.onTouchMove}
+        onTouchEnd={swipe.onTouchEnd}
       >
         <button className="exam-preview__close" onClick={onClose} type="button" aria-label="Fermer l'aperçu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -160,7 +168,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
         </div>
 
         {/* Scrollable body */}
-        <div className="exam-preview__body">
+        <div className="exam-preview__body" ref={bodyRef}>
           {/* Best-score / attempt banner */}
           {attempt && (
             <div className={`exam-preview__attempt exam-preview__attempt${tone}`}>

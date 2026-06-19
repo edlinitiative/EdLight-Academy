@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
@@ -12,6 +12,27 @@ export function Layout() {
   const { showAuthModal, toggleAuthModal, language, theme } = useStore();
   const isCreole = language === 'ht';
   const queryClient = useQueryClient();
+  const { pathname } = useLocation();
+
+  // Focused, app-like flows that should shed the global chrome (bottom tab bar
+  // + footer) so the task owns the screen:
+  //   • Taking an exam:  /exams/:level/:examId  (but NOT the .../results page)
+  //   • A course lesson: /courses/:courseId
+  // The exam-taking flow goes fully immersive (the global navbar is hidden too,
+  // since the exam has its own sticky top bar with a back button).
+  const isExamTaking =
+    /^\/exams\/[^/]+\/[^/]+$/.test(pathname) && !pathname.endsWith('/results');
+  const isLessonView = /^\/courses\/[^/]+$/.test(pathname);
+  const isImmersive = isExamTaking;
+  const isFocused = isExamTaking || isLessonView;
+
+  const shellClassName = [
+    'app-shell',
+    isImmersive ? 'app-shell--immersive' : '',
+    isFocused ? 'app-shell--focused' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   React.useEffect(() => {
     const root = document.documentElement;
@@ -63,7 +84,7 @@ export function Layout() {
   }, []);
 
   return (
-    <div className="app-shell">
+    <div className={shellClassName}>
       <a href="#main-content" className="skip-to-content">
         Skip to content
       </a>
@@ -72,7 +93,7 @@ export function Layout() {
         <Outlet />
       </main>
       <Footer />
-      <BottomNav />
+      {!isFocused && <BottomNav />}
       {showAuthModal && <AuthModal onClose={() => toggleAuthModal()} />}
       <StreakMilestoneModal isCreole={isCreole} />
     </div>

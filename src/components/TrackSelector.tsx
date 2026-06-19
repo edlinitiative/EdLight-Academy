@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { GraduationCap, Lightbulb } from 'lucide-react';
 import useStore from '../contexts/store';
 import { updateUserTrack } from '../services/firebase';
 import { TRACKS } from '../config/trackConfig';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /**
  * TrackSelector — lets the user pick their Baccalauréat track (série/filière).
@@ -25,6 +27,13 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
   const user = useStore((s) => s.user);
   const setTrack = useStore((s) => s.setTrack);
   const setOnboardingCompleted = useStore((s) => s.setOnboardingCompleted);
+
+  // Modal mode behaves like the other dialogs: lock background scroll and trap
+  // focus. Inline mode (settings) keeps the page interactive, so it's disabled.
+  const isModal = mode !== 'inline';
+  const modalRef = useRef(null);
+  useBodyScrollLock(isModal);
+  useFocusTrap(modalRef, isModal);
 
   const handleConfirm = async () => {
     if (!selected) return;
@@ -124,7 +133,7 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
 
   return (
     <div className="modal-overlay track-selector__overlay" onClick={onClose}>
-      <div className="track-selector__modal" onClick={(e) => e.stopPropagation()}>
+      <div className="track-selector__modal" onClick={(e) => e.stopPropagation()} ref={modalRef} role="dialog" aria-modal="true">
         {content}
       </div>
     </div>
