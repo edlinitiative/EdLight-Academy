@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
-export function CourseCard({ course, onPreview }) {
+export function CourseCard({ course }) {
   const { enrolledCourses, progress } = useStore();
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
   const navigate = useNavigate();
@@ -39,19 +39,43 @@ export function CourseCard({ course, onPreview }) {
   const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
   const durationLabel = formatDuration(course.duration);
 
-  const handleStart = () => {
-    // Navigate to the course detail page. Signed-out visitors may preview a
-    // few videos for free before being asked to create an account.
+  const goToCourse = () => {
+    // Open the course detail page directly. Signed-out visitors may preview a
+    // few videos for free before being asked to create an account. The detail
+    // page already shows the full syllabus, so a separate preview modal would
+    // just duplicate it — tapping the card goes straight there.
     navigate(`/courses/${course.id}`);
   };
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      goToCourse();
+    }
+  };
+
   return (
-    <article className="course-card">
-      {isEnrolled && (
-        <div className="course-card__head">
-          <span className="chip chip--success">{t('courses.enrolled')}</span>
+    <article
+      className="course-card"
+      style={{ '--course-accent': course.color || 'var(--primary-500)' }}
+      role="button"
+      tabIndex={0}
+      onClick={goToCourse}
+      onKeyDown={handleKeyDown}
+      aria-label={`${subjectLabel} · ${levelLabel} — ${course.name}`}
+    >
+      <div className="course-card__head">
+        <div className="course-card__tags">
+          <span
+            className="course-card__badge"
+            style={{ background: (course.color || '#0A66C2') + '1f', color: course.color || 'var(--primary-600)' }}
+          >
+            {subjectLabel}
+          </span>
+          <span className="course-card__badge course-card__badge--level">{levelLabel}</span>
         </div>
-      )}
+        {isEnrolled && <span className="chip chip--success">{t('courses.enrolled')}</span>}
+      </div>
 
       <h3 className="course-card__title">{course.name}</h3>
       <p className="course-card__description">{course.description}</p>
@@ -75,14 +99,9 @@ export function CourseCard({ course, onPreview }) {
           </div>
         )}
 
-        <div className="course-card__actions">
-          <button className="button button--primary button--pill" onClick={handleStart}>
-            {isEnrolled ? t('courses.continue') : t('courses.startCourse')}
-          </button>
-          <button className="course-card__cta" onClick={() => onPreview(course)}>
-            {t('courses.details')} →
-          </button>
-        </div>
+        <span className="course-card__cta">
+          {isEnrolled ? t('courses.continue') : t('courses.startCourse')} →
+        </span>
       </div>
     </article>
   );

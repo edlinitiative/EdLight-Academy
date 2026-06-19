@@ -252,6 +252,55 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
   });
 };
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Lightweight course-catalog loader
+   ──────────────────────────────────────────────────────────────────────────
+   The /courses listing and the dashboard only need the course catalog
+   (name, level, subject, description, unit/lesson counts, duration). They do
+   NOT need the full `videos` + `quizzes` collections or the quiz-bank index.
+   Fetching only the small `courses` collection — and skipping the quiz-bank
+   build entirely — turns a multi-collection, CPU-heavy load into a single,
+   fast read. A localStorage cache lets returning visitors paint instantly. */
+
+const COURSES_CACHE_KEY = 'edlight:courses:v1';
+
+/**
+ * Read the cached course catalog from localStorage.
+ * @returns {{ data: Object[], updatedAt: number } | null}
+ */
+export const getCachedCourses = () => {
+  try {
+    const raw = localStorage.getItem(COURSES_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.data)) return null;
+    return { data: parsed.data, updatedAt: parsed.t || 0 };
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedCourses = (data) => {
+  try {
+    localStorage.setItem(COURSES_CACHE_KEY, JSON.stringify({ t: Date.now(), data }));
+  } catch {
+    /* ignore quota / private-mode errors */
+  }
+};
+
+/**
+ * Load ONLY the course catalog from Firestore (no videos/quizzes/quiz-bank).
+ * The catalog uses fields that already live on the course document, so the
+ * transform runs with empty enrichment maps — unit/lesson counts stay intact.
+ * @returns {Promise<Object[]>} Array of transformed course objects
+ */
+export const loadCoursesData = async () => {
+  const firestoreCourses = await fetchCoursesFromFirestore();
+  const courses = transformFirestoreCourses(firestoreCourses);
+  writeCachedCourses(courses);
+  return courses;
+};
+
 /**
  * Load all required data for the application
  * All data comes from Firestore

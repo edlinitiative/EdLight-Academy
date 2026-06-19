@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import './mobile-fixes.css';
 import './mobile-first.css';
+import './mobile-premium.css';
 import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
 import { registerServiceWorker } from './utils/registerServiceWorker';

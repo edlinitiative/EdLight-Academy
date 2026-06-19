@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAppData } from '../hooks/useData';
-import { CourseCard, CourseModal } from '../components/Course';
+import { useCourses } from '../hooks/useData';
+import { CourseCard } from '../components/Course';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
 export default function Courses() {
-  const navigate = useNavigate();
-  const { data, isLoading } = useAppData();
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const { data: courses = [], isLoading } = useCourses();
   const [filter, setFilter] = useState('all');
-  const { enrolledCourses, isAuthenticated } = useStore();
+  const { enrolledCourses } = useStore();
   const { t } = useTranslation();
   
   const filterLabels = {
@@ -50,8 +47,6 @@ export default function Courses() {
     );
   }
 
-  const courses = data?.courses || [];
-
   const filteredCourses = courses.filter(course => {
     if (filter === 'enrolled') {
       return enrolledCourses.some(c => c.id === course.id);
@@ -62,14 +57,6 @@ export default function Courses() {
     return true;
   });
 
-  const handleEnroll = (course) => {
-    if (isAuthenticated) {
-      useStore.getState().enrollInCourse(course);
-    }
-    setSelectedCourse(null);
-    navigate(`/courses/${course.id}`);
-  };
-
   return (
     <section className="section">
       <div className="container">
@@ -77,6 +64,9 @@ export default function Courses() {
           <div>
             <h1 className="page-header__title">{t('courses.catalogTitle')}</h1>
             <p className="page-header__subtitle">{t('courses.catalogSubtitle')}</p>
+            <p className="page-header__count">
+              {t('courses.countLabel', '{{count}} cours', { count: filteredCourses.length })}
+            </p>
           </div>
           <div className="page-header__actions">
             <div className="filter-group">
@@ -100,7 +90,6 @@ export default function Courses() {
               <CourseCard
                 key={course.id}
                 course={course}
-                onPreview={() => setSelectedCourse(course)}
               />
             ))}
           </div>
@@ -116,14 +105,6 @@ export default function Courses() {
           </div>
         )}
       </div>
-
-      {selectedCourse && (
-        <CourseModal
-          course={selectedCourse}
-          onClose={() => setSelectedCourse(null)}
-          onEnroll={handleEnroll}
-        />
-      )}
     </section>
   );
 }

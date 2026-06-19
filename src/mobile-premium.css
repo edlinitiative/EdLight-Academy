@@ -1,0 +1,711 @@
+/* =====================================================================
+   mobile-premium.css  ·  EdLight Academy
+   ---------------------------------------------------------------------
+   A modern, app-like mobile experience. Loaded LAST so it refines the
+   navigation and core surfaces on phones without touching the desktop
+   layout (everything here is scoped to <= 767px unless noted).
+
+   Sections
+     1. Design tokens (mobile nav)
+     2. Frosted top bar
+     3. Premium slide-in drawer (icons, profile card, sections)
+     4. Bottom tab bar (the primary mobile nav)
+     5. App-shell spacing for the bottom bar
+     6. Global polish (cards, buttons, tap feedback)
+     7. Dark-theme variants
+   ===================================================================== */
+
+:root {
+  --bottom-nav-height: 64px;
+  --nav-ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ====================================================================
+   2 · FROSTED TOP BAR  (mobile only)
+   ==================================================================== */
+@media (max-width: 767px) {
+  .navbar {
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 6px 24px -12px rgba(15, 23, 42, 0.25);
+  }
+
+  .navbar__inner {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+    padding-left: 1.1rem !important;
+    padding-right: 1.1rem !important;
+  }
+
+  .logo__image { height: 30px; }
+
+  .logo__text {
+    font-size: 1.02rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-900);
+    background: linear-gradient(120deg, var(--primary-600), var(--primary-400));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Hamburger -> soft rounded "chip" button */
+  .mobile-menu-toggle {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    color: var(--text-800);
+    box-shadow: 0 2px 10px -4px rgba(15, 23, 42, 0.2);
+    transition: transform 0.18s var(--nav-ease-spring), background 0.18s ease;
+  }
+  .mobile-menu-toggle:active { transform: scale(0.92); }
+}
+
+/* ====================================================================
+   3 · PREMIUM SLIDE-IN DRAWER  (mobile only)
+   ==================================================================== */
+@media (max-width: 767px) {
+  .nav-links {
+    position: fixed;
+    inset: 0 0 0 auto;
+    top: 0;
+    right: 0;
+    width: min(86vw, 360px);
+    height: 100%;
+    height: calc(var(--vvh, 1vh) * 100);
+    /* Hidden state: slide off-canvas + fully transparent */
+    transform: translateX(102%);
+    opacity: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-radius: 22px 0 0 22px;
+    background: var(--surface);
+    box-shadow: -24px 0 60px -20px rgba(15, 23, 42, 0.45);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1001;
+    pointer-events: none;
+    transition: transform 0.34s var(--nav-ease-spring), opacity 0.2s ease;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+
+  .nav-links--mobile-open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ---- Drawer header (brand + close) ---- */
+  .nav-links__header.nav-drawer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    height: auto;
+    padding: calc(0.9rem + env(safe-area-inset-top)) 1.1rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 2;
+  }
+
+  .nav-drawer__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+  }
+  .nav-drawer__brand-img { height: 30px; width: auto; }
+  .nav-drawer__brand-text {
+    font-weight: 800;
+    font-size: 1.02rem;
+    letter-spacing: -0.02em;
+    color: var(--text-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav-links__close {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 12px;
+    background: var(--surface-muted);
+    color: var(--text-700);
+    transition: transform 0.18s var(--nav-ease-spring), background 0.18s ease;
+  }
+  .nav-links__close:active { transform: scale(0.9); background: var(--border); }
+
+  /* ---- Profile card (authenticated) ---- */
+  .nav-drawer__profile {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin: 0.9rem 0.9rem 0.4rem;
+    padding: 0.85rem 0.95rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--primary-500) 12%, var(--surface)),
+        color-mix(in srgb, var(--primary-400) 6%, var(--surface)));
+    border: 1px solid color-mix(in srgb, var(--primary-500) 18%, transparent);
+    transition: transform 0.18s var(--nav-ease-spring);
+  }
+  .nav-drawer__profile:active { transform: scale(0.985); }
+
+  .nav-drawer__avatar {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-400));
+    box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--primary-500) 70%, transparent);
+  }
+  .nav-drawer__profile-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .nav-drawer__profile-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-900);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nav-drawer__profile-email {
+    font-size: 0.78rem;
+    color: var(--text-500);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .nav-drawer__profile-chevron { color: var(--text-400); flex-shrink: 0; }
+
+  /* ---- Nav rows (icon + label) ---- */
+  .nav-links .nav-link {
+    width: auto;
+    margin: 0.15rem 0.7rem;
+    padding: 0.8rem 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-700);
+    background: transparent;
+    border: none;
+    border-radius: 13px;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.16s var(--nav-ease-spring);
+  }
+  .nav-links .nav-link:active {
+    transform: scale(0.98);
+    background: var(--surface-muted);
+  }
+
+  .nav-link__icon {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: var(--surface-muted);
+    color: var(--text-600);
+    transition: background 0.16s ease, color 0.16s ease;
+  }
+  .nav-link__label { flex: 1; min-width: 0; }
+
+  .nav-links .nav-link.active {
+    color: var(--primary-700);
+    background: color-mix(in srgb, var(--primary-500) 12%, transparent);
+    border: none;
+    padding-left: 0.85rem;
+  }
+  .nav-links .nav-link.active .nav-link__icon {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-400));
+    color: #fff;
+    box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--primary-500) 75%, transparent);
+  }
+
+  .nav-link--danger { color: var(--danger-500) !important; }
+  .nav-link--danger .nav-link__icon {
+    background: color-mix(in srgb, var(--danger-500) 12%, transparent);
+    color: var(--danger-500);
+  }
+
+  /* ---- Sectioned secondary area ---- */
+  .nav-drawer__section {
+    margin-top: 0.6rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .nav-drawer__section-label {
+    padding: 0 1.55rem 0.35rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-400);
+  }
+  .nav-link--mobile-only {
+    display: flex !important;
+    margin: 0.15rem 0.7rem;
+    border: none;
+  }
+
+  /* Theme toggle becomes a full-width labelled row in the drawer */
+  .theme-toggle--mobile-only {
+    display: inline-flex !important;
+    align-self: stretch;
+    margin: 0.15rem 0.7rem;
+    width: auto;
+    height: auto;
+    padding: 0.7rem 0.85rem;
+    justify-content: flex-start;
+    gap: 0.85rem;
+    border-radius: 13px;
+    background: transparent;
+    border: none;
+    color: var(--text-700);
+  }
+  .theme-toggle--mobile-only:active { background: var(--surface-muted); }
+  .theme-toggle--mobile-only::after {
+    content: attr(title);
+    font-size: 0.98rem;
+    font-weight: 600;
+  }
+
+  /* ---- Auth CTAs ---- */
+  .nav-drawer__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin: 0.8rem 1rem 0;
+  }
+  .nav-drawer__cta {
+    width: 100%;
+    justify-content: center;
+    padding: 0.85rem 1rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+  }
+
+  /* ---- Backdrop ---- */
+  .mobile-menu-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    z-index: 1000;
+  }
+}
+
+/* Desktop guard: the drawer-only chrome are direct children of .nav-links,
+   which becomes a horizontal flex row at >=768px. Keep them mobile-only so
+   they never leak into the desktop inline navigation. */
+@media (min-width: 768px) {
+  .nav-drawer__header,
+  .nav-drawer__profile,
+  .nav-drawer__section,
+  .nav-links__close {
+    display: none !important;
+  }
+}
+
+/* ====================================================================
+   4 · BOTTOM TAB BAR  (the primary mobile nav)
+   ==================================================================== */
+.bottom-nav { display: none; }
+
+@media (max-width: 767px) {
+  .bottom-nav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 980;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    backdrop-filter: saturate(180%) blur(22px);
+    border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+    box-shadow: 0 -8px 30px -16px rgba(15, 23, 42, 0.4);
+  }
+
+  .bottom-nav__inner {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: stretch;
+    height: var(--bottom-nav-height);
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .bottom-nav__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border: none;
+    background: transparent;
+    color: var(--text-500);
+    font-family: inherit;
+    cursor: pointer;
+    padding: 6px 0 4px;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.18s ease;
+  }
+
+  .bottom-nav__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 11px;
+    transition: transform 0.22s var(--nav-ease-spring), background 0.2s ease, color 0.18s ease;
+  }
+
+  .bottom-nav__label {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+
+  /* Active tab: lifted, colored icon pill + brand label + top indicator */
+  .bottom-nav__item.is-active { color: var(--primary-600); }
+  .bottom-nav__item.is-active .bottom-nav__icon {
+    transform: translateY(-2px);
+    background: color-mix(in srgb, var(--primary-500) 14%, transparent);
+    color: var(--primary-600);
+  }
+  .bottom-nav__item.is-active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: 26px;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+    background: linear-gradient(90deg, var(--primary-600), var(--primary-400));
+  }
+  .bottom-nav__item:active .bottom-nav__icon { transform: scale(0.9); }
+}
+
+/* ====================================================================
+   5 · APP-SHELL SPACING for the fixed bottom bar
+   ==================================================================== */
+@media (max-width: 767px) {
+  /* Keep page content clear of the bottom bar */
+  .app-shell__main {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.5rem);
+  }
+  /* The footer sits above the bar too */
+  .footer { margin-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom)); }
+
+  /* Float any page-level sticky CTAs above the bottom bar */
+  .exam-take__passage-btn,
+  .study-plan__fab,
+  .scroll-to-top {
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 1rem) !important;
+  }
+}
+
+/* ====================================================================
+   6 · GLOBAL POLISH  (mobile only) — premium cards, buttons, feedback
+   ==================================================================== */
+@media (max-width: 767px) {
+  /* Softer, deeper card elevation + pressed feedback */
+  .card,
+  .course-card,
+  .exam-card,
+  .lp-course,
+  .lp-pillar {
+    border-radius: 18px;
+  }
+  .course-card,
+  .exam-card,
+  .lp-course {
+    transition: transform 0.2s var(--nav-ease-spring), box-shadow 0.2s ease;
+  }
+  .course-card:active,
+  .exam-card:active,
+  .lp-course:active {
+    transform: scale(0.985);
+  }
+
+  /* Pill buttons get a touch more presence + spring press */
+  .button {
+    border-radius: 13px;
+    transition: transform 0.16s var(--nav-ease-spring), box-shadow 0.2s ease, background 0.2s ease;
+  }
+  .button:active { transform: scale(0.97); }
+  .button--primary {
+    box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--primary-500) 65%, transparent);
+  }
+
+  /* Primary hero CTA: full-width, bold, app-like */
+  .lp-hero__actions { width: 100%; }
+  .lp-hero__actions .lp-btn { flex: 1; min-width: 0; }
+
+  /* Tidy avatar in the top bar */
+  .nav-actions .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-400));
+    color: #fff;
+    border: 2px solid var(--surface);
+    box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--primary-500) 70%, transparent);
+  }
+}
+
+/* ====================================================================
+   7 · EXAM CARDS — declutter so each card is scannable, not a wall
+   ====================================================================
+   On a phone the catalog cards stacked subject + year + title + meta +
+   stats + track chips + question-type chips + CTA: far too much. Trim the
+   power-user details and calm the type scale so cards read at a glance. */
+@media (max-width: 767px) {
+  .exam-card {
+    gap: 0.45rem;
+    border-radius: 16px;
+  }
+
+  /* Hide secondary / power-user detail — keep subject, title, level,
+     duration, difficulty, question count and the CTA. */
+  .exam-card__types,
+  .exam-card__tracks,
+  .exam-card__lang,
+  .exam-card__gradable {
+    display: none !important;
+  }
+
+  /* Calm the title + chips so nothing shouts */
+  .exam-card__title {
+    font-size: clamp(0.95rem, 3.9vw, 1.05rem);
+    line-height: 1.34;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .exam-card__subject-badge {
+    font-size: 0.72rem;
+    padding: 0.18rem 0.55rem;
+  }
+  .exam-card__year { font-size: 0.74rem; padding: 0.12rem 0.45rem; }
+  .exam-card__meta { font-size: 0.78rem; gap: 0.4rem; }
+  .exam-card__stats { font-size: 0.78rem; }
+  .exam-card__attempt { font-size: 0.74rem; }
+
+  /* Slimmer, tidy CTA */
+  .exam-card__cta { padding-top: 0.5rem; }
+  .exam-card__cta-text {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 12px;
+  }
+}
+
+/* ====================================================================
+   8 · ANSWERING A QUESTION — right-size everything so it feels polished
+   ====================================================================
+   The question text inherited ~17px / 1.65 leading and the options used
+   generous padding with a 26px key bubble. On mobile that reads oversized.
+   Tighten type, padding and the option rows into a compact, app-like card. */
+@media (max-width: 767px) {
+  .exam-take__question-card.card { padding: 0.9rem 0.95rem; }
+  .exam-take__question-card { gap: 0.55rem; }
+
+  /* Question prompt: calmer size + tighter leading */
+  .exam-take__question-text,
+  .exam-take__question-text .instruction-renderer,
+  .exam-take__question-text .instruction-renderer__p {
+    font-size: clamp(0.95rem, 3.6vw, 1rem);
+    line-height: 1.5;
+  }
+
+  /* Header: smaller number + points chip */
+  .exam-take__question-num-label { font-size: 0.92rem; }
+  .exam-take__question-num-total { font-size: 0.74rem; }
+  .exam-take__question-points { font-size: 0.72rem; }
+
+  /* Multiple-choice: compact, tappable rows */
+  .exam-take__mcq-options { gap: 0.4rem; }
+  .exam-take__mcq-option {
+    padding: 0.65rem 0.75rem;
+    gap: 0.6rem;
+    border-radius: 12px;
+    border-width: 1.5px;
+  }
+  .exam-take__mcq-option:active {
+    transform: scale(0.99);
+    background: color-mix(in srgb, var(--primary-500) 6%, var(--surface));
+  }
+  .exam-take__mcq-key {
+    width: 23px;
+    height: 23px;
+    font-size: 0.72rem;
+  }
+  .exam-take__mcq-text { font-size: 0.92rem; line-height: 1.45; }
+
+  /* True / False options match the compact scale */
+  .exam-take__tf-option {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.92rem;
+    border-radius: 12px;
+  }
+
+  /* Inline blanks + scaffold prompts stay proportional */
+  .exam-take__temporal-note { font-size: 0.8rem; padding: 0.5rem 0.7rem; }
+
+  /* Action row + nav: snug, not chunky */
+  .exam-take__action-row { padding-top: 0.25rem; gap: 0.4rem; }
+  .exam-take__question-nav { margin-top: 0.8rem; gap: 0.5rem; }
+  .exam-take__check-btn { min-height: 36px; }
+}
+
+/* ====================================================================
+   9 · COURSE CARDS — uniform, scannable, right-sized
+   ====================================================================
+   Catalog cards (.course-card) and the home grid (.lp-course) ran tall
+   with generous padding and unbounded descriptions, so card heights were
+   uneven. Tighten padding, calm the type, and clamp the blurb to 2 lines
+   so the grid reads like a tidy, modern list. */
+@media (max-width: 767px) {
+  /* — Courses page catalog card — */
+  .course-card {
+    gap: 0.7rem;
+    padding: 1rem 1.05rem;
+    border-radius: 16px;
+  }
+  .course-card__title {
+    font-size: clamp(0.95rem, 3.8vw, 1.02rem);
+    line-height: 1.32;
+  }
+  .course-card__description {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    max-width: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .course-card__meta { gap: 0.4rem; }
+  .course-meta__item { font-size: 0.72rem; padding: 0.22rem 0.5rem; }
+  .course-card__footer { gap: 0.6rem; }
+  .course-card__actions { gap: 0.5rem; }
+  .course-card__actions .button,
+  .course-card__actions .course-card__cta {
+    font-size: 0.86rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  /* — Home page course tile — */
+  .lp-course__body { padding: 1rem 1rem 1.1rem; gap: 0.4rem; }
+  .lp-course__title { font-size: 1rem; line-height: 1.28; }
+  .lp-course__desc {
+    font-size: 0.86rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .lp-course__foot { margin-top: 0.4rem; padding-top: 0.7rem; font-size: 0.66rem; }
+}
+
+/* ====================================================================
+   10 · QUIZ ANSWERING — right-size the practice card to match exams
+   ====================================================================
+   The practice quiz used a 1.5rem grid gap, a roomy question box and
+   chunky option rows. On a phone that felt oversized; tighten it into a
+   compact, app-like card consistent with the exam question UI. */
+@media (max-width: 767px) {
+  .quiz-card { gap: 0.9rem; }
+  .quiz-card__label { font-size: 0.74rem; }
+  .quiz-card__heading { font-size: clamp(0.98rem, 4vw, 1.1rem); }
+
+  .quiz-card__question {
+    padding: 0.85rem 0.9rem;
+    border-radius: 14px;
+    font-size: clamp(0.95rem, 3.6vw, 1rem);
+    line-height: 1.5;
+  }
+
+  .quiz-card__options { gap: 0.5rem; }
+  .radio-option {
+    padding: 0.65rem 0.8rem;
+    gap: 0.6rem;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+  .radio-option:active {
+    transform: scale(0.99);
+    background: color-mix(in srgb, var(--primary-500) 6%, var(--surface));
+  }
+
+  .quiz-card__controls { gap: 0.5rem; }
+  .quiz-card__explanation {
+    padding: 0.8rem 0.9rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .hint-box { font-size: 0.85rem; line-height: 1.5; }
+}
+
+/* ====================================================================
+   11 · DARK-THEME VARIANTS
+   ==================================================================== */
+@media (max-width: 767px) {
+  [data-theme="dark"] .navbar {
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--border-strong) 60%, transparent);
+    box-shadow: 0 6px 24px -12px rgba(0, 0, 0, 0.6);
+  }
+  [data-theme="dark"] .logo__text {
+    background: linear-gradient(120deg, #a5b4fc, #818cf8);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  [data-theme="dark"] .nav-links {
+    background: var(--surface);
+    border-left: 1px solid var(--border-strong);
+    box-shadow: -24px 0 60px -20px rgba(0, 0, 0, 0.7);
+  }
+  [data-theme="dark"] .bottom-nav {
+    background: color-mix(in srgb, var(--surface) 78%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--border-strong) 55%, transparent);
+    box-shadow: 0 -8px 30px -16px rgba(0, 0, 0, 0.7);
+  }
+  [data-theme="dark"] .nav-link__icon { background: color-mix(in srgb, var(--surface-muted) 80%, #000); }
+}

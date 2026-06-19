@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { loadAppData } from '../services/dataService';
+import { loadAppData, loadCoursesData, getCachedCourses } from '../services/dataService';
 
 export function useAppData() {
   return useQuery({
@@ -10,6 +10,32 @@ export function useAppData() {
     retry: 2,
     onError: (error) => {
       console.error('Failed to load application data:', error);
+    },
+  });
+}
+
+/**
+ * Lightweight course-catalog query.
+ *
+ * Used by the /courses listing and the dashboard, which only need the course
+ * catalog — not the full videos/quizzes collections or the quiz-bank index
+ * that `useAppData()` loads. It fetches a single small Firestore collection
+ * and hydrates instantly from a localStorage cache (revalidating in the
+ * background), so returning visitors see the catalog with no spinner.
+ */
+export function useCourses() {
+  const cached = getCachedCourses();
+  return useQuery({
+    queryKey: ['coursesData'],
+    queryFn: loadCoursesData,
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 30 * 60 * 1000,
+    retry: 2,
+    // Paint instantly from the last-known catalog, then revalidate if stale.
+    initialData: cached ? cached.data : undefined,
+    initialDataUpdatedAt: cached ? cached.updatedAt : undefined,
+    onError: (error) => {
+      console.error('Failed to load course catalog:', error);
     },
   });
 }

@@ -27,6 +27,7 @@ export interface AppState {
   showAuthModal: boolean;
   showUserDropdown: boolean;
   showCourseModal: boolean;
+  showMobileMenu: boolean;
   activeTab: string;
 
   // Actions
@@ -47,6 +48,8 @@ export interface AppState {
   setShowUserDropdown: (show: boolean) => void;
   toggleCourseModal: () => void;
   setActiveTab: (tab: string) => void;
+  toggleMobileMenu: () => void;
+  setShowMobileMenu: (show: boolean) => void;
   logout: () => void;
 }
 
@@ -73,6 +76,7 @@ const useStore = create<AppState>()(
       showAuthModal: false,
       showUserDropdown: false,
       showCourseModal: false,
+      showMobileMenu: false,
       activeTab: 'signin',
       
       // Actions
@@ -120,6 +124,8 @@ const useStore = create<AppState>()(
       setShowUserDropdown: (show) => set({ showUserDropdown: show }),
       toggleCourseModal: () => set((state) => ({ showCourseModal: !state.showCourseModal })),
       setActiveTab: (tab) => set({ activeTab: tab }),
+      toggleMobileMenu: () => set((state) => ({ showMobileMenu: !state.showMobileMenu })),
+      setShowMobileMenu: (show) => set({ showMobileMenu: !!show }),
       
       logout: () => set({
         user: null,
@@ -132,7 +138,8 @@ const useStore = create<AppState>()(
         quizAttempts: {},
         showUserDropdown: false,
         showAuthModal: false,
-        showCourseModal: false
+        showCourseModal: false,
+        showMobileMenu: false
       })
     }),
     {

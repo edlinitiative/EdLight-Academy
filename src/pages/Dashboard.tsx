@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Flame, Target, ClipboardList } from 'lucide-react';
-import { useAppData } from '../hooks/useData';
+import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
 import ProgressDashboard from '../components/ProgressDashboard';
@@ -31,7 +31,7 @@ function formatShortDate(msOrDate, locale) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data, isLoading } = useAppData();
+  const { data: courses, isLoading } = useCourses();
   const { user, enrolledCourses, quizAttempts, language } = useStore();
   const isCreole = language === 'ht';
   const locale = isCreole ? 'fr-HT' : 'fr-FR';
@@ -364,7 +364,7 @@ export default function Dashboard() {
                   : 0;
                 const good = pct >= 80;
                 const courseName = a.courseId
-                  ? (data?.courses?.find((c) => c.id === a.courseId)?.name || a.courseId)
+                  ? (courses?.find((c) => c.id === a.courseId)?.name || a.courseId)
                   : '';
                 const label = a.quizId || (isCreole ? 'Quiz' : 'Quiz');
                 const dateMs = a.attemptedAtMs || a.attemptedAt_ms || a.date || Date.now();

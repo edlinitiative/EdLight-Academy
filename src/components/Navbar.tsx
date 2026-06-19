@@ -1,24 +1,47 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
+import {
+  Home,
+  BookOpen,
+  Brain,
+  ClipboardList,
+  Gamepad2,
+  Info,
+  LayoutDashboard,
+  CalendarCheck,
+  LogOut,
+  ChevronRight,
+  X,
+} from 'lucide-react';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
 
+/** Primary destinations shown in the desktop inline nav and the mobile drawer. */
+const NAV_ITEMS = [
+  { to: '/', label: 'Accueil', icon: Home, exact: true },
+  { to: '/courses', label: 'Cours', icon: BookOpen },
+  { to: '/quizzes', label: 'Quiz', icon: Brain },
+  { to: '/exams', label: 'Examens', icon: ClipboardList },
+  { to: '/trivia', label: 'Trivia', icon: Gamepad2 },
+  { to: '/about', label: 'À propos', icon: Info },
+];
+
 export function Navbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const dropdownRef = useRef(null);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const { 
-    isAuthenticated, 
-    user, 
+  const {
+    isAuthenticated,
+    user,
     showUserDropdown,
     toggleUserDropdown,
     logout,
     theme,
-    toggleTheme
+    toggleTheme,
+    showMobileMenu,
+    setShowMobileMenu,
   } = useStore();
 
   const isDark = theme === 'dark';
@@ -43,6 +66,8 @@ export function Navbar() {
     </button>
   );
 
+  const closeMenu = () => setShowMobileMenu(false);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -60,7 +85,7 @@ export function Navbar() {
   // Close mobile menu on route change
   useEffect(() => {
     setShowMobileMenu(false);
-  }, [pathname]);
+  }, [pathname, setShowMobileMenu]);
 
   // Lock scroll when mobile menu is open + allow ESC to close
   useEffect(() => {
@@ -79,27 +104,32 @@ export function Navbar() {
 
     document.body.classList.remove('no-scroll');
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [showMobileMenu]);
+  }, [showMobileMenu, setShowMobileMenu]);
 
   const handleLogout = async () => {
     try {
       await logoutUser();
     } catch {}
     logout();
+    closeMenu();
     navigate('/');
   };
 
-  const isActive = (path) => {
-    if (path === '/') {
-      return pathname === '/';
+  const isActive = (path, exact = false) => {
+    if (path === '/' || exact) {
+      return pathname === path;
     }
     return pathname.startsWith(path);
   };
 
+  const initials = user?.name
+    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'EL';
+
   return (
     <header className="navbar">
       <div className="container navbar__inner">
-        <Link to="/" className="logo">
+        <Link to="/" className="logo" onClick={closeMenu}>
           <img src="/assets/logo.png" alt="EdLight Academy" className="logo__image" />
           <span className="logo__text">EdLight Academy</span>
         </Link>
@@ -107,7 +137,7 @@ export function Navbar() {
         {/* Mobile Menu Toggle Button */}
         <button
           className="mobile-menu-toggle"
-          onClick={() => setShowMobileMenu((v) => !v)}
+          onClick={() => setShowMobileMenu(!showMobileMenu)}
           aria-label={showMobileMenu ? 'Fermer le menu' : 'Ouvrir le menu'}
           aria-controls="primary-navigation"
           aria-expanded={showMobileMenu}
@@ -127,122 +157,108 @@ export function Navbar() {
         </button>
 
         <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`}>
-          <div className="nav-links__header">
+          {/* Drawer header (mobile only) */}
+          <div className="nav-links__header nav-drawer__header">
+            <Link to="/" className="nav-drawer__brand" onClick={closeMenu}>
+              <img src="/assets/logo.png" alt="" className="nav-drawer__brand-img" />
+              <span className="nav-drawer__brand-text">EdLight Academy</span>
+            </Link>
             <button
               type="button"
               className="nav-links__close"
-              onClick={() => setShowMobileMenu(false)}
+              onClick={closeMenu}
               aria-label="Fermer le menu"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <X size={22} strokeWidth={2} aria-hidden="true" />
             </button>
           </div>
-          <Link
-            to="/"
-            className={['nav-link', pathname === '/' ? 'active' : ''].join(' ')}
-            onClick={() => setShowMobileMenu(false)}
-          >
-            Accueil
-          </Link>
-          <Link
-            to="/courses"
-            className={['nav-link', isActive('/courses') ? 'active' : ''].join(' ')}
-            onClick={() => setShowMobileMenu(false)}
-          >
-            Cours
-          </Link>
-          <Link 
-            to="/quizzes" 
-            className={['nav-link', isActive('/quizzes') ? 'active' : ''].join(' ')}
-            onClick={() => setShowMobileMenu(false)}
-          >
-            Quiz
-          </Link>
-          <Link 
-            to="/exams" 
-            className={['nav-link', isActive('/exams') ? 'active' : ''].join(' ')}
-            onClick={() => setShowMobileMenu(false)}
-          >
-            Examens
-          </Link>
-          <Link
-            to="/trivia"
-            className={['nav-link', isActive('/trivia') ? 'active' : ''].join(' ')}
-            onClick={() => setShowMobileMenu(false)}
-          >
-            Trivia
-          </Link>
-          <Link 
-            to="/about" 
-            className={['nav-link', isActive('/about') ? 'active' : ''].join(' ')}
-            onClick={() => setShowMobileMenu(false)}
-          >
-            À propos
-          </Link>
 
-          <ThemeToggle className="theme-toggle--mobile-only" />
-          
-          {/* Mobile-only auth actions */}
-          {isAuthenticated ? (
-            <>
-            <Link 
-              to="/dashboard" 
-              className="nav-link nav-link--mobile-only"
-              onClick={() => setShowMobileMenu(false)}
-            >
-              Tableau de bord
+          {/* Profile card (mobile, authenticated) */}
+          {isAuthenticated && user && (
+            <Link to="/dashboard" className="nav-drawer__profile" onClick={closeMenu}>
+              <span className="nav-drawer__avatar">{initials}</span>
+              <span className="nav-drawer__profile-info">
+                <span className="nav-drawer__profile-name">{user.name}</span>
+                <span className="nav-drawer__profile-email">{user.email || 'Voir le tableau de bord'}</span>
+              </span>
+              <ChevronRight size={18} className="nav-drawer__profile-chevron" aria-hidden="true" />
             </Link>
-            <Link 
-              to="/study-plan" 
-              className="nav-link nav-link--mobile-only"
-              onClick={() => setShowMobileMenu(false)}
-            >
-              <ClipboardList size={16} /> Plan d'étude
-            </Link>
-            </>
-          ) : (
-            <>
-              <button 
-                className="nav-link nav-link--mobile-only nav-link--button"
-                onClick={() => {
-                  useStore.getState().toggleAuthModal();
-                  setShowMobileMenu(false);
-                }}
-              >
-                Se connecter
-              </button>
-              <button 
-                className="nav-link nav-link--mobile-only nav-link--button nav-link--primary"
-                onClick={() => {
-                  useStore.getState().toggleAuthModal();
-                  useStore.getState().setActiveTab('signup');
-                  setShowMobileMenu(false);
-                }}
-              >
-                Créer un compte
-              </button>
-            </>
           )}
+
+          {NAV_ITEMS.map(({ to, label, icon: ItemIcon, exact }) => (
+            <Link
+              key={to}
+              to={to}
+              className={['nav-link', isActive(to, exact) ? 'active' : ''].join(' ')}
+              onClick={closeMenu}
+            >
+              <span className="nav-link__icon"><ItemIcon size={19} strokeWidth={2} aria-hidden="true" /></span>
+              <span className="nav-link__label">{label}</span>
+            </Link>
+          ))}
+
+          {/* Secondary actions (mobile only) */}
+          <div className="nav-drawer__section">
+            <span className="nav-drawer__section-label">Mon espace</span>
+
+            <ThemeToggle className="theme-toggle--mobile-only" />
+
+            {isAuthenticated ? (
+              <>
+                <Link to="/dashboard" className="nav-link nav-link--mobile-only" onClick={closeMenu}>
+                  <span className="nav-link__icon"><LayoutDashboard size={19} strokeWidth={2} aria-hidden="true" /></span>
+                  <span className="nav-link__label">Tableau de bord</span>
+                </Link>
+                <Link to="/study-plan" className="nav-link nav-link--mobile-only" onClick={closeMenu}>
+                  <span className="nav-link__icon"><CalendarCheck size={19} strokeWidth={2} aria-hidden="true" /></span>
+                  <span className="nav-link__label">Plan d'étude</span>
+                </Link>
+                <button type="button" className="nav-link nav-link--mobile-only nav-link--danger" onClick={handleLogout}>
+                  <span className="nav-link__icon"><LogOut size={19} strokeWidth={2} aria-hidden="true" /></span>
+                  <span className="nav-link__label">Déconnexion</span>
+                </button>
+              </>
+            ) : (
+              <div className="nav-drawer__footer">
+                <button
+                  className="button button--ghost button--pill nav-drawer__cta"
+                  onClick={() => {
+                    useStore.getState().toggleAuthModal();
+                    closeMenu();
+                  }}
+                >
+                  Se connecter
+                </button>
+                <button
+                  className="button button--primary button--pill nav-drawer__cta"
+                  onClick={() => {
+                    useStore.getState().toggleAuthModal();
+                    useStore.getState().setActiveTab('signup');
+                    closeMenu();
+                  }}
+                >
+                  Créer un compte
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Mobile menu backdrop */}
         {showMobileMenu && (
-          <div 
+          <div
             className="mobile-menu-backdrop mobile-menu-backdrop--visible"
-            onClick={() => setShowMobileMenu(false)}
+            onClick={closeMenu}
           />
         )}
-        
+
         <div className="nav-actions">
           <ThemeToggle />
           {isAuthenticated ? (
             <>
               <StreakBadge />
 
-              <button 
+              <button
                 className="button button--ghost button--pill nav-actions__dashboard"
                 onClick={() => navigate('/dashboard')}
               >
@@ -250,13 +266,13 @@ export function Navbar() {
               </button>
 
               <div className="dropdown" ref={dropdownRef}>
-                <button 
+                <button
                   className="avatar"
                   onClick={() => toggleUserDropdown()}
                   aria-haspopup="true"
                   aria-expanded={showUserDropdown}
                 >
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {initials}
                 </button>
                 {showUserDropdown && (
                   <UserDropdown user={user} onLogout={handleLogout} />
@@ -265,13 +281,13 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <button 
+              <button
                 className="button button--ghost button--pill nav-actions__signin"
                 onClick={() => useStore.getState().toggleAuthModal()}
               >
                 Se connecter
               </button>
-              <button 
+              <button
                 className="button button--primary button--pill nav-actions__signup"
                 onClick={() => {
                   useStore.getState().toggleAuthModal();

@@ -280,6 +280,14 @@ main {
 	color: var(--text-600);
 }
 
+.page-header__count {
+	margin-top: 0.35rem;
+	font-size: 0.82rem;
+	font-weight: 600;
+	color: var(--text-500);
+	letter-spacing: 0.01em;
+}
+
 .grid {
 	display: grid;
 	gap: clamp(1.25rem, 3.2vw, 2rem);
@@ -1060,6 +1068,27 @@ textarea.input-field {
 	border: 1px solid rgba(10, 102, 194, 0.1);
 	box-shadow: var(--shadow-sm);
 	overflow: hidden;
+	cursor: pointer;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.course-card:hover {
+	border-color: color-mix(in srgb, var(--course-accent, var(--primary-500)) 35%, transparent);
+	box-shadow: var(--shadow-md);
+	transform: translateY(-2px);
+}
+
+.course-card:hover .course-card__cta {
+	background: color-mix(in srgb, var(--course-accent, var(--primary-500)) 22%, transparent);
+}
+
+.course-card:focus-visible {
+	outline: 2px solid var(--course-accent, var(--primary-500));
+	outline-offset: 2px;
+}
+
+.course-card:active {
+	transform: translateY(0);
 }
 
 .course-card::before {
@@ -1084,6 +1113,25 @@ textarea.input-field {
 	font-weight: 600;
 	color: var(--primary-600);
 	background: rgba(10, 102, 194, 0.12);
+}
+
+.course-card__tags {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+}
+
+.course-card__badge--level {
+	color: var(--text-600);
+	background: rgba(15, 23, 42, 0.06);
+	font-weight: 700;
+	letter-spacing: 0.01em;
+}
+
+[data-theme="dark"] .course-card__badge--level {
+	color: var(--text-300, #cbd5e1);
+	background: rgba(148, 163, 184, 0.16);
 }
 
 .course-card__title {
@@ -1171,6 +1219,7 @@ textarea.input-field {
 .course-card__cta {
 	display: inline-flex;
 	align-items: center;
+	justify-content: center;
 	gap: 0.4rem;
 	padding: clamp(0.45rem, 1.4vw, 0.55rem) clamp(0.75rem, 2.5vw, 0.9rem);
 	border-radius: 999px;
