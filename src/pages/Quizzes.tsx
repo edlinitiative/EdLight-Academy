@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { useAppData } from '../hooks/useData';
 import { useTranslation } from 'react-i18next';
+import { subjectThumbs } from './home/content';
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
@@ -172,6 +173,26 @@ const Quizzes = () => {
           {/* Filters Section */}
           <div className="quiz-filters">
             <div className="card">
+              {subjectBase && (
+                <div className="quiz-hero">
+                  <img
+                    className="quiz-hero__img"
+                    src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
+                    alt=""
+                    width={760}
+                    height={425}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="quiz-hero__overlay">
+                    <span className="quiz-hero__eyebrow">{t('quizzes.curriculumPractice', 'Exercices du programme')}</span>
+                    <h2 className="quiz-hero__title">
+                      {(subjectOptions.find((o) => o.value === subjectBase)?.label) || subjectBase}
+                    </h2>
+                    {level && <p className="quiz-hero__sub">{level.replace(/^NS(.*)$/i, 'NS $1')}</p>}
+                  </div>
+                </div>
+              )}
               <h3 className="card__title">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</h3>
               <div className="quiz-selectors">
                 <div className="form-group">

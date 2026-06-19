@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gamepad2, Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell } from 'lucide-react';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import './TriviaGames.css';
@@ -24,7 +24,7 @@ function CategoryPicker({ onSelect, isCreole }) {
           {isCreole ? 'Jeu Edikasyon' : 'Jeux Éducatifs'}
         </span>
         <h1 className="trivia-landing__title">
-          <Gamepad2 size={28} /> {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
+          {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
         </h1>
         <p className="trivia-landing__subtitle">
           {isCreole

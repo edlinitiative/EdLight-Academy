@@ -14411,6 +14411,99 @@ textarea:focus {
 	box-shadow: var(--shadow-sm) !important;
 }
 
+/* ============================================================
+   Card cover art — optimized, vector "thumbnails" for cards.
+   A CSS gradient + dot pattern + a single inline SVG glyph:
+   no raster images, no network requests, crisp at any DPI.
+   Used by the exam level cards and filière cards (and ready for
+   reuse anywhere a card wants a polished picture-style banner).
+   ============================================================ */
+.card-cover {
+	position: relative;
+	width: 100%;
+	height: 96px;
+	overflow: hidden;
+	color: #fff; /* the glyph stroke inherits this */
+	isolation: isolate;
+}
+/* Soft top-left sheen so the flat gradient reads as a lit surface. */
+.card-cover::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(130% 90% at 0% 0%, rgba(255, 255, 255, 0.26), transparent 58%);
+	pointer-events: none;
+}
+.card-cover__pattern {
+	position: absolute;
+	inset: 0;
+	background-image: radial-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1.5px);
+	background-size: 13px 13px;
+	-webkit-mask-image: linear-gradient(105deg, transparent, #000 55%);
+	mask-image: linear-gradient(105deg, transparent, #000 55%);
+	opacity: 0.6;
+}
+.card-cover__glyph {
+	position: absolute;
+	right: -8px;
+	bottom: -12px;
+	width: 92px;
+	height: 92px;
+	stroke: rgba(255, 255, 255, 0.92);
+	opacity: 0.95;
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.16));
+}
+
+/* ---- Quiz subject hero — an optimized webp/jpg photo banner that makes the
+   curriculum-practice card feel picture-rich instead of form-only. ---- */
+.quiz-hero {
+	position: relative;
+	height: 140px;
+	border-radius: var(--radius-md);
+	overflow: hidden;
+	margin-bottom: 1.1rem;
+	background: var(--surface-muted);
+}
+.quiz-hero__img {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+.quiz-hero__overlay {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 0.15rem;
+	padding: 0.9rem 1rem;
+	background: linear-gradient(180deg, rgba(10, 18, 32, 0) 20%, rgba(10, 18, 32, 0.74) 100%);
+	color: #fff;
+}
+.quiz-hero__eyebrow {
+	font-size: 0.66rem;
+	font-weight: 700;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	opacity: 0.92;
+}
+.quiz-hero__title {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1.2;
+}
+.quiz-hero__sub {
+	margin: 0;
+	font-size: 0.78rem;
+	font-weight: 600;
+	opacity: 0.9;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*, *::before, *::after {
 		animation-duration: 0.001ms !important;
