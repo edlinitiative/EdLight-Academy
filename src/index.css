@@ -4627,6 +4627,7 @@ textarea.input-field {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
+	flex-shrink: 0;
 }
 
 .exam-card__score-pill {
@@ -4647,12 +4648,40 @@ textarea.input-field {
 .exam-card__score-pill--low { background: rgba(239, 68, 68, 0.12); color: #b91c1c; }
 
 .exam-card__title {
-	font-weight: 700;
-	color: var(--text-900);
-	line-height: 1.42;
-	letter-spacing: -0.01em;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
 	margin: 0;
-	/* Truncate at 2 lines */
+	font-weight: 700;
+	font-size: 1.02rem;
+	letter-spacing: -0.01em;
+	line-height: 1.3;
+	color: var(--text-900);
+}
+
+/* Small subject-colour dot — replaces the old coloured badge chip so the
+   subject reads once, as the heading, with a calm colour cue. */
+.exam-card__dot {
+	flex-shrink: 0;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
+.exam-card__title-text {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* Optional subtitle: the distinct topic only (never the subject or year). */
+.exam-card__topic {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.4;
+	color: var(--text-500);
 	display: -webkit-box;
 	line-clamp: 2;
 	-webkit-line-clamp: 2;

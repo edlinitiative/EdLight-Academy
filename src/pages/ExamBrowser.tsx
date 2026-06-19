@@ -544,9 +544,55 @@ const ExamBrowser = () => {
 
 // ── Exam Card Component ──────────────────────────────────────────────────────
 
+/**
+ * The normalized exam title has the shape "Subject — Topic · Year/Session".
+ * The card already shows the subject (heading + colour dot) and the year (pill),
+ * so we pull out ONLY the distinct topic (e.g. "English Time") to use as a
+ * subtitle — never repeating the subject or year. Returns '' when there is none.
+ */
+function topicFromTitle(fullTitle) {
+  const t = String(fullTitle || '');
+  const dash = t.indexOf(' — ');
+  if (dash === -1) return '';
+  let topic = t.slice(dash + 3);
+  const dot = topic.indexOf(' · ');
+  if (dot !== -1) topic = topic.slice(0, dot);
+  topic = topic.trim();
+
+  // Drop an unmatched trailing "(" group, e.g. a title truncated mid-phrase
+  // like "Faculté des Sciences (Génie, Chimie" -> "Faculté des Sciences".
+  const opens = (topic.match(/\(/g) || []).length;
+  const closes = (topic.match(/\)/g) || []).length;
+  if (opens > closes) {
+    const i = topic.lastIndexOf('(');
+    if (i > 0) topic = topic.slice(0, i);
+  }
+
+  // Strip a leading ALL-CAPS prefix before a " - " — usually the subject in its
+  // full form that the normalizer didn't match (e.g. subject "Histoire-Géo" vs
+  // "HISTOIRE-GÉOGRAPHIE - Croisades" -> "Croisades").
+  const segs = topic.split(/\s[-–—]\s/);
+  if (segs.length > 1 && /[A-ZÀ-Þ]/.test(segs[0]) && segs[0] === segs[0].toUpperCase()) {
+    topic = segs.slice(1).join(' - ');
+  }
+
+  // Tidy stray edge punctuation left by the cuts above.
+  topic = topic.replace(/^[\s\-–—:,.()/]+|[\s\-–—:,.()/]+$/g, '').trim();
+
+  // Calm a still-shouty ALL-CAPS topic down to sentence case.
+  if (topic.length > 3 && topic === topic.toUpperCase()) {
+    topic = topic.charAt(0).toUpperCase() + topic.slice(1).toLowerCase();
+  }
+  return topic;
+}
+
 function ExamCard({ exam, onClick, attempt }) {
   const color = subjectColor(exam._subject);
-  const title = exam._title || exam.exam_title || 'Examen';
+  const subject = exam._subject || 'Examen';
+  // The subject (heading + colour dot) and the year (pill) are each shown once,
+  // so we surface ONLY the distinct topic as a subtitle — avoiding the subject,
+  // year and language being repeated inside the title. '' when there is none.
+  const topic = topicFromTitle(exam._title || exam.exam_title || '');
   const qCount = exam._questionCount || 0;
   const duration = exam.duration_minutes || 0;
   const diff = difficultyMeta(exam.difficulty);
@@ -560,16 +606,14 @@ function ExamCard({ exam, onClick, attempt }) {
       className={`card exam-card ${attempt ? 'exam-card--done' : ''}`}
       onClick={onClick}
       type="button"
-      aria-label={`${exam._subject}, ${title} (${exam._year || ''})${attempt ? ', déjà fait' : ''}`}
+      aria-label={`${subject}${topic ? ` — ${topic}` : ''}${exam._year ? `, ${exam._year}` : ''}${attempt ? ', déjà fait' : ''}`}
       style={{ '--exam-accent': color }}
     >
       <div className="exam-card__header">
-        <span
-          className="exam-card__subject-badge"
-          style={{ background: color + '18', color }}
-        >
-          {exam._subject}
-        </span>
+        <h3 className="exam-card__title" title={subject}>
+          <span className="exam-card__dot" style={{ background: color }} aria-hidden="true" />
+          <span className="exam-card__title-text">{subject}</span>
+        </h3>
         <div className="exam-card__header-right">
           {attempt && (
             <span className={`exam-card__score-pill exam-card__score-pill${scoreTone}`}>
@@ -581,7 +625,7 @@ function ExamCard({ exam, onClick, attempt }) {
         </div>
       </div>
 
-      <h3 className="exam-card__title" title={title}>{title}</h3>
+      {topic && <p className="exam-card__topic" title={topic}>{topic}</p>}
 
       <div className="exam-card__meta">
         <span className="exam-card__meta-item">
