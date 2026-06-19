@@ -4435,12 +4435,11 @@ textarea.input-field {
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
 }
 
-/* Exam card "already done" state — a single, consistent green top accent
-   (visible at rest) signals completion without reintroducing varied colours. */
-.exam-card--done::before {
-	background: var(--success-500, #22c55e);
-	opacity: 0.9;
-	transform: scaleX(1);
+/* Exam card "already done" state — a calm green-tinted border (the same hover
+   language the course cards use) signals completion. No coloured stripe; the
+   score pill already shows the result. */
+.exam-card.exam-card--done {
+	border-color: color-mix(in srgb, var(--success-500, #22c55e) 32%, var(--border)) !important;
 }
 
 .exam-card__attempt {
@@ -4516,35 +4515,18 @@ textarea.input-field {
 	overflow: hidden;
 }
 
-/* A whisper-thin accent along the TOP edge that only reveals on hover/focus,
-   so the subject colour is a subtle highlight on the active card rather than a
-   permanent coloured stripe down the side of every card. */
-.exam-card::before {
-	content: '';
-	position: absolute;
-	left: 0;
-	right: 0;
-	top: 0;
-	height: 3px;
-	background: var(--exam-accent, var(--primary-500));
-	opacity: 0;
-	transform: scaleX(0);
-	transform-origin: left center;
-	transition: opacity 0.25s ease, transform 0.3s ease;
-}
+/* No decorative edge accent — exam cards use the same calm surface as the
+   course cards. The subject colour lives only in the badge. */
+.exam-card::before { display: none; }
 
 .exam-card:hover,
 .exam-card:focus-visible {
-	border-color: color-mix(in srgb, var(--exam-accent, var(--primary-500)) 38%, var(--border));
-	background: var(--surface);
-	box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--exam-accent, var(--primary-500)) 60%, transparent);
+	/* Course-card hover language: tint the border, lift, deepen the shadow.
+	   (Final values come from the unified card cohesion layer near the end of
+	   this file.) No coloured top-bar reveal. */
+	border-color: color-mix(in srgb, var(--primary-500) 32%, var(--border));
+	box-shadow: var(--shadow-md);
 	transform: translateY(-2px);
-}
-
-.exam-card:hover::before,
-.exam-card:focus-visible::before {
-	opacity: 0.95;
-	transform: scaleX(1);
 }
 
 .exam-card:focus-visible {
@@ -4774,7 +4756,7 @@ textarea.input-field {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
-	max-width: 560px;
+	max-width: 600px;
 	max-height: min(92vh, 920px);
 	background: var(--surface, #fff);
 	border-radius: var(--radius-lg, 18px);
@@ -4891,24 +4873,26 @@ textarea.input-field {
 
 .exam-preview__stats {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: 0.6rem;
+	grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+	gap: 0.55rem;
 }
 .exam-preview__stat {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 0.15rem;
-	padding: 0.7rem 0.4rem;
+	justify-content: center;
+	gap: 0.25rem;
+	padding: 0.9rem 0.5rem;
+	min-height: 74px;
 	border-radius: var(--radius-md, 12px);
 	background: var(--surface-muted, #f8fafc);
 	border: 1px solid var(--border, rgba(15, 23, 42, 0.05));
 }
 .exam-preview__stat-value {
-	font-size: 1.25rem;
+	font-size: 1.35rem;
 	font-weight: 800;
 	color: var(--text-900);
-	line-height: 1;
+	line-height: 1.05;
 }
 .exam-preview__stat-label {
 	font-size: 0.66rem;
@@ -4982,14 +4966,14 @@ textarea.input-field {
 
 .exam-preview__sample {
 	position: relative;
-	max-height: 168px;
+	max-height: 220px;
 	overflow: hidden;
-	padding: 0.9rem 1rem;
+	padding: 1rem 1.1rem;
 	border-radius: var(--radius-md, 12px);
 	background: var(--surface-muted, #f8fafc);
 	border: 1px solid var(--border, rgba(15, 23, 42, 0.06));
 }
-.exam-preview__sample-text { font-size: 0.9rem; color: var(--text-800); line-height: 1.5; }
+.exam-preview__sample-text { font-size: 0.92rem; color: var(--text-800); line-height: 1.55; }
 .exam-preview__sample-options { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 .exam-preview__sample-options li { display: flex; gap: 0.4rem; font-size: 0.85rem; color: var(--text-600); }
 .exam-preview__sample-opt-letter { font-weight: 700; color: var(--exam-accent); }
