@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7a1f2b"/>
+      <stop offset="1" stop-color="#4f1219"/>
+    </linearGradient>
+    <radialGradient id="gl" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.4" fill="#ffffff" opacity="0.07"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="225" fill="url(#bg)"/>
+  <rect width="400" height="225" fill="url(#dots)"/>
+  <rect width="400" height="225" fill="url(#gl)"/>
+  <circle cx="200" cy="104" r="54" fill="#ffffff" opacity="0.12"/>
+  <g stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.4">
+    <line x1="200" y1="34" x2="200" y2="52"/>
+    <line x1="250" y1="54" x2="239" y2="65"/>
+    <line x1="150" y1="54" x2="161" y2="65"/>
+    <line x1="270" y1="104" x2="254" y2="104"/>
+    <line x1="130" y1="104" x2="146" y2="104"/>
+  </g>
+  <g fill="#ffffff">
+    <polygon points="138,188 138,150 206,116 206,188" opacity="0.92"/>
+    <rect x="206" y="132" width="72" height="56" opacity="0.92"/>
+    <g opacity="0.92">
+      <rect x="208" y="122" width="13" height="12"/>
+      <rect x="231" y="122" width="13" height="12"/>
+      <rect x="254" y="122" width="13" height="12"/>
+    </g>
+    <rect x="120" y="187" width="172" height="9" rx="2" opacity="0.66"/>
+  </g>
+</svg>

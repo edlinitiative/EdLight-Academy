@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#135c3f"/>
+      <stop offset="1" stop-color="#0c3f2b"/>
+    </linearGradient>
+    <radialGradient id="gl" cx="0.8" cy="0.18" r="0.85">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.4" fill="#ffffff" opacity="0.07"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="225" fill="url(#bg)"/>
+  <rect width="400" height="225" fill="url(#dots)"/>
+  <rect width="400" height="225" fill="url(#gl)"/>
+  <circle cx="282" cy="142" r="36" fill="#ffffff" opacity="0.38"/>
+  <rect x="114" y="78" width="158" height="90" rx="20" fill="#ffffff" opacity="0.96"/>
+  <polygon points="150,164 150,198 188,164" fill="#ffffff" opacity="0.96"/>
+  <g fill="#0c3f2b" opacity="0.9">
+    <rect x="136" y="104" width="114" height="9" rx="4"/>
+    <rect x="136" y="124" width="114" height="9" rx="4"/>
+    <rect x="136" y="144" width="76" height="9" rx="4"/>
+  </g>
+</svg>

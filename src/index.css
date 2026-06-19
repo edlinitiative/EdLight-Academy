@@ -13689,7 +13689,7 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 	border-color: color-mix(in srgb, var(--lp-accent) 35%, var(--border)) !important;
 	transform: translateY(-4px);
 }
-.trivia-cat-card__name { font-family: var(--font-serif) !important; color: var(--text-900) !important; }
+.trivia-cat-card__title { color: #fff !important; }
 .trivia-cat-card__desc { color: var(--text-600) !important; }
 .trivia-cat-card__footer { border-top-color: var(--border) !important; }
 
@@ -14059,11 +14059,10 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	padding: 0 !important;
 	overflow: hidden;
 }
-.trivia-cat-card__body { padding: 1.6rem 1.6rem 1.2rem !important; }
-.trivia-cat-card__icon { font-size: 2rem; }
-.trivia-cat-card__footer { padding: 1rem 1.6rem !important; }
+.trivia-cat-card__body { padding: 0.95rem 1.1rem 0.5rem !important; }
+.trivia-cat-card__footer { padding: 0.7rem 1.1rem 0.95rem !important; }
 .trivia-cat-card__cta {
-	color: var(--cat-color, var(--lp-accent)) !important;
+	color: var(--lp-accent) !important;
 	font-weight: 700;
 }
 
@@ -14577,8 +14576,7 @@ textarea:focus {
 	opacity: 0.55;
 }
 
-.level-card__accent,
-.trivia-cat-card__accent {
+.level-card__accent {
 	height: 3px !important;
 }
 

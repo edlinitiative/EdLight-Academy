@@ -38,13 +38,22 @@ function CategoryPicker({ onSelect, isCreole }) {
           <button
             key={cat.id}
             className="trivia-cat-card"
-            style={{ '--cat-color': cat.color }}
             onClick={() => onSelect(cat.id)}
+            aria-label={`${isCreole ? cat.nameHt : cat.name} — ${TRIVIA_QUESTIONS[cat.id].length} ${isCreole ? 'kesyon' : 'questions'}`}
           >
-            <div className="trivia-cat-card__accent" />
+            <div className="trivia-cat-card__media">
+              <img
+                className="trivia-cat-card__img"
+                src={cat.image}
+                alt=""
+                width={400}
+                height={225}
+                loading="lazy"
+                decoding="async"
+              />
+              <h2 className="trivia-cat-card__title">{isCreole ? cat.nameHt : cat.name}</h2>
+            </div>
             <div className="trivia-cat-card__body">
-              <span className="trivia-cat-card__icon">{cat.icon}</span>
-              <h2 className="trivia-cat-card__name">{isCreole ? cat.nameHt : cat.name}</h2>
               <p className="trivia-cat-card__desc">{isCreole ? cat.descriptionHt : cat.description}</p>
               <span className="trivia-cat-card__count">
                 {TRIVIA_QUESTIONS[cat.id].length} {isCreole ? 'kesyon' : 'questions'}
@@ -80,7 +89,7 @@ function RoundPicker({ category, onStart, onBack, isCreole }) {
         ← {isCreole ? 'Retounen' : 'Retour'}
       </button>
       <div className="trivia-round-picker__header">
-        <span className="trivia-round-picker__icon">{cat.icon}</span>
+        <img className="trivia-round-picker__thumb" src={cat.image} alt="" width={400} height={225} />
         <h2>{isCreole ? cat.nameHt : cat.name}</h2>
         <p>{isCreole ? 'Chwazi konbyen kesyon ou vle reponn' : 'Choisissez le nombre de questions'}</p>
       </div>

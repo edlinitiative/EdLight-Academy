@@ -74,21 +74,21 @@
   margin: 0;
 }
 
-/* ─── Category Cards Grid ─── */
+/* ─── Category Cards Grid — matches the exam catalog grid sizing ─── */
 .trivia-landing__grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.1rem;
   width: 100%;
-  max-width: 480px;
+  max-width: 1120px;
+  margin: 0 auto;
   position: relative;
   z-index: 1;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 560px) {
   .trivia-landing__grid {
-    grid-template-columns: repeat(3, 1fr);
-    max-width: 720px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
@@ -114,7 +114,7 @@
 }
 
 .trivia-cat-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: var(--shadow-md);
   border-color: color-mix(in srgb, var(--primary-500) 28%, var(--border));
 }
@@ -124,35 +124,68 @@
   outline-offset: 3px;
 }
 
-.trivia-cat-card__accent {
-  height: 4px;
+/* Image banner — replaces the emoji; acts as the card's visual background. */
+.trivia-cat-card__media {
+  position: relative;
   width: 100%;
-  background: var(--cat-color, var(--primary-500));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: rgba(10, 102, 194, 0.06);
   flex-shrink: 0;
 }
 
+.trivia-cat-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.trivia-cat-card:hover .trivia-cat-card__img {
+  transform: scale(1.05);
+}
+
+/* Legibility scrim so the white title reads on any artwork. */
+.trivia-cat-card__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(8, 17, 33, 0.82) 0%,
+    rgba(8, 17, 33, 0.32) 42%,
+    rgba(8, 17, 33, 0) 72%
+  );
+}
+
+.trivia-cat-card__title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0.9rem 1.1rem 0.85rem;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
 .trivia-cat-card__body {
-  padding: 1.3rem 1.2rem 1.1rem;
+  padding: 0.95rem 1.1rem 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.55rem;
   flex: 1;
-}
-
-.trivia-cat-card__icon {
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.trivia-cat-card__name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-900);
-  margin: 0;
 }
 
 .trivia-cat-card__desc {
   color: var(--text-500);
+  font-size: 0.9rem;
   line-height: 1.55;
   margin: 0;
 }
@@ -162,22 +195,22 @@
   margin-top: auto;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--cat-color, var(--primary-500)) 10%, transparent);
-  color: var(--cat-color, var(--primary-500));
+  background: color-mix(in srgb, var(--primary-500) 10%, transparent);
+  color: var(--primary-600);
   font-size: 0.72rem;
   font-weight: 600;
   width: fit-content;
 }
 
 .trivia-cat-card__footer {
-  padding: 0.8rem 1.2rem;
+  padding: 0.7rem 1.1rem 0.95rem;
   border-top: 1px solid rgba(10, 102, 194, 0.08);
 }
 
 .trivia-cat-card__cta {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--cat-color, var(--primary-500));
+  color: var(--primary-600);
 }
 
 /* ─── Back Button ─── */
@@ -225,8 +258,13 @@
   gap: 0.5rem;
 }
 
-.trivia-round-picker__icon {
-  font-size: 2rem;
+.trivia-round-picker__thumb {
+  width: 96px;
+  height: 96px;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
 }
 
 .trivia-round-picker__header h2 {
