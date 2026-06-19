@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
@@ -246,7 +246,12 @@ const ExamTake = () => {
   }, [questions]);
 
   // ── Exam intro / consignes extraction ─────────────────────────────────────
-  const [viewState, setViewState] = useState('preview'); // 'preview' | 'active' | (legacy) 'cover'
+  // When the browser's preview modal launches with "Commencer", it passes
+  // { autostart: true } so we jump straight into the live exam instead of the
+  // full read-through preview. "Aperçu complet" navigates without the flag.
+  const location = useLocation();
+  const autostart = Boolean(location.state?.autostart);
+  const [viewState, setViewState] = useState(autostart ? 'active' : 'preview'); // 'preview' | 'active' | (legacy) 'cover'
 
   const sectionSummary = useMemo(() => {
     if (!exam) return [];
@@ -1282,7 +1287,10 @@ const ExamTake = () => {
                   {/* Reading passage */}
                   {(section.passage || (cleanInstructions && cleanInstructions.length > 200)) && (
                     <div className="exam-take__preview-passage">
-                      <div className="exam-take__preview-passage-label">📖 Texte de référence</div>
+                      <div className="exam-take__preview-passage-label">
+                        📖 Texte de référence
+                        {section.passage && section.passage_reconstructed && <ReconstructedBadge />}
+                      </div>
                       <InstructionRenderer text={section.passage || cleanInstructions} />
                     </div>
                   )}
@@ -1594,7 +1602,10 @@ const ExamTake = () => {
 
           {/* Reading passage panel — always visible for comprehension sections */}
           {(sectionPassage || (cleanInstructions && cleanInstructions.length > 200)) && (
-            <ReadingPassage text={sectionPassage || cleanInstructions} />
+            <ReadingPassage
+              text={sectionPassage || cleanInstructions}
+              reconstructed={!!sectionPassage && !!currentSection?.passage_reconstructed}
+            />
           )}
 
           {/* Honest notice when the original reading passage was never digitized */}
@@ -1890,7 +1901,10 @@ const ExamTake = () => {
             aria-labelledby="exam-passage-title"
           >
             <div className="exam-take__passage-panel-header">
-              <h3 id="exam-passage-title">📖 Texte de référence</h3>
+              <h3 id="exam-passage-title">
+                📖 Texte de référence
+                {sectionPassage && currentSection?.passage_reconstructed && <ReconstructedBadge />}
+              </h3>
               <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
             </div>
             <div className="exam-take__passage-panel-body">
@@ -1940,9 +1954,28 @@ function SectionHeader({ title, instructions }) {
   );
 }
 
+// ── Reconstructed-passage transparency badge ────────────────────────────────
+
+/**
+ * Small badge shown on reading passages whose original scan was never
+ * digitized and were faithfully reconstructed from the questions + answer key
+ * so the comprehension exercise is usable. Keeps students honestly informed
+ * that this is a practice text, not the verbatim official passage.
+ */
+function ReconstructedBadge() {
+  return (
+    <span
+      className="exam-take__passage-recon-badge"
+      title="Texte reconstitué fidèlement à partir des questions et du corrigé. Le scan original de l’épreuve n’a pas été numérisé."
+    >
+      ✎ Texte reconstitué
+    </span>
+  );
+}
+
 // ── Reading Passage (always-visible panel for comprehension text) ────────────
 
-function ReadingPassage({ text }) {
+function ReadingPassage({ text, reconstructed }) {
   const [expanded, setExpanded] = useState(true);
   if (!text) return null;
 
@@ -1951,6 +1984,7 @@ function ReadingPassage({ text }) {
       <div className="exam-take__reading-passage-bar" onClick={() => setExpanded((e) => !e)}>
         <span className="exam-take__reading-passage-icon">📖</span>
         <span className="exam-take__reading-passage-label">Texte de référence</span>
+        {reconstructed && <ReconstructedBadge />}
         <button
           className="exam-take__reading-passage-toggle"
           type="button"
@@ -1962,6 +1996,13 @@ function ReadingPassage({ text }) {
       </div>
       {expanded && (
         <div className="exam-take__reading-passage-body">
+          {reconstructed && (
+            <p className="exam-take__passage-recon-note">
+              Le texte original de cette épreuve n’a pas été numérisé. Voici une
+              reconstitution fidèle, élaborée à partir des questions et du
+              corrigé, pour vous permettre de vous entraîner.
+            </p>
+          )}
           <InstructionRenderer text={text} />
         </div>
       )}

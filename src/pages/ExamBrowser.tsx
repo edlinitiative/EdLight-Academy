@@ -1,15 +1,15 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { TRACKS, TRACK_BY_CODE } from '../config/trackConfig';
+import { TRACKS } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
+import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import {
   buildExamIndex,
   subjectColor,
-  QUESTION_TYPE_META,
 } from '../utils/examUtils';
 
 const PAGE_SIZE = 24;
@@ -111,7 +111,6 @@ const LEVEL_LABELS = {
 };
 
 const ExamBrowser = () => {
-  const navigate = useNavigate();
   const { level } = useParams(); // Get level from URL
 
   const { data: allExams, isLoading, error } = useExamCatalog();
@@ -124,6 +123,7 @@ const ExamBrowser = () => {
   const isTerminale = level === 'terminale';
   const [trackFilter, setTrackFilter] = useState('');
   const [showTrackSelector, setShowTrackSelector] = useState(false);
+  const [previewExam, setPreviewExam] = useState(null);
 
   // Auto-default track filter to user's track on first load
   useEffect(() => {
@@ -492,10 +492,7 @@ const ExamBrowser = () => {
                   key={exam.exam_id || exam._idx}
                   exam={exam}
                   attempt={attempts[examKeyOf(exam)]}
-                  onClick={() => {
-                    const id = exam.exam_id || exam._idx;
-                    navigate(`/exams/${level}/${id}`);
-                  }}
+                  onClick={() => setPreviewExam(exam)}
                 />
               ))}
             </div>
@@ -530,6 +527,16 @@ const ExamBrowser = () => {
             onClose={() => setShowTrackSelector(false)}
           />
         )}
+
+        {/* Quick-look preview modal */}
+        {previewExam && (
+          <ExamPreviewModal
+            exam={previewExam}
+            attempt={attempts[examKeyOf(previewExam)]}
+            level={level}
+            onClose={() => setPreviewExam(null)}
+          />
+        )}
       </div>
     </section>
   );
@@ -539,23 +546,14 @@ const ExamBrowser = () => {
 
 function ExamCard({ exam, onClick, attempt }) {
   const color = subjectColor(exam._subject);
-  const stats = {
-    total: exam._questionCount,
-    gradable: exam._autoGradable,
-  };
-
-  // Top question types for this exam
-  const topTypes = Object.entries(exam._typeCounts || {})
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
   const title = exam._title || exam.exam_title || 'Examen';
+  const qCount = exam._questionCount || 0;
+  const duration = exam.duration_minutes || 0;
+  const diff = difficultyMeta(exam.difficulty);
 
-  // Attempt badge: best score (if known) or a generic "done" marker
+  // Best score (if known) drives a compact pill in the header.
   const pct = attempt && typeof attempt.percentage === 'number' ? attempt.percentage : null;
   const scoreTone = pct == null ? '' : pct >= 60 ? '--good' : pct >= 40 ? '--mid' : '--low';
-
-  const diff = difficultyMeta(exam.difficulty);
 
   return (
     <button
@@ -572,73 +570,42 @@ function ExamCard({ exam, onClick, attempt }) {
         >
           {exam._subject}
         </span>
-        {exam._year > 0 && <span className="exam-card__year">{exam._year}</span>}
-      </div>
-
-      {attempt && (
-        <div className={`exam-card__attempt exam-card__attempt${scoreTone}`}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-          {pct != null ? `Meilleur score : ${pct}%` : 'Déjà fait'}
+        <div className="exam-card__header-right">
+          {attempt && (
+            <span className={`exam-card__score-pill exam-card__score-pill${scoreTone}`}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+              {pct != null ? `${pct}%` : 'Fait'}
+            </span>
+          )}
+          {exam._year > 0 && <span className="exam-card__year">{exam._year}</span>}
         </div>
-      )}
+      </div>
 
       <h3 className="exam-card__title" title={title}>{title}</h3>
 
       <div className="exam-card__meta">
-        <span className="exam-card__level">{exam._level}</span>
-        {exam.duration_minutes > 0 && (
-          <span className="exam-card__duration">{exam.duration_minutes} min</span>
+        <span className="exam-card__meta-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>
+          {qCount} question{qCount !== 1 ? 's' : ''}
+        </span>
+        {duration > 0 && (
+          <span className="exam-card__meta-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            {duration} min
+          </span>
         )}
         {diff && (
           <span className={`exam-card__difficulty exam-card__difficulty--${diff.tier}`}>
             {diff.label}
           </span>
         )}
-        {exam.language && (
-          <span className="exam-card__lang">
-            {exam.language === 'fr' ? 'FR' : exam.language === 'ht' ? 'HT' : 'EN'}
-          </span>
-        )}
       </div>
-
-      <div className="exam-card__stats">
-        <span>{stats.total} question{stats.total !== 1 ? 's' : ''}</span>
-        {stats.gradable > 0 && (
-          <span className="exam-card__gradable">
-            {stats.gradable} auto-corrigée{stats.gradable !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      {/* Track badges */}
-      {exam.tracks && exam.tracks.length > 0 && !exam.tracks.includes('ALL') && (
-        <div className="exam-card__tracks">
-          {exam.tracks.map((t) => {
-            const info = TRACK_BY_CODE[t];
-            return (
-              <span key={t} className="exam-card__track-chip">
-                {info?.shortLabel || t}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {topTypes.length > 0 && (
-        <div className="exam-card__types">
-          {topTypes.map(([type, count]) => {
-            const meta = QUESTION_TYPE_META[type] || QUESTION_TYPE_META.unknown;
-            return (
-              <span key={type} className="exam-card__type-chip">
-                {meta.label} ({count})
-              </span>
-            );
-          })}
-        </div>
-      )}
 
       <div className="exam-card__cta">
-        <span className="exam-card__cta-text">{attempt ? 'Refaire →' : 'Commencer →'}</span>
+        <span className="exam-card__cta-text">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>
+          Aperçu
+        </span>
       </div>
     </button>
   );
