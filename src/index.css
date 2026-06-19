@@ -4476,10 +4476,12 @@ textarea.input-field {
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.10);
 }
 
-/* Exam card "already done" state */
+/* Exam card "already done" state — a single, consistent green top accent
+   (visible at rest) signals completion without reintroducing varied colours. */
 .exam-card--done::before {
-	background: #22c55e;
-	opacity: 0.7;
+	background: var(--success-500, #22c55e);
+	opacity: 0.9;
+	transform: scaleX(1);
 }
 
 .exam-card__attempt {
@@ -4546,34 +4548,44 @@ textarea.input-field {
 	width: 100%;
 	font-family: var(--font-sans);
 	transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease, background 0.25s ease;
-	border: 1px solid rgba(10, 102, 194, 0.09);
+	/* Uniform, neutral hairline — no per-subject coloured edge. The subject
+	   colour now lives only in the badge, so a grid of cards reads calmly
+	   instead of showing a row of mismatched left borders. */
+	border: 1px solid var(--border);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 	position: relative;
 	overflow: hidden;
 }
 
+/* A whisper-thin accent along the TOP edge that only reveals on hover/focus,
+   so the subject colour is a subtle highlight on the active card rather than a
+   permanent coloured stripe down the side of every card. */
 .exam-card::before {
 	content: '';
 	position: absolute;
 	left: 0;
+	right: 0;
 	top: 0;
-	bottom: 0;
-	width: 4px;
+	height: 3px;
 	background: var(--exam-accent, var(--primary-500));
-	opacity: 0.45;
-	transition: opacity 0.25s ease, width 0.25s ease;
+	opacity: 0;
+	transform: scaleX(0);
+	transform-origin: left center;
+	transition: opacity 0.25s ease, transform 0.3s ease;
 }
 
 .exam-card:hover,
 .exam-card:focus-visible {
-	border-color: rgba(10, 102, 194, 0.22);
-	background: rgba(255, 255, 255, 0.95);
-	backdrop-filter: saturate(140%) blur(8px);
-	-webkit-backdrop-filter: saturate(140%) blur(8px);
+	border-color: color-mix(in srgb, var(--exam-accent, var(--primary-500)) 38%, var(--border));
+	background: var(--surface);
+	box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--exam-accent, var(--primary-500)) 60%, transparent);
+	transform: translateY(-2px);
 }
 
 .exam-card:hover::before,
 .exam-card:focus-visible::before {
-	opacity: 0.55;
+	opacity: 0.95;
+	transform: scaleX(1);
 }
 
 .exam-card:focus-visible {
