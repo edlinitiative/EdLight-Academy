@@ -62,25 +62,23 @@ const SUBJECT_DEFAULTS = {
  * @returns {Promise<Object[]>} Array of course objects from Firestore
  */
 const fetchCoursesFromFirestore = async () => {
-  try {
-    const coursesRef = collection(db, 'courses');
-    const snapshot = await getDocs(coursesRef);
-    
-    const courses = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      courses.push({
-        id: doc.id,
-        ...data
-      });
+  // NOTE: deliberately NOT wrapped in try/catch. Courses are essential, and a
+  // transient failure must PROPAGATE so react-query can retry. Previously this
+  // swallowed every error into `return []`, which callers couldn't distinguish
+  // from a genuinely empty catalog — that empty array then got cached and shown
+  // as "no courses" (and an empty quiz filter) until the cache expired.
+  const coursesRef = collection(db, 'courses');
+  const snapshot = await getDocs(coursesRef);
+
+  const courses = [];
+  snapshot.forEach((doc) => {
+    courses.push({
+      id: doc.id,
+      ...doc.data()
     });
-    
-    return courses;
-  } catch (error) {
-    console.error('❌ Error fetching courses from Firestore:', error);
-    // Return empty array if Firestore fetch fails
-    return [];
-  }
+  });
+
+  return courses;
 };
 
 /**
@@ -262,7 +260,11 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
    build entirely — turns a multi-collection, CPU-heavy load into a single,
    fast read. A localStorage cache lets returning visitors paint instantly. */
 
-const COURSES_CACHE_KEY = 'edlight:courses:v1';
+// v2: previous builds could cache an empty [] after a transient Firestore
+// failure, which then persisted and showed an empty catalog for that visitor.
+// Bumping the key abandons any such poisoned entry; we also now refuse to
+// cache empty results and ignore empty caches on read (see below).
+const COURSES_CACHE_KEY = 'edlight:courses:v2';
 
 /**
  * Read the cached course catalog from localStorage.
@@ -273,7 +275,9 @@ export const getCachedCourses = () => {
     const raw = localStorage.getItem(COURSES_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.data)) return null;
+    // Treat an empty array as "no cache" so a previously poisoned entry can
+    // never keep the catalog blank — we fetch fresh instead.
+    if (!parsed || !Array.isArray(parsed.data) || parsed.data.length === 0) return null;
     return { data: parsed.data, updatedAt: parsed.t || 0 };
   } catch {
     return null;
@@ -297,7 +301,9 @@ const writeCachedCourses = (data) => {
 export const loadCoursesData = async () => {
   const firestoreCourses = await fetchCoursesFromFirestore();
   const courses = transformFirestoreCourses(firestoreCourses);
-  writeCachedCourses(courses);
+  // Only cache a non-empty catalog. Caching [] (e.g. after a transient error)
+  // would persist an empty listing for returning visitors.
+  if (courses.length > 0) writeCachedCourses(courses);
   return courses;
 };
 

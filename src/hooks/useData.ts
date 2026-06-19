@@ -31,9 +31,11 @@ export function useCourses() {
     staleTime: 5 * 60 * 1000,
     cacheTime: 30 * 60 * 1000,
     retry: 2,
-    // Paint instantly from the last-known catalog, then revalidate if stale.
+    // Paint instantly from the last-known catalog, then ALWAYS revalidate in
+    // the background so a stale or partial cache self-heals on the next visit.
     initialData: cached ? cached.data : undefined,
     initialDataUpdatedAt: cached ? cached.updatedAt : undefined,
+    refetchOnMount: 'always',
     onError: (error) => {
       console.error('Failed to load course catalog:', error);
     },
