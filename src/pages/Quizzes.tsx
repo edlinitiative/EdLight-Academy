@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { BookOpen } from 'lucide-react';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { useAppData } from '../hooks/useData';
 import { useTranslation } from 'react-i18next';
@@ -161,8 +160,11 @@ const Quizzes = () => {
       <div className="container">
         <div className="page-header">
           <div>
-            <h1>{t('quizzes.curriculumPractice', 'Exercices du programme')}</h1>
-            <p className="text-muted">{t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}</p>
+            <h1 className="page-header__title">{t('quizzes.curriculumPractice', 'Exercices du programme')}</h1>
+            <p className="page-header__subtitle">{t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}</p>
+            <p className="page-header__count">
+              {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}
+            </p>
           </div>
         </div>
 
@@ -200,14 +202,14 @@ const Quizzes = () => {
               
               {/* Status chips */}
               <div className="quiz-status">
-                <span className="chip chip--success">
-                  {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}
-                </span>
                 {subjectBase && level && (
-                  <span className="chip">
+                  <span className="chip chip--success">
                     {(subjectOptions.find(o => o.value === subjectBase)?.label) || subjectBase} · {level.replace(/^NS(.*)$/i, 'NS $1')}
                   </span>
                 )}
+                <span className="chip">
+                  {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}
+                </span>
               </div>
 
               <button
@@ -245,9 +247,6 @@ const Quizzes = () => {
                   <p className="text-muted">
                     {bankMessage || t('quizzes.readyBody', 'Choisissez un cours, un niveau et une unité, puis cliquez sur « Commencer » pour démarrer.')}
                   </p>
-                  {!bankMessage && (
-                    <div className="quiz-placeholder__icon"><BookOpen size={36} /></div>
-                  )}
                 </div>
               </div>
             )}

@@ -292,6 +292,9 @@ const ExamBrowser = () => {
           <p className="page-header__subtitle">
             Banque d'examens officiels du MENFP{level ? `, ${LEVEL_LABELS[level]}` : ''}
           </p>
+          <p className="page-header__count">
+            {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
+          </p>
         </div>
 
         {/* Sticky filter bar */}
@@ -424,9 +427,6 @@ const ExamBrowser = () => {
 
             {/* Stat chips */}
             <div className="exam-browser__summary">
-              <span className="exam-browser__stat-chip">
-                {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
-              </span>
               <span className="exam-browser__stat-chip">
                 {summary.totalQ.toLocaleString()} question{summary.totalQ !== 1 ? 's' : ''}
               </span>

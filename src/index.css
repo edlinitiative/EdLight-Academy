@@ -2988,22 +2988,20 @@ textarea.input-field {
 }
 
 .quiz-filters .card {
-	background: linear-gradient(160deg, rgba(10, 102, 194, 0.06), rgba(139, 124, 232, 0.03));
-	border: 1px solid rgba(10, 102, 194, 0.14);
-	box-shadow:
-		0 1px 2px rgba(10, 102, 194, 0.04),
-		0 6px 20px rgba(10, 102, 194, 0.07);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 	padding: clamp(1rem, 2.5vw, 1.25rem);
 	border-radius: var(--radius-lg);
 }
 
 .quiz-filters .card__title {
-	font-size: 0.85rem;
+	font-size: 0.95rem;
 	font-weight: 700;
-	color: var(--primary-700, #075985);
-	padding-bottom: 0.5rem;
-	border-bottom: 1px solid rgba(10, 102, 194, 0.1);
-	margin-bottom: 0.25rem;
+	color: var(--text-900);
+	padding-bottom: 0.6rem;
+	border-bottom: 1px solid var(--border);
+	margin-bottom: 0.75rem;
 }
 
 .quiz-selectors {
@@ -3014,29 +3012,28 @@ textarea.input-field {
 }
 
 .quiz-selectors .label {
-	font-size: 0.7rem;
+	font-size: 0.72rem;
 	font-weight: 600;
-	color: var(--primary-600);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	color: var(--text-500);
+	letter-spacing: 0.03em;
 }
 
 .quiz-selectors .input-field,
 .quiz-selectors select {
 	border-radius: var(--radius-md);
-	padding: 0.55rem 0.75rem;
-	border: 1.5px solid rgba(10, 102, 194, 0.18);
-	background: #ffffff;
-	font-size: 0.8rem;
+	padding: 0.6rem 0.8rem;
+	border: 1px solid var(--border);
+	background: var(--surface);
+	font-size: 0.875rem;
 	font-weight: 500;
-	color: var(--text-900);
-	transition: all 0.2s ease;
+	color: var(--text-800);
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .quiz-selectors .input-field:focus,
 .quiz-selectors select:focus {
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+	box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.12);
 }
 
 .form-group {
@@ -3047,21 +3044,9 @@ textarea.input-field {
 
 .quiz-filters .button--primary {
 	border-radius: var(--radius-md);
-	font-size: 0.8rem;
+	font-size: 0.9rem;
 	font-weight: 700;
-	padding: 0.6rem 1rem;
-	background: linear-gradient(135deg, var(--primary-600), var(--primary-500));
-	box-shadow: 0 3px 0 var(--primary-700, #075985), 0 4px 12px rgba(10, 102, 194, 0.2);
-	transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
-}
-
-.quiz-filters .button--primary:hover {
-	filter: brightness(1.08);
-}
-
-.quiz-filters .button--primary:active {
-	transform: translateY(3px);
-	box-shadow: 0 1px 0 var(--primary-700, #075985);
+	padding: 0.7rem 1rem;
 }
 
 .quiz-status {
@@ -3079,24 +3064,19 @@ textarea.input-field {
 	font-weight: 600;
 }
 
-.quiz-status .chip--success {
-	background: rgba(10, 102, 194, 0.1);
-	color: var(--primary-700, #075985);
-}
-
 .quiz-filters .card--compact {
-	background: linear-gradient(160deg, rgba(10, 102, 194, 0.04), rgba(139, 124, 232, 0.02));
-	border: 1px solid rgba(10, 102, 194, 0.1);
+	background: var(--surface-muted);
+	border: 1px solid var(--border);
 	border-radius: var(--radius-lg);
-	padding: 0.85rem;
+	padding: 0.9rem 1rem;
 }
 
 .quiz-filters .card--compact .card__title {
-	font-size: 0.8rem;
-	color: var(--primary-600);
+	font-size: 0.9rem;
+	color: var(--text-800);
 	border-bottom: none;
 	padding-bottom: 0;
-	margin-bottom: 0.4rem;
+	margin-bottom: 0.5rem;
 }
 
 .quiz-filters .card--compact .list--bulleted {
@@ -3113,10 +3093,8 @@ textarea.input-field {
 }
 
 .quiz-panel .card {
-	border: 1px solid rgba(10, 102, 194, 0.12);
-	box-shadow:
-		0 1px 2px rgba(10, 102, 194, 0.04),
-		0 6px 20px rgba(10, 102, 194, 0.07);
+	border: 1px solid var(--border);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 	border-radius: var(--radius-lg);
 }
 
@@ -3125,11 +3103,8 @@ textarea.input-field {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background:
-		radial-gradient(circle at 30% 20%, rgba(10, 102, 194, 0.06) 0%, transparent 50%),
-		radial-gradient(circle at 70% 80%, rgba(139, 124, 232, 0.05) 0%, transparent 40%),
-		linear-gradient(160deg, rgba(10, 102, 194, 0.04), rgba(139, 124, 232, 0.02));
-	border: 2px dashed rgba(10, 102, 194, 0.15);
+	background: var(--surface);
+	border: 1px dashed var(--border-strong);
 	border-radius: var(--radius-lg);
 }
 
@@ -3140,21 +3115,15 @@ textarea.input-field {
 }
 
 .quiz-placeholder__content h3 {
-	font-size: 1rem;
+	font-size: 1.05rem;
 	font-weight: 700;
 	margin-bottom: 0.5rem;
-	color: var(--primary-600);
+	color: var(--text-900);
 }
 
 .quiz-placeholder__content .text-muted {
-	font-size: 0.8rem;
+	font-size: 0.875rem;
 	line-height: 1.6;
-}
-
-.quiz-placeholder__icon {
-	font-size: 3rem;
-	margin-top: 1rem;
-	opacity: 0.25;
 }
 
 @media (max-width: 767px) {
@@ -3163,11 +3132,7 @@ textarea.input-field {
 	}
 }
 
-/* Quiz page — blue theme overrides */
-.quiz-page {
-	background: #ffffff;
-}
-
+/* Quiz page — quiz-taking UI accents (DirectBankQuiz) */
 .quiz-page .quiz-card__label {
 	color: var(--primary-600);
 }
@@ -4201,16 +4166,14 @@ textarea.input-field {
 	margin-top: 0;
 }
 
-/* ─── Sticky filter strip — fully transparent ─── */
+/* ─── Filter section — a cohesive, polished panel ─── */
 .exam-browser__filters-sticky {
 	position: static;
 	top: auto;
 	z-index: 40;
 	background: none;
-	padding: 0.85rem 0;
-	margin: 0 calc(-1 * clamp(1rem, 3vw, 2rem));
-	padding-left: clamp(1rem, 3vw, 2rem);
-	padding-right: clamp(1rem, 3vw, 2rem);
+	padding: 0;
+	margin: 0;
 	border-bottom: none;
 }
 
@@ -4218,15 +4181,16 @@ textarea.input-field {
 	box-shadow: none;
 }
 
-/* Transparent wrapper — no visible card */
+/* Cohesive card surface (matches the rest of the site's cards) */
 .exam-browser__filters-card {
 	display: flex;
 	flex-direction: column;
-	gap: 0.6rem;
-	background: none;
-	border: none;
-	padding: 0;
-	box-shadow: none;
+	gap: 0.9rem;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	padding: clamp(0.9rem, 2.4vw, 1.15rem);
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
 /* Row that holds grouped controls */
@@ -4257,43 +4221,40 @@ textarea.input-field {
 }
 
 .exam-browser__label {
-	font-size: 0.7rem;
+	font-size: 0.72rem;
 	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--text-400);
-	padding-left: 0.2rem;
+	letter-spacing: 0.03em;
+	color: var(--text-500);
+	padding-left: 0.15rem;
 	user-select: none;
 }
 
-/* Premium pill-shaped selects */
+/* Selects — consistent with the site's input fields */
 .exam-browser__select {
 	appearance: none;
-	padding: 0.6rem 2rem 0.6rem 1rem;
-	border-radius: 100px;
-	border: 1.5px solid var(--border);
+	padding: 0.6rem 2.1rem 0.6rem 0.85rem;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border);
 	background:
 		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
 		no-repeat right 0.85rem center / 12px,
-		rgba(255, 255, 255, 0.70);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	color: var(--text-700);
+		var(--surface);
+	color: var(--text-800);
 	font-family: var(--font-sans);
+	font-size: 0.875rem;
 	cursor: pointer;
 	transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 	width: 100%;
 }
 
 .exam-browser__select:hover {
-	background-color: rgba(255, 255, 255, 0.95);
-	border-color: var(--primary-400, #60a5fa);
+	border-color: var(--border-strong);
 }
 
 .exam-browser__select:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.10), 0 1px 4px rgba(10, 102, 194, 0.08);
+	box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.12);
 }
 
 /* Premium pill search input */
@@ -4318,14 +4279,13 @@ textarea.input-field {
 
 .exam-browser__search {
 	width: 100%;
-	padding: 0.6rem 1rem 0.6rem 2.75rem;
-	border-radius: 100px;
-	border: 1.5px solid var(--border);
-	background: rgba(255, 255, 255, 0.70);
-	backdrop-filter: blur(8px);
-	-webkit-backdrop-filter: blur(8px);
-	color: var(--text-700);
+	padding: 0.6rem 1rem 0.6rem 2.6rem;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--text-800);
 	font-family: var(--font-sans);
+	font-size: 0.875rem;
 	transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
@@ -4335,45 +4295,44 @@ textarea.input-field {
 }
 
 .exam-browser__search:hover {
-	background: rgba(255, 255, 255, 0.95);
-	border-color: var(--primary-400, #60a5fa);
+	border-color: var(--border-strong);
 }
 
 .exam-browser__search:focus {
 	outline: none;
 	border-color: var(--primary-500);
-	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.10), 0 1px 4px rgba(10, 102, 194, 0.08);
+	box-shadow: 0 0 0 4px rgba(10, 102, 194, 0.12);
 }
 
 .exam-browser__search:focus::placeholder {
 	color: var(--text-200, #d1d5db);
 }
 
-/* Icon-only ghost pill reset button */
+/* Neutral ghost reset button (consistent with the site's quiet controls) */
 .exam-browser__clear-btn {
 	appearance: none;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	gap: 0.4rem;
-	background: rgba(239, 68, 68, 0.06);
-	color: #ef4444;
-	border: 1.5px solid rgba(239, 68, 68, 0.15);
+	background: transparent;
+	color: var(--text-600);
+	border: 1px solid var(--border);
 	padding: 0.55rem 1rem;
-	border-radius: 100px;
-	font-size: 0.78rem;
+	border-radius: var(--radius-md);
+	font-size: 0.8rem;
 	font-weight: 600;
 	font-family: var(--font-sans);
 	cursor: pointer;
-	transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+	transition: background 0.2s, border-color 0.2s, transform 0.15s, color 0.2s;
 	white-space: nowrap;
 	line-height: 1;
 }
 
 .exam-browser__clear-btn:hover {
-	background: rgba(239, 68, 68, 0.12);
-	border-color: rgba(239, 68, 68, 0.30);
-	box-shadow: 0 2px 8px rgba(239, 68, 68, 0.10);
+	background: var(--surface-muted);
+	border-color: var(--border-strong);
+	color: var(--text-800);
 }
 
 .exam-browser__clear-btn:active {
@@ -4383,7 +4342,7 @@ textarea.input-field {
 /* ─── Divider between controls and stats ─── */
 .exam-browser__divider {
 	height: 1px;
-	background: linear-gradient(90deg, transparent, rgba(10, 102, 194, 0.10) 20%, rgba(10, 102, 194, 0.10) 80%, transparent);
+	background: var(--border);
 	margin: 0;
 	border: none;
 }
