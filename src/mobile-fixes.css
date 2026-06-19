@@ -383,10 +383,6 @@ body {
     border-radius: var(--radius-md);
   }
   
-  .hero-visual__grid {
-    display: none;
-  }
-  
   .hero-visual__row {
     flex-direction: column;
     align-items: flex-start;
@@ -492,10 +488,6 @@ body {
   .grid--metrics {
     grid-template-columns: 1fr;
     gap: 1rem;
-  }
-  
-  .grid {
-    gap: 1.5rem;
   }
   
   /* Quiz layout */
@@ -1508,11 +1500,6 @@ body {
     gap: 1.5rem;
   }
   
-  .grid--metrics {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
   .metric-card {
     padding: 1.25rem;
     text-align: center;
@@ -1696,10 +1683,6 @@ body {
     gap: 0.75rem;
   }
   
-  .flashcard-controls__rating .button {
-    flex: 1;
-  }
-  
   /* Notification Center */
   .notification-center {
     padding: 1rem;
@@ -1815,13 +1798,6 @@ body {
   }
   
   /* Admin page table */
-  .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin: 0 -1rem;
-    padding: 0 1rem;
-  }
-  
   table {
     min-width: 800px;
     font-size: 0.875rem;
