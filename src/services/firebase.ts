@@ -6,6 +6,7 @@ import { getAuth,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, increment, writeBatch } from 'firebase/firestore';
@@ -64,6 +65,17 @@ export async function signInWithGoogle() {
     return result;
   } catch (error) {
     console.error('[Firebase] Sign-in error:', error.code, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Send a password-reset email to the given address.
+ */
+export async function resetPassword(email) {
+  try {
+    await sendPasswordResetEmail(auth, email);
+  } catch (error) {
     throw error;
   }
 }

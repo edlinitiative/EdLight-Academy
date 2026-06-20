@@ -31,6 +31,23 @@
 	--radius-lg: 16px;
 	--radius-md: 12px;
 	--radius-sm: 8px;
+	/* ── Type scale ────────────────────────────────────────────────────
+	   Canonical sizes (12/14/16/20/24/32). Prefer these over one-off values
+	   so headings and body text stay consistent across the platform. */
+	--text-xs: 0.75rem;    /* 12px */
+	--text-sm: 0.875rem;   /* 14px */
+	--text-base: 1rem;     /* 16px */
+	--text-lg: 1.25rem;    /* 20px */
+	--text-xl: 1.5rem;     /* 24px */
+	--text-2xl: 2rem;      /* 32px */
+	/* ── Spacing scale (8px grid, 4px half-step) ──────────────────────── */
+	--space-1: 0.25rem;    /* 4px  */
+	--space-2: 0.5rem;     /* 8px  */
+	--space-3: 0.75rem;    /* 12px */
+	--space-4: 1rem;       /* 16px */
+	--space-5: 1.5rem;     /* 24px */
+	--space-6: 2rem;       /* 32px */
+	--space-8: 3rem;       /* 48px */
 	/* Subtle Notion elevation scale (low, diffuse, near-black) */
 	--shadow-sm: 0 1px 2px rgba(15, 15, 15, 0.05);
 	--shadow-md: 0 4px 12px rgba(15, 15, 15, 0.08);
@@ -2993,6 +3010,43 @@ textarea.input-field {
 	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.18);
 }
 
+/* Input paired with an inline action button (e.g. show/hide password). */
+.input-with-action {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.input-with-action .form-input {
+	padding-right: 3rem;
+}
+
+.input-action {
+	position: absolute;
+	right: 0.35rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border: none;
+	background: transparent;
+	color: var(--text-500);
+	border-radius: 999px;
+	cursor: pointer;
+	transition: color 0.2s ease, background 0.2s ease;
+}
+
+.input-action:hover {
+	color: var(--primary-600);
+	background: rgba(10, 102, 194, 0.08);
+}
+
+.form-hint {
+	color: var(--text-500);
+	font-size: 0.78rem;
+}
+
 .form-message {
 	font-size: 0.85rem;
 	font-weight: 500;
@@ -3559,6 +3613,362 @@ textarea.input-field {
 	to {
 		transform: rotate(360deg);
 	}
+}
+
+/* ── Shared UX states (empty / error / 404) ──────────────────────────────
+   One coherent component for every "non-happy-path" view so lists never
+   render blank. Driven entirely by design tokens. */
+.state-view {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: 0.75rem;
+	max-width: 30rem;
+	margin: 0 auto;
+	padding: clamp(2rem, 5vw, 3rem) clamp(1.25rem, 4vw, 2.5rem);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-sm);
+}
+
+.state-view--compact {
+	padding: clamp(1.25rem, 3vw, 1.75rem);
+	box-shadow: none;
+	background: var(--surface-muted);
+}
+
+.state-view--page {
+	margin-top: clamp(2rem, 8vw, 4.5rem);
+	margin-bottom: clamp(2rem, 8vw, 4.5rem);
+	max-width: 32rem;
+}
+
+.state-view__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--radius-md);
+	background: var(--primary-50);
+	color: var(--primary-600);
+}
+
+.state-view__icon--error {
+	background: rgba(224, 49, 49, 0.1);
+	color: var(--danger-500);
+}
+
+.state-view__title {
+	font-size: 1.125rem;
+	font-weight: 700;
+	color: var(--text-900);
+	line-height: 1.3;
+}
+
+.state-view__message {
+	font-size: 0.875rem;
+	color: var(--text-500);
+	line-height: 1.55;
+	max-width: 28rem;
+}
+
+.state-view__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	justify-content: center;
+	margin-top: 0.5rem;
+}
+
+.state-view__retry {
+	gap: 0.45rem;
+}
+
+.state-view__spin {
+	animation: spin 0.8s linear infinite;
+}
+
+.not-found__code {
+	font-family: var(--font-mono);
+	font-size: clamp(2.75rem, 12vw, 4.5rem);
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	line-height: 1;
+	color: var(--primary-500);
+	opacity: 0.85;
+}
+
+[data-theme="dark"] .state-view {
+	background: var(--surface);
+	border-color: var(--border);
+}
+
+[data-theme="dark"] .state-view--compact {
+	background: var(--surface-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.state-view__spin {
+		animation: none;
+	}
+}
+
+/* ── Network status banner (offline / reconnected) ───────────────────────── */
+.network-banner {
+	position: fixed;
+	left: 50%;
+	bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+	transform: translate(-50%, 200%);
+	z-index: 1200;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	max-width: calc(100vw - 2rem);
+	padding: 0.6rem 1.1rem;
+	border-radius: 999px;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: #fff;
+	box-shadow: var(--shadow-lg);
+	opacity: 0;
+	pointer-events: none;
+	transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.network-banner.is-visible {
+	transform: translate(-50%, 0);
+	opacity: 1;
+}
+
+.network-banner--offline {
+	background: #2f2e2b;
+}
+
+.network-banner--reconnected {
+	background: var(--success-500);
+}
+
+/* When the bottom tab bar is present, lift the banner above it. */
+.app-shell:not(.app-shell--focused) .network-banner {
+	bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+}
+
+/* ── Low-data mode: drop decorative cost when the user saves data ─────────── */
+[data-save-data] body {
+	background: var(--background);
+}
+
+[data-save-data] [data-reveal] {
+	opacity: 1 !important;
+	transform: none !important;
+	transition: none !important;
+}
+
+/* ── Global accessibility baseline ───────────────────────────────────────── */
+/* Visible keyboard focus on every interactive element (WCAG 2.4.7). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+[role="button"]:focus-visible {
+	outline: 2px solid var(--primary-500);
+	outline-offset: 2px;
+	border-radius: var(--radius-sm);
+}
+
+/* Prevent iOS from zooming the viewport when focusing inputs: keep the
+   computed font-size at 16px on small screens (WCAG-friendly, no zoom jump). */
+@media (max-width: 767px) {
+	input,
+	select,
+	textarea,
+	.input-field,
+	.form-input {
+		font-size: 16px;
+	}
+}
+
+/* Honour the user's reduced-motion preference app-wide. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* ── Resume banner ("Reprendre où vous étiez") ───────────────────────────── */
+.resume-banner-wrap {
+	margin-top: -1rem;
+	margin-bottom: 1.5rem;
+}
+
+.resume-banner {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem 1.25rem;
+	background: linear-gradient(135deg, var(--primary-50), var(--surface));
+	border: 1px solid var(--primary-100);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-sm);
+}
+
+.resume-banner__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	flex-shrink: 0;
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	color: var(--primary-600);
+	box-shadow: var(--shadow-sm);
+}
+
+.resume-banner__body {
+	flex: 1;
+	min-width: 0;
+}
+
+.resume-banner__eyebrow {
+	font-size: 0.72rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-500);
+}
+
+.resume-banner__title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.15rem;
+	min-width: 0;
+}
+
+.resume-banner__badge {
+	flex-shrink: 0;
+	font-size: 0.68rem;
+	font-weight: 700;
+	padding: 0.12rem 0.5rem;
+	border-radius: 999px;
+	background: var(--primary-500);
+	color: #fff;
+}
+
+.resume-banner__name {
+	font-weight: 600;
+	color: var(--text-900);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.resume-banner__subtitle {
+	font-size: 0.8rem;
+	color: var(--text-500);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.resume-banner__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-shrink: 0;
+}
+
+.resume-banner__cta {
+	gap: 0.4rem;
+}
+
+.resume-banner__dismiss {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border: none;
+	background: transparent;
+	color: var(--text-500);
+	border-radius: 999px;
+	cursor: pointer;
+	transition: color 0.2s ease, background 0.2s ease;
+}
+
+.resume-banner__dismiss:hover {
+	color: var(--danger-500);
+	background: rgba(224, 49, 49, 0.08);
+}
+
+@media (max-width: 600px) {
+	.resume-banner {
+		flex-wrap: wrap;
+	}
+	.resume-banner__actions {
+		width: 100%;
+		justify-content: space-between;
+	}
+	.resume-banner__cta {
+		flex: 1;
+		justify-content: center;
+	}
+}
+
+[data-theme="dark"] .resume-banner {
+	border-color: var(--border);
+}
+
+/* ── Courses search box ──────────────────────────────────────────────────── */
+.courses-search {
+	position: relative;
+	display: flex;
+	align-items: center;
+	min-width: min(100%, 260px);
+}
+
+.courses-search__icon {
+	position: absolute;
+	left: 0.75rem;
+	color: var(--text-400);
+	pointer-events: none;
+}
+
+.courses-search__input {
+	width: 100%;
+	padding: 0.5rem 0.85rem 0.5rem 2.25rem;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--text-900);
+	font: inherit;
+	font-size: 0.85rem;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.courses-search__input::placeholder {
+	color: var(--text-400);
+}
+
+.courses-search__input:focus {
+	outline: none;
+	border-color: var(--primary-500);
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.14);
+}
+
+.filter-group--subjects {
+	flex-wrap: wrap;
 }
 
 /* Utilities */

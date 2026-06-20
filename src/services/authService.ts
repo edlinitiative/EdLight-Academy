@@ -118,6 +118,15 @@ export async function logoutUser() {
   }
 }
 
+export async function sendPasswordReset(email) {
+  try {
+    const { resetPassword } = await loadFirebase();
+    await resetPassword(email);
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
 export function getAuthUser() {
   // Read from the app store (kept in sync with Firebase auth) so this stays
   // synchronous and free of any Firebase import.

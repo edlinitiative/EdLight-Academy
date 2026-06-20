@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { CourseCard } from '../components/Course';
+import { EmptyState, ErrorState } from '../components/StateViews';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
 export default function Courses() {
-  const { data: courses = [], isLoading } = useCourses();
+  const { data: courses = [], isLoading, isError, isFetching, refetch } = useCourses();
   const [filter, setFilter] = useState('all');
+  const [subject, setSubject] = useState('all');
+  const [query, setQuery] = useState('');
   const { enrolledCourses } = useStore();
   const { t } = useTranslation();
-  
+
+  const subjectOptions = useMemo(() => {
+    const set = new Set();
+    for (const c of courses) if (c?.subject) set.add(c.subject);
+    return Array.from(set);
+  }, [courses]);
+
+  const resetAllFilters = () => {
+    setFilter('all');
+    setSubject('all');
+    setQuery('');
+  };
+
   const filterLabels = {
     all: t('common.all', 'Tout'),
     enrolled: t('courses.myCourses', 'Mes cours'),
@@ -47,12 +63,31 @@ export default function Courses() {
     );
   }
 
+  if (isError && courses.length === 0) {
+    return (
+      <section className="section">
+        <div className="container">
+          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        </div>
+      </section>
+    );
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
   const filteredCourses = courses.filter(course => {
-    if (filter === 'enrolled') {
-      return enrolledCourses.some(c => c.id === course.id);
-    }
-    if (filter === 'NSI' || filter === 'NSII' || filter === 'NSIII' || filter === 'NSIV') {
-      return course.level === filter;
+    if (filter === 'enrolled' && !enrolledCourses.some(c => c.id === course.id)) return false;
+    if (
+      (filter === 'NSI' || filter === 'NSII' || filter === 'NSIII' || filter === 'NSIV') &&
+      course.level !== filter
+    ) return false;
+    if (subject !== 'all' && course.subject !== subject) return false;
+    if (normalizedQuery) {
+      const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject || '' });
+      const haystack = [course.title, course.name, subjectLabel, course.level, course.description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(normalizedQuery)) return false;
     }
     return true;
   });
@@ -69,6 +104,17 @@ export default function Courses() {
             </p>
           </div>
           <div className="page-header__actions">
+            <div className="courses-search">
+              <Search size={16} className="courses-search__icon" aria-hidden="true" />
+              <input
+                type="search"
+                className="courses-search__input"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('courses.searchPlaceholder')}
+                aria-label={t('courses.searchLabel')}
+              />
+            </div>
             <div className="filter-group">
               {Object.entries(filterLabels).map(([key, label]) => (
                 <button
@@ -81,6 +127,27 @@ export default function Courses() {
                 </button>
               ))}
             </div>
+            {subjectOptions.length > 1 && (
+              <div className="filter-group filter-group--subjects">
+                <button
+                  type="button"
+                  className={["filter-pill", subject === 'all' ? 'filter-pill--active' : ''].join(' ')}
+                  onClick={() => setSubject('all')}
+                >
+                  {t('courses.allSubjects')}
+                </button>
+                {subjectOptions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={["filter-pill", subject === s ? 'filter-pill--active' : ''].join(' ')}
+                    onClick={() => setSubject(s)}
+                  >
+                    {t(`subjects.${s}`, { defaultValue: s })}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -94,15 +161,11 @@ export default function Courses() {
             ))}
           </div>
         ) : (
-          <div className="card text-center" style={{ padding: '3rem 2.5rem' }}>
-            <h3 className="course-card__title" style={{ marginBottom: '0.5rem' }}>{t('courses.noCoursesTitle')}</h3>
-            <p className="text-muted">{t('courses.noCoursesSubtitle')}</p>
-            <div style={{ marginTop: '1.5rem' }}>
-              <button className="button button--primary button--pill" onClick={() => setFilter('all')}>
-                {t('courses.resetFilters')}
-              </button>
-            </div>
-          </div>
+          <EmptyState
+            title={t('courses.noCoursesTitle')}
+            message={t('courses.noCoursesSubtitle')}
+            action={{ label: t('courses.resetFilters'), onClick: resetAllFilters }}
+          />
         )}
       </div>
     </section>

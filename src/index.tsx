@@ -8,6 +8,7 @@ import './mobile-premium.css';
 import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
 import { registerServiceWorker } from './utils/registerServiceWorker';
+import { initTelemetry } from './utils/telemetry';
 
 function getDefaultStudentName(language) {
   return language === 'ht' ? 'Elèv' : 'Élève';
@@ -42,6 +43,28 @@ const initViewportHeightVar = () => {
 
 // Keep iOS Safari viewport/keyboard quirks from breaking vh-based layouts.
 initViewportHeightVar();
+
+// Install global error/observability hooks as early as possible.
+initTelemetry();
+
+// Low-data / slow-connection awareness. When the user has Data Saver enabled
+// (or is on a 2G-class connection), we flag the document so CSS can drop
+// decorative gradients/animations and defer non-essential media — important
+// for EdLight's low-bandwidth audience.
+const initConnectionAwareness = () => {
+  const nav = navigator as any;
+  const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
+  if (!conn) return;
+  const apply = () => {
+    const root = document.documentElement;
+    const slow = /(^|-)2g$/.test(conn.effectiveType || '');
+    root.toggleAttribute('data-save-data', !!conn.saveData);
+    root.toggleAttribute('data-slow-network', slow);
+  };
+  apply();
+  conn.addEventListener?.('change', apply);
+};
+initConnectionAwareness();
 
 // Initialize internationalization
 initI18n();

@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, GraduationCap } from 'lucide-react';
+import { RefreshCw, GraduationCap, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
-import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle } from '../services/authService';
+import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset } from '../services/authService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
 export function AuthModal({ onClose }) {
+  const { t } = useTranslation();
   const storeActiveTab = useStore(state => state.activeTab);
   const [activeTab, setActiveTab] = useState(storeActiveTab || 'signin');
+  const [mode, setMode] = useState('auth'); // 'auth' | 'reset'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +38,18 @@ export function AuthModal({ onClose }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Map a raw Firebase auth error to a friendly, localized message.
+  const mapAuthError = (raw) => {
+    const code = String(raw || '');
+    if (code.includes('auth/invalid-email')) return t('authErrors.invalidEmail');
+    if (code.includes('auth/user-not-found')) return t('authErrors.userNotFound');
+    if (code.includes('auth/wrong-password')) return t('authErrors.wrongPassword');
+    if (code.includes('auth/weak-password')) return t('authErrors.weakPassword');
+    if (code.includes('auth/email-already-in-use')) return t('authErrors.emailInUse');
+    if (code.includes('auth/invalid-credential')) return t('authErrors.invalidCredential');
+    return t('authErrors.generic');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -41,66 +57,77 @@ export function AuthModal({ onClose }) {
     setLoading(true);
 
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError(t('authErrors.fillAllFields'));
       setLoading(false);
       return;
     }
 
     if (activeTab === 'signup' && !name) {
-      setError('Please enter your name');
+      setError(t('authErrors.enterName'));
       setLoading(false);
       return;
     }
 
     try {
       let userData;
-      
+
       if (activeTab === 'signin') {
         userData = await loginWithEmailPassword(email, password);
       } else {
         userData = await registerWithEmailPassword(email, password, name);
       }
-      
+
       setUser(userData);
-      setSuccess(activeTab === 'signin' ? 'Successfully logged in!' : 'Account created successfully!');
-      
+      setSuccess(activeTab === 'signin' ? t('auth.signedIn') : t('auth.accountCreated'));
+
       // Auto close modal after successful authentication
       setTimeout(() => {
         onClose();
       }, 1000);
     } catch (err) {
-      // Handle different Firebase error messages
-      let errorMessage = err.message;
-      if (errorMessage.includes('auth/invalid-email')) {
-        errorMessage = 'Invalid email address';
-      } else if (errorMessage.includes('auth/user-not-found')) {
-        errorMessage = 'No account found with this email';
-      } else if (errorMessage.includes('auth/wrong-password')) {
-        errorMessage = 'Incorrect password';
-      } else if (errorMessage.includes('auth/weak-password')) {
-        errorMessage = 'Password should be at least 6 characters';
-      } else if (errorMessage.includes('auth/email-already-in-use')) {
-        errorMessage = 'An account with this email already exists';
-      } else if (errorMessage.includes('auth/invalid-credential')) {
-        errorMessage = 'Invalid email or password';
-      }
-      
-      setError(errorMessage);
+      setError(mapAuthError(err.message));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!email) {
+      setError(t('authErrors.fillAllFields'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordReset(email);
+      setSuccess(t('auth.resetSent'));
+    } catch (err) {
+      setError(t('authErrors.resetFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchMode = (next) => {
+    setMode(next);
+    setError('');
+    setSuccess('');
   };
 
   const handleGoogleSignIn = async () => {
     setError('');
     setSuccess('');
     setLoading(true);
-    
+
     try {
       const userData = await loginWithGoogle();
       setUser(userData);
-      setSuccess('Successfully signed in with Google!');
-      
+      setSuccess(t('auth.googleSuccess'));
+
       setTimeout(() => {
         onClose();
       }, 1000);
@@ -111,7 +138,7 @@ export function AuthModal({ onClose }) {
       } else if (err.message && err.message.includes('cancelled-popup-request')) {
         // Also ignore if a new popup request cancelled the previous one
       } else {
-        setError(err.message || 'Failed to sign in with Google');
+        setError(t('authErrors.googleFailed'));
       }
     } finally {
       setLoading(false);
@@ -131,111 +158,184 @@ export function AuthModal({ onClose }) {
         onTouchEnd={swipe.onTouchEnd}
       >
         <div className="auth-modal__header">
-          <h2 id="auth-modal-title" className="auth-modal__title">Welcome to EdLight</h2>
-          <button className="auth-modal__close" onClick={onClose} aria-label="Close dialog">
+          <h2 id="auth-modal-title" className="auth-modal__title">
+            {mode === 'reset' ? t('auth.resetTitle') : t('auth.welcome')}
+          </h2>
+          <button className="auth-modal__close" onClick={onClose} aria-label={t('auth.close')}>
             ×
           </button>
         </div>
 
-        <div className="auth-modal__tabs">
-          <button 
-            className={["auth-modal__tab", activeTab === 'signin' ? 'auth-modal__tab--active' : ''].join(' ')}
-            onClick={() => setActiveTab('signin')}
-            type="button"
-          >
-            Sign In
-          </button>
-          <button 
-            className={["auth-modal__tab", activeTab === 'signup' ? 'auth-modal__tab--active' : ''].join(' ')}
-            onClick={() => setActiveTab('signup')}
-            type="button"
-          >
-            Create Account
-          </button>
-        </div>
+        {mode === 'reset' ? (
+          <>
+            <p className="text-muted" style={{ marginBottom: '1rem', fontSize: '0.875rem' }}>
+              {t('auth.resetBody')}
+            </p>
+            <form onSubmit={handleReset}>
+              <div className="form-field">
+                <label className="form-label" htmlFor="reset-email">{t('auth.emailAddress')}</label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  className="form-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('auth.emailPlaceholder')}
+                  required
+                />
+              </div>
 
-        {/* Google Sign-In */}
-        <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
-          <button
-            type="button"
-            className="button button--secondary button--pill"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.02 24.02 0 0 0 0 21.56l7.98-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Continue with Google
-          </button>
-        </div>
+              {error && <div className="form-message form-message--error" role="alert">{error}</div>}
+              {success && <div className="form-message form-message--success" role="status">{success}</div>}
 
-        <div className="auth-divider">
-          <span className="auth-divider__label">or continue with email</span>
-        </div>
+              <button
+                type="submit"
+                className="button button--primary button--pill"
+                style={{ width: '100%', marginTop: '0.75rem' }}
+                disabled={loading}
+              >
+                {loading ? t('auth.sending') : t('auth.sendResetLink')}
+              </button>
+            </form>
 
-        <form onSubmit={handleSubmit}>
-          {activeTab === 'signup' && (
-            <div className="form-field">
-              <label className="form-label" htmlFor="auth-name">Full Name</label>
-              <input
-                id="auth-name"
-                type="text"
-                className="form-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your full name"
-              />
+            <p className="form-footnote">
+              <button type="button" className="form-footnote__link" onClick={() => switchMode('auth')}>
+                {t('auth.backToSignIn')}
+              </button>
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="auth-modal__tabs">
+              <button
+                className={["auth-modal__tab", activeTab === 'signin' ? 'auth-modal__tab--active' : ''].join(' ')}
+                onClick={() => setActiveTab('signin')}
+                type="button"
+              >
+                {t('auth.signIn')}
+              </button>
+              <button
+                className={["auth-modal__tab", activeTab === 'signup' ? 'auth-modal__tab--active' : ''].join(' ')}
+                onClick={() => setActiveTab('signup')}
+                type="button"
+              >
+                {t('auth.createAccount')}
+              </button>
             </div>
-          )}
 
-          <div className="form-field">
-            <label className="form-label" htmlFor="auth-email">Email Address</label>
-            <input
-              id="auth-email"
-              type="email"
-              className="form-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              required
-            />
-          </div>
+            {/* Google Sign-In */}
+            <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <button
+                type="button"
+                className="button button--secondary button--pill"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+              >
+                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.02 24.02 0 0 0 0 21.56l7.98-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                {t('auth.continueWithGoogle')}
+              </button>
+            </div>
 
-          <div className="form-field">
-            <label className="form-label" htmlFor="auth-password">Password</label>
-            <input
-              id="auth-password"
-              type="password"
-              className="form-input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+            <div className="auth-divider">
+              <span className="auth-divider__label">{t('auth.orWithEmail')}</span>
+            </div>
 
-          {error && <div className="form-message form-message--error">{error}</div>}
-          {success && <div className="form-message form-message--success">{success}</div>}
+            <form onSubmit={handleSubmit}>
+              {activeTab === 'signup' && (
+                <div className="form-field">
+                  <label className="form-label" htmlFor="auth-name">{t('auth.fullName')}</label>
+                  <input
+                    id="auth-name"
+                    type="text"
+                    autoComplete="name"
+                    className="form-input"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('auth.fullNamePlaceholder')}
+                  />
+                </div>
+              )}
 
-          <button 
-            type="submit" 
-            className="button button--primary button--pill" 
-            style={{ width: '100%', marginTop: '0.75rem' }}
-            disabled={loading}
-          >
-            {loading ? 'Please wait...' : (activeTab === 'signin' ? 'Sign In' : 'Create Account')}
-          </button>
-        </form>
+              <div className="form-field">
+                <label className="form-label" htmlFor="auth-email">{t('auth.emailAddress')}</label>
+                <input
+                  id="auth-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  className="form-input"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('auth.emailPlaceholder')}
+                  required
+                />
+              </div>
 
-        <p className="form-footnote">
-          {activeTab === 'signin' 
-            ? <>Don't have an account? <button type="button" className="form-footnote__link" onClick={() => setActiveTab('signup')}>Sign up now!</button></>
-            : <>Already have an account? <button type="button" className="form-footnote__link" onClick={() => setActiveTab('signin')}>Sign in instead!</button></>}
-        </p>
+              <div className="form-field">
+                <label className="form-label" htmlFor="auth-password">{t('auth.password')}</label>
+                <div className="input-with-action">
+                  <input
+                    id="auth-password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={activeTab === 'signin' ? 'current-password' : 'new-password'}
+                    className="form-input"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={t('auth.passwordPlaceholder')}
+                    aria-describedby={activeTab === 'signup' ? 'auth-password-rule' : undefined}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="input-action"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {activeTab === 'signup' && (
+                  <small id="auth-password-rule" className="form-hint">{t('auth.passwordRule')}</small>
+                )}
+              </div>
+
+              {activeTab === 'signin' && (
+                <div style={{ textAlign: 'right', marginBottom: '0.4rem' }}>
+                  <button type="button" className="form-footnote__link" onClick={() => switchMode('reset')}>
+                    {t('auth.forgotPassword')}
+                  </button>
+                </div>
+              )}
+
+              {error && <div className="form-message form-message--error" role="alert">{error}</div>}
+              {success && <div className="form-message form-message--success" role="status">{success}</div>}
+
+              <button
+                type="submit"
+                className="button button--primary button--pill"
+                style={{ width: '100%', marginTop: '0.75rem' }}
+                disabled={loading}
+              >
+                {loading ? t('auth.pleaseWait') : (activeTab === 'signin' ? t('auth.signIn') : t('auth.createAccount'))}
+              </button>
+            </form>
+
+            <p className="form-footnote">
+              {activeTab === 'signin'
+                ? <>{t('auth.noAccount')} <button type="button" className="form-footnote__link" onClick={() => setActiveTab('signup')}>{t('auth.signUpNow')}</button></>
+                : <>{t('auth.hasAccount')} <button type="button" className="form-footnote__link" onClick={() => setActiveTab('signin')}>{t('auth.signInInstead')}</button></>}
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

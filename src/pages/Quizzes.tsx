@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
+import { ErrorState } from '../components/StateViews';
 import { useAppData } from '../hooks/useData';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
@@ -9,7 +10,7 @@ import { subjectThumbs } from './home/content';
 const Quizzes = () => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
-  const { data: appData } = useAppData();
+  const { data: appData, isError, isFetching, refetch } = useAppData();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
 
@@ -155,6 +156,16 @@ const Quizzes = () => {
       setIsLoadingBank(false);
     }
   };
+
+  if (isError && !appData) {
+    return (
+      <section className="section quiz-page">
+        <div className="container">
+          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="section quiz-page">

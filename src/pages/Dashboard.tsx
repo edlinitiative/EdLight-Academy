@@ -6,6 +6,7 @@ import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
 import ProgressDashboard from '../components/ProgressDashboard';
+import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
 
@@ -31,7 +32,7 @@ function formatShortDate(msOrDate, locale) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: courses, isLoading } = useCourses();
+  const { data: courses, isLoading, isError, isFetching, refetch } = useCourses();
   const { user, enrolledCourses, quizAttempts, language } = useStore();
   const isCreole = language === 'ht';
   const locale = isCreole ? 'fr-HT' : 'fr-FR';
@@ -165,6 +166,16 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (isError && !courses) {
+    return (
+      <section className="section">
+        <div className="container">
+          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
         </div>
       </section>
     );

@@ -1,9 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 
-export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded }) {
+export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded, startSeconds = 0 }) {
   const playerInstanceRef = useRef(null);
   const containerRef = useRef(null);
   const intervalRef = useRef(null);
+  // Hold the latest resume point in a ref so changing it never re-inits the
+  // player (which would seek mid-playback); it's only read once at init.
+  const startSecondsRef = useRef(startSeconds);
+  startSecondsRef.current = startSeconds;
 
   useEffect(() => {
     // Load YouTube IFrame API
@@ -35,6 +39,9 @@ export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded })
   const initPlayer = () => {
     if (!videoId || !containerRef.current) return;
 
+    // Resume where the learner left off (cued, not autoplayed).
+    const resumeAt = Math.max(0, Math.floor(startSecondsRef.current || 0));
+
     const newPlayer = new window.YT.Player(containerRef.current, {
       videoId: videoId,
       playerVars: {
@@ -45,6 +52,7 @@ export default function YouTubePlayer({ videoId, title, onTimeUpdate, onEnded })
         fs: 1,
         playsinline: 1,
         enablejsapi: 1,
+        ...(resumeAt > 0 ? { start: resumeAt } : {}),
       },
       events: {
         onReady: (event) => {

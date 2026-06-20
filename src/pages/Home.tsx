@@ -1,6 +1,7 @@
 import React from 'react';
 import './Home.css';
 import { useT } from './home/content';
+import ResumeBanner from '../components/ResumeBanner';
 import HeroSection from './home/HeroSection';
 import PillarsSection from './home/PillarsSection';
 import CoursesSection from './home/CoursesSection';
@@ -22,6 +23,9 @@ export default function Home() {
   return (
     <div className="lp">
       <HeroSection t={t} />
+      <div className="container resume-banner-wrap">
+        <ResumeBanner />
+      </div>
       <PillarsSection t={t} />
       <CoursesSection t={t} />
       <ExperienceSection t={t} />

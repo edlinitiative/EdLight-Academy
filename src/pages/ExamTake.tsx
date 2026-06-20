@@ -251,6 +251,7 @@ const ExamTake = () => {
   // full read-through preview. "Aperçu complet" navigates without the flag.
   const location = useLocation();
   const autostart = Boolean(location.state?.autostart);
+  const recordActivity = useStore((s) => s.recordActivity);
   const [viewState, setViewState] = useState(autostart ? 'active' : 'preview'); // 'preview' | 'active' | (legacy) 'cover'
 
   const sectionSummary = useMemo(() => {
@@ -318,6 +319,18 @@ const ExamTake = () => {
   const [secondsLeft, setSecondsLeft] = useState(durationMin * 60);
   const timerRef = useRef(null);
   const skipInitialTimerResetRef = useRef(false);
+
+  // Record an in-progress exam so Home can offer "Reprendre où vous étiez".
+  useEffect(() => {
+    if (!exam || viewState !== 'active' || submitted) return;
+    recordActivity({
+      type: 'exam',
+      path: location.pathname,
+      title: normalizeExamTitle(exam),
+      ts: Date.now(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exam, viewState, submitted, location.pathname]);
 
   // Resume flow state
   const [resumeDraft, setResumeDraft] = useState(null);

@@ -14,13 +14,30 @@
   <meta property="og:title" content="EdLight Academy">
   <meta property="og:description" content="Des cours de qualité, des exercices pratiques et des quiz interactifs — conçus pour les élèves haïtiens.">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="EdLight Academy">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:url" content="https://academy.edlight.org/">
   <meta property="og:image" content="/assets/logo.png">
+  <meta property="og:image:alt" content="EdLight Academy">
   <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="EdLight Academy">
+  <meta name="twitter:description" content="Des cours de qualité, des exercices pratiques et des quiz interactifs — conçus pour les élèves haïtiens.">
+  <meta name="twitter:image" content="/assets/logo.png">
+  <link rel="canonical" href="https://academy.edlight.org/">
   <link rel="icon" type="image/png" href="/assets/logo.png">
   <link rel="apple-touch-icon" href="/assets/logo.png">
+  <!-- Fonts: loaded asynchronously (preload + swap) so they never block the
+       critical render path on slow connections. The page paints immediately
+       with system fonts and swaps to the brand fonts when they arrive. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400..700&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400..700&family=Geist+Mono:wght@400..600&display=swap"
+    onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400..700&family=Geist+Mono:wght@400..600&display=swap">
+  </noscript>
   <title>EdLight Academy</title>
   <!-- Firebase config at runtime (replace with your real project values) -->
   <script>

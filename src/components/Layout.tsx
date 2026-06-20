@@ -1,15 +1,19 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Navbar } from './Navbar';
 import { Footer } from './Footer';
 import BottomNav from './BottomNav';
+import NetworkStatus from './NetworkStatus';
+import RouteMeta from './RouteMeta';
 import { AuthModal } from './Auth';
 import { StreakMilestoneModal } from './Streak';
 import useStore from '../contexts/store';
 
 export function Layout() {
   const { showAuthModal, toggleAuthModal, language, theme } = useStore();
+  const { t } = useTranslation();
   const isCreole = language === 'ht';
   const queryClient = useQueryClient();
   const { pathname } = useLocation();
@@ -85,9 +89,11 @@ export function Layout() {
 
   return (
     <div className={shellClassName}>
+      <RouteMeta />
       <a href="#main-content" className="skip-to-content">
-        Skip to content
+        {t('a11y.skipToContent', 'Aller au contenu')}
       </a>
+      <NetworkStatus />
       <Navbar />
       <main id="main-content" className="app-shell__main">
         <Outlet />

@@ -5,6 +5,15 @@ import { persist } from 'zustand/middleware';
 // before being asked to create an account.
 export const FREE_VIDEO_LIMIT = 3;
 
+/** A resumable point in the product ("Reprendre où vous étiez"). */
+export interface LastActivity {
+  type: 'lesson' | 'exam' | 'quiz';
+  path: string;          // route to return to
+  title: string;         // primary label (lesson/exam/course title)
+  subtitle?: string;     // secondary label (course name, subject…)
+  ts: number;            // when it was last touched (ms)
+}
+
 /** Shape of the global application store (state + actions). */
 export interface AppState {
   // User state
@@ -21,6 +30,7 @@ export interface AppState {
   progress: Record<string, any>;
   quizAttempts: Record<string, any[]>;
   freeVideoIds: string[];
+  lastActivity: LastActivity | null;
 
   // UI state
   currentCourse: any;
@@ -41,6 +51,8 @@ export interface AppState {
   updateProgress: (videoId: string, progress: any) => void;
   recordQuizAttempt: (quizId: string, attempt: any) => void;
   recordFreeVideoView: (videoId: string) => void;
+  recordActivity: (activity: LastActivity) => void;
+  clearActivity: () => void;
   setCurrentCourse: (course: any) => void;
   toggleAuthModal: () => void;
   setShowAuthModal: (show: boolean) => void;
@@ -70,6 +82,7 @@ const useStore = create<AppState>()(
       progress: {}, // videoId -> { completed: boolean, watchTime: number }
       quizAttempts: {}, // quizId -> [{ score: number, date: Date }]
       freeVideoIds: [], // distinct video lessons watched while signed out (free preview)
+      lastActivity: null, // most recent resumable point ("Reprendre où vous étiez")
       
       // UI state
       currentCourse: null,
@@ -116,6 +129,20 @@ const useStore = create<AppState>()(
           if (state.freeVideoIds.includes(videoId)) return state;
           return { freeVideoIds: [...state.freeVideoIds, videoId] };
         }),
+
+      // Remember the most recent resumable point. Ignores no-op updates to the
+      // same path so we don't thrash persisted storage on every re-render.
+      recordActivity: (activity) =>
+        set((state) => {
+          if (!activity?.path || !activity?.title) return state;
+          const prev = state.lastActivity;
+          if (prev && prev.path === activity.path && prev.title === activity.title) {
+            return state;
+          }
+          return { lastActivity: { ...activity, ts: activity.ts || Date.now() } };
+        }),
+
+      clearActivity: () => set({ lastActivity: null }),
         
       setCurrentCourse: (course) => set({ currentCourse: course }),
       toggleAuthModal: () => set((state) => ({ showAuthModal: !state.showAuthModal })),
@@ -136,6 +163,7 @@ const useStore = create<AppState>()(
         enrolledCourses: [],
         progress: {},
         quizAttempts: {},
+        lastActivity: null,
         showUserDropdown: false,
         showAuthModal: false,
         showCourseModal: false,
@@ -155,6 +183,7 @@ const useStore = create<AppState>()(
         progress: state.progress,
         quizAttempts: state.quizAttempts,
         freeVideoIds: state.freeVideoIds,
+        lastActivity: state.lastActivity,
         hydrated: state.hydrated
       })
       // Note: Avoid using onRehydrateStorage here because set/get are out of scope.

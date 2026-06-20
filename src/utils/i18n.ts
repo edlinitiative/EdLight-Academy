@@ -18,18 +18,108 @@ const resources = {
         search: 'Search',
         all: 'All',
         none: 'None',
-        required: 'Required'
+        required: 'Required',
+        retry: 'Retry',
+        retrying: 'Retrying…'
+      },
+      errors: {
+        genericTitle: 'Something went wrong',
+        genericBody: 'An unexpected error occurred. Please try again.',
+        loadTitle: "Couldn't load the content",
+        loadBody: 'Check your connection, then try again.',
+        boundaryTitle: 'The app ran into a problem',
+        boundaryBody: 'Sorry for the inconvenience. You can reload the page to continue.',
+        reload: 'Reload the page',
+        offlineHint: 'You appear to be offline.'
+      },
+      notFound: {
+        code: '404',
+        title: 'Page not found',
+        body: "The page you're looking for doesn't exist or has moved.",
+        home: 'Back to home',
+        courses: 'Browse courses'
+      },
+      resume: {
+        title: 'Pick up where you left off',
+        lessonBadge: 'Course',
+        examBadge: 'Mock exam',
+        quizBadge: 'Practice',
+        cta: 'Resume',
+        dismiss: 'Dismiss'
+      },
+      network: {
+        offline: 'Offline — saved content available',
+        online: 'Back online',
+        syncing: 'Syncing…',
+        synced: 'Synced ✓'
+      },
+      a11y: {
+        skipToContent: 'Skip to content'
+      },
+      meta: {
+        titleTemplate: '{{page}} · EdLight Academy',
+        home: 'Home',
+        courses: 'Courses',
+        dashboard: 'Dashboard',
+        quizzes: 'Practice',
+        exams: 'Mock exams',
+        about: 'About',
+        contact: 'Contact',
+        faq: 'FAQ',
+        help: 'Help',
+        privacy: 'Privacy Policy',
+        terms: 'Terms of Use',
+        studyPlan: 'Study plan',
+        trivia: 'Trivia games',
+        notFound: 'Page not found'
       },
       auth: {
+        welcome: 'Welcome to EdLight',
         signIn: 'Sign In',
         signUp: 'Sign Up',
         signOut: 'Sign Out',
-        email: 'Email',
-        password: 'Password',
+        createAccount: 'Create Account',
+        continueWithGoogle: 'Continue with Google',
+        orWithEmail: 'or continue with email',
         fullName: 'Full Name',
-        forgotPassword: 'Forgot Password?',
+        fullNamePlaceholder: 'Enter your full name',
+        email: 'Email',
+        emailAddress: 'Email Address',
+        emailPlaceholder: 'Enter your email',
+        password: 'Password',
+        passwordPlaceholder: 'Enter your password',
+        passwordRule: 'At least 6 characters.',
+        showPassword: 'Show password',
+        hidePassword: 'Hide password',
+        forgotPassword: 'Forgot password?',
+        resetTitle: 'Reset your password',
+        resetBody: 'Enter your email and we’ll send you a reset link.',
+        sendResetLink: 'Send reset link',
+        sending: 'Sending…',
+        resetSent: 'Reset link sent. Check your inbox.',
+        backToSignIn: 'Back to sign in',
+        pleaseWait: 'Please wait…',
+        signedIn: 'Successfully logged in!',
+        accountCreated: 'Account created successfully!',
+        googleSuccess: 'Successfully signed in with Google!',
         noAccount: "Don't have an account?",
-        hasAccount: 'Already have an account?'
+        hasAccount: 'Already have an account?',
+        signUpNow: 'Sign up now!',
+        signInInstead: 'Sign in instead!',
+        close: 'Close dialog'
+      },
+      authErrors: {
+        fillAllFields: 'Please fill in all fields',
+        enterName: 'Please enter your name',
+        invalidEmail: 'Invalid email address',
+        userNotFound: 'No account found with this email',
+        wrongPassword: 'Incorrect password',
+        weakPassword: 'Password should be at least 6 characters',
+        emailInUse: 'An account with this email already exists',
+        invalidCredential: 'Invalid email or password',
+        googleFailed: 'Failed to sign in with Google',
+        resetFailed: 'Could not send the reset link. Try again.',
+        generic: 'Something went wrong. Please try again.'
       },
       courses: {
         catalog: 'Course Catalog',
@@ -45,6 +135,9 @@ const resources = {
         enrolled: 'Enrolled',
         viewDashboard: 'View Dashboard',
         resetFilters: 'Reset Filters',
+        searchLabel: 'Search a course',
+        searchPlaceholder: 'Search by name or subject…',
+        allSubjects: 'All subjects',
         noCoursesTitle: 'No courses match this filter yet',
         noCoursesSubtitle: 'Adjust the filters or head back to the full catalog.',
         progress: 'Progress',
@@ -158,18 +251,108 @@ const resources = {
         search: 'Rechercher',
         all: 'Tout',
         none: 'Aucun',
-        required: 'Obligatoire'
+        required: 'Obligatoire',
+        retry: 'Réessayer',
+        retrying: 'Nouvelle tentative…'
+      },
+      errors: {
+        genericTitle: 'Un problème est survenu',
+        genericBody: 'Une erreur inattendue s’est produite. Veuillez réessayer.',
+        loadTitle: 'Impossible de charger le contenu',
+        loadBody: 'Vérifiez votre connexion, puis réessayez.',
+        boundaryTitle: 'L’application a rencontré un problème',
+        boundaryBody: 'Désolé pour la gêne occasionnée. Vous pouvez recharger la page pour continuer.',
+        reload: 'Recharger la page',
+        offlineHint: 'Vous semblez être hors ligne.'
+      },
+      notFound: {
+        code: '404',
+        title: 'Page introuvable',
+        body: 'La page que vous cherchez n’existe pas ou a été déplacée.',
+        home: 'Retour à l’accueil',
+        courses: 'Parcourir les cours'
+      },
+      resume: {
+        title: 'Reprendre où vous étiez',
+        lessonBadge: 'Cours',
+        examBadge: 'Examen blanc',
+        quizBadge: 'Exercice',
+        cta: 'Reprendre',
+        dismiss: 'Ignorer'
+      },
+      network: {
+        offline: 'Hors ligne — contenu enregistré disponible',
+        online: 'De retour en ligne',
+        syncing: 'Synchronisation…',
+        synced: 'Synchronisé ✓'
+      },
+      a11y: {
+        skipToContent: 'Aller au contenu'
+      },
+      meta: {
+        titleTemplate: '{{page}} · EdLight Academy',
+        home: 'Accueil',
+        courses: 'Cours',
+        dashboard: 'Tableau de bord',
+        quizzes: 'Exercices',
+        exams: 'Examens blancs',
+        about: 'À propos',
+        contact: 'Contact',
+        faq: 'FAQ',
+        help: 'Aide',
+        privacy: 'Politique de confidentialité',
+        terms: 'Conditions d’utilisation',
+        studyPlan: 'Plan d’étude',
+        trivia: 'Jeux-questionnaires',
+        notFound: 'Page introuvable'
       },
       auth: {
+        welcome: 'Bienvenue sur EdLight',
         signIn: 'Se connecter',
-        signUp: "S’inscrire",
+        signUp: 'S’inscrire',
         signOut: 'Se déconnecter',
-        email: 'Email',
-        password: 'Mot de passe',
+        createAccount: 'Créer un compte',
+        continueWithGoogle: 'Continuer avec Google',
+        orWithEmail: 'ou continuer avec l’e-mail',
         fullName: 'Nom complet',
+        fullNamePlaceholder: 'Entrez votre nom complet',
+        email: 'E-mail',
+        emailAddress: 'Adresse e-mail',
+        emailPlaceholder: 'Entrez votre e-mail',
+        password: 'Mot de passe',
+        passwordPlaceholder: 'Entrez votre mot de passe',
+        passwordRule: 'Au moins 6 caractères.',
+        showPassword: 'Afficher le mot de passe',
+        hidePassword: 'Masquer le mot de passe',
         forgotPassword: 'Mot de passe oublié ?',
-        noAccount: "Pas de compte ?",
-        hasAccount: 'Déjà un compte ?'
+        resetTitle: 'Réinitialiser votre mot de passe',
+        resetBody: 'Entrez votre e-mail et nous vous enverrons un lien de réinitialisation.',
+        sendResetLink: 'Envoyer le lien',
+        sending: 'Envoi…',
+        resetSent: 'Lien envoyé. Vérifiez votre boîte de réception.',
+        backToSignIn: 'Retour à la connexion',
+        pleaseWait: 'Veuillez patienter…',
+        signedIn: 'Connexion réussie !',
+        accountCreated: 'Compte créé avec succès !',
+        googleSuccess: 'Connexion Google réussie !',
+        noAccount: 'Vous n’avez pas de compte ?',
+        hasAccount: 'Vous avez déjà un compte ?',
+        signUpNow: 'Inscrivez-vous !',
+        signInInstead: 'Connectez-vous !',
+        close: 'Fermer la fenêtre'
+      },
+      authErrors: {
+        fillAllFields: 'Veuillez remplir tous les champs',
+        enterName: 'Veuillez entrer votre nom',
+        invalidEmail: 'Adresse e-mail invalide',
+        userNotFound: 'Aucun compte trouvé avec cet e-mail',
+        wrongPassword: 'Mot de passe incorrect',
+        weakPassword: 'Le mot de passe doit comporter au moins 6 caractères',
+        emailInUse: 'Un compte existe déjà avec cet e-mail',
+        invalidCredential: 'E-mail ou mot de passe invalide',
+        googleFailed: 'Échec de la connexion avec Google',
+        resetFailed: 'Impossible d’envoyer le lien. Réessayez.',
+        generic: 'Une erreur est survenue. Veuillez réessayer.'
       },
       courses: {
         catalog: 'Catalogue des cours',
@@ -185,6 +368,9 @@ const resources = {
         enrolled: 'Inscrit',
         viewDashboard: 'Voir le tableau de bord',
         resetFilters: 'Réinitialiser les filtres',
+        searchLabel: 'Rechercher un cours',
+        searchPlaceholder: 'Rechercher par nom ou matière…',
+        allSubjects: 'Toutes les matières',
         noCoursesTitle: "Aucun cours ne correspond à ce filtre pour l’instant",
         noCoursesSubtitle: 'Ajustez les filtres ou revenez au catalogue complet.',
         progress: 'Progression',
@@ -298,18 +484,108 @@ const resources = {
         search: 'Chèche',
         all: 'Tout',
         none: 'Okenn',
-        required: 'Obligatwa'
+        required: 'Obligatwa',
+        retry: 'Eseye ankò',
+        retrying: 'N ap eseye ankò…'
+      },
+      errors: {
+        genericTitle: 'Gen yon pwoblèm ki rive',
+        genericBody: 'Yon erè rive. Tanpri eseye ankò.',
+        loadTitle: 'Nou pa ka chaje kontni an',
+        loadBody: 'Tcheke koneksyon ou epi eseye ankò.',
+        boundaryTitle: 'Aplikasyon an jwenn yon pwoblèm',
+        boundaryBody: 'Eskize pou dezagreman an. Ou ka rechaje paj la pou kontinye.',
+        reload: 'Rechaje paj la',
+        offlineHint: 'Sanble ou pa konekte.'
+      },
+      notFound: {
+        code: '404',
+        title: 'Paj la pa jwenn',
+        body: 'Paj w ap chèche a pa egziste oswa li deplase.',
+        home: 'Tounen lakay',
+        courses: 'Gade kou yo'
+      },
+      resume: {
+        title: 'Kontinye kote w te ye a',
+        lessonBadge: 'Kou',
+        examBadge: 'Egzamen blan',
+        quizBadge: 'Pratik',
+        cta: 'Kontinye',
+        dismiss: 'Inyore'
+      },
+      network: {
+        offline: 'Pa gen koneksyon — kontni ki anrejistre disponib',
+        online: 'Koneksyon tounen',
+        syncing: 'N ap senkronize…',
+        synced: 'Senkronize ✓'
+      },
+      a11y: {
+        skipToContent: 'Ale nan kontni an'
+      },
+      meta: {
+        titleTemplate: '{{page}} · EdLight Academy',
+        home: 'Akèy',
+        courses: 'Kou',
+        dashboard: 'Tablo',
+        quizzes: 'Pratik',
+        exams: 'Egzamen blan',
+        about: 'Konsènan',
+        contact: 'Kontak',
+        faq: 'Kesyon',
+        help: 'Èd',
+        privacy: 'Règleman sou enfòmasyon prive',
+        terms: 'Kondisyon itilizasyon',
+        studyPlan: 'Plan etid',
+        trivia: 'Jwèt kesyon',
+        notFound: 'Paj la pa jwenn'
       },
       auth: {
+        welcome: 'Byenveni sou EdLight',
         signIn: 'Konekte',
         signUp: 'Enskri',
         signOut: 'Dekonekte',
-        email: 'Imèl',
-        password: 'Modpas',
+        createAccount: 'Kreye yon kont',
+        continueWithGoogle: 'Kontinye ak Google',
+        orWithEmail: 'oswa kontinye ak imèl',
         fullName: 'Non konplè',
-        forgotPassword: 'Ou bliye modpas la?',
+        fullNamePlaceholder: 'Antre non konplè ou',
+        email: 'Imèl',
+        emailAddress: 'Adrès imèl',
+        emailPlaceholder: 'Antre imèl ou',
+        password: 'Modpas',
+        passwordPlaceholder: 'Antre modpas ou',
+        passwordRule: 'Omwen 6 karaktè.',
+        showPassword: 'Montre modpas',
+        hidePassword: 'Kache modpas',
+        forgotPassword: 'Ou bliye modpas?',
+        resetTitle: 'Reinisyalize modpas ou',
+        resetBody: 'Antre imèl ou epi n ap voye yon lyen pou reinisyalize.',
+        sendResetLink: 'Voye lyen an',
+        sending: 'N ap voye…',
+        resetSent: 'Lyen an voye. Tcheke bwat resepsyon ou.',
+        backToSignIn: 'Tounen nan koneksyon',
+        pleaseWait: 'Tanpri tann…',
+        signedIn: 'Ou konekte!',
+        accountCreated: 'Kont kreye!',
+        googleSuccess: 'Ou konekte ak Google!',
         noAccount: 'Ou pa gen kont?',
-        hasAccount: 'Ou deja gen kont?'
+        hasAccount: 'Ou deja gen kont?',
+        signUpNow: 'Enskri kounye a!',
+        signInInstead: 'Konekte pito!',
+        close: 'Fèmen fenèt la'
+      },
+      authErrors: {
+        fillAllFields: 'Tanpri ranpli tout chan yo',
+        enterName: 'Tanpri antre non ou',
+        invalidEmail: 'Adrès imèl pa valab',
+        userNotFound: 'Pa gen kont ak imèl sa a',
+        wrongPassword: 'Modpas pa kòrèk',
+        weakPassword: 'Modpas la dwe gen omwen 6 karaktè',
+        emailInUse: 'Gen yon kont deja ak imèl sa a',
+        invalidCredential: 'Imèl oswa modpas pa valab',
+        googleFailed: 'Koneksyon ak Google echwe',
+        resetFailed: 'Nou pa ka voye lyen an. Eseye ankò.',
+        generic: 'Gen yon erè. Tanpri eseye ankò.'
       },
       courses: {
         catalog: 'Katalòg kou yo',
@@ -325,6 +601,9 @@ const resources = {
         enrolled: 'Ou enskri',
         viewDashboard: 'Gade tablodbò a',
         resetFilters: 'Reyinisyalize filtè yo',
+        searchLabel: 'Chèche yon kou',
+        searchPlaceholder: 'Chèche pa non oswa matyè…',
+        allSubjects: 'Tout matyè yo',
         noCoursesTitle: 'Pa gen kou ki mache ak filtè sa a',
         noCoursesSubtitle: 'Chanje filtè yo oswa retounen nan tout katalòg la.',
         progress: 'Pwogrè',
@@ -458,4 +737,14 @@ export function initI18n() {
         escapeValue: false
       }
     });
+
+  // Keep the document language in sync with the active UI language so screen
+  // readers and the browser announce content in the right language (WCAG 3.1.1).
+  if (typeof document !== 'undefined') {
+    const applyLang = (lng) => {
+      document.documentElement.lang = lng || 'fr';
+    };
+    applyLang(i18n.language);
+    i18n.on('languageChanged', applyLang);
+  }
 }

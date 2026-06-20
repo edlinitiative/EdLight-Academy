@@ -8,7 +8,7 @@
  * Hand-written (no build tooling) so it stays simple and reviewable.
  * Bump CACHE_VERSION to force-refresh all caches after a structural change.
  */
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
@@ -17,6 +17,7 @@ const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
 const SHELL_ASSETS = [
   '/',
   '/index.html',
+  '/offline.html',
   '/manifest.webmanifest',
   '/icon-192.png',
   '/assets/logo.png',
@@ -85,7 +86,12 @@ async function navigationHandler(request) {
     return res;
   } catch {
     const cache = await caches.open(SHELL_CACHE);
-    return (await cache.match('/index.html')) || (await cache.match('/')) || Response.error();
+    return (
+      (await cache.match('/index.html')) ||
+      (await cache.match('/')) ||
+      (await cache.match('/offline.html')) ||
+      Response.error()
+    );
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Target, Flame, Check, X, BookOpen, MessageCircle } from 'lucide-react';
 import { useAppData } from '../hooks/useData';
@@ -9,14 +9,57 @@ import Comments from '../components/Comments';
 import FlashcardDeck from '../components/FlashcardDeck';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
+import { ErrorState } from '../components/StateViews';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { useTranslation } from 'react-i18next';
+
+// ── Video resume position ("reprendre la vidéo") ───────────────────────────
+// Persist the last playback second per lesson in localStorage so reopening a
+// lesson resumes the video where the learner stopped. Kept local + tiny so it
+// works for signed-out free-preview viewers too, with no backend round-trip.
+const VIDEO_POS_KEY = 'edlight-video-positions';
+
+function readVideoPositions() {
+  try {
+    return JSON.parse(localStorage.getItem(VIDEO_POS_KEY) || '{}') || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveVideoPosition(key, t, d) {
+  if (!key || !Number.isFinite(t)) return;
+  try {
+    const all = readVideoPositions();
+    if (t < 5 || (d && t > d * 0.95)) {
+      // Near the start or essentially finished — drop any resume point.
+      delete all[key];
+    } else {
+      all[key] = { t: Math.floor(t), d: d ? Math.floor(d) : 0 };
+    }
+    // Bound the map so it can never grow without limit.
+    const keys = Object.keys(all);
+    if (keys.length > 200) delete all[keys[0]];
+    localStorage.setItem(VIDEO_POS_KEY, JSON.stringify(all));
+  } catch {
+    /* storage unavailable / quota exceeded — resume is best-effort */
+  }
+}
+
+function getResumeSeconds(key) {
+  if (!key) return 0;
+  const rec = readVideoPositions()[key];
+  if (!rec || !Number.isFinite(rec.t)) return 0;
+  if (rec.t < 15) return 0; // ignore trivially short watches
+  if (rec.d && rec.t > rec.d * 0.95) return 0; // basically finished
+  return rec.t;
+}
 
 export default function CourseDetail() {
   const { t } = useTranslation();
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading } = useAppData();
+  const { data, isLoading, isError, isFetching, refetch } = useAppData();
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -25,6 +68,7 @@ export default function CourseDetail() {
   const [showComments, setShowComments] = useState(false); // Mobile comments toggle
   const { isAuthenticated, enrolledCourses, user } = useStore();
   const freeVideoIds = useStore((s) => s.freeVideoIds);
+  const recordActivity = useStore((s) => s.recordActivity);
   const { progress } = useCourseProgress(courseId);
 
   const course = data?.courses?.find((c) => c.id === courseId);
@@ -148,6 +192,20 @@ export default function CourseDetail() {
     setShowQuiz(false);
   }, [activeLesson]);
 
+  // Remember where the learner was so Home can offer "Reprendre où vous étiez".
+  useEffect(() => {
+    if (!course || !courseId) return;
+    const lessonTitle = activeLessonData?.title || activeModuleData?.title || '';
+    recordActivity({
+      type: 'lesson',
+      path: `/courses/${courseId}`,
+      title: course.title || lessonTitle || String(courseId),
+      subtitle: lessonTitle && lessonTitle !== course.title ? lessonTitle : undefined,
+      ts: Date.now(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, course?.title, activeModuleData?.id, activeLessonData?.id]);
+
   // Handler to mark lesson as complete
   const handleMarkComplete = async () => {
     if (!user?.uid || !courseId || !activeLessonData?.id) return;
@@ -162,10 +220,32 @@ export default function CourseDetail() {
   // Check if current lesson is completed
   const isLessonCompleted = progress?.completedLessons?.includes(activeLessonData?.id) || false;
 
+  // Per-lesson key for saving/restoring the video position.
+  const positionKey = courseId && activeLessonData?.id ? `${courseId}:${activeLessonData.id}` : '';
+  const lastSavedRef = useRef({ key: '', t: -100 });
+
+  // Where to resume this lesson's video (0 if none / completed). Recomputed when
+  // the lesson changes; the player remounts per video via its key.
+  const resumeSeconds = useMemo(() => {
+    if (!positionKey || isLessonCompleted) return 0;
+    return getResumeSeconds(positionKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [positionKey, youtubeVideoId, isLessonCompleted]);
+
   // Handle YouTube player time updates for progress tracking
   const handleVideoTimeUpdate = ({ currentTime, duration }) => {
+    // Persist resume position for everyone (throttled to ~5s), independent of
+    // enrolment/auth so free-preview viewers also get resume.
+    if (positionKey && Number.isFinite(currentTime)) {
+      const last = lastSavedRef.current;
+      if (last.key !== positionKey || Math.abs(currentTime - last.t) >= 5) {
+        lastSavedRef.current = { key: positionKey, t: currentTime };
+        saveVideoPosition(positionKey, currentTime, duration);
+      }
+    }
+
     if (!user?.uid || !isEnrolled || !activeLessonData) return;
-    
+
     // Track video progress when user watches 10+ seconds
     if (currentTime >= 10) {
       trackVideoProgress(user.uid, courseId, activeLessonData.id, {
@@ -215,6 +295,16 @@ export default function CourseDetail() {
           <div className="card card--centered card--loading">
             <div className="loading-spinner" />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError && !data) {
+    return (
+      <div className="section">
+        <div className="container">
+          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
         </div>
       </div>
     );
@@ -309,6 +399,7 @@ export default function CourseDetail() {
                       title={activeLessonData?.title || activeModuleData?.title || course.name}
                       onTimeUpdate={handleVideoTimeUpdate}
                       onEnded={handleVideoEnded}
+                      startSeconds={resumeSeconds}
                     />
                   ) : (
                     <iframe
