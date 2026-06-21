@@ -1313,7 +1313,10 @@ textarea.input-field {
 	display: grid;
 	place-items: center;
 	padding: calc(1.5rem + env(safe-area-inset-top)) calc(1.5rem + env(safe-area-inset-right)) calc(1.5rem + env(safe-area-inset-bottom)) calc(1.5rem + env(safe-area-inset-left));
-	z-index: 30;
+	/* Must sit above the fixed mobile bottom tab bar (z-index 980); otherwise the
+	   bottom-sheet variant of this modal docks under the bar and its primary CTA
+	   (e.g. the auth submit button) is covered + untappable on phones. */
+	z-index: 1100;
 }
 
 .course-modal {
@@ -2299,7 +2302,7 @@ textarea.input-field {
 
 .about-approach {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 	gap: clamp(1.4rem, 4vw, 2rem);
 	margin-bottom: clamp(2.5rem, 6vw, 4rem);
 }
@@ -2518,7 +2521,9 @@ textarea.input-field {
    narrow ones — gives the dashboard a balanced, less-bloated single screen. */
 .dashboard-cols {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	/* min(320px, 100%) keeps two columns on wide screens but lets the track shrink
+	   to the container on narrow phones (<=320px) instead of overflowing it. */
+	grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
 	gap: clamp(1.4rem, 3vw, 2rem);
 	align-items: start;
 }

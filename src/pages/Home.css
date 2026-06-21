@@ -188,7 +188,9 @@
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.02;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  /* Floor lowered from 2.5rem so the hero is ~32px (not 40px) on small phones,
+     restoring the mobile-first intent that this page CSS was overriding. */
+  font-size: clamp(2rem, 6vw, 4.5rem);
   margin: 2rem 0 1.5rem;
   color: var(--lp-accent);
 }
@@ -561,7 +563,7 @@
 .lp-testi__grid {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
 }
 
 .lp-quote {
