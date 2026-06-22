@@ -140,27 +140,9 @@ export function Navbar() {
           <span className="logo__text">EdLight Academy</span>
         </Link>
 
-        {/* Mobile Menu Toggle Button */}
-        <button
-          className="mobile-menu-toggle"
-          onClick={() => setShowMobileMenu(!showMobileMenu)}
-          aria-label={showMobileMenu ? 'Fermer le menu' : 'Ouvrir le menu'}
-          aria-controls="primary-navigation"
-          aria-expanded={showMobileMenu}
-        >
-          {showMobileMenu ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          )}
-        </button>
+        {/* Mobile menu is opened from the bottom tab bar's "Menu" tab
+            (shared `showMobileMenu` store flag), so the top-bar hamburger
+            is intentionally omitted to avoid a redundant control. */}
 
         <nav id="primary-navigation" className={`nav-links ${showMobileMenu ? 'nav-links--mobile-open' : ''}`} ref={navLinksRef}>
           {/* Drawer header (mobile only) */}
