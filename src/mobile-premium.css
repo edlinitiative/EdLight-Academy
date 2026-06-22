@@ -648,6 +648,24 @@
     overflow: hidden;
   }
   .lp-course__foot { margin-top: 0.4rem; padding-top: 0.7rem; font-size: 0.66rem; }
+
+  /* — Courses filter bar: one tidy scrollable line, never a double row —
+     The "Pass 4" premium layer (index.css) makes .filter-group a wrapping pill
+     cluster, so on a phone the level + subject filters spilled onto two lines.
+     Force each group into a single horizontal-scroll row (iOS-style chip bar).
+     Scoping under .page-header__actions (0,2,0) beats the single-class wrap. */
+  .page-header__actions .filter-group,
+  .page-header__actions .filter-group--subjects {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .page-header__actions .filter-group::-webkit-scrollbar { display: none; }
+  .page-header__actions .filter-pill { flex: 0 0 auto; white-space: nowrap; }
 }
 
 /* ====================================================================

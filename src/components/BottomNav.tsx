@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, BookOpen, ClipboardList, Gamepad2, Menu as MenuIcon } from 'lucide-react';
 import useStore from '../contexts/store';
@@ -28,6 +28,38 @@ export default function BottomNav() {
     return pathname.startsWith(path);
   };
 
+  // Native-app feel for the tab bar:
+  //   • single tap → smooth-scroll the current page back to the top (the <Link>
+  //                 still handles navigation when the route is different)
+  //   • double tap → reload the route (a quick "pull-to-refresh" equivalent)
+  const lastTapRef = useRef({ to: '', time: 0 });
+
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.scrollingElement?.scrollTo?.({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const handleTabTap = (to) => (e) => {
+    const now = Date.now();
+    const prev = lastTapRef.current;
+    const isDoubleTap = prev.to === to && now - prev.time < 350;
+    lastTapRef.current = { to, time: now };
+
+    if (isDoubleTap) {
+      // Second quick tap on the same tab → refresh.
+      e.preventDefault();
+      window.location.reload();
+      return;
+    }
+    // First tap → jump to the top. Essential when we're already on this route,
+    // since the <Link> won't navigate (and so wouldn't otherwise reset scroll).
+    scrollToTop();
+  };
+
   return (
     <nav className="bottom-nav" aria-label="Navigation principale">
       <div className="bottom-nav__inner">
@@ -39,6 +71,7 @@ export default function BottomNav() {
               to={to}
               className={`bottom-nav__item ${active ? 'is-active' : ''}`}
               aria-current={active ? 'page' : undefined}
+              onClick={handleTabTap(to)}
             >
               <span className="bottom-nav__icon">
                 <Icon size={22} strokeWidth={active ? 2.4 : 2} aria-hidden="true" />

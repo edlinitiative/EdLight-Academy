@@ -3978,6 +3978,13 @@ textarea:focus-visible,
 	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.14);
 }
 
+/* The generic `input[type="search"]` premium rule (specificity 0,1,1) outranks
+   the single class above and reset the left padding, sliding the placeholder
+   under the search icon. Re-assert room for the icon with a 2-class selector. */
+.courses-search .courses-search__input {
+	padding-left: 2.5rem;
+}
+
 .filter-group--subjects {
 	flex-wrap: wrap;
 }
