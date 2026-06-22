@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchSingleExam } from '../utils/examCatalog';
@@ -125,7 +126,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
 
   const sampleOptions = sample && sample.options ? Object.entries(sample.options) : [];
 
-  return (
+  return createPortal(
     <div
       className="exam-preview"
       role="dialog"
@@ -314,6 +315,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
           </p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -497,6 +497,9 @@
   .exam-card {
     gap: 0.45rem;
     border-radius: 16px;
+    /* The .card base padding floor is 1.4rem (~22px), which makes these feel
+       oversized on a phone. Tighten it so cards read compact and scannable. */
+    padding: 1.05rem 1.1rem;
   }
 
   /* Hide secondary / power-user detail — keep subject, title, level,

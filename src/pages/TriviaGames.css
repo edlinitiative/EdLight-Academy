@@ -562,6 +562,35 @@
   padding: 2rem 1rem;
 }
 
+/* ── Mobile refinements ──────────────────────────────────────────────────
+   On phones the fixed bottom tab bar eats ~64px, and short screens shouldn't
+   sit vertically centred (they look stranded in the middle of the page). */
+@media (max-width: 767px) {
+  .trivia-page,
+  .trivia-landing,
+  .trivia-results {
+    min-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height) - var(--bottom-nav-height, 64px));
+  }
+
+  /* Start the results card at the top instead of the middle. (This is a row
+     flex, so vertical position is controlled by align-items; justify-content
+     stays center to keep the card horizontally centred.) */
+  .trivia-results {
+    align-items: flex-start;
+    padding-top: 1.5rem;
+  }
+
+  /* Lift the round picker so it doesn't begin halfway down the screen. */
+  .trivia-round-picker { padding-top: 1.5rem; }
+
+  /* Compact the category cards so they don't dominate the viewport. */
+  .trivia-cat-card__media { aspect-ratio: 12 / 5; }
+  .trivia-cat-card__title { font-size: 0.98rem; padding: 0.7rem 1rem 0.65rem; }
+  .trivia-cat-card__body { padding: 0.8rem 1rem 0.4rem; gap: 0.45rem; }
+  .trivia-cat-card__desc { font-size: 0.85rem; line-height: 1.5; }
+  .trivia-cat-card__footer { padding: 0.6rem 1rem 0.8rem; }
+}
+
 .trivia-results__card {
   display: flex;
   flex-direction: column;
