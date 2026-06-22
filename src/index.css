@@ -10805,6 +10805,20 @@ textarea:focus-visible,
 	font-style: italic;
 }
 
+/* Explanations reuse InstructionRenderer — strip its translucent "glass"
+   container so the text blends into the explanation/feedback box instead of
+   nesting a faint bordered box inside it. */
+.exam-results__item-explanation .instruction-renderer,
+.exam-take__feedback-explain .instruction-renderer {
+	margin-top: 0;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: 0;
+	max-height: none;
+	overflow: visible;
+}
+
 .exam-results__actions {
 	display: flex;
 	justify-content: center;
