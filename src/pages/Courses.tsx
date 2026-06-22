@@ -105,10 +105,8 @@ export default function Courses() {
   return (
     <section className="section">
       <div className="container">
-        <div className="page-header">
+        <div className="page-header page-header--no-eyebrow">
           <div>
-            <h1 className="page-header__title">{t('courses.catalogTitle')}</h1>
-            <p className="page-header__subtitle">{t('courses.catalogSubtitle')}</p>
             <p className="page-header__count">
               {t('courses.countLabel', '{{count}} cours', { count: filteredCourses.length })}
             </p>

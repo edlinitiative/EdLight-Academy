@@ -46,15 +46,6 @@ const ExamLanding = () => {
 
   return (
     <div className="exam-landing">
-      <header className="exam-landing__header">
-        <span className="exam-landing__eyebrow">Examens Officiels MENFP</span>
-        <h1 className="exam-landing__title">Choisissez votre niveau</h1>
-        <p className="exam-landing__subtitle">
-          Accédez à la banque d'examens officiels haïtiens avec corrections automatiques
-          et suivi de votre progression.
-        </p>
-      </header>
-
       <div className="exam-landing__grid">
         {LEVELS.map((level) => {
           // The Terminale (Baccalauréat) card embeds the filière quick-pick so the

@@ -19,17 +19,6 @@ function shuffle(arr) {
 function CategoryPicker({ onSelect, isCreole }) {
   return (
     <div className="trivia-landing">
-      <header className="trivia-landing__header">
-        <h1 className="trivia-landing__title">
-          {isCreole ? 'Teste Konesans Ou' : 'Testez vos connaissances'}
-        </h1>
-        <p className="trivia-landing__subtitle">
-          {isCreole
-            ? 'Chwazi yon kategori epi reponn kesyon yo pou vin pi entelijan!'
-            : 'Choisissez une catégorie et répondez aux questions pour apprendre en vous amusant !'}
-        </p>
-      </header>
-
       <div className="trivia-landing__grid">
         {TRIVIA_CATEGORIES.map((cat) => (
           <button

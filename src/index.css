@@ -14383,6 +14383,11 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	margin-bottom: 0.85rem;
 }
 
+/* Opt out of the auto-injected eyebrow pill */
+.page-header--no-eyebrow > div:first-child::before {
+	content: none !important;
+}
+
 /* Quiz page also raises h1 to serif treatment (matches .page-header__title) */
 .quiz-page .page-header h1 {
 	font-family: var(--font-serif);
