@@ -821,18 +821,20 @@
     padding: 0;
   }
 
-  /* The search box owns the row above. The two primary dropdowns (matière /
-     année) share a row, and difficulté spans the full width below — this keeps
-     the labels readable at the 16px iOS-safe font without clipping. */
+  /* The search box owns the row above; the three dropdowns share one compact
+     3-up row. The font is shrunk below the usual 16px iOS-safe size on purpose
+     to keep them small (a brief focus-zoom is an acceptable trade-off here). */
   .exam-browser__filters {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.45rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
   }
-  .exam-browser__filters > .exam-browser__select:nth-child(3) {
-    grid-column: 1 / -1;
+  .exam-browser__select {
+    width: 100%;
+    font-size: 0.72rem !important;
+    padding: 0.3rem 0.8rem 0.3rem 0.4rem;
+    min-height: 30px;
   }
-  .exam-browser__select { width: 100%; }
 
   /* Filière chips: one tidy horizontally-scrollable row instead of a wrapped
      wall of buttons. */
