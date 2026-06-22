@@ -817,8 +817,8 @@
 /* ── b) Exam filter bar: compact, not full-screen-tall ── */
 @media (max-width: 767px) {
   .exam-browser__filters-card {
-    gap: 0.55rem;
-    padding: 0.7rem;
+    gap: 0.5rem;
+    padding: 0;
   }
 
   /* The search box owns the row above. The two primary dropdowns (matière /

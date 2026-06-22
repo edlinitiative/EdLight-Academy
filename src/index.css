@@ -4806,16 +4806,16 @@ textarea:focus-visible,
 	box-shadow: none;
 }
 
-/* Cohesive card surface (matches the rest of the site's cards) */
+/* Filter section wrapper — no outer box, just a stacking container */
 .exam-browser__filters-card {
 	display: flex;
 	flex-direction: column;
 	gap: 0.55rem;
-	background: var(--surface);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-lg);
-	padding: clamp(0.6rem, 1.6vw, 0.8rem);
-	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+	background: none;
+	border: none;
+	border-radius: 0;
+	padding: 0;
+	box-shadow: none;
 }
 
 /* Row of compact dropdown filters (the search box sits on its own row above) */
@@ -4840,19 +4840,16 @@ textarea:focus-visible,
 .exam-browser__filter-toggle {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.4rem;
+	justify-content: center;
+	gap: 0.3rem;
 	flex: 0 0 auto;
-	padding: 0.5rem 0.85rem;
+	padding: 0.5rem 0.6rem;
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border);
 	background: var(--surface);
 	color: var(--text-700);
-	font-family: var(--font-sans);
-	font-size: 0.85rem;
-	font-weight: 600;
 	cursor: pointer;
 	transition: background 0.2s, border-color 0.2s, color 0.2s;
-	white-space: nowrap;
 }
 
 .exam-browser__filter-toggle:hover {
@@ -4913,16 +4910,16 @@ textarea:focus-visible,
 /* Selects — consistent with the site's input fields */
 .exam-browser__select {
 	appearance: none;
-	padding: 0.5rem 1.5rem 0.5rem 0.65rem;
+	padding: 0.38rem 1.2rem 0.38rem 0.5rem;
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border);
 	background:
 		url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
-		no-repeat right 0.5rem center / 12px,
+		no-repeat right 0.4rem center / 11px,
 		var(--surface);
 	color: var(--text-800);
 	font-family: var(--font-sans);
-	font-size: 0.85rem;
+	font-size: 0.68rem;
 	cursor: pointer;
 	transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 	width: 100%;
@@ -4948,23 +4945,9 @@ textarea:focus-visible,
 	width: 100%;
 }
 
-.exam-browser__search-icon {
-	position: absolute;
-	left: 1rem;
-	top: 50%;
-	transform: translateY(-50%);
-	color: var(--text-300);
-	pointer-events: none;
-	transition: color 0.2s;
-}
-
-.exam-browser__search-wrap:focus-within .exam-browser__search-icon {
-	color: var(--primary-500);
-}
-
 .exam-browser__search {
 	width: 100%;
-	padding: 0.5rem 1rem 0.5rem 2.6rem;
+	padding: 0.5rem 1rem;
 	border-radius: var(--radius-md);
 	border: 1px solid var(--border);
 	background: var(--surface);
@@ -12126,12 +12109,15 @@ textarea:focus-visible,
 
 /* Small-screen touch-target refinements */
 @media (max-width: 640px) {
-	.exam-browser__select,
 	.exam-browser__search,
 	.exam-browser__clear-btn,
 	.exam-browser__load-btn {
 		min-height: 44px;
 	
+	}
+
+	.exam-browser__select {
+		min-height: 35px;
 	}
 
 	.exam-browser__stat-chip {
@@ -12328,24 +12314,22 @@ textarea:focus-visible,
 	all: unset;
 	box-sizing: border-box;
 	cursor: pointer;
-	font-size: 0.78rem;
+	font-size: 0.72rem;
 	font-weight: 600;
-	padding: 0.3rem 0.7rem;
+	padding: 0.2rem 0.5rem;
 	border-radius: 999px;
-	border: 1.5px solid var(--border, #e2e8f0);
-	background: var(--surface);
+	border: none;
+	background: transparent;
 	color: var(--text-muted);
 	transition: all 0.15s;
 	white-space: nowrap;
 }
 
 .exam-browser__track-chip:hover {
-	border-color: var(--track-color, var(--primary));
 	color: var(--track-color, var(--primary));
 }
 
 .exam-browser__track-chip--active {
-	border-color: var(--track-color, var(--primary));
 	background: color-mix(in srgb, var(--track-color, var(--primary)) 12%, var(--surface));
 	color: var(--track-color, var(--primary));
 }
@@ -14958,7 +14942,6 @@ body {
 .course-card,
 .quiz-card,
 .exam-card,
-.exam-browser__filters-card,
 .level-card,
 .trivia-cat-card,
 .trivia-quiz__question-card,

@@ -303,10 +303,6 @@ const ExamBrowser = () => {
             {/* Search + filter toggle */}
             <div className="exam-browser__search-row">
               <div className="exam-browser__search-wrap">
-                <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
                 <input
                   className="exam-browser__search"
                   type="search"
@@ -327,7 +323,6 @@ const ExamBrowser = () => {
                 aria-label="Filtres"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-                <span className="exam-browser__filter-toggle-label">Filtres</span>
                 {dropdownCount > 0 && <span className="exam-browser__filter-badge">{dropdownCount}</span>}
               </button>
             </div>
