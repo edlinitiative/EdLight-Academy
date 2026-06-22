@@ -538,10 +538,9 @@
    ========================================================== */
 .lp-testi { background: var(--lp-paper-100); border-top: 1px solid var(--lp-paper-200); border-bottom: 1px solid var(--lp-paper-200); }
 
-.lp-testi__grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+.lp-testi__carousel {
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .lp-quote {
@@ -586,6 +585,59 @@
   text-transform: uppercase;
   color: var(--lp-ink-700);
 }
+
+/* Solo, centred quote that rotates — editorial, no card chrome */
+.lp-quote--solo {
+  background: transparent;
+  border: none;
+  padding: 0 1rem;
+  text-align: center;
+  align-items: center;
+  gap: 1.25rem;
+  animation: lp-quote-in 480ms ease both;
+}
+.lp-quote--solo .lp-quote__mark {
+  position: static;
+  font-size: 3rem;
+  line-height: 0.6;
+  opacity: 0.5;
+}
+.lp-quote--solo blockquote {
+  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+  line-height: 1.55;
+  font-weight: 500;
+  min-height: 3.5em;
+}
+.lp-quote--solo figcaption {
+  border-top: none;
+  padding-top: 0;
+  align-items: center;
+}
+
+@keyframes lp-quote-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-quote--solo { animation: none; }
+}
+
+/* Pagination dots */
+.lp-testi__dots {
+  display: flex; justify-content: center; align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+}
+.lp-testi__dot {
+  width: 8px; height: 8px;
+  padding: 0; border: none; border-radius: 999px;
+  background: var(--lp-paper-300);
+  cursor: pointer;
+  transition: width 200ms ease, background-color 200ms ease;
+}
+.lp-testi__dot:hover { background: var(--lp-ink-400); }
+.lp-testi__dot.is-active { width: 26px; background: var(--lp-accent); }
+.lp-testi__dot:focus-visible { outline: 2px solid var(--lp-accent); outline-offset: 3px; }
 
 /* ==========================================================
    CTA

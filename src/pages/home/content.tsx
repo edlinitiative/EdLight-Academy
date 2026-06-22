@@ -62,10 +62,10 @@ export const getPillars = (t: TFn): Pillar[] => [
 ];
 
 export const getStats = (t: TFn): Stat[] => [
-  { value: '4 000+', label: t('élèves accompagnés', 'elèv ki akonpaye') },
-  { value: '600+', label: t('leçons vidéo', 'leson videyo') },
-  { value: '120+', label: t('examens disponibles', 'egzamen ki disponib') },
-  { value: '96%', label: t('de satisfaction', 'satisfaksyon') },
+  { value: '490+', label: t('examens blancs', 'egzamen blan') },
+  { value: '300+', label: t('leçons vidéo', 'leson videyo') },
+  { value: 'NS I–IV', label: t('niveaux couverts', 'nivo ki kouvri') },
+  { value: '100%', label: t('gratuit', 'gratis') },
 ];
 
 export const getTestimonials = (t: TFn): Testimonial[] => [

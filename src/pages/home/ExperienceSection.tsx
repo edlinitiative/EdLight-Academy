@@ -21,9 +21,9 @@ export default function ExperienceSection({ t }: { t: TFn }) {
             </h2>
             <ul className="lp-checklist">
               <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Vidéos HD avec sous-titres en français et créole', 'Videyo HD ak soustit an franse ak kreyòl')}</li>
-              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Quiz qui s’adaptent à votre niveau', 'Quiz ki ajiste ak nivo ou')}</li>
-              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Corrections rédigées par des enseignants', 'Koreksyon ekri pa pwofesè')}</li>
-              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Plan d’étude hebdomadaire personnalisé', 'Plan etid chak semèn pèsonalize')}</li>
+              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Installable comme une app, accessible hors-ligne', 'Enstale l tankou yon app, itilize l san entènèt')}</li>
+              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Corrections rédigées par des enseignants', 'Koreksyon ekri pa pwofèsè')}</li>
+              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Progression synchronisée sur tous vos appareils', 'Pwogresyon ou senkronize sou tout aparèy ou')}</li>
             </ul>
             <div className="lp-hero__actions">
               <button className="lp-btn lp-btn--primary" onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}>
