@@ -18,7 +18,7 @@ const LEVELS = [
     to: '/exams/terminale',
     glyph: 'cap',
     heading: 'Terminale',
-    desc: 'Examens du baccalauréat haïtien. Toutes les matières, toutes les sessions, avec auto-correction intégrée.',
+    desc: 'Examens du baccalauréat haïtien, toutes les sessions, avec auto-correction intégrée.',
     badge: 'Baccalauréat',
     color: '#7c3aed',
   },
@@ -56,58 +56,76 @@ const ExamLanding = () => {
       </header>
 
       <div className="exam-landing__grid">
-        {LEVELS.map((level) => (
-          <Link
-            key={level.to}
-            to={level.to}
-            className="level-card"
-            style={{ '--level-color': level.color }}
-          >
-            <CardCover className="level-card__cover" glyph={level.glyph} color={level.color} />
-            <div className="level-card__body">
-              <h2 className="level-card__heading">{level.heading}</h2>
-              <p className="level-card__desc">{level.desc}</p>
-            </div>
-            <div className="level-card__footer">
-              <span className="level-card__cta">Explorer →</span>
-              <span className="level-card__badge">{level.badge}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Filière quick-pick — sets the Bac track so scores are coefficient-weighted */}
-      <section className="track-pick" aria-label="Choisir votre filière du Baccalauréat">
-        <div className="track-pick__head">
-          <h2 className="track-pick__title">Vous préparez le Baccalauréat ?</h2>
-          <p className="track-pick__subtitle">
-            Choisissez votre filière pour des examens ciblés et des scores pondérés
-            selon les coefficients officiels.
-          </p>
-        </div>
-        <div className="track-pick__grid">
-          {TRACKS.map((t) => {
-            const active = userTrack === t.code;
+        {LEVELS.map((level) => {
+          // The Terminale (Baccalauréat) card embeds the filière quick-pick so the
+          // whole "choose your level / choose your série" flow fits one screen
+          // without a separate section forcing the page to scroll.
+          if (level.to === '/exams/terminale') {
             return (
-              <button
-                key={t.code}
-                type="button"
-                className={`track-pick__card ${active ? 'track-pick__card--active' : ''}`}
-                style={{ '--track-color': t.color }}
-                onClick={() => pickTrack(t.code)}
-                aria-pressed={active}
+              <div
+                key={level.to}
+                className="level-card level-card--bac"
+                style={{ '--level-color': level.color }}
               >
-                <CardCover className="track-pick__cover" glyph={t.glyph} color={t.color} />
-                <span className="track-pick__body">
-                  <span className="track-pick__label">{t.shortLabel}</span>
-                  <span className="track-pick__desc">{t.description}</span>
-                  {active && <span className="track-pick__current">Votre filière ✓</span>}
-                </span>
-              </button>
+                <Link to={level.to} className="level-card__link">
+                  <CardCover className="level-card__cover" glyph={level.glyph} color={level.color} />
+                  <div className="level-card__body">
+                    <h2 className="level-card__heading">{level.heading}</h2>
+                    <p className="level-card__desc">{level.desc}</p>
+                  </div>
+                </Link>
+
+                <div className="level-card__tracks" aria-label="Choisir votre filière du Baccalauréat">
+                  <span className="level-card__tracks-label">Choisissez votre filière</span>
+                  <div className="level-card__chips">
+                    {TRACKS.map((t) => {
+                      const active = userTrack === t.code;
+                      return (
+                        <button
+                          key={t.code}
+                          type="button"
+                          className={`bac-chip ${active ? 'bac-chip--active' : ''}`}
+                          style={{ '--track-color': t.color }}
+                          onClick={() => pickTrack(t.code)}
+                          aria-pressed={active}
+                          title={t.label}
+                        >
+                          {t.shortLabel}
+                          {active && <span className="bac-chip__check" aria-hidden="true">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="level-card__footer">
+                  <Link to={level.to} className="level-card__cta">Explorer →</Link>
+                  <span className="level-card__badge">{level.badge}</span>
+                </div>
+              </div>
             );
-          })}
-        </div>
-      </section>
+          }
+
+          return (
+            <Link
+              key={level.to}
+              to={level.to}
+              className="level-card"
+              style={{ '--level-color': level.color }}
+            >
+              <CardCover className="level-card__cover" glyph={level.glyph} color={level.color} />
+              <div className="level-card__body">
+                <h2 className="level-card__heading">{level.heading}</h2>
+                <p className="level-card__desc">{level.desc}</p>
+              </div>
+              <div className="level-card__footer">
+                <span className="level-card__cta">Explorer →</span>
+                <span className="level-card__badge">{level.badge}</span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 };
