@@ -432,9 +432,12 @@
   .app-shell:not(.app-shell--focused) .app-shell__main {
     padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.5rem);
   }
-  /* The footer sits above the bar too (and is hidden entirely when focused). */
-  .app-shell:not(.app-shell--focused) .footer {
-    margin-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
+  /* App-like PWA: the marketing footer (Contact / Confidentialité / Conditions)
+     is out of place inside the phone app shell, where the bottom tab bar is the
+     primary chrome — so drop it on phones. It still renders on >=768px (the
+     desktop site) and is already hidden in focused/immersive flows. */
+  .footer {
+    display: none;
   }
 }
 

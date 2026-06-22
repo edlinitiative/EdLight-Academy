@@ -163,10 +163,11 @@
 .lp-hero {
   position: relative;
   background: var(--lp-paper-50);
-  padding: 6rem 0 3.5rem;
+  /* Top padding trimmed ~40% so the eyebrow sits closer to the navbar. */
+  padding: 3.6rem 0 3.5rem;
   border-bottom: 1px solid var(--lp-paper-200);
 }
-@media (min-width: 768px) { .lp-hero { padding: 9rem 0 5rem; } }
+@media (min-width: 768px) { .lp-hero { padding: 5.4rem 0 5rem; } }
 
 .lp-hero__bg { display: none; }
 .lp-hero__orb { display: none; }
@@ -382,12 +383,19 @@
 
 .lp-course__media {
   position: relative;
-  aspect-ratio: 4 / 3;
+  /* Matches the real 760×425 (16:9) artwork so there's no letterbox gap. */
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: var(--lp-paper-100);
   border-bottom: 1px solid var(--lp-paper-200);
 }
-.lp-course__media img {
+/* The <img> carries width/height attrs (good for CLS), but the global
+   `img[width][height] { height: auto }` reset (mobile-first.css) has a higher
+   specificity than `.lp-course__media img` and was forcing the cover image
+   back to its natural height — leaving a paper-coloured strip below it. Match
+   that selector's specificity so height:100% + object-fit:cover wins. */
+.lp-course__media img,
+.lp-course__media img[width][height] {
   width: 100%; height: 100%;
   object-fit: cover; object-position: center;
   display: block;

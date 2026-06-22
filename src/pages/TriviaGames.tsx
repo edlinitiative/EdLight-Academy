@@ -55,11 +55,11 @@ function CategoryPicker({ onSelect, isCreole }) {
             </div>
             <div className="trivia-cat-card__body">
               <p className="trivia-cat-card__desc">{isCreole ? cat.descriptionHt : cat.description}</p>
+            </div>
+            <div className="trivia-cat-card__footer">
               <span className="trivia-cat-card__count">
                 {TRIVIA_QUESTIONS[cat.id].length} {isCreole ? 'kesyon' : 'questions'}
               </span>
-            </div>
-            <div className="trivia-cat-card__footer">
               <span className="trivia-cat-card__cta">
                 {isCreole ? 'Jwe →' : 'Jouer →'}
               </span>

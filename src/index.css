@@ -445,7 +445,9 @@ main {
 }
 
 .mobile-menu-toggle {
-	display: inline-flex;
+	/* Removed: the bottom tab bar's "Menu" tab opens the same drawer (shared
+	   `showMobileMenu` store flag), so this top-bar hamburger is redundant. */
+	display: none;
 	align-items: center;
 	justify-content: center;
 	width: 32px;

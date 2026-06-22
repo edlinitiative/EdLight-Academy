@@ -191,6 +191,66 @@
   border-radius: 999px;
 }
 
+/* ── Phone: compact horizontal rows so every level fits one screen ──
+   The stacked cover+body+footer card is ~240px tall; three of them force a
+   scroll. On phones we re-flow each card into a grid: a slim cover rail on the
+   left, the heading/blurb top-right and the cta/badge bottom-right — dropping
+   each card to ~96px so 9e, Terminale and Université are all visible. */
+@media (max-width: 700px) {
+  .exam-landing {
+    padding-top: 0.85rem;
+  }
+  .exam-landing__header {
+    margin-bottom: 0.85rem;
+    gap: 0.3rem;
+  }
+  .exam-landing__subtitle {
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+  .exam-landing__grid {
+    gap: 0.7rem;
+    max-width: 480px;
+  }
+
+  .level-card {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    grid-template-areas:
+      "cover body"
+      "cover footer";
+    align-items: stretch;
+  }
+  .level-card__cover {
+    grid-area: cover;
+    height: auto;
+    min-height: 100%;
+  }
+  .level-card__body {
+    grid-area: body;
+    padding: 0.65rem 0.85rem 0.3rem;
+    gap: 0.2rem;
+  }
+  .level-card__heading {
+    font-size: 0.98rem;
+  }
+  .level-card__desc {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .level-card__footer {
+    grid-area: footer;
+    padding: 0.25rem 0.85rem 0.6rem;
+    border-top: none;
+    background: transparent;
+  }
+}
+
 /* ── Desktop/tablet enhancements ── */
 @media (min-width: 701px) {
   .exam-landing {

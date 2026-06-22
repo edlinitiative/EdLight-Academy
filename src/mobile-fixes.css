@@ -765,8 +765,10 @@ body {
   .page-header__actions {
     width: 100%;
     flex-direction: column;
-    gap: 1rem;
-    margin-top: 0.5rem;
+    /* Tighter so the search + filter rows read as one compact toolbar and the
+       first course card isn't pushed below the fold. */
+    gap: 0.55rem;
+    margin-top: 0.35rem;
   }
   
   .page-header__actions .button {
