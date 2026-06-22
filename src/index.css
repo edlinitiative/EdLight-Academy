@@ -14138,10 +14138,11 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 }
 .exam-landing__title {
 	font-family: var(--font-serif);
-	font-size: clamp(1.8rem, 4vw, 2.6rem) !important;
+	font-size: clamp(1.15rem, 6vw, 2.2rem) !important;
 	font-weight: 600 !important;
 	letter-spacing: -0.025em !important;
 	color: var(--text-900) !important;
+	white-space: nowrap !important;
 }
 .exam-landing__subtitle {
 	color: var(--text-600) !important;
@@ -14515,9 +14516,10 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	font-family: var(--font-serif) !important;
 	font-weight: 600 !important;
 	letter-spacing: -0.028em !important;
-	font-size: clamp(2.2rem, 5vw, 3.4rem) !important;
+	font-size: clamp(1.15rem, 6vw, 2.2rem) !important;
 	line-height: 1.04 !important;
 	margin-bottom: 0.85rem !important;
+	white-space: nowrap !important;
 }
 .exam-landing__title::after {
 	content: '.';
