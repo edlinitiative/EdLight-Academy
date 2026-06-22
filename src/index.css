@@ -10953,6 +10953,31 @@ textarea:focus-visible,
 	color: var(--text-700);
 }
 
+/* Prose passage — a reading text that was tagged as a figure. Drop the
+   figure-ish tint and present it as a clean, readable passage with a calm
+   left accent (no icon / "FIGURE" label header). */
+.figure-renderer--prose {
+	border-color: var(--border);
+	background: var(--surface-muted, #f8fafc);
+	border-left: 3px solid var(--primary-400, #60a5fa);
+}
+.figure-render--prose {
+	padding: 1rem 1.15rem;
+	color: var(--text-800);
+	line-height: 1.7;
+	font-size: 0.95rem;
+}
+.figure-render__prose-p {
+	margin: 0 0 0.75rem;
+}
+.figure-render__prose-p:last-child {
+	margin-bottom: 0;
+}
+.figure-renderer--compact .figure-render--prose {
+	font-size: 0.85rem;
+	line-height: 1.6;
+}
+
 /* Image placeholder */
 .figure-render--image {
 	padding: 0.75rem;

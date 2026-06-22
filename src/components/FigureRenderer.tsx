@@ -116,6 +116,20 @@ function classifyFigure(desc) {
   return FIGURE_TYPES.TEXT;
 }
 
+// Detect when a "figure description" is actually a natural-language reading
+// passage (common in language exams, where the comprehension text was tagged
+// as a figure). Only meaningful once a description has fallen through to the
+// TEXT classification, i.e. it matched no real figure type. Deliberately
+// conservative so short verbal figure descriptions stay as figure cards.
+function looksLikeProse(desc) {
+  const text = (desc || '').trim();
+  if (text.length < 180) return false;                      // passages are long
+  if (text.split(/\s+/).filter(Boolean).length < 35) return false; // and wordy
+  if ((text.match(/[.!?…]/g) || []).length < 2) return false;    // multi-sentence
+  if ((text.match(/\$/g) || []).length >= 4) return false;  // a math block, not prose
+  return true;
+}
+
 // ─── Utility: render inline math ────────────────────────────────────────────
 
 function InlineMath({ text }) {
@@ -2689,6 +2703,22 @@ function ImagePlaceholder({ description }) {
   );
 }
 
+// ─── Prose passage (reading text mis-tagged as a figure) ────────────────────
+
+function ProsePassage({ description }) {
+  const paragraphs = useMemo(
+    () => String(description).split(/\n+/).map((p) => p.trim()).filter(Boolean),
+    [description]
+  );
+  return (
+    <div className="figure-render figure-render--prose">
+      {paragraphs.map((p, i) => (
+        <p key={i} className="figure-render__prose-p"><InlineMath text={p} /></p>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export default function FigureRenderer({ description, compact = false }) {
@@ -2696,7 +2726,16 @@ export default function FigureRenderer({ description, compact = false }) {
 
   if (!description) return null;
 
-  const wrapCls = `figure-renderer ${compact ? 'figure-renderer--compact' : ''}`;
+  // A question tagged has_figure whose "figure" is really a long prose reading
+  // passage: present it as a readable passage rather than the generic "Figure"
+  // card chrome (icon + "FIGURE" label).
+  const isProse = type === FIGURE_TYPES.TEXT && looksLikeProse(description);
+
+  const wrapCls = [
+    'figure-renderer',
+    compact ? 'figure-renderer--compact' : '',
+    isProse ? 'figure-renderer--prose' : '',
+  ].filter(Boolean).join(' ');
 
   let content;
   switch (type) {
@@ -2729,7 +2768,9 @@ export default function FigureRenderer({ description, compact = false }) {
       break;
     case FIGURE_TYPES.TEXT:
     default:
-      content = <DescriptionCard description={description} icon="📋" label="Figure" />;
+      content = isProse
+        ? <ProsePassage description={description} />
+        : <DescriptionCard description={description} icon="📋" label="Figure" />;
       break;
   }
 
