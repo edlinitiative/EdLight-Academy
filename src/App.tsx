@@ -5,10 +5,10 @@ import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AdminRoute from './components/AdminRoute';
 import ScrollToTop from './components/ScrollToTop';
+import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
-const Home = lazyWithRetry(() => import('./pages/Home'));
 const Courses = lazyWithRetry(() => import('./pages/Courses'));
 const CourseDetail = lazyWithRetry(() => import('./pages/CourseDetail'));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
@@ -53,7 +53,7 @@ export default function App() {
           }>
             <Routes>
               <Route path="/" element={<Layout />}>
-                <Route index element={<Home />} />
+                <Route index element={<HomeRoute />} />
                 <Route path="courses" element={<Courses />} />
                 <Route path="courses/:courseId" element={<CourseDetail />} />
                 <Route path="dashboard" element={<Dashboard />} />
