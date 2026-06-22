@@ -239,10 +239,8 @@ const ExamBrowser = () => {
 
   // Summary counts for filtered set
   const summary = useMemo(() => {
-    const totalQ = filtered.reduce((s, e) => s + (e._questionCount || 0), 0);
-    const gradable = filtered.reduce((s, e) => s + (e._autoGradable || 0), 0);
     const done = filtered.reduce((s, e) => s + (attempts[examKeyOf(e)] ? 1 : 0), 0);
-    return { exams: filtered.length, totalQ, gradable, done };
+    return { exams: filtered.length, done };
   }, [filtered, attempts, examKeyOf]);
 
   // Unique subjects and years for filter dropdowns (from level-filtered index)
@@ -300,87 +298,62 @@ const ExamBrowser = () => {
         {/* Sticky filter bar */}
         <div className="exam-browser__filters-sticky">
           <div className="exam-browser__filters-card">
+            {/* Search */}
+            <div className="exam-browser__search-wrap">
+              <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                className="exam-browser__search"
+                type="search"
+                placeholder="Rechercher…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Rechercher un examen"
+                enterKeyHint="search"
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+            </div>
+
+            {/* Filter dropdowns */}
             <div className="exam-browser__filters">
-              {/* Subject */}
-              <div className="exam-browser__field">
-                <select
-                  className="exam-browser__select"
-                  value={subjectFilter}
-                  onChange={(e) => setSubjectFilter(e.target.value)}
-                  aria-label="Filtrer par matière"
-                >
-                  <option value="">Toutes les matières</option>
-                  {subjects.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                className="exam-browser__select"
+                value={subjectFilter}
+                onChange={(e) => setSubjectFilter(e.target.value)}
+                aria-label="Filtrer par matière"
+              >
+                <option value="">Matière</option>
+                {subjects.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
 
-              {/* Year */}
-              <div className="exam-browser__field">
-                <select
-                  className="exam-browser__select"
-                  value={yearFilter}
-                  onChange={(e) => setYearFilter(e.target.value)}
-                  aria-label="Filtrer par année"
-                >
-                  <option value="">Toutes les années</option>
-                  {years.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                className="exam-browser__select"
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+                aria-label="Filtrer par année"
+              >
+                <option value="">Année</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
 
-              {/* Difficulty */}
-              <div className="exam-browser__field">
-                <select
-                  className="exam-browser__select"
-                  value={difficultyFilter}
-                  onChange={(e) => setDifficultyFilter(e.target.value)}
-                  aria-label="Filtrer par difficulté"
-                >
-                  <option value="">Toute difficulté</option>
-                  <option value="easy">Facile</option>
-                  <option value="medium">Moyen</option>
-                  <option value="hard">Difficile</option>
-                </select>
-              </div>
-
-              {/* Search */}
-              <div className="exam-browser__field exam-browser__field--search">
-                <div className="exam-browser__search-wrap">
-                  <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <input
-                    className="exam-browser__search"
-                    type="search"
-                    placeholder="Titre, matière, année…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    aria-label="Rechercher un examen"
-                    enterKeyHint="search"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                  />
-                </div>
-              </div>
-
-              {/* Clear filters */}
-              {hasActiveFilters && (
-                <div className="exam-browser__field exam-browser__field--actions">
-                  <button
-                    className="exam-browser__clear-btn"
-                    onClick={clearFilters}
-                    type="button"
-                    aria-label="Réinitialiser les filtres"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                    Effacer
-                  </button>
-                </div>
-              )}
+              <select
+                className="exam-browser__select"
+                value={difficultyFilter}
+                onChange={(e) => setDifficultyFilter(e.target.value)}
+                aria-label="Filtrer par difficulté"
+              >
+                <option value="">Difficulté</option>
+                <option value="easy">Facile</option>
+                <option value="medium">Moyen</option>
+                <option value="hard">Difficile</option>
+              </select>
             </div>
 
             {/* Track filter chips — only for Terminale/Baccalauréat */}
@@ -418,23 +391,8 @@ const ExamBrowser = () => {
               </div>
             )}
 
-            {/* Stat chips */}
+            {/* Status filter + reset */}
             <div className="exam-browser__summary">
-              <span className="exam-browser__stat-chip">
-                {summary.totalQ.toLocaleString()} question{summary.totalQ !== 1 ? 's' : ''}
-              </span>
-              {summary.gradable > 0 && (
-                <span className="exam-browser__stat-chip exam-browser__stat-chip--accent">
-                  {summary.gradable.toLocaleString()} auto-corrigée{summary.gradable !== 1 ? 's' : ''}
-                </span>
-              )}
-              {summary.done > 0 && (
-                <span className="exam-browser__stat-chip exam-browser__stat-chip--done">
-                  {summary.done} déjà fait{summary.done !== 1 ? 's' : ''}
-                </span>
-              )}
-
-              {/* Status filter — done / to do */}
               <div className="exam-browser__status-filter" role="group" aria-label="Filtrer par statut">
                 <button
                   type="button"
@@ -459,6 +417,18 @@ const ExamBrowser = () => {
                   Terminés
                 </button>
               </div>
+
+              {hasActiveFilters && (
+                <button
+                  className="exam-browser__clear-btn"
+                  onClick={clearFilters}
+                  type="button"
+                  aria-label="Réinitialiser les filtres"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  Effacer
+                </button>
+              )}
             </div>
           </div>
         </div>

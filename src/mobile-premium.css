@@ -821,28 +821,18 @@
     padding: 0.7rem;
   }
 
-  /* Selects sit in a tidy 2-up grid; search and the reset button span the
-     full width. This roughly halves the height of the old one-per-row stack
-     that filled the whole screen. */
+  /* The search box owns the row above. The two primary dropdowns (matière /
+     année) share a row, and difficulté spans the full width below — this keeps
+     the labels readable at the 16px iOS-safe font without clipping. */
   .exam-browser__filters {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
-    align-items: start;
+    gap: 0.45rem;
   }
-  .exam-browser__field {
-    flex: initial;
-    min-width: 0;
-  }
-  .exam-browser__field--search {
+  .exam-browser__filters > .exam-browser__select:nth-child(3) {
     grid-column: 1 / -1;
-    order: -1; /* search first — it's the primary control */
-  }
-  .exam-browser__field--actions {
-    align-self: stretch; /* sits beside "Difficulté" rather than on its own row */
   }
   .exam-browser__select { width: 100%; }
-  .exam-browser__clear-btn { width: 100%; height: 100%; }
 
   /* Filière chips: one tidy horizontally-scrollable row instead of a wrapped
      wall of buttons. */
