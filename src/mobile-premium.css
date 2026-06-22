@@ -920,3 +920,20 @@
   }
 }
 
+/* ====================================================================
+   14 · MOBILE DENSITY — lift content above the fold
+   ====================================================================
+   The desktop "premium" layer (index.css, !important) adds generous
+   .section padding and .page-header margins for breathing room on large
+   screens. On phones that pushes the catalog/landing content far below the
+   navbar, so the first cards need a long scroll. Tighten it for <=767px
+   only — desktop is untouched. */
+@media (max-width: 767px) {
+  .section { padding: 0.85rem 0 0.5rem !important; }
+  .page-header { margin-bottom: 0.9rem !important; }
+  .page-header__title { font-size: clamp(1.45rem, 6vw, 1.85rem) !important; }
+  .page-header__subtitle { font-size: 0.95rem !important; line-height: 1.5 !important; }
+  /* The dashboard already manages its own tighter rhythm; don't over-compress. */
+  .dashboard-grid .section { padding: 0.85rem 0 !important; }
+}
+

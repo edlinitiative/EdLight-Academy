@@ -580,8 +580,10 @@
     padding-top: 1.5rem;
   }
 
-  /* Lift the round picker so it doesn't begin halfway down the screen. */
-  .trivia-round-picker { padding-top: 1.5rem; }
+  /* Lift the round picker so it doesn't begin halfway down the screen, and
+     shrink the thumbnail so the title + options sit higher. */
+  .trivia-round-picker { padding-top: 1rem; gap: 1.5rem; }
+  .trivia-round-picker__thumb { width: 72px; height: 72px; border-radius: 16px; }
 
   /* Compact the category cards so they don't dominate the viewport. */
   .trivia-cat-card__media { aspect-ratio: 12 / 5; }

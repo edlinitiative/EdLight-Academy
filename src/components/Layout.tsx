@@ -27,6 +27,11 @@ export function Layout() {
   const isExamTaking =
     /^\/exams\/[^/]+\/[^/]+$/.test(pathname) && !pathname.endsWith('/results');
   const isLessonView = /^\/courses\/[^/]+$/.test(pathname);
+  // Trivia is a single-route, app-like game flow (landing -> round picker ->
+  // quiz -> results). It keeps the bottom tab bar for navigation, but the
+  // marketing footer (Contact/Confidentialité/Conditions) is out of place in a
+  // game screen, so we drop it here.
+  const isTrivia = pathname === '/trivia';
   const isImmersive = isExamTaking;
   const isFocused = isExamTaking || isLessonView;
 
@@ -98,7 +103,7 @@ export function Layout() {
       <main id="main-content" className="app-shell__main">
         <Outlet />
       </main>
-      <Footer />
+      {!isTrivia && <Footer />}
       {!isFocused && <BottomNav />}
       {showAuthModal && <AuthModal onClose={() => toggleAuthModal()} />}
       <StreakMilestoneModal isCreole={isCreole} />
