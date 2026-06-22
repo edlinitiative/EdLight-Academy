@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell } from 'lucide-react';
 import useStore from '../contexts/store';
+import { useFocusMode } from '../hooks/useFocusMode';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import './TriviaGames.css';
 
@@ -308,6 +309,10 @@ export default function TriviaGames() {
   const [category, setCategory] = useState(null);
   const [roundCount, setRoundCount] = useState(10);
   const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+
+  // While a round is in play, go heads-down: drop the bottom tab bar + footer
+  // so the question owns the screen. The in-quiz ✕ button is the way out.
+  useFocusMode(screen === 'play');
 
   const handleCategorySelect = (catId) => {
     setCategory(catId);

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { useAppData } from '../hooks/useData';
+import { useFocusMode } from '../hooks/useFocusMode';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
 
@@ -127,6 +128,10 @@ const Quizzes = () => {
   const [bankDirectItem, setBankDirectItem] = useState(null);
   const [bankMessage, setBankMessage] = useState('');
   const [isLoadingBank, setIsLoadingBank] = useState(false);
+
+  // Taking a practice question is a focused task: hide the bottom tab bar +
+  // footer while one is on screen so it reads like a dedicated quiz.
+  useFocusMode(!!bankDirectItem);
 
   const generateCurriculumPractice = async () => {
     try {

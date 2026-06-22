@@ -12,7 +12,7 @@ import { StreakMilestoneModal } from './Streak';
 import useStore from '../contexts/store';
 
 export function Layout() {
-  const { showAuthModal, toggleAuthModal, language, theme } = useStore();
+  const { showAuthModal, toggleAuthModal, language, theme, focusMode } = useStore();
   const { t } = useTranslation();
   const isCreole = language === 'ht';
   const queryClient = useQueryClient();
@@ -33,7 +33,12 @@ export function Layout() {
   // game screen, so we drop it here.
   const isTrivia = pathname === '/trivia';
   const isImmersive = isExamTaking;
-  const isFocused = isExamTaking || isLessonView;
+  // `focusMode` is a transient store flag set by phase-based flows (via the
+  // useFocusMode hook) that can't be detected from the URL alone — e.g. an
+  // active trivia round (screen === 'play') or a live practice question on
+  // /quizzes. It drops the bottom tab bar + footer for the same "maximum
+  // focus" effect as the route-based flows above.
+  const isFocused = isExamTaking || isLessonView || focusMode;
 
   const shellClassName = [
     'app-shell',

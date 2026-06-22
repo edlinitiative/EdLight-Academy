@@ -576,6 +576,12 @@
     min-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height) - var(--bottom-nav-height, 64px));
   }
 
+  /* Focus mode (an active round) drops the bottom tab bar, so the play screen
+     reclaims its ~64px and fills the viewport for a true full-screen game. */
+  .app-shell--focused .trivia-page {
+    min-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
+  }
+
   /* Start the results card at the top instead of the middle. (This is a row
      flex, so vertical position is controlled by align-items; justify-content
      stays center to keep the card horizontally centred.) */
