@@ -174,9 +174,11 @@ const ExamBrowser = () => {
   const [difficultyFilter, setDifficultyFilter] = useState(''); // '' | 'easy' | 'medium' | 'hard'
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(''); // '' | 'todo' | 'done'
+  const [showFilters, setShowFilters] = useState(false); // collapsible dropdown panel
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const hasActiveFilters = subjectFilter || yearFilter || search.trim() || trackFilter || statusFilter || difficultyFilter;
+  const dropdownCount = [subjectFilter, yearFilter, difficultyFilter].filter(Boolean).length;
 
   const clearFilters = useCallback(() => {
     setSubjectFilter('');
@@ -298,26 +300,40 @@ const ExamBrowser = () => {
         {/* Sticky filter bar */}
         <div className="exam-browser__filters-sticky">
           <div className="exam-browser__filters-card">
-            {/* Search */}
-            <div className="exam-browser__search-wrap">
-              <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                className="exam-browser__search"
-                type="search"
-                placeholder="Rechercher…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Rechercher un examen"
-                enterKeyHint="search"
-                autoCapitalize="none"
-                autoCorrect="off"
-              />
+            {/* Search + filter toggle */}
+            <div className="exam-browser__search-row">
+              <div className="exam-browser__search-wrap">
+                <svg className="exam-browser__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  className="exam-browser__search"
+                  type="search"
+                  placeholder="Rechercher…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Rechercher un examen"
+                  enterKeyHint="search"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+              </div>
+              <button
+                type="button"
+                className={`exam-browser__filter-toggle ${showFilters ? 'exam-browser__filter-toggle--open' : ''}`}
+                onClick={() => setShowFilters((v) => !v)}
+                aria-expanded={showFilters}
+                aria-label="Filtres"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
+                <span className="exam-browser__filter-toggle-label">Filtres</span>
+                {dropdownCount > 0 && <span className="exam-browser__filter-badge">{dropdownCount}</span>}
+              </button>
             </div>
 
-            {/* Filter dropdowns */}
+            {/* Filter dropdowns (collapsible) */}
+            {showFilters && (
             <div className="exam-browser__filters">
               <select
                 className="exam-browser__select"
@@ -355,11 +371,11 @@ const ExamBrowser = () => {
                 <option value="hard">Difficile</option>
               </select>
             </div>
+            )}
 
             {/* Track filter chips — only for Terminale/Baccalauréat */}
             {isTerminale && (
               <div className="exam-browser__track-bar">
-                <span className="exam-browser__track-label">Filière :</span>
                 <button
                   className={`exam-browser__track-chip ${!trackFilter ? 'exam-browser__track-chip--active' : ''}`}
                   onClick={() => setTrackFilter('')}

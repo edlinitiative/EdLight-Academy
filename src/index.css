@@ -4825,6 +4825,63 @@ textarea:focus-visible,
 	gap: 0.5rem;
 }
 
+/* Search + filter-toggle live on one row */
+.exam-browser__search-row {
+	display: flex;
+	gap: 0.5rem;
+	align-items: stretch;
+}
+
+.exam-browser__search-row .exam-browser__search-wrap {
+	flex: 1 1 auto;
+}
+
+/* Filter icon button that toggles the dropdown panel */
+.exam-browser__filter-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex: 0 0 auto;
+	padding: 0.5rem 0.85rem;
+	border-radius: var(--radius-md);
+	border: 1px solid var(--border);
+	background: var(--surface);
+	color: var(--text-700);
+	font-family: var(--font-sans);
+	font-size: 0.85rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s, border-color 0.2s, color 0.2s;
+	white-space: nowrap;
+}
+
+.exam-browser__filter-toggle:hover {
+	background: var(--surface-muted);
+	border-color: var(--border-strong);
+	color: var(--text-900);
+}
+
+.exam-browser__filter-toggle--open {
+	border-color: var(--primary-500);
+	color: var(--primary-700, #1d4ed8);
+	background: rgba(10, 102, 194, 0.06);
+}
+
+.exam-browser__filter-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.05rem;
+	height: 1.05rem;
+	padding: 0 0.3rem;
+	border-radius: 100px;
+	background: var(--primary-500);
+	color: #fff;
+	font-size: 0.68rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
 /* Field groups (label-less — the select's default option is self-describing) */
 .exam-browser__field {
 	display: flex;
