@@ -57,7 +57,6 @@ export default function FAQ() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">{isCreole ? 'Repons rapid' : 'Réponses rapides'}</span>
             <h1>{isCreole ? 'Kesyon yo poze souvan (FAQ)' : 'Foire aux questions (FAQ)'}</h1>
             <p className="text-muted">
               {isCreole

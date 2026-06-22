@@ -136,9 +136,6 @@ export default function About() {
 
         {/* Hero */}
         <section className="about-hero">
-          <span className="page-header__eyebrow">
-            {isCreole ? 'Misyon nou' : 'Notre mission'}
-          </span>
           <h1 className="about-hero__title">
             {isCreole ? 'Bon jan edikasyon pou chak elèv ayisyen' : 'Une éducation de qualité pour chaque élève haïtien'}
           </h1>

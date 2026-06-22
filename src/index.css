@@ -14379,28 +14379,9 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	width: max-content;
 }
 
-/* Auto-inject an eyebrow on Cours & Quiz page headers */
-.quiz-page .page-header > div:first-child::before,
-.section .page-header:not(:has(.page-header__eyebrow)) > div:first-child::before {
-	content: 'EdLight Academy';
-	display: inline-flex;
-	align-items: center;
-	padding: 0.4rem 0.85rem;
-	border-radius: 999px;
-	background: color-mix(in srgb, var(--lp-accent) 10%, transparent);
-	color: var(--lp-accent);
-	font-size: 0.7rem;
-	font-weight: 700;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
-	border: 1px solid color-mix(in srgb, var(--lp-accent) 22%, transparent);
-	margin-bottom: 0.85rem;
-}
-
-/* Opt out of the auto-injected eyebrow pill */
-.page-header--no-eyebrow > div:first-child::before {
-	content: none !important;
-}
+/* The auto-injected uppercase "eyebrow" kicker pill (e.g. "EDLIGHT ACADEMY")
+   above page titles was removed — it read as template/AI filler and added no
+   information beyond the page title itself. */
 
 /* Quiz page also raises h1 to serif treatment (matches .page-header__title) */
 .quiz-page .page-header h1 {

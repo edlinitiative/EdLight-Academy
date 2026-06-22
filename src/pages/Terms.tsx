@@ -6,7 +6,6 @@ export default function Terms() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Please read carefully</span>
             <h1>Terms of Use</h1>
             <p className="text-muted">These terms govern your use of EdLight Academy. By using the site, you agree to them.</p>
           </div>

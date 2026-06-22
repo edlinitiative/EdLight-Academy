@@ -6,7 +6,6 @@ export default function Privacy() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">Our commitment</span>
             <h1>Privacy Policy</h1>
             <p className="text-muted">We respect your privacy. This page explains what we collect, how we use it, and your choices.</p>
           </div>

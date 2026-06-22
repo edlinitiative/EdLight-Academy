@@ -31,7 +31,6 @@ export default function Contact() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">{isCreole ? 'Nou vle tande ou' : 'Nous serions ravis de vous lire'}</span>
             <h1>{isCreole ? 'Kontakte nou' : 'Contactez-nous'}</h1>
             <p className="text-muted">
               {isCreole

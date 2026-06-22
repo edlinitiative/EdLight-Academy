@@ -287,7 +287,6 @@ const ExamBrowser = () => {
       <div className="container">
         {/* Header */}
         <div className="page-header exam-browser__header">
-          <span className="page-header__eyebrow">Examens</span>
           <h1 className="page-header__title">{LEVEL_LABELS[level] || 'Examens Nationaux'}</h1>
           <p className="page-header__subtitle">
             Banque d'examens officiels du MENFP{level ? `, ${LEVEL_LABELS[level]}` : ''}

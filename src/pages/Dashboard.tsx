@@ -186,7 +186,6 @@ export default function Dashboard() {
       <div className="container dashboard-grid">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">{isCreole ? 'Byenveni ankò' : 'Bon retour'}</span>
             <h1>
               {isCreole
                 ? `Bonjou ${firstName || 'zanmi'}, ann kontinye vwayaj la`

@@ -10,7 +10,6 @@ export default function Help() {
       <div className="container">
         <div className="page-header">
           <div>
-            <span className="page-header__eyebrow">{isCreole ? 'Sant sipò' : 'Centre d’aide'}</span>
             <h1>{isCreole ? 'Èd' : 'Aide'}</h1>
             <p className="text-muted">
               {isCreole

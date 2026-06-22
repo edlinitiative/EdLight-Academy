@@ -68,7 +68,6 @@ export default function CourseManager() {
       <div className="container">
         <div className="page-header" style={{ marginBottom: '2rem' }}>
           <div>
-            <span className="page-header__eyebrow">Admin</span>
             <h1>Course Structure Manager</h1>
             <p className="text-muted">View and manage course units and lessons</p>
           </div>

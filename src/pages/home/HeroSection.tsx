@@ -12,11 +12,6 @@ export default function HeroSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <div className="lp-hero__layout">
           <div className="lp-hero__copy">
-            <span className="lp-eyebrow">
-              <span className="lp-eyebrow__dot" />
-              {t('Plateforme éducative haïtienne', 'Platfòm edikatif ayisyen')}
-            </span>
-
             <h1 className="lp-hero__title">
               {t('Maîtrisez le ', 'Metrize ')}
               <span className="lp-hero__title-accent">Bac</span>

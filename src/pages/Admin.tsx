@@ -468,7 +468,6 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
       <div className="container">
         <div className="page-header" style={{ marginBottom: '1rem' }}>
           <div>
-            <span className="page-header__eyebrow">Admin</span>
             <h2>{title}</h2>
             <p className="text-muted">Columns: {columns.join(', ')}</p>
           </div>
@@ -659,7 +658,6 @@ export default function Admin() {
         <div className="container">
           <div className="page-header" style={{ marginBottom: '1.5rem' }}>
             <div>
-              <span className="page-header__eyebrow">Admin Dashboard</span>
               <h1>Content Management</h1>
               <p className="text-muted">Manage videos, quizzes, users, and course structure</p>
             </div>

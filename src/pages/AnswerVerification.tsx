@@ -604,7 +604,6 @@ export default function AnswerVerification() {
       {/* Page header */}
       <div className="av-header">
         <div>
-          <span className="page-header__eyebrow">Admin</span>
           <h1>Answer Verification</h1>
           <p className="text-muted">Review and approve AI-generated answers for exam questions</p>
         </div>
