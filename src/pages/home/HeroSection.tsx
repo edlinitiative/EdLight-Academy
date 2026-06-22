@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, Sparkles } from 'lucide-react';
 import { ArrowIcon, getStats, TFn } from './content';
 
 export default function HeroSection({ t }: { t: TFn }) {
@@ -42,19 +41,6 @@ export default function HeroSection({ t }: { t: TFn }) {
                 {t('Passer un examen blanc', 'Pase yon egzamen blan')}
               </button>
             </div>
-
-            <div className="lp-hero__trust">
-              <div className="lp-hero__avatars" aria-hidden="true">
-                <span style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)' }}>C</span>
-                <span style={{ background: 'linear-gradient(135deg,#0A66C2,#22d3ee)' }}>J</span>
-                <span style={{ background: 'linear-gradient(135deg,#10b981,#0ea5e9)' }}>M</span>
-                <span style={{ background: 'linear-gradient(135deg,#a855f7,#ec4899)' }}>+</span>
-              </div>
-              <div className="lp-hero__trust-copy">
-                <strong>4 000+ {t('élèves', 'elèv')}</strong>
-                <span>{t('progressent déjà avec EdLight', 'k ap pwogrese deja ak EdLight')}</span>
-              </div>
-            </div>
           </div>
 
           <div className="lp-hero__visual">
@@ -74,12 +60,6 @@ export default function HeroSection({ t }: { t: TFn }) {
                   }
                 }}
               />
-              <div className="lp-hero__chip lp-hero__chip--a">
-                <span className="lp-hero__chip-dot" />
-                {t('Quiz Physique · 8/10', 'Quiz Fizik · 8/10')}
-              </div>
-              <div className="lp-hero__chip lp-hero__chip--b"><Flame size={14} strokeWidth={2.2} /> {t('Série de 12 jours', 'Seri 12 jou')}</div>
-              <div className="lp-hero__chip lp-hero__chip--c"><Sparkles size={14} strokeWidth={2.2} /> {t('Plan d’étude prêt', 'Plan etid pare')}</div>
             </div>
           </div>
         </div>
