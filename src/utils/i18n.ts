@@ -123,7 +123,7 @@ const resources = {
       },
       courses: {
         catalog: 'Course Catalog',
-        catalogTitle: 'Explore the EdLight Academy Curriculum',
+        catalogTitle: 'Explore the Curriculum',
         catalogSubtitle: 'Filter by level or return to the lessons you already started.',
         myCourses: 'My Courses',
         start: 'Start',
@@ -356,7 +356,7 @@ const resources = {
       },
       courses: {
         catalog: 'Catalogue des cours',
-        catalogTitle: 'Explorez le programme EdLight Academy',
+        catalogTitle: 'Explorez le programme',
         catalogSubtitle: 'Filtrez par niveau ou reprenez les leçons que vous avez déjà commencées.',
         myCourses: 'Mes cours',
         start: 'Commencer',
@@ -589,7 +589,7 @@ const resources = {
       },
       courses: {
         catalog: 'Katalòg kou yo',
-        catalogTitle: 'Dekouvri pwogram EdLight Academy',
+        catalogTitle: 'Dekouvri pwogram nan',
         catalogSubtitle: 'Filtre pa nivo oswa retounen sou leson ou te deja kòmanse yo.',
         myCourses: 'Kou mwen yo',
         start: 'Kòmanse',

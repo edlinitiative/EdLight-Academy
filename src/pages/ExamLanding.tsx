@@ -71,7 +71,6 @@ const ExamLanding = () => {
                   <CardCover className="level-card__cover" glyph={level.glyph} color={level.color} />
                   <div className="level-card__body">
                     <h2 className="level-card__heading">{level.heading}</h2>
-                    <p className="level-card__desc">{level.desc}</p>
                   </div>
                 </Link>
 

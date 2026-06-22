@@ -35,6 +35,16 @@ export default function Courses() {
     NSIV: 'NS IV'
   };
 
+  // Compact subject-pill labels so the filter row stays narrow (the full
+  // subject names — Mathématiques, Économie, Physique — are still used
+  // everywhere else via t('subjects.X')).
+  const subjectShortLabels = {
+    MATH: 'Maths',
+    ECON: 'Econ',
+    PHYS: 'Phys',
+    CHEM: 'Chimie',
+  };
+
   if (isLoading) {
     return (
       <section className="section">
@@ -143,7 +153,7 @@ export default function Courses() {
                     className={["filter-pill", subject === s ? 'filter-pill--active' : ''].join(' ')}
                     onClick={() => setSubject(s)}
                   >
-                    {t(`subjects.${s}`, { defaultValue: s })}
+                    {subjectShortLabels[s] || t(`subjects.${s}`, { defaultValue: s })}
                   </button>
                 ))}
               </div>

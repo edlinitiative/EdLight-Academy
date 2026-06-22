@@ -20,9 +20,6 @@ function CategoryPicker({ onSelect, isCreole }) {
   return (
     <div className="trivia-landing">
       <header className="trivia-landing__header">
-        <span className="trivia-landing__eyebrow">
-          {isCreole ? 'Jeu Edikasyon' : 'Jeux Éducatifs'}
-        </span>
         <h1 className="trivia-landing__title">
           {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
         </h1>
