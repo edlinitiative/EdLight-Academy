@@ -21,7 +21,7 @@ function CategoryPicker({ onSelect, isCreole }) {
     <div className="trivia-landing">
       <header className="trivia-landing__header">
         <h1 className="trivia-landing__title">
-          {isCreole ? 'Trivia, Teste Konesans Ou' : 'Trivia, Testez vos connaissances'}
+          {isCreole ? 'Teste Konesans Ou' : 'Testez vos connaissances'}
         </h1>
         <p className="trivia-landing__subtitle">
           {isCreole
