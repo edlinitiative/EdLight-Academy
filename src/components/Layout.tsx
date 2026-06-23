@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -9,14 +9,23 @@ import NetworkStatus from './NetworkStatus';
 import RouteMeta from './RouteMeta';
 import { AuthModal } from './Auth';
 import { StreakMilestoneModal } from './Streak';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+import { useNotificationRuntime } from '../hooks/useNotificationRuntime';
 import useStore from '../contexts/store';
 
+// Notification panel is only shown on demand — keep it (and its Firebase use)
+// out of the initial shell bundle.
+const NotificationCenter = lazyWithRetry(() => import('./NotificationCenter'));
+
 export function Layout() {
-  const { showAuthModal, toggleAuthModal, language, theme, focusMode } = useStore();
+  const { showAuthModal, toggleAuthModal, language, theme, showNotifications, setShowNotifications, focusMode } = useStore();
   const { t } = useTranslation();
   const isCreole = language === 'ht';
   const queryClient = useQueryClient();
   const { pathname } = useLocation();
+
+  // Start reminder scheduling / push sync once a user is signed in.
+  useNotificationRuntime();
 
   // Focused, app-like flows that should shed the global chrome (bottom tab bar
   // + footer) so the task owns the screen:
@@ -111,6 +120,19 @@ export function Layout() {
       {!isTrivia && <Footer />}
       {!isFocused && <BottomNav />}
       {showAuthModal && <AuthModal onClose={() => toggleAuthModal()} />}
+      {showNotifications && (
+        <Suspense fallback={null}>
+          <div
+            className="notification-overlay"
+            role="presentation"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowNotifications(false);
+            }}
+          >
+            <NotificationCenter onClose={() => setShowNotifications(false)} />
+          </div>
+        </Suspense>
+      )}
       <StreakMilestoneModal isCreole={isCreole} />
     </div>
   );

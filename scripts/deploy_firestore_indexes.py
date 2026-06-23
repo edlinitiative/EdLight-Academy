@@ -61,14 +61,15 @@ def list_existing(tok):
         cg = ix["name"].split("/collectionGroups/")[1].split("/indexes/")[0]
         out.setdefault(cg, []).append({
             "sig": field_sig(ix.get("fields", [])),
+            "scope": ix.get("queryScope", "COLLECTION"),
             "state": ix.get("state"),
         })
     return out
 
 
-def create_index(tok, cg, fields):
+def create_index(tok, cg, fields, scope="COLLECTION"):
     url = f"{BASE}/collectionGroups/{cg}/indexes"
-    body = {"queryScope": "COLLECTION", "fields": [
+    body = {"queryScope": scope, "fields": [
         {k: v for k, v in f.items()} for f in fields
     ]}
     r = requests.post(url, headers={
@@ -94,16 +95,19 @@ def main():
     for ix in desired:
         cg = ix["collectionGroup"]
         fields = ix["fields"]
+        scope = ix.get("queryScope", "COLLECTION")
         sig = field_sig(fields)
-        have = any(e["sig"] == sig for e in existing.get(cg, []))
+        have = any(e["sig"] == sig and e.get("scope", "COLLECTION") == scope
+                   for e in existing.get(cg, []))
         label = ", ".join(f"{p} {o}" for p, o in sig)
+        scope_tag = "" if scope == "COLLECTION" else f" ({scope})"
         if have:
-            print(f"  ✓ exists  [{cg}] {label}")
+            print(f"  ✓ exists  [{cg}]{scope_tag} {label}")
             skipped += 1
             continue
-        print(f"  + create  [{cg}] {label}")
+        print(f"  + create  [{cg}]{scope_tag} {label}")
         try:
-            create_index(tok, cg, fields)
+            create_index(tok, cg, fields, scope)
             created += 1
         except RuntimeError as e:
             # 409 = already exists (race / __name__ variant)

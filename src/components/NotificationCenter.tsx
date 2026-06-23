@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Trophy, Flame, Megaphone, PartyPopper, Repeat, Trash2, Clock } from 'lucide-react';
+import { X, Check, Trophy, Flame, Megaphone, PartyPopper, Repeat, Trash2, Clock, BellRing } from 'lucide-react';
 import useStore from '../contexts/store';
 import { 
   getUnreadNotifications, 
@@ -11,6 +11,14 @@ import {
   createStudyReminder,
   deleteReminder,
 } from '../services/notificationService';
+import {
+  getPermission,
+  requestNotificationPermission,
+  isNotificationSupported,
+  showLocalNotification,
+  subscribeToPush,
+  sendSelfTestPush,
+} from '../services/pushNotificationService';
 
 export default function NotificationCenter({ onClose }) {
   const { user } = useStore();
@@ -19,6 +27,9 @@ export default function NotificationCenter({ onClose }) {
   const [reminders, setReminders] = useState([]);
   const [preferences, setPreferences] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [permission, setPermission] = useState(
+    () => (typeof window !== 'undefined' ? getPermission() : 'default')
+  );
 
   useEffect(() => {
     if (user?.uid) {
@@ -81,14 +92,49 @@ export default function NotificationCenter({ onClose }) {
     tomorrow.setHours(18, 0, 0, 0);
     
     await createStudyReminder(user.uid, {
-      title: 'Daily Study Reminder',
-      message: 'Time to continue your learning journey!',
+      title: "Rappel d'étude quotidien",
+      message: 'Continue ton apprentissage ✨',
       scheduledFor: tomorrow.toISOString(),
       recurring: true,
       recurringPattern: 'daily',
     });
     
     await loadReminders();
+  };
+
+  const handleEnableNotifications = async () => {
+    const result = await requestNotificationPermission();
+    setPermission(result);
+    if (result === 'granted') {
+      if (user?.uid) {
+        try {
+          await subscribeToPush(user.uid);
+        } catch {
+          /* push optional */
+        }
+      }
+      await showLocalNotification('Notifications activées ✅', {
+        body: 'Tu recevras tes rappels et tes succès ici.',
+        tag: 'welcome',
+        url: '/dashboard',
+      });
+    }
+  };
+
+  const handleTestNotification = async () => {
+    // Prefer the server path (this is what fires when the app is closed). If the
+    // backend isn't configured or reached no devices, fall back to a local one.
+    const server = await sendSelfTestPush({
+      title: 'Test EdLight 🔔',
+      body: 'Ceci est une notification de test.',
+      url: '/dashboard',
+    });
+    if (server && server.delivered > 0) return;
+    await showLocalNotification('Test EdLight 🔔', {
+      body: 'Ceci est une notification de test.',
+      tag: 'test',
+      url: '/dashboard',
+    });
   };
 
   if (loading) {
@@ -108,7 +154,7 @@ export default function NotificationCenter({ onClose }) {
   return (
     <div className="notification-center">
       <div className="notification-center__header">
-        <h3>Notifications & Reminders</h3>
+        <h3>Notifications et rappels</h3>
         <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
       </div>
 
@@ -123,17 +169,34 @@ export default function NotificationCenter({ onClose }) {
           className={`notification-center__tab ${activeTab === 'reminders' ? 'notification-center__tab--active' : ''}`}
           onClick={() => setActiveTab('reminders')}
         >
-          Reminders {reminders.length > 0 && `(${reminders.length})`}
+          Rappels {reminders.length > 0 && `(${reminders.length})`}
         </button>
         <button
           className={`notification-center__tab ${activeTab === 'settings' ? 'notification-center__tab--active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          Settings
+          Réglages
         </button>
       </div>
 
       <div className="notification-center__content">
+        {isNotificationSupported() && permission !== 'granted' && (
+          <div className="notification-permission">
+            <div className="notification-permission__icon"><BellRing size={20} /></div>
+            <div className="notification-permission__text">
+              <strong>Activer les notifications</strong>
+              <span>Reçois tes rappels d'étude et tes succès, même quand l'app est en arrière-plan.</span>
+            </div>
+            {permission === 'denied' ? (
+              <span className="notification-permission__blocked">Bloquées dans le navigateur</span>
+            ) : (
+              <button className="button button--primary button--sm" onClick={handleEnableNotifications}>
+                Activer
+              </button>
+            )}
+          </div>
+        )}
+
         {activeTab === 'notifications' && (
           <div className="notification-list">
             {notifications.length > 0 ? (
@@ -143,7 +206,7 @@ export default function NotificationCenter({ onClose }) {
                     className="button button--ghost button--sm"
                     onClick={handleMarkAllRead}
                   >
-                    Mark all as read
+                    Tout marquer comme lu
                   </button>
                 </div>
                 {notifications.map(notif => (
@@ -171,8 +234,8 @@ export default function NotificationCenter({ onClose }) {
               </>
             ) : (
               <div className="notification-empty">
-                <p><PartyPopper size={18} /> You're all caught up!</p>
-                <p className="text-muted">No new notifications</p>
+                <p><PartyPopper size={18} /> Tu es à jour !</p>
+                <p className="text-muted">Aucune nouvelle notification</p>
               </div>
             )}
           </div>
@@ -185,7 +248,7 @@ export default function NotificationCenter({ onClose }) {
                 className="button button--primary button--sm"
                 onClick={handleCreateReminder}
               >
-                + Create Reminder
+                + Créer un rappel
               </button>
             </div>
             {reminders.length > 0 ? (
@@ -195,8 +258,8 @@ export default function NotificationCenter({ onClose }) {
                     <div className="reminder-item__title">{reminder.title}</div>
                     <div className="reminder-item__message">{reminder.message}</div>
                     <div className="reminder-item__schedule">
-                      {reminder.recurring && <><Repeat size={12} /> Recurring • </>}
-                      Scheduled: {new Date(reminder.scheduledFor).toLocaleString()}
+                      {reminder.recurring && <><Repeat size={12} /> Récurrent • </>}
+                      Prévu : {new Date(reminder.scheduledFor).toLocaleString()}
                     </div>
                   </div>
                   <button
@@ -210,8 +273,8 @@ export default function NotificationCenter({ onClose }) {
               ))
             ) : (
               <div className="notification-empty">
-                <p><Clock size={18} /> No active reminders</p>
-                <p className="text-muted">Create a reminder to stay on track</p>
+                <p><Clock size={18} /> Aucun rappel actif</p>
+                <p className="text-muted">Crée un rappel pour rester régulier</p>
               </div>
             )}
           </div>
@@ -219,7 +282,7 @@ export default function NotificationCenter({ onClose }) {
 
         {activeTab === 'settings' && preferences && (
           <div className="notification-settings">
-            <h4>Notification Preferences</h4>
+            <h4>Préférences de notification</h4>
             
             <div className="notification-setting">
               <label className="notification-setting__label">
@@ -228,9 +291,9 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.emailNotifications}
                   onChange={(e) => handlePreferenceChange('emailNotifications', e.target.checked)}
                 />
-                <span>Email Notifications</span>
+                <span>Notifications par e-mail</span>
               </label>
-              <p className="text-muted">Receive important updates via email</p>
+              <p className="text-muted">Reçois les mises à jour importantes par e-mail</p>
             </div>
 
             <div className="notification-setting">
@@ -240,9 +303,9 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.studyReminders}
                   onChange={(e) => handlePreferenceChange('studyReminders', e.target.checked)}
                 />
-                <span>Study Reminders</span>
+                <span>Rappels d'étude</span>
               </label>
-              <p className="text-muted">Get reminders to keep your learning streak</p>
+              <p className="text-muted">Reçois des rappels pour garder ta série d'apprentissage</p>
             </div>
 
             <div className="notification-setting">
@@ -252,9 +315,9 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.achievementNotifications}
                   onChange={(e) => handlePreferenceChange('achievementNotifications', e.target.checked)}
                 />
-                <span>Achievement Notifications</span>
+                <span>Notifications de succès</span>
               </label>
-              <p className="text-muted">Celebrate when you earn new badges</p>
+              <p className="text-muted">Célèbre chaque nouveau badge gagné</p>
             </div>
 
             <div className="notification-setting">
@@ -264,14 +327,14 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.weeklyProgress}
                   onChange={(e) => handlePreferenceChange('weeklyProgress', e.target.checked)}
                 />
-                <span>Weekly Progress Report</span>
+                <span>Rapport de progrès hebdomadaire</span>
               </label>
-              <p className="text-muted">Get a summary of your weekly achievements</p>
+              <p className="text-muted">Reçois un résumé de tes progrès de la semaine</p>
             </div>
 
             <div className="notification-setting">
               <label className="notification-setting__label">
-                <span>Reminder Time</span>
+                <span>Heure du rappel</span>
                 <input
                   type="time"
                   value={preferences.reminderTime}
@@ -279,7 +342,29 @@ export default function NotificationCenter({ onClose }) {
                   className="notification-setting__time-input"
                 />
               </label>
-              <p className="text-muted">Default time for daily reminders</p>
+              <p className="text-muted">Heure par défaut des rappels quotidiens</p>
+            </div>
+
+            <div className="notification-setting">
+              <div className="notification-setting__label">
+                <span>Notifications sur cet appareil</span>
+                {permission === 'granted' ? (
+                  <button className="button button--ghost button--sm" onClick={handleTestNotification}>
+                    Tester
+                  </button>
+                ) : permission === 'denied' ? (
+                  <span className="text-muted">Bloquées</span>
+                ) : (
+                  <button className="button button--primary button--sm" onClick={handleEnableNotifications}>
+                    Activer
+                  </button>
+                )}
+              </div>
+              <p className="text-muted">
+                {permission === 'granted'
+                  ? 'Activées — tu recevras rappels et succès sur cet appareil.'
+                  : 'Autorise les notifications pour recevoir tes rappels.'}
+              </p>
             </div>
           </div>
         )}

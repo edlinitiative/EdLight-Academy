@@ -38,6 +38,7 @@ export interface AppState {
   showUserDropdown: boolean;
   showCourseModal: boolean;
   showMobileMenu: boolean;
+  showNotifications: boolean;
   activeTab: string;
   // Transient (never persisted): a focused task — taking a quiz, a trivia round,
   // a lesson — asks the Layout to shed distracting chrome (the mobile bottom tab
@@ -66,6 +67,8 @@ export interface AppState {
   setActiveTab: (tab: string) => void;
   toggleMobileMenu: () => void;
   setShowMobileMenu: (show: boolean) => void;
+  toggleNotifications: () => void;
+  setShowNotifications: (show: boolean) => void;
   setFocusMode: (focus: boolean) => void;
   logout: () => void;
 }
@@ -95,6 +98,7 @@ const useStore = create<AppState>()(
       showUserDropdown: false,
       showCourseModal: false,
       showMobileMenu: false,
+      showNotifications: false,
       activeTab: 'signin',
       focusMode: false, // transient: set by useFocusMode while a task is active
       
@@ -159,6 +163,8 @@ const useStore = create<AppState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       toggleMobileMenu: () => set((state) => ({ showMobileMenu: !state.showMobileMenu })),
       setShowMobileMenu: (show) => set({ showMobileMenu: !!show }),
+      toggleNotifications: () => set((state) => ({ showNotifications: !state.showNotifications })),
+      setShowNotifications: (show) => set({ showNotifications: !!show }),
       setFocusMode: (focus) => set({ focusMode: !!focus }),
       
       logout: () => set({
@@ -174,7 +180,8 @@ const useStore = create<AppState>()(
         showUserDropdown: false,
         showAuthModal: false,
         showCourseModal: false,
-        showMobileMenu: false
+        showMobileMenu: false,
+        showNotifications: false
       })
     }),
     {

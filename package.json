@@ -21,6 +21,7 @@
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
     "zustand": "^4.4.1"
   },
@@ -36,6 +37,7 @@
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "@types/web-push": "^3.6.4",
     "@vercel/node": "^5.8.8",
     "babel-jest": "^29.7.0",
     "babel-loader": "^9.1.3",

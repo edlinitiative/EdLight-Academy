@@ -87,6 +87,31 @@ export function registerServiceWorker() {
           registration.waiting.postMessage('SKIP_WAITING');
         }
         registration.addEventListener('updatefound', () => promote(registration.installing));
+
+        // Long-lived PWA sessions (installed to the home screen) can stay open
+        // for hours, so a "check only on load" strategy would keep serving an
+        // old build after a deploy. Re-check for a newer worker periodically and
+        // whenever the tab regains focus or the network comes back. Each check
+        // is cheap (a conditional GET of /sw.js); when a new worker is found the
+        // updatefound/controllerchange flow above promotes + reloads it.
+        const checkForUpdate = () => {
+          // Avoid hammering the network: at most once per 15 minutes.
+          const now = Date.now();
+          const last = (checkForUpdate as any)._last || 0;
+          if (now - last < 15 * 60 * 1000) return;
+          (checkForUpdate as any)._last = now;
+          registration.update().catch(() => { /* offline — try again later */ });
+        };
+
+        // Hourly safety net while the tab stays open.
+        window.setInterval(checkForUpdate, 60 * 60 * 1000);
+
+        // Opportunistic checks when the user comes back to the app or reconnects.
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkForUpdate();
+        });
+        window.addEventListener('focus', checkForUpdate);
+        window.addEventListener('online', checkForUpdate);
       })
       .catch((err) => {
         console.warn('Service worker registration failed:', err);

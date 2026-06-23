@@ -50,3 +50,6 @@ yarn-error.log*
 *.swo.env
 .venv/
 .firebase/
+.vercel
+.env*
+!.env.example

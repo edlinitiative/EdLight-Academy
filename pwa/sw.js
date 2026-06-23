@@ -8,7 +8,7 @@
  * Hand-written (no build tooling) so it stays simple and reviewable.
  * Bump CACHE_VERSION to force-refresh all caches after a structural change.
  */
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
@@ -48,9 +48,82 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Allow the page to trigger an immediate update.
+// Messages from the page:
+//   • SKIP_WAITING — activate a freshly-installed worker immediately.
+//   • SHOW_NOTIFICATION — display an OS notification on the page's behalf so it
+//     shows even when the tab is backgrounded and routes clicks through the SW.
 self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  const data = event.data;
+  if (data === 'SKIP_WAITING' || (data && data.type === 'SKIP_WAITING')) {
+    self.skipWaiting();
+    return;
+  }
+  if (data && data.type === 'SHOW_NOTIFICATION' && data.payload) {
+    const { title, ...options } = data.payload;
+    event.waitUntil(
+      self.registration.showNotification(title || 'EdLight Academy', options)
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Push notifications
+// ---------------------------------------------------------------------------
+// Handles Web Push messages (study reminders, achievements, announcements).
+// Today notifications are also raised locally from the page via the message
+// handler above; this `push` listener makes the app ready for a server-side
+// sender (Web Push / FCM) without any further client changes.
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: 'EdLight Academy', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = payload.title || 'EdLight Academy';
+  const options = {
+    body: payload.body || '',
+    icon: payload.icon || '/icon-192.png',
+    badge: payload.badge || '/icon-192.png',
+    lang: 'fr',
+    tag: payload.tag,
+    renotify: !!payload.tag,
+    requireInteraction: !!payload.requireInteraction,
+    actions: Array.isArray(payload.actions) ? payload.actions : [],
+    data: { url: payload.url || '/', ...(payload.data || {}) },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Focus an existing window for the target URL if one is open, otherwise open a
+// new one. Keeps a single tab instead of spawning duplicates.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const targetUrl = data.url || '/';
+  const targetPath = new URL(targetUrl, self.location.origin).pathname;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if (new URL(client.url).pathname === targetPath && 'focus' in client) {
+            return client.focus();
+          }
+        }
+        // No exact match — reuse any open window, else open a fresh one.
+        const open = clients[0];
+        if (open) {
+          const focused = open.focus();
+          if ('navigate' in open) open.navigate(targetUrl).catch(() => {});
+          return focused;
+        }
+        return self.clients.openWindow(targetUrl);
+      })
+  );
 });
 
 /** Cache-first: serve from cache, fetch+store on miss. For immutable assets. */

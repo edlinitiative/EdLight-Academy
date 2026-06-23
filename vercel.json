@@ -4,6 +4,9 @@
   "devCommand": "npm start",
   "installCommand": "npm install",
   "framework": null,
+  "crons": [
+    { "path": "/api/send-reminders", "schedule": "*/15 * * * *" }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/proxy", "destination": "/api/proxy" },

@@ -11,12 +11,14 @@ import {
   CalendarCheck,
   LogOut,
   ChevronRight,
+  Bell,
   X,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
+import NotificationBell from './NotificationBell';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /** Primary destinations shown in the desktop inline nav and the mobile drawer. */
@@ -197,6 +199,17 @@ export function Navbar() {
                   <span className="nav-link__icon"><LayoutDashboard size={19} strokeWidth={2} aria-hidden="true" /></span>
                   <span className="nav-link__label">Tableau de bord</span>
                 </Link>
+                <button
+                  type="button"
+                  className="nav-link nav-link--mobile-only"
+                  onClick={() => {
+                    useStore.getState().setShowNotifications(true);
+                    closeMenu();
+                  }}
+                >
+                  <span className="nav-link__icon"><Bell size={19} strokeWidth={2} aria-hidden="true" /></span>
+                  <span className="nav-link__label">Notifications</span>
+                </button>
                 <Link to="/study-plan" className="nav-link nav-link--mobile-only" onClick={closeMenu}>
                   <span className="nav-link__icon"><CalendarCheck size={19} strokeWidth={2} aria-hidden="true" /></span>
                   <span className="nav-link__label">Plan d'étude</span>
@@ -245,6 +258,8 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <StreakBadge />
+
+              <NotificationBell />
 
               <button
                 className="button button--ghost button--pill nav-actions__dashboard"

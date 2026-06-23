@@ -4757,6 +4757,129 @@ textarea:focus-visible,
 	font-size: 0.875rem;
 }
 
+/* Device row: push the action/status control to the right edge */
+.notification-setting__label > button,
+.notification-setting__label > .text-muted {
+	margin-left: auto;
+}
+
+/* Top-bar notification bell + unread badge */
+.notif-bell {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border: none;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--text-700, #44423d);
+	cursor: pointer;
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.notif-bell:hover {
+	background: rgba(10, 102, 194, 0.08);
+	color: var(--primary, #0a66c2);
+}
+
+.notif-bell:focus-visible {
+	outline: 2px solid var(--primary, #0a66c2);
+	outline-offset: 2px;
+}
+
+.notif-bell__badge {
+	position: absolute;
+	top: 3px;
+	right: 3px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 5px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.6875rem;
+	font-weight: 700;
+	line-height: 1;
+	color: #fff;
+	background: #ef4444;
+	border-radius: 999px;
+	border: 2px solid var(--surface, #fff);
+}
+
+/* Notification center modal overlay */
+.notification-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: clamp(1rem, 5vh, 4rem) 1rem;
+	background: rgba(15, 23, 42, 0.45);
+	-webkit-backdrop-filter: blur(2px);
+	backdrop-filter: blur(2px);
+	overflow-y: auto;
+	animation: notif-overlay-in 0.18s ease-out;
+}
+
+@keyframes notif-overlay-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+.notification-overlay .notification-center {
+	animation: notif-pop-in 0.2s ease-out;
+}
+
+@keyframes notif-pop-in {
+	from { transform: translateY(8px); opacity: 0; }
+	to { transform: translateY(0); opacity: 1; }
+}
+
+/* Permission prompt banner inside the center */
+.notification-permission {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 0.875rem;
+	margin-bottom: 0.75rem;
+	background: rgba(10, 102, 194, 0.08);
+	border: 1px solid rgba(10, 102, 194, 0.2);
+	border-radius: 10px;
+}
+
+.notification-permission__icon {
+	display: inline-flex;
+	color: var(--primary, #0a66c2);
+	flex-shrink: 0;
+}
+
+.notification-permission__text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.notification-permission__text strong {
+	font-size: 0.9rem;
+	color: var(--text-900);
+}
+
+.notification-permission__text span {
+	font-size: 0.8rem;
+	color: var(--text-600);
+}
+
+.notification-permission__blocked {
+	font-size: 0.78rem;
+	color: var(--text-500);
+	white-space: nowrap;
+}
+
 /* ========================================
    Hide YouTube End Screen Overlay
    ======================================== */

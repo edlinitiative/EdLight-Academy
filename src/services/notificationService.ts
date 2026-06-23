@@ -1,5 +1,6 @@
 import { db } from './firebase';
 import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { showLocalNotification } from './pushNotificationService';
 
 /**
  * Notification preferences and reminders system
@@ -134,6 +135,20 @@ export async function markReminderSent(userId, reminderId) {
 }
 
 /**
+ * Raise an OS notification for an in-app event, gated on the user's preference
+ * flag. Best-effort: never throws, so it can't break the calling write.
+ */
+async function maybeShowOsNotification(userId, prefKey, title, options) {
+  try {
+    const prefs = await getNotificationPreferences(userId);
+    if (prefs[prefKey] === false) return;
+    await showLocalNotification(title, options);
+  } catch (error) {
+    console.warn('[Notifications] OS notification skipped:', error);
+  }
+}
+
+/**
  * Create notification for achievement
  */
 export async function notifyAchievement(userId, achievement) {
@@ -150,7 +165,14 @@ export async function notifyAchievement(userId, achievement) {
       read: false,
       createdAt: serverTimestamp(),
     });
-    
+
+    // Also surface it as an OS notification (best-effort, respects prefs).
+    await maybeShowOsNotification(userId, 'achievementNotifications', 'Nouveau succès ! 🎉', {
+      body: `Tu as gagné le badge « ${achievement.name} » ! ${achievement.icon || ''}`.trim(),
+      tag: `achievement-${achievement.badgeId}`,
+      url: '/dashboard',
+    });
+
     return notificationId;
   } catch (error) {
     console.error('Error creating achievement notification:', error);
@@ -181,7 +203,13 @@ export async function notifyStreak(userId, streakDays) {
       read: false,
       createdAt: serverTimestamp(),
     });
-    
+
+    await maybeShowOsNotification(userId, 'achievementNotifications', 'Série en cours ! 🔥', {
+      body: message,
+      tag: `streak-${streakDays}`,
+      url: '/dashboard',
+    });
+
     return notificationId;
   } catch (error) {
     console.error('Error creating streak notification:', error);
