@@ -2,8 +2,13 @@
   "compilerOptions": {
     "target": "ES2020",
     "lib": ["ES2020", "DOM"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    // Vercel's @vercel/node runtime loads the compiled api/*.js as CommonJS
+    // (the repo has no "type":"module"). Emitting ESM here produced
+    // "Cannot use import statement outside a module" at cold-start, taking the
+    // entire /api layer down. Compile to CommonJS so the output matches the
+    // runtime. Extensionless relative imports (./_lib/...) also require CJS.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "types": ["node", "@vercel/node"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
