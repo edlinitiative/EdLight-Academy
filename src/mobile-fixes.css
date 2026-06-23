@@ -2157,32 +2157,14 @@ body {
   }
 }
 
-/* Dark mode adjustments for mobile */
-@media (max-width: 767px) and (prefers-color-scheme: dark) {
-  .navbar {
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(8px);
-  }
-
-  .logo,
-  .logo__text {
-    color: rgba(255, 255, 255, 0.95);
-  }
-
-  .logo__image {
-    /* Use the existing blue logo asset, but render it white on dark */
-    filter: brightness(0) invert(1);
-  }
-
-  .mobile-menu-toggle {
-    color: rgba(255, 255, 255, 0.95);
-  }
-  
-  .modal,
-  .modal__content {
-    background: var(--surface);
-  }
-}
+/* NOTE: Dark-mode styling is driven by the app's own theme toggle via the
+   [data-theme="dark"] selector (set on <html> from app state in Layout.tsx),
+   NOT the OS-level `prefers-color-scheme`. A previous block here keyed off
+   `prefers-color-scheme: dark` and inverted the blue logo to white — which made
+   the logo invisible whenever the phone was in OS dark mode but the app was in
+   its (default) light theme. The navbar/logo/menu/modal dark variants now live
+   solely under [data-theme="dark"] in index.css so the logo stays blue on the
+   light theme and white on the dark theme, matching the actual background. */
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
