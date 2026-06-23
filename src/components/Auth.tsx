@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { RefreshCw, GraduationCap, Eye, EyeOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { RefreshCw, GraduationCap, Eye, EyeOff, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset } from '../services/authService';
@@ -360,6 +361,14 @@ export function UserDropdown({ user, onLogout }) {
           <strong>{user.name}</strong>
           <span className="text-muted" style={{ fontSize: '0.85rem' }}>{user.email}</span>
         </div>
+        <div className="dropdown__divider" />
+        <Link
+          to="/profile"
+          className="dropdown__item"
+          onClick={() => useStore.getState().setShowUserDropdown(false)}
+        >
+          <User size={14} /> Mon profil
+        </Link>
         {trackInfo && (
           <>
             <div className="dropdown__divider" />

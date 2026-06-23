@@ -12,6 +12,7 @@ import { Target, Lightbulb, TrendingUp, ClipboardList } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useReadiness } from '../hooks/useReadiness';
 import { subjectColor } from '../utils/examUtils';
+import { localizeSubject } from '../utils/localizeSubject';
 import './ReadinessCard.css';
 
 export default function ReadinessCard({ maxSubjects = 6 }) {
@@ -69,7 +70,7 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
         </span>
         {strongest && hasData && (
           <span className="readiness-card__strong" title={t('Votre point fort', 'Pwen fò ou')}>
-            <TrendingUp size={13} /> {strongest.subject} {strongest.pct}%
+            <TrendingUp size={13} /> {localizeSubject(strongest.subject, language)} {strongest.pct}%
           </span>
         )}
       </div>
@@ -88,8 +89,8 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
         </div>
 
         <div className="readiness-card__summary">
-          <span className="readiness-card__band" style={{ color: band.color }}>
-            {isCreole ? band.labelHt : band.label}
+          <span className="readiness-card__band" style={{ color: hasData ? band.color : 'var(--text-500)' }}>
+            {hasData ? (isCreole ? band.labelHt : band.label) : t('Pas encore de score', 'Poko gen nòt')}
           </span>
           <p className="readiness-card__caption text-muted">
             {hasData
@@ -112,7 +113,7 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
             return (
               <div className="readiness-subject" key={s.subject}>
                 <div className="readiness-subject__head">
-                  <span className="readiness-subject__name">{s.subject}</span>
+                  <span className="readiness-subject__name">{localizeSubject(s.subject, language)}</span>
                   <span className="readiness-subject__coeff" title={t('Coefficient', 'Koyefisyan')}>
                     ×{s.coeff}
                   </span>
@@ -146,12 +147,12 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
           <span className="readiness-focus__text">
             {focus.hasData
               ? t(
-                  `Concentrez-vous sur ${focus.subject} cette semaine.`,
-                  `Konsantre sou ${focus.subject} semèn sa a.`,
+                  `Concentrez-vous sur ${localizeSubject(focus.subject, language)} cette semaine.`,
+                  `Konsantre sou ${localizeSubject(focus.subject, language)} semèn sa a.`,
                 )
               : t(
-                  `Commencez ${focus.subject} — fort coefficient (×${focus.coeff}).`,
-                  `Kòmanse ${focus.subject} — gwo koyefisyan (×${focus.coeff}).`,
+                  `Commencez ${localizeSubject(focus.subject, language)} — fort coefficient (×${focus.coeff}).`,
+                  `Kòmanse ${localizeSubject(focus.subject, language)} — gwo koyefisyan (×${focus.coeff}).`,
                 )}
           </span>
           <span className="readiness-focus__cta">→</span>

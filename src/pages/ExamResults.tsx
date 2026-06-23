@@ -27,6 +27,16 @@ import {
 const NEEDS_REVIEW = new Set(['incorrect', 'partial', 'unanswered']);
 const MASTERED = new Set(['correct', 'scaffold-complete']);
 
+// Canonical exam subject → the course/quiz subject code used by the catalog.
+// Only the four taught subjects have a practice bank today; this lets us close
+// the loop by deep-linking a weak mock-exam subject straight to its drills.
+const SUBJECT_TO_COURSE_CODE = {
+  'Mathématiques': 'MATH',
+  'Physique': 'PHYS',
+  'Chimie': 'CHEM',
+  'Économie': 'ECON',
+};
+
 /**
  * Group graded results by a key (section title or competency) and compute a
  * points-weighted mastery ratio for each group. Returns sorted groups
@@ -261,6 +271,15 @@ const ExamResults = () => {
     }, 50);
   };
 
+  // ── Close the loop: weakest area → targeted practice → readiness ──────────
+  // `computeMastery` already sorts weakest-first, so element [0] is the gap to
+  // attack. Prefer the section breakdown when the exam has real sections.
+  const weakestArea = (showSectionMastery ? masteryBySection : masteryByType)[0]
+    || masteryByType[0] || null;
+  const masteredSubject = !!weakestArea && weakestArea.pct >= 80;
+  const courseCode = SUBJECT_TO_COURSE_CODE[subject] || null;
+  const studyTarget = courseCode ? `/quizzes?course=${courseCode}` : '/courses';
+
   return (
     <section className="section exam-results">
       <div className="container">
@@ -384,6 +403,33 @@ const ExamResults = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Next step — close the loop: weak area → targeted practice → readiness */}
+      <div className="exam-results__next" style={{ '--next-accent': color } as React.CSSProperties}>
+        <div className="exam-results__next-head">
+          <span className="exam-results__next-icon"><Lightbulb size={20} /></span>
+          <div className="exam-results__next-copy">
+            <h2 className="exam-results__next-title">Et maintenant&nbsp;?</h2>
+            <p className="exam-results__next-sub">
+              {masteredSubject ? (
+                <>Excellent travail en <strong>{subject}</strong> — gardez le rythme pour consolider votre score de préparation au Bac.</>
+              ) : weakestArea ? (
+                <>Votre point faible sur cet examen&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Renforcez-le pour faire monter votre score de préparation au Bac.</>
+              ) : (
+                <>Continuez à vous entraîner en <strong>{subject}</strong> pour faire monter votre score de préparation au Bac.</>
+              )}
+            </p>
+          </div>
+        </div>
+        <div className="exam-results__next-actions">
+          <button className="button button--primary button--pill" onClick={() => navigate(studyTarget)} type="button">
+            <Target size={16} /> {courseCode ? `S'entraîner en ${subject}` : 'Réviser cette matière'}
+          </button>
+          <button className="button button--ghost button--pill" onClick={() => navigate('/dashboard')} type="button">
+            <BarChart3 size={16} /> Voir mon score de préparation
+          </button>
+        </div>
       </div>
 
       {/* Detailed results */}

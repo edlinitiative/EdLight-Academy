@@ -30,12 +30,14 @@ export function Layout() {
   // Focused, app-like flows that should shed the global chrome (bottom tab bar
   // + footer) so the task owns the screen:
   //   • Taking an exam:  /exams/:level/:examId  (but NOT the .../results page)
-  //   • A course lesson: /courses/:courseId
   // The exam-taking flow goes fully immersive (the global navbar is hidden too,
   // since the exam has its own sticky top bar with a back button).
+  //
+  // A course LESSON is also immersive, but the same /courses/:id route first
+  // shows a (non-immersive) overview, so that screen drives focus mode itself
+  // via the `focusMode` store flag rather than this URL test.
   const isExamTaking =
     /^\/exams\/[^/]+\/[^/]+$/.test(pathname) && !pathname.endsWith('/results');
-  const isLessonView = /^\/courses\/[^/]+$/.test(pathname);
   // Trivia is a single-route, app-like game flow (landing -> round picker ->
   // quiz -> results). It keeps the bottom tab bar for navigation, but the
   // marketing footer (Contact/Confidentialité/Conditions) is out of place in a
@@ -44,10 +46,10 @@ export function Layout() {
   const isImmersive = isExamTaking;
   // `focusMode` is a transient store flag set by phase-based flows (via the
   // useFocusMode hook) that can't be detected from the URL alone — e.g. an
-  // active trivia round (screen === 'play') or a live practice question on
-  // /quizzes. It drops the bottom tab bar + footer for the same "maximum
-  // focus" effect as the route-based flows above.
-  const isFocused = isExamTaking || isLessonView || focusMode;
+  // active trivia round (screen === 'play'), a live practice question on
+  // /quizzes, or a course lesson (vs its overview). It drops the bottom tab bar
+  // + footer for the same "maximum focus" effect as the route-based flow above.
+  const isFocused = isExamTaking || focusMode;
 
   const shellClassName = [
     'app-shell',

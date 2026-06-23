@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Target, Flame, Check, X, BookOpen, MessageCircle } from 'lucide-react';
+import { Target, Flame, Check, X, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useAppData } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
@@ -9,7 +9,9 @@ import Comments from '../components/Comments';
 import FlashcardDeck from '../components/FlashcardDeck';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
+import CourseOverview from '../components/CourseOverview';
 import { ErrorState } from '../components/StateViews';
+import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
@@ -60,6 +62,7 @@ export default function CourseDetail() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, isError, isFetching, refetch } = useAppData();
+  const [view, setView] = useState('overview'); // 'overview' | 'lesson'
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -131,6 +134,24 @@ export default function CourseDetail() {
   const prevTarget = findPrevTarget(activeModule, activeLesson);
   const nextTarget = findNextTarget(activeModule, activeLesson);
 
+  // The lesson view is an immersive, heads-down task (sheds the bottom tab bar +
+  // footer); the overview is a browsing screen that keeps the global chrome.
+  useFocusMode(view === 'lesson');
+
+  // Where "Reprendre" should land: the first lesson the learner hasn't completed
+  // yet (falls back to the very first lesson for a fresh start).
+  const resumeTarget = useMemo(() => {
+    for (let m = 0; m < modules.length; m++) {
+      const lessons = getModuleLessons(m);
+      for (let l = 0; l < lessons.length; l++) {
+        if (!progress?.completedLessons?.includes(lessons[l]?.id)) return { module: m, lesson: l };
+      }
+    }
+    return { module: 0, lesson: 0 };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modules, progress?.completedLessons]);
+  const hasProgress = (progress?.completedLessons?.length || 0) > 0;
+
   const hydrated = useStore(s => s.hydrated);
 
   // Free-preview gating: signed-out visitors may watch up to FREE_VIDEO_LIMIT
@@ -147,6 +168,7 @@ export default function CourseDetail() {
   const freeVideosRemaining = Math.max(0, FREE_VIDEO_LIMIT - freeVideoIds.length);
 
   useEffect(() => {
+    if (view !== 'lesson') return;
     if (!hydrated || isAuthenticated) return;
     if (!isVideoLesson || !currentVideoKey) return;
     if (isCurrentVideoCounted) return;
@@ -157,7 +179,7 @@ export default function CourseDetail() {
     }
     // Count this video toward the free preview allowance.
     useStore.getState().recordFreeVideoView(currentVideoKey);
-  }, [hydrated, isAuthenticated, isVideoLesson, currentVideoKey, isCurrentVideoCounted, freeVideoIds.length]);
+  }, [view, hydrated, isAuthenticated, isVideoLesson, currentVideoKey, isCurrentVideoCounted, freeVideoIds.length]);
 
   // Prevent background page scrolling when the mobile course drawer is open
   useEffect(() => {
@@ -172,6 +194,7 @@ export default function CourseDetail() {
   }, [showSidebar]);
 
   useEffect(() => {
+    setView('overview');
     setActiveModule(0);
     setActiveLesson(0);
   }, [courseId]);
@@ -329,8 +352,35 @@ export default function CourseDetail() {
   return (
     <div className="section course-detail">
       <div className="container course-detail__container">
+        {view === 'overview' ? (
+          <CourseOverview
+            course={course}
+            modules={modules}
+            progress={progress}
+            isEnrolled={isEnrolled}
+            resumeTarget={resumeTarget}
+            hasProgress={hasProgress}
+            onStart={() => {
+              setActiveModule(resumeTarget.module);
+              setActiveLesson(resumeTarget.lesson);
+              setView('lesson');
+            }}
+            onSelectModule={(mIdx) => {
+              setActiveModule(mIdx);
+              setActiveLesson(0);
+              setView('lesson');
+            }}
+          />
+        ) : (
         <div className="course-detail__layout">
           <div className="course-detail__column">
+            <button
+              type="button"
+              className="course-detail__back"
+              onClick={() => setView('overview')}
+            >
+              <ChevronLeft size={16} /> {course.name || course.title}
+            </button>
             <article className="lesson-card">
               <header className="lesson-card__header">
                 <div className="lesson-card__header-content">
@@ -571,6 +621,7 @@ export default function CourseDetail() {
             }}
           />
         </div>
+        )}
       </div>
       {/* Removed modal overlay; inline rendering used instead */}
     </div>

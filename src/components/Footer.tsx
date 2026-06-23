@@ -16,6 +16,7 @@ export function Footer() {
         </div>
         <div className="footer__right">
           <nav className="footer__nav">
+            <Link to="/about" className="footer__link">À propos</Link>
             <Link to="/contact" className="footer__link">Contact</Link>
             <Link to="/privacy" className="footer__link">Confidentialité</Link>
             <Link to="/terms" className="footer__link">Conditions</Link>

@@ -27,6 +27,17 @@ function defaultAlias(user) {
   return `${first}${initial}`;
 }
 
+// Anonymized example ranking shown when the board is still empty so the feature
+// never looks dead. Always clearly labelled as an example — never blended with
+// real entries.
+const SAMPLE_LEADERBOARD = [
+  { rank: 1, displayName: 'Marie L.', level: 7, xp: 1240 },
+  { rank: 2, displayName: 'Jean P.', level: 6, xp: 1080 },
+  { rank: 3, displayName: 'Naïka D.', level: 5, xp: 920 },
+  { rank: 4, displayName: 'Samuel R.', level: 4, xp: 760 },
+  { rank: 5, displayName: 'Wideline C.', level: 4, xp: 640 },
+];
+
 function RankBadge({ rank }) {
   if (rank === 1) return <span className="lb-rank lb-rank--gold"><Crown size={14} /></span>;
   if (rank === 2) return <span className="lb-rank lb-rank--silver"><Medal size={14} /></span>;
@@ -136,12 +147,26 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
             );
           })}
         </ol>
-      ) : (
+      ) : (scope === 'school' && !mySchool) ? (
         <div className="leaderboard__empty">
           <p className="text-muted">
-            {scope === 'school' && !mySchool
-              ? t('Ajoutez votre école pour voir son classement.', 'Ajoute lekòl ou pou wè klasman li.')
-              : t('Personne pour le moment — soyez le premier !', 'Pèsòn poko la — se ou ki premye !')}
+            {t('Ajoutez votre école pour voir son classement.', 'Ajoute lekòl ou pou wè klasman li.')}
+          </p>
+        </div>
+      ) : (
+        <div className="leaderboard__empty leaderboard__empty--sample">
+          <ol className="leaderboard__list leaderboard__list--sample" aria-hidden="true">
+            {SAMPLE_LEADERBOARD.slice(0, compact ? 3 : 5).map((e) => (
+              <li key={e.rank} className="leaderboard__row">
+                <RankBadge rank={e.rank} />
+                <span className="leaderboard__name">{e.displayName}</span>
+                <span className="leaderboard__level">{t('Niv.', 'Niv.')} {e.level}</span>
+                <span className="leaderboard__xp"><Flame size={12} /> {e.xp}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="leaderboard__sample-note text-muted">
+            {t('Exemple — gagnez des XP cette semaine pour apparaître ici.', 'Egzanp — ranmase XP semèn sa a pou parèt isit la.')}
           </p>
         </div>
       )}

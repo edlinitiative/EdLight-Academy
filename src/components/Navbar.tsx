@@ -3,10 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   BookOpen,
-  Brain,
   ClipboardList,
   Gamepad2,
-  Info,
+  User,
   LayoutDashboard,
   CalendarCheck,
   LogOut,
@@ -21,14 +20,14 @@ import { StreakBadge } from './Streak';
 import NotificationBell from './NotificationBell';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
-/** Primary destinations shown in the desktop inline nav and the mobile drawer. */
+/** Primary destinations shown in the desktop inline nav and the mobile drawer.
+ *  Kept identical to the PWA bottom bar (BottomNav) so web + app agree. */
 const NAV_ITEMS = [
   { to: '/', label: 'Accueil', icon: Home, exact: true },
   { to: '/courses', label: 'Cours', icon: BookOpen },
-  { to: '/quizzes', label: 'Quiz', icon: Brain },
   { to: '/exams', label: 'Examens', icon: ClipboardList },
   { to: '/trivia', label: 'Trivia', icon: Gamepad2 },
-  { to: '/about', label: 'À propos', icon: Info },
+  { to: '/profile', label: 'Profil', icon: User },
 ];
 
 export function Navbar() {
@@ -260,13 +259,6 @@ export function Navbar() {
               <StreakBadge />
 
               <NotificationBell />
-
-              <button
-                className="button button--ghost button--pill nav-actions__dashboard"
-                onClick={() => navigate('/dashboard')}
-              >
-                Tableau de bord
-              </button>
 
               <div className="dropdown" ref={dropdownRef}>
                 <button

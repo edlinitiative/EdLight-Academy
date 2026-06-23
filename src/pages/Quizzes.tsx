@@ -177,7 +177,7 @@ const Quizzes = () => {
       <div className="container">
         <div className="page-header">
           <div>
-            <h1 className="page-header__title">{t('quizzes.curriculumPractice', 'Exercices du programme')}</h1>
+            <h1 className="page-header__title">{t('quizzes.curriculumPractice', 'Quiz du programme')}</h1>
             <p className="page-header__subtitle">{t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}</p>
             <p className="page-header__count">
               {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}

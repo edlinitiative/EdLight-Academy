@@ -175,6 +175,28 @@
   font-size: 0.85rem;
 }
 
+/* Sample/example ranking shown when the real board is empty */
+.leaderboard__empty--sample {
+  padding-top: 0;
+  text-align: left;
+}
+
+.leaderboard__list--sample {
+  opacity: 0.55;
+  filter: grayscale(0.25);
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, rgba(0, 0, 0, 0.35) 100%);
+  mask-image: linear-gradient(180deg, #000 30%, rgba(0, 0, 0, 0.35) 100%);
+}
+
+.leaderboard__sample-note {
+  margin: 0.6rem 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
 /* Opt-in */
 .leaderboard__join {
   border-top: 1px solid var(--border-color, #e6e8eb);

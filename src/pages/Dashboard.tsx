@@ -241,7 +241,9 @@ export default function Dashboard() {
             <span className="metric-card__eyebrow">{isCreole ? 'Kou k ap kontinye' : 'Cours en cours'}</span>
             <span className="metric-card__value">{coursesInProgress}</span>
             <span className="metric-card__caption">
-              {isCreole ? 'Rete regilye pou w deblozake badj metrize.' : 'Restez régulier pour débloquer des badges de maîtrise.'}
+              {coursesInProgress === 0
+                ? (isCreole ? 'Enskri nan yon premye kou pou kòmanse.' : 'Inscrivez-vous à un premier cours pour commencer.')
+                : (isCreole ? 'Rete regilye pou w deblozake badj metrize.' : 'Restez régulier pour débloquer des badges de maîtrise.')}
             </span>
           </div>
           <div className="metric-card metric-card--green">
@@ -254,9 +256,11 @@ export default function Dashboard() {
             <span className="metric-card__eyebrow">{isCreole ? 'Quiz fini' : 'Quiz terminés'}</span>
             <span className="metric-card__value">{quizzesTaken}</span>
             <span className="metric-card__caption">
-              {isCreole
-                ? `${masteredQuizCount} metrize • ${quizStreak7d} nan 7 jou`
-                : `${masteredQuizCount} maîtrisés • ${quizStreak7d} sur 7 jours`}
+              {quizzesTaken === 0
+                ? (isCreole ? 'Fè premye quiz ou pou swiv pwogrè w.' : 'Faites votre premier quiz pour suivre vos progrès.')
+                : (isCreole
+                  ? `${masteredQuizCount} metrize • ${quizStreak7d} nan 7 jou`
+                  : `${masteredQuizCount} maîtrisés • ${quizStreak7d} sur 7 jours`)}
             </span>
           </div>
           <div className="metric-card metric-card--purple">
@@ -268,9 +272,11 @@ export default function Dashboard() {
               </svg>
             </div>
             <span className="metric-card__eyebrow">{isCreole ? 'Mwayèn nòt' : 'Score moyen'}</span>
-            <span className="metric-card__value">{avgScore}%</span>
+            <span className="metric-card__value">{quizzesTaken ? `${avgScore}%` : '—'}</span>
             <span className="metric-card__caption">
-              {isCreole ? 'Vize 85%+ pou deblozake leson avanse.' : 'Visez 85%+ pour débloquer des leçons avancées.'}
+              {quizzesTaken === 0
+                ? (isCreole ? 'Nòt ou ap parèt apre premye quiz ou.' : 'Votre score apparaîtra après votre premier quiz.')
+                : (isCreole ? 'Vize 85%+ pou deblozake leson avanse.' : 'Visez 85%+ pour débloquer des leçons avancées.')}
             </span>
           </div>
         </div>
@@ -430,9 +436,14 @@ export default function Dashboard() {
             <div className="dashboard-empty">
               <p>
                 {isCreole
-                  ? 'Ou poko gen done quiz. Fè yon quiz pou wè pèfòmans ou.'
-                  : 'Aucune donnée de quiz pour le moment. Faites un quiz pour voir votre performance.'}
+                  ? 'Fè premye quiz ou pou kòmanse swiv pèfòmans ou ak pwen fò ou.'
+                  : 'Faites votre premier quiz pour commencer à suivre votre performance et vos points forts.'}
               </p>
+              <div style={{ marginTop: '1rem' }}>
+                <button className="button button--primary button--pill" onClick={() => navigate('/quizzes')} type="button">
+                  {isCreole ? 'Kòmanse yon quiz' : 'Commencer un quiz'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -512,9 +523,14 @@ export default function Dashboard() {
             <div className="dashboard-empty">
               <p>
                 {isCreole
-                  ? 'Ou poko kòmanse okenn egzamen. Chwazi yon nivo pou kòmanse.'
-                  : 'Vous n’avez commencé aucun examen. Choisissez un niveau pour démarrer.'}
+                  ? 'Fè yon egzamen blan pou jenere nòt preparasyon ou epi wè pwen fèb ou.'
+                  : 'Passez un examen blanc pour générer votre score de préparation et révéler vos points faibles.'}
               </p>
+              <div style={{ marginTop: '1rem' }}>
+                <button className="button button--primary button--pill" onClick={() => navigate('/exams')} type="button">
+                  {isCreole ? 'Kòmanse yon egzamen blan' : 'Commencer un examen blanc'}
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -6,8 +6,9 @@ import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
-export function CourseCard({ course }) {
-  const { enrolledCourses, progress } = useStore();
+export const CourseCard = React.memo(function CourseCard({ course }) {
+  const enrolledCourses = useStore((s) => s.enrolledCourses);
+  const progress = useStore((s) => s.progress);
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -128,7 +129,7 @@ export function CourseCard({ course }) {
       </div>
     </article>
   );
-}
+});
 
 export function CourseModal({ course, onClose, onEnroll }) {
   const { enrolledCourses } = useStore();
