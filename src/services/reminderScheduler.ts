@@ -23,11 +23,15 @@ import {
   getNotificationPreferences,
 } from './notificationService';
 import { showLocalNotification, getPermission } from './pushNotificationService';
+import {
+  decideEveningReminder,
+  buildRetentionNotification,
+  parseHHMM,
+  WEEKDAYS,
+} from './reminderRules';
 
 const CHECK_INTERVAL_MS = 60 * 1000; // poll once a minute while the app is open
-const DAILY_GRACE_MS = 2 * 60 * 60 * 1000; // only fire today's nudge within 2h of its time
-
-const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const STUDY_GRACE_MS = 2 * 60 * 60 * 1000; // generic study nudge only fires within 2h of its time
 
 let intervalId: number | null = null;
 let activeUserId: string | null = null;
@@ -74,7 +78,7 @@ async function runDueCheck(): Promise<void> {
     const prefs = await getNotificationPreferences(activeUserId);
     if (prefs.studyReminders === false) return; // user opted out of reminders
     await processDueReminders(activeUserId);
-    await maybeFireDailyNudge(activeUserId, prefs);
+    await maybeFireEveningReminder(activeUserId, prefs);
   } catch (error) {
     console.warn('[Reminders] Due check failed:', error);
   } finally {
@@ -117,43 +121,82 @@ async function processDueReminders(userId: string): Promise<void> {
   }
 }
 
-async function maybeFireDailyNudge(userId: string, prefs: any): Promise<void> {
-  const days: string[] = Array.isArray(prefs.reminderDays) ? prefs.reminderDays : [];
-  const time: string = prefs.reminderTime || '18:00';
-  if (days.length === 0) return;
-
+/**
+ * Fire at most one retention nudge per evening: protect a streak that's about
+ * to reset, surface an unfinished daily challenge, or fall back to the generic
+ * study reminder. The decision itself is pure (see reminderRules); this wrapper
+ * just gathers live state, de-duplicates to once per day and routes the result
+ * through the service worker.
+ */
+async function maybeFireEveningReminder(userId: string, prefs: any): Promise<void> {
   const now = new Date();
-  if (!days.includes(WEEKDAYS[now.getDay()])) return;
+  const stampKey = `edlight:evening-nudge:${dateKey(now)}`;
+  if (readStamp(stampKey)) return; // already decided today
 
-  const [hh, mm] = time.split(':').map((n: string) => Number(n));
+  // Cheap time gate first so we don't load streak/trivia state every minute.
+  const [hh, mm] = parseHHMM(prefs.reminderTime, 18, 0);
   const target = new Date(now);
-  target.setHours(hh || 18, mm || 0, 0, 0);
-  if (now < target) return; // not yet time today
+  target.setHours(hh, mm, 0, 0);
+  if (now < target) return; // before the evening window — re-check later, no stamp
 
-  const stampKey = `edlight:daily-nudge:${dateKey(now)}`;
-  let already: string | null = null;
-  try {
-    already = window.localStorage.getItem(stampKey);
-  } catch {
-    /* storage unavailable */
+  // Pull the minimal live state the decision needs. Firebase loads lazily here,
+  // and only after the evening window opens, so the hot polling path stays cheap.
+  const [{ loadStreak, todayStr }, { loadTriviaProfile, getDailyChallengeState }] =
+    await Promise.all([import('./streakService'), import('./triviaService')]);
+  const today = todayStr();
+  const [streak, profile] = await Promise.all([loadStreak(userId), loadTriviaProfile(userId)]);
+  const daily = getDailyChallengeState(profile, today);
+
+  const kind = decideEveningReminder({
+    now,
+    target,
+    graceMs: STUDY_GRACE_MS,
+    reminderDays: Array.isArray(prefs.reminderDays) ? prefs.reminderDays : [],
+    weekday: WEEKDAYS[now.getDay()],
+    streakDays: streak.currentStreak || 0,
+    streakActiveToday: streak.lastActivityDate === today,
+    engaged: (streak.currentStreak || 0) >= 1 || (profile.totalGames || 0) >= 1,
+    dailyCompletedToday: daily.completedToday,
+  });
+
+  if (kind === 'none') {
+    writeStamp(stampKey, 'checked'); // nothing to send today; stop re-querying
+    return;
   }
-  if (already) return;
 
-  // If the app was opened long after the scheduled time, skip silently so users
-  // don't get a stale "study now" ping at, say, 2 a.m. the next morning.
-  const fired = now.getTime() - target.getTime() <= DAILY_GRACE_MS;
+  const note = buildRetentionNotification(kind, getStoredLanguage(), streak.currentStreak || 0);
+  writeStamp(stampKey, `sent:${kind}`);
+  await showLocalNotification(note.title, { body: note.body, tag: note.tag, url: note.url });
+}
+
+/** Read the persisted UI language ('fr' | 'ht') so notification copy matches it. */
+function getStoredLanguage(): 'fr' | 'ht' {
   try {
-    window.localStorage.setItem(stampKey, fired ? 'sent' : 'skipped');
+    const raw = window.localStorage.getItem('edlight-storage');
+    if (raw) {
+      const lang = JSON.parse(raw)?.state?.language;
+      if (lang === 'ht' || lang === 'fr') return lang;
+    }
+  } catch {
+    /* storage unavailable or malformed */
+  }
+  return 'fr';
+}
+
+function readStamp(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStamp(key: string, value: string): void {
+  try {
+    window.localStorage.setItem(key, value);
   } catch {
     /* ignore */
   }
-  if (!fired) return;
-
-  await showLocalNotification('Temps de réviser ✨', {
-    body: 'Continue ton apprentissage sur EdLight Academy.',
-    tag: 'daily-study-nudge',
-    url: '/dashboard',
-  });
 }
 
 /** Compute the next ISO timestamp for a recurring reminder. */

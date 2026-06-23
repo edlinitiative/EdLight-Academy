@@ -28,6 +28,7 @@ const ExamResults = lazyWithRetry(() => import('./pages/ExamResults'));
 const AnswerVerification = lazyWithRetry(() => import('./pages/AnswerVerification'));
 const StudyPlan = lazyWithRetry(() => import('./pages/StudyPlan'));
 const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
+const Profile = lazyWithRetry(() => import('./pages/Profile'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 
 // Create a client
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="exams/:level/:examId/results" element={<ExamResults />} />
                 <Route path="study-plan" element={<StudyPlan />} />
                 <Route path="trivia" element={<TriviaGames />} />
+                <Route path="profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>

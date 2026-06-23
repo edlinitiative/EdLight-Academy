@@ -1,0 +1,228 @@
+/* Leaderboard — weekly XP competition
+   ──────────────────────────────────── */
+
+.leaderboard {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e6e8eb);
+  border-radius: 16px;
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.leaderboard__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.leaderboard__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text, #101828);
+}
+
+.leaderboard__title svg {
+  color: #f59e0b;
+}
+
+.leaderboard__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary, #0a66c2);
+}
+
+/* Scope tabs */
+.leaderboard__scopes {
+  display: inline-flex;
+  gap: 0.3rem;
+  background: var(--surface-alt, #f2f4f7);
+  padding: 0.25rem;
+  border-radius: 10px;
+  align-self: flex-start;
+}
+
+.leaderboard__scope {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted, #667085);
+  padding: 0.3rem 0.7rem;
+  border-radius: 7px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.leaderboard__scope.is-active {
+  background: var(--surface, #fff);
+  color: var(--text, #101828);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+/* List */
+.leaderboard__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.leaderboard__row,
+.leaderboard__self {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  background: var(--surface-alt, #f7f8fa);
+}
+
+.leaderboard__row.is-me {
+  background: rgba(10, 102, 194, 0.1);
+  outline: 1px solid rgba(10, 102, 194, 0.25);
+}
+
+.leaderboard__self {
+  margin-top: 0.2rem;
+  background: rgba(10, 102, 194, 0.08);
+  border: 1px dashed rgba(10, 102, 194, 0.3);
+}
+
+.lb-rank {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted, #667085);
+  background: var(--surface, #fff);
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-rank--gold { background: #fef3c7; color: #b45309; }
+.lb-rank--silver { background: #e5e7eb; color: #4b5563; }
+.lb-rank--bronze { background: #fde4d0; color: #9a3412; }
+
+.leaderboard__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text, #101828);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.leaderboard__you {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary, #0a66c2);
+  background: rgba(10, 102, 194, 0.12);
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+}
+
+.leaderboard__level {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted, #667085);
+  flex: 0 0 auto;
+}
+
+.leaderboard__xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #ea580c;
+  flex: 0 0 auto;
+  min-width: 48px;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard__empty {
+  padding: 0.75rem 0;
+  text-align: center;
+}
+
+.leaderboard__empty p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Opt-in */
+.leaderboard__join {
+  border-top: 1px solid var(--border-color, #e6e8eb);
+  padding-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.leaderboard__join-pitch {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, #667085);
+}
+
+.leaderboard__join-pitch svg { color: #10b981; flex: 0 0 auto; }
+
+.leaderboard__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.leaderboard__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #667085);
+}
+
+.leaderboard__form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.leaderboard__compact-foot {
+  border-top: 1px solid var(--border-color, #e6e8eb);
+  padding-top: 0.6rem;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.leaderboard--compact {
+  gap: 0.6rem;
+}

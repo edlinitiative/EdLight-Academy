@@ -6,6 +6,9 @@ import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
 import ProgressDashboard from '../components/ProgressDashboard';
+import ReadinessCard from '../components/ReadinessCard';
+import HomeWidgets from '../components/HomeWidgets';
+import Leaderboard from '../components/Leaderboard';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
@@ -47,6 +50,23 @@ export default function Dashboard() {
     }
     return m;
   }, [allProgress]);
+
+  // Surface the most useful "next" course: the least-complete enrolled course,
+  // falling back to the first catalog entry for brand-new learners.
+  const recommendedCourse = React.useMemo(() => {
+    if (enrolledCourses.length) {
+      let best = null;
+      let bestPct = Infinity;
+      for (const c of enrolledCourses) {
+        const total = countCourseLessons(c);
+        const p = progressByCourseId.get(c.id) || null;
+        const pct = calculateCompletionPercentage(p, total || 0);
+        if (pct < bestPct) { bestPct = pct; best = c; }
+      }
+      if (best) return best;
+    }
+    return (courses && courses[0]) || null;
+  }, [enrolledCourses, progressByCourseId, courses]);
 
   const { data: recentQuizAttempts = [], isLoading: quizLoading } = useQuery({
     queryKey: ['dashboard-quiz-attempts', user?.uid],
@@ -203,6 +223,12 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* Exam Readiness Score — the flagship "are you ready for the Bac?" metric */}
+        <ReadinessCard />
+
+        {/* "What should I do next?" — countdown, daily challenge, rank, recommendation */}
+        <HomeWidgets recommendedCourse={recommendedCourse} />
 
         <div className="grid grid--metrics">
           <div className="metric-card">
@@ -493,6 +519,10 @@ export default function Dashboard() {
           )}
         </div>
         </div>{/* /dashboard-cols */}
+
+        <div className="dashboard-section">
+          <Leaderboard variant="compact" />
+        </div>
 
         <div className="dashboard-section">
           <div className="dashboard-section__header">

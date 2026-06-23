@@ -1,9 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
+import { useTrivia } from '../hooks/useTrivia';
+import { useStreak } from '../hooks/useStreak';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
+import { todayStr } from '../services/streakService';
 import './TriviaGames.css';
 
 /* ─── Utility: shuffle an array (Fisher-Yates) ─── */
@@ -98,9 +102,16 @@ function RoundPicker({ category, onStart, onBack, isCreole }) {
 }
 
 /* ─── Active Game Screen ─── */
-function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
+function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: providedQuestions = null, accentColor = null }) {
   const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
-  const questions = useMemo(() => shuffle(TRIVIA_QUESTIONS[category]).slice(0, count), [category, count]);
+  const questions = useMemo(
+    () =>
+      providedQuestions && providedQuestions.length
+        ? providedQuestions
+        : shuffle(TRIVIA_QUESTIONS[category] || []).slice(0, count),
+    [category, count, providedQuestions],
+  );
+  const accent = accentColor || cat?.color || '#0A66C2';
 
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -160,7 +171,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
   };
 
   return (
-    <div className="trivia-quiz" style={{ '--cat-color': cat.color }}>
+    <div className="trivia-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
       <div className="trivia-quiz__top-bar">
         <button className="trivia-back-btn trivia-back-btn--sm" onClick={onBack}>
           <X size={18} />
@@ -237,9 +248,10 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole }) {
 }
 
 /* ─── Results Screen ─── */
-function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
+function TriviaResults({ category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null }) {
   const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
-  const pct = Math.round((score / total) * 100);
+  const accent = accentColor || cat?.color || '#0A66C2';
+  const pct = total > 0 ? Math.round((score / total) * 100) : 0;
 
   let IconCmp, message, messageHt;
   if (pct >= 90) {
@@ -261,7 +273,7 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
   }
 
   return (
-    <div className="trivia-results" style={{ '--cat-color': cat.color }}>
+    <div className="trivia-results" style={{ '--cat-color': accent } as React.CSSProperties}>
       <div className="trivia-results__card">
         <span className="trivia-results__emoji"><IconCmp size={48} /></span>
         <h2 className="trivia-results__title">
@@ -286,6 +298,21 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
         <p className="trivia-results__message">
           {isCreole ? messageHt : message}
         </p>
+        {reward && reward.xpEarned > 0 && (
+          <div className="trivia-reward">
+            <span className="trivia-reward__xp"><Sparkles size={16} /> +{reward.xpEarned} XP</span>
+            {reward.leveledUp && (
+              <span className="trivia-reward__levelup">
+                <Crown size={14} /> {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
+              </span>
+            )}
+            {reward.guest && (
+              <span className="trivia-reward__guest">
+                {isCreole ? 'Konekte pou sove XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
+              </span>
+            )}
+          </div>
+        )}
         <div className="trivia-results__actions">
           <button className="button button--primary button--pill" onClick={onReplay}>
             <RefreshCw size={16} /> {isCreole ? 'Jwe ankò' : 'Rejouer'}
@@ -299,20 +326,94 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole }) {
   );
 }
 
+/* ─── Trivia header: level, XP progress, streak ─── */
+function TriviaHeader({ level, streak, isCreole }) {
+  return (
+    <div className="trivia-header">
+      <div className="trivia-header__stat">
+        <Zap size={16} />
+        <span className="trivia-header__value">{isCreole ? 'Nivo' : 'Niv.'} {level.level}</span>
+      </div>
+      <div className="trivia-header__xpbar" title={`${level.xp} XP`}>
+        <span className="trivia-header__xpfill" style={{ width: `${level.progressPct}%` }} />
+        <span className="trivia-header__xptext">{level.xp} XP</span>
+      </div>
+      <div className="trivia-header__stat trivia-header__stat--streak">
+        <Flame size={16} />
+        <span className="trivia-header__value">{streak?.currentStreak || 0}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Daily Challenge banner ─── */
+function DailyChallengeBanner({ daily, isCreole, onStart }) {
+  const done = daily.completedToday;
+  return (
+    <button
+      type="button"
+      className={`trivia-daily ${done ? 'trivia-daily--done' : ''}`}
+      onClick={() => !done && onStart()}
+      disabled={done}
+    >
+      <span className="trivia-daily__icon">{done ? <Check size={22} /> : <CalendarCheck size={22} />}</span>
+      <span className="trivia-daily__body">
+        <span className="trivia-daily__title">{isCreole ? 'Defi jodi a' : 'Défi du jour'}</span>
+        <span className="trivia-daily__sub">
+          {done
+            ? (isCreole
+                ? `Fini — ${daily.score}/${daily.total}. Retounen demen !`
+                : `Terminé — ${daily.score}/${daily.total}. Revenez demain !`)
+            : (isCreole ? '10 kesyon · +50 XP bonis' : '10 questions · +50 XP bonus')}
+        </span>
+      </span>
+      {!done && <span className="trivia-daily__cta">{isCreole ? 'Jwe →' : 'Jouer →'}</span>}
+    </button>
+  );
+}
+
 /* ─── Main Trivia Page ─── */
 export default function TriviaGames() {
   const { language } = useStore();
   const isCreole = language === 'ht';
+  const location = useLocation();
+  const { recordResult, level, daily, isAuthed } = useTrivia();
+  const { streak } = useStreak();
 
   // States: 'pick' | 'round' | 'play' | 'results'
   const [screen, setScreen] = useState('pick');
   const [category, setCategory] = useState(null);
   const [roundCount, setRoundCount] = useState(10);
+  const [dailyQuestions, setDailyQuestions] = useState([]);
   const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+  const [reward, setReward] = useState(null);
+  const [playNonce, setPlayNonce] = useState(0);
+  const autoStartedRef = useRef(false);
 
   // While a round is in play, go heads-down: drop the bottom tab bar + footer
   // so the question owns the screen. The in-quiz ✕ button is the way out.
   useFocusMode(screen === 'play');
+
+  const startDaily = useCallback(() => {
+    const qs = getDailyChallengeQuestions(TRIVIA_QUESTIONS, todayStr(), 10);
+    if (!qs.length) return;
+    setDailyQuestions(qs);
+    setCategory('daily');
+    setRoundCount(qs.length);
+    setReward(null);
+    setPlayNonce((n) => n + 1);
+    setScreen('play');
+  }, []);
+
+  // Deep-link from the home "Défi du jour" widget:
+  // navigate('/trivia', { state: { startDaily: true } }).
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if ((location.state)?.startDaily && !daily.completedToday) {
+      autoStartedRef.current = true;
+      startDaily();
+    }
+  }, [location.state, daily.completedToday, startDaily]);
 
   const handleCategorySelect = (catId) => {
     setCategory(catId);
@@ -321,15 +422,33 @@ export default function TriviaGames() {
 
   const handleStart = (count) => {
     setRoundCount(count);
+    setReward(null);
+    setPlayNonce((n) => n + 1);
     setScreen('play');
   };
 
-  const handleFinish = (score, total) => {
-    setFinalScore({ score, total });
-    setScreen('results');
-  };
+  const handleFinish = useCallback(
+    async (score, total) => {
+      setFinalScore({ score, total });
+      const isDaily = category === 'daily';
+      try {
+        const r = await recordResult({ category: isDaily ? 'daily' : category, score, total, isDaily });
+        setReward(r);
+      } catch {
+        setReward(null);
+      }
+      setScreen('results');
+    },
+    [category, recordResult],
+  );
 
   const handleReplay = () => {
+    if (category === 'daily') {
+      // Daily is once-a-day — send them back to choose a category.
+      setScreen('pick');
+      setCategory(null);
+      return;
+    }
     setScreen('round');
   };
 
@@ -343,14 +462,23 @@ export default function TriviaGames() {
       setScreen('pick');
       setCategory(null);
     } else if (screen === 'play') {
-      setScreen('round');
+      if (category === 'daily') {
+        setScreen('pick');
+        setCategory(null);
+      } else {
+        setScreen('round');
+      }
     }
   };
 
   return (
     <div className="trivia-page">
       {screen === 'pick' && (
-        <CategoryPicker onSelect={handleCategorySelect} isCreole={isCreole} />
+        <>
+          {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
+          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
+          <CategoryPicker onSelect={handleCategorySelect} isCreole={isCreole} />
+        </>
       )}
       {screen === 'round' && (
         <RoundPicker
@@ -362,9 +490,11 @@ export default function TriviaGames() {
       )}
       {screen === 'play' && (
         <TriviaQuiz
-          key={`${category}-${roundCount}-${Date.now()}`}
+          key={`${category}-${playNonce}`}
           category={category}
           count={roundCount}
+          questions={category === 'daily' ? dailyQuestions : null}
+          accentColor={category === 'daily' ? '#f59e0b' : null}
           onFinish={handleFinish}
           onBack={handleBack}
           isCreole={isCreole}
@@ -375,6 +505,8 @@ export default function TriviaGames() {
           category={category}
           score={finalScore.score}
           total={finalScore.total}
+          reward={reward}
+          accentColor={category === 'daily' ? '#f59e0b' : null}
           onReplay={handleReplay}
           onHome={handleHome}
           isCreole={isCreole}
