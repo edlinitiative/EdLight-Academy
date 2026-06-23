@@ -2961,7 +2961,7 @@ textarea.input-field {
 	padding: 0.45rem 1.2rem;
 	border-radius: 999px;
 	font-weight: 600;
-
+	white-space: nowrap;
 	color: var(--primary-600);
 	cursor: pointer;
 	transition: background 0.2s ease;
