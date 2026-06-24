@@ -57,7 +57,7 @@
 
 .readiness-ring {
   --pct: 0%;
-  --ring-color: #10b981;
+  --ring-color: #0857a6;
   --ring-track: var(--border-color, #e6e8eb);
   position: relative;
   flex: 0 0 auto;
@@ -178,8 +178,8 @@
   gap: 0.6rem;
   width: 100%;
   text-align: left;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(59, 130, 246, 0.08));
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  background: linear-gradient(135deg, rgba(8, 87, 166, 0.08), rgba(74, 147, 221, 0.08));
+  border: 1px solid rgba(8, 87, 166, 0.2);
   border-radius: 12px;
   padding: 0.7rem 0.85rem;
   cursor: pointer;
@@ -188,7 +188,7 @@
 
 .readiness-focus:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 6px 16px rgba(8, 87, 166, 0.15);
 }
 
 .readiness-focus__icon {
@@ -197,8 +197,8 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: rgba(124, 58, 237, 0.15);
-  color: #7c3aed;
+  background: rgba(8, 87, 166, 0.15);
+  color: #0857a6;
   flex: 0 0 auto;
 }
 
@@ -211,7 +211,7 @@
 
 .readiness-focus__cta {
   font-weight: 800;
-  color: #7c3aed;
+  color: #0857a6;
   flex: 0 0 auto;
 }
 

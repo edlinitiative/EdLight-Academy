@@ -15,7 +15,7 @@
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
   background:
     radial-gradient(circle at 20% 15%, rgba(10, 102, 194, 0.08) 0%, transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(139, 124, 232, 0.07) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(74, 147, 221, 0.07) 0%, transparent 40%),
     var(--background);
 }
 
@@ -366,8 +366,8 @@
 .trivia-quiz__score-badge {
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
-  background: rgba(250, 204, 21, 0.15);
-  color: #b45309;
+  background: rgba(8, 87, 166, 0.15);
+  color: #0857a6;
   font-size: 0.78rem;
   font-weight: 700;
   white-space: nowrap;
@@ -719,8 +719,8 @@
   gap: 0.35rem;
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
-  background: rgba(124, 58, 237, 0.12);
-  color: #7c3aed;
+  background: rgba(8, 87, 166, 0.12);
+  color: #0857a6;
   font-weight: 800;
   font-size: 0.8rem;
   white-space: nowrap;
@@ -746,7 +746,7 @@
   inset: 0 auto 0 0;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #f59e0b, #7c3aed);
+  background: linear-gradient(90deg, #0857a6, #4a93dd);
   transition: width 0.6s ease;
 }
 
@@ -770,9 +770,9 @@
   max-width: 720px;
   margin: 0.85rem auto 0;
   padding: 0.9rem 1.1rem;
-  border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--border));
+  border: 1px solid color-mix(in srgb, #0857a6 35%, var(--border));
   border-radius: var(--radius-lg, 16px);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(124, 58, 237, 0.1));
+  background: linear-gradient(135deg, rgba(8, 87, 166, 0.12), rgba(74, 147, 221, 0.1));
   cursor: pointer;
   text-align: left;
   font: inherit;
@@ -781,7 +781,7 @@
 
 .trivia-daily:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(245, 158, 11, 0.18);
+  box-shadow: 0 10px 26px rgba(8, 87, 166, 0.18);
 }
 
 .trivia-daily--done {
@@ -796,8 +796,8 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(245, 158, 11, 0.18);
-  color: #d97706;
+  background: rgba(8, 87, 166, 0.18);
+  color: #0857a6;
   flex: 0 0 auto;
 }
 
@@ -827,7 +827,7 @@
 
 .trivia-daily__cta {
   font-weight: 800;
-  color: #d97706;
+  color: #0857a6;
   flex: 0 0 auto;
 }
 
@@ -846,8 +846,8 @@
   gap: 0.35rem;
   font-weight: 800;
   font-size: 1rem;
-  color: #d97706;
-  background: rgba(245, 158, 11, 0.14);
+  color: #0857a6;
+  background: rgba(8, 87, 166, 0.14);
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
 }
@@ -858,8 +858,8 @@
   gap: 0.3rem;
   font-weight: 800;
   font-size: 0.85rem;
-  color: #7c3aed;
-  background: rgba(124, 58, 237, 0.12);
+  color: #0857a6;
+  background: rgba(8, 87, 166, 0.12);
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
   animation: trivia-fadeUp 0.4s ease;

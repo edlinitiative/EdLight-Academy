@@ -1,13 +1,12 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, ArrowRight, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight, Target } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { CourseCard } from '../components/Course';
 import { EmptyState, ErrorState } from '../components/StateViews';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
-import { subjectThumbs } from './home/content';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
@@ -35,7 +34,6 @@ export default function Courses() {
   const { data: courses = [], isLoading, isError, isFetching, refetch } = useCourses();
   const [filter, setFilter] = useState('all');
   const [subject, setSubject] = useState('all');
-  const [query, setQuery] = useState('');
   const { enrolledCourses, progress: storeProgress } = useStore();
   const { t } = useTranslation();
 
@@ -83,7 +81,6 @@ export default function Courses() {
         code,
         items: sorted,
         accent: sorted[0]?.color || 'var(--primary-500)',
-        thumb: subjectThumbs[code] || null,
         enrolledCount: enrolledItems.length,
         pct,
         resume,
@@ -95,12 +92,6 @@ export default function Courses() {
     });
     return list;
   }, [courses, isEnrolled, coursePercent]);
-
-  const resetAllFilters = () => {
-    setFilter('all');
-    setSubject('all');
-    setQuery('');
-  };
 
   const goToSubjects = () => { setSubject('all'); setFilter('all'); };
 
@@ -141,20 +132,6 @@ export default function Courses() {
       </section>
     );
   }
-
-  const normalizedQuery = query.trim().toLowerCase();
-  const searching = normalizedQuery.length > 0;
-
-  const matchesQuery = (course) => {
-    const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject || '' });
-    const haystack = [course.title, course.name, subjectLabel, course.level, course.description]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(normalizedQuery);
-  };
-
-  const searchResults = searching ? courses.filter(matchesQuery) : [];
 
   // Selected subject (level view). When none is chosen we show the picker.
   const activeGroup = subject !== 'all' ? subjectGroups.find((g) => g.code === subject) : null;
@@ -206,10 +183,6 @@ export default function Courses() {
                   <Target size={15} /> {t('courses.practiceCta', "S'entraîner")}
                 </button>
               </>
-            ) : searching ? (
-              <h1 className="courses-header__title">
-                {t('courses.countLabel', '{{count}} cours', { count: searchResults.length })}
-              </h1>
             ) : (
               <>
                 <h1 className="courses-header__title">{t('courses.chooseSubject')}</h1>
@@ -217,65 +190,31 @@ export default function Courses() {
               </>
             )}
           </div>
-          <div className="courses-search">
-            <Search size={16} className="courses-search__icon" aria-hidden="true" />
-            <input
-              type="search"
-              className="courses-search__input"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('courses.searchPlaceholder')}
-              aria-label={t('courses.searchLabel')}
-            />
-          </div>
         </div>
 
-        {/* Level pills — only in the level view */}
-        {activeGroup && !searching && (
-          <div className="filter-group courses-levels">
-            <button
-              type="button"
-              className={["filter-pill", filter === 'all' ? 'filter-pill--active' : ''].join(' ')}
-              onClick={() => setFilter('all')}
+        {/* Level filter — compact dropdown (level view only) */}
+        {activeGroup && (
+          <div className="courses-levels-select">
+            <select
+              id="level-filter"
+              className="level-select"
+              aria-label={t('courses.levelLabel', 'Niveau')}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
             >
-              {t('common.all', 'Tout')}
-            </button>
-            {activeGroup.enrolledCount > 0 && (
-              <button
-                type="button"
-                className={["filter-pill", filter === 'enrolled' ? 'filter-pill--active' : ''].join(' ')}
-                onClick={() => setFilter('enrolled')}
-              >
-                {t('courses.myCourses', 'Mes cours')}
-              </button>
-            )}
-            {levelsForSubject.map((lvl) => (
-              <button
-                key={lvl}
-                type="button"
-                className={["filter-pill", filter === lvl ? 'filter-pill--active' : ''].join(' ')}
-                onClick={() => setFilter(lvl)}
-              >
-                {levelLabel(lvl)}
-              </button>
-            ))}
+              <option value="all">{t('courses.allLevels', 'Tous les niveaux')}</option>
+              {activeGroup.enrolledCount > 0 && (
+                <option value="enrolled">{t('courses.myCourses', 'Mes cours')}</option>
+              )}
+              {levelsForSubject.map((lvl) => (
+                <option key={lvl} value={lvl}>{levelLabel(lvl)}</option>
+              ))}
+            </select>
           </div>
         )}
 
         {/* Content */}
-        {searching ? (
-          searchResults.length > 0 ? (
-            <div className="grid grid--courses">
-              {searchResults.map((course) => <CourseCard key={course.id} course={course} />)}
-            </div>
-          ) : (
-            <EmptyState
-              title={t('courses.noCoursesTitle')}
-              message={t('courses.noCoursesSubtitle')}
-              action={{ label: t('courses.resetFilters'), onClick: resetAllFilters }}
-            />
-          )
-        ) : activeGroup ? (
+        {activeGroup ? (
           levelViewCourses.length > 0 ? (
             <div className="grid grid--courses">
               {levelViewCourses.map((course) => <CourseCard key={course.id} course={course} />)}
@@ -326,35 +265,28 @@ export default function Courses() {
                     key={g.code}
                     type="button"
                     className="subject-tile"
-                    style={{ '--subject-accent': g.accent } as React.CSSProperties}
                     onClick={() => { setSubject(g.code); setFilter('all'); }}
                     aria-label={label}
                   >
-                    <span className="subject-tile__media">
-                      {g.thumb
-                        ? <img src={g.thumb} alt="" loading="lazy" className="subject-tile__img" />
-                        : <span className="subject-tile__img subject-tile__img--placeholder" />}
-                      <span className="subject-tile__scrim" />
-                      <span className="subject-tile__name">{label}</span>
-                    </span>
+                    <span className="subject-tile__glyph" aria-hidden="true">{label.charAt(0)}</span>
                     <span className="subject-tile__body">
+                      <span className="subject-tile__name">{label}</span>
                       <span className="subject-tile__stat">
                         {t('courses.levelCount', { count: g.items.length })}
                         {g.enrolledCount > 0 && <> · {g.enrolledCount} {t('courses.enrolledShort')}</>}
                       </span>
-                      {g.enrolledCount > 0 ? (
+                      {g.enrolledCount > 0 && (
                         <span className="subject-tile__progress">
                           <span className="progress-bar">
                             <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
                           </span>
                           <span className="subject-tile__pct">{g.pct}%</span>
                         </span>
-                      ) : (
-                        <span className="subject-tile__startcta">
-                          {t('courses.start', 'Commencer')} <ChevronRight size={15} />
-                        </span>
                       )}
                     </span>
+                    {g.enrolledCount > 0
+                      ? <ChevronRight size={18} className="subject-tile__chevron" aria-hidden="true" />
+                      : <span className="subject-tile__startcta">{t('courses.start', 'Commencer')} <ChevronRight size={15} /></span>}
                   </button>
                 );
               })}

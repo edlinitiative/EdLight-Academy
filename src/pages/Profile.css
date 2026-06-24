@@ -21,7 +21,7 @@
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #0a66c2, #7c3aed);
+  background: linear-gradient(135deg, #0857a6, #4a93dd);
   color: #fff;
   font-weight: 800;
   font-size: 1.4rem;
@@ -61,8 +61,8 @@
   border-radius: 999px;
 }
 
-.profile-chip--level { background: rgba(124, 58, 237, 0.12); color: #7c3aed; }
-.profile-chip--xp { background: rgba(245, 158, 11, 0.14); color: #d97706; }
+.profile-chip--level { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
+.profile-chip--xp { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
 .profile-chip--streak { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 
 /* ── Level progress ── */
@@ -93,7 +93,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #f59e0b, #7c3aed);
+  background: linear-gradient(90deg, #0857a6, #4a93dd);
   transition: width 0.6s ease;
 }
 
@@ -186,8 +186,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #7c3aed;
-  background: rgba(124, 58, 237, 0.12);
+  color: #0857a6;
+  background: rgba(8, 87, 166, 0.12);
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
 }
@@ -255,7 +255,7 @@
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #0a66c2, #7c3aed);
+  background: linear-gradient(135deg, #0857a6, #4a93dd);
   color: #fff;
 }
 

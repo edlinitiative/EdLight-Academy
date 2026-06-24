@@ -427,26 +427,26 @@ export function normalizeExamTitle(exam) {
 // ─── Subject colors ─────────────────────────────────────────────────────────
 
 const SUBJECT_COLORS = {
-  Français: '#8b5cf6',
-  Anglais: '#3b82f6',
-  Espagnol: '#f59e0b',
-  Mathématiques: '#ef4444',
-  Physique: '#06b6d4',
-  Chimie: '#22c55e',
-  SVT: '#10b981',
-  'Histoire-Géo': '#f97316',
-  Philosophie: '#a855f7',
-  Kreyòl: '#ec4899',
-  Économie: '#14b8a6',
-  'Art & Musique': '#d946ef',
-  Informatique: '#6366f1',
-  Santé: '#e11d48',
-  'Culture Générale': '#64748b',
-  Mixed: '#78716c',
+  Français: '#0857A6',
+  Anglais: '#0A66C2',
+  Espagnol: '#2563EB',
+  Mathématiques: '#1E40AF',
+  Physique: '#0A66C2',
+  Chimie: '#4A93DD',
+  SVT: '#2563EB',
+  'Histoire-Géo': '#5D5B54',
+  Philosophie: '#1E40AF',
+  Kreyòl: '#0857A6',
+  Économie: '#64748B',
+  'Art & Musique': '#4A93DD',
+  Informatique: '#2563EB',
+  Santé: '#64748B',
+  'Culture Générale': '#64748B',
+  Mixed: '#787671',
 };
 
 export function subjectColor(subject) {
-  return SUBJECT_COLORS[subject] || '#6366f1';
+  return SUBJECT_COLORS[subject] || '#0A66C2';
 }
 
 // ─── Question type metadata ─────────────────────────────────────────────────

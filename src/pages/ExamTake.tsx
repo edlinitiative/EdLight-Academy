@@ -3062,14 +3062,31 @@ function TextInput({ type, index, value, onChange, disabled }) {
 
 function EssayInput({ index, value, onChange, disabled }) {
   const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
+  const textareaRef = useRef(null);
+
+  // Auto-grow: keep the textarea height matched to its content so short
+  // answers stay compact and long ones expand naturally (min-height in CSS
+  // sets the floor).
+  const autoGrow = useCallback((el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    autoGrow(textareaRef.current);
+  }, [value, autoGrow]);
+
   return (
     <div className="exam-take__essay-wrap">
       <textarea
+        ref={textareaRef}
         className="exam-take__essay-input"
         value={value}
         onChange={(e) => onChange(index, e.target.value)}
+        onInput={(e) => autoGrow(e.currentTarget)}
         placeholder="Rédigez votre réponse ici…"
-        rows={8}
+        rows={4}
         disabled={disabled}
       />
       <div className="exam-take__essay-wordcount">

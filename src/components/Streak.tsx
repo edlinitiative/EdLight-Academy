@@ -7,8 +7,24 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { Flame, Trophy, Shield, Zap } from 'lucide-react';
+import { Flame, Trophy, Shield, Zap, Dumbbell, Crown, Gem } from 'lucide-react';
 import { useStreak } from '../hooks/useStreak';
+
+// Maps a streak-milestone id to a monochrome Lucide icon (replaces emoji).
+const MILESTONE_ICONS = {
+  streak_3: Flame,
+  streak_7: Flame,
+  streak_14: Zap,
+  streak_30: Dumbbell,
+  streak_60: Crown,
+  streak_100: Trophy,
+  streak_365: Gem,
+};
+
+function MilestoneIcon({ id, size = 18 }) {
+  const Cmp = MILESTONE_ICONS[id] || Flame;
+  return <Cmp size={size} />;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. StreakBadge — lives in the Navbar, always visible to logged-in users
@@ -102,7 +118,7 @@ export function StreakWidget({ isCreole = false }) {
       {nextMilestone && nextMilestone.remaining > 0 && (
         <div className="streak-widget__milestone">
           <div className="streak-widget__milestone-info">
-            <span className="streak-widget__milestone-emoji">{nextMilestone.emoji}</span>
+            <span className="streak-widget__milestone-emoji"><MilestoneIcon id={nextMilestone.id} size={15} /></span>
             <span className="streak-widget__milestone-text">
               {isCreole
                 ? `${nextMilestone.remaining} jou ankò pou ${nextMilestone.labelHt}`
@@ -161,7 +177,7 @@ export function StreakMilestoneModal({ isCreole = false }) {
       >
         {/* Animated emoji burst */}
         <div className="streak-milestone__burst">
-          <span className="streak-milestone__emoji">{milestone.emoji}</span>
+          <span className="streak-milestone__emoji"><MilestoneIcon id={milestone.id} size={52} /></span>
         </div>
 
         <div className="streak-milestone__content">
