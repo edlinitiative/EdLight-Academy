@@ -148,12 +148,6 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
 
         {/* Header */}
         <div className="exam-preview__header">
-          <div className="exam-preview__header-top">
-            <span className="exam-preview__subject" style={{ background: color + '18', color }}>
-              {exam._subject}
-            </span>
-            {exam._year > 0 && <span className="exam-preview__year">{exam._year}</span>}
-          </div>
           <h2 className="exam-preview__title">{title}</h2>
           <div className="exam-preview__tags">
             {exam._level && <span className="exam-preview__tag">{exam._level}</span>}

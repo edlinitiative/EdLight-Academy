@@ -51,10 +51,10 @@ const extractEnglishTitle = (title) => {
 
 // Subject color/icon mapping (moved from CSV to code)
 const SUBJECT_DEFAULTS = {
-  CHEM: { color: '#10B981', icon: 'beaker', name: 'Chemistry' },
-  PHYS: { color: '#3B82F6', icon: 'atom', name: 'Physics' },
-  MATH: { color: '#8B5CF6', icon: 'calculator', name: 'Mathematics' },
-  ECON: { color: '#F59E0B', icon: 'chart', name: 'Economics' }
+  CHEM: { color: '#0A66C2', icon: 'beaker', name: 'Chemistry' },
+  PHYS: { color: '#0857A6', icon: 'atom', name: 'Physics' },
+  MATH: { color: '#4A93DD', icon: 'calculator', name: 'Mathematics' },
+  ECON: { color: '#5D5B54', icon: 'chart', name: 'Economics' }
 };
 
 /**
@@ -138,7 +138,7 @@ const fetchQuizzesFromFirestore = async () => {
  */
 const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quizzesMap = new Map()) => {
 
-  return firestoreCourses.map(course => {
+  const transformed = firestoreCourses.map(course => {
     // Parse course ID (e.g., chem-ns1)
     const [subjectPart, levelPart] = course.id.split('-');
     const subjectCode = subjectPart ? subjectPart.toUpperCase() : '';
@@ -248,6 +248,20 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
       }
     };
   });
+
+  // De-duplicate by course code (subject + level). Some catalogs contain more
+  // than one Firestore document for the same course — e.g. a re-imported
+  // "Mathématiques NS IV" — which would otherwise render as two identical
+  // cards. Keep the most complete copy (most modules) so each course shows once.
+  const byCode = new Map();
+  for (const c of transformed) {
+    const key = c.code || c.id;
+    const prev = byCode.get(key);
+    if (!prev || (c.modules?.length || 0) > (prev.modules?.length || 0)) {
+      byCode.set(key, c);
+    }
+  }
+  return Array.from(byCode.values());
 };
 
 /* ──────────────────────────────────────────────────────────────────────────

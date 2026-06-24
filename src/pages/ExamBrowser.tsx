@@ -9,7 +9,6 @@ import { normalizeExamCatalog } from '../utils/examCatalog';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import {
   buildExamIndex,
-  subjectColor,
 } from '../utils/examUtils';
 
 const PAGE_SIZE = 24;
@@ -560,7 +559,6 @@ function topicFromTitle(fullTitle) {
 }
 
 function ExamCard({ exam, onClick, attempt }) {
-  const color = subjectColor(exam._subject);
   const subject = exam._subject || 'Examen';
   // The subject (heading + colour dot) and the year (pill) are each shown once,
   // so we surface ONLY the distinct topic as a subtitle — avoiding the subject,
@@ -583,7 +581,6 @@ function ExamCard({ exam, onClick, attempt }) {
     >
       <div className="exam-card__header">
         <h3 className="exam-card__title" title={subject}>
-          <span className="exam-card__dot" style={{ background: color }} aria-hidden="true" />
           <span className="exam-card__title-text">{subject}</span>
         </h3>
         <div className="exam-card__header-right">
