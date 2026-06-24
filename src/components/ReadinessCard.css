@@ -40,7 +40,7 @@
   color: #10b981;
   background: rgba(16, 185, 129, 0.1);
   padding: 0.2rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 7px;
 }
 
 .readiness-card__title {

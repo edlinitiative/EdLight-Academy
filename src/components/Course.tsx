@@ -281,7 +281,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
           {isEnrolled ? (
             <>
               <button
-                className="button button--primary button--pill"
+                className="button button--primary"
                 onClick={() => {
                   onClose();
                   navigate(`/courses/${course.id}`);
@@ -291,7 +291,7 @@ export function CourseModal({ course, onClose, onEnroll }) {
                 {t('courses.continueLearning')}
               </button>
               <button
-                className="button button--secondary button--pill"
+                className="button button--secondary"
                 onClick={() => {
                   onClose();
                   navigate('/dashboard');
@@ -304,14 +304,14 @@ export function CourseModal({ course, onClose, onEnroll }) {
           ) : (
             <>
               <button 
-                className="button button--primary button--pill" 
+                className="button button--primary" 
                 onClick={handleEnroll}
                 style={{ flex: 1, minWidth: '150px' }}
               >
                 {t('courses.enroll')}
               </button>
               <button 
-                className="button button--ghost button--pill" 
+                className="button button--ghost" 
                 onClick={onClose}
                 style={{ flex: 1, minWidth: '150px' }}
               >

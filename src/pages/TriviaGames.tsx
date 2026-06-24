@@ -314,10 +314,10 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole, rew
           </div>
         )}
         <div className="trivia-results__actions">
-          <button className="button button--primary button--pill" onClick={onReplay}>
+          <button className="button button--primary" onClick={onReplay}>
             <RefreshCw size={16} /> {isCreole ? 'Jwe ankò' : 'Rejouer'}
           </button>
-          <button className="button button--ghost button--pill" onClick={onHome}>
+          <button className="button button--ghost" onClick={onHome}>
             ← {isCreole ? 'Kategori yo' : 'Catégories'}
           </button>
         </div>

@@ -222,7 +222,7 @@ export function Navbar() {
             ) : (
               <div className="nav-drawer__footer">
                 <button
-                  className="button button--ghost button--pill nav-drawer__cta"
+                  className="button button--ghost nav-drawer__cta"
                   onClick={() => {
                     useStore.getState().toggleAuthModal();
                     closeMenu();
@@ -231,7 +231,7 @@ export function Navbar() {
                   Se connecter
                 </button>
                 <button
-                  className="button button--primary button--pill nav-drawer__cta"
+                  className="button button--primary nav-drawer__cta"
                   onClick={() => {
                     useStore.getState().toggleAuthModal();
                     useStore.getState().setActiveTab('signup');
@@ -280,13 +280,13 @@ export function Navbar() {
           ) : (
             <>
               <button
-                className="button button--ghost button--pill nav-actions__signin"
+                className="button button--ghost nav-actions__signin"
                 onClick={() => useStore.getState().toggleAuthModal()}
               >
                 Se connecter
               </button>
               <button
-                className="button button--primary button--pill nav-actions__signup"
+                className="button button--primary nav-actions__signup"
                 onClick={() => {
                   useStore.getState().toggleAuthModal();
                   useStore.getState().setActiveTab('signup');

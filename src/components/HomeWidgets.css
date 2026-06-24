@@ -75,25 +75,11 @@
   opacity: 0.6;
 }
 
-/* Tonal accents */
-.home-widget[data-tone='indigo'] .home-widget__icon { background: rgba(79, 70, 229, 0.12); color: #4f46e5; }
+/* Tonal accents (icon only — no top border bar) */
+.home-widget[data-tone='indigo'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
 .home-widget[data-tone='violet'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
 .home-widget[data-tone='amber'] .home-widget__icon { background: rgba(8, 87, 166, 0.14); color: #0857a6; }
 .home-widget[data-tone='emerald'] .home-widget__icon { background: rgba(16, 185, 129, 0.13); color: #059669; }
-
-.home-widget[data-tone='indigo']::before,
-.home-widget[data-tone='violet']::before,
-.home-widget[data-tone='amber']::before,
-.home-widget[data-tone='emerald']::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-}
-.home-widget[data-tone='indigo']::before { background: #4f46e5; }
-.home-widget[data-tone='violet']::before { background: #0857a6; }
-.home-widget[data-tone='amber']::before { background: #0857a6; }
-.home-widget[data-tone='emerald']::before { background: #10b981; }
 
 /* Responsive: 2×2 on tablet, single column on small phones */
 @media (max-width: 900px) {

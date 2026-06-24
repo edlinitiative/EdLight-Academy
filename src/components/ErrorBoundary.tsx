@@ -44,7 +44,7 @@ export class ErrorBoundary extends React.Component {
               <div className="state-view__actions">
                 <button
                   type="button"
-                  className="button button--primary button--pill"
+                  className="button button--primary"
                   onClick={() => {
                     this.setState({ hasError: false, error: null });
                     window.location.reload();

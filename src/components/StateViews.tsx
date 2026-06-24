@@ -21,7 +21,7 @@ type StateAction = {
 };
 
 function ActionButton({ label, onClick, href, variant = 'primary' }: StateAction) {
-  const className = `button button--${variant} button--pill`;
+  const className = `button button--${variant}`;
   if (href) {
     return (
       <a className={className} href={href}>
@@ -128,7 +128,7 @@ export function ErrorState({
         {onRetry ? (
           <button
             type="button"
-            className="button button--primary button--pill state-view__retry"
+            className="button button--primary state-view__retry"
             onClick={onRetry}
             disabled={retrying}
           >

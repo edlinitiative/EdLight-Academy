@@ -51,7 +51,7 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
               'Chwazi filyè ou pou aktive nòt preparasyon pèsonalize ou.',
             )}
           </p>
-          <button className="button button--primary button--pill" onClick={() => navigate('/exams')}>
+          <button className="button button--primary" onClick={() => navigate('/exams')}>
             {t('Choisir ma filière', 'Chwazi filyè m')}
           </button>
         </div>
@@ -132,7 +132,7 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
           })}
         </div>
       ) : (
-        <button className="button button--primary button--pill readiness-card__cta" onClick={() => navigate('/exams')}>
+        <button className="button button--primary readiness-card__cta" onClick={() => navigate('/exams')}>
           <ClipboardList size={16} /> {t('Commencer un examen blanc', 'Kòmanse yon egzamen blan')}
         </button>
       )}

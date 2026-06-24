@@ -39,7 +39,7 @@ export default function ResumeBanner() {
         ) : null}
       </div>
       <div className="resume-banner__actions">
-        <Link className="button button--primary button--pill resume-banner__cta" to={lastActivity.path}>
+        <Link className="button button--primary resume-banner__cta" to={lastActivity.path}>
           <Play size={15} aria-hidden="true" />
           {t('resume.cta')}
         </Link>

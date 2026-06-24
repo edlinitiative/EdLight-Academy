@@ -71,7 +71,7 @@ export default function CourseManager() {
             <h1>Course Structure Manager</h1>
             <p className="text-muted">View and manage course units and lessons</p>
           </div>
-          <button className="button button--ghost button--pill" onClick={loadCourses}>
+          <button className="button button--ghost" onClick={loadCourses}>
             Reload Courses
           </button>
         </div>

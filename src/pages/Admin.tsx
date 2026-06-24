@@ -79,7 +79,7 @@ function FilePicker({ onData, columns, label }) {
 
   return (
     <div>
-      <label className="button button--secondary button--pill" style={{ cursor: 'pointer' }}>
+      <label className="button button--secondary" style={{ cursor: 'pointer' }}>
         {label}
         <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={(e) => handleFiles(e.target.files)} />
       </label>
@@ -114,7 +114,7 @@ function DataTable({ rows, columns, onEdit }) {
                 <td key={c} style={{ padding: '8px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r[c]}</td>
               ))}
               <td style={{ padding: '8px' }}>
-                <button className="button button--ghost button--pill" onClick={() => handleEditClick(idx)}>Edit</button>
+                <button className="button button--ghost" onClick={() => handleEditClick(idx)}>Edit</button>
               </td>
             </tr>
           ))}
@@ -245,8 +245,8 @@ function EditForm({ row, columns, onSave, onCancel }) {
           flexShrink: 0,
           backgroundColor: 'var(--color-bg-secondary)'
         }}>
-          <button className="button button--ghost button--pill" onClick={onCancel}>Cancel</button>
-          <button className="button button--primary button--pill" onClick={() => onSave(form)}>Save Changes</button>
+          <button className="button button--ghost" onClick={onCancel}>Cancel</button>
+          <button className="button button--primary" onClick={() => onSave(form)}>Save Changes</button>
         </div>
       </div>
     </div>
@@ -480,11 +480,11 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
               <input type="radio" name={`${title}-mode`} checked={mode==='merge'} onChange={() => setMode('merge')} /> Merge
             </label>
             <FilePicker onData={handleUpload} columns={columns} label={`Upload ${title}`} />
-            <button className="button button--ghost button--pill" onClick={handleLoadCurrent}>Load current</button>
-            <button className="button button--secondary button--pill" onClick={handleAddNew}>Add new</button>
+            <button className="button button--ghost" onClick={handleLoadCurrent}>Load current</button>
+            <button className="button button--secondary" onClick={handleAddNew}>Add new</button>
             {collectionType && (
               <button 
-                className="button button--primary button--pill" 
+                className="button button--primary" 
                 onClick={handleSyncToFirebase} 
                 disabled={!hasData || syncing}
               >
@@ -494,7 +494,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
             {collectionType === 'quizzes' && (
               <>
                 <button
-                  className="button button--ghost button--pill"
+                  className="button button--ghost"
                   onClick={async () => {
                     try {
                       setSyncing(true);
@@ -522,7 +522,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
                   🔍 Preview Quiz Count
                 </button>
                 <button
-                  className="button button--danger button--pill"
+                  className="button button--danger"
                   onClick={async () => {
                     try {
                       setSyncing(true);
@@ -608,7 +608,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
                 </button>
               </>
             )}
-            <button className="button button--ghost button--pill" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
+            <button className="button button--ghost" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
           </div>
         </div>
 
@@ -666,19 +666,19 @@ export default function Admin() {
           <div className="card" style={{ marginBottom: '2rem' }}>
             <h3 className="card__title" style={{ marginBottom: '1rem' }}>Quick Actions</h3>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <a href="/admin/courses" className="button button--primary button--pill">
+              <a href="/admin/courses" className="button button--primary">
                 📚 Manage Course Structure
               </a>
-              <a href="/admin/verify" className="button button--primary button--pill">
+              <a href="/admin/verify" className="button button--primary">
                 ✅ Verify Exam Answers
               </a>
-              <a href="#courses" className="button button--ghost button--pill">
+              <a href="#courses" className="button button--ghost">
                 🎬 Manage Videos
               </a>
-              <a href="#quizzes" className="button button--ghost button--pill">
+              <a href="#quizzes" className="button button--ghost">
                 📝 Manage Quizzes
               </a>
-              <a href="#users" className="button button--ghost button--pill">
+              <a href="#users" className="button button--ghost">
                 👥 Manage Users
               </a>
             </div>

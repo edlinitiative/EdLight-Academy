@@ -423,10 +423,10 @@ const ExamResults = () => {
           </div>
         </div>
         <div className="exam-results__next-actions">
-          <button className="button button--primary button--pill" onClick={() => navigate(studyTarget)} type="button">
+          <button className="button button--primary" onClick={() => navigate(studyTarget)} type="button">
             <Target size={16} /> {courseCode ? `S'entraîner en ${subject}` : 'Réviser cette matière'}
           </button>
-          <button className="button button--ghost button--pill" onClick={() => navigate('/dashboard')} type="button">
+          <button className="button button--ghost" onClick={() => navigate('/dashboard')} type="button">
             <BarChart3 size={16} /> Voir mon score de préparation
           </button>
         </div>

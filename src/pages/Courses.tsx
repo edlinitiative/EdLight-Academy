@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ArrowRight, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Target, Layers, Check } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { CourseCard } from '../components/Course';
@@ -19,6 +19,70 @@ function countCourseLessons(course) {
 
 function levelLabel(level) {
   return String(level || '').replace(/^NS(.*)$/i, 'NS $1');
+}
+
+/**
+ * LevelFilter — a "Niveau" button that opens a small popover list of levels.
+ * Replaces the old pill row / native select with a clean, on-brand dropdown.
+ */
+function LevelFilter({ value, onChange, levels, hasEnrolled, t }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const options = [
+    { value: 'all', label: t('courses.allLevels', 'Tous les niveaux') },
+    ...(hasEnrolled ? [{ value: 'enrolled', label: t('courses.myCourses', 'Mes cours') }] : []),
+    ...levels.map((lvl) => ({ value: lvl, label: levelLabel(lvl) })),
+  ];
+  const isFiltered = value !== 'all';
+  const active = options.find((o) => o.value === value);
+  const niveau = t('courses.levelLabel', 'Niveau');
+
+  return (
+    <div className="level-filter" ref={ref}>
+      <button
+        type="button"
+        className={`level-filter__btn ${isFiltered ? 'level-filter__btn--active' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Layers size={15} className="level-filter__icon" aria-hidden="true" />
+        <span className="level-filter__label">
+          {isFiltered ? `${niveau} : ${active?.label}` : niveau}
+        </span>
+        <ChevronDown size={16} className="level-filter__chevron" aria-hidden="true" />
+      </button>
+      {open && (
+        <ul className="level-filter__menu" role="listbox">
+          {options.map((o) => (
+            <li key={o.value} role="option" aria-selected={o.value === value}>
+              <button
+                type="button"
+                className={`level-filter__item ${o.value === value ? 'level-filter__item--active' : ''}`}
+                onClick={() => { onChange(o.value); setOpen(false); }}
+              >
+                <span>{o.label}</span>
+                {o.value === value && <Check size={15} aria-hidden="true" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -177,7 +241,7 @@ export default function Courses() {
                 </h1>
                 <button
                   type="button"
-                  className="button button--ghost button--pill button--sm courses-header__practice"
+                  className="button button--ghost button--sm courses-header__practice"
                   onClick={() => navigate(`/quizzes?course=${activeGroup.code}`)}
                 >
                   <Target size={15} /> {t('courses.practiceCta', "S'entraîner")}
@@ -192,25 +256,15 @@ export default function Courses() {
           </div>
         </div>
 
-        {/* Level filter — compact dropdown (level view only) */}
+        {/* Level filter — "Niveau" dropdown button (level view only) */}
         {activeGroup && (
-          <div className="courses-levels-select">
-            <select
-              id="level-filter"
-              className="level-select"
-              aria-label={t('courses.levelLabel', 'Niveau')}
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">{t('courses.allLevels', 'Tous les niveaux')}</option>
-              {activeGroup.enrolledCount > 0 && (
-                <option value="enrolled">{t('courses.myCourses', 'Mes cours')}</option>
-              )}
-              {levelsForSubject.map((lvl) => (
-                <option key={lvl} value={lvl}>{levelLabel(lvl)}</option>
-              ))}
-            </select>
-          </div>
+          <LevelFilter
+            value={filter}
+            onChange={setFilter}
+            levels={levelsForSubject}
+            hasEnrolled={activeGroup.enrolledCount > 0}
+            t={t}
+          />
         )}
 
         {/* Content */}
@@ -268,7 +322,6 @@ export default function Courses() {
                     onClick={() => { setSubject(g.code); setFilter('all'); }}
                     aria-label={label}
                   >
-                    <span className="subject-tile__glyph" aria-hidden="true">{label.charAt(0)}</span>
                     <span className="subject-tile__body">
                       <span className="subject-tile__name">{label}</span>
                       <span className="subject-tile__stat">

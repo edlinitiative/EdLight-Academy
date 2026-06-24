@@ -101,8 +101,8 @@ export default function Contact() {
               </span>
             </div>
             <div className="quiz-card__controls" style={{ marginTop: '0.9rem' }}>
-              <button type="submit" className="button button--primary button--pill">{isCreole ? 'Voye mesaj' : 'Envoyer'}</button>
-              <a className="button button--ghost button--pill" href={`mailto:${supportEmail}`}>Email {supportEmail}</a>
+              <button type="submit" className="button button--primary">{isCreole ? 'Voye mesaj' : 'Envoyer'}</button>
+              <a className="button button--ghost" href={`mailto:${supportEmail}`}>Email {supportEmail}</a>
             </div>
           </form>
 

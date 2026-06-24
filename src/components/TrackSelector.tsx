@@ -104,7 +104,7 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
 
       <div className="track-selector__actions">
         <button
-          className="button button--primary button--pill track-selector__confirm"
+          className="button button--primary track-selector__confirm"
           onClick={handleConfirm}
           disabled={!selected || saving}
           type="button"
@@ -113,7 +113,7 @@ export default function TrackSelector({ onSelect, onClose, mode = 'modal', curre
         </button>
         {onClose && (
           <button
-            className="button button--ghost button--pill"
+            className="button button--ghost"
             onClick={onClose}
             disabled={saving}
             type="button"

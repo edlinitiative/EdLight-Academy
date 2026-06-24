@@ -115,7 +115,7 @@ export default function CourseOverview({
         )}
 
         <div className="course-overview__actions">
-          <button type="button" className="button button--primary button--pill course-overview__cta" onClick={onStart}>
+          <button type="button" className="button button--primary course-overview__cta" onClick={onStart}>
             <PlayCircle size={18} /> {ctaLabel}
             {hasProgress && resumeLessonTitle && (
               <span className="course-overview__cta-sub">{resumeModuleTitle ? `${resumeModuleTitle} · ` : ''}{resumeLessonTitle}</span>
@@ -123,7 +123,7 @@ export default function CourseOverview({
           </button>
           <button
             type="button"
-            className="button button--ghost button--pill"
+            className="button button--ghost"
             onClick={() => navigate(practiceHref)}
           >
             <Target size={16} /> {t('courses.practiceCta', "S'entraîner")}

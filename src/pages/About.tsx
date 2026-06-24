@@ -146,10 +146,10 @@ export default function About() {
               <>EdLight construit l’infrastructure pour une éducation STEM accessible et de qualité en Haïti, des cours structurés, des exercices d’examens officiels et un suivi de progression en temps réel, le tout au même endroit.</>
             )}
           </p>          <div className="about-hero__actions">
-            <button className="button button--primary button--pill" onClick={() => navigate('/courses')}>
+            <button className="button button--primary" onClick={() => navigate('/courses')}>
               {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
             </button>
-            <button className="button button--ghost button--pill" onClick={() => navigate('/exams')}>
+            <button className="button button--ghost" onClick={() => navigate('/exams')}>
               {isCreole ? 'Wè egzamen yo' : 'Voir les examens'}
             </button>
           </div>        </section>
@@ -262,7 +262,7 @@ export default function About() {
                 : 'Rejoignez des élèves à travers Haïti qui apprennent avec EdLight Academy.')}
           </p>
           <button
-            className="button button--primary button--pill"
+            className="button button--primary"
             onClick={() => navigate('/courses')}
           >
             {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}

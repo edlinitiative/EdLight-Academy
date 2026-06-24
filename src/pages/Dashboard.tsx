@@ -218,7 +218,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="page-header__actions">
-            <button className="button button--ghost button--pill" onClick={() => navigate('/courses')}>
+            <button className="button button--ghost" onClick={() => navigate('/courses')}>
               {isCreole ? 'Gade katalòg la' : 'Explorer le catalogue'}
             </button>
           </div>
@@ -284,7 +284,7 @@ export default function Dashboard() {
         <div className="dashboard-section">
           <div className="dashboard-section__header">
             <h2 className="dashboard-section__title">{isCreole ? 'Kou ou enskri' : 'Cours suivis'}</h2>
-            <button className="button button--light button--pill" onClick={() => navigate('/courses')}>
+            <button className="button button--light" onClick={() => navigate('/courses')}>
               {isCreole ? 'Ajoute lòt kou' : 'Ajouter des cours'}
             </button>
           </div>
@@ -347,14 +347,14 @@ export default function Dashboard() {
 
                     <div className="dashboard-course-row__actions">
                       <button
-                        className="button button--primary button--pill button--sm"
+                        className="button button--primary button--sm"
                         onClick={() => navigate(`/courses/${course.id}`)}
                         type="button"
                       >
                         {isCreole ? 'Kontinye' : 'Continuer'}
                       </button>
                       <button
-                        className="button button--ghost button--pill button--sm"
+                        className="button button--ghost button--sm"
                         onClick={() => navigate(`/courses/${course.id}`)}
                         type="button"
                       >
@@ -373,7 +373,7 @@ export default function Dashboard() {
                   : 'Aucun cours pour le moment. Explorez le catalogue pour vous inscrire à votre premier cours.'}
               </p>
               <div style={{ marginTop: '1rem' }}>
-                <button className="button button--primary button--pill" onClick={() => navigate('/courses')}>
+                <button className="button button--primary" onClick={() => navigate('/courses')}>
                   {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
                 </button>
               </div>
@@ -390,7 +390,7 @@ export default function Dashboard() {
         <div className="dashboard-section">
           <div className="dashboard-section__header">
             <h2 className="dashboard-section__title">{isCreole ? 'Quiz, pèfòmans' : 'Quiz, performance'}</h2>
-            <button className="button button--light button--pill" onClick={() => navigate('/quizzes')} type="button">
+            <button className="button button--light" onClick={() => navigate('/quizzes')} type="button">
               {isCreole ? 'Ale nan quiz yo' : 'Aller aux quiz'}
             </button>
           </div>
@@ -440,7 +440,7 @@ export default function Dashboard() {
                   : 'Faites votre premier quiz pour commencer à suivre votre performance et vos points forts.'}
               </p>
               <div style={{ marginTop: '1rem' }}>
-                <button className="button button--primary button--pill" onClick={() => navigate('/quizzes')} type="button">
+                <button className="button button--primary" onClick={() => navigate('/quizzes')} type="button">
                   {isCreole ? 'Kòmanse yon quiz' : 'Commencer un quiz'}
                 </button>
               </div>
@@ -451,7 +451,7 @@ export default function Dashboard() {
         <div className="dashboard-section">
           <div className="dashboard-section__header">
             <h2 className="dashboard-section__title">{isCreole ? 'Egzamen, aktivite' : 'Examens, activité'}</h2>
-            <button className="button button--light button--pill" onClick={() => navigate('/exams')} type="button">
+            <button className="button button--light" onClick={() => navigate('/exams')} type="button">
               {isCreole ? 'Ale nan egzamen yo' : 'Aller aux examens'}
             </button>
           </div>
@@ -527,7 +527,7 @@ export default function Dashboard() {
                   : 'Passez un examen blanc pour générer votre score de préparation et révéler vos points faibles.'}
               </p>
               <div style={{ marginTop: '1rem' }}>
-                <button className="button button--primary button--pill" onClick={() => navigate('/exams')} type="button">
+                <button className="button button--primary" onClick={() => navigate('/exams')} type="button">
                   {isCreole ? 'Kòmanse yon egzamen blan' : 'Commencer un examen blanc'}
                 </button>
               </div>

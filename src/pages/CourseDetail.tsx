@@ -340,7 +340,7 @@ export default function CourseDetail() {
           <div className="card card--message">
             <h2 className="section__title">{t('courses.notAvailableTitle', 'Ce cours n\'est pas disponible')}</h2>
             <p className="text-muted">{t('courses.notAvailableBody', 'Nous n\'avons pas trouvé le cours que vous cherchez.')}</p>
-            <button className="button button--primary button--pill" onClick={() => navigate('/courses')}>
+            <button className="button button--primary" onClick={() => navigate('/courses')}>
               {t('courses.returnToCatalog', 'Retour au catalogue')}
             </button>
           </div>
@@ -426,7 +426,7 @@ export default function CourseDetail() {
                       {t('courses.gateText', 'Vous avez profité de vos 3 vidéos gratuites. Inscrivez-vous gratuitement pour débloquer tous les cours, quiz et examens.')}
                     </p>
                     <button
-                      className="button button--primary button--pill"
+                      className="button button--primary"
                       onClick={() => useStore.getState().setShowAuthModal(true)}
                     >
                       {t('courses.gateCta', 'Créer un compte gratuit')}

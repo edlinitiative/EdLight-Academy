@@ -214,7 +214,7 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                   'Antre nan klasman an ak yon ti non — ou rete anonim.',
                 )}
               </p>
-              <button className="button button--primary button--pill" onClick={() => setShowJoin(true)}>
+              <button className="button button--primary" onClick={() => setShowJoin(true)}>
                 {t('Rejoindre le classement', 'Antre nan klasman')}
               </button>
             </>
@@ -251,10 +251,10 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                 />
               </label>
               <div className="leaderboard__form-actions">
-                <button className="button button--ghost button--pill" onClick={() => setShowJoin(false)} disabled={saving}>
+                <button className="button button--ghost" onClick={() => setShowJoin(false)} disabled={saving}>
                   {t('Annuler', 'Anile')}
                 </button>
-                <button className="button button--primary button--pill" onClick={join} disabled={saving}>
+                <button className="button button--primary" onClick={join} disabled={saving}>
                   {saving ? t('…', '…') : t('Confirmer', 'Konfime')}
                 </button>
               </div>

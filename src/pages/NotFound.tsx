@@ -23,10 +23,10 @@ export default function NotFound() {
           <h1 className="state-view__title">{t('notFound.title')}</h1>
           <p className="state-view__message">{t('notFound.body')}</p>
           <div className="state-view__actions">
-            <Link className="button button--primary button--pill" to="/">
+            <Link className="button button--primary" to="/">
               {t('notFound.home')}
             </Link>
-            <Link className="button button--ghost button--pill" to="/courses">
+            <Link className="button button--ghost" to="/courses">
               {t('notFound.courses')}
             </Link>
           </div>

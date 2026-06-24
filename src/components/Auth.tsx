@@ -193,7 +193,7 @@ export function AuthModal({ onClose }) {
 
               <button
                 type="submit"
-                className="button button--primary button--pill"
+                className="button button--primary"
                 style={{ width: '100%', marginTop: '0.75rem' }}
                 disabled={loading}
               >
@@ -230,7 +230,7 @@ export function AuthModal({ onClose }) {
             <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
               <button
                 type="button"
-                className="button button--secondary button--pill"
+                className="button button--secondary"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
                 onClick={handleGoogleSignIn}
                 disabled={loading}
@@ -322,7 +322,7 @@ export function AuthModal({ onClose }) {
 
               <button
                 type="submit"
-                className="button button--primary button--pill"
+                className="button button--primary"
                 style={{ width: '100%', marginTop: '0.75rem' }}
                 disabled={loading}
               >

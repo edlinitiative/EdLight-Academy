@@ -59,13 +59,13 @@ export default function Profile() {
             </p>
             <div className="profile-guest__actions">
               <button
-                className="button button--primary button--pill"
+                className="button button--primary"
                 onClick={() => { setActiveTab('signup'); toggleAuthModal(); }}
               >
                 {t('Créer un compte', 'Kreye yon kont')}
               </button>
               <button
-                className="button button--ghost button--pill"
+                className="button button--ghost"
                 onClick={() => { setActiveTab('signin'); toggleAuthModal(); }}
               >
                 {t('Se connecter', 'Konekte')}
