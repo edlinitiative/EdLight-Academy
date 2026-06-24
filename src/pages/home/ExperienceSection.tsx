@@ -13,6 +13,10 @@ export default function ExperienceSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <div className="lp-experience__grid">
           <div className="lp-experience__copy" data-reveal>
+            <span className="lp-eyebrow">
+              <span className="lp-eyebrow__dot" />
+              {t('L’expérience EdLight', 'Eksperyans EdLight')}
+            </span>
             <h2 className="lp-section__title">
               {t('Apprenez comme dans', 'Aprann tankou nan')}
               <br />

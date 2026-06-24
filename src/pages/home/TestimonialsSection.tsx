@@ -33,6 +33,10 @@ export default function TestimonialsSection({ t }: { t: TFn }) {
     <section className="lp-section lp-testi">
       <div className="lp-container">
         <header className="lp-section__head lp-section__head--center" data-reveal>
+          <span className="lp-eyebrow">
+            <span className="lp-eyebrow__dot" />
+            {t('Témoignages', 'Temwayaj')}
+          </span>
           <h2 className="lp-section__title">
             {t('Ils progressent avec ', 'Y ap pwogrese ak ')}
             <span className="lp-text-accent">EdLight</span>.

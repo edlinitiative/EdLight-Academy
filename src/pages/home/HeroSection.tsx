@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Flame, Sparkles } from 'lucide-react';
 import { ArrowIcon, getStats, TFn } from './content';
 
 export default function HeroSection({ t }: { t: TFn }) {
@@ -9,15 +10,19 @@ export default function HeroSection({ t }: { t: TFn }) {
 
   return (
     <section className="lp-hero">
+      <div className="lp-hero__grid" aria-hidden="true" />
       <div className="lp-container">
         <div className="lp-hero__layout">
           <div className="lp-hero__copy">
+            <span className="lp-eyebrow">
+              <span className="lp-eyebrow__dot" />
+              {t('Préparation au Bac · 100% gratuit', 'Preparasyon Bak · 100% gratis')}
+            </span>
+
             <h1 className="lp-hero__title">
               {t('Maîtrisez le ', 'Metrize ')}
-              <span className="lp-hero__title-accent">Bac</span>
-              {t(' avec une rigueur', ' ak rigè')}
-              <br />
-              {t('digne d’une école d’élite.', 'tankou yon lekòl elit.')}
+              <span className="lp-hero__title-accent lp-text-accent">Bac</span>
+              {t(' avec une rigueur digne d’une école d’élite.', ' ak rigè tankou yon lekòl elit.')}
             </h1>
 
             <p className="lp-hero__lede">
@@ -36,9 +41,21 @@ export default function HeroSection({ t }: { t: TFn }) {
                 {t('Passer un examen blanc', 'Pase yon egzamen blan')}
               </button>
             </div>
+
+            <div className="lp-hero__trust">
+              <span className="lp-hero__avatars" aria-hidden="true">
+                <span>A</span><span>M</span><span>J</span><span>+</span>
+              </span>
+              <span>
+                <span className="lp-hero__stars" aria-hidden="true">★★★★★</span>
+                <br />
+                <strong>12 000+</strong> {t('élèves haïtiens accompagnés', 'elèv ayisyen akonpaye')}
+              </span>
+            </div>
           </div>
 
           <div className="lp-hero__visual">
+            <div className="lp-hero__glow" aria-hidden="true" />
             <div className="lp-hero__frame">
               <img
                 src={heroSrc}
@@ -55,6 +72,21 @@ export default function HeroSection({ t }: { t: TFn }) {
                   }
                 }}
               />
+            </div>
+
+            <div className="lp-hero__float lp-hero__float--a" aria-hidden="true">
+              <span className="lp-hero__float-icon"><Flame size={18} strokeWidth={2.4} /></span>
+              <span className="lp-hero__float-text">
+                <span className="lp-hero__float-label">{t('Série', 'Seri')}</span>
+                <span className="lp-hero__float-value">12 {t('jours', 'jou')}</span>
+              </span>
+            </div>
+            <div className="lp-hero__float lp-hero__float--b" aria-hidden="true">
+              <span className="lp-hero__float-icon"><Sparkles size={18} strokeWidth={2.4} /></span>
+              <span className="lp-hero__float-text">
+                <span className="lp-hero__float-label">{t('Maîtrise', 'Metrize')}</span>
+                <span className="lp-hero__float-value">82%</span>
+              </span>
             </div>
           </div>
         </div>

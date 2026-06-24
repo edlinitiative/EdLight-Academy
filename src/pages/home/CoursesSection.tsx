@@ -11,6 +11,10 @@ export default function CoursesSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <header className="lp-section__head lp-section__head--row" data-reveal>
           <div>
+            <span className="lp-eyebrow">
+              <span className="lp-eyebrow__dot" />
+              {t('Catalogue', 'Katalòg')}
+            </span>
             <h2 className="lp-section__title lp-section__title--sm">{t('Cours phares de la rentrée', 'Kou ki pi enpòtan')}</h2>
           </div>
           <button className="lp-link" onClick={() => navigate('/courses')}>

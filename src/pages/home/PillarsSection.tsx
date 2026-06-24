@@ -8,6 +8,10 @@ export default function PillarsSection({ t }: { t: TFn }) {
     <section className="lp-section lp-pillars">
       <div className="lp-container">
         <header className="lp-section__head" data-reveal>
+          <span className="lp-eyebrow">
+            <span className="lp-eyebrow__dot" />
+            {t('La méthode EdLight', 'Metòd EdLight')}
+          </span>
           <h2 className="lp-section__title">
             {t('Une méthode complète,', 'Yon metòd konplè,')}
             <br />
