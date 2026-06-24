@@ -1325,6 +1325,87 @@ textarea.input-field {
 	z-index: 1100;
 }
 
+/* First-run language picker — welcome gate */
+.welcome-lang {
+	width: min(440px, 96vw);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 24px;
+	box-shadow: var(--shadow-xl);
+	padding: clamp(1.5rem, 5vw, 2.25rem);
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.85rem;
+}
+.welcome-lang__logo {
+	height: 52px;
+	width: auto;
+	margin-bottom: 0.25rem;
+}
+.welcome-lang__title {
+	font-size: 1.4rem;
+	font-weight: 800;
+	color: var(--text-900);
+	line-height: 1.2;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	margin: 0;
+}
+.welcome-lang__title-ht {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-500);
+}
+.welcome-lang__subtitle {
+	font-size: 0.875rem;
+	color: var(--text-500);
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+.welcome-lang__subtitle-ht { font-style: italic; opacity: 0.85; }
+.welcome-lang__options {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.75rem;
+	width: 100%;
+	margin-top: 0.5rem;
+}
+.welcome-lang__option {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 1.1rem 0.75rem;
+	border-radius: 16px;
+	border: 2px solid var(--border);
+	background: var(--surface-elevated);
+	cursor: pointer;
+	transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.welcome-lang__option:hover {
+	transform: translateY(-2px);
+	border-color: var(--primary-500, #2563eb);
+	box-shadow: var(--shadow-md);
+}
+.welcome-lang__option.is-current {
+	border-color: var(--primary-500, #2563eb);
+	background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.05));
+}
+.welcome-lang__flag { font-size: 2rem; line-height: 1; }
+.welcome-lang__option-label {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--text-900);
+}
+@media (max-width: 380px) {
+	.welcome-lang__options { grid-template-columns: 1fr; }
+}
+
 .course-modal {
 	width: min(640px, 96vw);
 	border-radius: 24px;
@@ -13796,6 +13877,57 @@ textarea:focus-visible,
 	font-weight: 800;
 	color: var(--text-900);
 	line-height: 1;
+}
+
+/* Level chip — XP progress donut + level number, mirrors the streak badge */
+.level-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	padding: 0.25rem 0.5rem 0.25rem 0.28rem;
+	border-radius: 999px;
+	border: 1px solid var(--border);
+	background: var(--surface);
+	text-decoration: none;
+	transition: all 0.25s ease;
+	user-select: none;
+}
+.level-badge:hover {
+	border-color: rgba(37, 99, 235, 0.35);
+	background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.06));
+}
+.level-badge__ring {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 999px;
+	background: conic-gradient(#2563eb var(--lvl-pct, 0%), rgba(148, 163, 184, 0.25) var(--lvl-pct, 0%));
+	flex-shrink: 0;
+}
+.level-badge__ring::after {
+	content: "";
+	position: absolute;
+	inset: 2px;
+	border-radius: 999px;
+	background: var(--surface);
+}
+.level-badge__icon {
+	position: relative;
+	z-index: 1;
+	color: #2563eb;
+}
+.level-badge__num {
+	font-size: 0.82rem;
+	font-weight: 800;
+	color: var(--text-900);
+	line-height: 1;
+}
+[data-theme="dark"] .level-badge__icon { color: #60a5fa; }
+[data-theme="dark"] .level-badge__ring {
+	background: conic-gradient(#60a5fa var(--lvl-pct, 0%), rgba(148, 163, 184, 0.22) var(--lvl-pct, 0%));
 }
 
 @keyframes streak-flame-pulse {

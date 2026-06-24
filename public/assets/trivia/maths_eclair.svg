@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e40af"/>
+      <stop offset="1" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <radialGradient id="gl" cx="0.8" cy="0.18" r="0.9">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="26" height="26" patternUnits="userSpaceOnUse">
+      <path d="M26 0H0V26" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.06"/>
+    </pattern>
+  </defs>
+  <rect width="400" height="225" fill="url(#bg)"/>
+  <rect width="400" height="225" fill="url(#grid)"/>
+  <rect width="400" height="225" fill="url(#gl)"/>
+  <g fill="#ffffff" opacity="0.92" font-family="Georgia, 'Times New Roman', serif" font-weight="700">
+    <text x="40" y="86" font-size="58">π</text>
+    <text x="120" y="150" font-size="64">÷</text>
+    <text x="206" y="96" font-size="58">×</text>
+    <text x="286" y="158" font-size="62">√</text>
+    <text x="300" y="92" font-size="50">∑</text>
+  </g>
+  <g fill="none" stroke="#93c5fd" stroke-width="4" opacity="0.85" stroke-linecap="round">
+    <path d="M48 178 h44 M70 156 v44"/>
+    <path d="M168 182 h40 M188 162 v40"/>
+  </g>
+</svg>

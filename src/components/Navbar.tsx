@@ -17,6 +17,7 @@ import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
+import { LevelBadge } from './LevelBadge';
 import NotificationBell from './NotificationBell';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -257,6 +258,8 @@ export function Navbar() {
           {isAuthenticated ? (
             <>
               <StreakBadge />
+
+              <LevelBadge />
 
               <NotificationBell />
 

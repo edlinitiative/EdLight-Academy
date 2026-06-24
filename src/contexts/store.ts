@@ -23,6 +23,7 @@ export interface AppState {
   hydrated: boolean;
   track: string | null;
   onboardingCompleted: boolean;
+  languageChosen: boolean;
   theme: 'light' | 'dark';
 
   // Course progress
@@ -50,6 +51,7 @@ export interface AppState {
   setLanguage: (language: string) => void;
   setTrack: (track: string | null) => void;
   setOnboardingCompleted: (completed: boolean) => void;
+  setLanguageChosen: (chosen: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
   enrollInCourse: (course: any) => void;
@@ -83,6 +85,7 @@ const useStore = create<AppState>()(
       hydrated: false,
       track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
       onboardingCompleted: false,
+      languageChosen: false, // first-run language picker has been answered
       theme: 'light', // 'light' | 'dark' — Night Shift
       
       // Course progress
@@ -107,6 +110,7 @@ const useStore = create<AppState>()(
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
+      setLanguageChosen: (chosen) => set({ languageChosen: !!chosen }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
       
@@ -192,6 +196,7 @@ const useStore = create<AppState>()(
         language: state.language,
         track: state.track,
         onboardingCompleted: state.onboardingCompleted,
+        languageChosen: state.languageChosen,
         theme: state.theme,
         enrolledCourses: state.enrolledCourses,
         progress: state.progress,

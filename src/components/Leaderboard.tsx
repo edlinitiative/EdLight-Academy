@@ -56,19 +56,24 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
 
   const optedIn = !!profile?.leaderboard?.optedIn;
   const mySchool = profile?.leaderboard?.school || null;
+  const myCity = profile?.leaderboard?.city || null;
 
-  const [scope, setScope] = useState('national'); // 'national' | 'school'
+  const [scope, setScope] = useState('national'); // 'school' | 'city' | 'national'
   const [showJoin, setShowJoin] = useState(false);
   const [alias, setAlias] = useState(defaultAlias(user));
   const [school, setSchool] = useState(mySchool || '');
+  const [city, setCity] = useState(myCity || '');
   const [saving, setSaving] = useState(false);
 
   const visible = useMemo(() => {
     if (scope === 'school' && mySchool) {
       return entries.filter((e) => e.school && e.school === mySchool);
     }
+    if (scope === 'city' && myCity) {
+      return entries.filter((e) => e.city && e.city === myCity);
+    }
     return entries;
-  }, [entries, scope, mySchool]);
+  }, [entries, scope, mySchool, myCity]);
 
   const join = async () => {
     setSaving(true);
@@ -77,6 +82,7 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
         optedIn: true,
         displayName: (alias || defaultAlias(user)).slice(0, 24),
         school: school.trim() || null,
+        city: city.trim() || null,
       });
       setShowJoin(false);
     } finally {
@@ -103,19 +109,27 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
         <div className="leaderboard__scopes" role="tablist">
           <button
             role="tab"
+            aria-selected={scope === 'school'}
+            className={`leaderboard__scope ${scope === 'school' ? 'is-active' : ''}`}
+            onClick={() => setScope('school')}
+          >
+            {t('École', 'Lekòl')}
+          </button>
+          <button
+            role="tab"
+            aria-selected={scope === 'city'}
+            className={`leaderboard__scope ${scope === 'city' ? 'is-active' : ''}`}
+            onClick={() => setScope('city')}
+          >
+            {t('Ville', 'Vil')}
+          </button>
+          <button
+            role="tab"
             aria-selected={scope === 'national'}
             className={`leaderboard__scope ${scope === 'national' ? 'is-active' : ''}`}
             onClick={() => setScope('national')}
           >
             {t('National', 'Nasyonal')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={scope === 'school'}
-            className={`leaderboard__scope ${scope === 'school' ? 'is-active' : ''}`}
-            onClick={() => setScope('school')}
-          >
-            {t('Mon école', 'Lekòl mwen')}
           </button>
         </div>
       )}
@@ -151,6 +165,12 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
         <div className="leaderboard__empty">
           <p className="text-muted">
             {t('Ajoutez votre école pour voir son classement.', 'Ajoute lekòl ou pou wè klasman li.')}
+          </p>
+        </div>
+      ) : (scope === 'city' && !myCity) ? (
+        <div className="leaderboard__empty">
+          <p className="text-muted">
+            {t('Ajoutez votre ville pour voir son classement.', 'Ajoute vil ou pou wè klasman li.')}
           </p>
         </div>
       ) : (
@@ -218,6 +238,16 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                   maxLength={60}
                   onChange={(e) => setSchool(e.target.value)}
                   placeholder={t('Nom de votre école', 'Non lekòl ou')}
+                />
+              </label>
+              <label className="leaderboard__field">
+                <span>{t('Ville (optionnel)', 'Vil (opsyonèl)')}</span>
+                <input
+                  className="input-field"
+                  value={city}
+                  maxLength={60}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder={t('Votre ville', 'Vil ou')}
                 />
               </label>
               <div className="leaderboard__form-actions">
