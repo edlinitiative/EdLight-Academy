@@ -166,6 +166,30 @@ export const UNIVERSAL_SUBJECTS = new Set([
   'Santé',
 ]);
 
+// ─── Default subject order (no track selected) ──────────────────────────────
+// Rough importance ordering used to lay out subject sections when the student
+// has not chosen a filière. When a track IS active, sections are ordered by the
+// track's coefficient instead (see getCoefficient).
+
+export const DEFAULT_SUBJECT_ORDER = [
+  'Mathématiques',
+  'Physique',
+  'Chimie',
+  'SVT',
+  'Histoire-Géo',
+  'Philosophie',
+  'Français',
+  'Anglais',
+  'Espagnol',
+  'Économie',
+  'Kreyòl',
+  'Art & Musique',
+  'Informatique',
+  'Santé',
+  'Culture Générale',
+  'Mixed',
+];
+
 // ─── Track-specific exam section directives ─────────────────────────────────
 
 /**

@@ -301,7 +301,7 @@ function extractSession(title) {
  *      - If topic duplicates the subject, omit it
  *      - If no topic and no extra metadata, use: "[Subject] — Bac [Year]"
  */
-export function normalizeExamTitle(exam) {
+export function examTitleParts(exam) {
   const rawTitle = String(exam.exam_title || '').trim();
   const subject = normalizeSubject(exam.subject);
   const { year, session: yearSession } = normalizeYear(exam.year);
@@ -376,52 +376,60 @@ export function normalizeExamTitle(exam) {
   // Final guard: if what's left is very short junk (≤2 chars), discard
   if (cleaned.length <= 2) cleaned = '';
 
-  // Build the clean title
-  const parts = [subject || 'Examen'];
-
+  // ── Build structured parts ──
   // Meaningful topic / subtitle from the original title
+  let topic = '';
   if (cleaned) {
     // Smart case: Title-case if ALL UPPER, otherwise preserve original mixed case
-    let topic;
     if (cleaned.length > 3 && cleaned === cleaned.toUpperCase()) {
       // "TEXTE MODÈLE" → "Texte modèle"
       topic = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
     } else {
       topic = cleaned;
     }
-    parts.push('—');
-    parts.push(topic);
   }
 
-  // Session line
+  // Session (month + year, else the caller falls back to the bare year)
   const session = titleSession || yearSession;
 
-  // Build subtitle chips (series, session, year)
-  const chips = [];
-  // Only show series if it adds info beyond the subject name
+  // Series — only when it adds info beyond the subject name
+  let seriesClean = '';
   if (series) {
-    const seriesClean = series
+    seriesClean = series
       .split(/[,\s]+/)
       .filter((s) => s.length >= 2 && s.toUpperCase() !== subject.toUpperCase())
       .join(', ');
-    if (seriesClean) chips.push(seriesClean);
   }
-  if (session) {
-    chips.push(session);
-  } else if (year) {
-    chips.push(String(year));
-  }
+
+  return { subject: subject || 'Examen', topic, series: seriesClean, session, year };
+}
+
+/**
+ * Compose the canonical one-line title string from structured parts:
+ *   "[Subject] — [Topic] · [Series] · [Session|Year]"
+ */
+export function composeExamTitle(parts) {
+  const { subject, topic, series, session, year } = parts;
+  const out = [subject || 'Examen'];
+  if (topic) out.push('—', topic);
+
+  const chips = [];
+  if (series) chips.push(series);
+  if (session) chips.push(session);
+  else if (year) chips.push(String(year));
 
   if (chips.length) {
-    parts.push('·');
-    parts.push(chips.join(' · '));
-  } else if (!cleaned && year) {
-    // No topic and no session — add bare year
-    parts.push('·');
-    parts.push(String(year));
+    out.push('·', chips.join(' · '));
+  } else if (!topic && year) {
+    // No topic and no session — add the bare year
+    out.push('·', String(year));
   }
+  return out.join(' ');
+}
 
-  return parts.join(' ');
+/** Produce a short, clean one-line exam title (Subject — Topic · Session). */
+export function normalizeExamTitle(exam) {
+  return composeExamTitle(examTitleParts(exam));
 }
 
 // ─── Subject colors ─────────────────────────────────────────────────────────
@@ -484,7 +492,8 @@ export function buildExamIndex(rawExams) {
     const level = normalizeLevel(exam.level);
     const yearRaw = String(exam.year || '');
     const { year: yearNum } = normalizeYear(yearRaw);
-    const title = normalizeExamTitle(exam);
+    const titleParts = examTitleParts(exam);
+    const title = composeExamTitle(titleParts);
 
     let qCount = 0;
     let autoGradable = 0;
@@ -518,6 +527,9 @@ export function buildExamIndex(rawExams) {
       _subject: subj,
       _level: level,
       _title: title,
+      _topic: titleParts.topic,
+      _series: titleParts.series,
+      _session: titleParts.session,
       _yearRaw: yearRaw,
       _year: yearNum,
       _questionCount: qCount,

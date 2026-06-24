@@ -2,14 +2,12 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { TRACKS } from '../config/trackConfig';
+import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
 import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { loadAllExamResultSummaries } from '../services/examResults';
-import {
-  buildExamIndex,
-} from '../utils/examUtils';
+import { buildExamIndex, subjectColor } from '../utils/examUtils';
 
 const PAGE_SIZE = 24;
 
@@ -174,7 +172,6 @@ const ExamBrowser = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(''); // '' | 'todo' | 'done'
   const [showFilters, setShowFilters] = useState(false); // collapsible dropdown panel
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const hasActiveFilters = subjectFilter || yearFilter || search.trim() || trackFilter || statusFilter || difficultyFilter;
   const dropdownCount = [subjectFilter, yearFilter, difficultyFilter].filter(Boolean).length;
@@ -186,7 +183,6 @@ const ExamBrowser = () => {
     setTrackFilter('');
     setStatusFilter('');
     setDifficultyFilter('');
-    setVisibleCount(PAGE_SIZE);
   }, []);
 
   const examKeyOf = useCallback((e) => String(e.exam_id ?? e._idx), []);
@@ -229,14 +225,83 @@ const ExamBrowser = () => {
     return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
   }, [index, subjectFilter, yearFilter, difficultyFilter, search, trackFilter, isTerminale, statusFilter, attempts, examKeyOf]);
 
-  // Reset visible count when filters change
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [subjectFilter, yearFilter, difficultyFilter, search, trackFilter, statusFilter]);
+  // The student's active filière drives both the section ordering and the
+  // coefficient note on each subject header (track-first organisation).
+  const activeTrack = isTerminale ? (trackFilter || userTrack || '') : '';
 
-  // Paginated subset
-  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
-  const hasMore = visibleCount < filtered.length;
+  // Group filtered exams into subject sections, ordered by the active track's
+  // coefficient (most-weighted subject first), else a sensible default order.
+  const groups = useMemo(() => {
+    if (!filtered.length) return [];
+    const bySubject = new Map();
+    for (const e of filtered) {
+      const s = e._subject || 'Autre';
+      if (!bySubject.has(s)) bySubject.set(s, []);
+      bySubject.get(s).push(e);
+    }
+    const arr = [...bySubject.entries()].map(([subject, exams]) => ({
+      subject,
+      exams,
+      color: subjectColor(subject),
+      coef: activeTrack ? getCoefficient(activeTrack, subject) : null,
+    }));
+    arr.sort((a, b) => {
+      if (activeTrack) {
+        if ((b.coef || 0) !== (a.coef || 0)) return (b.coef || 0) - (a.coef || 0);
+      } else {
+        const ra = DEFAULT_SUBJECT_ORDER.indexOf(a.subject);
+        const rb = DEFAULT_SUBJECT_ORDER.indexOf(b.subject);
+        const na = ra === -1 ? 999 : ra;
+        const nb = rb === -1 ? 999 : rb;
+        if (na !== nb) return na - nb;
+      }
+      if (b.exams.length !== a.exams.length) return b.exams.length - a.exams.length;
+      return a.subject.localeCompare(b.subject);
+    });
+    return arr;
+  }, [filtered, activeTrack]);
+
+  // Default expansion: open the highest-priority section(s) up to a small card
+  // budget, so the page opens as a scannable "table of contents".
+  const defaultOpen = useMemo(() => {
+    const set = new Set();
+    let budget = PAGE_SIZE;
+    for (const g of groups) {
+      if (set.size === 0 || budget > 0) {
+        set.add(g.subject);
+        budget -= g.exams.length;
+      }
+    }
+    return set;
+  }, [groups]);
+
+  // Track which sections the user toggled; reset when the level / filière changes.
+  const [openTouched, setOpenTouched] = useState(false);
+  const [openSubjects, setOpenSubjects] = useState(() => new Set());
+  useEffect(() => { setOpenTouched(false); }, [level, activeTrack]);
+
+  const openSet = openTouched ? openSubjects : defaultOpen;
+  // A subject filter or an active search forces matching sections open so
+  // results are never hidden behind a collapsed header.
+  const forceOpen = !!subjectFilter || !!search.trim();
+  const isSectionOpen = useCallback(
+    (subject) => forceOpen || openSet.has(subject),
+    [forceOpen, openSet]
+  );
+  const toggleSection = useCallback((subject) => {
+    setOpenSubjects((prev) => {
+      const base = openTouched ? prev : defaultOpen;
+      const next = new Set(base);
+      if (next.has(subject)) next.delete(subject); else next.add(subject);
+      return next;
+    });
+    setOpenTouched(true);
+  }, [openTouched, defaultOpen]);
+  const allOpen = groups.length > 0 && groups.every((g) => openSet.has(g.subject));
+  const setAllOpen = useCallback((open) => {
+    setOpenSubjects(open ? new Set(groups.map((g) => g.subject)) : new Set());
+    setOpenTouched(true);
+  }, [groups]);
 
   // Summary counts for filtered set
   const summary = useMemo(() => {
@@ -457,34 +522,62 @@ const ExamBrowser = () => {
             )}
           </div>
         ) : (
-          <>
-            <div className="grid grid--exams exam-browser__grid">
-              {visible.map((exam) => (
-                <ExamCard
-                  key={exam.exam_id || exam._idx}
-                  exam={exam}
-                  attempt={attempts[examKeyOf(exam)]}
-                  onClick={() => setPreviewExam(exam)}
-                />
-              ))}
+          <div className="exam-browser__results">
+            <div className="exam-browser__results-head">
+              <p className="exam-browser__results-count">
+                {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
+                {summary.done > 0 && <> · {summary.done} terminé{summary.done !== 1 ? 's' : ''}</>}
+              </p>
+              {groups.length > 1 && !forceOpen && (
+                <button
+                  type="button"
+                  className="exam-browser__expand-all"
+                  onClick={() => setAllOpen(!allOpen)}
+                >
+                  {allOpen ? 'Tout réduire' : 'Tout développer'}
+                </button>
+              )}
             </div>
 
-            {/* Pagination */}
-            {hasMore && (
-              <div className="exam-browser__load-more">
-                <button
-                  className="exam-browser__load-btn"
-                  onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                  type="button"
-                >
-                  Afficher plus d'examens ({filtered.length - visibleCount} restants)
-                </button>
-              </div>
-            )}
-            <p className="exam-browser__showing">
-              {Math.min(visibleCount, filtered.length)} sur {filtered.length} examens affichés
-            </p>
-          </>
+            {groups.map((g) => {
+              const open = isSectionOpen(g.subject);
+              return (
+                <section key={g.subject} className="exam-section">
+                  <button
+                    type="button"
+                    className="exam-section__head"
+                    onClick={() => toggleSection(g.subject)}
+                    aria-expanded={open}
+                    disabled={forceOpen}
+                  >
+                    <span className="exam-section__swatch" style={{ background: g.color }} aria-hidden="true" />
+                    <span className="exam-section__name">{g.subject}</span>
+                    <span className="exam-section__count">{g.exams.length}</span>
+                    {g.coef != null && <span className="exam-section__coef">Coef. {g.coef}</span>}
+                    <svg
+                      className={`exam-section__chevron ${open ? 'is-open' : ''}`}
+                      width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  {open && (
+                    <div className="grid grid--exams exam-section__grid">
+                      {g.exams.map((exam) => (
+                        <ExamCard
+                          key={exam.exam_id || exam._idx}
+                          exam={exam}
+                          attempt={attempts[examKeyOf(exam)]}
+                          onClick={() => setPreviewExam(exam)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         )}
 
         {/* Track selector modal (onboarding) */}
@@ -517,58 +610,27 @@ const ExamBrowser = () => {
 // ── Exam Card Component ──────────────────────────────────────────────────────
 
 /**
- * The normalized exam title has the shape "Subject — Topic · Year/Session".
- * The card already shows the subject (heading + colour dot) and the year (pill),
- * so we pull out ONLY the distinct topic (e.g. "English Time") to use as a
- * subtitle — never repeating the subject or year. Returns '' when there is none.
+ * Flat, editorial exam card. Because cards live inside a subject section, the
+ * subject already appears in the section header — so the card leads with the
+ * distinct topic / session (the real differentiator between same-subject papers)
+ * and surfaces year, filière, length and difficulty as quiet metadata.
  */
-function topicFromTitle(fullTitle) {
-  const t = String(fullTitle || '');
-  const dash = t.indexOf(' — ');
-  if (dash === -1) return '';
-  let topic = t.slice(dash + 3);
-  const dot = topic.indexOf(' · ');
-  if (dot !== -1) topic = topic.slice(0, dot);
-  topic = topic.trim();
-
-  // Drop an unmatched trailing "(" group, e.g. a title truncated mid-phrase
-  // like "Faculté des Sciences (Génie, Chimie" -> "Faculté des Sciences".
-  const opens = (topic.match(/\(/g) || []).length;
-  const closes = (topic.match(/\)/g) || []).length;
-  if (opens > closes) {
-    const i = topic.lastIndexOf('(');
-    if (i > 0) topic = topic.slice(0, i);
-  }
-
-  // Strip a leading ALL-CAPS prefix before a " - " — usually the subject in its
-  // full form that the normalizer didn't match (e.g. subject "Histoire-Géo" vs
-  // "HISTOIRE-GÉOGRAPHIE - Croisades" -> "Croisades").
-  const segs = topic.split(/\s[-–—]\s/);
-  if (segs.length > 1 && /[A-ZÀ-Þ]/.test(segs[0]) && segs[0] === segs[0].toUpperCase()) {
-    topic = segs.slice(1).join(' - ');
-  }
-
-  // Tidy stray edge punctuation left by the cuts above.
-  topic = topic.replace(/^[\s\-–—:,.()/]+|[\s\-–—:,.()/]+$/g, '').trim();
-
-  // Calm a still-shouty ALL-CAPS topic down to sentence case.
-  if (topic.length > 3 && topic === topic.toUpperCase()) {
-    topic = topic.charAt(0).toUpperCase() + topic.slice(1).toLowerCase();
-  }
-  return topic;
-}
-
 function ExamCard({ exam, onClick, attempt }) {
   const subject = exam._subject || 'Examen';
-  // The subject (heading + colour dot) and the year (pill) are each shown once,
-  // so we surface ONLY the distinct topic as a subtitle — avoiding the subject,
-  // year and language being repeated inside the title. '' when there is none.
-  const topic = topicFromTitle(exam._title || exam.exam_title || '');
+  const topic = exam._topic || '';
+  const session = exam._session || (exam._year ? String(exam._year) : '');
+  // Heading is the best available distinguisher under the section's subject.
+  const heading = topic || session || 'Épreuve';
+  // Secondary line: show the session only when it differs from the heading.
+  const sub = topic && session && session !== topic ? session : '';
+
   const qCount = exam._questionCount || 0;
   const duration = exam.duration_minutes || 0;
   const diff = difficultyMeta(exam.difficulty);
+  const tracks = (exam.tracks || [])
+    .filter((t) => t && t !== 'ALL')
+    .map((t) => TRACK_BY_CODE[t]?.shortLabel || t);
 
-  // Best score (if known) drives a compact pill in the header.
   const pct = attempt && typeof attempt.percentage === 'number' ? attempt.percentage : null;
   const scoreTone = pct == null ? '' : pct >= 60 ? '--good' : pct >= 40 ? '--mid' : '--low';
 
@@ -577,49 +639,32 @@ function ExamCard({ exam, onClick, attempt }) {
       className={`card exam-card ${attempt ? 'exam-card--done' : ''}`}
       onClick={onClick}
       type="button"
-      aria-label={`${subject}${topic ? ` — ${topic}` : ''}${exam._year ? `, ${exam._year}` : ''}${attempt ? ', déjà fait' : ''}`}
+      aria-label={`${subject} — ${heading}${exam._year ? `, ${exam._year}` : ''}${attempt ? ', déjà fait' : ''}`}
     >
-      <div className="exam-card__header">
-        <h3 className="exam-card__title" title={subject}>
-          <span className="exam-card__title-text">{subject}</span>
-        </h3>
-        <div className="exam-card__header-right">
-          {attempt && (
-            <span className={`exam-card__score-pill exam-card__score-pill${scoreTone}`}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-              {pct != null ? `${pct}%` : 'Fait'}
-            </span>
-          )}
-          {exam._year > 0 && <span className="exam-card__year">{exam._year}</span>}
-        </div>
+      <div className="exam-card__top">
+        <span className="exam-card__year">{exam._year || '—'}</span>
+        {attempt && (
+          <span className={`exam-card__score exam-card__score${scoreTone}`}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+            {pct != null ? `${pct}%` : 'Fait'}
+          </span>
+        )}
       </div>
 
-      {topic && <p className="exam-card__topic" title={topic}>{topic}</p>}
+      <h3 className="exam-card__heading" title={heading}>{heading}</h3>
+      {sub && <p className="exam-card__sub" title={sub}>{sub}</p>}
 
       <div className="exam-card__meta">
-        <span className="exam-card__meta-item">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>
-          {qCount} question{qCount !== 1 ? 's' : ''}
-        </span>
-        {duration > 0 && (
-          <span className="exam-card__meta-item">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-            {duration} min
-          </span>
-        )}
-        {diff && (
-          <span className={`exam-card__difficulty exam-card__difficulty--${diff.tier}`}>
-            {diff.label}
-          </span>
-        )}
+        <span>{qCount} question{qCount !== 1 ? 's' : ''}</span>
+        {duration > 0 && <span>{duration} min</span>}
+        {diff && <span className={`exam-card__diff exam-card__diff--${diff.tier}`}>{diff.label}</span>}
       </div>
 
-      <div className="exam-card__cta">
-        <span className="exam-card__cta-text">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>
-          Aperçu
-        </span>
-      </div>
+      {tracks.length > 0 && (
+        <p className="exam-card__tracks">Filière : {tracks.join(' · ')}</p>
+      )}
+
+      <span className="exam-card__cta">Aperçu →</span>
     </button>
   );
 }
