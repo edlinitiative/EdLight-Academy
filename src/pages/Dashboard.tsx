@@ -1,17 +1,30 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Flame, Target, ClipboardList } from 'lucide-react';
+import { Flame, Target, ClipboardList, BookOpen, ChevronRight, BarChart3, CheckCircle2 } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
-import ProgressDashboard from '../components/ProgressDashboard';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
 import Leaderboard from '../components/Leaderboard';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
+import './Dashboard.css';
+
+const SUBJECT_CODES = ['PHYS', 'CHEM', 'MATH', 'ECON'] as const;
+function subjectCode(subject) {
+  const v = String(subject || '').toLowerCase();
+  if (v.startsWith('chim') || v.includes('chem')) return 'CHEM';
+  if (v.startsWith('math') || v.includes('matemat')) return 'MATH';
+  if (v.startsWith('econ') || v.includes('ekonomi')) return 'ECON';
+  if (SUBJECT_CODES.includes(String(subject).toUpperCase() as any)) return String(subject).toUpperCase();
+  return 'PHYS';
+}
+function subjectInitial(subject) {
+  return (String(subject || '?').trim()[0] || '?').toUpperCase();
+}
 
 function countCourseLessons(course) {
   const units = Array.isArray(course?.modules) ? course.modules : [];
@@ -111,28 +124,6 @@ export default function Dashboard() {
       )
     : 0;
 
-  const masteredQuizCount = React.useMemo(() => {
-    const byQuiz = new Map();
-    for (const a of quizAttemptsForStats) {
-      if (!a?.quizId) continue;
-      const best = byQuiz.get(a.quizId) ?? -1;
-      const pct = typeof a.percentage === 'number' ? a.percentage : -1;
-      byQuiz.set(a.quizId, Math.max(best, pct));
-    }
-    let mastered = 0;
-    for (const best of byQuiz.values()) {
-      if (best >= 80) mastered += 1;
-    }
-    return mastered;
-  }, [quizAttemptsForStats]);
-
-  const quizStreak7d = React.useMemo(() => {
-    const now = Date.now();
-    const start = now - 7 * 24 * 60 * 60 * 1000;
-    const count = quizAttemptsForStats.filter((a) => (a.attemptedAtMs || 0) >= start).length;
-    return count;
-  }, [quizAttemptsForStats]);
-
   const recentQuizActivityRows = React.useMemo(() => {
     if (recentQuizAttempts.length) return recentQuizAttempts.slice(0, 5);
     return fallbackQuizAttemptsList.slice(0, 5).map((a) => ({
@@ -152,39 +143,42 @@ export default function Dashboard() {
     return { inProgress, submitted, lastMs };
   }, [recentExamAttempts]);
 
+  const currentStreak = React.useMemo(
+    () => (allProgress || []).reduce((m, p) => Math.max(m, p?.currentStreak || 0), 0),
+    [allProgress]
+  );
+
   const firstName = getFirstName(user);
 
   if (isLoading) {
     return (
       <section className="section">
-        <div className="container dashboard-grid">
-          <div className="page-header">
-            <div>
-              <div className="skeleton" style={{ height: 18, width: 100, borderRadius: 999, marginBottom: '0.75rem' }} />
-              <div className="skeleton" style={{ height: 30, width: '55%', marginBottom: '0.5rem' }} />
-              <div className="skeleton" style={{ height: 15, width: '45%' }} />
+        <div className="container dash">
+          <div className="dash__header">
+            <div style={{ flex: 1 }}>
+              <div className="dash-skel" style={{ height: 14, width: 120, marginBottom: 12 }} />
+              <div className="dash-skel" style={{ height: 28, width: '45%', marginBottom: 10 }} />
+              <div className="dash-skel" style={{ height: 14, width: '60%' }} />
             </div>
           </div>
-          <div className="grid grid--metrics">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="skeleton-metric">
-                <div className="skeleton skeleton-metric__icon" />
-                <div className="skeleton skeleton-metric__label" />
-                <div className="skeleton skeleton-metric__value" />
-                <div className="skeleton skeleton-metric__cap" />
-              </div>
+          <div className="home-widgets">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="dash-skel" style={{ height: 104, borderRadius: 16 }} />
             ))}
           </div>
-          <div className="grid grid--courses">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="skeleton-card">
-                <div className="skeleton skeleton-card__badge" />
-                <div className="skeleton skeleton-card__title" />
-                <div className="skeleton skeleton-card__line" />
-                <div className="skeleton skeleton-card__bar" />
-                <div className="skeleton skeleton-card__btn" />
+          <div className="dash__body">
+            <div className="dash__main">
+              <div className="dash-skel" style={{ height: 200, borderRadius: 18 }} />
+              <div className="dash-skel" style={{ height: 260, borderRadius: 18 }} />
+            </div>
+            <div className="dash__side">
+              <div className="dash-kpis">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="dash-skel" style={{ height: 96, borderRadius: 14 }} />
+                ))}
               </div>
-            ))}
+              <div className="dash-skel" style={{ height: 220, borderRadius: 18 }} />
+            </div>
           </div>
         </div>
       </section>
@@ -203,363 +197,244 @@ export default function Dashboard() {
 
   return (
     <section className="section">
-      <div className="container dashboard-grid">
-        <div className="page-header">
+      <div className="container dash">
+        <header className="dash__header">
           <div>
-            <h1>
-              {isCreole
-                ? `Bonjou ${firstName || 'zanmi'}, ann kontinye vwayaj la`
-                : `Bonjour ${firstName || 'à vous'}, continuons votre parcours`}
+            <span className="dash__eyebrow">{isCreole ? 'Tablo de bò' : 'Tableau de bord'}</span>
+            <h1 className="dash__title">
+              {isCreole ? 'Bonjou ' : 'Bonjour '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>
             </h1>
-            <p className="text-muted">
+            <p className="dash__subtitle">
               {isCreole
                 ? 'Kontinye yon kou, gade seri quiz ou, oswa dekouvri yon nouvo matyè.'
                 : 'Reprenez un cours, consultez votre série de quiz ou explorez une nouvelle matière.'}
             </p>
           </div>
-          <div className="page-header__actions">
+          <div className="dash__header-actions">
             <button className="button button--ghost" onClick={() => navigate('/courses')}>
               {isCreole ? 'Gade katalòg la' : 'Explorer le catalogue'}
             </button>
           </div>
-        </div>
-
-        {/* Exam Readiness Score — the flagship "are you ready for the Bac?" metric */}
-        <ReadinessCard />
+        </header>
 
         {/* "What should I do next?" — countdown, daily challenge, rank, recommendation */}
         <HomeWidgets recommendedCourse={recommendedCourse} />
 
-        <div className="grid grid--metrics">
-          <div className="metric-card">
-            <div className="metric-card__icon" aria-hidden>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-            </div>
-            <span className="metric-card__eyebrow">{isCreole ? 'Kou k ap kontinye' : 'Cours en cours'}</span>
-            <span className="metric-card__value">{coursesInProgress}</span>
-            <span className="metric-card__caption">
-              {coursesInProgress === 0
-                ? (isCreole ? 'Enskri nan yon premye kou pou kòmanse.' : 'Inscrivez-vous à un premier cours pour commencer.')
-                : (isCreole ? 'Rete regilye pou w deblozake badj metrize.' : 'Restez régulier pour débloquer des badges de maîtrise.')}
-            </span>
-          </div>
-          <div className="metric-card metric-card--green">
-            <div className="metric-card__icon" aria-hidden>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="m9 12 2 2 4-4"/>
-              </svg>
-            </div>
-            <span className="metric-card__eyebrow">{isCreole ? 'Quiz fini' : 'Quiz terminés'}</span>
-            <span className="metric-card__value">{quizzesTaken}</span>
-            <span className="metric-card__caption">
-              {quizzesTaken === 0
-                ? (isCreole ? 'Fè premye quiz ou pou swiv pwogrè w.' : 'Faites votre premier quiz pour suivre vos progrès.')
-                : (isCreole
-                  ? `${masteredQuizCount} metrize • ${quizStreak7d} nan 7 jou`
-                  : `${masteredQuizCount} maîtrisés • ${quizStreak7d} sur 7 jours`)}
-            </span>
-          </div>
-          <div className="metric-card metric-card--purple">
-            <div className="metric-card__icon" aria-hidden>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"/>
-                <line x1="12" y1="20" x2="12" y2="4"/>
-                <line x1="6" y1="20" x2="6" y2="14"/>
-              </svg>
-            </div>
-            <span className="metric-card__eyebrow">{isCreole ? 'Mwayèn nòt' : 'Score moyen'}</span>
-            <span className="metric-card__value">{quizzesTaken ? `${avgScore}%` : '—'}</span>
-            <span className="metric-card__caption">
-              {quizzesTaken === 0
-                ? (isCreole ? 'Nòt ou ap parèt apre premye quiz ou.' : 'Votre score apparaîtra après votre premier quiz.')
-                : (isCreole ? 'Vize 85%+ pou deblozake leson avanse.' : 'Visez 85%+ pour débloquer des leçons avancées.')}
-            </span>
-          </div>
-        </div>
+        <div className="dash__body">
+          {/* ───────────── MAIN COLUMN ───────────── */}
+          <div className="dash__main">
+            {/* Flagship: "are you ready for the Bac?" */}
+            <ReadinessCard />
 
-        <div className="dashboard-section">
-          <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">{isCreole ? 'Kou ou enskri' : 'Cours suivis'}</h2>
-            <button className="button button--light" onClick={() => navigate('/courses')}>
-              {isCreole ? 'Ajoute lòt kou' : 'Ajouter des cours'}
-            </button>
-          </div>
+            {/* Continue learning */}
+            <section className="dash-panel">
+              <div className="dash-panel__head">
+                <h2 className="dash-panel__title">
+                  <BookOpen size={18} /> {isCreole ? 'Kontinye aprann' : "Continuer l'apprentissage"}
+                  {enrolledCourses.length > 0 && <span className="dash-panel__count">{enrolledCourses.length}</span>}
+                </h2>
+                <button className="dash-panel__link" onClick={() => navigate('/courses')} type="button">
+                  {isCreole ? 'Tout kou' : 'Tous les cours'} <ChevronRight size={15} />
+                </button>
+              </div>
 
-          {enrolledCourses.length > 0 ? (
-            <div className="dashboard-course-list">
-              {enrolledCourses.map((course) => {
-                const totalLessons = countCourseLessons(course);
-                const p = progressByCourseId.get(course.id) || null;
-                const completedLessons = p?.completedLessons?.length || 0;
-                const percent = calculateCompletionPercentage(p, totalLessons || 0);
-                const points = p?.totalPoints || 0;
-                const streak = p?.currentStreak || 0;
-                const lastStudyRaw = p?.lastStudyDate?.toDate ? p.lastStudyDate.toDate() : (p?.lastStudyDate || null);
-                const lastStudyLabel = lastStudyRaw ? formatShortDate(lastStudyRaw, locale) : '';
-                const remaining = Math.max(0, (totalLessons || 0) - completedLessons);
+              {enrolledCourses.length > 0 ? (
+                <div className="dash-courses">
+                  {enrolledCourses.slice(0, 4).map((course) => {
+                    const totalLessons = countCourseLessons(course);
+                    const p = progressByCourseId.get(course.id) || null;
+                    const completedLessons = p?.completedLessons?.length || 0;
+                    const percent = calculateCompletionPercentage(p, totalLessons || 0);
+                    const remaining = Math.max(0, (totalLessons || 0) - completedLessons);
 
-                return (
-                  <div
-                    key={course.id}
-                    className="dashboard-course-row"
-                    role="group"
-                    aria-label={course.name || course.title || course.id}
-                  >
-                    <div className="dashboard-course-row__main">
-                      <div className="dashboard-course-row__top">
-                        <div className="dashboard-course-row__titlewrap">
-                          <h3 className="dashboard-course-row__title">{course.name || course.title}</h3>
-                          <div className="dashboard-course-row__badges">
-                            <span className="course-card__badge">{course.subject} · {course.level}</span>
-                            <span className="chip chip--success">{isCreole ? 'An kou' : 'En cours'}</span>
+                    return (
+                      <button
+                        key={course.id}
+                        type="button"
+                        className="dash-course"
+                        onClick={() => navigate(`/courses/${course.id}`)}
+                        aria-label={course.name || course.title || course.id}
+                      >
+                        <span className="dash-course__badge" data-subject={subjectCode(course.subject)}>
+                          {subjectInitial(course.subject)}
+                        </span>
+                        <span className="dash-course__body">
+                          <span className="dash-course__top">
+                            <span className="dash-course__name">{course.name || course.title}</span>
+                            <span className="dash-course__pct">{progressLoading ? '—' : `${percent}%`}</span>
+                          </span>
+                          <span className="dash-course__bar" aria-hidden="true">
+                            <span style={{ width: `${percent}%` }} />
+                          </span>
+                          <span className="dash-course__meta">
+                            {progressLoading
+                              ? (isCreole ? 'Ap chaje…' : 'Chargement…')
+                              : (isCreole
+                                ? `${completedLessons}/${totalLessons || 0} leson · ${remaining} rete`
+                                : `${completedLessons}/${totalLessons || 0} leçons · ${remaining} restantes`)}
+                          </span>
+                        </span>
+                        <ChevronRight size={18} className="dash-course__chev" aria-hidden="true" />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="dash-empty">
+                  <p>
+                    {isCreole
+                      ? 'Ou poko gen kou. Gade katalòg la pou enskri nan premye kou ou.'
+                      : 'Aucun cours pour le moment. Explorez le catalogue pour vous inscrire à votre premier cours.'}
+                  </p>
+                  <button className="button button--primary" onClick={() => navigate('/courses')}>
+                    {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
+                  </button>
+                </div>
+              )}
+            </section>
+
+            {/* Recent activity — quiz + exams side by side */}
+            <div className="dash-activity-cols">
+              <section className="dash-panel">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title"><Target size={18} /> Quiz</h2>
+                  <button className="dash-panel__link" onClick={() => navigate('/quizzes')} type="button">
+                    {isCreole ? 'Ale' : 'Voir'} <ChevronRight size={15} />
+                  </button>
+                </div>
+
+                {(quizLoading && user?.uid) ? (
+                  <div className="dash-empty"><p>{isCreole ? 'Ap chaje…' : 'Chargement…'}</p></div>
+                ) : quizzesTaken > 0 ? (
+                  <div className="dash-activity">
+                    {recentQuizActivityRows.slice(0, 4).map((a, idx) => {
+                      const pct = typeof a.percentage === 'number' ? Math.round(a.percentage) : 0;
+                      const good = pct >= 80;
+                      const courseName = a.courseId ? (courses?.find((c) => c.id === a.courseId)?.name || '') : '';
+                      const label = a.quizId || 'Quiz';
+                      const dateMs = a.attemptedAtMs || a.attemptedAt_ms || a.date || Date.now();
+                      return (
+                        <div key={`${a.quizId || 'quiz'}-${idx}`} className="dash-activity__row">
+                          <div className="dash-activity__meta">
+                            <span className="dash-activity__title">{label}{courseName ? ` · ${courseName}` : ''}</span>
+                            <span className="dash-activity__date">{formatShortDate(dateMs, locale)}</span>
                           </div>
+                          <span className={`dash-activity__tag ${good ? 'dash-activity__tag--success' : 'dash-activity__tag--error'}`}>{pct}%</span>
                         </div>
-                        <div className="dashboard-course-row__kpis">
-                          <span className="chip chip--ghost">{progressLoading ? '—' : `${percent}%`}</span>
-                          {streak > 0 && <span className="chip chip--warning"><Flame size={14} /> {streak}</span>}
-                          {points > 0 && <span className="chip chip--primary"><Target size={14} /> {points}</span>}
-                        </div>
-                      </div>
-
-                      <div className="dashboard-course-row__progress">
-                        <div className="progress-bar" aria-hidden>
-                          <span className="progress-bar__fill" style={{ width: `${percent}%` }} />
-                        </div>
-                        <div className="dashboard-course-row__meta text-muted text-xs">
-                          {progressLoading
-                            ? (isCreole ? 'Ap chaje pwogrè…' : 'Chargement de la progression…')
-                            : (
-                              <>
-                                {completedLessons}/{totalLessons || 0} {isCreole ? 'leson fini' : 'leçons terminées'}
-                                {totalLessons > 0
-                                  ? ` · ${remaining} ${isCreole ? 'rete' : 'restantes'}`
-                                  : ''}
-                                {lastStudyLabel ? ` · ${isCreole ? 'Dènye etid:' : 'Dernière étude:'} ${lastStudyLabel}` : ''}
-                              </>
-                            )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="dashboard-course-row__actions">
-                      <button
-                        className="button button--primary button--sm"
-                        onClick={() => navigate(`/courses/${course.id}`)}
-                        type="button"
-                      >
-                        {isCreole ? 'Kontinye' : 'Continuer'}
-                      </button>
-                      <button
-                        className="button button--ghost button--sm"
-                        onClick={() => navigate(`/courses/${course.id}`)}
-                        type="button"
-                      >
-                        {isCreole ? 'Detay' : 'Détails'}
-                      </button>
-                    </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="dashboard-empty">
-              <p>
-                {isCreole
-                  ? 'Ou poko gen kou. Gade katalòg la pou enskri nan premye kou ou.'
-                  : 'Aucun cours pour le moment. Explorez le catalogue pour vous inscrire à votre premier cours.'}
-              </p>
-              <div style={{ marginTop: '1rem' }}>
-                <button className="button button--primary" onClick={() => navigate('/courses')}>
-                  {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* New Progress Tracking Dashboard */}
-        <div className="dashboard-section">
-          <ProgressDashboard />
-        </div>
-
-        <div className="dashboard-cols">
-        <div className="dashboard-section">
-          <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">{isCreole ? 'Quiz, pèfòmans' : 'Quiz, performance'}</h2>
-            <button className="button button--light" onClick={() => navigate('/quizzes')} type="button">
-              {isCreole ? 'Ale nan quiz yo' : 'Aller aux quiz'}
-            </button>
-          </div>
-
-          {(quizLoading && user?.uid) ? (
-            <div className="dashboard-empty">
-              <p>{isCreole ? 'Ap chaje done quiz…' : 'Chargement des données quiz…'}</p>
-            </div>
-          ) : quizzesTaken > 0 ? (
-            <div className="dashboard-activity">
-              {recentQuizActivityRows.map((a, idx) => {
-                const pct = typeof a.percentage === 'number'
-                  ? Math.round(a.percentage)
-                  : 0;
-                const good = pct >= 80;
-                const courseName = a.courseId
-                  ? (courses?.find((c) => c.id === a.courseId)?.name || a.courseId)
-                  : '';
-                const label = a.quizId || (isCreole ? 'Quiz' : 'Quiz');
-                const dateMs = a.attemptedAtMs || a.attemptedAt_ms || a.date || Date.now();
-
-                return (
-                  <div key={`${a.quizId || 'quiz'}-${idx}`} className="activity-item">
-                    <div className="activity-item__meta">
-                      <span className="activity-item__question">
-                        {label}{courseName ? ` · ${courseName}` : ''}
-                      </span>
-                      <span className="activity-item__date">{formatShortDate(dateMs, locale)}</span>
-                    </div>
-                    <span
-                      className={[
-                        'activity-item__tag',
-                        good ? 'activity-item__tag--success' : 'activity-item__tag--error'
-                      ].join(' ')}
-                    >
-                      {pct}%
-                    </span>
+                ) : (
+                  <div className="dash-empty">
+                    <p>{isCreole ? 'Fè premye quiz ou pou swiv pèfòmans ou.' : 'Faites votre premier quiz pour suivre votre performance.'}</p>
+                    <button className="button button--primary button--sm" onClick={() => navigate('/quizzes')} type="button">
+                      {isCreole ? 'Kòmanse yon quiz' : 'Commencer un quiz'}
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="dashboard-empty">
-              <p>
-                {isCreole
-                  ? 'Fè premye quiz ou pou kòmanse swiv pèfòmans ou ak pwen fò ou.'
-                  : 'Faites votre premier quiz pour commencer à suivre votre performance et vos points forts.'}
-              </p>
-              <div style={{ marginTop: '1rem' }}>
-                <button className="button button--primary" onClick={() => navigate('/quizzes')} type="button">
-                  {isCreole ? 'Kòmanse yon quiz' : 'Commencer un quiz'}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+                )}
+              </section>
 
-        <div className="dashboard-section">
-          <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">{isCreole ? 'Egzamen, aktivite' : 'Examens, activité'}</h2>
-            <button className="button button--light" onClick={() => navigate('/exams')} type="button">
-              {isCreole ? 'Ale nan egzamen yo' : 'Aller aux examens'}
-            </button>
-          </div>
-
-          {(examLoading && user?.uid) ? (
-            <div className="dashboard-empty">
-              <p>{isCreole ? 'Ap chaje aktivite egzamen…' : 'Chargement de l’activité examens…'}</p>
-            </div>
-          ) : (recentExamAttempts.length > 0) ? (
-            <>
-              <div className="grid grid--metrics">
-                <div className="metric-card">
-                  <span className="metric-card__eyebrow">{isCreole ? 'Ankou' : 'En cours'}</span>
-                  <span className="metric-card__value">{examSummary.inProgress}</span>
-                  <span className="metric-card__caption">
-                    {examSummary.lastMs
-                      ? (isCreole ? `Dènye mizajou: ${formatShortDate(examSummary.lastMs, locale)}` : `Dernière mise à jour: ${formatShortDate(examSummary.lastMs, locale)}`)
-                      : (isCreole ? '—' : '—')}
-                  </span>
+              <section className="dash-panel">
+                <div className="dash-panel__head">
+                  <h2 className="dash-panel__title">
+                    <ClipboardList size={18} /> {isCreole ? 'Egzamen' : 'Examens'}
+                    {examSummary.submitted > 0 && (
+                      <span className="dash-panel__count">{examSummary.submitted} {isCreole ? 'soumèt' : 'soumis'}</span>
+                    )}
+                  </h2>
+                  <button className="dash-panel__link" onClick={() => navigate('/exams')} type="button">
+                    {isCreole ? 'Ale' : 'Voir'} <ChevronRight size={15} />
+                  </button>
                 </div>
-                <div className="metric-card metric-card--green">
-                  <span className="metric-card__eyebrow">{isCreole ? 'Soumèt' : 'Soumis'}</span>
-                  <span className="metric-card__value">{examSummary.submitted}</span>
-                  <span className="metric-card__caption">
-                    {isCreole ? 'Egzamen ki gen rezilta sove.' : 'Examens avec résultats enregistrés.'}
-                  </span>
-                </div>
+
+                {(examLoading && user?.uid) ? (
+                  <div className="dash-empty"><p>{isCreole ? 'Ap chaje…' : 'Chargement…'}</p></div>
+                ) : (recentExamAttempts.length > 0) ? (
+                  <div className="dash-activity">
+                    {recentExamAttempts.slice(0, 4).map((a, idx) => {
+                      const status = a?.status || '';
+                      const isSubmitted = status === 'submitted';
+                      const tagClass = isSubmitted ? 'dash-activity__tag--success' : 'dash-activity__tag--neutral';
+                      const title = a?.exam_title || a?.examTitle || a?.exam_id || (isCreole ? 'Egzamen' : 'Examen');
+                      const dateMs = a?.updated_at_ms || a?.submitted_at_ms || a?.started_at_ms || Date.now();
+                      const urlLevel = levelToUrl(a?.level);
+                      const ctaLabel = isSubmitted ? (isCreole ? 'Rezilta' : 'Résultats') : (isCreole ? 'Repran' : 'Reprendre');
+                      const onOpen = () => {
+                        if (!a?.exam_id || !urlLevel) return navigate('/exams');
+                        if (isSubmitted) return navigate(`/exams/${urlLevel}/${a.exam_id}/results`);
+                        return navigate(`/exams/${urlLevel}/${a.exam_id}`);
+                      };
+                      return (
+                        <div key={`${a?.exam_id || 'exam'}-${idx}`} className="dash-activity__row">
+                          <div className="dash-activity__meta">
+                            <span className="dash-activity__title">{title}</span>
+                            <span className="dash-activity__date">{formatShortDate(dateMs, locale)}</span>
+                          </div>
+                          <button type="button" className={`dash-activity__tag ${tagClass}`} onClick={onOpen}>
+                            {ctaLabel} <ChevronRight size={13} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="dash-empty">
+                    <p>{isCreole ? 'Fè yon egzamen blan pou jenere nòt preparasyon ou.' : 'Passez un examen blanc pour générer votre score de préparation.'}</p>
+                    <button className="button button--primary button--sm" onClick={() => navigate('/exams')} type="button">
+                      {isCreole ? 'Kòmanse yon egzamen' : 'Commencer un examen'}
+                    </button>
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+
+          {/* ───────────── SIDE COLUMN ───────────── */}
+          <aside className="dash__side">
+            {/* Compact KPI strip (replaces the old metric-card + ProgressDashboard sprawl) */}
+            <div className="dash-kpis">
+              <div className="dash-kpi">
+                <span className="dash-kpi__icon"><BookOpen size={17} /></span>
+                <span className="dash-kpi__value">{coursesInProgress}</span>
+                <span className="dash-kpi__label">{isCreole ? 'Kou aktif' : 'Cours actifs'}</span>
               </div>
-
-              <div className="dashboard-activity">
-                {recentExamAttempts.slice(0, 5).map((a, idx) => {
-                  const status = a?.status || '';
-                  const isSubmitted = status === 'submitted';
-                  const tagClass = isSubmitted ? 'activity-item__tag--success' : 'activity-item__tag--error';
-                  const title = a?.exam_title || a?.examTitle || a?.exam_id || (isCreole ? 'Egzamen' : 'Examen');
-                  const dateMs = a?.updated_at_ms || a?.submitted_at_ms || a?.started_at_ms || Date.now();
-                  const urlLevel = levelToUrl(a?.level);
-
-                  const ctaLabel = isSubmitted
-                    ? (isCreole ? 'Rezilta' : 'Résultats')
-                    : (isCreole ? 'Repran' : 'Reprendre');
-
-                  const onOpen = () => {
-                    if (!a?.exam_id) return navigate('/exams');
-                    if (!urlLevel) return navigate('/exams');
-                    if (isSubmitted) return navigate(`/exams/${urlLevel}/${a.exam_id}/results`);
-                    return navigate(`/exams/${urlLevel}/${a.exam_id}`);
-                  };
-
-                  return (
-                    <div key={`${a?.exam_id || 'exam'}-${idx}`} className="activity-item">
-                      <div className="activity-item__meta">
-                        <span className="activity-item__question">{title}</span>
-                        <span className="activity-item__date">{formatShortDate(dateMs, locale)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className={['activity-item__tag', tagClass].join(' ')}
-                        onClick={onOpen}
-                      >
-                        {ctaLabel}
-                      </button>
-                    </div>
-                  );
-                })}
+              <div className="dash-kpi dash-kpi--green">
+                <span className="dash-kpi__icon"><CheckCircle2 size={17} /></span>
+                <span className="dash-kpi__value">{quizzesTaken}</span>
+                <span className="dash-kpi__label">{isCreole ? 'Quiz fini' : 'Quiz faits'}</span>
               </div>
-            </>
-          ) : (
-            <div className="dashboard-empty">
-              <p>
-                {isCreole
-                  ? 'Fè yon egzamen blan pou jenere nòt preparasyon ou epi wè pwen fèb ou.'
-                  : 'Passez un examen blanc pour générer votre score de préparation et révéler vos points faibles.'}
-              </p>
-              <div style={{ marginTop: '1rem' }}>
-                <button className="button button--primary" onClick={() => navigate('/exams')} type="button">
-                  {isCreole ? 'Kòmanse yon egzamen blan' : 'Commencer un examen blanc'}
-                </button>
+              <div className="dash-kpi dash-kpi--violet">
+                <span className="dash-kpi__icon"><BarChart3 size={17} /></span>
+                <span className="dash-kpi__value">{quizzesTaken ? `${avgScore}%` : '—'}</span>
+                <span className="dash-kpi__label">{isCreole ? 'Mwayèn' : 'Score moyen'}</span>
+              </div>
+              <div className="dash-kpi dash-kpi--amber">
+                <span className="dash-kpi__icon"><Flame size={17} /></span>
+                <span className="dash-kpi__value">{currentStreak}</span>
+                <span className="dash-kpi__label">{isCreole ? 'Seri jou' : 'Série'}</span>
               </div>
             </div>
-          )}
-        </div>
-        </div>{/* /dashboard-cols */}
 
-        <div className="dashboard-section">
-          <Leaderboard variant="compact" />
-        </div>
+            {/* Weekly leaderboard */}
+            <Leaderboard variant="compact" />
 
-        <div className="dashboard-section">
-          <div className="dashboard-section__header">
-            <h2 className="dashboard-section__title">
-              <ClipboardList size={16} /> {isCreole ? 'Plan Etid' : 'Plan d\'Étude'}
-            </h2>
-            <button
-              className="chip chip--primary"
-              onClick={() => navigate('/study-plan')}
-              style={{ cursor: 'pointer', border: 'none' }}
-            >
-              {isCreole ? 'Wè plan' : 'Voir le plan'} →
-            </button>
-          </div>
-          <div className="dashboard-study-plan-cta" onClick={() => navigate('/study-plan')} style={{ cursor: 'pointer' }}>
-            <p className="text-muted">
-              {isCreole
-                ? 'Jwenn yon plan etid pèsonalize ak revizyon espase pou prepare bak ou.'
-                : 'Obtenez un plan d\'étude personnalisé avec révision espacée pour préparer votre bac.'}
-            </p>
-          </div>
+            {/* Study plan CTA */}
+            <section className="dash-panel dash-studyplan">
+              <div className="dash-panel__head">
+                <h2 className="dash-panel__title">
+                  <ClipboardList size={18} /> {isCreole ? 'Plan Etid' : "Plan d'étude"}
+                </h2>
+              </div>
+              <p className="dash-studyplan__text">
+                {isCreole
+                  ? 'Jwenn yon plan etid pèsonalize ak revizyon espase pou prepare bak ou.'
+                  : "Obtenez un plan d'étude personnalisé avec révision espacée pour préparer votre bac."}
+              </p>
+              <button className="dash-studyplan__btn" onClick={() => navigate('/study-plan')} type="button">
+                {isCreole ? 'Wè plan an' : 'Voir le plan'} <ChevronRight size={15} />
+              </button>
+            </section>
+          </aside>
         </div>
       </div>
     </section>
