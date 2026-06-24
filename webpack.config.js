@@ -72,6 +72,17 @@ module.exports = {
           to: 'data',
           globOptions: { ignore: ['**/EdLight_All_Videos_FULL_DETAIL_ORIGINAL.csv'] },
         },
+        // Assets are sourced from two folders. public/assets holds the newer /
+        // uploaded extras (e.g. the program-aligned trivia deck covers
+        // maths_eclair / chimie_symboles / bio_corps / anglais_vocab that only
+        // live here). Copy it first; public_original/assets below is canonical
+        // and overwrites any duplicates, so existing art stays byte-identical
+        // while the extra files still ship.
+        {
+          from: 'public/assets',
+          to: 'assets',
+          noErrorOnMissing: true,
+        },
         {
           from: 'public_original/assets',
           to: 'assets'
