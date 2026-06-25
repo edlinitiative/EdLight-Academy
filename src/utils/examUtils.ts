@@ -905,22 +905,154 @@ function answerMatches(userVal, expectedAnswer, alternatives = [], options = {})
 }
 
 /**
+ * Parse a templated-blank value (`{"slots":[...]}`) into its slot-value array,
+ * or null when `userVal` is not a templated payload. A templated blank lets a
+ * single step show the answer "written out with holes" (e.g. `]_, _[ ∪ ]_, _[`)
+ * where each hole is its own small input.
+ */
+export function parseTemplatedSlots(userVal) {
+  if (typeof userVal !== 'string') return null;
+  const t = userVal.trim();
+  if (!t.startsWith('{')) return null;
+  try {
+    const p = JSON.parse(t);
+    if (p && Array.isArray(p.slots)) return p.slots;
+  } catch { /* not a templated payload */ }
+  return null;
+}
+
+/** Substitute slot values into a template's `{n}` markers (for display/feedback). */
+export function reconstructTemplate(template, slots = []) {
+  if (!template) return '';
+  return String(template).replace(/\{(\d+)\}/g, (_, n) => {
+    const v = slots[Number(n)];
+    return v == null || v === '' ? '□' : String(v);
+  });
+}
+
+/** Is this answer_part an inline fill-in template (has a template + slot specs)? */
+export function isTemplatedPart(part) {
+  return !!(part && part.template && Array.isArray(part.slots) && part.slots.length > 0);
+}
+
+/** Is this answer_part a matrix grid (has a matrix shape + row-major slot specs)? */
+export function isMatrixPart(part) {
+  return !!(part && part.matrix && Array.isArray(part.slots) && part.slots.length > 0);
+}
+
+/** True for any slot-based blank — inline template OR matrix grid. */
+function isSlotPart(part) {
+  return !!(part && Array.isArray(part.slots) && part.slots.length > 0);
+}
+
+/** Rebuild a `\begin{pmatrix}…\end{pmatrix}` string from row-major slot values. */
+export function reconstructMatrix(matrix, slots = []) {
+  const rows = matrix?.rows || 0;
+  const cols = matrix?.cols || 0;
+  const lines = [];
+  for (let r = 0; r < rows; r++) {
+    const cells = [];
+    for (let c = 0; c < cols; c++) {
+      const v = slots[r * cols + c];
+      cells.push(v == null || v === '' ? '\\square' : String(v));
+    }
+    lines.push(cells.join(' & '));
+  }
+  return `\\begin{pmatrix} ${lines.join(' \\\\ ')} \\end{pmatrix}`;
+}
+
+/** Reconstruct a slot-based part's filled value for feedback display. */
+function reconstructSlotValue(part, slots) {
+  if (part.template) return reconstructTemplate(part.template, slots);
+  if (part.matrix) return reconstructMatrix(part.matrix, slots);
+  return (slots || []).filter(Boolean).join(', ');
+}
+
+/**
  * Grade each scaffold blank against its answer_parts entry.
  * Returns array of { blankIndex, correct, userValue, expectedAnswer, label }.
  */
 export function gradeScaffoldBlanks(scaffoldValues, answerParts, options = {}) {
   return (answerParts || []).map((part, i) => {
     const userVal = scaffoldValues[i] || '';
-    const isCorrect = answerMatches(userVal, part.answer, part.alternatives, options);
+    let isCorrect;
+    let displayUser = userVal;
+    if (isSlotPart(part)) {
+      const userSlots = parseTemplatedSlots(userVal) || [];
+      isCorrect = part.slots.every((s, k) =>
+        answerMatches(userSlots[k] || '', s.answer, s.alternatives || [], options));
+      displayUser = reconstructSlotValue(part, userSlots);
+    } else {
+      isCorrect = answerMatches(userVal, part.answer, part.alternatives, options);
+    }
     return {
       blankIndex: i,
       correct: isCorrect,
-      userValue: userVal,
+      userValue: displayUser,
       expectedAnswer: part.answer,
       alternatives: part.alternatives || [],
       label: part.label || `Partie ${i + 1}`,
     };
   });
+}
+
+/**
+ * Parse a stored scaffold answer (JSON: {"scaffold":[...]}) into its value
+ * array, or null if `userAnswer` is not a scaffold payload.
+ */
+export function parseScaffoldAnswer(userAnswer) {
+  if (typeof userAnswer !== 'string') return null;
+  const trimmed = userAnswer.trim();
+  if (!trimmed.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && Array.isArray(parsed.scaffold)) return parsed.scaffold;
+  } catch { /* not scaffold JSON */ }
+  return null;
+}
+
+/**
+ * Grade a scaffolded question from its stored {scaffold:[...]} answer.
+ *
+ * Returns a normalized result { status, awarded, maxPoints, blankResults, ratio }
+ * or null when `userAnswer` is not a scaffold payload. When the scaffold is
+ * present but empty (no blank filled) the status is 'unanswered'.
+ *
+ * Works regardless of whether the question also carries a single `correct`
+ * value — this is what lets math/science questions use the interactive
+ * fill-in-the-solution flow instead of single-answer string matching.
+ */
+export function gradeScaffoldAnswer(question, userAnswer, options = {}) {
+  if (!question.scaffold_text || !question.scaffold_blanks) return null;
+  const scaffoldValues = parseScaffoldAnswer(userAnswer);
+  if (!scaffoldValues) return null;
+
+  const pts = question.points || 1;
+  const filled = scaffoldValues.filter(v => v && String(v).trim());
+  if (filled.length === 0) {
+    return { status: 'unanswered', awarded: 0, maxPoints: pts, ratio: 0 };
+  }
+
+  if (question.answer_parts && question.answer_parts.length > 0) {
+    const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts, options);
+    const correctBlanks = blankResults.filter(r => r.correct).length;
+    const totalBlanks = question.answer_parts.length;
+    const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
+    const awarded = Math.round(pts * ratio * 100) / 100;
+    return {
+      status: correctBlanks === totalBlanks ? 'correct' : correctBlanks > 0 ? 'partial' : 'incorrect',
+      awarded,
+      maxPoints: pts,
+      blankResults,
+      ratio,
+    };
+  }
+
+  // No answer_parts — award full credit for completing every blank (effort).
+  if (filled.length === question.scaffold_blanks.length) {
+    return { status: 'scaffold-complete', awarded: pts, maxPoints: pts, ratio: 1 };
+  }
+  return { status: 'partial', awarded: 0, maxPoints: pts, ratio: 0 };
 }
 
 // ─── Single-question grading (for immediate feedback mode) ──────────────────
@@ -948,6 +1080,26 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
       userAnswer: null,
       status: 'unanswered',
       result: { awarded: 0, maxPoints: pts },
+    };
+  }
+
+  // Interactive scaffold answer ({scaffold:[...]}) — grade by blanks regardless
+  // of any single `correct` value (math/science included).
+  const scaffoldGraded = gradeScaffoldAnswer(question, userAnswer, options);
+  if (scaffoldGraded) {
+    if (scaffoldGraded.status === 'unanswered') {
+      return {
+        question,
+        userAnswer: null,
+        status: 'unanswered',
+        result: { awarded: 0, maxPoints: pts },
+      };
+    }
+    return {
+      question,
+      userAnswer,
+      status: scaffoldGraded.status,
+      result: { awarded: scaffoldGraded.awarded, maxPoints: pts, blankResults: scaffoldGraded.blankResults },
     };
   }
 
@@ -1100,6 +1252,32 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
         userAnswer: null,
         status: 'unanswered',
         result: { awarded: 0, maxPoints: pts },
+      };
+    }
+
+    // Interactive scaffold answer ({scaffold:[...]}) — grade by blanks,
+    // regardless of any single `correct` value (math/science included).
+    const scaffoldGraded = gradeScaffoldAnswer(q, userAnswer, options);
+    if (scaffoldGraded) {
+      if (scaffoldGraded.status === 'unanswered') {
+        unanswered++;
+        return {
+          question: q,
+          userAnswer: null,
+          status: 'unanswered',
+          result: { awarded: 0, maxPoints: pts },
+        };
+      }
+      autoGraded++;
+      earnedPoints += scaffoldGraded.awarded;
+      if (scaffoldGraded.status === 'correct' || scaffoldGraded.status === 'scaffold-complete') correctCount++;
+      else if (scaffoldGraded.status === 'partial') correctCount += scaffoldGraded.ratio || 0;
+      else incorrectCount++;
+      return {
+        question: q,
+        userAnswer,
+        status: scaffoldGraded.status,
+        result: { awarded: scaffoldGraded.awarded, maxPoints: pts, blankResults: scaffoldGraded.blankResults },
       };
     }
 

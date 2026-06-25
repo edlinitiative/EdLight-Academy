@@ -9031,6 +9031,270 @@ textarea:focus-visible,
 	background: #fef6f6;
 }
 
+/* Dropdown blank (choose-from-options step) */
+.ka-scaffold__select {
+	width: 100%;
+	padding: 0.35rem 0.55rem;
+	font-family: inherit;
+	border: 1.5px solid #d1d5db;
+	border-radius: 0.375rem;
+	background: #fff;
+	color: #1e293b;
+	outline: none;
+	cursor: pointer;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ka-scaffold__select:focus {
+	border-color: #0A66C2;
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.13);
+}
+.ka-scaffold__select:disabled {
+	background: #f3f4f6;
+	color: #9ca3af;
+	cursor: default;
+}
+.ka-scaffold__field--correct .ka-scaffold__select {
+	border-color: #0d923f;
+	background: #f6fef8;
+	color: #0d6b2f;
+}
+.ka-scaffold__field--wrong .ka-scaffold__select {
+	border-color: #d92828;
+	background: #fef6f6;
+}
+
+/* Math-rendering dropdown (expression options a native <select> can't show) */
+.ka-mathselect {
+	position: relative;
+	width: 100%;
+}
+.ka-mathselect__trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	width: 100%;
+	min-height: 2.25rem;
+	padding: 0.35rem 0.55rem;
+	font-family: inherit;
+	text-align: left;
+	border: 1.5px solid #d1d5db;
+	border-radius: 0.375rem;
+	background: #fff;
+	color: #1e293b;
+	cursor: pointer;
+	transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ka-mathselect__trigger:focus-visible {
+	outline: none;
+	border-color: #0A66C2;
+	box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.13);
+}
+.ka-mathselect__trigger:disabled {
+	background: #f3f4f6;
+	color: #9ca3af;
+	cursor: default;
+}
+.ka-mathselect__trigger svg {
+	flex: 0 0 auto;
+	transition: transform 0.15s;
+	color: #64748b;
+}
+.ka-mathselect--open .ka-mathselect__trigger svg {
+	transform: rotate(180deg);
+}
+.ka-mathselect__value {
+	flex: 1 1 auto;
+	overflow-x: auto;
+	white-space: nowrap;
+}
+.ka-mathselect__placeholder {
+	color: #9ca3af;
+}
+.ka-mathselect__list {
+	position: absolute;
+	z-index: 30;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	margin: 0;
+	padding: 0.25rem;
+	list-style: none;
+	max-height: 240px;
+	overflow-y: auto;
+	background: #fff;
+	border: 1.5px solid #d1d5db;
+	border-radius: 0.5rem;
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+.ka-mathselect__option {
+	padding: 0.45rem 0.55rem;
+	border-radius: 0.375rem;
+	cursor: pointer;
+	white-space: nowrap;
+	overflow-x: auto;
+}
+.ka-mathselect__option.is-active {
+	background: #eef4fc;
+}
+.ka-mathselect__option.is-selected {
+	background: #0A66C2;
+	color: #fff;
+}
+.ka-scaffold__field--correct .ka-mathselect__trigger {
+	border-color: #0d923f;
+	background: #f6fef8;
+	color: #0d6b2f;
+}
+.ka-scaffold__field--wrong .ka-mathselect__trigger {
+	border-color: #d92828;
+	background: #fef6f6;
+}
+
+/* ── Inline fill-in template (answer shown with holes to complete) ────────── */
+.ka-fill {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.1rem 0.2rem;
+	font-size: 1.05rem;
+	line-height: 1.9;
+}
+.ka-fill__tex {
+	white-space: nowrap;
+}
+.ka-fill__slot {
+	min-width: 2.5ch;
+	padding: 0.08rem 0.3rem;
+	font-family: inherit;
+	font-size: 0.95em;
+	text-align: center;
+	border: none;
+	border-bottom: 2px solid #0A66C2;
+	border-radius: 0.2rem 0.2rem 0 0;
+	background: #eef4fc;
+	color: #0b2e52;
+	outline: none;
+	transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.ka-fill__slot::placeholder {
+	color: #9ab6da;
+}
+.ka-fill__slot:focus {
+	background: #fff;
+	box-shadow: 0 2px 0 0 #0A66C2;
+}
+.ka-fill__slot:disabled {
+	background: transparent;
+	color: #475569;
+	border-bottom-color: #cbd5e1;
+}
+.ka-scaffold__field--correct .ka-fill__slot {
+	border-bottom-color: #0d923f;
+	background: #eafaf0;
+	color: #0d6b2f;
+}
+.ka-scaffold__field--wrong .ka-fill__slot {
+	border-bottom-color: #d92828;
+	background: #fdeeee;
+}
+[data-theme="dark"] .ka-fill__slot {
+	background: #14304d;
+	color: #dbeafe;
+	border-bottom-color: #4f93da;
+}
+[data-theme="dark"] .ka-fill__slot:focus {
+	background: #0b1f33;
+}
+[data-theme="dark"] .ka-fill__slot:disabled {
+	color: #94a3b8;
+	border-bottom-color: #334155;
+}
+
+/* ── Matrix grid blank (fill each cell inside brackets) ───────────────────── */
+.ka-matrix {
+	display: inline-flex;
+	align-items: stretch;
+	gap: 0.15rem;
+	vertical-align: middle;
+	margin: 0.15rem 0;
+}
+.ka-matrix__bracket {
+	width: 0.5rem;
+	flex: 0 0 auto;
+	border: 2.5px solid #475569;
+}
+.ka-matrix__bracket--left {
+	border-right: none;
+	border-radius: 0.35rem 0 0 0.35rem;
+}
+.ka-matrix__bracket--right {
+	border-left: none;
+	border-radius: 0 0.35rem 0.35rem 0;
+}
+.ka-matrix__grid {
+	display: grid;
+	gap: 0.3rem 0.45rem;
+	padding: 0.4rem 0.25rem;
+}
+.ka-matrix__cell {
+	min-width: 2.4ch;
+	padding: 0.12rem 0.3rem;
+	font-family: inherit;
+	font-size: 0.98rem;
+	text-align: center;
+	border: 1.5px solid #cbd5e1;
+	border-radius: 0.3rem;
+	background: #f8fafc;
+	color: #0b2e52;
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.ka-matrix__cell::placeholder {
+	color: #aab8c8;
+}
+.ka-matrix__cell:focus {
+	border-color: #0A66C2;
+	background: #fff;
+	box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.15);
+}
+.ka-matrix__cell:disabled {
+	background: transparent;
+	color: #475569;
+	border-color: #e2e8f0;
+}
+.ka-scaffold__field--correct .ka-matrix__cell {
+	border-color: #0d923f;
+	background: #f1fbf5;
+	color: #0d6b2f;
+}
+.ka-scaffold__field--correct .ka-matrix__bracket {
+	border-color: #0d923f;
+}
+.ka-scaffold__field--wrong .ka-matrix__cell {
+	border-color: #d92828;
+	background: #fdf3f3;
+}
+.ka-scaffold__field--wrong .ka-matrix__bracket {
+	border-color: #d92828;
+}
+[data-theme="dark"] .ka-matrix__bracket {
+	border-color: #94a3b8;
+}
+[data-theme="dark"] .ka-matrix__cell {
+	background: #14304d;
+	color: #dbeafe;
+	border-color: #2f4a6b;
+}
+[data-theme="dark"] .ka-matrix__cell:focus {
+	background: #0b1f33;
+	border-color: #4f93da;
+}
+[data-theme="dark"] .ka-matrix__cell:disabled {
+	color: #94a3b8;
+	border-color: #334155;
+}
+
 /* Correction hint (shown below input on wrong answer) */
 .ka-scaffold__correction {
 	margin-top: 0.3rem;

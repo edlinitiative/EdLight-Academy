@@ -59,6 +59,22 @@ function MathText({ text }) {
   return <span dangerouslySetInnerHTML={renderWithKatex(text, katexReady)} />;
 }
 
+/**
+ * Wrap a bare math expression in `$…$` so MathText renders it with KaTeX.
+ * Already-delimited text and plain words/numbers are returned unchanged.
+ */
+function asMath(text) {
+  if (!text) return text;
+  if (/\$/.test(text) || /\\\(/.test(text)) return text;     // already delimited
+  if (/[\\^_{}]/.test(text)) return `$${text}$`;             // bare LaTeX-ish → wrap
+  return text;                                               // plain word/number
+}
+
+/** True when any option needs math rendering (a native <select> can't do KaTeX). */
+function optionsNeedMath(options) {
+  return Array.isArray(options) && options.some((o) => /[\\^_{}]|\$/.test(String(o)));
+}
+
 /** Proof sub-type scaffolds — detected from question text */
 const PROOF_SUBTYPES = [
   {
@@ -637,10 +653,10 @@ const ExamTake = () => {
       } finally {
         setGradingInProgress((prev) => ({ ...prev, [qIndex]: false }));
       }
-    } else if (q.scaffold_text && q.scaffold_blanks && q.answer_parts && !MATH_SUBJECTS.has(subject)) {
-      // Non-math scaffold: try exact match first, then AI for long-text blanks
+    } else if (q.scaffold_text && q.scaffold_blanks && q.answer_parts) {
+      // Scaffold: exact/numeric/CAS match first; for non-math, AI-grade long-text blanks
       const result = gradeSingleQuestion(q, userAnswer, null, { subject });
-      const hasUngradedLongBlanks = (result.result?.blankResults || []).some(
+      const hasUngradedLongBlanks = !MATH_SUBJECTS.has(subject) && (result.result?.blankResults || []).some(
         (br) => !br.correct && (br.expectedAnswer || '').length > 25
       );
 
@@ -1694,7 +1710,7 @@ const ExamTake = () => {
                     </div>
                     {/* Show scaffold as primary input when scaffold data exists, otherwise QuestionInput */}
                     {/* Essay + short_answer always get their textarea — skip scaffold even if scaffold data exists */}
-                    {gq.type !== 'essay' && gq.type !== 'short_answer' && !gq.correct && gq.scaffold_text && gq.scaffold_blanks ? (
+                    {usesScaffold(gq, subject) ? (
                       <div className="exam-take__answer-area">
                         <ScaffoldedAnswer
                           question={gq}
@@ -1729,7 +1745,7 @@ const ExamTake = () => {
 
                   {/* Immediate feedback mode: compact "Vérifier" button */}
                   {/* Skip when scaffold is active — it has its own check button (but not for essay/short_answer) */}
-                  {feedbackMode === 'immediate' && !questionResults[qIdx] && !(gq.type !== 'essay' && gq.type !== 'short_answer' && !gq.correct && gq.scaffold_text && gq.scaffold_blanks) && (
+                  {feedbackMode === 'immediate' && !questionResults[qIdx] && !usesScaffold(gq, subject) && (
                     <div className="exam-take__check-answer">
                       {(gq.type === 'essay' || gq.type === 'short_answer') ? (
                         <>
@@ -2159,6 +2175,304 @@ const MATH_SUBJECTS = new Set([
   'Mathématiques', 'Physique', 'Chimie', 'SVT', 'Informatique',
 ]);
 
+/** Native-widget types that keep their own input even when scaffold data exists. */
+const NATIVE_INPUT_TYPES = new Set(['multiple_choice', 'multiple_select', 'true_false', 'matching']);
+
+/**
+ * Should this question render the interactive step-by-step ScaffoldedAnswer?
+ *
+ * Shows the authored solution-with-blanks when scaffold data exists and the
+ * question is open-computation. Historically this only fired when a question
+ * had NO single `correct` value; we now also enable it for math/science
+ * subjects so their authored scaffolds become interactive (the student fills
+ * the removed steps) instead of collapsing to a single answer box.
+ */
+function usesScaffold(q, subject) {
+  if (!q) return false;
+  if (q.type === 'essay' || q.type === 'short_answer') return false;
+  if (NATIVE_INPUT_TYPES.has(q.type)) return false;
+  if (!q.scaffold_text || !q.scaffold_blanks) return false;
+  return !q.correct || MATH_SUBJECTS.has(subject);
+}
+
+/**
+ * Trim a string back to balanced `$…$` math delimiters so a partial LaTeX
+ * fragment (e.g. when a blank sits inside `$…$`) never reaches KaTeX.
+ */
+function balanceMathDelimiters(s) {
+  if (!s) return s;
+  const dollars = (s.match(/(?<!\\)\$/g) || []).length;
+  if (dollars % 2 === 1) {
+    const last = s.lastIndexOf('$');
+    return s.slice(0, last).replace(/\s+$/, '');
+  }
+  return s;
+}
+
+/**
+ * Accessible dropdown that renders each option as KaTeX math. Used for scaffold
+ * blanks whose options are expressions (a native <select> can only show raw
+ * LaTeX). Exposes focus() so the step dots and keyboard nav keep working.
+ */
+const MathSelect = React.forwardRef(function MathSelect(
+  { id, value, options, onChange, onFocus, onBlur, disabled, ariaLabel, placeholder = '— Choisir —' },
+  ref
+) {
+  const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const btnRef = useRef(null);
+  const listRef = useRef(null);
+
+  React.useImperativeHandle(ref, () => ({ focus: () => btnRef.current?.focus() }), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocDown = (e) => {
+      if (!listRef.current?.contains(e.target) && !btnRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, [open]);
+
+  const choose = useCallback((opt) => {
+    onChange(opt);
+    setOpen(false);
+    btnRef.current?.focus();
+  }, [onChange]);
+
+  const openList = useCallback(() => {
+    if (disabled) return;
+    setActiveIdx(Math.max(0, options.indexOf(value)));
+    setOpen(true);
+  }, [disabled, options, value]);
+
+  const onKeyDown = useCallback((e) => {
+    if (disabled) return;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!open) openList();
+        else setActiveIdx((i) => Math.min(i + 1, options.length - 1));
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (open) setActiveIdx((i) => Math.max(i - 1, 0));
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (open && activeIdx >= 0) choose(options[activeIdx]);
+        else openList();
+        break;
+      case 'Escape':
+        setOpen(false);
+        break;
+      default:
+        break;
+    }
+  }, [disabled, open, activeIdx, options, openList, choose]);
+
+  return (
+    <div className={`ka-mathselect ${open ? 'ka-mathselect--open' : ''}`}>
+      <button
+        type="button"
+        ref={btnRef}
+        id={id}
+        className="ka-mathselect__trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        disabled={disabled}
+        onClick={() => (open ? setOpen(false) : openList())}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
+      >
+        <span className="ka-mathselect__value">
+          {value
+            ? <MathText text={asMath(value)} />
+            : <span className="ka-mathselect__placeholder">{placeholder}</span>}
+        </span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="ka-mathselect__list" role="listbox" ref={listRef} aria-label={ariaLabel}>
+          {options.map((opt, oi) => (
+            <li
+              key={oi}
+              role="option"
+              aria-selected={value === opt}
+              className={`ka-mathselect__option ${activeIdx === oi ? 'is-active' : ''} ${value === opt ? 'is-selected' : ''}`}
+              onMouseEnter={() => setActiveIdx(oi)}
+              onMouseDown={(e) => { e.preventDefault(); choose(opt); }}
+            >
+              <MathText text={asMath(opt)} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+});
+
+/** Split an inline template into literal LaTeX fragments and `{n}` slot markers. */
+function tokenizeTemplate(template) {
+  const tokens = [];
+  const re = /\{(\d+)\}/g;
+  let last = 0;
+  let m;
+  while ((m = re.exec(template)) !== null) {
+    if (m.index > last) tokens.push({ t: 'tex', s: template.slice(last, m.index) });
+    tokens.push({ t: 'slot', i: Number(m[1]) });
+    last = m.index + m[0].length;
+  }
+  if (last < template.length) tokens.push({ t: 'tex', s: template.slice(last) });
+  return tokens;
+}
+
+/**
+ * Renders a step's answer "written out with holes": the fixed LaTeX is shown
+ * (e.g. `]_, _[ \cup ]_, _[`) and each `{n}` becomes a small inline input the
+ * student fills (a bound, a sign, an exponent…). Serializes to `{"slots":[…]}`
+ * so the existing scaffold grading treats it as one blank. Exposes focus() so
+ * the step-dots / Enter navigation keep working.
+ */
+const TemplatedBlank = React.forwardRef(function TemplatedBlank(
+  { template, slots = [], value, onChange, disabled, ariaLabel, onComplete },
+  ref
+) {
+  const tokens = useMemo(() => tokenizeTemplate(template || ''), [template]);
+  const slotVals = useMemo(() => {
+    if (value) {
+      try {
+        const p = JSON.parse(value);
+        if (p && Array.isArray(p.slots)) return p.slots;
+      } catch { /* not filled yet */ }
+    }
+    return slots.map(() => '');
+  }, [value, slots]);
+  const slotRefs = useRef([]);
+
+  React.useImperativeHandle(ref, () => ({ focus: () => slotRefs.current[0]?.focus?.() }), []);
+
+  const setSlot = useCallback((i, v) => {
+    const next = slots.map((_, k) => slotVals[k] || '');
+    next[i] = v;
+    onChange(JSON.stringify({ slots: next }));
+  }, [slots, slotVals, onChange]);
+
+  const onSlotKey = useCallback((e, i) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextInput = slotRefs.current[i + 1];
+      if (nextInput) nextInput.focus();
+      else onComplete?.();
+    }
+  }, [onComplete]);
+
+  return (
+    <span className="ka-fill" role="group" aria-label={ariaLabel}>
+      {tokens.map((tk, ti) => {
+        if (tk.t === 'tex') {
+          return <span key={ti} className="ka-fill__tex"><MathText text={asMath(tk.s)} /></span>;
+        }
+        const spec = slots[tk.i] || {};
+        const isNum = spec.kind === 'number';
+        const ch = Math.max(2, Math.min(9, spec.width || String(spec.answer || '').length || 3));
+        return (
+          <input
+            key={ti}
+            ref={el => { slotRefs.current[tk.i] = el; }}
+            className={`ka-fill__slot${isNum ? ' ka-fill__slot--num' : ''}`}
+            style={{ width: `${ch + 1.5}ch` }}
+            type="text"
+            inputMode={isNum ? 'decimal' : undefined}
+            value={slotVals[tk.i] || ''}
+            onChange={e => setSlot(tk.i, e.target.value)}
+            onKeyDown={e => onSlotKey(e, tk.i)}
+            disabled={disabled}
+            aria-label={spec.label || `${ariaLabel || 'champ'} ${tk.i + 1}`}
+            placeholder={isNum ? '#' : '?'}
+          />
+        );
+      })}
+    </span>
+  );
+});
+
+/**
+ * Renders a matrix answer as a bracketed grid of inputs — the student fills each
+ * cell. Slots are row-major; serializes to `{"slots":[…]}` so the existing
+ * scaffold grading treats the whole matrix as one blank (correct ⇔ all cells
+ * right). Exposes focus() for the step-dots / Enter navigation.
+ */
+const MatrixBlank = React.forwardRef(function MatrixBlank(
+  { rows, cols, slots = [], value, onChange, disabled, ariaLabel, onComplete },
+  ref
+) {
+  const slotVals = useMemo(() => {
+    if (value) {
+      try {
+        const p = JSON.parse(value);
+        if (p && Array.isArray(p.slots)) return p.slots;
+      } catch { /* not filled yet */ }
+    }
+    return slots.map(() => '');
+  }, [value, slots]);
+  const cellRefs = useRef([]);
+
+  React.useImperativeHandle(ref, () => ({ focus: () => cellRefs.current[0]?.focus?.() }), []);
+
+  const setCell = useCallback((i, v) => {
+    const next = slots.map((_, k) => slotVals[k] || '');
+    next[i] = v;
+    onChange(JSON.stringify({ slots: next }));
+  }, [slots, slotVals, onChange]);
+
+  const onCellKey = useCallback((e, i) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const nextInput = cellRefs.current[i + 1];
+      if (nextInput) nextInput.focus();
+      else onComplete?.();
+    }
+  }, [onComplete]);
+
+  return (
+    <span className="ka-matrix" role="group" aria-label={ariaLabel}>
+      <span className="ka-matrix__bracket ka-matrix__bracket--left" aria-hidden="true" />
+      <span className="ka-matrix__grid" style={{ gridTemplateColumns: `repeat(${cols}, auto)` }}>
+        {Array.from({ length: rows * cols }, (_, i) => {
+          const spec = slots[i] || {};
+          const isNum = spec.kind === 'number';
+          const w = Math.max(2, Math.min(6, String(spec.answer || '').replace(/[\\{}\s]/g, '').length || 2));
+          const r = Math.floor(i / cols) + 1;
+          const c = (i % cols) + 1;
+          return (
+            <input
+              key={i}
+              ref={el => { cellRefs.current[i] = el; }}
+              className={`ka-matrix__cell${isNum ? ' ka-matrix__cell--num' : ''}`}
+              style={{ width: `${w + 1.5}ch` }}
+              type="text"
+              inputMode={isNum ? 'decimal' : undefined}
+              value={slotVals[i] || ''}
+              onChange={e => setCell(i, e.target.value)}
+              onKeyDown={e => onCellKey(e, i)}
+              disabled={disabled}
+              aria-label={`${ariaLabel || 'matrice'} ligne ${r} colonne ${c}`}
+              placeholder={isNum ? '#' : '?'}
+            />
+          );
+        })}
+      </span>
+      <span className="ka-matrix__bracket ka-matrix__bracket--right" aria-hidden="true" />
+    </span>
+  );
+});
+
 function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }) {
   const template = question.scaffold_text;
   const blanks = question.scaffold_blanks || [];
@@ -2202,6 +2516,29 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
     .replace(/^\$+|\$+$/g, '').replace(/\\text\{([^}]*)\}/g, '$1')
     .replace(/\\,/g, '').replace(/\s+/g, ' ').trim(), []);
 
+  // Parse an inline-template blank value (`{"slots":[…]}`) into its slot array.
+  const parseSlots = useCallback((v) => {
+    if (typeof v === 'string' && v.trim().startsWith('{')) {
+      try { const p = JSON.parse(v); if (p && Array.isArray(p.slots)) return p.slots; } catch { /* not filled */ }
+    }
+    return [];
+  }, []);
+
+  // Exact / numeric match of a value against any acceptable answer (slot-level).
+  const matchAcceptable = useCallback((userVal, acceptable) => {
+    const userNorm = normalize(userVal);
+    if (!userNorm) return false;
+    for (const ans of acceptable) {
+      const expected = normalize(ans);
+      if (!expected) continue;
+      if (userNorm === expected) return true;
+      const u = parseFloat(userNorm.replace(/,/g, '.'));
+      const e = parseFloat(expected.replace(/,/g, '.'));
+      if (!isNaN(u) && !isNaN(e) && Math.abs(u - e) <= Math.max(Math.abs(e) * 0.01, 0.01)) return true;
+    }
+    return false;
+  }, [normalize]);
+
   // Minimum expected answer length to trigger AI grading (short answers grade fine by exact match)
   const AI_THRESHOLD = 25;
 
@@ -2214,10 +2551,21 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
 
     // ── Pass 1: exact / numeric matching (instant) ──
     blanks.forEach((_, bi) => {
-      const userVal = (blankValues[bi] || '').trim();
-      if (!userVal) { results[bi] = undefined; return; }
       const part = answerParts[bi];
       if (!part) { results[bi] = undefined; return; }
+
+      // Inline fill-in template or matrix grid: grade every slot; correct only if all match.
+      if (Array.isArray(part.slots) && part.slots.length > 0) {
+        const userSlots = parseSlots(blankValues[bi]);
+        const allSlotsFilled = part.slots.every((_, k) => (userSlots[k] || '').toString().trim());
+        if (!allSlotsFilled) { results[bi] = undefined; return; }
+        results[bi] = part.slots.every((s, k) =>
+          matchAcceptable(userSlots[k], [s.answer, ...(s.alternatives || [])]));
+        return;
+      }
+
+      const userVal = (blankValues[bi] || '').trim();
+      if (!userVal) { results[bi] = undefined; return; }
       const allAcceptable = [part.answer, ...(part.alternatives || [])];
       const userNorm = normalize(userVal);
       let isCorrect = false;
@@ -2299,7 +2647,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
     setValidated(results);
     setChecked(true);
     setGrading(false);
-  }, [hasGrading, answerParts, blankValues, blanks, normalize, mathMode, question]);
+  }, [hasGrading, answerParts, blankValues, blanks, normalize, mathMode, question, parseSlots, matchAcceptable]);
 
   // Handle Enter key → move to next blank or check
   const handleKeyDown = useCallback((e, bi) => {
@@ -2313,7 +2661,16 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
     }
   }, [blanks.length, checkAnswers]);
 
-  const filledCount = blankValues.filter(v => v.trim()).length;
+  // A templated/matrix blank is "filled" only when every slot has a value.
+  const blankFilled = useCallback((bi) => {
+    const part = answerParts[bi];
+    if (Array.isArray(part?.slots) && part.slots.length > 0) {
+      const s = parseSlots(blankValues[bi]);
+      return part.slots.every((_, k) => (s[k] || '').toString().trim().length > 0);
+    }
+    return (blankValues[bi] || '').toString().trim().length > 0;
+  }, [answerParts, blankValues, parseSlots]);
+  const filledCount = blanks.reduce((n, _, bi) => n + (blankFilled(bi) ? 1 : 0), 0);
   const correctCount = Object.values(validated).filter(v => v === true).length;
   const incorrectCount = Object.values(validated).filter(v => v === false).length;
   const totalBlanks = blanks.length;
@@ -2322,7 +2679,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
 
   // Extract the solution text (everything before the first {{n}} marker)
   const firstBlankPos = template.search(/\{\{\d+\}\}/);
-  const solutionText = firstBlankPos > 0 ? template.slice(0, firstBlankPos).trim() : '';
+  const solutionText = balanceMathDelimiters(firstBlankPos > 0 ? template.slice(0, firstBlankPos).trim() : '');
 
   const allCorrect = checked && correctCount === totalBlanks;
   const allFilled = filledCount === totalBlanks;
@@ -2361,7 +2718,63 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                 </label>
               )}
               <div className="ka-scaffold__input-wrap">
-                {mathMode ? (
+                {Array.isArray(answerParts[bi]?.slots) && answerParts[bi].slots.length > 0 ? (
+                  answerParts[bi].matrix ? (
+                    <MatrixBlank
+                      ref={el => inputRefs.current[bi] = el}
+                      rows={answerParts[bi].matrix.rows}
+                      cols={answerParts[bi].matrix.cols}
+                      slots={answerParts[bi].slots}
+                      value={blankValues[bi] || ''}
+                      onChange={val => setBlank(bi, val)}
+                      onComplete={checkAnswers}
+                      ariaLabel={blank.label || `Étape ${bi + 1}`}
+                      disabled={allCorrect}
+                    />
+                  ) : (
+                    <TemplatedBlank
+                      ref={el => inputRefs.current[bi] = el}
+                      template={answerParts[bi].template}
+                      slots={answerParts[bi].slots}
+                      value={blankValues[bi] || ''}
+                      onChange={val => setBlank(bi, val)}
+                      onComplete={checkAnswers}
+                      ariaLabel={blank.label || `Étape ${bi + 1}`}
+                      disabled={allCorrect}
+                    />
+                  )
+                ) : Array.isArray(answerParts[bi]?.options) && answerParts[bi].options.length > 0 ? (
+                  optionsNeedMath(answerParts[bi].options) ? (
+                    <MathSelect
+                      ref={el => inputRefs.current[bi] = el}
+                      id={`scaffold-${index}-${bi}`}
+                      value={blankValues[bi] || ''}
+                      options={answerParts[bi].options}
+                      onChange={val => setBlank(bi, val)}
+                      onFocus={() => setFocusedBlank(bi)}
+                      onBlur={() => setFocusedBlank(null)}
+                      ariaLabel={blank.label || `Étape ${bi + 1}`}
+                      disabled={allCorrect}
+                    />
+                  ) : (
+                    <select
+                      ref={el => inputRefs.current[bi] = el}
+                      id={`scaffold-${index}-${bi}`}
+                      className="ka-scaffold__select"
+                      value={blankValues[bi] || ''}
+                      onChange={e => setBlank(bi, e.target.value)}
+                      onFocus={() => setFocusedBlank(bi)}
+                      onBlur={() => setFocusedBlank(null)}
+                      aria-label={blank.label || `Étape ${bi + 1}`}
+                      disabled={allCorrect}
+                    >
+                      <option value="">— Choisir —</option>
+                      {answerParts[bi].options.map((opt, oi) => (
+                        <option key={oi} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  )
+                ) : mathMode ? (
                   <MathKeyboard
                     ref={el => inputRefs.current[bi] = el}
                     id={`scaffold-${index}-${bi}`}
@@ -2370,7 +2783,8 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                     onFocus={() => setFocusedBlank(bi)}
                     onBlur={() => setFocusedBlank(null)}
                     onKeyDown={e => handleKeyDown(e, bi)}
-                    placeholder="Votre réponse"
+                    placeholder={answerParts[bi]?.kind === 'number' ? 'Nombre' : 'Votre réponse'}
+                    inputMode={answerParts[bi]?.kind === 'number' ? 'decimal' : undefined}
                     ariaLabel={blank.label || `Étape ${bi + 1}`}
                     disabled={allCorrect}
                     compact={totalBlanks > 4}
@@ -2407,7 +2821,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
               {/* Show correct answer on wrong attempt */}
               {vState === false && answerParts[bi] && (
                 <div className="ka-scaffold__correction">
-                  Réponse : <MathText text={answerParts[bi].answer} />
+                  Réponse : <MathText text={asMath(answerParts[bi].answer)} />
                 </div>
               )}
             </div>
@@ -2445,7 +2859,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
             let dotClass = 'ka-scaffold__dot';
             if (validated[bi] === true) dotClass += ' ka-scaffold__dot--correct';
             else if (validated[bi] === false) dotClass += ' ka-scaffold__dot--wrong';
-            else if (blankValues[bi]?.trim()) dotClass += ' ka-scaffold__dot--filled';
+            else if (blankFilled(bi)) dotClass += ' ka-scaffold__dot--filled';
             if (focusedBlank === bi) dotClass += ' ka-scaffold__dot--active';
             return (
               <button

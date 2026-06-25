@@ -147,6 +147,7 @@ const MathKeyboard = forwardRef(function MathKeyboard({
   disabled = false,
   className = '',
   compact = false,
+  inputMode,
 }, ref) {
   const katexReady = useKatex();
   const inputRef = useRef(null);
@@ -249,6 +250,7 @@ const MathKeyboard = forwardRef(function MathKeyboard({
           placeholder={placeholder}
           autoComplete="off"
           spellCheck="false"
+          inputMode={inputMode}
           aria-label={ariaLabel || placeholder}
           disabled={disabled}
         />
