@@ -289,3 +289,67 @@ describe('matrix grid grading', () => {
     expect(res.userValue).toBe('\\begin{pmatrix} 0 & 1 \\\\ -1 & 0 \\end{pmatrix}');
   });
 });
+
+// ── Non-math short_answer scaffolds (humanities / science prose) ─────────────
+// Opportunity 1: a short_answer carrying authored scaffold blanks + a quality
+// flag now renders interactive and must grade by its blanks, while an ordinary
+// free-text short_answer keeps routing to manual / AI grading (no regression).
+function makeShortAnswerScaffold(overrides: Record<string, unknown> = {}) {
+  return {
+    type: 'short_answer',
+    points: 2,
+    scaffold_ready: true,
+    scaffold_text:
+      'Les deux sécrétions thyroïdiennes sont la thyroxine et la triiodothyronine.\n\nPremière : {{0}}\n\nSeconde : {{1}}',
+    scaffold_blanks: [{ label: 'Première' }, { label: 'Seconde' }],
+    answer_parts: [
+      { label: 'Première', answer: 'Thyroxine', alternatives: ['T4'] },
+      { label: 'Seconde', answer: 'Triiodothyronine', alternatives: ['T3'] },
+    ],
+    ...overrides,
+  };
+}
+
+const NONMATH = { subject: 'Anglais' };
+
+describe('non-math short_answer scaffolds', () => {
+  it('grades a short_answer scaffold by its blanks, not as an essay', () => {
+    const q = makeShortAnswerScaffold();
+    const r = gradeSingleQuestion(q, JSON.stringify({ scaffold: ['Thyroxine', 'Triiodothyronine'] }), null, NONMATH);
+    expect(r.status).toBe('correct');
+    expect(r.result.awarded).toBe(2);
+    expect(r.result.blankResults).toHaveLength(2);
+  });
+
+  it('accepts per-blank alternatives', () => {
+    const q = makeShortAnswerScaffold();
+    const r = gradeSingleQuestion(q, JSON.stringify({ scaffold: ['T4', 'T3'] }), null, NONMATH);
+    expect(r.status).toBe('correct');
+  });
+
+  it('awards proportional partial credit', () => {
+    const q = makeShortAnswerScaffold();
+    const r = gradeSingleQuestion(q, JSON.stringify({ scaffold: ['Thyroxine', 'wrong'] }), null, NONMATH);
+    expect(r.status).toBe('partial');
+    expect(r.result.awarded).toBe(1);
+  });
+
+  it('grades end-to-end through gradeExam and counts as auto-graded', () => {
+    const q = makeShortAnswerScaffold();
+    const { summary, results } = gradeExam(
+      [q],
+      { 0: JSON.stringify({ scaffold: ['Thyroxine', 'Triiodothyronine'] }) },
+      {},
+      NONMATH,
+    );
+    expect(results[0].status).toBe('correct');
+    expect(summary.earnedPoints).toBe(2);
+    expect(summary.autoGraded).toBe(1);
+  });
+
+  it('still routes an ordinary free-text short_answer to manual grading', () => {
+    const plain = { type: 'short_answer', points: 3, question: 'Expliquez votre raisonnement.' };
+    const r = gradeSingleQuestion(plain, 'Une réponse libre rédigée par l’élève.', null, NONMATH);
+    expect(r.status).toBe('manual');
+  });
+});

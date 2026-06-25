@@ -608,8 +608,9 @@ const ExamTake = () => {
     // Don't re-grade if already graded
     if (questionResults[qIndex]) return;
 
-    if (q.type === 'essay' || q.type === 'short_answer') {
-      // Essay / short_answer: needs AI grading — enforce minimum word count
+    if ((q.type === 'essay' || q.type === 'short_answer') && !usesScaffold(q, subject)) {
+      // Essay / short_answer (free-text, no interactive scaffold): needs AI
+      // grading — enforce minimum word count
       const minWords = q.type === 'short_answer' ? SHORT_ANSWER_MIN_WORDS : ESSAY_MIN_WORDS;
       const wordCount = (userAnswer || '').trim().split(/\s+/).filter(Boolean).length;
       if (wordCount < minWords) return; // caller should show a warning
@@ -653,7 +654,7 @@ const ExamTake = () => {
       } finally {
         setGradingInProgress((prev) => ({ ...prev, [qIndex]: false }));
       }
-    } else if (q.scaffold_text && q.scaffold_blanks && q.answer_parts) {
+    } else if (usesScaffold(q, subject) && q.answer_parts) {
       // Scaffold: exact/numeric/CAS match first; for non-math, AI-grade long-text blanks
       const result = gradeSingleQuestion(q, userAnswer, null, { subject });
       const hasUngradedLongBlanks = !MATH_SUBJECTS.has(subject) && (result.result?.blankResults || []).some(
@@ -2182,16 +2183,23 @@ const NATIVE_INPUT_TYPES = new Set(['multiple_choice', 'multiple_select', 'true_
  * Should this question render the interactive step-by-step ScaffoldedAnswer?
  *
  * Shows the authored solution-with-blanks when scaffold data exists and the
- * question is open-computation. Historically this only fired when a question
- * had NO single `correct` value; we now also enable it for math/science
- * subjects so their authored scaffolds become interactive (the student fills
- * the removed steps) instead of collapsing to a single answer box.
+ * question is open-computation.
+ *
+ * Authoritative override: `scaffold_ready` (set offline by
+ * scripts/tag_scaffold_quality.mjs after a quality gate) decides per-question
+ * for the previously-blocked set — it unblocks vetted non-math and short_answer
+ * scaffolds and vetoes degenerate ones (answer hidden in its label, refusals,
+ * open essays). When the flag is absent we fall back to the original behavior,
+ * so the math/science scaffolds keep working and untagged short_answers stay
+ * free-text (no regression).
  */
 function usesScaffold(q, subject) {
   if (!q) return false;
-  if (q.type === 'essay' || q.type === 'short_answer') return false;
+  if (q.type === 'essay') return false;
   if (NATIVE_INPUT_TYPES.has(q.type)) return false;
   if (!q.scaffold_text || !q.scaffold_blanks) return false;
+  if (typeof q.scaffold_ready === 'boolean') return q.scaffold_ready;
+  if (q.type === 'short_answer') return false;
   return !q.correct || MATH_SUBJECTS.has(subject);
 }
 
