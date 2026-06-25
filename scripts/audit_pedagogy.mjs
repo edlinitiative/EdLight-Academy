@@ -14,7 +14,9 @@
  *   • Feedback        — explanation coverage (what a learner sees after a wrong
  *                       answer). Hints are separate (already ~100%).
  *   • Auto-grading    — fraction that can be graded without a human/AI.
- *   • matching        — currently gradable:false, so these never score.
+ *   • matching        — letter/number matchings now render interactive
+ *                       dropdowns and auto-grade (parseMatchingKey); the rest
+ *                       (free-text tables, grouping tasks) stay manual.
  *
  * Prints a per-subject table + a global opportunity summary. Mutates nothing.
  */
@@ -49,6 +51,35 @@ function usesScaffold(q, subject) {
   return !nonEmpty(q.correct) || MATH_SUBJECTS.has(subject);
 }
 
+// Mirror of parseMatchingKey() accept gates (src/utils/examUtils.ts): does this
+// matching normalize into a clean letter/number key (→ interactive + gradable)?
+function matchingGradable(q) {
+  if (!q || q.type !== 'matching') return false;
+  const parts = Array.isArray(q.answer_parts) ? q.answer_parts : [];
+  let answers = parts.map((p) => String(p?.answer ?? '').trim());
+  const nonE = answers.filter(Boolean);
+  if (nonE.length === 1 && /[,;]/.test(nonE[0]) && /[-–—:)]/.test(nonE[0])) {
+    answers = nonE[0].split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
+  }
+  if (answers.filter(Boolean).length < 2) return false;
+  const lefts = [];
+  let anyExplicit = false;
+  let anyPositional = false;
+  for (let i = 0; i < answers.length; i++) {
+    const a = answers[i];
+    if (!a) continue;
+    const two = a.match(/^([a-z0-9]{1,3})\s*[-–—:.)]\s*([a-z0-9]{1,3})$/i);
+    if (two) { anyExplicit = true; lefts.push(two[1].toLowerCase()); continue; }
+    const lead = a.match(/^([a-z0-9]{1,3})\b/i);
+    if (lead) { anyPositional = true; lefts.push(String(i + 1)); continue; }
+    return false;
+  }
+  if (lefts.length < 2) return false;
+  if (anyExplicit && anyPositional) return false;
+  if (new Set(lefts).size !== lefts.length) return false;
+  return true;
+}
+
 function blankRow() {
   return {
     exams: 0, questions: 0,
@@ -63,6 +94,7 @@ function blankRow() {
     autoGradable: 0,            // correct present OR answer_parts present
     essay: 0,
     matching: 0,
+    matchGradable: 0,
   };
 }
 
@@ -88,6 +120,7 @@ for (const f of files) {
       if (nonEmpty(q.correct) || nonEmpty(q.answer_parts)) row.autoGradable += 1;
       if (t === 'essay') row.essay += 1;
       if (t === 'matching') row.matching += 1;
+      if (matchingGradable(q)) row.matchGradable += 1;
 
       if (hasScaffoldData(q)) {
         row.scaffoldData += 1;
@@ -112,7 +145,7 @@ console.log('CROSS-SUBJECT PEDAGOGICAL AUDIT (read-only)   ∑ = science subject
 console.log('='.repeat(96));
 console.log(
   pad('Subject', 26) + pad('Qs', 6) + pad('Interact', 9) + pad('Scaffld', 8) +
-  pad('Blocked', 8) + pad('Expl', 7) + pad('AutoGr', 8) + pad('Essay', 7) + pad('Match', 6));
+  pad('Blocked', 8) + pad('Expl', 7) + pad('AutoGr', 8) + pad('Essay', 7) + pad('Match', 6) + pad('MGrad', 7));
 console.log('-'.repeat(96));
 for (const [s, r] of subjects) {
   const blocked = r.blockedShortAnswer + r.blockedNonMathCorrect;
@@ -125,7 +158,8 @@ for (const [s, r] of subjects) {
     pad(pct(r.explanation, r.questions), 7) +
     pad(pct(r.autoGradable, r.questions), 8) +
     pad(`${r.essay}`, 7) +
-    pad(`${r.matching}`, 6));
+    pad(`${r.matching}`, 6) +
+    pad(`${r.matchGradable}`, 7));
 }
 
 // Global opportunity rollups
@@ -135,11 +169,12 @@ console.log('-'.repeat(96));
 console.log('GLOBAL OPPORTUNITIES');
 console.log(`  Total questions                         : ${sumQ}`);
 console.log(`  Render interactive today                : ${sum('interactive')}  (${pct(sum('interactive'), sumQ)})`);
+console.log(`  ⮑ incl. matching dropdowns              : ${sum('interactive') + sum('matchGradable')}  (${pct(sum('interactive') + sum('matchGradable'), sumQ)})`);
 console.log(`  Have scaffold data (text+blanks)        : ${sum('scaffoldData')}  (${pct(sum('scaffoldData'), sumQ)})`);
-console.log(`  ⮑ BLOCKED short_answer scaffolds        : ${sum('blockedShortAnswer')}   (authored steps never shown)`);
-console.log(`  ⮑ BLOCKED non-math "has correct"        : ${sum('blockedNonMathCorrect')}`);
+console.log(`  ⫠ BLOCKED short_answer scaffolds        : ${sum('blockedShortAnswer')}   (authored steps never shown)`);
+console.log(`  ⫠ BLOCKED non-math "has correct"        : ${sum('blockedNonMathCorrect')}`);
 console.log(`  Missing explanation (no "why")          : ${sumQ - sum('explanation')}  (${pct(sumQ - sum('explanation'), sumQ)})`);
-console.log(`  matching questions (currently ungraded) : ${sum('matching')}`);
+console.log(`  matching: auto-gradable / total         : ${sum('matchGradable')} / ${sum('matching')}  (rest stay manual: tables, grouping)`);
 console.log(`  essay (manual/AI only)                  : ${sum('essay')}`);
 console.log('-'.repeat(96));
 

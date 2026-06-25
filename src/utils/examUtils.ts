@@ -1055,6 +1055,199 @@ export function gradeScaffoldAnswer(question, userAnswer, options = {}) {
   return { status: 'partial', awarded: 0, maxPoints: pts, ratio: 0 };
 }
 
+// ─── Matching-question grading ──────────────────────────────────────────────
+
+const MATCH_SHORT_TOKEN = /^[a-z0-9]{1,3}$/i;
+const matchNorm = (s) => String(s ?? '').trim().toLowerCase();
+
+/**
+ * Read one answer string into a { left, right } pair.
+ *   "1-c", "a - 3", "2.i"  → explicit pair (left = first token, right = second)
+ *   "d", "e- freezing"     → positional (left = position i+1, right = lead token)
+ * Returns null when the string is not a letter/number match (e.g. a full word).
+ */
+function parseMatchingPair(answer, i) {
+  const a = String(answer ?? '').trim();
+  if (!a) return null;
+  const two = a.match(/^([a-z0-9]{1,3})\s*[-–—:.)]\s*([a-z0-9]{1,3})$/i);
+  if (two) return { left: matchNorm(two[1]), right: matchNorm(two[2]), positional: false };
+  const lead = a.match(/^([a-z0-9]{1,3})\b/i);
+  if (lead) return { left: String(i + 1), right: matchNorm(lead[1]), positional: true };
+  return null;
+}
+
+/** Parse a legend entry "a) some text" / "a - text" → { key, text } or null. */
+function parseLegendEntry(entry) {
+  const m = String(entry ?? '').match(/^\s*([a-z0-9]{1,3})\s*[-–—:.)]\s*(.+)$/i);
+  return m ? { key: matchNorm(m[1]), text: m[2].trim() } : null;
+}
+
+/** Strip a leading "1."/"a)" enumerator and drop boilerplate "Matching pair x". */
+function cleanMatchingLabel(label) {
+  const t = String(label ?? '').trim();
+  if (!t || /^matching\s+pair/i.test(t)) return '';
+  return t.replace(/^[a-z0-9]{1,3}\s*[-–—:.)]\s*/i, '').trim();
+}
+
+/** Best-effort left-item texts from a numbered question stem ("1. foo 2. bar"). */
+function parseMatchingLeftFromText(questionText) {
+  const t = String(questionText ?? '').replace(/\r/g, '');
+  const re = /(?:^|\n|\s)(\d{1,2}|[a-z])\s*[-–—.)]\s+/gi;
+  const idxs = [];
+  let m;
+  while ((m = re.exec(t)) !== null) idxs.push({ key: matchNorm(m[1]), start: m.index + m[0].length });
+  if (idxs.length < 2) return [];
+  return idxs.map((it, i) => {
+    const end = i + 1 < idxs.length ? idxs[i + 1].start : t.length;
+    let seg = t.slice(it.start, end).trim().replace(/\s*(?:\d{1,2}|[a-z])\s*[-–—.)]\s*$/i, '').trim();
+    if (seg.length > 90) seg = seg.slice(0, 90) + '…';
+    return { key: it.key, text: seg };
+  });
+}
+
+/**
+ * Normalize a matching question into { pairs, key, leftItems, rightOptions } for
+ * both grading and the interactive widget — or null when it is not a clean
+ * letter/number matching (free-text tables, grouping tasks, missing key). The
+ * null case is what keeps those questions on the manual-review path.
+ */
+export function parseMatchingKey(question) {
+  if (!question || question.type !== 'matching') return null;
+  const parts = Array.isArray(question.answer_parts) ? question.answer_parts : [];
+  let answers = parts.map((p) => String(p?.answer ?? '').trim());
+  let labels = parts.map((p) => String(p?.label ?? '').trim());
+
+  // Combined single string "1-f, 2-e, 3-b" → explode (labels no longer align).
+  const nonEmpty = answers.filter(Boolean);
+  if (nonEmpty.length === 1 && /[,;]/.test(nonEmpty[0]) && /[-–—:)]/.test(nonEmpty[0])) {
+    answers = nonEmpty[0].split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
+    labels = answers.map(() => '');
+  }
+  if (answers.filter(Boolean).length < 2) return null;
+
+  const pairs = [];
+  let anyExplicit = false;
+  let anyPositional = false;
+  for (let i = 0; i < answers.length; i++) {
+    if (!answers[i]) continue;
+    const pr = parseMatchingPair(answers[i], i);
+    if (!pr) return null; // an unreadable token → treat the whole question as manual
+    if (pr.positional) anyPositional = true; else anyExplicit = true;
+    pairs.push({ left: pr.left, right: pr.right, label: labels[i] || '' });
+  }
+  if (pairs.length < 2) return null;
+  if (anyExplicit && anyPositional) return null; // mixed shapes → avoid misalignment
+  if (new Set(pairs.map((p) => p.left)).size !== pairs.length) return null; // dup lefts
+
+  // Right-hand legend: prefer question.options; otherwise the key's own letters.
+  const rights = [...new Set(pairs.map((p) => p.right))];
+  const legendText = {};
+  const opts = question.options;
+  if (opts && typeof opts === 'object' && !Array.isArray(opts)) {
+    const keys = Object.keys(opts);
+    if (keys.length && keys.every((k) => MATCH_SHORT_TOKEN.test(k))) {
+      for (const k of keys) legendText[matchNorm(k)] = String(opts[k]);
+    } else if (Array.isArray(opts.B)) {
+      for (const e of opts.B) { const le = parseLegendEntry(e); if (le) legendText[le.key] = le.text; }
+    }
+  }
+  const optionKeys = Object.keys(legendText);
+  const rightSet = new Set(rights);
+  const overlap = optionKeys.filter((k) => rightSet.has(k)).length;
+  let allKeys;
+  if (optionKeys.length && overlap === 0) {
+    // The options describe the left column (not the right side) → ignore them.
+    allKeys = rights.slice().sort();
+    for (const k of optionKeys) delete legendText[k];
+  } else {
+    allKeys = [...new Set([...optionKeys, ...rights])].sort();
+  }
+  const rightOptions = allKeys.map((k) => ({ key: k, text: legendText[k] || '' }));
+
+  // Left-hand items: answer-part labels → question stem → bare keys.
+  const fromText = parseMatchingLeftFromText(question.question);
+  const byKey = {};
+  for (const it of fromText) byKey[it.key] = it.text;
+  const leftItems = pairs.map((p, i) => {
+    let text = cleanMatchingLabel(p.label);
+    if (!text && byKey[p.left]) text = byKey[p.left];
+    if (!text && fromText[i]) text = fromText[i].text;
+    return { key: p.left, text: text || '' };
+  });
+
+  const key = {};
+  for (const p of pairs) key[p.left] = p.right;
+  return { pairs: pairs.map((p) => ({ left: p.left, right: p.right })), key, leftItems, rightOptions };
+}
+
+/** Parse a stored matching answer into { left: right } selections, or null. */
+export function parseMatchingSelections(userAnswer) {
+  if (userAnswer == null) return null;
+  if (typeof userAnswer === 'object' && !Array.isArray(userAnswer)) {
+    const out = {};
+    let any = false;
+    for (const [k, v] of Object.entries(userAnswer)) {
+      const val = matchNorm(v);
+      if (val) { out[matchNorm(k)] = val; any = true; }
+    }
+    return any ? out : null;
+  }
+  const s = String(userAnswer).trim();
+  if (!s) return null;
+  if (s.startsWith('{')) {
+    try {
+      const obj = JSON.parse(s);
+      if (obj && typeof obj === 'object' && !obj.scaffold) return parseMatchingSelections(obj);
+    } catch { /* not JSON */ }
+  }
+  const out = {};
+  let any = false;
+  for (const seg of s.split(/[,;\n]+/)) {
+    const m = seg.trim().match(/^([a-z0-9]{1,3})\s*[-–—:.)]\s*([a-z0-9]{1,3})$/i);
+    if (m) { out[matchNorm(m[1])] = matchNorm(m[2]); any = true; }
+  }
+  return any ? out : null;
+}
+
+/**
+ * Grade a matching answer against its parsed pair key. Returns a normalized
+ * result { status, awarded, maxPoints, ratio, blankResults } or null when the
+ * question is not a clean, auto-gradable matching (caller keeps manual review).
+ */
+export function gradeMatchingAnswer(question, userAnswer) {
+  const parsed = parseMatchingKey(question);
+  if (!parsed) return null;
+  const pts = question.points || 1;
+  const sel = parseMatchingSelections(userAnswer);
+
+  const blankResults = parsed.pairs.map((p, i) => {
+    const li = parsed.leftItems[i] || { key: p.left, text: '' };
+    const got = sel ? matchNorm(sel[p.left]) : '';
+    return {
+      blankIndex: i,
+      label: li.text ? `${String(li.key)}. ${li.text}` : String(li.key),
+      correct: got !== '' && got === matchNorm(p.right),
+      userValue: got ? got.toUpperCase() : '',
+      expectedAnswer: String(p.right).toUpperCase(),
+    };
+  });
+
+  const filled = blankResults.filter((b) => b.userValue).length;
+  if (filled === 0) return { status: 'unanswered', awarded: 0, maxPoints: pts, ratio: 0, blankResults };
+
+  const correctN = blankResults.filter((b) => b.correct).length;
+  const total = parsed.pairs.length;
+  const ratio = total ? correctN / total : 0;
+  const awarded = Math.round(pts * ratio * 100) / 100;
+  return {
+    status: correctN === total ? 'correct' : correctN > 0 ? 'partial' : 'incorrect',
+    awarded,
+    maxPoints: pts,
+    ratio,
+    blankResults,
+  };
+}
+
 // ─── Single-question grading (for immediate feedback mode) ──────────────────
 
 /**
@@ -1100,6 +1293,25 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
       userAnswer,
       status: scaffoldGraded.status,
       result: { awarded: scaffoldGraded.awarded, maxPoints: pts, blankResults: scaffoldGraded.blankResults },
+    };
+  }
+
+  // Interactive matching answer ({left:right}) — grade against the parsed key.
+  const matchingGraded = gradeMatchingAnswer(question, userAnswer);
+  if (matchingGraded) {
+    if (matchingGraded.status === 'unanswered') {
+      return {
+        question,
+        userAnswer: null,
+        status: 'unanswered',
+        result: { awarded: 0, maxPoints: pts },
+      };
+    }
+    return {
+      question,
+      userAnswer,
+      status: matchingGraded.status,
+      result: { awarded: matchingGraded.awarded, maxPoints: pts, blankResults: matchingGraded.blankResults },
     };
   }
 
@@ -1278,6 +1490,31 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
         userAnswer,
         status: scaffoldGraded.status,
         result: { awarded: scaffoldGraded.awarded, maxPoints: pts, blankResults: scaffoldGraded.blankResults },
+      };
+    }
+
+    // Interactive matching answer ({left:right}) — grade against the parsed key.
+    const matchingGraded = gradeMatchingAnswer(q, userAnswer);
+    if (matchingGraded) {
+      if (matchingGraded.status === 'unanswered') {
+        unanswered++;
+        return {
+          question: q,
+          userAnswer: null,
+          status: 'unanswered',
+          result: { awarded: 0, maxPoints: pts },
+        };
+      }
+      autoGraded++;
+      earnedPoints += matchingGraded.awarded;
+      if (matchingGraded.status === 'correct') correctCount++;
+      else if (matchingGraded.status === 'partial') correctCount += matchingGraded.ratio || 0;
+      else incorrectCount++;
+      return {
+        question: q,
+        userAnswer,
+        status: matchingGraded.status,
+        result: { awarded: matchingGraded.awarded, maxPoints: pts, blankResults: matchingGraded.blankResults },
       };
     }
 

@@ -8198,6 +8198,62 @@ textarea:focus-visible,
 	background: rgba(0,0,0,0.025);
 	border-radius: 8px;
 }
+.exam-take__feedback-keypoints {
+	margin-top: 0.65rem;
+	padding: 0.6rem 0.85rem;
+	background: rgba(10, 102, 194, 0.04);
+	border-radius: 8px;
+}
+.exam-take__feedback-keypoints > strong {
+	display: block;
+	margin-bottom: 0.35rem;
+	color: var(--text-700, #334155);
+}
+.exam-take__feedback-keypoints ul {
+	margin: 0;
+	padding-left: 1.1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+.exam-take__feedback-keypoints li {
+	line-height: 1.45;
+}
+.exam-take__feedback-keypoint-label {
+	font-weight: 600;
+	color: var(--text-800, #1f2937);
+}
+
+/* Rubric guidance above free-text (essay + short_answer) inputs */
+.exam-take__rubric-guide {
+	background: var(--surface-100, #f4f4f5);
+	border: 1px solid var(--border-200, #e4e4e7);
+	border-radius: 8px;
+	padding: 0.65rem 0.85rem;
+	font-size: 0.82rem;
+	margin-bottom: 0.5rem;
+}
+.exam-take__rubric-guide-title {
+	font-weight: 700;
+	color: var(--text-600, #52525b);
+	display: block;
+	margin-bottom: 0.25rem;
+}
+.exam-take__rubric-guide-list {
+	margin: 0;
+	padding-left: 1.2rem;
+	color: var(--text-500, #71717a);
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+.exam-take__rubric-guide-list li {
+	line-height: 1.45;
+}
+.exam-take__rubric-guide-count {
+	color: var(--text-400, #a1a1aa);
+	font-style: italic;
+}
 
 /* Essay word count */
 .exam-take__essay-wrap {
@@ -10915,6 +10971,29 @@ textarea:focus-visible,
 	font-weight: 600;
 	color: var(--text-400);
 	text-align: right;
+}
+
+.exam-take__matching-legend {
+	list-style: none;
+	margin: 0;
+	padding: 0.6rem 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	background: var(--bg-100, #f8f9fa);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	font-size: 0.82rem;
+	color: var(--text-700);
+}
+
+.exam-take__matching-legend li {
+	line-height: 1.35;
+}
+
+.exam-take__matching-legend strong {
+	color: var(--primary);
+	margin-right: 0.25rem;
 }
 
 .exam-take__matching-pairs {

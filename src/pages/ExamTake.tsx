@@ -15,6 +15,7 @@ import {
   flattenQuestions,
   gradeExam,
   gradeSingleQuestion,
+  parseMatchingKey,
   questionTypeMeta,
   normalizeSubject,
   normalizeLevel,
@@ -2913,6 +2914,9 @@ function ImmediateFeedback({ result, question, color }) {
 
   const awarded = result.result?.awarded ?? 0;
   const maxPts = result.result?.maxPoints ?? (question.points || 1);
+  const keyPoints = (question.type === 'essay' || question.type === 'short_answer')
+    ? buildRubricDetailed(question)
+    : [];
 
   return (
     <div className={`exam-take__feedback ${cfg.cls}`}>
@@ -2961,7 +2965,7 @@ function ImmediateFeedback({ result, question, color }) {
       )}
 
       {/* Explanation toggle */}
-      {(question.explanation || question.model_answer) && (
+      {(question.explanation || question.model_answer || keyPoints.length > 0) && (
         <div className="exam-take__feedback-explain">
           <button
             className="exam-take__feedback-explain-btn"
@@ -2981,6 +2985,19 @@ function ImmediateFeedback({ result, question, color }) {
                 <div className="exam-take__feedback-explain-model">
                   <strong>Réponse modèle :</strong>
                   <InstructionRenderer text={question.model_answer} />
+                </div>
+              )}
+              {keyPoints.length > 0 && (
+                <div className="exam-take__feedback-keypoints">
+                  <strong>Points clés attendus :</strong>
+                  <ul>
+                    {keyPoints.map((p, i) => (
+                      <li key={i}>
+                        <span className="exam-take__feedback-keypoint-label">{p.label} :</span>{' '}
+                        <MathText text={p.answer} />
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
@@ -3014,7 +3031,7 @@ function QuestionInput({ question, index, value, onChange, disabled, subject }) 
     case 'short_answer':
       return <ShortAnswerInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'essay':
-      return <EssayInput index={index} value={value} onChange={onChange} disabled={disabled} />;
+      return <EssayInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     case 'matching':
       return <MatchingInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
     default:
@@ -3432,23 +3449,72 @@ function TrueFalseInput({ index, value, onChange, disabled }) {
   );
 }
 
+// ── Rubric guidance (essay + short_answer answer_parts) ──────────────────
+
+/**
+ * Distill answer_parts labels into a clean "aspects to address" list: drops
+ * boilerplate ("Matching pair 1", "Answer depends on the passage") and the
+ * question text itself, and collapses repeated labels into one entry with a
+ * count (e.g. three "Drawback…" parts → one line tagged "3 éléments").
+ */
+function buildRubricLabels(question) {
+  const parts = Array.isArray(question?.answer_parts) ? question.answer_parts : [];
+  const qText = String(question?._displayText || question?.question || '').trim().toLowerCase();
+  const order = [];
+  const seen = new Map();
+  for (const p of parts) {
+    const label = String(p?.label || '').trim();
+    if (!label) continue;
+    if (/^(matching\s+pair|point|partie|aspect)\s*\d*$/i.test(label)) continue;
+    if (/^(answer|réponse|respuesta)\s+(depends|dépend|depende)/i.test(label)) continue;
+    if (label.toLowerCase() === qText) continue;
+    const key = label.toLowerCase();
+    const existing = seen.get(key);
+    if (existing) existing.count++;
+    else { const entry = { label, count: 1 }; seen.set(key, entry); order.push(entry); }
+  }
+  return order;
+}
+
+/** Per-point model breakdown (label + answer) revealed in feedback after grading. */
+function buildRubricDetailed(question) {
+  const parts = Array.isArray(question?.answer_parts) ? question.answer_parts : [];
+  const out = [];
+  for (const p of parts) {
+    const label = String(p?.label || '').trim();
+    const answer = String(p?.answer || '').trim();
+    if (!label || !answer) continue;
+    if (/^(answer|réponse|respuesta)\s+(depends|dépend|depende)/i.test(label)) continue;
+    out.push({ label, answer });
+  }
+  return out;
+}
+
+/** Collapsible "your response should address…" guide shown above free-text inputs. */
+function RubricGuide({ question }) {
+  const rubric = buildRubricLabels(question);
+  if (rubric.length === 0) return null;
+  return (
+    <div className="exam-take__rubric-guide">
+      <span className="exam-take__rubric-guide-title">Votre réponse devrait aborder :</span>
+      <ul className="exam-take__rubric-guide-list">
+        {rubric.map((r, i) => (
+          <li key={i}>
+            {r.label}
+            {r.count > 1 && <span className="exam-take__rubric-guide-count"> ({r.count} éléments)</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ShortAnswerInput({ question, index, value, onChange, disabled }) {
   const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
-  const answerParts = question.answer_parts || [];
 
   return (
     <div className="exam-take__short-answer-wrap">
-      {/* Show answer_parts labels as guidance */}
-      {answerParts.length > 0 && (
-        <div className="exam-take__short-answer-guide">
-          <span className="exam-take__short-answer-guide-title">Points à aborder :</span>
-          <ul className="exam-take__short-answer-guide-list">
-            {answerParts.map((p, i) => (
-              <li key={i}>{p.label}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <RubricGuide question={question} />
       <textarea
         className="exam-take__short-answer-input"
         value={value}
@@ -3482,7 +3548,7 @@ function TextInput({ type, index, value, onChange, disabled }) {
   );
 }
 
-function EssayInput({ index, value, onChange, disabled }) {
+function EssayInput({ question, index, value, onChange, disabled }) {
   const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
   const textareaRef = useRef(null);
 
@@ -3500,67 +3566,80 @@ function EssayInput({ index, value, onChange, disabled }) {
   }, [value, autoGrow]);
 
   return (
-    <div className="exam-take__essay-wrap">
-      <textarea
-        ref={textareaRef}
-        className="exam-take__essay-input"
-        value={value}
-        onChange={(e) => onChange(index, e.target.value)}
-        onInput={(e) => autoGrow(e.currentTarget)}
-        placeholder="Rédigez votre réponse ici…"
-        rows={4}
-        disabled={disabled}
-      />
-      <div className="exam-take__essay-wordcount">
-        {wordCount} mot{wordCount !== 1 ? 's' : ''}
+    <>
+      <RubricGuide question={question} />
+      <div className="exam-take__essay-wrap">
+        <textarea
+          ref={textareaRef}
+          className="exam-take__essay-input"
+          value={value}
+          onChange={(e) => onChange(index, e.target.value)}
+          onInput={(e) => autoGrow(e.currentTarget)}
+          placeholder="Rédigez votre réponse ici…"
+          rows={4}
+          disabled={disabled}
+        />
+        <div className="exam-take__essay-wordcount">
+          {wordCount} mot{wordCount !== 1 ? 's' : ''}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
 function MatchingInput({ question, index, value, onChange, disabled }) {
-  const options = question.options || {};
-  const entries = Object.entries(options);
+  const parsed = useMemo(() => parseMatchingKey(question), [question]);
+  const selections = useMemo(() => {
+    try { return value ? JSON.parse(value) : {}; } catch { return {}; }
+  }, [value]);
 
-  // If we have structured matching pairs (key→value), render a proper matching UI
-  if (entries.length > 0) {
-    // Parse stored JSON value → { [key]: selectedValue }
-    const selections = useMemo(() => {
-      try { return value ? JSON.parse(value) : {}; } catch { return {}; }
-    }, [value]);
+  // Clean letter/number matching → interactive, auto-gradable dropdowns.
+  if (parsed && parsed.leftItems.length >= 2) {
+    const { leftItems, rightOptions } = parsed;
+    const showLegend = rightOptions.some((o) => o.text);
 
-    // Get unique target values (the right-hand side to match to)
-    const targets = useMemo(() => {
-      const vals = entries.map(([, v]) => v);
-      return [...new Set(vals)].sort();
-    }, [entries]);
-
-    const setMatch = (key, val) => {
-      const next = { ...selections, [key]: val };
-      onChange(index, JSON.stringify(next));
+    const setMatch = (leftKey, rightKey) => {
+      const next = { ...selections };
+      if (rightKey) next[leftKey] = rightKey; else delete next[leftKey];
+      onChange(index, Object.keys(next).length ? JSON.stringify(next) : '');
     };
 
-    const matchedCount = entries.filter(([k]) => selections[k]).length;
+    const matchedCount = leftItems.filter((it) => selections[it.key]).length;
 
     return (
       <div className="exam-take__matching-structured">
         <div className="exam-take__matching-progress">
-          {matchedCount}/{entries.length} associés
+          {matchedCount}/{leftItems.length} associés
         </div>
+        {showLegend && (
+          <ul className="exam-take__matching-legend">
+            {rightOptions.map((o) => (
+              <li key={o.key}>
+                <strong>{o.key.toUpperCase()}.</strong> <MathText text={o.text || '—'} />
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="exam-take__matching-pairs">
-          {entries.map(([key]) => (
-            <div className="exam-take__matching-pair" key={key}>
-              <span className="exam-take__matching-item">{key}</span>
+          {leftItems.map((it) => (
+            <div className="exam-take__matching-pair" key={it.key}>
+              <span className="exam-take__matching-item">
+                <strong>{String(it.key).toUpperCase()}.</strong>
+                {it.text ? <> <MathText text={it.text} /></> : null}
+              </span>
               <span className="exam-take__matching-arrow">→</span>
               <select
                 className="exam-take__matching-select"
-                value={selections[key] || ''}
-                onChange={(e) => setMatch(key, e.target.value)}
+                value={selections[it.key] || ''}
+                onChange={(e) => setMatch(it.key, e.target.value)}
                 disabled={disabled}
+                aria-label={`Correspondance pour l'élément ${it.key}`}
               >
                 <option value="">— Choisir —</option>
-                {targets.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                {rightOptions.map((o) => (
+                  <option key={o.key} value={o.key}>
+                    {o.text ? `${o.key.toUpperCase()}. ${o.text}` : o.key.toUpperCase()}
+                  </option>
                 ))}
               </select>
             </div>
@@ -3570,7 +3649,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
     );
   }
 
-  // Fallback for matching without structured options: text input
+  // Fallback for free-text / table matching: text input (manual review).
   return (
     <div className="exam-take__matching">
       <p className="exam-take__matching-hint">
