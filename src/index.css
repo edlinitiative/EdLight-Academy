@@ -8135,6 +8135,62 @@ textarea:focus-visible,
 	line-height: 1.55;
 	margin: 0;
 }
+.exam-take__feedback-essay-capped {
+	font-size: 0.75rem;
+	color: var(--text-400, #94a3b8);
+	font-style: italic;
+	margin-left: 0.35rem;
+}
+
+/* Analytic per-criterion breakdown */
+.exam-take__feedback-criteria {
+	list-style: none;
+	margin: 0.5rem 0 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	font-size: 0.82rem;
+}
+.exam-take__feedback-criterion {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.4rem;
+	line-height: 1.4;
+}
+.exam-take__feedback-criterion-mark {
+	flex-shrink: 0;
+	font-weight: 700;
+	width: 1rem;
+	text-align: center;
+}
+.exam-take__feedback-criterion--ok .exam-take__feedback-criterion-mark { color: #16a34a; }
+.exam-take__feedback-criterion--partial .exam-take__feedback-criterion-mark { color: #d97706; }
+.exam-take__feedback-criterion--wrong .exam-take__feedback-criterion-mark { color: #dc2626; }
+.exam-take__feedback-criterion-body { color: var(--text-700, #334155); }
+.exam-take__feedback-criterion-comment { color: var(--text-500, #64748b); }
+
+/* Strengths / improvements lists */
+.exam-take__feedback-points {
+	margin-top: 0.5rem;
+	font-size: 0.82rem;
+}
+.exam-take__feedback-points-title {
+	display: block;
+	font-weight: 700;
+	margin-bottom: 0.15rem;
+}
+.exam-take__feedback-points ul {
+	margin: 0;
+	padding-left: 1.1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	color: var(--text-700, #334155);
+	line-height: 1.4;
+}
+.exam-take__feedback-points--strength .exam-take__feedback-points-title { color: #16a34a; }
+.exam-take__feedback-points--improve .exam-take__feedback-points-title { color: #d97706; }
 
 /* Correct answer reveal */
 .exam-take__feedback-correct {

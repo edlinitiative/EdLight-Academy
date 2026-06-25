@@ -599,8 +599,15 @@ const ExamTake = () => {
   }, []);
 
   // ── Immediate-mode: grade a single question ──────────────────────────────
+  // Word expectations mirror api/_lib/essayGrading.ts: submitMin gates the
+  // "Évaluer" button; target is the length needed for full development credit;
+  // softMax only warns. No exam in the dataset states its own limit.
   const ESSAY_MIN_WORDS = 50;
+  const ESSAY_TARGET_WORDS = 130;
+  const ESSAY_MAX_WORDS = 650;
   const SHORT_ANSWER_MIN_WORDS = 5;
+  const SHORT_ANSWER_TARGET_WORDS = 25;
+  const SHORT_ANSWER_MAX_WORDS = 180;
 
   const gradeQuestionImmediate = useCallback(async (qIndex) => {
     const q = questions[qIndex];
@@ -635,6 +642,10 @@ const ExamTake = () => {
             context: q.sectionInstructions || '',
             answer: userAnswer,
             modelAnswer: modelRef,
+            answerParts: q.answer_parts || [],
+            points: q.points || 10,
+            type: q.type,
+            subject,
           }),
         });
         let essayResult;
@@ -1752,7 +1763,10 @@ const ExamTake = () => {
                       {(gq.type === 'essay' || gq.type === 'short_answer') ? (
                         <>
                           {(() => {
-                            const minWords = gq.type === 'short_answer' ? SHORT_ANSWER_MIN_WORDS : ESSAY_MIN_WORDS;
+                            const isShort = gq.type === 'short_answer';
+                            const minWords = isShort ? SHORT_ANSWER_MIN_WORDS : ESSAY_MIN_WORDS;
+                            const targetWords = isShort ? SHORT_ANSWER_TARGET_WORDS : ESSAY_TARGET_WORDS;
+                            const maxWords = isShort ? SHORT_ANSWER_MAX_WORDS : ESSAY_MAX_WORDS;
                             const wc = (answers[qIdx] || '').trim().split(/\s+/).filter(Boolean).length;
                             return (
                               <>
@@ -1769,7 +1783,13 @@ const ExamTake = () => {
                                   )}
                                 </button>
                                 <span className="exam-take__check-hint">
-                                  {wc < minWords ? `Min. ${minWords} mots (${wc})` : `${wc} mots`}
+                                  {wc < minWords
+                                    ? `Min. ${minWords} mots (${wc})`
+                                    : wc < targetWords
+                                      ? `${wc} mots · visez ~${targetWords}`
+                                      : wc > maxWords
+                                        ? `${wc} mots · un peu long`
+                                        : `${wc} mots ✓`}
                                 </span>
                               </>
                             );
@@ -2932,9 +2952,45 @@ function ImmediateFeedback({ result, question, color }) {
         <div className="exam-take__feedback-essay">
           <div className="exam-take__feedback-essay-score">
             <span>🤖 Note IA :</span> <strong>{essayFeedback.score}</strong>
+            {essayFeedback.capped && (
+              <span className="exam-take__feedback-essay-capped" title={essayFeedback.wordMessage || ''}>
+                · limitée par la longueur
+              </span>
+            )}
           </div>
           {essayFeedback.feedback && (
             <p className="exam-take__feedback-essay-text">{essayFeedback.feedback}</p>
+          )}
+
+          {Array.isArray(essayFeedback.criteria) && essayFeedback.criteria.length > 0 && (
+            <ul className="exam-take__feedback-criteria">
+              {essayFeedback.criteria.map((c, i) => {
+                const mark = c.level >= 2 ? '✓' : c.level === 1 ? '◐' : '✗';
+                const cls = c.level >= 2 ? 'ok' : c.level === 1 ? 'partial' : 'wrong';
+                return (
+                  <li key={i} className={`exam-take__feedback-criterion exam-take__feedback-criterion--${cls}`}>
+                    <span className="exam-take__feedback-criterion-mark">{mark}</span>
+                    <span className="exam-take__feedback-criterion-body">
+                      <strong>{c.label}</strong>
+                      {c.comment && <span className="exam-take__feedback-criterion-comment"> — {c.comment}</span>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {Array.isArray(essayFeedback.strengths) && essayFeedback.strengths.length > 0 && (
+            <div className="exam-take__feedback-points exam-take__feedback-points--strength">
+              <span className="exam-take__feedback-points-title">Points forts</span>
+              <ul>{essayFeedback.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
+          )}
+          {Array.isArray(essayFeedback.improvements) && essayFeedback.improvements.length > 0 && (
+            <div className="exam-take__feedback-points exam-take__feedback-points--improve">
+              <span className="exam-take__feedback-points-title">À améliorer</span>
+              <ul>{essayFeedback.improvements.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </div>
           )}
         </div>
       )}

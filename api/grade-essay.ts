@@ -1,41 +1,50 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { chatJSON, resolveLLMConfig, LLMError } from './_lib/llm';
+import {
+  analyzeWordCount,
+  buildEssayRubric,
+  buildGradingPrompt,
+  normalizeGraderResponse,
+  computeEssayScore,
+  type AnswerPart,
+} from './_lib/essayGrading';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyArY6rWXr3IoaZjSgreonwhvgKg1gQ4yZ4';
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-
-const GRADING_PROMPT = `You are an expert teacher grading a student's written answer.
-Compare the student's answer to the provided model answer and reference text.
-
-Your task is to:
-1.  Determine if the student's answer is substantially correct based on the model answer. For short-answer questions, check whether the student addresses the key expected points. Be generous with wording — accept answers in French, English, Haitian Creole, or Spanish.
-2.  Provide a short, constructive feedback in FRENCH (2-3 sentences) explaining what the student did well and what they could improve. The students are Haitian and French is their language of instruction.
-3.  Assign a score from 0 to 10, where 10 is a perfect match to the model answer's concepts.
-
-Respond with ONLY a JSON object with three keys: "isCorrect" (boolean — true if score >= 6), "feedback" (string), and "score" (string, e.g., "8/10").
-
----
-REFERENCE TEXT:
-{context}
-
----
-QUESTION:
-{question}
-
----
-MODEL ANSWER:
-{modelAnswer}
-
----
-STUDENT'S ANSWER:
-{answer}
-`;
+/**
+ * POST /api/grade-essay
+ *
+ * Standards-based analytic grading for essay / short_answer questions. The
+ * configured LLM (any provider — see api/_lib/llm.ts) judges each rubric
+ * criterion 0/1/2 and writes feedback; the SCORE is computed deterministically
+ * here from those judgements + the question's word-count expectation. The same
+ * answer always yields the same grade, with no human gold set required.
+ *
+ * Body: {
+ *   question: string,
+ *   answer: string,
+ *   modelAnswer?: string,
+ *   context?: string,            // reference passage, if any
+ *   answerParts?: AnswerPart[],  // the rubric (expected points)
+ *   points?: number,             // max points (default 10)
+ *   type?: 'essay' | 'short_answer',
+ *   subject?: string,
+ *   level?: string,
+ * }
+ *
+ * Response is a backward-compatible superset of the old
+ * { isCorrect, feedback, score } shape, adding criteria/strengths/improvements
+ * and word-count diagnostics.
+ */
 
 interface GradeEssayBody {
   question?: string;
   answer?: string;
   modelAnswer?: string;
   context?: string;
+  answerParts?: AnswerPart[];
+  points?: number;
+  type?: string;
+  subject?: string;
+  level?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -44,50 +53,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const { question, answer, modelAnswer, context }: GradeEssayBody = req.body || {};
+  const body: GradeEssayBody = req.body || {};
+  const { question, answer, modelAnswer, context, answerParts, subject, level } = body;
+  const type = body.type === 'short_answer' ? 'short_answer' : 'essay';
+  const points = typeof body.points === 'number' && body.points > 0 ? body.points : 10;
 
-  if (!question || !answer || !modelAnswer) {
-    res.status(400).json({ error: 'Missing required fields: question, answer, modelAnswer' });
+  if (!question || !answer) {
+    res.status(400).json({ error: 'Missing required fields: question, answer' });
+    return;
+  }
+
+  const rubric = buildEssayRubric(answerParts);
+  const word = analyzeWordCount(answer, type);
+
+  // Graceful, still-useful response when the LLM can't or shouldn't run.
+  const manualFallback = (message: string) => {
+    res.status(200).json({
+      isCorrect: false,
+      score: 'N/A',
+      feedback: message,
+      ratio: 0,
+      awarded: 0,
+      maxPoints: points,
+      criteria: rubric.criteria.map((c) => ({ label: c.label, level: 0, evidence: '', comment: '' })),
+      strengths: [],
+      improvements: [],
+      wordCount: word.words,
+      wordStatus: word.status,
+      wordMessage: word.message,
+      capped: false,
+      graded: false,
+    });
+  };
+
+  // Too short to assess meaningfully — tell the student, don't spend a call.
+  if (word.status === 'empty' || word.status === 'too_short') {
+    manualFallback(word.message);
+    return;
+  }
+
+  const config = resolveLLMConfig();
+  if (!config) {
+    manualFallback('Évaluation automatique indisponible (aucun fournisseur IA configuré). Votre réponse sera revue manuellement.');
     return;
   }
 
   try {
-    const prompt = GRADING_PROMPT.replace('{question}', question)
-      .replace('{modelAnswer}', modelAnswer)
-      .replace('{answer}', answer)
-      .replace('{context}', context || 'N/A');
-
-    const payload = {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 512,
-        responseMimeType: 'application/json',
-      },
-    };
-
-    const apiRes = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const { system, user } = buildGradingPrompt({
+      question, answer, modelAnswer, context, subject, level, rubric, word,
     });
+    const raw = await chatJSON({ system, user, temperature: 0, maxTokens: 1200, config });
+    const grade = normalizeGraderResponse(raw, rubric);
+    const score = computeEssayScore({ grade, rubric, word, points });
 
-    if (!apiRes.ok) {
-      const errorBody = await apiRes.text();
-      console.error('Gemini API Error:', errorBody);
-      throw new Error(`API request failed with status ${apiRes.status}`);
-    }
+    const feedback = grade.feedback
+      || (score.isCorrect ? 'Bon travail dans l\'ensemble.' : 'Réponse à approfondir — voyez les pistes d\'amélioration.');
 
-    const body = await apiRes.json();
-    const text = body.candidates[0].content.parts[0].text;
-    const result = JSON.parse(text);
-
-    res.status(200).json(result);
+    res.status(200).json({
+      isCorrect: score.isCorrect,
+      score: score.score,
+      feedback,
+      ratio: score.ratio,
+      awarded: score.awarded,
+      maxPoints: score.maxPoints,
+      contentRatio: score.contentRatio,
+      criteria: grade.criteria.map((c) => ({ label: c.label, level: c.level, evidence: c.evidence, comment: c.comment })),
+      taskResponse: grade.taskResponse,
+      organization: grade.organization,
+      language: grade.language,
+      strengths: grade.strengths,
+      improvements: grade.improvements,
+      wordCount: word.words,
+      wordStatus: word.status,
+      wordMessage: word.message,
+      capped: score.capped,
+      graded: true,
+      provider: config.label,
+    });
   } catch (error) {
-    console.error('Error grading essay:', error);
-    res.status(500).json({
-      feedback: 'Could not grade this essay automatically. A human will review it.',
-      score: 'N/A',
-    });
+    const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
+    console.error('grade-essay failed:', detail, error instanceof Error ? error.message : error);
+    manualFallback('L\'évaluation automatique a échoué. Votre réponse sera revue manuellement.');
   }
 }
