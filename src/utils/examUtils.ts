@@ -328,7 +328,7 @@ const TOPIC_STOPWORDS = new Set([
   // French administrative boilerplate
   'ministere', 'education', 'nationale', 'national', 'formation', 'professionnelle',
   'professionnel', 'menfp', 'filiere', 'filieres', 'enseignement', 'general', 'generale',
-  'examen', 'examens', 'fin', 'etudes', 'etude', 'secondaire', 'secondaires', 'baccalaureat',
+  'examen', 'examens', 'annale', 'annales', 'fin', 'etudes', 'etude', 'secondaire', 'secondaires', 'baccalaureat',
   'baccaulaureat', 'bac', 'permanent', 'permanente', 'regulier', 'reguliere', 'unique',
   'session', 'sessions', 'ordinaire', 'extraordinaire', 'remediation', 'rappels', 'rappel',
   'direction', 'epreuve', 'epreuves', 'nationales', 'serie', 'series', 'texte', 'modele',
