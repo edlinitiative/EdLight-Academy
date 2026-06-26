@@ -8,7 +8,7 @@
  * Hand-written (no build tooling) so it stays simple and reviewable.
  * Bump CACHE_VERSION to force-refresh all caches after a structural change.
  */
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
@@ -136,11 +136,16 @@ async function cacheFirst(request, cacheName) {
   return res;
 }
 
-/** Stale-while-revalidate: serve cache immediately, refresh in background. */
+/** Stale-while-revalidate: serve cache immediately, refresh in background.
+ *  The revalidation fetch uses `cache: 'no-cache'` so it ALWAYS validates with
+ *  the origin (via ETag/Last-Modified) instead of being satisfied by the
+ *  browser's own HTTP cache (exam/data files ship `max-age=86400`). Without
+ *  this, a deployed data fix could stay invisible for up to a day because the
+ *  background refresh kept re-storing the stale HTTP-cached copy. */
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(request);
-  const network = fetch(request)
+  const network = fetch(request, { cache: 'no-cache' })
     .then((res) => {
       if (res && res.ok) cache.put(request, res.clone());
       return res;
