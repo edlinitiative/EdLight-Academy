@@ -2775,7 +2775,9 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
               {blank.label && (
                 <label className="ka-scaffold__label" htmlFor={`scaffold-${index}-${bi}`}>
                   <MathText text={blank.label} />
-                  {totalBlanks > 1 && <> =</>}
+                  {/* "=" reads naturally for math blanks ("x =") but looks wrong
+                      after a textual label ("Définition de la mitose ="). */}
+                  {mathMode && totalBlanks > 1 && <> =</>}
                 </label>
               )}
               <div className="ka-scaffold__input-wrap">
