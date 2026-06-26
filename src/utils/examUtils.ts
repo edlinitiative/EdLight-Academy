@@ -289,6 +289,88 @@ function extractSession(title) {
   return `${month} ${m[2]}`;
 }
 
+// ─── Topic-extraction helpers ───────────────────────────────────────────────
+
+/**
+ * Canonical subject → extra spellings that appear inside raw titles but won't
+ * match the normalized subject string. JS `\b` doesn't form a boundary next to
+ * accented letters, so "Histoire-Géo" never matches "HISTOIRE-GÉOGRAPHIE" and
+ * "Art & Musique" never matches "Art et Musique" — these strip them anyway.
+ */
+const SUBJECT_TITLE_ALIASES = {
+  'Histoire-Géo': [
+    /Histoire\s*[-–—/]?\s*(?:et\s+)?G[ée]ographie/gi,
+    /Histoire\s+et\s+G[ée]o\b/gi,
+  ],
+  'Art & Musique': [
+    /[ÉE]ducation\s+esth[ée]tique\s+et\s+artistique/gi,
+    /Arts?\s+et\s+Musique/gi,
+    /Art\s*&\s*Musique/gi,
+  ],
+  SVT: [
+    /Sciences?\s+de\s+la\s+Vie\s+et\s+de\s+la\s+Terre/gi,
+    /Biologie\s*[/-]?\s*(?:et\s+)?G[ée]ologie/gi,
+    /Bio\s*\/\s*G[ée]o/gi,
+  ],
+};
+
+/** Filière codes — never a topic, dropped wherever they appear. */
+const SERIES_TOKENS = new Set(['SVT', 'SMP', 'SES', 'LLA', 'LL', 'LET', 'LA', 'ARTS', 'ALL', 'ES']);
+
+const stripDiacritics = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const topicKey = (tok) => stripDiacritics(String(tok).toLowerCase()).replace(/[^a-z0-9]/g, '');
+
+/**
+ * Normalized (lowercased, accent-stripped) words that are pure administrative
+ * boilerplate or a subject name, and must never survive as a card topic.
+ */
+const TOPIC_STOPWORDS = new Set([
+  // French administrative boilerplate
+  'ministere', 'education', 'nationale', 'national', 'formation', 'professionnelle',
+  'professionnel', 'menfp', 'filiere', 'filieres', 'enseignement', 'general', 'generale',
+  'examen', 'examens', 'fin', 'etudes', 'etude', 'secondaire', 'secondaires', 'baccalaureat',
+  'baccaulaureat', 'bac', 'permanent', 'permanente', 'regulier', 'reguliere', 'unique',
+  'session', 'sessions', 'ordinaire', 'extraordinaire', 'remediation', 'rappels', 'rappel',
+  'direction', 'epreuve', 'epreuves', 'nationales', 'serie', 'series', 'texte', 'modele',
+  'ancienne', 'partie', 'deuxieme', 'premiere', 'des', 'les', 'aux', 'une', 'philo',
+  'bureau', 'concours', 'centre', 'institut', 'faculte', 'universite',
+  // Subject words (a subject is never its own topic; also blocks cross-subject leakage)
+  'francais', 'anglais', 'espagnol', 'mathematiques', 'physique', 'chimie', 'svt', 'histoire',
+  'geographie', 'philosophie', 'kreyol', 'economie', 'informatique', 'musique',
+  // Kreyòl administrative boilerplate
+  'ministe', 'edikasyon', 'nasyonal', 'fomasyon', 'pwofesyonel', 'filye', 'anseyman', 'jeneral',
+  'egzamen', 'fen', 'etid', 'liye', 'segonde', 'segond', 'bakaloreya', 'bakalorya', 'sesyon',
+  'seri', 'sevis', 'jesyon', 'sosyal',
+  // Kreyòl month names (accent-stripped — the \b-based regex misses "Jiyè")
+  'jen', 'jiye', 'jive', 'out', 'mas', 'fevriye', 'janvye', 'avril', 'desanm', 'septanm',
+  'oktob', 'novanm',
+]);
+
+const MONTH_RE_G = new RegExp(MONTH_RE.source, 'gi');
+const KREYOL_MONTH_G = /\b(?:JEN|JIY[ÈE]|JIV[ÈE]|OUT|MAS|FEVRIYE|JANVYE|AVR[IÌ]L|DESANM|SEPTANM|OKTOB|NOVANM)\b/gi;
+const ANSWER_KEY_CODE_G = /[\s:]+(?:SR|NS)\b/gi;
+
+/**
+ * Classify the exam "session type" from the raw title so we can show a clean,
+ * human label ("Bac permanent", "Sujet type") when there is no real topic.
+ */
+function detectExamType(raw) {
+  const s = stripDiacritics(raw).toUpperCase();
+  if (/TEXTE\s+MODELE/.test(s)) return 'modèle';
+  if (/REMEDIATION/.test(s)) return 'remédiation';
+  if (/\bRAPPELS?\b/.test(s)) return 'rappels';
+  if (/\bBAC(?:CALAUREAT)?\s+UNIQUE\b|UNIQUE\)/.test(s)) return 'unique';
+  if (/PERMANENT|PEMANAN/.test(s)) return 'permanent';
+  if (/REGULIER/.test(s)) return 'régulier';
+  return '';
+}
+
+/** Is this parenthesised group only filière codes (e.g. "SVT, SMP")? */
+function isSeriesGroup(inner) {
+  const toks = String(inner).split(/[\s,/&.-]+/).filter(Boolean);
+  return toks.length > 0 && toks.every((t) => SERIES_TOKENS.has(t.toUpperCase()));
+}
+
 /**
  * Produce a short, clean exam title from the raw title + metadata.
  *
@@ -306,93 +388,81 @@ export function examTitleParts(exam) {
   const subject = normalizeSubject(exam.subject);
   const { year, session: yearSession } = normalizeYear(exam.year);
 
-  // Extract metadata embedded in title
+  // Metadata embedded in the raw title.
   const series = extractSeries(rawTitle);
   const titleSession = extractSession(rawTitle);
+  const examType = detectExamType(rawTitle);
 
-  // Strip boilerplate noise
+  // ── Stage 1: strip known ministry / exam boilerplate ──
   let cleaned = rawTitle;
-  for (const re of TITLE_NOISE) {
-    cleaned = cleaned.replace(re, ' ');
-  }
-  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
-  // Remove trailing/leading punctuation
-  cleaned = cleaned.replace(/^[\s\-–—:,.]+|[\s\-–—:,.]+$/g, '').trim();
+  for (const re of TITLE_NOISE) cleaned = cleaned.replace(re, ' ');
 
-  // Remove subject name from the topic (avoids "Chimie — CHIMIE Organique")
-  // Check at word boundary, not just start — handles "HISTOIRE-GÉOGRAPHIE" anywhere
-  if (subject) {
-    // Build variants: "Histoire-Géo" + possible full forms like "Histoire-Géographie"
-    const escSubj = subject.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    cleaned = cleaned.replace(new RegExp(`\\b${escSubj}\\b\\s*[-–—:]?\\s*`, 'gi'), '').trim();
-  }
-  // Also remove the raw subject field value (handles unormalized forms)
-  if (exam.subject) {
-    const rawSubj = String(exam.subject).trim();
-    const escRaw = rawSubj.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    cleaned = cleaned.replace(new RegExp(`\\b${escRaw}\\b\\s*[-–—:]?\\s*`, 'gi'), '').trim();
-  }
+  // ── Stage 2: strip every spelling of the subject ──
+  // Accent-safe boundaries — a plain `\bÉconomie\b` never matches "ÉCONOMIE"
+  // because `\b` doesn't fire next to accented letters.
+  const removeWord = (text, word) => {
+    if (!word) return text;
+    const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(
+      new RegExp(`(^|[^A-Za-zÀ-ÿ])${esc}(?![A-Za-zÀ-ÿ])\\s*[-–—:]*\\s*`, 'gi'),
+      '$1 ',
+    );
+  };
+  cleaned = removeWord(cleaned, subject);
+  if (exam.subject) cleaned = removeWord(cleaned, String(exam.subject).trim());
+  for (const re of SUBJECT_TITLE_ALIASES[subject] || []) cleaned = cleaned.replace(re, ' ');
 
-  // Strip leftover "régulier", "permanent" (already captured by level)
-  cleaned = cleaned.replace(/^(?:R[ÉE]GULIER|PERMANENT)\s*/i, '').trim();
-  // Strip leftover "fin d'études secondaires" fragments
-  cleaned = cleaned.replace(/\bfin\s+d[''']?[ée]tudes?\s+secondaires\b/gi, '').trim();
-  // Strip "Examen de" / "Épreuve de" prefix
-  cleaned = cleaned.replace(/^(?:Examen|[ÉE]preuve)\s+(?:de\s+|d['''])/i, '').trim();
-  // Strip "Deuxième partie" / "2ème partie"
-  cleaned = cleaned.replace(/\b(?:Deuxi[èe]me|2[èe]me)\s+partie\b/gi, '').trim();
-  // Strip leftover bare years
-  cleaned = cleaned.replace(/\b\d{4}\b/g, '').trim();
-  // Strip leftover "Espagnol 1" → just "1" type remnants, or bare series codes like "SMP"
-  cleaned = cleaned.replace(/^\d+$/, '').trim();
-  // Strip orphaned parentheses / brackets before fragment checks
-  cleaned = cleaned.replace(/^[\s\-–—:,.()[\]]+|[\s\-–—:,.()[\]]+$/g, '').trim();
-  // Strip orphaned short fragments: lone "graphie", "géo" from partial subject removal
-  if (cleaned.length < 8 && /^[a-zà-ÿ]+$/i.test(cleaned)) {
-    // Check if it's a substring of the subject
-    if (subject && subject.toLowerCase().includes(cleaned.toLowerCase())) {
-      cleaned = '';
-    }
-  }
-  // Strip lone series codes left in the topic
-  if (/^[A-Z]{2,4}(?:[\s,/-]+[A-Z]{2,4})*$/i.test(cleaned)) {
-    cleaned = '';
-  }
+  // ── Stage 3: strip residual structured noise (elisions, series, codes, dates) ──
+  cleaned = cleaned
+    // Elided articles: d', l', s'… → drop the article ("d'Art" → "Art").
+    .replace(/(^|[^A-Za-zÀ-ÿ])[a-zà-ÿ]['’‘]/gi, '$1 ')
+    // "SÉRIE(S)" label — the codes are dropped token-by-token below.
+    .replace(/\bS[ÉE]RIES?\b\s*:?/gi, ' ')
+    // Answer-key markers leaked from source PDFs ("Polyamide:SR", "Carbure : NS").
+    .replace(ANSWER_KEY_CODE_G, ' ')
+    // "MENFP" acronym, stray months and years (the session is captured already).
+    .replace(/\bMENFP\b/gi, ' ')
+    .replace(MONTH_RE_G, ' ')
+    .replace(KREYOL_MONTH_G, ' ')
+    .replace(/\b\d{4}\b/g, ' ');
 
-  // Remove if only the subject name remains (redundant) or is empty-ish
-  if (subject && cleaned.toLowerCase().replace(/[^a-zà-ÿ]/g, '') === subject.toLowerCase().replace(/[^a-zà-ÿ]/g, '')) {
-    cleaned = '';
-  }
-  // Remove if it's just "PHILO C-D" or similar series abbreviation
-  if (/^(?:PHILO\s+)?[A-Z][\s-]*[A-Z]?$/i.test(cleaned)) {
-    cleaned = '';
-  }
-  // Remove standalone "MENFP" (ministry acronym leaked through)
-  cleaned = cleaned.replace(/\bMENFP\b\s*/gi, '').trim();
-  // Remove stray Kreyòl month names used as topic
-  cleaned = cleaned.replace(/^(?:JEN|JIY[ÈE]|JIV[ÈE]|OUT|MAS|FEVRIYE|JANVYE|AVR[IÌ]L|DESANM)$/i, '').trim();
-  // Remove trailing/leading punctuation again after all cleaning
-  cleaned = cleaned.replace(/^[\s\-–—:,.()[\]/]+|[\s\-–—:,.()[\]/]+$/g, '').trim();
-  // Final guard: if what's left is very short junk (≤2 chars), discard
-  if (cleaned.length <= 2) cleaned = '';
+  // Parenthesised groups: drop pure filière groups ("(SVT, SMP)") but keep a
+  // real word that merely happens to be parenthesised ("(ÉCOLOGISME)").
+  cleaned = cleaned.replace(/\(([^)]*)\)/g, (_, inner) =>
+    isSeriesGroup(inner) ? ' ' : ` ${inner} `,
+  );
+  cleaned = cleaned.replace(/[()[\]]/g, ' '); // leftover unbalanced brackets
 
-  // ── Build structured parts ──
-  // Meaningful topic / subtitle from the original title
-  let topic = '';
-  if (cleaned) {
-    // Smart case: Title-case if ALL UPPER, otherwise preserve original mixed case
-    if (cleaned.length > 3 && cleaned === cleaned.toUpperCase()) {
-      // "TEXTE MODÈLE" → "Texte modèle"
-      topic = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
-    } else {
-      topic = cleaned;
-    }
+  // ── Stage 4: keep only meaningful words ──
+  const subjKey = topicKey(subject);
+  const kept = cleaned
+    .split(/\s+/)
+    .map((t) => t.replace(/^[\s\-–—:,./]+|[\s\-–—:,./]+$/g, ''))
+    .filter((tok) => {
+      const key = topicKey(tok);
+      if (!key || key.length <= 2) return false; // punctuation, "d", "iv", "c-d"
+      if (/^\d+$/.test(key)) return false; // stray numbers
+      if (SERIES_TOKENS.has(key.toUpperCase())) return false; // filière codes
+      if (TOPIC_STOPWORDS.has(key)) return false; // boilerplate / subject words
+      if (key.length <= 5 && subjKey.includes(key)) return false; // "géo"/"graphie" remnants
+      return true;
+    });
+
+  // ── Stage 5: assemble the topic ──
+  let topic = kept.join(' ').replace(/\s{2,}/g, ' ').trim();
+  if (topic && topic === topic.toUpperCase()) {
+    // ALL-CAPS source → Title Case ("MONTAGE BIO/GÉO" → "Montage Bio/Géo").
+    topic = topic
+      .toLowerCase()
+      .replace(/(^|[\s/\-–—])([a-zà-ÿ])/g, (_, sep, ch) => sep + ch.toUpperCase());
+  } else if (topic) {
+    topic = topic.charAt(0).toUpperCase() + topic.slice(1);
   }
 
-  // Session (month + year, else the caller falls back to the bare year)
+  // Session (month + year, else the caller falls back to the bare year).
   const session = titleSession || yearSession;
 
-  // Series — only when it adds info beyond the subject name
+  // Series — only filière codes that add info beyond the subject name.
   let seriesClean = '';
   if (series) {
     seriesClean = series
@@ -401,7 +471,7 @@ export function examTitleParts(exam) {
       .join(', ');
   }
 
-  return { subject: subject || 'Examen', topic, series: seriesClean, session, year };
+  return { subject: subject || 'Examen', topic, series: seriesClean, session, year, examType };
 }
 
 /**
@@ -409,9 +479,12 @@ export function examTitleParts(exam) {
  *   "[Subject] — [Topic] · [Series] · [Session|Year]"
  */
 export function composeExamTitle(parts) {
-  const { subject, topic, series, session, year } = parts;
+  const { subject, topic, series, session, year, examType } = parts;
   const out = [subject || 'Examen'];
-  if (topic) out.push('—', topic);
+  // Prefer the real topic; otherwise fall back to a clean session-type label
+  // ("Bac permanent", "Sujet type") rather than leaving just "Subject · Year".
+  const subtitle = topic || examTypeLabel(examType);
+  if (subtitle) out.push('—', subtitle);
 
   const chips = [];
   if (series) chips.push(series);
@@ -420,7 +493,7 @@ export function composeExamTitle(parts) {
 
   if (chips.length) {
     out.push('·', chips.join(' · '));
-  } else if (!topic && year) {
+  } else if (!subtitle && year) {
     // No topic and no session — add the bare year
     out.push('·', String(year));
   }
@@ -430,6 +503,57 @@ export function composeExamTitle(parts) {
 /** Produce a short, clean one-line exam title (Subject — Topic · Session). */
 export function normalizeExamTitle(exam) {
   return composeExamTitle(examTitleParts(exam));
+}
+
+// ─── Human-friendly fallback labels ─────────────────────────────────────────
+
+const EXAM_TYPE_LABELS = {
+  permanent: 'Bac permanent',
+  régulier: 'Bac régulier',
+  unique: 'Bac unique',
+  remédiation: 'Session de remédiation',
+  rappels: 'Session des rappels',
+  modèle: 'Sujet type',
+};
+
+/** Short label for a session "type" (e.g. "Bac permanent"), or '' if none. */
+export function examTypeLabel(examType) {
+  return EXAM_TYPE_LABELS[examType] || '';
+}
+
+/** "Juillet 2022" → "Session de juillet" (the year is shown separately). */
+export function sessionLabel(session) {
+  const m = String(session || '').match(/^([A-Za-zÀ-ÿ]+)\s+\d{4}$/);
+  if (!m) return '';
+  const month = m[1].toLowerCase();
+  const elide = /^[aeiouyàâäéèêëîïôöûü]/i.test(month);
+  return `Session ${elide ? "d'" : 'de '}${month}`;
+}
+
+/** Bare capitalised month from a session ("mars 2021" → "Mars"), or '' if none. */
+function sessionMonth(session) {
+  const m = String(session || '').match(/^([A-Za-zÀ-ÿ]+)\s+\d{4}$/);
+  return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : '';
+}
+
+/**
+ * Heading + sub-line for an exam catalog card, from the precomputed parts.
+ *
+ * The card already shows the subject (section header) and the year (chip), so
+ * this never repeats them: it leads with the real topic when there is one, and
+ * otherwise a clean session/type label — never a bare year or a generic
+ * "Épreuve".
+ */
+export function examCardName({ topic, session, examType }) {
+  const typeLbl = examTypeLabel(examType);
+  if (topic) {
+    return { heading: topic, sub: typeLbl || sessionLabel(session) };
+  }
+  if (examType === 'modèle') return { heading: 'Sujet type', sub: '' };
+  if (typeLbl) return { heading: typeLbl, sub: sessionMonth(session) };
+  const sess = sessionLabel(session);
+  if (sess) return { heading: sess, sub: '' };
+  return { heading: 'Annale', sub: '' };
 }
 
 // ─── Subject colors ─────────────────────────────────────────────────────────
@@ -530,6 +654,7 @@ export function buildExamIndex(rawExams) {
       _topic: titleParts.topic,
       _series: titleParts.series,
       _session: titleParts.session,
+      _examType: titleParts.examType,
       _yearRaw: yearRaw,
       _year: yearNum,
       _questionCount: qCount,

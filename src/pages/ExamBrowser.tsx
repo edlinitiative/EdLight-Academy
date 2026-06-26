@@ -7,7 +7,7 @@ import TrackSelector from '../components/TrackSelector';
 import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { loadAllExamResultSummaries } from '../services/examResults';
-import { buildExamIndex, subjectColor } from '../utils/examUtils';
+import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
 
 const PAGE_SIZE = 24;
 
@@ -617,12 +617,14 @@ const ExamBrowser = () => {
  */
 function ExamCard({ exam, onClick, attempt }) {
   const subject = exam._subject || 'Examen';
-  const topic = exam._topic || '';
-  const session = exam._session || (exam._year ? String(exam._year) : '');
-  // Heading is the best available distinguisher under the section's subject.
-  const heading = topic || session || 'Épreuve';
-  // Secondary line: show the session only when it differs from the heading.
-  const sub = topic && session && session !== topic ? session : '';
+  // The section header already carries the subject and the card shows the year
+  // as a chip, so the heading leads with the real differentiator (topic) and
+  // falls back to a clean session/type label — never a bare year or "Épreuve".
+  const { heading, sub } = examCardName({
+    topic: exam._topic || '',
+    session: exam._session || '',
+    examType: exam._examType || '',
+  });
 
   const qCount = exam._questionCount || 0;
   const duration = exam.duration_minutes || 0;
