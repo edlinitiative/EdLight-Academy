@@ -1731,7 +1731,7 @@ const ExamTake = () => {
                           value={answers[qIdx] ?? ''}
                           onChange={setAnswer}
                           disabled={isLocked}
-                          mathMode={MATH_SUBJECTS.has(subject)}
+                          mathMode={scaffoldNeedsMath(gq, subject)}
                         />
                       </div>
                     ) : (
@@ -2222,6 +2222,38 @@ function usesScaffold(q, subject) {
   if (typeof q.scaffold_ready === 'boolean') return q.scaffold_ready;
   if (q.type === 'short_answer') return false;
   return !q.correct || MATH_SUBJECTS.has(subject);
+}
+
+/** Bare LaTeX / math markers in an authored answer string. */
+const MATH_MARK_RE = /[\\${}^]/;
+
+/**
+ * Whether a scaffold question's blanks should use the MathKeyboard (symbol
+ * palette) rather than a plain text input.
+ *
+ * Subject alone is too coarse: science subjects (SVT, Physique, Chimie…) mix
+ * genuine calculations with purely textual items (definitions, genetics
+ * notation, vocabulary). Showing a math keyboard on a biology definition is
+ * noise — students reported seeing “math symbols” on a genetics question. We
+ * therefore enable math input only when the authored answer data actually
+ * contains mathematical notation (LaTeX, exponents, numeric slots, matrices…).
+ */
+function scaffoldNeedsMath(q, subject) {
+  if (!q || !subject || !MATH_SUBJECTS.has(subject)) return false;
+  const parts = (q.answer_parts && q.answer_parts.length)
+    ? q.answer_parts
+    : (q.scaffold_blanks || []);
+  for (const p of parts) {
+    if (!p) continue;
+    if (p.kind === 'number') return true;
+    if (Array.isArray(p.slots) && p.slots.length > 0) return true;   // inline math template
+    if (p.matrix) return true;
+    if (typeof p.answer === 'string' && MATH_MARK_RE.test(p.answer)) return true;
+    if (Array.isArray(p.alternatives) && p.alternatives.some((a) => MATH_MARK_RE.test(String(a)))) return true;
+  }
+  // Authored solution text with LaTeX delimiters / commands.
+  if (typeof q.scaffold_text === 'string' && /\$[^$]*\$|\\[a-zA-Z]+/.test(q.scaffold_text)) return true;
+  return false;
 }
 
 /**
