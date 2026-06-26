@@ -130,7 +130,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: rgba(10, 102, 194, 0.06);
+  background: var(--cat-color, rgba(10, 102, 194, 0.06));
   flex-shrink: 0;
 }
 

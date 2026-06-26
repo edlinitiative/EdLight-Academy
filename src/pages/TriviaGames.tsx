@@ -32,7 +32,7 @@ function CategoryPicker({ onSelect, isCreole }) {
             onClick={() => onSelect(cat.id)}
             aria-label={`${isCreole ? cat.nameHt : cat.name} — ${TRIVIA_QUESTIONS[cat.id].length} ${isCreole ? 'kesyon' : 'questions'}`}
           >
-            <div className="trivia-cat-card__media">
+            <div className="trivia-cat-card__media" style={{ '--cat-color': cat.color } as React.CSSProperties}>
               <img
                 className="trivia-cat-card__img"
                 src={cat.image}
@@ -41,6 +41,7 @@ function CategoryPicker({ onSelect, isCreole }) {
                 height={225}
                 loading="lazy"
                 decoding="async"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
               />
               <h2 className="trivia-cat-card__title">{isCreole ? cat.nameHt : cat.name}</h2>
             </div>
