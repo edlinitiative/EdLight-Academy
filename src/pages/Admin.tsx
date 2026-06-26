@@ -125,7 +125,9 @@ function DataTable({ rows, columns, onEdit }) {
   );
 }
 
-function EditForm({ row, columns, onSave, onCancel }) {
+const COLLECTION_LABELS = { videos: 'Course', quizzes: 'Quiz', users: 'User' };
+
+function EditForm({ row, columns, onSave, onCancel, collectionType = '' }) {
   const [form, setForm] = useState(() => {
     // Initialize form with row data, converting any complex types to strings
     const initialForm = {};
@@ -220,7 +222,7 @@ function EditForm({ row, columns, onSave, onCancel }) {
           padding: '1.5rem',
           flexShrink: 0
         }}>
-          <h3 className="modal__title" style={{ fontSize: '1.5rem', margin: 0 }}>Edit Course Details</h3>
+          <h3 className="modal__title" style={{ fontSize: '1.5rem', margin: 0 }}>Edit {COLLECTION_LABELS[collectionType] || 'Record'}</h3>
           <button className="modal__close" onClick={onCancel} aria-label="Close">×</button>
         </div>
         <div className="modal__body" style={{ 
@@ -656,6 +658,7 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
             key={editIdx}
             row={rows[editIdx]}
             columns={columns}
+            collectionType={collectionType}
             onSave={handleEditSave}
             onCancel={() => setEditIdx(null)}
           />

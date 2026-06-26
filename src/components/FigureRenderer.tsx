@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useRef, useState } from 'react';
+import 'katex/dist/katex.min.css';
 
 // ─── Lazy KaTeX ─────────────────────────────────────────────────────────────
 let katexModule = null;
@@ -10,15 +11,6 @@ function ensureKaTeX(cb) {
   katexCallbacks.push(cb);
   if (katexLoading) return;
   katexLoading = true;
-
-  // inject KaTeX CSS from CDN once
-  if (!document.getElementById('katex-css')) {
-    const link = document.createElement('link');
-    link.id = 'katex-css';
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css';
-    document.head.appendChild(link);
-  }
 
   import('katex').then((mod) => {
     katexModule = mod.default || mod;
@@ -149,7 +141,7 @@ function InlineMath({ text }) {
       if (part.startsWith('$') && part.endsWith('$')) {
         const span = document.createElement('span');
         try {
-          katexModule.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false });
+          katexModule.render(part.slice(1, -1), span, { throwOnError: false, displayMode: false, output: 'htmlAndMathml' });
         } catch {
           span.textContent = part;
         }
@@ -2315,7 +2307,7 @@ function EquationFigure({ description }) {
     const match = description.match(/\$([^$]+)\$/);
     const tex = match ? match[1] : description;
     try {
-      katexModule.render(tex, ref.current, { throwOnError: false, displayMode: true });
+      katexModule.render(tex, ref.current, { throwOnError: false, displayMode: true, output: 'htmlAndMathml' });
     } catch {
       ref.current.textContent = description;
     }

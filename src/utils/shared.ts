@@ -1,67 +1,42 @@
-import { useEffect, useState } from 'react';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
-// ─── KaTeX Lazy Loading ──────────────────────────────────────────────────────
-const KATEX_CSS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.css';
-const KATEX_JS = 'https://unpkg.com/katex@0.16.9/dist/katex.min.js';
-
-export function loadCssOnce(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.appendChild(link);
-}
-
-export function loadScriptOnce(src, onload) {
-  if (document.querySelector(`script[src="${src}"]`)) {
-    if (onload) onload();
-    return;
-  }
-  const script = document.createElement('script');
-  script.src = src;
-  script.async = true;
-  script.onload = onload || null;
-  document.body.appendChild(script);
-}
-
-/** React hook — returns true once window.katex is available */
-export function useKatex() {
-  const [ready, setReady] = useState(typeof window !== 'undefined' && !!window.katex);
-  useEffect(() => {
-    if (ready) return;
-    loadCssOnce(KATEX_CSS);
-    loadScriptOnce(KATEX_JS, () => setReady(true));
-  }, [ready]);
-  return ready;
+/** React hook — returns true once KaTeX is available. Always true since KaTeX is bundled. */
+export function useKatex(): boolean {
+  return true;
 }
 
 /**
  * Render text containing LaTeX math to an HTML string for dangerouslySetInnerHTML.
  * Supports inline $...$, \(...\), and display $$...$$ delimiters.
+ * Outputs both HTML and MathML for screen reader accessibility.
  */
-export function renderWithKatex(text, katexReady) {
+export function renderWithKatex(text: string, katexReady: boolean) {
   if (!text) return { __html: '' };
-  let html = String(text);
-  if (katexReady && typeof window !== 'undefined' && window.katex) {
-    // Display math first: $$...$$
-    html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { displayMode: true, throwOnError: false }); } catch { return _; }
-    });
-    // Inline math: \(...\)
-    html = html.replace(/\\\((.+?)\\\)/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
-    });
-    // Inline math: $...$  (single dollar, not escaped \$, not $$)
-    html = html.replace(/(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)/g, (_, expr) => {
-      try { return window.katex.renderToString(expr, { throwOnError: false }); } catch { return _; }
-    });
-  } else {
-    html = html
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/\n/g, '<br/>');
+  if (!katexReady) {
+    return {
+      __html: String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>'),
+    };
   }
+  const opts = { throwOnError: false, output: 'htmlAndMathml' as const };
+  const optsDisplay = { ...opts, displayMode: true };
+  let html = String(text);
+  // Display math: $$...$$
+  html = html.replace(/\$\$([\s\S]+?)\$\$/g, (_, expr) => {
+    try { return katex.renderToString(expr, optsDisplay); } catch { return _; }
+  });
+  // Inline math: \(...\)
+  html = html.replace(/\\\((.+?)\\\)/g, (_, expr) => {
+    try { return katex.renderToString(expr, opts); } catch { return _; }
+  });
+  // Inline math: $...$ (single dollar, not escaped \$, not $$)
+  html = html.replace(/(?<!\$)\$(?!\$)(.+?)(?<!\$)\$(?!\$)/g, (_, expr) => {
+    try { return katex.renderToString(expr, opts); } catch { return _; }
+  });
   return { __html: html };
 }
 

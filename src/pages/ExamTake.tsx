@@ -202,7 +202,7 @@ function useExam(examIdParam) {
     queryKey: ['exam', examIdParam],
     queryFn: () => fetchSingleExam(examIdParam),
     enabled: examIdParam != null,
-    staleTime: Infinity,
+    staleTime: 60 * 60 * 1000,
   });
 }
 

@@ -7,6 +7,7 @@ import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sen
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
+import { TRACK_BY_CODE } from '../config/trackConfig';
 
 export function AuthModal({ onClose }) {
   const { t } = useTranslation();
@@ -353,12 +354,8 @@ export function UserDropdown({ user, onLogout }) {
   const track = useStore((s) => s.track);
   const [showTrackSelector, setShowTrackSelector] = React.useState(false);
 
-  // Lazy-import track info to avoid circular deps
   const trackInfo = React.useMemo(() => {
-    try {
-      const { TRACK_BY_CODE } = require('../config/trackConfig');
-      return track ? TRACK_BY_CODE[track] : null;
-    } catch { return null; }
+    try { return track ? TRACK_BY_CODE[track] : null; } catch { return null; }
   }, [track]);
 
   return (
