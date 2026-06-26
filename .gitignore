@@ -53,3 +53,7 @@ yarn-error.log*
 .vercel
 .env*
 !.env.example
+
+# Python
+__pycache__/
+*.py[cod]
