@@ -110,12 +110,10 @@ export async function markLessonComplete(userId, courseId, lessonId) {
     }
     
     const completedLessons = progressDoc.data().completedLessons || [];
-    
+
     if (!completedLessons.includes(lessonId)) {
-      completedLessons.push(lessonId);
-      
       await updateDoc(progressRef, {
-        completedLessons,
+        completedLessons: arrayUnion(lessonId),
         lastAccessedAt: new Date()
       });
       
@@ -234,19 +232,12 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
  */
 export async function awardPoints(userId, courseId, points, reason) {
   if (!userId) return;
-  
+
   try {
     const progressRef = doc(db, 'users', userId, 'progress', courseId);
-    const progressDoc = await getDoc(progressRef);
-    
-    if (!progressDoc.exists()) return;
-    
-    const currentPoints = progressDoc.data().totalPoints || 0;
-    
     await updateDoc(progressRef, {
-      totalPoints: currentPoints + points
+      totalPoints: increment(points)
     });
-    
   } catch (error) {
     console.error('[Progress] Error awarding points:', error);
   }
@@ -336,12 +327,10 @@ export async function awardBadge(userId, courseId, badgeId) {
     if (!progressDoc.exists()) return;
     
     const badges = progressDoc.data().badges || [];
-    
+
     if (!badges.includes(badgeId)) {
-      badges.push(badgeId);
-      
       await updateDoc(progressRef, {
-        badges
+        badges: arrayUnion(badgeId)
       });
       
       

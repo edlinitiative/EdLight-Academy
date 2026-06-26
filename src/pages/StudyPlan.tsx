@@ -26,7 +26,7 @@ import { StreakWidget } from '../components/Streak';
 import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
-import { auth } from '../services/firebase';
+import { auth, authedFetch } from '../services/firebase';
 
 // ─── Local exam catalog hook (same pattern as ExamBrowser) ──────────────────
 
@@ -157,22 +157,14 @@ export default function StudyPlan() {
       // Try AI-assisted plan generation
       let aiPlan = null;
       try {
-        const token = await auth.currentUser?.getIdToken();
-        if (token) {
-          const resp = await fetch('/api/generate-plan', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
+        if (auth.currentUser) {
+          const resp = await authedFetch('/api/generate-plan', {
               track,
               subjects: Object.keys(coefficients),
               performance: buildPerformanceSummary(existingResults, allExams),
               examCount: Math.min(trackExams.length, 40),
               preferences: { dailyMinutes: 90, weeks: 8 },
-            }),
-          });
+            });
           if (resp.ok) {
             const data = await resp.json();
             aiPlan = data.plan;

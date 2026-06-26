@@ -894,6 +894,19 @@ main {
 	background: rgba(10, 102, 194, 0.18);
 }
 
+.button--danger {
+	background: var(--danger-500);
+	color: #fff;
+	box-shadow: var(--shadow-sm);
+	transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.button--danger:hover {
+	background: var(--danger-600, #c0392b);
+	transform: translateY(-1px);
+	box-shadow: var(--shadow-md);
+}
+
 .button--secondary {
 	background: var(--surface);
 	color: var(--text-700);

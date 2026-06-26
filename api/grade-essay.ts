@@ -1,4 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireAuth } from './_lib/requireAuth';
+import { checkRateLimit } from './_lib/rateLimit';
 import { chatJSON, resolveLLMConfig, LLMError } from './_lib/llm';
 import {
   analyzeWordCount,
@@ -52,6 +54,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
+
+  const uid = await requireAuth(req, res);
+  if (!uid) return;
+
+  const { allowed, remaining, resetAt } = await checkRateLimit(uid, 'grade-essay');
+  if (!allowed) {
+    res.setHeader('X-RateLimit-Limit', '20');
+    res.setHeader('X-RateLimit-Remaining', '0');
+    res.setHeader('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
+    res.status(429).json({
+      error: 'rate_limit_exceeded',
+      message: 'Trop de requêtes. Réessayez dans une heure.',
+    });
+    return;
+  }
+  res.setHeader('X-RateLimit-Remaining', String(remaining));
 
   const body: GradeEssayBody = req.body || {};
   const { question, answer, modelAnswer, context, answerParts, subject, level } = body;

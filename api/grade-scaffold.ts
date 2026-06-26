@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireAuth } from './_lib/requireAuth';
+import { checkRateLimit } from './_lib/rateLimit';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyArY6rWXr3IoaZjSgreonwhvgKg1gQ4yZ4';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 /**
  * POST /api/grade-scaffold
@@ -74,6 +75,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
+  if (!GEMINI_API_KEY) {
+    res.status(503).json({ error: 'AI grading not configured' });
+    return;
+  }
+
+  const uid = await requireAuth(req, res);
+  if (!uid) return;
+
+  const { allowed, remaining, resetAt } = await checkRateLimit(uid, 'grade-scaffold');
+  if (!allowed) {
+    res.setHeader('X-RateLimit-Limit', '30');
+    res.setHeader('X-RateLimit-Remaining', '0');
+    res.setHeader('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
+    res.status(429).json({
+      error: 'rate_limit_exceeded',
+      message: 'Trop de requêtes. Réessayez dans une heure.',
+    });
+    return;
+  }
+  res.setHeader('X-RateLimit-Remaining', String(remaining));
+
   const { question, blanks }: GradeScaffoldBody = req.body || {};
 
   if (!question || !blanks || !Array.isArray(blanks) || blanks.length === 0) {
@@ -108,7 +130,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       },
     };
 
-    const apiRes = await fetch(GEMINI_URL, {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const apiRes = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

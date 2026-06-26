@@ -11,7 +11,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
     const allowedHosts = new Set(['unpkg.com', 'cdn.jsdelivr.net']);
+    const allowedContentTypes = ['text/javascript', 'application/javascript', 'text/css'];
     const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') {
+      res.status(400).json({ error: 'Only HTTPS URLs are allowed' });
+      return;
+    }
     if (!allowedHosts.has(parsed.hostname)) {
       res.status(400).json({ error: 'Host not allowed' });
       return;
@@ -21,8 +26,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(upstream.status).send(`Upstream error: ${upstream.status}`);
       return;
     }
-    // Pass through content-type and cache headers for performance
-    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    const contentType = upstream.headers.get('content-type') || '';
+    const baseType = contentType.split(';')[0].trim().toLowerCase();
+    if (!allowedContentTypes.some((t) => baseType === t)) {
+      res.status(400).json({ error: 'Content-Type not allowed' });
+      return;
+    }
     const etag = upstream.headers.get('etag');
     res.setHeader('Content-Type', contentType);
     if (etag) res.setHeader('ETag', etag);

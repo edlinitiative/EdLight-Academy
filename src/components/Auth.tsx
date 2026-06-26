@@ -30,6 +30,12 @@ export function AuthModal({ onClose }) {
   useFocusTrap(modalRef);
   const swipe = useSwipeToDismiss(onClose, { scrollRef: modalRef });
 
+  // Set initial focus to the email input when the modal opens
+  useEffect(() => {
+    const el = modalRef.current?.querySelector('#auth-email');
+    if (el instanceof HTMLInputElement) el.focus();
+  }, []);
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -79,12 +85,13 @@ export function AuthModal({ onClose }) {
       }
 
       setUser(userData);
-      setSuccess(activeTab === 'signin' ? t('auth.signedIn') : t('auth.accountCreated'));
-
-      // Auto close modal after successful authentication
-      setTimeout(() => {
-        onClose();
-      }, 1000);
+      if (activeTab === 'signin') {
+        setSuccess(t('auth.signedIn'));
+        setTimeout(() => onClose(), 1000);
+      } else {
+        setSuccess('Compte créé ! Vérifiez votre boîte mail pour activer votre compte.');
+        setTimeout(() => onClose(), 2500);
+      }
     } catch (err) {
       setError(mapAuthError(err.message));
     } finally {

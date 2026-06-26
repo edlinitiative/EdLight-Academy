@@ -31,7 +31,7 @@ describe('HomeRoute (adaptive index route)', () => {
     // Reset to a clean signed-out state before each test. Doing this in
     // `beforeEach` (rather than `afterEach`) means no HomeRoute is mounted and
     // subscribed when the store updates, avoiding an act(...) warning.
-    useStore.setState({ isAuthenticated: false, user: null });
+    useStore.setState({ isAuthenticated: false, authConfirmed: false, user: null });
   });
 
   it('renders the marketing landing page for signed-out visitors', async () => {
@@ -41,8 +41,16 @@ describe('HomeRoute (adaptive index route)', () => {
     expect(screen.queryByText('LEARNER_DASHBOARD')).not.toBeInTheDocument();
   });
 
+  it('renders a loading state while firebase auth is pending', () => {
+    // isAuthenticated=true from localStorage but Firebase hasn't confirmed yet
+    useStore.setState({ isAuthenticated: true, authConfirmed: false, user: { uid: 'u1' } });
+    renderHomeRoute();
+    expect(screen.queryByText('LEARNER_DASHBOARD')).not.toBeInTheDocument();
+    expect(screen.queryByText('MARKETING_HOME')).not.toBeInTheDocument();
+  });
+
   it('renders the personalized dashboard for signed-in learners', async () => {
-    useStore.setState({ isAuthenticated: true, user: { uid: 'u1', name: 'Test Learner' } });
+    useStore.setState({ isAuthenticated: true, authConfirmed: true, user: { uid: 'u1', name: 'Test Learner' } });
 
     renderHomeRoute();
 

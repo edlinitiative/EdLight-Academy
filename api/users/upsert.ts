@@ -1,7 +1,9 @@
 // Upserts a user into public/data/edlight_users.csv by committing to GitHub using a token.
 // Requires env GITHUB_TOKEN with repo scope.
+// Requires a valid Firebase ID token — the caller may only upsert their own identity.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { verifyIdToken, isAdminConfigured } from '../_lib/firebaseAdmin';
 
 const OWNER = 'edlinitiative';
 const REPO = 'EdLight-Academy';
@@ -54,6 +56,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
+
+  if (!isAdminConfigured()) {
+    res.status(503).json({ error: 'server_misconfigured', message: 'Firebase Admin is not configured.' });
+    return;
+  }
+
+  const authHeader = req.headers.authorization || '';
+  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  if (!idToken) {
+    res.status(401).json({ error: 'unauthorized', message: 'Missing Authorization header.' });
+    return;
+  }
+
+  let callerUid: string;
+  let callerEmail: string | undefined;
+  try {
+    const decoded = await verifyIdToken(idToken);
+    callerUid = decoded.uid;
+    callerEmail = decoded.email;
+  } catch {
+    res.status(401).json({ error: 'unauthorized', message: 'Invalid or expired token.' });
+    return;
+  }
+
   try {
     const token = process.env.GITHUB_TOKEN;
     if (!token) {
@@ -73,6 +99,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(400).json({ error: 'invalid_request', message: 'Missing email or sub' });
       return;
     }
+
+    // Enforce that the caller can only upsert their own record: the `sub`
+    // must match the verified uid, and the `email` must match the token email.
+    if (sub && sub !== callerUid) {
+      res.status(403).json({ error: 'forbidden', message: 'sub must match the authenticated user uid.' });
+      return;
+    }
+    if (email && callerEmail && email.toLowerCase() !== callerEmail.toLowerCase()) {
+      res.status(403).json({ error: 'forbidden', message: 'email must match the authenticated user email.' });
+      return;
+    }
+
     const user_id = sub ? `g_${sub}` : `email:${String(email).toLowerCase()}`;
 
     // Fetch the current file metadata to get sha

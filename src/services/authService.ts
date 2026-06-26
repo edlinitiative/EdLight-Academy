@@ -89,8 +89,7 @@ export async function loginWithGoogle() {
     const result = await signInWithGoogle();
     const user = result.user;
     
-    // Check if this is a new user via additionalUserInfo
-    const isNewUser = result._tokenResponse?.isNewUser || false;
+    const isNewUser = result.isNewUser ?? false;
     
     // Create or update user document in Firestore
     await upsertUserDocument(user, isNewUser);

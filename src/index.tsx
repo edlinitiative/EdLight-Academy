@@ -98,8 +98,9 @@ setTimeout(() => {
 function bootstrapFirebaseAuth() {
   import('./services/firebase')
     .then(({ onAuthStateChange, upsertUserDocument }) => {
+      let firstCallback = true;
       onAuthStateChange(async (user) => {
-        const setUser = useStore.getState().setUser;
+        const { setUser, setAuthConfirmed, logout } = useStore.getState();
         if (user) {
           // Update last_seen in Firestore on session restore
           try {
@@ -115,7 +116,13 @@ function bootstrapFirebaseAuth() {
             picture: user.photoURL || '',
           });
         } else {
-          useStore.getState().logout();
+          logout();
+        }
+        // Mark auth as confirmed after first callback so stale persisted
+        // isAuthenticated is no longer trusted before Firebase has spoken.
+        if (firstCallback) {
+          firstCallback = false;
+          setAuthConfirmed();
         }
       });
     })

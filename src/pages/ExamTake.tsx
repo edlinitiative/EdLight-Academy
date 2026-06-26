@@ -9,6 +9,7 @@ import InstructionRenderer from '../components/InstructionRenderer';
 import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
+import { authedFetch } from '../services/firebase';
 import { saveExamResult } from '../services/examResults';
 import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
 import {
@@ -634,10 +635,7 @@ const ExamTake = () => {
 
       setGradingInProgress((prev) => ({ ...prev, [qIndex]: true }));
       try {
-        const response = await fetch('/api/grade-essay', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const response = await authedFetch('/api/grade-essay', {
             question: q._displayText || q.question,
             context: q.sectionInstructions || '',
             answer: userAnswer,
@@ -646,8 +644,7 @@ const ExamTake = () => {
             points: q.points || 10,
             type: q.type,
             subject,
-          }),
-        });
+          });
         let essayResult;
         if (response.ok) {
           essayResult = await response.json();
@@ -680,10 +677,7 @@ const ExamTake = () => {
           const failedLong = (result.result.blankResults || []).filter(
             (br) => !br.correct && (br.expectedAnswer || '').length > 25
           );
-          const response = await fetch('/api/grade-scaffold', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          const response = await authedFetch('/api/grade-scaffold', {
               question: q._displayText || q.question || '',
               blanks: failedLong.map((br) => ({
                 index: br.blankIndex,
@@ -692,7 +686,6 @@ const ExamTake = () => {
                 expectedAnswer: br.expectedAnswer,
                 alternatives: br.alternatives || [],
               })),
-            }),
           });
           if (response.ok) {
             const { results: aiResults } = await response.json();
@@ -867,16 +860,12 @@ const ExamTake = () => {
       const settled = await Promise.allSettled(
         aiJobs.map(async (job) => {
           try {
-            const response = await fetch('/api/grade-essay', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            const response = await authedFetch('/api/grade-essay', {
                 question: job.question._displayText || job.question.question,
                 context: job.question.sectionInstructions || '',
                 answer: job.userAnswer,
                 modelAnswer: job.modelRef,
-              }),
-            });
+              });
             if (response.ok) {
               return { index: job.index, essayResult: await response.json() };
             }
@@ -994,172 +983,6 @@ const ExamTake = () => {
   }
 
   // subject and color are now declared at the top of the component (before hooks)
-
-  // ── Exam Intro splash ───────────────────────────────────────────────────
-  if (viewState === 'cover') {
-    return (
-      <section className="exam-cover" style={{ '--cover-accent': color }}>
-        {/* Decorative background shapes */}
-        <div className="exam-cover__bg">
-          <div className="exam-cover__orb exam-cover__orb--1" />
-          <div className="exam-cover__orb exam-cover__orb--2" />
-          <div className="exam-cover__orb exam-cover__orb--3" />
-          <div className="exam-cover__grid" />
-        </div>
-
-        <div className="exam-cover__inner">
-          {/* Navigation */}
-          <nav className="exam-cover__nav">
-            <button className="exam-cover__back" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-              Retour
-            </button>
-            <div className="exam-cover__brand">
-              <span className="exam-cover__brand-icon">🎓</span>
-              <span>EdLight Academy</span>
-            </div>
-          </nav>
-
-          {/* Hero card */}
-          <div className="exam-cover__hero">
-            <div className="exam-cover__badge" style={{ background: color, color: '#fff' }}>
-              {subject}
-            </div>
-            <h1 className="exam-cover__title">{normalizeExamTitle(exam)}</h1>
-            {exam.year && <p className="exam-cover__year">{exam.year}</p>}
-
-            {/* Stats row */}
-            <div className="exam-cover__stats">
-              {durationMin > 0 && (
-                <div className="exam-cover__stat">
-                  <span className="exam-cover__stat-value">{durationMin}</span>
-                  <span className="exam-cover__stat-label">minutes</span>
-                </div>
-              )}
-              {exam.total_points > 0 && (
-                <div className="exam-cover__stat">
-                  <span className="exam-cover__stat-value">{exam.total_points}</span>
-                  <span className="exam-cover__stat-label">points</span>
-                </div>
-              )}
-              <div className="exam-cover__stat">
-                <span className="exam-cover__stat-value">{totalQ}</span>
-                <span className="exam-cover__stat-label">questions</span>
-              </div>
-              <div className="exam-cover__stat">
-                <span className="exam-cover__stat-value">{sectionSummary.length}</span>
-                <span className="exam-cover__stat-label">{sectionSummary.length > 1 ? 'sections' : 'section'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Two-column body */}
-          <div className="exam-cover__body">
-            {/* Sections panel */}
-            <div className="exam-cover__panel exam-cover__panel--sections">
-              <h2 className="exam-cover__panel-heading">
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                Structure
-              </h2>
-              <ol className="exam-cover__section-list">
-                {sectionSummary.map((sec, i) => (
-                  <li key={i} className="exam-cover__section-row">
-                    <span className="exam-cover__section-dot" style={{ background: color }} />
-                    <span className="exam-cover__section-name">{sec.title}</span>
-                    <span className="exam-cover__section-qty">{sec.qCount}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-
-            {/* Rules panel */}
-            {examInfo?.rules?.length > 0 && (
-              <div className="exam-cover__panel exam-cover__panel--rules">
-                <h2 className="exam-cover__panel-heading">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  Consignes
-                </h2>
-                <ul className="exam-cover__rules-list">
-                  {examInfo.rules.map((rule, i) => (
-                    <li key={i} className="exam-cover__rule-item">
-                      <span className="exam-cover__rule-icon">{ruleIcon(rule)}</span>
-                      <span>{rule}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          {/* Feedback mode selector */}
-          <div className="exam-cover__feedback-mode">
-            <h2 className="exam-cover__panel-heading">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              Mode de correction
-            </h2>
-            <div className="exam-cover__feedback-options">
-              <label
-                className={`exam-cover__feedback-option ${feedbackMode === 'immediate' ? 'exam-cover__feedback-option--selected' : ''}`}
-                style={feedbackMode === 'immediate' ? { borderColor: color, background: color + '0a' } : undefined}
-              >
-                <input
-                  type="radio"
-                  name="feedbackMode"
-                  value="immediate"
-                  checked={feedbackMode === 'immediate'}
-                  onChange={() => { setFeedbackMode('immediate'); localStorage.setItem('edlight-exam-feedback-mode', 'immediate'); }}
-                  className="exam-cover__feedback-radio"
-                />
-                <div className="exam-cover__feedback-content">
-                  <span className="exam-cover__feedback-icon">⚡</span>
-                  <div>
-                    <strong>Résultat immédiat</strong>
-                    <p>Voir la correction après chaque question</p>
-                  </div>
-                </div>
-              </label>
-              <label
-                className={`exam-cover__feedback-option ${feedbackMode === 'end' ? 'exam-cover__feedback-option--selected' : ''}`}
-                style={feedbackMode === 'end' ? { borderColor: color, background: color + '0a' } : undefined}
-              >
-                <input
-                  type="radio"
-                  name="feedbackMode"
-                  value="end"
-                  checked={feedbackMode === 'end'}
-                  onChange={() => { setFeedbackMode('end'); localStorage.setItem('edlight-exam-feedback-mode', 'end'); }}
-                  className="exam-cover__feedback-radio"
-                />
-                <div className="exam-cover__feedback-content">
-                  <span className="exam-cover__feedback-icon">📋</span>
-                  <div>
-                    <strong>Résultat à la fin</strong>
-                    <p>Voir tous les résultats après avoir soumis l'examen</p>
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* CTA */}
-          <div className="exam-cover__cta">
-            <button
-              className="exam-cover__start-btn"
-              style={{ background: color }}
-              onClick={() => setViewState('preview')}
-              type="button"
-            >
-              <span>Aperçu de l'examen</span>
-              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-            </button>
-            <p className="exam-cover__cta-hint">Bonne chance ! 🍀</p>
-          </div>
-        </div>
-
-        {resumeOverlays}
-      </section>
-    );
-  }
 
   // ── Preview mode (read-only continuous view) ───────────────────────────────
   if (viewState === 'preview') {
@@ -2680,14 +2503,10 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
       setChecked(true);
 
       try {
-        const response = await fetch('/api/grade-scaffold', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        const response = await authedFetch('/api/grade-scaffold', {
             question: question._displayText || question.question || '',
             blanks: needsAI,
-          }),
-        });
+          });
         if (response.ok) {
           const { results: aiResults } = await response.json();
           const newFeedback = {};

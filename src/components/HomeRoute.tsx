@@ -9,17 +9,27 @@ const Dashboard = lazyWithRetry(() => import('../pages/Dashboard'));
 
 /**
  * The index route ("/") adapts to who is viewing it:
- *  - Signed-out visitors get the marketing landing page (Home) with the full
- *    conversion funnel (hero, social proof, sign-up CTA).
- *  - Signed-in learners get their personalized home (Dashboard) instead —
- *    resume points, courses in progress, streak and recent activity — so the
- *    most valuable screen isn't spent re-selling a product they already use.
+ *  - Signed-out visitors get the marketing landing page (Home).
+ *  - Signed-in learners get their personalized Dashboard.
  *
- * `isAuthenticated` is rehydrated synchronously from persisted storage (the
- * same source the Navbar trusts), so there is no logged-in/out flash on refresh.
- * Suspense is provided by the router shell in App.tsx.
+ * When localStorage says the user is authenticated but Firebase hasn't
+ * confirmed the session yet (authConfirmed = false), we hold on a spinner
+ * rather than rendering Dashboard with a potentially stale token. Firebase's
+ * onAuthStateChanged typically fires within ~200 ms of the idle-callback
+ * bootstrap, so the delay is imperceptible on a warm session.
  */
 export default function HomeRoute() {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const authConfirmed = useStore((s) => s.authConfirmed);
+
+  // Wait for Firebase to confirm before trusting persisted isAuthenticated.
+  if (isAuthenticated && !authConfirmed) {
+    return (
+      <div className="suspense-fallback">
+        <div className="loading-spinner" />
+      </div>
+    );
+  }
+
   return isAuthenticated ? <Dashboard /> : <Home />;
 }

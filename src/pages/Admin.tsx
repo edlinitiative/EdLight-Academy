@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { loadCSV } from '../utils/csvParser';
 import { toCSV, remapRow } from '../utils/csvStringify';
 import { updateVideo, updateQuiz, updateUser, deleteVideo, deleteQuiz, deleteUser, deleteAllQuizzes, db } from '../services/firebase';
@@ -260,8 +261,42 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
   const [editIdx, setEditIdx] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
+  // Inline confirmation state for destructive delete-all action
+  const [deleteConfirm, setDeleteConfirm] = useState<{ count: number; backupData: any[] } | null>(null);
 
   const hasData = rows && rows.length > 0;
+
+  async function handleConfirmedDelete() {
+    if (!deleteConfirm) return;
+    const { count, backupData } = deleteConfirm;
+    setDeleteConfirm(null);
+    setSyncing(true);
+    try {
+      setSyncStatus({ type: 'info', message: `📥 Creating backup of ${count} quizzes...` });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+      const backupFilename = `quizzes_backup_${timestamp}.csv`;
+      const mapped = backupData.map((r) => remapRow(r, columns));
+      const csv = toCSV(mapped, columns);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = backupFilename;
+      a.click();
+      URL.revokeObjectURL(url);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setSyncStatus({ type: 'info', message: `🗑️ Deleting ${count} quizzes...` });
+      const res = await deleteAllQuizzes();
+      setRows([]);
+      setSyncStatus({ type: 'success', message: `✅ Backup saved as "${backupFilename}". Deleted ${res.deleted || 0} quizzes.` });
+    } catch (err) {
+      console.error(err);
+      setSyncStatus({ type: 'error', message: `❌ Failed: ${err.message}` });
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncStatus(null), 8000);
+    }
+  }
 
   // Helper function to convert Firebase Timestamps to readable strings
   function convertTimestamps(obj) {
@@ -552,52 +587,13 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
                         setTimeout(() => setSyncStatus(null), 3000);
                         return;
                       }
-                      
-                      // Show confirmation with count
-                      const ok = window.confirm(
-                        `This will:\n\n` +
-                        `1. Export ${count} quizzes as backup CSV\n` +
-                        `2. Permanently delete ALL ${count} quizzes from Firestore\n\n` +
-                        `Are you sure you want to continue?`
-                      );
-                      
-                      if (!ok) {
-                        setSyncing(false);
-                        setSyncStatus(null);
-                        return;
-                      }
-                      
-                      // Create timestamped backup CSV
-                      setSyncStatus({ type: 'info', message: `📥 Creating backup of ${count} quizzes...` });
-                      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-                      const backupFilename = `quizzes_backup_${timestamp}.csv`;
-                      
-                      const mapped = backupData.map((r) => remapRow(r, columns));
-                      const csv = toCSV(mapped, columns);
-                      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = backupFilename;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      
-                      // Wait a moment for download to start
-                      await new Promise(resolve => setTimeout(resolve, 500));
-                      
-                      // Now delete all quizzes
-                      setSyncStatus({ type: 'info', message: `🗑️ Deleting ${count} quizzes...` });
-                      const res = await deleteAllQuizzes();
-                      
-                      setRows([]);
-                      setSyncStatus({ 
-                        type: 'success', 
-                        message: `✅ Backup saved as "${backupFilename}". Deleted ${res.deleted || 0} quizzes.` 
-                      });
+
+                      // Show inline confirmation instead of window.confirm
+                      setSyncing(false);
+                      setDeleteConfirm({ count, backupData });
                     } catch (err) {
                       console.error(err);
                       setSyncStatus({ type: 'error', message: `❌ Failed: ${err.message}` });
-                    } finally {
                       setSyncing(false);
                       setTimeout(() => setSyncStatus(null), 8000);
                     }
@@ -612,8 +608,26 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
           </div>
         </div>
 
+        {deleteConfirm && (
+          <div className="form-message form-message--error" style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <strong>⚠️ Confirmer la suppression</strong>
+            <p>
+              Cette action va exporter {deleteConfirm.count} quiz en CSV (sauvegarde automatique) puis
+              les supprimer définitivement de Firestore. Continuer ?
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button type="button" className="button button--danger" onClick={handleConfirmedDelete}>
+                Oui, supprimer {deleteConfirm.count} quiz
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => setDeleteConfirm(null)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
         {syncStatus && (
-          <div 
+          <div
             className={`form-message form-message--${syncStatus.type === 'success' ? 'success' : syncStatus.type === 'error' ? 'error' : 'info'}`}
             style={{ marginBottom: '1rem' }}
           >
@@ -666,21 +680,21 @@ export default function Admin() {
           <div className="card" style={{ marginBottom: '2rem' }}>
             <h3 className="card__title" style={{ marginBottom: '1rem' }}>Quick Actions</h3>
             <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <a href="/admin/courses" className="button button--primary">
+              <Link to="/admin/courses" className="button button--primary">
                 📚 Manage Course Structure
-              </a>
-              <a href="/admin/verify" className="button button--primary">
+              </Link>
+              <Link to="/admin/verify" className="button button--primary">
                 ✅ Verify Exam Answers
-              </a>
-              <a href="#courses" className="button button--ghost">
+              </Link>
+              <button type="button" className="button button--ghost" onClick={() => document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth' })}>
                 🎬 Manage Videos
-              </a>
-              <a href="#quizzes" className="button button--ghost">
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => document.getElementById('quizzes')?.scrollIntoView({ behavior: 'smooth' })}>
                 📝 Manage Quizzes
-              </a>
-              <a href="#users" className="button button--ghost">
+              </button>
+              <button type="button" className="button button--ghost" onClick={() => document.getElementById('users')?.scrollIntoView({ behavior: 'smooth' })}>
                 👥 Manage Users
-              </a>
+              </button>
             </div>
           </div>
         </div>

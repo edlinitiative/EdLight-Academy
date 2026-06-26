@@ -1,13 +1,15 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, 
-  signInWithEmailAndPassword, 
+import { getAuth,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
-  updateProfile
+  sendEmailVerification,
+  updateProfile,
+  getAdditionalUserInfo,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, increment, writeBatch } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
@@ -44,12 +46,16 @@ export async function signUp(email, password, name) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Update profile with name if provided
+
     if (name) {
       await updateProfile(user, { displayName: name });
     }
-    
+
+    // Send verification email — non-blocking: failure doesn't prevent sign-up
+    sendEmailVerification(user).catch((err) => {
+      console.warn('[Firebase] Could not send verification email:', err);
+    });
+
     return userCredential;
   } catch (error) {
     throw error;
@@ -62,7 +68,8 @@ export async function signUp(email, password, name) {
 export async function signInWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    return result;
+    const additionalInfo = getAdditionalUserInfo(result);
+    return { ...result, isNewUser: additionalInfo?.isNewUser ?? false };
   } catch (error) {
     console.error('[Firebase] Sign-in error:', error.code, error.message);
     throw error;
@@ -103,6 +110,33 @@ export function onAuthStateChange(callback) {
  */
 export function getCurrentUser() {
   return auth.currentUser;
+}
+
+/**
+ * Get the current user's Firebase ID token, or null if not signed in.
+ * Automatically refreshes the token if it is close to expiry.
+ */
+export async function getIdToken(): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+  try {
+    return await user.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * POST to an authenticated API endpoint with the current user's Firebase ID
+ * token. Returns the raw Response so callers can check .ok and call .json().
+ * If the user is not signed in, sends the request without an Authorization
+ * header (the endpoint will return 401, which callers must handle gracefully).
+ */
+export async function authedFetch(url: string, body: unknown): Promise<Response> {
+  const token = await getIdToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
 }
 
 /**

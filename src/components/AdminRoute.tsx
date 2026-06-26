@@ -11,11 +11,13 @@ import useStore from '../contexts/store';
  * initial bundle. The check only runs for authenticated users on admin routes.
  */
 export default function AdminRoute({ children }) {
-  const { isAuthenticated, user } = useStore();
+  const { isAuthenticated, authConfirmed, user } = useStore();
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Wait for Firebase to confirm auth before running the Firestore role check.
+    if (!authConfirmed) return;
     if (!isAuthenticated || !user?.uid) {
       setChecking(false);
       return;
@@ -43,7 +45,7 @@ export default function AdminRoute({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user?.uid]);
+  }, [authConfirmed, isAuthenticated, user?.uid]);
 
   if (checking) {
     return (

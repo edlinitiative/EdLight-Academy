@@ -19,6 +19,8 @@ export interface AppState {
   // User state
   user: any;
   isAuthenticated: boolean;
+  /** True once Firebase's onAuthStateChanged has fired at least once this session. */
+  authConfirmed: boolean;
   language: string;
   hydrated: boolean;
   track: string | null;
@@ -48,6 +50,7 @@ export interface AppState {
 
   // Actions
   setUser: (user: any) => void;
+  setAuthConfirmed: () => void;
   setLanguage: (language: string) => void;
   setTrack: (track: string | null) => void;
   setOnboardingCompleted: (completed: boolean) => void;
@@ -81,6 +84,7 @@ const useStore = create<AppState>()(
       // User state
       user: null,
       isAuthenticated: false,
+      authConfirmed: false,
       language: 'fr', // Langue par défaut : français
       hydrated: false,
       track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
@@ -107,6 +111,7 @@ const useStore = create<AppState>()(
       
       // Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
+      setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),

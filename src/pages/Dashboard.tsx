@@ -49,7 +49,7 @@ function formatShortDate(msOrDate, locale) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: courses, isLoading, isError, isFetching, refetch } = useCourses();
-  const { user, enrolledCourses, quizAttempts, language } = useStore();
+  const { user, enrolledCourses, quizAttempts, language, setShowAuthModal } = useStore();
   const isCreole = language === 'ht';
   const locale = isCreole ? 'fr-HT' : 'fr-FR';
 
@@ -149,6 +149,21 @@ export default function Dashboard() {
   );
 
   const firstName = getFirstName(user);
+
+  if (!user?.uid && !isLoading) {
+    return (
+      <section className="section">
+        <div className="container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+          <p className="text-muted" style={{ marginBottom: '1.5rem' }}>
+            Connectez-vous pour accéder à votre tableau de bord.
+          </p>
+          <button type="button" className="button button--primary" onClick={() => setShowAuthModal(true)}>
+            Se connecter
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   if (isLoading) {
     return (

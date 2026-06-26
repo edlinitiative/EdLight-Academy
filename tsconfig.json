@@ -18,6 +18,7 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "useDefineForClassFields": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

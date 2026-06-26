@@ -179,7 +179,7 @@ function TableFigure({ description }) {
           <thead>
             <tr>
               {parsed.headers.map((h, i) => (
-                <th key={i}><InlineMath text={h} /></th>
+                <th key={i} scope="col"><InlineMath text={h} /></th>
               ))}
             </tr>
           </thead>

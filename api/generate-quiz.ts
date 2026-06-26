@@ -3,6 +3,8 @@
 // and call OpenAI APIs here, then map the response into a Perseus item.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { requireAuth } from './_lib/requireAuth';
+import { checkRateLimit } from './_lib/rateLimit';
 
 interface AIChoice {
   content?: string;
@@ -41,33 +43,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // Validate the token with Firebase Admin SDK (or Google's tokeninfo endpoint)
-  try {
-    const token = authHeader.split('Bearer ')[1];
-    const verifyResp = await fetch(
-      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`
-    );
-    if (!verifyResp.ok) {
-      // Try Firebase ID token verification via Google's secure token API
-      const idResp = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.FIREBASE_API_KEY || ''}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: token }),
-        }
-      );
-      if (!idResp.ok) {
-        res.status(401).json({ error: 'Invalid authentication token' });
-        return;
-      }
-    }
-  } catch (authErr) {
-    res.status(401).json({ error: 'Authentication verification failed' });
+  const uid = await requireAuth(req, res);
+  if (!uid) return;
+
+  const { allowed, remaining, resetAt } = await checkRateLimit(uid, 'generate-quiz');
+  if (!allowed) {
+    res.setHeader('X-RateLimit-Limit', '10');
+    res.setHeader('X-RateLimit-Remaining', '0');
+    res.setHeader('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
+    res.status(429).json({
+      error: 'rate_limit_exceeded',
+      message: 'Trop de requêtes. Réessayez dans une heure.',
+    });
     return;
   }
+  res.setHeader('X-RateLimit-Remaining', String(remaining));
 
-  const OPENAI_KEY = process.env.edlight_chatgpt_api;
+  const OPENAI_KEY = process.env.OPENAI_API_KEY || process.env.edlight_chatgpt_api;
 
   const buildPerseusFromAI = (ai: AIQuiz): PerseusItem => {
     const question = (ai.question || '').toString();

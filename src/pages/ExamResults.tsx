@@ -139,7 +139,9 @@ const ExamResults = () => {
   const examKey = exam?.exam_id || (Number.isFinite(idx) ? String(idx) : null);
 
   const [stored, setStored] = useState(null);
-  const [remoteLoading, setRemoteLoading] = useState(false);
+  // Start as true so we show "Chargement…" on first render rather than
+  // "Aucun résultat trouvé" before the sessionStorage/Firestore check runs.
+  const [remoteLoading, setRemoteLoading] = useState(true);
   // Detail list filter: 'all' | 'review' (mistakes) | 'mastered'
   const [reviewFilter, setReviewFilter] = useState('all');
   // Practice-your-mistakes session modal
