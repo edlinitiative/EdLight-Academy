@@ -104,111 +104,150 @@ export default function Profile() {
   return (
     <section className="section">
       <div className="container profile">
-        {/* Identity header */}
-        <header className="profile-header">
-          <div className="profile-header__avatar">{initialsOf(user)}</div>
-          <div className="profile-header__id">
-            <h1 className="profile-header__name">{user.name || getFirstName(user) || t('Élève', 'Elèv')}</h1>
-            {user.email && <p className="profile-header__email">{user.email}</p>}
-            <div className="profile-header__chips">
-              <span className="profile-chip profile-chip--level"><Zap size={13} /> {t('Niveau', 'Nivo')} {level.level}</span>
-              <span className="profile-chip profile-chip--xp"><Sparkles size={13} /> {level.xp} XP</span>
-              <span className="profile-chip profile-chip--streak"><Flame size={13} /> {streak?.currentStreak || 0} {t('j', 'j')}</span>
-            </div>
-          </div>
-        </header>
 
-        {/* Level / XP progress */}
-        <div className="profile-level">
-          <div className="profile-level__top">
-            <span>{t('Niveau', 'Nivo')} {level.level}</span>
-            <span className="text-muted">{level.xpToNext} XP → {t('niveau', 'nivo')} {level.level + 1}</span>
-          </div>
-          <div className="profile-level__bar">
-            <span className="profile-level__fill" style={{ width: `${level.progressPct}%` }} />
+        {/* ── Hero: identity + level progress ── */}
+        <div className="profile-area profile-area--hero">
+          <header className="profile-header">
+            <div className="profile-header__avatar">{initialsOf(user)}</div>
+            <div className="profile-header__id">
+              <h1 className="profile-header__name">{user.name || getFirstName(user) || t('Élève', 'Elèv')}</h1>
+              {user.email && <p className="profile-header__email">{user.email}</p>}
+              <div className="profile-header__chips">
+                <span className="profile-chip profile-chip--level"><Zap size={13} /> {t('Niveau', 'Nivo')} {level.level}</span>
+                <span className="profile-chip profile-chip--xp"><Sparkles size={13} /> {level.xp} XP</span>
+                <span className="profile-chip profile-chip--streak"><Flame size={13} /> {streak?.currentStreak || 0} {t('j', 'j')}</span>
+              </div>
+            </div>
+          </header>
+          <div className="profile-level">
+            <div className="profile-level__top">
+              <span>{t('Niveau', 'Nivo')} {level.level}</span>
+              <span className="text-muted">{level.xpToNext} XP → {t('niveau', 'nivo')} {level.level + 1}</span>
+            </div>
+            <div className="profile-level__bar">
+              <span className="profile-level__fill" style={{ '--level-pct': `${level.progressPct}%` } as React.CSSProperties} />
+            </div>
           </div>
         </div>
 
-        {/* Exam Readiness Score */}
-        <ReadinessCard />
+        {/* ── Readiness (main column) ── */}
+        <div className="profile-area profile-area--readiness">
+          <ReadinessCard />
+        </div>
 
-        {/* Progression (points / badges / per-course) */}
-        <ProgressDashboard />
-
-        {/* Achievements */}
-        <div className="profile-card">
-          <h2 className="profile-card__title"><Award size={18} /> {t('Réussites', 'Reyalizasyon')}</h2>
-
-          <div className="profile-achievements">
-            <div className="profile-stat">
-              <span className="profile-stat__value">{profile.totalGames || 0}</span>
-              <span className="profile-stat__label">{t('Parties trivia', 'Pati trivia')}</span>
+        {/* ── Achievements sidebar ── */}
+        <div className="profile-area profile-area--aside">
+          <div className="profile-card profile-card--full-height">
+            <h2 className="profile-card__title"><Award size={18} /> {t('Réussites', 'Reyalizasyon')}</h2>
+            <div className="profile-achievements">
+              <div className="profile-stat">
+                <span className="profile-stat__value">{profile.totalGames || 0}</span>
+                <span className="profile-stat__label">{t('Parties trivia', 'Pati trivia')}</span>
+              </div>
+              <div className="profile-stat">
+                <span className="profile-stat__value">{accuracy}%</span>
+                <span className="profile-stat__label">{t('Précision', 'Presizyon')}</span>
+              </div>
+              <div className="profile-stat">
+                <span className="profile-stat__value">{streak?.longestStreak || 0}</span>
+                <span className="profile-stat__label">{t('Meilleure série', 'Pi bon seri')}</span>
+              </div>
+              <div className="profile-stat">
+                <span className="profile-stat__value">{profile.bestScorePct || 0}%</span>
+                <span className="profile-stat__label">{t('Meilleur score', 'Pi bon nòt')}</span>
+              </div>
             </div>
-            <div className="profile-stat">
-              <span className="profile-stat__value">{accuracy}%</span>
-              <span className="profile-stat__label">{t('Précision', 'Presizyon')}</span>
+            <div className="profile-milestones">
+              {STREAK_MILESTONES.map((m) => {
+                const unlocked = unlockedMilestones.has(m.id);
+                return (
+                  <div key={m.id} className={`profile-milestone ${unlocked ? 'is-unlocked' : ''}`} title={isCreole ? m.labelHt : m.label}>
+                    <span className="profile-milestone__emoji">{m.emoji}</span>
+                    <span className="profile-milestone__label">{isCreole ? m.labelHt : m.label}</span>
+                    {unlocked && <Check size={12} className="profile-milestone__check" />}
+                  </div>
+                );
+              })}
             </div>
-            <div className="profile-stat">
-              <span className="profile-stat__value">{streak?.longestStreak || 0}</span>
-              <span className="profile-stat__label">{t('Meilleure série', 'Pi bon seri')}</span>
-            </div>
-            <div className="profile-stat">
-              <span className="profile-stat__value">{profile.bestScorePct || 0}%</span>
-              <span className="profile-stat__label">{t('Meilleur score', 'Pi bon nòt')}</span>
-            </div>
-          </div>
-
-          <div className="profile-milestones">
-            {STREAK_MILESTONES.map((m) => {
-              const unlocked = unlockedMilestones.has(m.id);
-              return (
-                <div key={m.id} className={`profile-milestone ${unlocked ? 'is-unlocked' : ''}`} title={isCreole ? m.labelHt : m.label}>
-                  <span className="profile-milestone__emoji">{m.emoji}</span>
-                  <span className="profile-milestone__label">{isCreole ? m.labelHt : m.label}</span>
-                  {unlocked && <Check size={12} className="profile-milestone__check" />}
-                </div>
-              );
-            })}
           </div>
         </div>
 
-        {/* Weekly leaderboard */}
-        <Leaderboard variant="full" />
-
-        {/* Certificates (future) */}
-        <div className="profile-card profile-card--soon">
-          <h2 className="profile-card__title"><GraduationCap size={18} /> {t('Certificats', 'Sètifika')}</h2>
-          <p className="text-muted">
-            {t(
-              'Bientôt : obtenez des certificats vérifiables en complétant des parcours et des examens blancs.',
-              'Talè : jwenn sètifika verifyab lè w konplete parcou ak egzamen blan.',
-            )}
-          </p>
-          <span className="profile-soon-badge">{t('Bientôt', 'Talè')}</span>
+        {/* ── Progression (full width) ── */}
+        <div className="profile-area profile-area--progress">
+          <ProgressDashboard />
         </div>
 
-        {/* Mon espace — secondary destinations */}
-        <div className="profile-card">
-          <h2 className="profile-card__title"><Target size={18} /> {t('Mon espace', 'Espas mwen')}</h2>
-          <div className="profile-links">
-            <Link to="/dashboard" className="profile-link"><LayoutDashboard size={18} /> {t('Tableau de bord', 'Tablo')}<ChevronRight size={16} /></Link>
-            <Link to="/study-plan" className="profile-link"><CalendarCheck size={18} /> {t("Plan d'étude", 'Plan etid')}<ChevronRight size={16} /></Link>
-            <Link to="/quizzes" className="profile-link"><Brain size={18} /> {t('Quiz', 'Quiz')}<ChevronRight size={16} /></Link>
-            <button className="profile-link" onClick={() => setShowNotifications(true)}><Bell size={18} /> {t('Notifications', 'Notifikasyon')}<ChevronRight size={16} /></button>
-            <Link to="/about" className="profile-link"><Info size={18} /> {t('À propos', 'Konsènan')}<ChevronRight size={16} /></Link>
-            <button className="profile-link" onClick={() => toggleTheme()}>
-              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-              {theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
-              <ChevronRight size={16} />
-            </button>
-            <button className="profile-link" onClick={() => setLanguage(isCreole ? 'fr' : 'ht')}>
-              <Languages size={18} /> {isCreole ? 'Français' : 'Kreyòl'}<ChevronRight size={16} />
-            </button>
-            <button className="profile-link profile-link--danger" onClick={handleLogout}>
+        {/* ── Leaderboard ── */}
+        <div className="profile-area profile-area--leaderboard">
+          <Leaderboard variant="full" />
+        </div>
+
+        {/* ── Mon espace — icon tile grid ── */}
+        <div className="profile-area profile-area--monespace">
+          <div className="profile-card">
+            <div className="profile-card__header">
+              <h2 className="profile-card__title"><Target size={18} /> {t('Mon espace', 'Espas mwen')}</h2>
+              <div className="profile-espace-toggles">
+                <button
+                  type="button"
+                  className="profile-toggle-btn"
+                  onClick={() => toggleTheme()}
+                  title={theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
+                >
+                  {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+                <button
+                  type="button"
+                  className="profile-toggle-btn"
+                  onClick={() => setLanguage(isCreole ? 'fr' : 'ht')}
+                  title={isCreole ? 'Passer en français' : 'Pase an kreyòl'}
+                >
+                  <Languages size={15} />
+                </button>
+              </div>
+            </div>
+            <div className="profile-espace-grid">
+              <Link to="/dashboard" className="profile-espace-tile">
+                <LayoutDashboard size={22} />
+                <span>{t('Tableau', 'Tablo')}</span>
+              </Link>
+              <Link to="/study-plan" className="profile-espace-tile">
+                <CalendarCheck size={22} />
+                <span>{t('Plan étude', 'Plan etid')}</span>
+              </Link>
+              <Link to="/quizzes" className="profile-espace-tile">
+                <Brain size={22} />
+                <span>{t('Quiz', 'Quiz')}</span>
+              </Link>
+              <button type="button" className="profile-espace-tile" onClick={() => setShowNotifications(true)}>
+                <Bell size={22} />
+                <span>{t('Alertes', 'Notifikasyon')}</span>
+              </button>
+              <Link to="/about" className="profile-espace-tile">
+                <Info size={22} />
+                <span>{t('À propos', 'Konsènan')}</span>
+              </Link>
+            </div>
+            <button type="button" className="profile-link profile-link--danger" onClick={handleLogout}>
               <LogOut size={18} /> {t('Déconnexion', 'Dekonekte')}<ChevronRight size={16} />
             </button>
           </div>
         </div>
+
+        {/* ── Certificates (future) ── */}
+        <div className="profile-area profile-area--certs">
+          <div className="profile-card profile-card--soon">
+            <h2 className="profile-card__title"><GraduationCap size={18} /> {t('Certificats', 'Sètifika')}</h2>
+            <p className="text-muted">
+              {t(
+                'Bientôt : obtenez des certificats vérifiables en complétant des parcours et des examens blancs.',
+                'Talè : jwenn sètifika verifyab lè w konplete parcou ak egzamen blan.',
+              )}
+            </p>
+            <span className="profile-soon-badge">{t('Bientôt', 'Talè')}</span>
+          </div>
+        </div>
+
       </div>
     </section>
   );

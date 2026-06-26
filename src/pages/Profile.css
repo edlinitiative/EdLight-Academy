@@ -2,10 +2,37 @@
    ───────────────────── */
 
 .profile {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  grid-template-areas:
+    "hero       hero"
+    "readiness  aside"
+    "progress   progress"
+    "leaderboard monespace"
+    "certs      certs";
+  gap: 1rem;
+  max-width: 1060px;
+  align-items: start;
+}
+
+/* ── Grid area assignments ── */
+.profile-area--hero        { grid-area: hero; }
+.profile-area--readiness   { grid-area: readiness; }
+.profile-area--aside       { grid-area: aside; }
+.profile-area--progress    { grid-area: progress; }
+.profile-area--leaderboard { grid-area: leaderboard; }
+.profile-area--monespace   { grid-area: monespace; }
+.profile-area--certs       { grid-area: certs; }
+
+/* ── Hero card: identity + level ── */
+.profile-area--hero {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e6e8eb);
+  border-radius: 16px;
+  padding: 1.2rem 1.4rem;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  max-width: 760px;
+  gap: 1rem;
 }
 
 /* ── Identity header ── */
@@ -62,17 +89,10 @@
 }
 
 .profile-chip--level { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
-.profile-chip--xp { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
+.profile-chip--xp    { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
 .profile-chip--streak { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 
-/* ── Level progress ── */
-.profile-level {
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-color, #e6e8eb);
-  border-radius: 14px;
-  padding: 0.9rem 1.1rem;
-}
-
+/* ── Level progress (inside hero) ── */
 .profile-level__top {
   display: flex;
   justify-content: space-between;
@@ -95,6 +115,8 @@
   border-radius: 999px;
   background: linear-gradient(90deg, #0857a6, #4a93dd);
   transition: width 0.6s ease;
+  /* width set via --level-pct custom property */
+  width: var(--level-pct, 0%);
 }
 
 /* ── Generic profile card ── */
@@ -106,6 +128,11 @@
   position: relative;
 }
 
+.profile-card--full-height {
+  height: 100%;
+  box-sizing: border-box;
+}
+
 .profile-card__title {
   display: flex;
   align-items: center;
@@ -114,10 +141,22 @@
   font-size: 1rem;
 }
 
-/* ── Achievements ── */
+/* Card header row (title + inline actions) */
+.profile-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.profile-card__header .profile-card__title {
+  margin-bottom: 0;
+}
+
+/* ── Achievements grid ── */
 .profile-achievements {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.6rem;
   margin-bottom: 1rem;
 }
@@ -146,6 +185,7 @@
   line-height: 1.2;
 }
 
+/* ── Milestones ── */
 .profile-milestones {
   display: flex;
   flex-wrap: wrap;
@@ -192,7 +232,71 @@
   border-radius: 999px;
 }
 
-/* ── Links list ── */
+/* ── Mon espace: compact toggle buttons (theme / language) ── */
+.profile-espace-toggles {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.profile-toggle-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e6e8eb);
+  background: var(--surface-alt, #f2f4f7);
+  color: var(--text-muted, #667085);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.profile-toggle-btn:hover {
+  background: var(--primary-50, #e8f1fb);
+  color: var(--primary-600, #0857a6);
+  border-color: var(--primary-100, #cfe2f7);
+}
+
+/* ── Mon espace: icon tile grid ── */
+.profile-espace-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.profile-espace-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.5rem;
+  border-radius: 12px;
+  background: var(--surface-muted, #f6f5f4);
+  border: 1px solid var(--border-color, #e6e8eb);
+  color: var(--text-800, #37352f);
+  font-size: 0.71rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.profile-espace-tile:hover {
+  background: var(--primary-50, #e8f1fb);
+  color: var(--primary-600, #0857a6);
+  border-color: var(--primary-100, #cfe2f7);
+  transform: translateY(-1px);
+}
+
+.profile-espace-tile svg {
+  color: var(--primary-500, #0a66c2);
+  flex-shrink: 0;
+}
+
+/* ── Shared link row (used for logout) ── */
 .profile-links {
   display: flex;
   flex-direction: column;
@@ -275,6 +379,24 @@
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
   padding: 0.6rem 0.8rem;
+}
+
+/* ── Responsive: collapse to single column ── */
+@media (max-width: 768px) {
+  .profile {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "hero"
+      "readiness"
+      "aside"
+      "progress"
+      "leaderboard"
+      "monespace"
+      "certs";
+  }
+
+  .profile-card--full-height { height: auto; }
+  .profile-achievements { grid-template-columns: repeat(4, 1fr); }
 }
 
 @media (max-width: 520px) {
