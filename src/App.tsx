@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AdminRoute from './components/AdminRoute';
+import AdminLayout from './components/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
 import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
@@ -65,10 +66,7 @@ export default function App() {
                 <Route path="help" element={<Help />} />
                 <Route path="privacy" element={<Privacy />} />
                 <Route path="terms" element={<Terms />} />
-                <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
-                <Route path="admin/courses" element={<AdminRoute><CourseManager /></AdminRoute>} />
-                <Route path="admin/verify" element={<AdminRoute><AnswerVerification /></AdminRoute>} />
-                <Route path="exams" element={<ExamLanding />} />
+                  <Route path="exams" element={<ExamLanding />} />
                 <Route path="exams/:level" element={<ExamBrowser />} />
                 <Route path="exams/:level/:examId" element={<ExamTake />} />
                 <Route path="exams/:level/:examId/results" element={<ExamResults />} />
@@ -76,6 +74,13 @@ export default function App() {
                 <Route path="trivia" element={<TriviaGames />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
+              </Route>
+
+              {/* Admin routes — own layout with dedicated navbar */}
+              <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                <Route index element={<Admin />} />
+                <Route path="courses" element={<CourseManager />} />
+                <Route path="verify" element={<AnswerVerification />} />
               </Route>
             </Routes>
           </Suspense>

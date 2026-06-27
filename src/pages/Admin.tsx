@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Film, HelpCircle, Users } from 'lucide-react';
 import { loadCSV } from '../utils/csvParser';
+import './Admin.css';
 import { toCSV, remapRow } from '../utils/csvStringify';
 import { updateVideo, updateQuiz, updateUser, deleteVideo, deleteQuiz, deleteUser, deleteAllQuizzes, db } from '../services/firebase';
 import { collection, getDocs } from 'firebase/firestore';
@@ -501,211 +502,193 @@ function Section({ title, columns, sourceUrl, idKey, collectionType }) {
   }
 
   return (
-    <section className="section" style={{ paddingTop: '1.5rem' }}>
-      <div className="container">
-        <div className="page-header" style={{ marginBottom: '1rem' }}>
-          <div>
-            <h2>{title}</h2>
-            <p className="text-muted">Columns: {columns.join(', ')}</p>
+    <div>
+      <div className="admin-section-header">
+        <div className="admin-section-header__meta">
+          <h2>{title}</h2>
+          <p className="text-muted">Colonnes : {columns.join(', ')}</p>
+        </div>
+        <div className="admin-section-actions">
+          <div className="admin-mode-group">
+            <span>Mode :</span>
+            <label>
+              <input type="radio" name={`${title}-mode`} checked={mode === 'replace'} onChange={() => setMode('replace')} /> Replace
+            </label>
+            <label>
+              <input type="radio" name={`${title}-mode`} checked={mode === 'merge'} onChange={() => setMode('merge')} /> Merge
+            </label>
           </div>
-          <div className="page-header__actions" style={{ alignItems: 'center' }}>
-            <div className="chip">Mode:</div>
-            <label className="chip" style={{ cursor: 'pointer' }}>
-              <input type="radio" name={`${title}-mode`} checked={mode==='replace'} onChange={() => setMode('replace')} /> Replace
-            </label>
-            <label className="chip" style={{ cursor: 'pointer' }}>
-              <input type="radio" name={`${title}-mode`} checked={mode==='merge'} onChange={() => setMode('merge')} /> Merge
-            </label>
-            <FilePicker onData={handleUpload} columns={columns} label={`Upload ${title}`} />
-            <button className="button button--ghost" onClick={handleLoadCurrent}>Load current</button>
-            <button className="button button--secondary" onClick={handleAddNew}>Add new</button>
-            {collectionType && (
-              <button 
-                className="button button--primary" 
-                onClick={handleSyncToFirebase} 
-                disabled={!hasData || syncing}
+          <FilePicker onData={handleUpload} columns={columns} label={`Importer`} />
+          <button type="button" className="button button--ghost" onClick={handleLoadCurrent}>Charger actuel</button>
+          <button type="button" className="button button--secondary" onClick={handleAddNew}>Ajouter</button>
+          {collectionType && (
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={handleSyncToFirebase}
+              disabled={!hasData || syncing}
+            >
+              {syncing ? 'Sync…' : '💾 Sauvegarder'}
+            </button>
+          )}
+          {collectionType === 'quizzes' && (
+            <>
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={async () => {
+                  try {
+                    setSyncing(true);
+                    setSyncStatus({ type: 'info', message: 'Vérification de la base de données...' });
+                    const quizzesRef = collection(db, 'quizzes');
+                    const snapshot = await getDocs(quizzesRef);
+                    setSyncStatus({
+                      type: 'info',
+                      message: `📊 ${snapshot.size} quiz dans la base. Cliquez "Vider" pour les supprimer (avec sauvegarde automatique).`,
+                    });
+                  } catch (err) {
+                    setSyncStatus({ type: 'error', message: `❌ Échec : ${err.message}` });
+                  } finally {
+                    setSyncing(false);
+                    setTimeout(() => setSyncStatus(null), 10000);
+                  }
+                }}
+                disabled={syncing}
               >
-                {syncing ? 'Syncing...' : '💾 Save to Firebase'}
+                🔍 Aperçu
               </button>
-            )}
-            {collectionType === 'quizzes' && (
-              <>
-                <button
-                  className="button button--ghost"
-                  onClick={async () => {
-                    try {
-                      setSyncing(true);
-                      setSyncStatus({ type: 'info', message: 'Checking quiz database...' });
-                      
-                      // Load current quizzes to show count
-                      const quizzesRef = collection(db, 'quizzes');
-                      const snapshot = await getDocs(quizzesRef);
-                      const count = snapshot.size;
-                      
-                      setSyncStatus({ 
-                        type: 'info', 
-                        message: `📊 Dry Run: Found ${count} quizzes in database. Click "🧹 Clear quiz database" to delete them (with automatic backup).` 
-                      });
-                    } catch (err) {
-                      console.error(err);
-                      setSyncStatus({ type: 'error', message: `❌ Failed to check database: ${err.message}` });
-                    } finally {
+              <button
+                type="button"
+                className="button button--danger"
+                onClick={async () => {
+                  try {
+                    setSyncing(true);
+                    setSyncStatus({ type: 'info', message: 'Chargement pour sauvegarde...' });
+                    const quizzesRef = collection(db, 'quizzes');
+                    const snapshot = await getDocs(quizzesRef);
+                    const backupData = [];
+                    snapshot.forEach((doc) => {
+                      const data: Record<string, any> = { id: doc.id, ...doc.data() };
+                      if (data.created_at?.seconds) data.created_at = new Date(data.created_at.seconds * 1000).toISOString();
+                      if (data.updated_at?.seconds) data.updated_at = new Date(data.updated_at.seconds * 1000).toISOString();
+                      backupData.push(data);
+                    });
+                    if (backupData.length === 0) {
+                      setSyncStatus({ type: 'info', message: 'Aucun quiz à supprimer.' });
                       setSyncing(false);
-                      setTimeout(() => setSyncStatus(null), 10000);
+                      setTimeout(() => setSyncStatus(null), 3000);
+                      return;
                     }
-                  }}
-                  disabled={syncing}
-                >
-                  🔍 Preview Quiz Count
-                </button>
-                <button
-                  className="button button--danger"
-                  onClick={async () => {
-                    try {
-                      setSyncing(true);
-                      setSyncStatus({ type: 'info', message: 'Loading quizzes for backup...' });
-                      
-                      // First, load all quizzes for backup
-                      const quizzesRef = collection(db, 'quizzes');
-                      const snapshot = await getDocs(quizzesRef);
-                      const backupData = [];
-                      snapshot.forEach((doc) => {
-                        const data = { id: doc.id, ...doc.data() };
-                        // Convert timestamps to readable format
-                        if (data.created_at?.seconds) {
-                          data.created_at = new Date(data.created_at.seconds * 1000).toISOString();
-                        }
-                        if (data.updated_at?.seconds) {
-                          data.updated_at = new Date(data.updated_at.seconds * 1000).toISOString();
-                        }
-                        backupData.push(data);
-                      });
-                      
-                      const count = backupData.length;
-                      
-                      if (count === 0) {
-                        setSyncStatus({ type: 'info', message: 'No quizzes to delete.' });
-                        setSyncing(false);
-                        setTimeout(() => setSyncStatus(null), 3000);
-                        return;
-                      }
+                    setSyncing(false);
+                    setDeleteConfirm({ count: backupData.length, backupData });
+                  } catch (err) {
+                    setSyncStatus({ type: 'error', message: `❌ Échec : ${err.message}` });
+                    setSyncing(false);
+                    setTimeout(() => setSyncStatus(null), 8000);
+                  }
+                }}
+                disabled={syncing}
+              >
+                🧹 Vider
+              </button>
+            </>
+          )}
+          <button type="button" className="button button--ghost" onClick={handleDownload} disabled={!hasData}>Exporter CSV</button>
+        </div>
+      </div>
 
-                      // Show inline confirmation instead of window.confirm
-                      setSyncing(false);
-                      setDeleteConfirm({ count, backupData });
-                    } catch (err) {
-                      console.error(err);
-                      setSyncStatus({ type: 'error', message: `❌ Failed: ${err.message}` });
-                      setSyncing(false);
-                      setTimeout(() => setSyncStatus(null), 8000);
-                    }
-                  }}
-                  disabled={syncing}
-                >
-                  🧹 Clear quiz database
-                </button>
-              </>
-            )}
-            <button className="button button--ghost" onClick={handleDownload} disabled={!hasData}>Download CSV</button>
+      {deleteConfirm && (
+        <div className="admin-delete-confirm">
+          <strong>⚠️ Confirmer la suppression</strong>
+          <p>
+            Cette action va exporter {deleteConfirm.count} quiz en CSV (sauvegarde automatique) puis
+            les supprimer définitivement de Firestore. Continuer ?
+          </p>
+          <div className="admin-delete-confirm__actions">
+            <button type="button" className="button button--danger" onClick={handleConfirmedDelete}>
+              Oui, supprimer {deleteConfirm.count} quiz
+            </button>
+            <button type="button" className="button button--ghost" onClick={() => setDeleteConfirm(null)}>
+              Annuler
+            </button>
           </div>
         </div>
+      )}
 
-        {deleteConfirm && (
-          <div className="form-message form-message--error" style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <strong>⚠️ Confirmer la suppression</strong>
-            <p>
-              Cette action va exporter {deleteConfirm.count} quiz en CSV (sauvegarde automatique) puis
-              les supprimer définitivement de Firestore. Continuer ?
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button type="button" className="button button--danger" onClick={handleConfirmedDelete}>
-                Oui, supprimer {deleteConfirm.count} quiz
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => setDeleteConfirm(null)}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        )}
+      {syncStatus && (
+        <div className={`admin-status admin-status--${syncStatus.type === 'success' ? 'success' : syncStatus.type === 'error' ? 'error' : syncStatus.type === 'warning' ? 'warning' : 'info'}`}>
+          {syncStatus.message}
+        </div>
+      )}
 
-        {syncStatus && (
-          <div
-            className={`form-message form-message--${syncStatus.type === 'success' ? 'success' : syncStatus.type === 'error' ? 'error' : 'info'}`}
-            style={{ marginBottom: '1rem' }}
-          >
-            {syncStatus.message}
-          </div>
-        )}
+      {hasData ? (
+        <div className="admin-data-card">
+          <p className="admin-data-card__meta text-muted">
+            Source : {sourceName || '—'} · {rows.length} lignes
+          </p>
+          <DataTable rows={rows} columns={columns} onEdit={(idx) => setEditIdx(idx)} />
+        </div>
+      ) : (
+        <div className="admin-data-card admin-data-card--empty">
+          <p className="text-muted">Aucune donnée. Importez un fichier ou cliquez "Charger actuel".</p>
+        </div>
+      )}
 
-        {hasData ? (
-          <div className="card" style={{ padding: '1rem' }}>
-            <div className="text-muted" style={{ marginBottom: '0.5rem' }}>
-              Source: {sourceName || '—'} • {rows.length} rows
-            </div>
-            <DataTable rows={rows} columns={columns} onEdit={(idx) => {
-              console.log('Setting editIdx to:', idx);
-              setEditIdx(idx);
-            }} />
-          </div>
-        ) : (
-          <div className="card card--compact" style={{ padding: '1rem' }}>
-            <p className="text-muted">No data loaded yet. Upload a file or click "Load current" to fetch {sourceUrl}.</p>
-          </div>
-        )}
-        
-        {editIdx !== null && (
-          <EditForm
-            key={editIdx}
-            row={rows[editIdx]}
-            columns={columns}
-            collectionType={collectionType}
-            onSave={handleEditSave}
-            onCancel={() => setEditIdx(null)}
-          />
-        )}
-      </div>
-    </section>
+      {editIdx !== null && (
+        <EditForm
+          key={editIdx}
+          row={rows[editIdx]}
+          columns={columns}
+          collectionType={collectionType}
+          onSave={handleEditSave}
+          onCancel={() => setEditIdx(null)}
+        />
+      )}
+    </div>
   );
 }
 
+const TABS = [
+  { id: 'videos',  label: 'Vidéos',        Icon: Film },
+  { id: 'quizzes', label: 'Quiz',           Icon: HelpCircle },
+  { id: 'users',   label: 'Utilisateurs',   Icon: Users },
+] as const;
+
+type TabId = typeof TABS[number]['id'];
+
 export default function Admin() {
+  const [activeTab, setActiveTab] = useState<TabId>('videos');
+
   return (
-    <>
-      <section className="section" style={{ paddingTop: '2rem', paddingBottom: '1rem' }}>
-        <div className="container">
-          <div className="page-header" style={{ marginBottom: '1.5rem' }}>
-            <div>
-              <h1>Content Management</h1>
-              <p className="text-muted">Manage videos, quizzes, users, and course structure</p>
-            </div>
-          </div>
-          
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <h3 className="card__title" style={{ marginBottom: '1rem' }}>Quick Actions</h3>
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <Link to="/admin/courses" className="button button--primary">
-                📚 Manage Course Structure
-              </Link>
-              <Link to="/admin/verify" className="button button--primary">
-                ✅ Verify Exam Answers
-              </Link>
-              <button type="button" className="button button--ghost" onClick={() => document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth' })}>
-                🎬 Manage Videos
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => document.getElementById('quizzes')?.scrollIntoView({ behavior: 'smooth' })}>
-                📝 Manage Quizzes
-              </button>
-              <button type="button" className="button button--ghost" onClick={() => document.getElementById('users')?.scrollIntoView({ behavior: 'smooth' })}>
-                👥 Manage Users
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      <Section title="Courses (Videos CSV)" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
-      <Section title="Quizzes" columns={QUIZ_COLUMNS} sourceUrl={null} idKey="id" collectionType="quizzes" />
-      <Section title="Users" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" collectionType="users" />
-    </>
+    <div className="admin-page">
+      <div className="admin-page__header">
+        <h1>Gestion du contenu</h1>
+        <p className="text-muted">Importez, éditez et synchronisez le contenu vers Firebase</p>
+      </div>
+
+      <div className="admin-tabs-bar">
+        {TABS.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`admin-tab${activeTab === id ? ' is-active' : ''}`}
+            onClick={() => setActiveTab(id)}
+          >
+            <Icon size={15} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'videos' && (
+        <Section title="Vidéos" columns={VIDEO_COLUMNS} sourceUrl="/data/edlight_videos.csv" idKey="id" collectionType="videos" />
+      )}
+      {activeTab === 'quizzes' && (
+        <Section title="Quiz" columns={QUIZ_COLUMNS} sourceUrl={null} idKey="id" collectionType="quizzes" />
+      )}
+      {activeTab === 'users' && (
+        <Section title="Utilisateurs" columns={USER_COLUMNS} sourceUrl="/api/users/export" idKey="user_id" collectionType="users" />
+      )}
+    </div>
   );
 }

@@ -1,0 +1,145 @@
+/* Admin — CMS overview
+   ──────────────────── */
+
+.admin-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 3rem;
+}
+
+.admin-page__header {
+  margin-bottom: 1.25rem;
+}
+
+.admin-page__header h1 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin: 0 0 0.2rem;
+  color: var(--text-900, #1a1a1a);
+}
+
+/* ── Tab bar ── */
+.admin-tabs-bar {
+  display: flex;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--border, #e5e3df);
+  margin-bottom: 1.5rem;
+}
+
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-500, #787671);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.admin-tab:hover {
+  color: var(--text-800, #37352f);
+}
+
+.admin-tab.is-active {
+  color: var(--primary, #0a66c2);
+  border-bottom-color: var(--primary, #0a66c2);
+}
+
+/* ── Section toolbar ── */
+.admin-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.admin-section-header__meta h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.2rem;
+}
+
+.admin-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.55rem;
+  border: 1px solid var(--border, #e5e3df);
+  border-radius: var(--radius-sm, 8px);
+  font-size: 0.8rem;
+  color: var(--text-600, #5d5b54);
+}
+
+.admin-mode-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* ── Status messages ── */
+.admin-status {
+  border-radius: var(--radius-sm, 8px);
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.admin-status--success { background: rgba(26, 174, 57, 0.1); color: #166534; }
+.admin-status--error   { background: rgba(224, 49, 49, 0.1); color: #9b1c1c; }
+.admin-status--info    { background: rgba(10, 102, 194, 0.08); color: #0857a6; }
+.admin-status--warning { background: rgba(217, 119, 6, 0.1); color: #92400e; }
+
+/* ── Delete confirm banner ── */
+.admin-delete-confirm {
+  border: 1px solid rgba(224, 49, 49, 0.3);
+  background: rgba(224, 49, 49, 0.06);
+  border-radius: var(--radius-sm, 8px);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-delete-confirm strong { color: var(--danger-500, #e03131); }
+.admin-delete-confirm p { font-size: 0.875rem; color: var(--text-700, #4a4843); margin: 0; }
+
+.admin-delete-confirm__actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+/* ── Data table card ── */
+.admin-data-card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e5e3df);
+  border-radius: var(--radius-md, 12px);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.admin-data-card--empty {
+  padding: 1rem;
+}
+
+.admin-data-card__meta {
+  margin-bottom: 0.5rem;
+}
