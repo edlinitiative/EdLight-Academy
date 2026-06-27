@@ -1,0 +1,84 @@
+/**
+ * useTrivia — gamification state for the Trivia experience
+ * ────────────────────────────────────────────────────────
+ * Loads the user's XP/level/daily-challenge profile and exposes a `recordResult`
+ * mutation that persists a finished round (and surfaces the XP reward so the UI
+ * can celebrate it). Guests get a local, non-persisted XP preview.
+ */
+
+import { useCallback, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import useStore from '../contexts/store';
+import {
+  loadTriviaProfile,
+  recordTriviaResult,
+  defaultTriviaProfile,
+  levelInfo,
+  getDailyChallengeState,
+  computeXpEarned,
+  setLeaderboardOptIn as svcSetLeaderboardOptIn,
+} from '../services/triviaService';
+
+const triviaKey = (uid) => ['trivia-profile', uid];
+
+export function useTrivia() {
+  const user = useStore((s) => s.user);
+  const uid = user?.uid ?? null;
+  const qc = useQueryClient();
+  const [lastReward, setLastReward] = useState(null);
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: triviaKey(uid),
+    queryFn: () => loadTriviaProfile(uid),
+    enabled: !!uid,
+    staleTime: 60 * 1000,
+  });
+
+  const safe = profile || defaultTriviaProfile();
+  const level = levelInfo(safe.xp || 0);
+  const daily = getDailyChallengeState(safe);
+
+  const recordResult = useCallback(
+    async ({ category, score, total, isDaily }) => {
+      if (!uid) {
+        // Guest: show what they *would* have earned, but don't persist.
+        const reward = {
+          xpEarned: computeXpEarned({ score, total, isDaily }),
+          leveledUp: false,
+          prevLevel: 1,
+          newLevel: 1,
+          guest: true,
+        };
+        setLastReward(reward);
+        return reward;
+      }
+      const res = await recordTriviaResult(uid, { category, score, total, isDaily });
+      qc.setQueryData(triviaKey(uid), res.profile);
+      setLastReward(res);
+      return res;
+    },
+    [uid, qc],
+  );
+
+  const setLeaderboardOptIn = useCallback(
+    async (opts) => {
+      if (!uid) return;
+      const updated = await svcSetLeaderboardOptIn(uid, opts);
+      if (updated) qc.setQueryData(triviaKey(uid), updated);
+      else qc.invalidateQueries({ queryKey: triviaKey(uid) });
+    },
+    [uid, qc],
+  );
+
+  return {
+    profile: safe,
+    isLoading: !!uid && isLoading,
+    level,
+    daily,
+    isAuthed: !!uid,
+    recordResult,
+    lastReward,
+    clearReward: () => setLastReward(null),
+    setLeaderboardOptIn,
+  };
+}

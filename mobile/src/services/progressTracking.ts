@@ -1,0 +1,439 @@
+import { db } from './firebase';
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
+import { notifyAchievement, notifyStreak } from './notificationService';
+import { recordActivity as recordStreakActivity } from './streakService';
+
+/**
+ * Progress tracking data structure in Firestore:
+ * 
+ * users/{userId}/progress/{courseId} = {
+ *   courseId: string,
+ *   enrolledAt: timestamp,
+ *   lastAccessedAt: timestamp,
+ *   completedLessons: string[],  // Array of lesson IDs
+ *   watchedVideos: {
+ *     [videoId]: {
+ *       watchedAt: timestamp,
+ *       watchDuration: number,  // seconds watched
+ *       totalDuration: number,  // total video length
+ *       completed: boolean
+ *     }
+ *   },
+ *   quizAttempts: {
+ *     [quizId]: {
+ *       attempts: [{
+ *         attemptedAt: timestamp,
+ *         score: number,
+ *         totalQuestions: number,
+ *         timeSpent: number  // seconds
+ *       }]
+ *     }
+ *   },
+ *   totalPoints: number,
+ *   badges: string[],
+ *   currentStreak: number,
+ *   longestStreak: number,
+ *   lastStudyDate: timestamp
+ * }
+ */
+
+/**
+ * Mark a video as watched
+ */
+export async function trackVideoProgress(userId, courseId, videoId, watchData) {
+  if (!userId) return;
+  
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+    
+    const now = new Date();
+    const existingData = progressDoc.exists() ? progressDoc.data() : null;
+    const watchedVideos = existingData ? (existingData.watchedVideos || {}) : {};
+    
+    // Capture the previous lastStudyDate BEFORE we overwrite it
+    const previousLastStudyDate = existingData?.lastStudyDate;
+    
+    watchedVideos[videoId] = {
+      watchedAt: now,
+      watchDuration: watchData.watchDuration || 0,
+      totalDuration: watchData.totalDuration || 0,
+      completed: watchData.completed || false
+    };
+    
+    const updateData = {
+      watchedVideos,
+      lastAccessedAt: now,
+      lastStudyDate: now
+    };
+    
+    if (progressDoc.exists()) {
+      await updateDoc(progressRef, updateData);
+    } else {
+      await setDoc(progressRef, {
+        courseId,
+        enrolledAt: now,
+        ...updateData,
+        completedLessons: [],
+        quizAttempts: {},
+        totalPoints: 0,
+        badges: [],
+        currentStreak: 1,
+        longestStreak: 1
+      });
+    }
+    
+    // Update streak using the PREVIOUS date (before we overwrote it)
+    await updateStreak(userId, courseId, previousLastStudyDate);
+
+    // Record global cross-course streak
+    recordStreakActivity(userId).catch(() => {});
+    
+  } catch (error) {
+    console.error('[Progress] Error tracking video:', error);
+  }
+}
+
+/**
+ * Mark a lesson as completed
+ */
+export async function markLessonComplete(userId, courseId, lessonId) {
+  if (!userId) return;
+  
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+    
+    if (!progressDoc.exists()) {
+      console.warn('[Progress] No progress document found');
+      return;
+    }
+    
+    const completedLessons = progressDoc.data().completedLessons || [];
+
+    if (!completedLessons.includes(lessonId)) {
+      await updateDoc(progressRef, {
+        completedLessons: arrayUnion(lessonId),
+        lastAccessedAt: new Date()
+      });
+      
+      // Award points for completing lesson
+      await awardPoints(userId, courseId, 10, 'lesson_complete');
+      
+    }
+  } catch (error) {
+    console.error('[Progress] Error marking lesson complete:', error);
+  }
+}
+
+/**
+ * Track quiz attempt
+ */
+export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
+  if (!userId) return;
+  
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+
+    // Ensure progress doc exists so updateDoc doesn't fail on first-ever attempt.
+    if (!progressDoc.exists()) {
+      await setDoc(progressRef, {
+        courseId,
+        enrolledAt: serverTimestamp(),
+        lastAccessedAt: serverTimestamp(),
+        lastStudyDate: serverTimestamp(),
+        completedLessons: [],
+        watchedVideos: {},
+        quizAttempts: {},
+        totalPoints: 0,
+        badges: [],
+        currentStreak: 1,
+        longestStreak: 1
+      }, { merge: true });
+    }
+
+    // Write an immutable attempt document for long-term improvement tracking.
+    // Security rules should allow owner create/read and deny update/delete.
+    try {
+      const pct = typeof attemptData.percentage === 'number'
+        ? attemptData.percentage
+        : ((attemptData.score / attemptData.totalQuestions) * 100);
+      await addDoc(collection(db, 'users', userId, 'quizAttempts'), {
+        courseId,
+        quizId,
+        score: attemptData.score,
+        totalQuestions: attemptData.totalQuestions,
+        percentage: pct,
+        timeSpent: attemptData.timeSpent || 0,
+        attemptedAt: serverTimestamp(),
+        attemptedAtMs: Date.now()
+      });
+    } catch (attemptWriteError) {
+      console.warn('[Progress] Failed to write immutable quizAttempt doc:', attemptWriteError);
+    }
+    
+    const quizAttempts = progressDoc.exists() ? (progressDoc.data().quizAttempts || {}) : {};
+    
+    if (!quizAttempts[quizId]) {
+      quizAttempts[quizId] = { attempts: [] };
+    }
+
+    // Keep only a small rolling window in the progress doc to avoid unbounded growth.
+    const nextAttempt = {
+      attemptedAt: new Date(),
+      attemptedAtMs: Date.now(),
+      score: attemptData.score,
+      totalQuestions: attemptData.totalQuestions,
+      percentage: typeof attemptData.percentage === 'number'
+        ? attemptData.percentage
+        : ((attemptData.score / attemptData.totalQuestions) * 100),
+      timeSpent: attemptData.timeSpent || 0
+    };
+    const existingAttempts = Array.isArray(quizAttempts[quizId].attempts)
+      ? quizAttempts[quizId].attempts
+      : [];
+    const MAX_EMBEDDED_ATTEMPTS = 20;
+    const trimmed = [...existingAttempts, nextAttempt].slice(-MAX_EMBEDDED_ATTEMPTS);
+    quizAttempts[quizId].attempts = trimmed;
+    
+    await updateDoc(progressRef, {
+      quizAttempts,
+      lastAccessedAt: new Date(),
+      lastStudyDate: new Date()
+    });
+    
+    // Award points based on score
+    const percentage = typeof attemptData.percentage === 'number'
+      ? attemptData.percentage
+      : (attemptData.score / attemptData.totalQuestions) * 100;
+    let points = 0;
+    if (percentage >= 90) points = 50;
+    else if (percentage >= 80) points = 40;
+    else if (percentage >= 70) points = 30;
+    else if (percentage >= 60) points = 20;
+    else points = 10;
+    
+    await awardPoints(userId, courseId, points, 'quiz_complete');
+    
+    // Check for achievements
+    await checkAchievements(userId, courseId);
+
+    // Record global cross-course streak
+    recordStreakActivity(userId).catch(() => {});
+    
+  } catch (error) {
+    console.error('[Progress] Error tracking quiz attempt:', error);
+  }
+}
+
+/**
+ * Award points to user
+ */
+export async function awardPoints(userId, courseId, points, reason) {
+  if (!userId) return;
+
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    await updateDoc(progressRef, {
+      totalPoints: increment(points)
+    });
+  } catch (error) {
+    console.error('[Progress] Error awarding points:', error);
+  }
+}
+
+/**
+ * Update study streak
+ * @param {string} userId
+ * @param {string} courseId
+ * @param {*} previousLastStudyDate - The lastStudyDate from BEFORE the current write (avoids race condition)
+ */
+async function updateStreak(userId, courseId, previousLastStudyDate) {
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+    
+    if (!progressDoc.exists()) return;
+    
+    const data = progressDoc.data();
+    // Use the passed-in previous date to avoid the race condition
+    const lastStudyDate = previousLastStudyDate?.toDate
+      ? previousLastStudyDate.toDate()
+      : (previousLastStudyDate instanceof Date ? previousLastStudyDate : null);
+    const now = new Date();
+    
+    if (!lastStudyDate) {
+      await updateDoc(progressRef, {
+        currentStreak: 1,
+        longestStreak: 1
+      });
+      return;
+    }
+    
+    // Calculate days difference
+    const diffTime = Math.abs(now - lastStudyDate);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    let currentStreak = data.currentStreak || 1;
+    let longestStreak = data.longestStreak || 1;
+    
+    if (diffDays === 0) {
+      // Same day, no change
+      return;
+    } else if (diffDays === 1) {
+      // Consecutive day, increment streak
+      currentStreak += 1;
+      longestStreak = Math.max(longestStreak, currentStreak);
+    } else {
+      // Streak broken
+      currentStreak = 1;
+    }
+    
+    await updateDoc(progressRef, {
+      currentStreak,
+      longestStreak
+    });
+    
+    // Award streak milestone badges and send notifications
+    if (currentStreak === 7) {
+      await awardBadge(userId, courseId, 'week_streak');
+      await notifyStreak(userId, 7);
+    }
+    if (currentStreak === 30) {
+      await awardBadge(userId, courseId, 'month_streak');
+      await notifyStreak(userId, 30);
+    }
+    if (currentStreak === 100) {
+      await awardBadge(userId, courseId, 'legend_streak');
+      await notifyStreak(userId, 100);
+    }
+    
+  } catch (error) {
+    console.error('[Progress] Error updating streak:', error);
+  }
+}
+
+/**
+ * Award badge to user
+ */
+export async function awardBadge(userId, courseId, badgeId) {
+  if (!userId) return;
+  
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+    
+    if (!progressDoc.exists()) return;
+    
+    const badges = progressDoc.data().badges || [];
+
+    if (!badges.includes(badgeId)) {
+      await updateDoc(progressRef, {
+        badges: arrayUnion(badgeId)
+      });
+      
+      
+      // Send notification for new badge
+      const badgeNames = {
+        first_lesson: { name: 'First Lesson', icon: '🎓' },
+        quiz_enthusiast: { name: 'Quiz Enthusiast', icon: '📝' },
+        perfectionist: { name: 'Perfectionist', icon: '💯' },
+        point_collector: { name: 'Point Collector', icon: '💎' },
+        week_streak: { name: '7 Day Streak', icon: '🔥' },
+        month_streak: { name: '30 Day Streak', icon: '⚡' },
+        legend_streak: { name: '100 Day Streak', icon: '👑' },
+      };
+      
+      const badgeInfo = badgeNames[badgeId] || { name: badgeId, icon: '🏅' };
+      await notifyAchievement(userId, { badgeId, ...badgeInfo });
+    }
+  } catch (error) {
+    console.error('[Progress] Error awarding badge:', error);
+  }
+}
+
+/**
+ * Check and award achievements
+ */
+async function checkAchievements(userId, courseId) {
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+    
+    if (!progressDoc.exists()) return;
+    
+    const data = progressDoc.data();
+    const quizAttempts = data.quizAttempts || {};
+    const totalPoints = data.totalPoints || 0;
+    
+    // Count total quiz attempts
+    let totalAttempts = 0;
+    let perfectScores = 0;
+    
+    Object.values(quizAttempts).forEach(quiz => {
+      totalAttempts += quiz.attempts.length;
+      quiz.attempts.forEach(attempt => {
+        if (attempt.score === attempt.totalQuestions) {
+          perfectScores++;
+        }
+      });
+    });
+    
+    // Award badges based on achievements
+    if (totalAttempts >= 10) await awardBadge(userId, courseId, 'quiz_enthusiast');
+    if (totalAttempts >= 50) await awardBadge(userId, courseId, 'quiz_master');
+    if (perfectScores >= 5) await awardBadge(userId, courseId, 'perfectionist');
+    if (totalPoints >= 1000) await awardBadge(userId, courseId, 'point_collector');
+    if (totalPoints >= 5000) await awardBadge(userId, courseId, 'point_master');
+    
+  } catch (error) {
+    console.error('[Progress] Error checking achievements:', error);
+  }
+}
+
+/**
+ * Get user's progress for a course
+ */
+export async function getCourseProgress(userId, courseId) {
+  if (!userId) return null;
+  
+  try {
+    const progressRef = doc(db, 'users', userId, 'progress', courseId);
+    const progressDoc = await getDoc(progressRef);
+    
+    if (!progressDoc.exists()) {
+      return null;
+    }
+    
+    return progressDoc.data();
+  } catch (error) {
+    console.error('[Progress] Error getting course progress:', error);
+    return null;
+  }
+}
+
+/**
+ * Get all progress for a user across all courses
+ */
+export async function getAllUserProgress(userId) {
+  if (!userId) return [];
+  
+  try {
+    const progressCollection = collection(db, 'users', userId, 'progress');
+    const snapshot = await getDocs(progressCollection);
+    
+    const progress = [];
+    snapshot.forEach(doc => {
+      progress.push({
+        courseId: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    return progress;
+  } catch (error) {
+    console.error('[Progress] Error getting all user progress:', error);
+    return [];
+  }
+}
