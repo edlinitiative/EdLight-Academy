@@ -793,7 +793,7 @@ function TriviaResults({
 // ─── Main TriviaScreen ────────────────────────────────────────────────────────
 
 export default function TriviaScreen() {
-  const { user, language } = useStore();
+  const { user, language, incrementGuestInteraction } = useStore();
   const isCreole = language === 'ht';
 
   const { level } = useTrivia();
@@ -829,6 +829,7 @@ export default function TriviaScreen() {
     (score: number, total: number) => {
       setFinalScore({ score, total });
       setPhase('results');
+      incrementGuestInteraction();
 
       // Record streak activity
       recordActivity().catch(console.warn);
@@ -842,7 +843,7 @@ export default function TriviaScreen() {
         }).catch(console.warn);
       }
     },
-    [recordActivity, user, level],
+    [recordActivity, user, level, incrementGuestInteraction],
   );
 
   // "Rejouer" — replay with same category + round size

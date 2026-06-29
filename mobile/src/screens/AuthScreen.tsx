@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { GraduationCap, Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import {
   loginWithEmailPassword,
@@ -93,19 +93,21 @@ export default function AuthScreen() {
   const isSignIn = activeTab === 'signin';
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView className="flex-1" contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           {/* Header */}
-          <View className="items-center pt-12 pb-8 px-6">
-            <View className="w-16 h-16 rounded-2xl bg-primary-600 items-center justify-center mb-4">
-              <GraduationCap color="#fff" size={32} />
-            </View>
-            <Text className="text-2xl font-bold text-gray-900">EdLight Academy</Text>
-            <Text className="text-gray-500 mt-1 text-center">
+          <View style={{ alignItems: 'center', paddingTop: 48, paddingBottom: 32, paddingHorizontal: 24 }}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={{ width: 80, height: 80, marginBottom: 16 }}
+              resizeMode="contain"
+            />
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827' }}>EdLight Academy</Text>
+            <Text style={{ color: '#6b7280', marginTop: 4, textAlign: 'center' }}>
               Préparez votre Bac avec confiance
             </Text>
           </View>

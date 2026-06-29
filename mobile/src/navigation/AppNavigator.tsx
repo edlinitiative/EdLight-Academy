@@ -1,31 +1,37 @@
 import React from 'react';
+import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
-import AuthScreen from '../screens/AuthScreen';
 import TabNavigator from './TabNavigator';
+import AuthModal from '../components/AuthModal';
 
 export type RootParamList = {
-  Auth: undefined;
+  Loading: undefined;
   Main: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
 
-export default function AppNavigator() {
-  const { isAuthenticated, authConfirmed } = useStore();
+function LoadingScreen() {
+  return <View style={{ flex: 1, backgroundColor: '#ffffff' }} />;
+}
 
-  if (!authConfirmed) return null;
+export default function AppNavigator() {
+  const authConfirmed = useStore((s) => s.authConfirmed);
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
-        {isAuthenticated ? (
-          <Stack.Screen name="Main" component={TabNavigator} />
-        ) : (
-          <Stack.Screen name="Auth" component={AuthScreen} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+          {!authConfirmed ? (
+            <Stack.Screen name="Loading" component={LoadingScreen} />
+          ) : (
+            <Stack.Screen name="Main" component={TabNavigator} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+      <AuthModal />
+    </>
   );
 }

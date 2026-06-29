@@ -22,8 +22,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0857A6"
       },
-      "package": "org.edlight.academy",
-      "googleServicesFile": "./google-services.json"
+      "package": "org.edlight.academy"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,12 +39,12 @@
     ],
     "scheme": "edlight",
     "extra": {
-      "firebaseApiKey": "",
-      "firebaseAuthDomain": "",
-      "firebaseProjectId": "",
-      "firebaseStorageBucket": "",
-      "firebaseMessagingSenderId": "",
-      "firebaseAppId": ""
+      "firebaseApiKey": "AIzaSyBvrcbWNBByF8OlD0_iJstZDYcZrKaBjYU",
+      "firebaseAuthDomain": "edlight-academy.firebaseapp.com",
+      "firebaseProjectId": "edlight-academy",
+      "firebaseStorageBucket": "edlight-academy.firebasestorage.app",
+      "firebaseMessagingSenderId": "618990331083",
+      "firebaseAppId": "1:618990331083:web:1af6a46399f9251a35e74e"
     }
   }
 }

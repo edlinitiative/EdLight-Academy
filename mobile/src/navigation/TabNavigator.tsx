@@ -23,7 +23,7 @@ const ACTIVE = '#0857A6';
 const INACTIVE = '#9ca3af';
 
 export default function TabNavigator() {
-  const { theme } = useStore();
+  const theme = useStore((s) => s.theme);
   const dark = theme === 'dark';
   const bg = dark ? '#111827' : '#ffffff';
   const border = dark ? '#1f2937' : '#e5e7eb';

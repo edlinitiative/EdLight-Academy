@@ -95,7 +95,7 @@ export default function CourseDetailScreen() {
   const route = useRoute<Route>();
   const { courseId } = route.params;
   const { data: courses, isLoading, isError } = useCourses();
-  const { progress, updateProgress } = useStore();
+  const { progress, updateProgress, incrementGuestInteraction } = useStore();
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
 
@@ -139,7 +139,7 @@ export default function CourseDetailScreen() {
             <Text className="text-xs text-gray-500 mt-1" numberOfLines={2}>{activeLesson.objectives}</Text>
           ) : null}
           <TouchableOpacity
-            onPress={() => updateProgress(activeLesson.id, { completed: true })}
+            onPress={() => { updateProgress(activeLesson.id, { completed: true }); incrementGuestInteraction(); }}
             className="mt-2 self-start px-3 py-1.5 bg-emerald-100 rounded-lg"
           >
             <Text className="text-emerald-700 text-xs font-semibold">Marquer terminé ✓</Text>

@@ -29,6 +29,7 @@ export interface AppState {
   lastActivity: LastActivity | null;
   currentCourse: any;
   showAuthModal: boolean;
+  guestInteractionCount: number;
   activeTab: string;
   focusMode: boolean;
 
@@ -49,6 +50,7 @@ export interface AppState {
   setCurrentCourse: (course: any) => void;
   toggleAuthModal: () => void;
   setShowAuthModal: (show: boolean) => void;
+  incrementGuestInteraction: () => void;
   setActiveTab: (tab: string) => void;
   setFocusMode: (focus: boolean) => void;
   logout: () => void;
@@ -73,10 +75,11 @@ const useStore = create<AppState>()(
       lastActivity: null,
       currentCourse: null,
       showAuthModal: false,
+      guestInteractionCount: 0,
       activeTab: 'signin',
       focusMode: false,
 
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
+      setUser: (user) => set({ user, isAuthenticated: !!user, ...(user ? { showAuthModal: false } : {}) }),
       setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
@@ -119,6 +122,15 @@ const useStore = create<AppState>()(
       setCurrentCourse: (course) => set({ currentCourse: course }),
       toggleAuthModal: () => set((s) => ({ showAuthModal: !s.showAuthModal })),
       setShowAuthModal: (show) => set({ showAuthModal: !!show }),
+      incrementGuestInteraction: () =>
+        set((s) => {
+          if (s.isAuthenticated) return s;
+          const newCount = s.guestInteractionCount + 1;
+          return {
+            guestInteractionCount: newCount,
+            showAuthModal: newCount >= 2 ? true : s.showAuthModal,
+          };
+        }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setFocusMode: (focus) => set({ focusMode: !!focus }),
 
@@ -153,6 +165,7 @@ const useStore = create<AppState>()(
         freeVideoIds: s.freeVideoIds,
         lastActivity: s.lastActivity,
         hydrated: s.hydrated,
+        guestInteractionCount: s.guestInteractionCount,
       }),
     },
   ),

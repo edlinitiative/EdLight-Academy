@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { registerRootComponent } from 'expo';
 import { onAuthStateChange, upsertUserDocument } from './src/services/firebase';
 import useStore from './src/contexts/store';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -40,7 +41,7 @@ function AuthGate() {
   return <AppNavigator />;
 }
 
-export default function App() {
+function App() {
   const { theme } = useStore();
 
   return (
@@ -52,3 +53,5 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+registerRootComponent(App);

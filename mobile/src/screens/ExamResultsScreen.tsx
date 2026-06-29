@@ -32,10 +32,14 @@ export default function ExamResultsScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user } = useStore();
+  const { user, incrementGuestInteraction } = useStore();
 
   const [result, setResult] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    incrementGuestInteraction();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user?.uid) { setLoading(false); return; }
