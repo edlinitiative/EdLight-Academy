@@ -13,6 +13,10 @@
 /public/css
 /public/*.html
 /public/*.png
+!/public/icon-192.png
+!/public/icon-512.png
+!/public/icon-maskable-512.png
+!/public/icon-96.png
 # Per-exam files are generated from public/exam_catalog.json by the
 # `prebuild` hook (scripts/split_exam_catalog.mjs); no need to commit ~21MB.
 /public/exams/
