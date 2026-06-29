@@ -7,7 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Call this once at module load (before any component mounts).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
