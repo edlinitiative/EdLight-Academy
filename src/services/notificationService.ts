@@ -1,6 +1,6 @@
-import { db } from './firebase';
+import { auth, db } from './firebase';
 import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { showLocalNotification } from './pushNotificationService';
+import { showLocalNotification, getPermission } from './pushNotificationService';
 
 /**
  * Notification preferences and reminders system
@@ -149,6 +149,30 @@ async function maybeShowOsNotification(userId, prefKey, title, options) {
 }
 
 /**
+ * Deliver a notification to all of this user's subscribed devices via the
+ * server-side Web Push API (/api/send-push). Works even when the PWA is closed.
+ * Best-effort — never throws.
+ */
+async function sendServerPush(
+  title: string,
+  options: { body?: string; url?: string; tag?: string },
+): Promise<void> {
+  // Only attempt when permission is granted and the user is signed in
+  if (getPermission() !== 'granted') return;
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+    if (!idToken) return;
+    await fetch('/api/send-push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ title, ...options }),
+    });
+  } catch {
+    // offline or backend unavailable — local notification already fired above
+  }
+}
+
+/**
  * Create notification for achievement
  */
 export async function notifyAchievement(userId, achievement) {
@@ -166,12 +190,12 @@ export async function notifyAchievement(userId, achievement) {
       createdAt: serverTimestamp(),
     });
 
-    // Also surface it as an OS notification (best-effort, respects prefs).
-    await maybeShowOsNotification(userId, 'achievementNotifications', 'Nouveau succès ! 🎉', {
-      body: `Tu as gagné le badge « ${achievement.name} » ! ${achievement.icon || ''}`.trim(),
-      tag: `achievement-${achievement.badgeId}`,
-      url: '/dashboard',
-    });
+    const body = `Tu as gagné le badge « ${achievement.name} » ! ${achievement.icon || ''}`.trim();
+    const notifOpts = { body, tag: `achievement-${achievement.badgeId}`, url: '/dashboard' };
+
+    // Local notification (foreground / SW) + server push (when app is closed).
+    await maybeShowOsNotification(userId, 'achievementNotifications', 'Nouveau succès ! 🎉', notifOpts);
+    await sendServerPush('Nouveau succès ! 🎉', notifOpts);
 
     return notificationId;
   } catch (error) {
@@ -204,11 +228,9 @@ export async function notifyStreak(userId, streakDays) {
       createdAt: serverTimestamp(),
     });
 
-    await maybeShowOsNotification(userId, 'achievementNotifications', 'Série en cours ! 🔥', {
-      body: message,
-      tag: `streak-${streakDays}`,
-      url: '/dashboard',
-    });
+    const notifOpts = { body: message, tag: `streak-${streakDays}`, url: '/dashboard' };
+    await maybeShowOsNotification(userId, 'achievementNotifications', 'Série en cours ! 🔥', notifOpts);
+    await sendServerPush('Série en cours ! 🔥', notifOpts);
 
     return notificationId;
   } catch (error) {
@@ -281,6 +303,24 @@ export async function markAllNotificationsRead(userId) {
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
     return false;
+  }
+}
+
+/**
+ * Fire a local + server push when the user enters the top 10 on the weekly
+ * leaderboard. Best-effort — never throws.
+ */
+export async function notifyLeaderboardRank(userId: string, rank: number): Promise<void> {
+  if (rank > 10) return;
+  const icon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏆';
+  const title = `${icon} Tu es #${rank} du classement !`;
+  const body = `Continue ainsi pour rester dans le top ${rank <= 3 ? '3' : '10'} cette semaine.`;
+  const opts = { body, tag: 'leaderboard-rank', url: '/trivia' };
+  try {
+    await maybeShowOsNotification(userId, 'achievementNotifications', title, opts);
+    await sendServerPush(title, opts);
+  } catch {
+    // best-effort
   }
 }
 

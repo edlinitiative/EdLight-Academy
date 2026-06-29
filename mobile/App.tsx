@@ -1,12 +1,17 @@
 import './global.css';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { registerRootComponent } from 'expo';
+import * as Notifications from 'expo-notifications';
 import { onAuthStateChange, upsertUserDocument } from './src/services/firebase';
 import useStore from './src/contexts/store';
 import AppNavigator from './src/navigation/AppNavigator';
+import {
+  requestPermissions,
+  scheduleDailyStudyReminder,
+} from './src/services/notificationService';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +35,11 @@ function AuthGate() {
           email: firebaseUser.email || '',
           picture: firebaseUser.photoURL || '',
         });
+        // Request notification permission after sign-in, then schedule the
+        // daily study reminder. Best-effort — never blocks the auth flow.
+        requestPermissions()
+          .then((granted) => { if (granted) scheduleDailyStudyReminder(); })
+          .catch(() => {});
       } else {
         logout();
       }
@@ -42,7 +52,21 @@ function AuthGate() {
 }
 
 function App() {
-  const { theme } = useStore();
+  const { theme, setActiveTab } = useStore();
+
+  // Handle notification taps — route user to the right screen.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const type = response.notification.request.content.data?.type as string | undefined;
+      if (type === 'trivia-reminder' || type === 'leaderboard') {
+        setActiveTab('trivia');
+      } else if (type === 'study-reminder') {
+        setActiveTab('courses');
+      }
+      // achievement / streak — no navigation needed; they're ambient
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <SafeAreaProvider>

@@ -21,7 +21,8 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp } from './leaderboardService';
+import { addWeeklyXp, getWeeklyTop } from './leaderboardService';
+import { notifyLeaderboardRank } from './notificationService';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
 
@@ -184,7 +185,7 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
     // Trivia is platform activity → keep the streak alive.
     try { await recordStreakActivity(uid); } catch {}
 
-    // Opt-in weekly leaderboard submission.
+    // Opt-in weekly leaderboard submission + rank notification.
     if (updated.leaderboard?.optedIn && xpEarned > 0) {
       await addWeeklyXp(uid, xpEarned, {
         displayName: updated.leaderboard.displayName || 'Élève',
@@ -192,6 +193,11 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
         school: updated.leaderboard.school || null,
         city: updated.leaderboard.city || null,
       });
+      // Best-effort rank notification — fire and forget.
+      getWeeklyTop(50).then((top) => {
+        const entry = top.find((e) => e.id === uid);
+        if (entry && entry.rank <= 10) notifyLeaderboardRank(uid, entry.rank).catch(() => {});
+      }).catch(() => {});
     }
 
     return {

@@ -6,12 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
-import { addWeeklyXp } from '../services/leaderboardService';
+import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
 import MathText from '../components/MathText';
+import { scheduleTriviaReminder, notifyLeaderboardRank } from '../services/notificationService';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -834,13 +835,22 @@ export default function TriviaScreen() {
       // Record streak activity
       recordActivity().catch(console.warn);
 
-      // Add XP to weekly leaderboard
+      // Schedule a trivia reminder for tomorrow (best-effort)
+      scheduleTriviaReminder().catch(() => {});
+
+      // Add XP to weekly leaderboard, then notify rank if top 10
       const xp = score * 10;
       if (user?.uid && xp > 0) {
         addWeeklyXp(user.uid, xp, {
           displayName: getFirstName(user),
           level: level?.level,
-        }).catch(console.warn);
+        })
+          .then(() => getWeeklyTop(50))
+          .then((top) => {
+            const entry = top.find((e: any) => e.id === user.uid);
+            if (entry && entry.rank <= 10) notifyLeaderboardRank(entry.rank).catch(() => {});
+          })
+          .catch(console.warn);
       }
     },
     [recordActivity, user, level, incrementGuestInteraction],
