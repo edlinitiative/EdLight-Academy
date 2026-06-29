@@ -6,7 +6,7 @@ export function useAppData() {
     queryKey: ['appData'],
     queryFn: loadAppData,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     retry: 2,
   });
 }
@@ -16,7 +16,7 @@ export function useCourses() {
     queryKey: ['coursesData'],
     queryFn: loadCoursesData,
     staleTime: 5 * 60 * 1000,
-    cacheTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     retry: 2,
     refetchOnMount: 'always',
   });
