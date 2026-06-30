@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Platform,
 } from 'react-native';
@@ -7,11 +7,13 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import {
-  ArrowLeft, BookOpen, ChevronDown, ChevronRight, PlayCircle, ClipboardList, CheckCircle2,
+  ArrowLeft, BookOpen, ChevronDown, ChevronRight, PlayCircle, ClipboardList,
+  CheckCircle2, ChevronLeft, Trophy,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState } from '../components/StateViews';
+import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
@@ -46,41 +48,54 @@ function VideoPlayer({ videoUrl }: { videoUrl: string }) {
   );
 }
 
-function UnitAccordion({ unit, completedIds, onLessonPress }: {
+function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress }: {
   unit: any;
   completedIds: Set<string>;
+  activeLesson: any | null;
   onLessonPress: (lesson: any) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const unitDone = (unit.lessons ?? []).filter((l: any) => completedIds.has(l.id)).length;
+  const unitTotal = (unit.lessons ?? []).length;
+
   return (
-    <View className="mb-3">
+    <View className="mb-2">
       <TouchableOpacity
         onPress={() => setOpen((v) => !v)}
         className="flex-row items-center bg-gray-100 rounded-xl px-4 py-3 gap-2"
       >
-        <Text className="flex-1 font-bold text-gray-800 text-sm">{unit.title}</Text>
+        <View className="flex-1">
+          <Text className="font-bold text-gray-800 text-sm">{unit.title}</Text>
+          <Text className="text-xs text-gray-500 mt-0.5">{unitDone}/{unitTotal} leçons</Text>
+        </View>
         {open ? <ChevronDown color="#6b7280" size={18} /> : <ChevronRight color="#6b7280" size={18} />}
       </TouchableOpacity>
       {open && (
         <View className="mt-1">
           {(unit.lessons ?? []).map((lesson: any) => {
             const done = completedIds.has(lesson.id);
+            const active = activeLesson?.id === lesson.id;
             return (
               <TouchableOpacity
                 key={lesson.id}
                 onPress={() => onLessonPress(lesson)}
-                className="flex-row items-center bg-white rounded-xl px-4 py-3 mb-1 gap-3"
+                className={`flex-row items-center rounded-xl px-4 py-3 mb-1 gap-3 ${active ? 'bg-blue-50 border border-primary-200' : 'bg-white'}`}
               >
-                {lesson.type === 'video' ? (
-                  <PlayCircle color={done ? '#10b981' : '#0857A6'} size={20} />
-                ) : (
-                  <ClipboardList color={done ? '#10b981' : '#f59e0b'} size={20} />
-                )}
-                <Text className="flex-1 text-gray-800 text-sm" numberOfLines={2}>{lesson.title}</Text>
-                {done && <CheckCircle2 color="#10b981" size={16} />}
-                {!done && lesson.duration && (
-                  <Text className="text-xs text-gray-400">{lesson.duration}min</Text>
-                )}
+                {lesson.type === 'video'
+                  ? <PlayCircle color={done ? '#10b981' : active ? '#0857A6' : '#9ca3af'} size={20} />
+                  : <ClipboardList color={done ? '#10b981' : active ? '#f59e0b' : '#9ca3af'} size={20} />}
+                <Text
+                  className="flex-1 text-sm"
+                  style={{ color: active ? '#0857A6' : '#1f2937', fontWeight: active ? '600' : '400' }}
+                  numberOfLines={2}
+                >
+                  {lesson.title}
+                </Text>
+                {done
+                  ? <CheckCircle2 color="#10b981" size={16} />
+                  : lesson.duration
+                    ? <Text className="text-xs text-gray-400">{lesson.duration}min</Text>
+                    : null}
               </TouchableOpacity>
             );
           })}
@@ -99,9 +114,9 @@ export default function CourseDetailScreen() {
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
 
-  const course = React.useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
+  const course = useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
 
-  const completedIds = React.useMemo(() => {
+  const completedIds = useMemo(() => {
     const ids = new Set<string>();
     Object.entries(progress).forEach(([id, p]: [string, any]) => {
       if (p?.completed) ids.add(id);
@@ -109,8 +124,35 @@ export default function CourseDetailScreen() {
     return ids;
   }, [progress]);
 
+  // Flat list of all lessons for prev/next navigation
+  const allLessons = useMemo(() => {
+    if (!course?.modules) return [];
+    return course.modules.flatMap((u: any) => u?.lessons ?? []);
+  }, [course]);
+
+  const activeIndex = useMemo(() => {
+    if (!activeLesson) return -1;
+    return allLessons.findIndex((l: any) => l.id === activeLesson.id);
+  }, [allLessons, activeLesson]);
+
+  const completedCount = useMemo(() => allLessons.filter((l: any) => completedIds.has(l.id)).length, [allLessons, completedIds]);
+  const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
+
   if (isLoading) return <LoadingState />;
   if (isError || !course) return <ErrorState />;
+
+  function markComplete() {
+    if (!activeLesson) return;
+    updateProgress(activeLesson.id, { completed: true });
+    incrementGuestInteraction();
+    // Auto-advance to next lesson
+    if (activeIndex < allLessons.length - 1) {
+      setActiveLesson(allLessons[activeIndex + 1]);
+    }
+  }
+
+  const isLastLesson = activeIndex === allLessons.length - 1;
+  const isAlreadyDone = activeLesson ? completedIds.has(activeLesson.id) : false;
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
@@ -119,44 +161,117 @@ export default function CourseDetailScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 p-1">
           <ArrowLeft color="#374151" size={22} />
         </TouchableOpacity>
-        <Text className="flex-1 font-bold text-gray-900 text-base" numberOfLines={1}>{course.name}</Text>
+        <View className="flex-1">
+          <Text className="font-bold text-gray-900 text-base" numberOfLines={1}>{course.name}</Text>
+          <Text className="text-xs text-gray-400">{completedCount}/{allLessons.length} leçons</Text>
+        </View>
       </View>
+
+      {/* Course progress bar */}
+      {allLessons.length > 0 && (
+        <View className="bg-white px-4 pb-3">
+          <ProgressBar value={pct} color={course.color ?? '#0857A6'} height={4} />
+        </View>
+      )}
 
       {/* Video player or header banner */}
       {activeLesson?.videoUrl ? (
         <VideoPlayer videoUrl={activeLesson.videoUrl} />
       ) : (
-        <View className="w-full h-28 items-center justify-center" style={{ backgroundColor: (course.color ?? '#0857A6') + '20' }}>
-          <BookOpen color={course.color ?? '#0857A6'} size={48} />
+        <View
+          className="w-full items-center justify-center"
+          style={{ height: activeLesson ? 80 : 120, backgroundColor: (course.color ?? '#0857A6') + '15' }}
+        >
+          {activeLesson
+            ? <Text className="text-gray-500 text-sm">{activeLesson.type === 'video' ? 'Vidéo non disponible' : 'Quiz / Exercice'}</Text>
+            : <BookOpen color={course.color ?? '#0857A6'} size={48} />}
         </View>
       )}
 
-      {/* Active lesson info */}
+      {/* Active lesson info + mark complete */}
       {activeLesson && (
-        <View className="bg-white px-5 py-3 border-b border-gray-100">
+        <View className="bg-white px-5 py-4 border-b border-gray-100">
           <Text className="font-bold text-gray-900 text-base">{activeLesson.title}</Text>
           {activeLesson.objectives ? (
-            <Text className="text-xs text-gray-500 mt-1" numberOfLines={2}>{activeLesson.objectives}</Text>
+            <Text className="text-xs text-gray-500 mt-1 leading-relaxed">{activeLesson.objectives}</Text>
           ) : null}
-          <TouchableOpacity
-            onPress={() => { updateProgress(activeLesson.id, { completed: true }); incrementGuestInteraction(); }}
-            className="mt-2 self-start px-3 py-1.5 bg-emerald-100 rounded-lg"
-          >
-            <Text className="text-emerald-700 text-xs font-semibold">Marquer terminé ✓</Text>
-          </TouchableOpacity>
+          <View className="flex-row gap-3 mt-3">
+            {isAlreadyDone ? (
+              <View className="flex-row items-center gap-2 px-4 py-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
+                <CheckCircle2 color="#10b981" size={16} />
+                <Text className="text-emerald-700 text-sm font-semibold">Terminé</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={markComplete}
+                className="flex-row items-center gap-2 px-4 py-2.5 rounded-xl"
+                style={{ backgroundColor: course.color ?? '#0857A6' }}
+              >
+                <CheckCircle2 color="#fff" size={16} />
+                <Text className="text-white text-sm font-bold">Marquer terminé</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Prev / Next navigation */}
+          <View className="flex-row gap-2 mt-3">
+            <TouchableOpacity
+              onPress={() => activeIndex > 0 && setActiveLesson(allLessons[activeIndex - 1])}
+              disabled={activeIndex <= 0}
+              className={`flex-row items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 ${activeIndex <= 0 ? 'opacity-30' : ''}`}
+            >
+              <ChevronLeft color="#374151" size={16} />
+              <Text className="text-gray-700 text-xs font-medium">Préc.</Text>
+            </TouchableOpacity>
+            <View className="flex-1" />
+            {isLastLesson ? (
+              <View className="flex-row items-center gap-1 px-3 py-2 bg-amber-50 rounded-xl border border-amber-200">
+                <Trophy color="#f59e0b" size={16} />
+                <Text className="text-amber-700 text-xs font-semibold">Dernière leçon</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setActiveLesson(allLessons[activeIndex + 1])}
+                className="flex-row items-center gap-1 px-3 py-2 rounded-xl"
+                style={{ backgroundColor: course.color ?? '#0857A6' }}
+              >
+                <Text className="text-white text-xs font-medium">Suiv.</Text>
+                <ChevronRight color="#fff" size={16} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       )}
 
       {/* Module list */}
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
-        <Text className="text-sm text-gray-500 mb-3">
-          {course.modules?.length ?? 0} unités • {course.videoCount ?? 0} leçons
-        </Text>
+        {!activeLesson && (
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+            <Text className="font-semibold text-gray-900 mb-1">{course.name}</Text>
+            {course.description ? (
+              <Text className="text-sm text-gray-500 leading-relaxed">{course.description}</Text>
+            ) : null}
+            <View className="flex-row items-center gap-3 mt-3 flex-wrap">
+              {course.subject && (
+                <View className="px-3 py-1 rounded-full" style={{ backgroundColor: (course.color ?? '#0857A6') + '18' }}>
+                  <Text className="text-xs font-semibold" style={{ color: course.color ?? '#0857A6' }}>{course.subject}</Text>
+                </View>
+              )}
+              {course.level && (
+                <View className="px-3 py-1 rounded-full bg-gray-100">
+                  <Text className="text-xs font-semibold text-gray-600">{course.level}</Text>
+                </View>
+              )}
+              <Text className="text-xs text-gray-400">{allLessons.length} leçons · {course.modules?.length ?? 0} unités</Text>
+            </View>
+          </View>
+        )}
         {(course.modules ?? []).map((unit: any) => (
           <UnitAccordion
             key={unit.id}
             unit={unit}
             completedIds={completedIds}
+            activeLesson={activeLesson}
             onLessonPress={setActiveLesson}
           />
         ))}

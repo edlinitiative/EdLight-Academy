@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Flame, Target, BookOpen, ClipboardList, Zap, BarChart3, ChevronRight } from 'lucide-react-native';
+import { Flame, Target, BookOpen, BarChart3, ChevronRight, Award } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useCourses } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
@@ -91,7 +91,11 @@ export default function DashboardScreen() {
 
   const firstName = getFirstName(user);
   const greeting = isCreole ? 'Bonjou' : 'Bonjour';
-  const totalQuizzes = Object.values(quizAttempts as Record<string, any[]>).flat().length;
+  const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
+  const totalQuizzes = allAttemptsList.length;
+  const avgScore = totalQuizzes > 0
+    ? Math.round(allAttemptsList.reduce((sum: number, a: any) => sum + (typeof a.score === 'number' ? a.score * 100 : typeof a.percentage === 'number' ? a.percentage : 0), 0) / totalQuizzes)
+    : 0;
   const initials = initialsOf(user);
 
   // Build a courseId → progress map
@@ -103,15 +107,15 @@ export default function DashboardScreen() {
     return m;
   }, [allProgress]);
 
-  // Up to 3 enrolled (or first 3 catalog) courses
+  // Up to 4 enrolled (or first 4 catalog) courses
   const displayCourses = React.useMemo(() => {
     if (!courses) return [];
     if (enrolledCourses.length > 0) {
       return enrolledCourses
-        .slice(0, 3)
+        .slice(0, 4)
         .map((ec: any) => courses.find((c) => c.id === ec.id) ?? ec);
     }
-    return courses.slice(0, 3);
+    return courses.slice(0, 4);
   }, [courses, enrolledCourses]);
 
   // ---------------------------------------------------------------------------
@@ -178,24 +182,30 @@ export default function DashboardScreen() {
         {/* ------------------------------------------------------------------ */}
         {/* KPI strip — overlaps header slightly                                */}
         {/* ------------------------------------------------------------------ */}
-        <View className="flex-row gap-3 px-5 -mt-4 mb-5">
+        <View className="flex-row gap-2 px-5 -mt-4 mb-5">
           <KpiCard
             icon={<Flame color="#ef4444" size={18} />}
             value={streak?.currentStreak ?? 0}
-            label={t('Jours consécutifs', 'Jou d\'afil')}
+            label={t('Série', 'Seri')}
             iconBg="#fef2f2"
           />
           <KpiCard
             icon={<Target color="#0857A6" size={18} />}
             value={totalQuizzes}
-            label={t('Quiz complétés', 'Quiz fini')}
+            label={t('Quiz', 'Quiz')}
             iconBg="#eff6ff"
           />
           <KpiCard
             icon={<BookOpen color="#10b981" size={18} />}
             value={enrolledCourses.length}
-            label={t('Cours inscrits', 'Kou enskri')}
+            label={t('Cours', 'Kou')}
             iconBg="#ecfdf5"
+          />
+          <KpiCard
+            icon={<Award color="#f59e0b" size={18} />}
+            value={avgScore > 0 ? `${avgScore}%` : '—'}
+            label={t('Moy.', 'Moy.')}
+            iconBg="#fffbeb"
           />
         </View>
 
@@ -339,66 +349,6 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Quick actions                                                         */}
-        {/* ------------------------------------------------------------------ */}
-        <View className="px-5">
-          <Text className="text-base font-bold text-gray-900 mb-3">
-            {t('Accès rapide', 'Akè rapid')}
-          </Text>
-          <View className="flex-row gap-3">
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Exams')}
-              activeOpacity={0.85}
-              className="flex-1 rounded-2xl p-4 items-center gap-2"
-              style={{ backgroundColor: '#4338ca' }}
-            >
-              <View
-                className="w-10 h-10 rounded-xl items-center justify-center"
-                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-              >
-                <ClipboardList color="#fff" size={20} />
-              </View>
-              <Text className="text-white font-semibold text-xs text-center">
-                {t('Examens\nBac', 'Egzamen\nBac')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Trivia')}
-              activeOpacity={0.85}
-              className="flex-1 rounded-2xl p-4 items-center gap-2"
-              style={{ backgroundColor: '#d97706' }}
-            >
-              <View
-                className="w-10 h-10 rounded-xl items-center justify-center"
-                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-              >
-                <Zap color="#fff" size={20} />
-              </View>
-              <Text className="text-white font-semibold text-xs text-center">
-                {t('Trivia\nJeux', 'Trivia\nJèt')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Profile')}
-              activeOpacity={0.85}
-              className="flex-1 rounded-2xl p-4 items-center gap-2"
-              style={{ backgroundColor: '#059669' }}
-            >
-              <View
-                className="w-10 h-10 rounded-xl items-center justify-center"
-                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
-              >
-                <BarChart3 color="#fff" size={20} />
-              </View>
-              <Text className="text-white font-semibold text-xs text-center">
-                {t('Mon\nProfil', 'Pwofil\nMwen')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

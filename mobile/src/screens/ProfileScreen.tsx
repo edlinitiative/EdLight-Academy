@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, GraduationCap,
-  ChevronRight, BarChart3, Target, User,
+  BarChart3, Star, Award, CheckCircle2,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
@@ -251,7 +251,7 @@ export default function ProfileScreen() {
           />
           <StatRow
             label={t('Meilleure série', 'Pi bon seri')}
-            value={streak?.longestStreak ?? 0}
+            value={`${streak?.longestStreak ?? 0} jours`}
             icon={<Trophy color="#f59e0b" size={18} />}
           />
           <StatRow
@@ -260,6 +260,40 @@ export default function ProfileScreen() {
             icon={<BarChart3 color="#10b981" size={18} />}
             last
           />
+        </View>
+
+        {/* ── 4b. Achievements / streak milestones ──────────────────────────── */}
+        <View className="bg-white mx-4 rounded-2xl shadow-sm p-4 mb-4">
+          <Text className="font-bold text-gray-900 mb-3">{t('Succès', 'Siksè')}</Text>
+          <View className="flex-row flex-wrap gap-3">
+            {[
+              { label: t('1er jour', '1ye jou'), target: 1, icon: '🌱', color: '#10b981' },
+              { label: t('7 jours', '7 jou'), target: 7, icon: '🔥', color: '#ef4444' },
+              { label: t('30 jours', '30 jou'), target: 30, icon: '⚡', color: '#f59e0b' },
+              { label: t('100 jours', '100 jou'), target: 100, icon: '🏆', color: '#0857A6' },
+              { label: t('10 quiz', '10 quiz'), target: 10, isQuiz: true, icon: '🎯', color: '#8b5cf6' },
+              { label: t('50 quiz', '50 quiz'), target: 50, isQuiz: true, icon: '🧠', color: '#ec4899' },
+            ].map((a) => {
+              const current = a.isQuiz ? totalQuizzes : (streak?.longestStreak ?? 0);
+              const unlocked = current >= a.target;
+              return (
+                <View
+                  key={a.label}
+                  className="items-center gap-1"
+                  style={{ width: '30%' }}
+                >
+                  <View
+                    className="w-14 h-14 rounded-2xl items-center justify-center"
+                    style={{ backgroundColor: unlocked ? a.color + '20' : '#f3f4f6', borderWidth: 1.5, borderColor: unlocked ? a.color : '#e5e7eb' }}
+                  >
+                    <Text style={{ fontSize: 28, opacity: unlocked ? 1 : 0.35 }}>{a.icon}</Text>
+                  </View>
+                  <Text className="text-xs text-center font-medium" style={{ color: unlocked ? a.color : '#9ca3af' }}>{a.label}</Text>
+                  {unlocked && <CheckCircle2 color={a.color} size={12} />}
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         {/* ── 5. Leaderboard section ────────────────────────────────────────── */}
