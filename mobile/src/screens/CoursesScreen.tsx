@@ -132,7 +132,7 @@ export default function CoursesScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
       {/* Header + search */}
       <View className="px-5 pt-5 pb-3 bg-white border-b border-gray-100">
-        <Text className="text-2xl font-bold text-gray-900 mb-3">{t('Cours', 'Kou yo')}</Text>
+        <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5, marginBottom: 12 }}>{t('Cours', 'Kou yo')}</Text>
         <View className="flex-row gap-2">
           <View className="flex-1 flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3">
             <Search color="#9ca3af" size={18} />

@@ -118,7 +118,8 @@ export default function AuthScreen() {
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-white shadow-sm' : ''}`}
+                className={`flex-1 py-2.5 rounded-lg items-center`}
+                style={activeTab === tab ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2 } : {}}
               >
                 <Text className={`font-semibold text-sm ${activeTab === tab ? 'text-primary-600' : 'text-gray-500'}`}>
                   {tab === 'signin' ? 'Connexion' : 'Inscription'}
@@ -184,7 +185,7 @@ export default function AuthScreen() {
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={loading}
-              className={`bg-primary-600 rounded-xl py-4 items-center mt-2 ${loading ? 'opacity-60' : ''}`}
+              className={`bg-primary-600 rounded-2xl py-4 items-center mt-2 ${loading ? 'opacity-60' : ''}`}
             >
               <Text className="text-white font-bold text-base">
                 {loading ? 'Chargement…' : isSignIn ? 'Se connecter' : 'Créer un compte'}
@@ -200,7 +201,7 @@ export default function AuthScreen() {
             <TouchableOpacity
               onPress={() => promptAsync()}
               disabled={loading}
-              className="border border-gray-300 rounded-xl py-3.5 items-center flex-row justify-center gap-3"
+              className="border border-gray-300 rounded-2xl py-3.5 items-center flex-row justify-center gap-3"
             >
               <Text className="text-lg">🇬</Text>
               <Text className="text-gray-700 font-semibold">Continuer avec Google</Text>

@@ -131,7 +131,7 @@ export default function ProfileScreen() {
           </Text>
           <TouchableOpacity
             onPress={toggleAuthModal}
-            className="rounded-xl py-4 px-10 mt-1"
+            className="rounded-2xl py-4 px-10 mt-1"
             style={{ backgroundColor: '#0857A6' }}
             activeOpacity={0.85}
           >
@@ -213,8 +213,7 @@ export default function ProfileScreen() {
         {/* ── 2. XP progress bar card (floats up, overlaps hero) ─────────────── */}
         {profile && level && (
           <View
-            className="bg-white rounded-2xl shadow-md p-4 mx-4"
-            style={{ marginTop: -20, marginBottom: 12 }}
+            style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', marginHorizontal: 16, marginTop: -20, marginBottom: 12, padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 }}
           >
             <View className="flex-row items-center justify-between mb-3">
               <View className="flex-row items-center gap-2">
@@ -242,7 +241,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── 4. Stats card ─────────────────────────────────────────────────── */}
-        <View className="bg-white mx-4 rounded-2xl shadow-sm p-4 mb-4">
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', marginHorizontal: 16, marginBottom: 16, padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
           <Text className="font-bold text-gray-900 mb-1">{t('Statistiques', 'Estatistik')}</Text>
           <StatRow
             label={t('Série consécutive', 'Seri konsekitif')}
@@ -263,7 +262,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* ── 4b. Achievements / streak milestones ──────────────────────────── */}
-        <View className="bg-white mx-4 rounded-2xl shadow-sm p-4 mb-4">
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', marginHorizontal: 16, marginBottom: 16, padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
           <Text className="font-bold text-gray-900 mb-3">{t('Succès', 'Siksè')}</Text>
           <View className="flex-row flex-wrap gap-3">
             {[

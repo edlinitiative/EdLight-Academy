@@ -48,7 +48,7 @@ export default function ReadinessCard() {
 
   if (isLoading) {
     return (
-      <View className="bg-white rounded-2xl p-4 shadow-sm">
+      <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
         <LoadingState message="" />
       </View>
     );
@@ -66,10 +66,10 @@ export default function ReadinessCard() {
   const focusColor = focusSubject ? subjectColor(focusSubject) : '#0857A6';
 
   return (
-    <View className="bg-white rounded-2xl p-4 shadow-sm">
-      <View className="flex-row items-center gap-2 mb-3">
+    <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Target color="#0857A6" size={18} />
-        <Text className="font-bold text-gray-900 text-base">Score de préparation</Text>
+        <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15 }}>Score de préparation</Text>
       </View>
 
       <View className="flex-row items-center gap-5">

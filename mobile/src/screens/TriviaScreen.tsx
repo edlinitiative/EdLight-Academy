@@ -111,63 +111,81 @@ function CategoryPicker({
 }) {
   return (
     <ScrollView
-      className="flex-1"
+      style={{ backgroundColor: '#f4f6fb' }}
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
       <View className="px-4 pt-4 pb-3">
-        <Text className="text-2xl font-bold text-gray-900">
+        <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
           {isCreole ? 'Jèt Trivia' : 'Trivia Games'}
         </Text>
-        <Text className="text-sm text-gray-500 mt-1">
+        <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
           {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
         </Text>
       </View>
 
       <View className="px-4 gap-3">
         {TRIVIA_CATEGORIES.map((cat: any) => {
-          const questionCount = TRIVIA_QUESTIONS[cat.id]?.length ?? 0;
+          const qCount = TRIVIA_QUESTIONS[cat.id]?.length ?? 0;
           return (
             <TouchableOpacity
               key={cat.id}
               onPress={() => onSelect(cat.id)}
               activeOpacity={0.82}
-              className="bg-white rounded-2xl overflow-hidden"
               style={{
-                shadowColor: '#000',
+                backgroundColor: '#ffffff',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#e8edf5',
+                shadowColor: '#0857A6',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.06,
-                shadowRadius: 4,
+                shadowRadius: 6,
                 elevation: 2,
+                overflow: 'hidden',
               }}
             >
-              {/* Colored top accent bar */}
-              <View style={{ height: 4, backgroundColor: cat.color }} />
-
-              <View className="p-4 flex-row items-center gap-3">
+              <View style={{ padding: 16 }}>
                 {/* Icon badge */}
                 <View
-                  className="w-12 h-12 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: cat.color + '22' }}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    backgroundColor: cat.color + '18',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 10,
+                  }}
                 >
                   <Text style={{ fontSize: 24 }}>{cat.icon ?? '🎯'}</Text>
                 </View>
 
-                {/* Text block */}
-                <View className="flex-1">
-                  <Text className="font-bold text-gray-900 text-base leading-tight">
-                    {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-                  </Text>
-                  <Text className="text-xs text-gray-500 mt-0.5 leading-tight" numberOfLines={2}>
-                    {isCreole ? (cat.descriptionHt ?? cat.description) : cat.description}
-                  </Text>
-                  <Text className="text-xs text-gray-400 mt-1">
-                    {questionCount} question{questionCount !== 1 ? 's' : ''}
+                <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>
+                  {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
+                </Text>
+                <Text style={{ color: '#64748b', fontSize: 13, marginTop: 3, lineHeight: 18 }} numberOfLines={2}>
+                  {isCreole ? (cat.descriptionHt ?? cat.description) : cat.description}
+                </Text>
+
+                {/* Question count chip */}
+                <View style={{ alignSelf: 'flex-start', backgroundColor: cat.color + '14', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 }}>
+                  <Text style={{ color: cat.color, fontSize: 11, fontWeight: '600' }}>
+                    {qCount} question{qCount !== 1 ? 's' : ''}
                   </Text>
                 </View>
 
-                <ChevronRight color="#9ca3af" size={18} />
+                {/* Jouer link */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
+                  <Text style={{ color: cat.color, fontSize: 14, fontWeight: '700' }}>
+                    {isCreole ? 'Jwe' : 'Jouer'}
+                  </Text>
+                  <ChevronRight color={cat.color} size={16} />
+                </View>
               </View>
+
+              {/* Bottom accent bar */}
+              <View style={{ height: 3, backgroundColor: cat.color }} />
             </TouchableOpacity>
           );
         })}

@@ -288,7 +288,7 @@ export default function ExamTakeScreen() {
             <Text className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
               Question {currentIdx + 1} / {questions.length}
             </Text>
-            <View className="bg-white rounded-xl p-4 shadow-sm">
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
               <MathText text={q._displayText ?? q.question ?? ''} style={{ fontSize: 15, color: '#111827', lineHeight: 22 }} />
             </View>
           </View>

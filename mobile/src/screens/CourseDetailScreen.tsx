@@ -79,7 +79,7 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress }: {
               <TouchableOpacity
                 key={lesson.id}
                 onPress={() => onLessonPress(lesson)}
-                className={`flex-row items-center rounded-xl px-4 py-3 mb-1 gap-3 ${active ? 'bg-blue-50 border border-primary-200' : 'bg-white'}`}
+                className={`flex-row items-center rounded-xl px-4 py-3 mb-1 gap-3 ${active ? 'bg-blue-50 border border-blue-200' : 'bg-white'}`}
               >
                 {lesson.type === 'video'
                   ? <PlayCircle color={done ? '#10b981' : active ? '#0857A6' : '#9ca3af'} size={20} />
@@ -246,7 +246,7 @@ export default function CourseDetailScreen() {
       {/* Module list */}
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 32 }}>
         {!activeLesson && (
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
             <Text className="font-semibold text-gray-900 mb-1">{course.name}</Text>
             {course.description ? (
               <Text className="text-sm text-gray-500 leading-relaxed">{course.description}</Text>

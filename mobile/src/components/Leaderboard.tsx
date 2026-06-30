@@ -70,19 +70,21 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
 
   const displayList = entries.slice(0, maxRows);
 
+  const cardStyle = { backgroundColor: '#ffffff' as const, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 };
+
   if (isLoading) {
     return (
-      <View className="bg-white rounded-2xl p-4 shadow-sm items-center py-8">
-        <Text className="text-gray-400 text-sm">Chargement…</Text>
+      <View style={{ ...cardStyle, alignItems: 'center', paddingVertical: 32 }}>
+        <Text style={{ color: '#94a3b8', fontSize: 14 }}>Chargement…</Text>
       </View>
     );
   }
 
   if (displayList.length === 0) {
     return (
-      <View className="bg-white rounded-2xl p-4 shadow-sm items-center py-6">
+      <View style={{ ...cardStyle, alignItems: 'center', paddingVertical: 24 }}>
         <Trophy color="#d1d5db" size={32} />
-        <Text className="text-gray-400 text-sm mt-2 text-center">
+        <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 8, textAlign: 'center' }}>
           Aucune entrée cette semaine.{'\n'}Joue au Trivia pour apparaître !
         </Text>
       </View>
@@ -90,7 +92,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   }
 
   return (
-    <View className="bg-white rounded-2xl p-4 shadow-sm">
+    <View style={cardStyle}>
       {!compact && (
         <View className="flex-row items-center gap-2 mb-3">
           <Trophy color="#f59e0b" size={18} />

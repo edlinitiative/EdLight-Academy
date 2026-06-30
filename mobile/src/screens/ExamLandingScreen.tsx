@@ -82,32 +82,40 @@ export default function ExamLandingScreen() {
                 shadowOpacity: 0.07,
                 shadowRadius: 8,
                 elevation: 2,
+                overflow: 'hidden',
+                flexDirection: 'row',
               }}
             >
-              <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {/* Left accent stripe */}
+              <View style={{ width: 4, backgroundColor: level.color }} />
+
+              <View style={{ flex: 1, padding: 16 }}>
+                {/* Icon */}
                 <View
                   style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 14,
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
                     backgroundColor: level.color + '14',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    flexShrink: 0,
+                    marginBottom: 10,
                   }}
                 >
                   <Text style={{ fontSize: 26 }}>{level.emoji}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15 }}>{level.label}</Text>
-                  <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>{level.sublabel}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                    <View style={{ backgroundColor: level.color + '14', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ color: level.color, fontSize: 11, fontWeight: '600' }}>{level.description}</Text>
-                    </View>
-                  </View>
+
+                <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
+                <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{level.description}</Text>
+
+                {/* Explorer link */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
+                  <Text style={{ color: level.color, fontSize: 14, fontWeight: '700' }}>
+                    {t('Explorer', 'Eksplore')}
+                  </Text>
+                  <ChevronRight color={level.color} size={16} />
                 </View>
-                <ChevronRight color="#cbd5e1" size={20} />
               </View>
             </TouchableOpacity>
           ))}
@@ -134,10 +142,10 @@ export default function ExamLandingScreen() {
                   borderWidth: 1,
                   borderColor: '#e8edf5',
                   borderRadius: 99,
-                  shadowColor: '#000',
+                  shadowColor: '#0857A6',
                   shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 3,
+                  shadowOpacity: 0.06,
+                  shadowRadius: 4,
                   elevation: 1,
                 }}
               >

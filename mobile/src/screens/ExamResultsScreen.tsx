@@ -145,7 +145,7 @@ export default function ExamResultsScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Score */}
-        <View className="bg-white mx-4 mt-4 rounded-2xl shadow-sm overflow-hidden">
+        <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, overflow: 'hidden' }}>
           <ScoreGauge percentage={Math.round(percentage)} />
           <View className="px-6 pb-6">
             <ProgressBar
@@ -164,7 +164,7 @@ export default function ExamResultsScreen() {
             { label: 'Incorrectes', value: String(total - correct), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
             { label: 'Score', value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color="#f59e0b" size={20} />, color: '#f59e0b' },
           ].map((stat) => (
-            <View key={stat.label} className="flex-1 bg-white rounded-xl p-3 shadow-sm items-center gap-1">
+            <View key={stat.label} style={{ flex: 1, backgroundColor: '#ffffff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1, alignItems: 'center', gap: 4 }}>
               {stat.icon}
               <Text className="text-lg font-bold text-gray-900">{stat.value}</Text>
               <Text className="text-xs text-gray-500 text-center">{stat.label}</Text>
@@ -174,7 +174,7 @@ export default function ExamResultsScreen() {
 
         {/* Exam info */}
         {result && (
-          <View className="bg-white mx-4 mt-4 rounded-2xl shadow-sm p-4">
+          <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
             <Text className="font-semibold text-gray-900 mb-1">{result.title ?? 'Examen'}</Text>
             {result.subject && <Text className="text-sm text-gray-500">Matière : {result.subject}</Text>}
             {result.level && <Text className="text-sm text-gray-500">Niveau : {result.level}</Text>}
@@ -195,7 +195,8 @@ export default function ExamResultsScreen() {
                 <TouchableOpacity
                   key={val}
                   onPress={() => setReviewFilter(val)}
-                  className={`flex-1 py-2 rounded-lg items-center ${reviewFilter === val ? 'bg-white shadow-sm' : ''}`}
+                  className={`flex-1 py-2 rounded-lg items-center`}
+                  style={reviewFilter === val ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2 } : {}}
                 >
                   <Text className={`text-xs font-semibold ${reviewFilter === val ? 'text-gray-900' : 'text-gray-500'}`}>{label}</Text>
                 </TouchableOpacity>

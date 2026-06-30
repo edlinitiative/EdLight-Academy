@@ -321,9 +321,11 @@ export default function DashboardScreen() {
                           </View>
                         </View>
 
-                        <View className="mt-3">
-                          <ProgressBar value={pct} color={courseColor} height={4} />
-                        </View>
+                        {pct > 0 && (
+                          <View className="mt-3">
+                            <ProgressBar value={pct} color={courseColor} height={4} />
+                          </View>
+                        )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -350,9 +352,7 @@ export default function DashboardScreen() {
               <ChevronRight color="#0857A6" size={14} />
             </TouchableOpacity>
           </View>
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', overflow: 'hidden' }}>
-            <Leaderboard compact maxRows={5} />
-          </View>
+          <Leaderboard compact maxRows={5} />
         </View>
 
       </ScrollView>
