@@ -57,9 +57,9 @@ function ExamCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      className="bg-white rounded-2xl shadow-sm mb-3 overflow-hidden"
+      className="bg-white rounded-2xl mb-3"
+      style={{ shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: '#e8edf5' }}
     >
-      <View style={{ height: 3, backgroundColor: color }} />
       <View className="p-4">
         <View className="flex-row items-start gap-3">
           <View
@@ -194,7 +194,7 @@ export default function ExamBrowserScreen() {
   if (error) return <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
       {/* Header */}
       <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
         <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 p-1">

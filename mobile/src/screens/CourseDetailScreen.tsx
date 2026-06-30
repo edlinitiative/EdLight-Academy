@@ -155,7 +155,7 @@ export default function CourseDetailScreen() {
   const isAlreadyDone = activeLesson ? completedIds.has(activeLesson.id) : false;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
       {/* Back bar */}
       <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
         <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 p-1">

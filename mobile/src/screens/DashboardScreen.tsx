@@ -62,7 +62,7 @@ function KpiCard({
   iconBg: string;
 }) {
   return (
-    <View className="flex-1 bg-white rounded-2xl p-3 shadow-sm items-center gap-1.5">
+    <View className="flex-1 rounded-2xl p-3 items-center gap-1.5" style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
       <View
         className="w-9 h-9 rounded-xl items-center justify-center"
         style={{ backgroundColor: iconBg }}
@@ -135,7 +135,7 @@ export default function DashboardScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -262,13 +262,20 @@ export default function DashboardScreen() {
                   <TouchableOpacity
                     key={course.id}
                     onPress={() => navigation.navigate('Courses')}
-                    activeOpacity={0.85}
-                    className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                    activeOpacity={0.82}
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: '#e8edf5',
+                      shadowColor: '#0857A6',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.06,
+                      shadowRadius: 6,
+                      elevation: 2,
+                    }}
                   >
-                    {/* Colored left border */}
-                    <View className="flex-row">
-                      <View style={{ width: 3, backgroundColor: courseColor }} />
-                      <View className="flex-1 p-4">
+                    <View className="flex-1 p-4">
                         <View className="flex-row items-center gap-3">
                           <View
                             className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
@@ -315,9 +322,8 @@ export default function DashboardScreen() {
                         </View>
 
                         <View className="mt-3">
-                          <ProgressBar value={pct} color={courseColor} height={5} />
+                          <ProgressBar value={pct} color={courseColor} height={4} />
                         </View>
-                      </View>
                     </View>
                   </TouchableOpacity>
                 );
@@ -344,7 +350,7 @@ export default function DashboardScreen() {
               <ChevronRight color="#0857A6" size={14} />
             </TouchableOpacity>
           </View>
-          <View className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', overflow: 'hidden' }}>
             <Leaderboard compact maxRows={5} />
           </View>
         </View>

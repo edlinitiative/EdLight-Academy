@@ -115,7 +115,7 @@ export default function ProfileScreen() {
   // ── Guest state ─────────────────────────────────────────────────────────────
   if (!isAuthenticated || !user) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50">
+      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
         <View className="flex-1 items-center justify-center px-8 gap-5">
           <View className="w-20 h-20 rounded-2xl items-center justify-center" style={{ backgroundColor: '#0857A6' }}>
             <GraduationCap color="#fff" size={36} />
@@ -146,7 +146,7 @@ export default function ProfileScreen() {
   const displayName = user.name || user.displayName || firstName || 'Étudiant';
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
 
         {/* ── 1. Blue hero card ─────────────────────────────────────────────── */}

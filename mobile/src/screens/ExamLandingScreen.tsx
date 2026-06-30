@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { GraduationCap, ChevronRight, BookOpen, FlaskConical, Calculator, TrendingUp } from 'lucide-react-native';
+import { GraduationCap, ChevronRight, BookOpen, TrendingUp } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
@@ -16,7 +16,6 @@ const LEVELS = [
     sublabel: 'Examens officiels du Baccalauréat',
     description: 'Révise les sujets des 5 dernières années.',
     color: '#0857A6',
-    icon: GraduationCap,
     emoji: '🎓',
   },
   {
@@ -25,18 +24,25 @@ const LEVELS = [
     sublabel: 'Examens du cycle fondamental',
     description: 'Prépare les épreuves nationales de 9ème.',
     color: '#10b981',
-    icon: BookOpen,
     emoji: '📚',
   },
   {
     id: 'university',
     label: 'Université',
-    sublabel: 'Examens d\'entrée et concours',
+    sublabel: "Examens d'entrée et concours",
     description: 'Accès aux études supérieures.',
-    color: '#8b5cf6',
-    icon: TrendingUp,
+    color: '#7c3aed',
     emoji: '🏛️',
   },
+];
+
+const SUBJECTS = [
+  { code: 'Mathématiques', color: '#2563eb', emoji: '📐' },
+  { code: 'Physique', color: '#0857A6', emoji: '⚛️' },
+  { code: 'Chimie', color: '#0891b2', emoji: '⚗️' },
+  { code: 'SVT', color: '#10b981', emoji: '🌿' },
+  { code: 'Français', color: '#d97706', emoji: '✍️' },
+  { code: 'Anglais', color: '#7c3aed', emoji: '🌍' },
 ];
 
 export default function ExamLandingScreen() {
@@ -46,68 +52,97 @@ export default function ExamLandingScreen() {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+
         {/* Header */}
-        <View className="px-5 pt-6 pb-4">
-          <Text className="text-2xl font-bold text-gray-900">
-            {t('Examens du Bac', 'Egzamen Bac yo')}
+        <View className="px-5 pt-6 pb-5">
+          <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
+            {t('Examens', 'Egzamen yo')}
           </Text>
-          <Text className="text-gray-500 mt-1">
-            {t('Entraîne-toi avec des sujets réels.', 'Pratike ak vrè sijè.')}
+          <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+            {t('Entraîne-toi avec des sujets officiels réels.', 'Pratike ak vrè sijè ofisyèl.')}
           </Text>
         </View>
 
         {/* Level cards */}
-        <View className="px-5 gap-4">
-          {LEVELS.map((level) => {
-            const Icon = level.icon;
-            return (
-              <TouchableOpacity
-                key={level.id}
-                onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
-                activeOpacity={0.85}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden"
-              >
-                <View className="h-1.5" style={{ backgroundColor: level.color }} />
-                <View className="p-5 flex-row items-center gap-4">
-                  <View
-                    className="w-14 h-14 rounded-2xl items-center justify-center"
-                    style={{ backgroundColor: level.color + '18' }}
-                  >
-                    <Text className="text-3xl">{level.emoji}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="font-bold text-gray-900 text-base">{level.label}</Text>
-                    <Text className="text-gray-500 text-xs mt-0.5">{level.sublabel}</Text>
-                    <Text className="text-gray-400 text-xs mt-1">{level.description}</Text>
-                  </View>
-                  <ChevronRight color="#9ca3af" size={20} />
+        <View className="px-5 gap-3">
+          {LEVELS.map((level) => (
+            <TouchableOpacity
+              key={level.id}
+              onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
+              activeOpacity={0.82}
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#e8edf5',
+                shadowColor: '#0857A6',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.07,
+                shadowRadius: 8,
+                elevation: 2,
+              }}
+            >
+              <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <View
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 14,
+                    backgroundColor: level.color + '14',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text style={{ fontSize: 26 }}>{level.emoji}</Text>
                 </View>
-              </TouchableOpacity>
-            );
-          })}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15 }}>{level.label}</Text>
+                  <Text style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>{level.sublabel}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <View style={{ backgroundColor: level.color + '14', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: level.color, fontSize: 11, fontWeight: '600' }}>{level.description}</Text>
+                    </View>
+                  </View>
+                </View>
+                <ChevronRight color="#cbd5e1" size={20} />
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Subject quick-links */}
         <View className="px-5 mt-6">
-          <Text className="font-bold text-gray-900 mb-3">{t('Par matière', 'Pa matye')}</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {[
-              { code: 'Mathématiques', color: '#4A93DD', emoji: '📐' },
-              { code: 'Physique', color: '#0857A6', emoji: '⚛️' },
-              { code: 'Chimie', color: '#0A66C2', emoji: '⚗️' },
-              { code: 'SVT', color: '#10b981', emoji: '🌿' },
-              { code: 'Français', color: '#f59e0b', emoji: '✍️' },
-              { code: 'Anglais', color: '#8b5cf6', emoji: '🇬🇧' },
-            ].map((subj) => (
+          <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15, marginBottom: 12 }}>
+            {t('Par matière', 'Pa matye')}
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {SUBJECTS.map((subj) => (
               <TouchableOpacity
                 key={subj.code}
                 onPress={() => navigation.navigate('ExamBrowser', { level: 'terminale', subject: subj.code })}
-                className="flex-row items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-full"
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  backgroundColor: '#ffffff',
+                  borderWidth: 1,
+                  borderColor: '#e8edf5',
+                  borderRadius: 99,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 3,
+                  elevation: 1,
+                }}
               >
-                <Text>{subj.emoji}</Text>
-                <Text className="text-sm font-medium text-gray-700">{subj.code}</Text>
+                <Text style={{ fontSize: 14 }}>{subj.emoji}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '500', color: '#374151' }}>{subj.code}</Text>
               </TouchableOpacity>
             ))}
           </View>

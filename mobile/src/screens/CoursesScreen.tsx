@@ -39,9 +39,9 @@ function CourseCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      className="bg-white rounded-2xl shadow-sm overflow-hidden mb-3"
+      className="bg-white rounded-2xl mb-3"
+      style={{ shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: '#e8edf5' }}
     >
-      <View style={{ height: 3, backgroundColor: color }} />
       <View className="p-4">
         <View className="flex-row items-center gap-3">
           <View
@@ -129,7 +129,7 @@ export default function CoursesScreen() {
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
       {/* Header + search */}
       <View className="px-5 pt-5 pb-3 bg-white border-b border-gray-100">
         <Text className="text-2xl font-bold text-gray-900 mb-3">{t('Cours', 'Kou yo')}</Text>

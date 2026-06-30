@@ -56,7 +56,7 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
       <View className="h-1 bg-gray-200">
         <View className="h-1 bg-primary-600" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
       </View>
@@ -102,7 +102,7 @@ function QuizResultScreen({ score, total, onRetry, onBack }: {
 }) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   return (
-    <View className="flex-1 items-center justify-center p-8 bg-gray-50">
+    <View className="flex-1 items-center justify-center p-8" style={{ backgroundColor: "#f4f6fb" }}>
       <Text className="text-6xl mb-4">{pct >= 70 ? '🏆' : pct >= 50 ? '👍' : '💪'}</Text>
       <Text className="text-4xl font-bold text-gray-900 mb-1">{score}/{total}</Text>
       <Text className="text-xl text-primary-600 font-semibold mb-6">{pct}% correct</Text>
@@ -148,7 +148,7 @@ export default function QuizzesScreen() {
 
   if (state === 'taking' && activeQuiz) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top']}>
         <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
           <TouchableOpacity onPress={() => setState('list')} className="p-1 mr-3">
             <ChevronRight color="#374151" size={22} style={{ transform: [{ rotate: '180deg' }] }} />
@@ -162,7 +162,7 @@ export default function QuizzesScreen() {
 
   if (state === 'results' && lastResult) {
     return (
-      <SafeAreaView className="flex-1 bg-gray-50" edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top', 'bottom']}>
         <QuizResultScreen
           score={lastResult.score}
           total={lastResult.total}
@@ -177,7 +177,7 @@ export default function QuizzesScreen() {
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
       <View className="px-5 pt-4 pb-2">
         <Text className="text-2xl font-bold text-gray-900">{t('Quiz', 'Quiz yo')}</Text>
         <Text className="text-gray-500 text-sm mt-1">{quizzes.length} {t('quiz disponibles', 'quiz disponib')}</Text>

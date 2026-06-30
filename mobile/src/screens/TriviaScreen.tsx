@@ -199,7 +199,7 @@ function RoundPicker({
   const totalQuestions = TRIVIA_QUESTIONS[category.id]?.length ?? 0;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
       {/* Mini header */}
       <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
         <TouchableOpacity onPress={onBack} className="p-1 mr-3">
@@ -401,7 +401,7 @@ function QuizPlayer({
   const questionText = isCreole ? q.qHt : q.q;
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
       {/* Top bar: nav circles + score badge */}
       <View className="bg-white border-b border-gray-100 px-4 py-2">
         <View className="flex-row items-center gap-2">
@@ -732,7 +732,7 @@ function TriviaResults({
 
   return (
     <ScrollView
-      className="flex-1 bg-gray-50"
+      className="flex-1" style={{ backgroundColor: "#f4f6fb" }}
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 40, paddingBottom: 48 }}
     >
       <Text style={{ fontSize: 48, marginBottom: 16 }}>{emoji}</Text>
@@ -873,7 +873,7 @@ export default function TriviaScreen() {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top']}>
       {/* Persistent XP + streak header */}
       <TriviaHeader />
 
