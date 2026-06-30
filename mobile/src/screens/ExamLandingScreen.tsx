@@ -103,7 +103,7 @@ export default function ExamLandingScreen() {
             ].map((subj) => (
               <TouchableOpacity
                 key={subj.code}
-                onPress={() => navigation.navigate('ExamBrowser', { level: 'terminale' })}
+                onPress={() => navigation.navigate('ExamBrowser', { level: 'terminale', subject: subj.code })}
                 className="flex-row items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-full"
               >
                 <Text>{subj.emoji}</Text>

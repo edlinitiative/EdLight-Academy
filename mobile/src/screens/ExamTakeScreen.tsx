@@ -217,7 +217,7 @@ export default function ExamTakeScreen() {
         await saveExamResult(user.uid, examId, {
           exam_id: examId,
           level,
-          title: exam?.title ?? '',
+          title: exam?.exam_title ?? exam?.title ?? '',
           subject: normalizeSubject(exam?.subject ?? ''),
           summary: graded.summary,
           answers,
@@ -251,7 +251,7 @@ export default function ExamTakeScreen() {
           <ArrowLeft color="#374151" size={22} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-sm" numberOfLines={1}>{exam?.title ?? 'Examen'}</Text>
+          <Text className="font-bold text-gray-900 text-sm" numberOfLines={1}>{exam?.exam_title ?? exam?.title ?? 'Examen'}</Text>
           <Text className="text-xs text-gray-500">{answeredCount}/{questions.length} réponses</Text>
         </View>
         <TouchableOpacity

@@ -9,6 +9,7 @@ import { Search, BookOpen, ChevronRight, SlidersHorizontal } from 'lucide-react-
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
+import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
@@ -16,31 +17,63 @@ type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
 const SUBJECTS = ['Tout', 'MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVELS = ['Tout', 'NSI', 'NSII', 'NSIII', 'NSIV'];
 
-function CourseCard({ course, onPress }: { course: any; onPress: () => void }) {
-  const lessonCount = course.modules?.reduce((s: number, u: any) => s + (u.lessons?.length ?? 0), 0) ?? course.videoCount ?? 0;
+function countLessons(course: any): number {
+  const units = Array.isArray(course?.modules) ? course.modules : [];
+  return units.reduce((s: number, u: any) => s + (u?.lessons?.length ?? 0), 0) || course?.videoCount || 0;
+}
+
+function CourseCard({
+  course,
+  completedCount,
+  onPress,
+}: {
+  course: any;
+  completedCount: number;
+  onPress: () => void;
+}) {
+  const totalLessons = countLessons(course);
+  const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
+  const color = course.color ?? '#0857A6';
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
       className="bg-white rounded-2xl shadow-sm overflow-hidden mb-3"
     >
-      <View className="h-2" style={{ backgroundColor: course.color ?? '#0857A6' }} />
-      <View className="p-4 flex-row items-center gap-3">
-        <View
-          className="w-12 h-12 rounded-xl items-center justify-center"
-          style={{ backgroundColor: (course.color ?? '#0857A6') + '15' }}
-        >
-          <BookOpen color={course.color ?? '#0857A6'} size={22} />
-        </View>
-        <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-base" numberOfLines={2}>{course.name}</Text>
-          <View className="flex-row items-center gap-2 mt-1">
-            <Text className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{course.subject}</Text>
-            <Text className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{course.level}</Text>
-            <Text className="text-xs text-gray-400">{lessonCount} leçons</Text>
+      <View style={{ height: 3, backgroundColor: color }} />
+      <View className="p-4">
+        <View className="flex-row items-center gap-3">
+          <View
+            className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: color + '18' }}
+          >
+            <BookOpen color={color} size={20} />
+          </View>
+          <View className="flex-1">
+            <Text className="font-bold text-gray-900 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
+            <View className="flex-row items-center gap-2 mt-1 flex-wrap">
+              <View style={{ backgroundColor: color + '18', borderRadius: 100 }} className="px-2 py-0.5">
+                <Text style={{ color, fontSize: 11, fontWeight: '600' }}>{course.subject}</Text>
+              </View>
+              <View style={{ backgroundColor: color + '12', borderRadius: 100 }} className="px-2 py-0.5">
+                <Text style={{ color, fontSize: 11, fontWeight: '600' }}>{course.level}</Text>
+              </View>
+              <Text className="text-xs text-gray-400">{totalLessons} leçons</Text>
+            </View>
+          </View>
+          <View className="items-end flex-shrink-0">
+            <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : '#9ca3af' }}>
+              {pct}%
+            </Text>
+            <ChevronRight color="#9ca3af" size={16} className="mt-1" />
           </View>
         </View>
-        <ChevronRight color="#9ca3af" size={18} />
+        {pct > 0 && (
+          <View className="mt-3">
+            <ProgressBar value={pct} color={color} height={4} />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -48,7 +81,7 @@ function CourseCard({ course, onPress }: { course: any; onPress: () => void }) {
 
 export default function CoursesScreen() {
   const navigation = useNavigation<Nav>();
-  const { language } = useStore();
+  const { language, progress } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -57,6 +90,27 @@ export default function CoursesScreen() {
   const [subject, setSubject] = useState('Tout');
   const [level, setLevel] = useState('Tout');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Build lessonId → completed map from local progress store
+  const completedIds = useMemo(() => {
+    const ids = new Set<string>();
+    Object.entries(progress).forEach(([id, p]: [string, any]) => {
+      if (p?.completed) ids.add(id);
+    });
+    return ids;
+  }, [progress]);
+
+  // Count completed lessons per course (using local progress)
+  function completedForCourse(course: any): number {
+    const units = Array.isArray(course?.modules) ? course.modules : [];
+    let count = 0;
+    for (const u of units) {
+      for (const l of u?.lessons ?? []) {
+        if (completedIds.has(l.id)) count++;
+      }
+    }
+    return count;
+  }
 
   const filtered = useMemo(() => {
     if (!courses) return [];
@@ -76,11 +130,11 @@ export default function CoursesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Search bar */}
-      <View className="px-5 pt-4 pb-3">
+      {/* Header + search */}
+      <View className="px-5 pt-5 pb-3 bg-white border-b border-gray-100">
         <Text className="text-2xl font-bold text-gray-900 mb-3">{t('Cours', 'Kou yo')}</Text>
         <View className="flex-row gap-2">
-          <View className="flex-1 flex-row items-center bg-white border border-gray-200 rounded-xl px-3">
+          <View className="flex-1 flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3">
             <Search color="#9ca3af" size={18} />
             <TextInput
               className="flex-1 py-3 ml-2 text-gray-900 text-sm"
@@ -92,7 +146,7 @@ export default function CoursesScreen() {
           </View>
           <TouchableOpacity
             onPress={() => setShowFilters((v) => !v)}
-            className={`w-11 h-11 rounded-xl items-center justify-center ${showFilters ? 'bg-primary-600' : 'bg-white border border-gray-200'}`}
+            className={`w-11 h-11 rounded-xl items-center justify-center ${showFilters ? 'bg-primary-600' : 'bg-gray-100'}`}
           >
             <SlidersHorizontal color={showFilters ? '#fff' : '#6b7280'} size={18} />
           </TouchableOpacity>
@@ -100,25 +154,25 @@ export default function CoursesScreen() {
 
         {showFilters && (
           <View className="mt-3 gap-2">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {SUBJECTS.map((s) => (
                 <TouchableOpacity
                   key={s}
                   onPress={() => setSubject(s)}
-                  className={`mr-2 px-4 py-2 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-white border border-gray-200'}`}
+                  className={`px-4 py-2 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-gray-100'}`}
                 >
-                  <Text className={`text-sm font-medium ${subject === s ? 'text-white' : 'text-gray-600'}`}>{s}</Text>
+                  <Text className={`text-sm font-semibold ${subject === s ? 'text-white' : 'text-gray-600'}`}>{s}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {LEVELS.map((l) => (
                 <TouchableOpacity
                   key={l}
                   onPress={() => setLevel(l)}
-                  className={`mr-2 px-4 py-2 rounded-full ${level === l ? 'bg-primary-600' : 'bg-white border border-gray-200'}`}
+                  className={`px-4 py-2 rounded-full ${level === l ? 'bg-primary-600' : 'bg-gray-100'}`}
                 >
-                  <Text className={`text-sm font-medium ${level === l ? 'text-white' : 'text-gray-600'}`}>{l}</Text>
+                  <Text className={`text-sm font-semibold ${level === l ? 'text-white' : 'text-gray-600'}`}>{l}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -127,19 +181,21 @@ export default function CoursesScreen() {
       </View>
 
       <ScrollView
-        className="flex-1 px-5"
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
+        className="flex-1 px-5 pt-4"
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#0857A6" />}
         contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
       >
         {filtered.length === 0 ? (
           <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
         ) : (
           <>
-            <Text className="text-sm text-gray-500 mb-3">{filtered.length} {t('cours', 'kou')}</Text>
+            <Text className="text-xs text-gray-400 mb-3">{filtered.length} {t('cours', 'kou')}</Text>
             {filtered.map((course) => (
               <CourseCard
                 key={course.id}
                 course={course}
+                completedCount={completedForCourse(course)}
                 onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
               />
             ))}

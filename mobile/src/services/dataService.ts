@@ -135,8 +135,12 @@ async function writeCachedCourses(data: any[]) {
 }
 
 export async function loadCoursesData(): Promise<any[]> {
-  const firestoreCourses = await fetchCoursesFromFirestore();
-  const courses = transformFirestoreCourses(firestoreCourses);
+  const [firestoreCourses, videosMap, quizzesMap] = await Promise.all([
+    fetchCoursesFromFirestore(),
+    fetchVideosFromFirestore(),
+    fetchQuizzesFromFirestore(),
+  ]);
+  const courses = transformFirestoreCourses(firestoreCourses, videosMap, quizzesMap);
   if (courses.length > 0) await writeCachedCourses(courses);
   return courses;
 }

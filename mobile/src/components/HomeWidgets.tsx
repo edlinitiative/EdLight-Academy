@@ -51,7 +51,7 @@ export default function HomeWidgets({
   const { myRank } = useLeaderboard(25);
 
   return (
-    <View className="flex-row gap-2.5 px-5">
+    <View className="flex-row gap-2.5">
       {/* Row 1 */}
       <View className="flex-1 gap-2.5">
         <Widget

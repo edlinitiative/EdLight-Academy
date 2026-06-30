@@ -37,10 +37,15 @@ export async function fetchSingleExam(examIdParam: string | number): Promise<any
   if (!id) return null;
   try {
     const res = await fetch(`${BASE_URL}/exams/${encodeURIComponent(id)}.json`);
-    if (res.ok) return await res.json();
-    // Try fetching from catalog index fallback
+    if (res.ok) {
+      // Firebase Hosting SPA redirect returns HTML with status 200 when the
+      // file doesn't exist — check content-type before attempting JSON parse.
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('json')) return await res.json();
+    }
+    // Fall back to the full catalog (which has all questions embedded).
     const catalog = await fetchFullCatalog();
-    return catalog.find((e) => String(e.id) === id || String(e.exam_id) === id) ?? null;
+    return catalog.find((e) => String(e.exam_id ?? e.id) === id) ?? null;
   } catch (err) {
     console.warn('[examCatalog] fetchSingleExam error:', err);
     return null;

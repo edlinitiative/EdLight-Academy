@@ -7,7 +7,7 @@ import ExamResultsScreen from '../screens/ExamResultsScreen';
 
 export type ExamsParamList = {
   ExamLanding: undefined;
-  ExamBrowser: { level: string };
+  ExamBrowser: { level: string; subject?: string };
   ExamTake: { level: string; examId: string };
   ExamResults: { level: string; examId: string };
 };
