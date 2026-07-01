@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, GraduationCap,
-  BarChart3, Star, Award, CheckCircle2,
+  BarChart3, Star, Award, CheckCircle2, Target, BookOpen, Bell,
 } from 'lucide-react-native';
+import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { useTrivia } from '../hooks/useTrivia';
@@ -13,6 +15,11 @@ import { getFirstName } from '../utils/shared';
 import ProgressBar from '../components/ProgressBar';
 import ReadinessCard from '../components/ReadinessCard';
 import Leaderboard from '../components/Leaderboard';
+import { scheduleDailyStudyReminder } from '../services/notificationService';
+
+// ── constants ────────────────────────────────────────────────────────────────
+
+const NOTIF_ENABLED_KEY = '@edlight:notifications_enabled';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +73,28 @@ function SettingsTile({
   );
 }
 
+function KpiCard({
+  icon,
+  value,
+  label,
+  iconBg,
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  label: string;
+  iconBg: string;
+}) {
+  return (
+    <View style={{ flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', gap: 6, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: iconBg }}>
+        {icon}
+      </View>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>{value}</Text>
+      <Text style={{ fontSize: 10, color: '#64748b', textAlign: 'center' }}>{label}</Text>
+    </View>
+  );
+}
+
 // ── main screen ───────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
@@ -78,6 +107,7 @@ export default function ProfileScreen() {
     toggleTheme,
     logout,
     quizAttempts,
+    enrolledCourses,
     track,
     toggleAuthModal,
   } = useStore();
@@ -88,11 +118,38 @@ export default function ProfileScreen() {
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
 
-  const totalQuizzes = Object.values(quizAttempts).flat().length;
+  const allAttempts = Object.values(quizAttempts).flat() as { score: number; total: number; date: number }[];
+  const totalQuizzes = allAttempts.length;
   const firstName = getFirstName(user);
 
+  // Average score calculation
+  const avgScore: string = (() => {
+    if (allAttempts.length === 0) return '—';
+    const avg = allAttempts.reduce((sum, a) => sum + (a.total > 0 ? a.score / a.total : 0), 0) / allAttempts.length;
+    return `${Math.round(avg * 100)}%`;
+  })();
+
+  // Notifications toggle state
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(NOTIF_ENABLED_KEY).then((val) => {
+      setNotificationsEnabled(val === 'true');
+    }).catch(() => {});
+  }, []);
+
+  async function handleNotificationToggle(value: boolean) {
+    setNotificationsEnabled(value);
+    await AsyncStorage.setItem(NOTIF_ENABLED_KEY, String(value));
+    if (value) {
+      await scheduleDailyStudyReminder();
+    } else {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
+  }
+
   // Progress value: level.progress is a 0–1 fraction; ProgressBar expects 0–100
-  const progressPct = Math.round((level?.progress ?? 0) * 100);
+  const progressPct = level?.progressPct ?? 0;
 
   async function handleLogout() {
     Alert.alert(
@@ -220,7 +277,6 @@ export default function ProfileScreen() {
                 <Zap color="#f59e0b" size={16} />
                 <Text className="font-bold text-gray-900 text-sm">
                   Niveau {level.level}
-                  {level.label ? ` · ${level.label}` : ''}
                 </Text>
               </View>
               <Text className="text-sm font-semibold text-amber-600">{profile.xp ?? 0} XP</Text>
@@ -235,7 +291,79 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* ── 3. Readiness card ─────────────────────────────────────────────── */}
+        {/* ── 3. Progress Dashboard ("Votre progression") ───────────────────── */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <Text style={{ fontWeight: '700', fontSize: 16, color: '#0f172a', marginBottom: 12 }}>
+            {t('Votre progression', 'Pwogrè ou')}
+          </Text>
+
+          {/* KPI stats row */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <KpiCard
+              icon={<Target color="#0857A6" size={18} />}
+              value={totalQuizzes}
+              label={t('Quiz complétés', 'Quiz fini')}
+              iconBg="#eff6ff"
+            />
+            <KpiCard
+              icon={<Award color="#f59e0b" size={18} />}
+              value={avgScore}
+              label={t('Score moyen', 'Mwayèn')}
+              iconBg="#fffbeb"
+            />
+            <KpiCard
+              icon={<BookOpen color="#10b981" size={18} />}
+              value={enrolledCourses.length}
+              label={t('Cours suivis', 'Kou swivi')}
+              iconBg="#ecfdf5"
+            />
+            <KpiCard
+              icon={<Flame color="#ef4444" size={18} />}
+              value={streak?.currentStreak ?? 0}
+              label={t('Jours série', 'Jou seri')}
+              iconBg="#fef2f2"
+            />
+          </View>
+
+          {/* Achievement badge pills (horizontal scroll) */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }} contentContainerStyle={{ paddingHorizontal: 4, gap: 8, flexDirection: 'row' }}>
+            {[
+              { label: t('1er jour', '1ye jou'), target: 1, icon: '🌱', color: '#10b981', isQuiz: false },
+              { label: t('7 jours', '7 jou'), target: 7, icon: '🔥', color: '#ef4444', isQuiz: false },
+              { label: t('30 jours', '30 jou'), target: 30, icon: '⚡', color: '#f59e0b', isQuiz: false },
+              { label: t('100 jours', '100 jou'), target: 100, icon: '🏆', color: '#0857A6', isQuiz: false },
+              { label: t('10 quiz', '10 quiz'), target: 10, icon: '🎯', color: '#8b5cf6', isQuiz: true },
+              { label: t('50 quiz', '50 quiz'), target: 50, icon: '🧠', color: '#ec4899', isQuiz: true },
+            ].map((a) => {
+              const current = a.isQuiz ? totalQuizzes : (streak?.longestStreak ?? 0);
+              const unlocked = current >= a.target;
+              return (
+                <View
+                  key={a.label}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 999,
+                    backgroundColor: unlocked ? a.color + '18' : '#f3f4f6',
+                    borderWidth: 1,
+                    borderColor: unlocked ? a.color + '60' : '#e5e7eb',
+                  }}
+                >
+                  <Text style={{ fontSize: 14, opacity: unlocked ? 1 : 0.4 }}>{a.icon}</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: unlocked ? a.color : '#9ca3af' }}>
+                    {a.label}
+                  </Text>
+                  {unlocked && <CheckCircle2 color={a.color} size={12} />}
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* ── 3b. Readiness card ────────────────────────────────────────────── */}
         <View className="mx-4 mb-4">
           <ReadinessCard />
         </View>
@@ -319,7 +447,33 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ── 7. Logout button ─────────────────────────────────────────────── */}
+        {/* ── 7. Notifications settings card ───────────────────────────────── */}
+        <View style={{ marginHorizontal: 16, marginBottom: 4 }}>
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eff6ff', marginRight: 12 }}>
+                <Bell color="#0857A6" size={18} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '600', fontSize: 14, color: '#0f172a' }}>
+                  {t('Notifications', 'Notifikasyon')}
+                </Text>
+                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
+                  {t("Rappels d'étude quotidiens", 'Rapèl etid chak jou')}
+                </Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={handleNotificationToggle}
+                trackColor={{ false: '#e2e8f0', true: '#bfdbfe' }}
+                thumbColor={notificationsEnabled ? '#0857A6' : '#94a3b8'}
+                ios_backgroundColor="#e2e8f0"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* ── 8. Logout button ─────────────────────────────────────────────── */}
         <TouchableOpacity
           onPress={handleLogout}
           activeOpacity={0.75}

@@ -14,6 +14,7 @@ import ProgressBar from '../components/ProgressBar';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
 import Leaderboard from '../components/Leaderboard';
+import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
@@ -81,7 +82,7 @@ function KpiCard({
 
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, language, enrolledCourses, quizAttempts } = useStore();
+  const { user, language, enrolledCourses, quizAttempts, lastActivity } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -180,9 +181,18 @@ export default function DashboardScreen() {
         </View>
 
         {/* ------------------------------------------------------------------ */}
-        {/* KPI strip — overlaps header slightly                                */}
+        {/* Resume banner — below header, above KPI strip                        */}
         {/* ------------------------------------------------------------------ */}
-        <View className="flex-row gap-2 px-5 -mt-4 mb-5">
+        {lastActivity ? (
+          <View className="px-5 mb-3" style={{ marginTop: -16 }}>
+            <ResumeBanner />
+          </View>
+        ) : null}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* KPI strip — overlaps header slightly when no banner                  */}
+        {/* ------------------------------------------------------------------ */}
+        <View className="flex-row gap-2 px-5 mb-5" style={lastActivity ? undefined : { marginTop: -16 }}>
           <KpiCard
             icon={<Flame color="#ef4444" size={18} />}
             value={streak?.currentStreak ?? 0}

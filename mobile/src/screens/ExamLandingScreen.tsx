@@ -3,11 +3,19 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { GraduationCap, ChevronRight, BookOpen, TrendingUp } from 'lucide-react-native';
+import { GraduationCap, ChevronRight, BookOpen, TrendingUp, Check } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
+
+const TRACKS = [
+  { code: 'SVT', shortLabel: 'SVT', color: '#10b981' },
+  { code: 'SMP', shortLabel: 'SMP', color: '#3b82f6' },
+  { code: 'SES', shortLabel: 'SES', color: '#f59e0b' },
+  { code: 'LETT', shortLabel: 'LETT', color: '#ec4899' },
+  { code: 'TEC', shortLabel: 'TEC', color: '#8b5cf6' },
+];
 
 const LEVELS = [
   {
@@ -47,9 +55,15 @@ const SUBJECTS = [
 
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
-  const { language } = useStore();
+  const { language, track, setTrack, setOnboardingCompleted } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  function pickTrack(code: string) {
+    setTrack(code);
+    setOnboardingCompleted(true);
+    navigation.navigate('ExamBrowser', { level: 'terminale' });
+  }
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
@@ -68,10 +82,8 @@ export default function ExamLandingScreen() {
         {/* Level cards */}
         <View className="px-5 gap-3">
           {LEVELS.map((level) => (
-            <TouchableOpacity
+            <View
               key={level.id}
-              onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
-              activeOpacity={0.82}
               style={{
                 backgroundColor: '#ffffff',
                 borderRadius: 16,
@@ -83,41 +95,83 @@ export default function ExamLandingScreen() {
                 shadowRadius: 8,
                 elevation: 2,
                 overflow: 'hidden',
-                flexDirection: 'row',
               }}
             >
-              {/* Left accent stripe */}
-              <View style={{ width: 4, backgroundColor: level.color }} />
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
+                activeOpacity={0.82}
+                style={{ flexDirection: 'row' }}
+              >
+                {/* Left accent stripe */}
+                <View style={{ width: 4, backgroundColor: level.color }} />
 
-              <View style={{ flex: 1, padding: 16 }}>
-                {/* Icon */}
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    backgroundColor: level.color + '14',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 10,
-                  }}
-                >
-                  <Text style={{ fontSize: 26 }}>{level.emoji}</Text>
+                <View style={{ flex: 1, padding: 16 }}>
+                  {/* Icon */}
+                  <View
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      backgroundColor: level.color + '14',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 10,
+                    }}
+                  >
+                    <Text style={{ fontSize: 26 }}>{level.emoji}</Text>
+                  </View>
+
+                  <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
+                  <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{level.description}</Text>
+
+                  {/* Explorer link */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
+                    <Text style={{ color: level.color, fontSize: 14, fontWeight: '700' }}>
+                      {t('Explorer', 'Eksplore')}
+                    </Text>
+                    <ChevronRight color={level.color} size={16} />
+                  </View>
                 </View>
+              </TouchableOpacity>
 
-                <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
-                <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{level.description}</Text>
-
-                {/* Explorer link */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                  <Text style={{ color: level.color, fontSize: 14, fontWeight: '700' }}>
-                    {t('Explorer', 'Eksplore')}
+              {/* Track (filière) chips — only for Terminale */}
+              {level.id === 'terminale' && (
+                <View style={{ paddingHorizontal: 16, paddingBottom: 14, paddingTop: 2 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94a3b8', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>
+                    {t('Ma filière', 'Seri mwen')}
                   </Text>
-                  <ChevronRight color={level.color} size={16} />
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {TRACKS.map((tr) => {
+                      const active = track === tr.code;
+                      return (
+                        <TouchableOpacity
+                          key={tr.code}
+                          onPress={() => pickTrack(tr.code)}
+                          activeOpacity={0.75}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 99,
+                            borderWidth: 1.5,
+                            borderColor: active ? tr.color : '#e8edf5',
+                            backgroundColor: active ? tr.color + '14' : '#f8faff',
+                          }}
+                        >
+                          {active && <Check color={tr.color} size={12} />}
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? tr.color : '#64748b' }}>
+                            {tr.shortLabel}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              )}
+            </View>
           ))}
         </View>
 

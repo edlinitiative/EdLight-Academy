@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Search, BookOpen, ChevronRight, SlidersHorizontal } from 'lucide-react-native';
+import { Search, BookOpen, BookMarked, ChevronRight, SlidersHorizontal } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
@@ -186,6 +186,42 @@ export default function CoursesScreen() {
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Banque de Questions banner */}
+        <TouchableOpacity
+          activeOpacity={0.82}
+          onPress={() => navigation.navigate('Quizzes', {})}
+          className="mb-4"
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: '#e8edf5',
+            shadowColor: '#0857A6',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.06,
+            shadowRadius: 6,
+            elevation: 2,
+          }}
+        >
+          <View className="flex-row items-center p-4 gap-3">
+            <View
+              className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: '#7c3aed18' }}
+            >
+              <BookMarked color="#7c3aed" size={20} />
+            </View>
+            <View className="flex-1">
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
+                {t('Banque de Questions', 'Fich Kesyon')}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
+              </Text>
+            </View>
+            <ChevronRight color="#7c3aed" size={20} />
+          </View>
+        </TouchableOpacity>
+
         {filtered.length === 0 ? (
           <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
         ) : (

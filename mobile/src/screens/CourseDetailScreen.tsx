@@ -110,7 +110,7 @@ export default function CourseDetailScreen() {
   const route = useRoute<Route>();
   const { courseId } = route.params;
   const { data: courses, isLoading, isError } = useCourses();
-  const { progress, updateProgress, incrementGuestInteraction } = useStore();
+  const { progress, updateProgress, incrementGuestInteraction, recordActivity } = useStore();
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
 
@@ -140,6 +140,17 @@ export default function CourseDetailScreen() {
 
   if (isLoading) return <LoadingState />;
   if (isError || !course) return <ErrorState />;
+
+  function onLessonPress(lesson: any) {
+    setActiveLesson(lesson);
+    recordActivity({
+      type: 'lesson',
+      path: course!.id,
+      title: lesson.title,
+      subtitle: course!.name,
+      ts: Date.now(),
+    });
+  }
 
   function markComplete() {
     if (!activeLesson) return;
@@ -272,7 +283,7 @@ export default function CourseDetailScreen() {
             unit={unit}
             completedIds={completedIds}
             activeLesson={activeLesson}
-            onLessonPress={setActiveLesson}
+            onLessonPress={onLessonPress}
           />
         ))}
       </ScrollView>

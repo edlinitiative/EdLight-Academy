@@ -87,6 +87,38 @@ function QuestionReviewItem({ question, index, answer }: { question: any; index:
   );
 }
 
+function computeMastery(questions: any[], answers: Record<string, any>) {
+  const groups: Record<string, { correct: number; total: number }> = {};
+  questions.forEach((q, i) => {
+    const section = q.sectionTitle || q.section || 'Général';
+    if (!groups[section]) groups[section] = { correct: 0, total: 0 };
+    groups[section].total++;
+    const given = answers[i]?.given ?? answers[i];
+    const correctAnswer = q.correct_answer ?? q.answer ?? q.solution;
+    const isCorrect = given != null && given !== '' && String(given).toLowerCase() === String(correctAnswer ?? '').toLowerCase();
+    if (isCorrect) groups[section].correct++;
+  });
+  return Object.entries(groups)
+    .map(([section, { correct, total }]) => ({ section, correct, total, pct: Math.round((correct / total) * 100) }))
+    .sort((a, b) => a.pct - b.pct);
+}
+
+function MasteryBar({ section, pct, correct, total }: { section: string; pct: number; correct: number; total: number }) {
+  const color = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', flex: 1 }} numberOfLines={1}>{section}</Text>
+        <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 8, color }}>{pct}%</Text>
+      </View>
+      <View style={{ height: 6, backgroundColor: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+        <View style={{ width: `${pct}%` as any, height: 6, backgroundColor: color, borderRadius: 99 }} />
+      </View>
+      <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{correct}/{total} correctes</Text>
+    </View>
+  );
+}
+
 export default function ExamResultsScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
@@ -171,6 +203,20 @@ export default function ExamResultsScreen() {
             </View>
           ))}
         </View>
+
+        {/* Mastery by section */}
+        {questions.length > 0 && (() => {
+          const mastery = computeMastery(questions, answers);
+          if (mastery.length <= 1) return null;
+          return (
+            <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
+              <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15, marginBottom: 14 }}>Par section</Text>
+              {mastery.map((m) => (
+                <MasteryBar key={m.section} section={m.section} pct={m.pct} correct={m.correct} total={m.total} />
+              ))}
+            </View>
+          );
+        })()}
 
         {/* Exam info */}
         {result && (

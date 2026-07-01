@@ -14,6 +14,7 @@ import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
+import FigureRenderer from '../components/FigureRenderer';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Route = RouteProp<ExamsParamList, 'ExamTake'>;
@@ -122,7 +123,7 @@ export default function ExamTakeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user } = useStore();
+  const { user, recordActivity } = useStore();
 
   const [exam, setExam] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -141,6 +142,16 @@ export default function ExamTakeScreen() {
         setExam(e);
         const qs = flattenQuestions(e) as any[];
         setQuestions(qs);
+        // Record activity so the dashboard can show "Resume where you left off"
+        const subject = e?.subject ? normalizeSubject(e.subject) : undefined;
+        const lvl: string | undefined = level ?? undefined;
+        recordActivity({
+          type: 'exam',
+          path: examId,
+          title: e?.exam_title ?? e?.title ?? e?.name ?? 'Examen',
+          subtitle: subject ?? lvl ?? undefined,
+          ts: Date.now(),
+        });
         // Load draft
         if (user?.uid) {
           const draft = await loadExamAttemptDraft(user.uid, examId);
@@ -290,6 +301,9 @@ export default function ExamTakeScreen() {
             </Text>
             <View style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
               <MathText text={q._displayText ?? q.question ?? ''} style={{ fontSize: 15, color: '#111827', lineHeight: 22 }} />
+              {q.has_figure && q.figure_description ? (
+                <FigureRenderer description={q.figure_description} />
+              ) : null}
             </View>
           </View>
 
