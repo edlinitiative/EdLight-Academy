@@ -107,10 +107,10 @@ const SUBJECT_MAP = {
   éthique: 'Philosophie',
 };
 
-export function normalizeSubject(raw) {
+export function normalizeSubject(raw: string): string {
   if (!raw) return 'Autre';
   const key = raw.trim().toLowerCase();
-  return SUBJECT_MAP[key] || raw.trim();
+  return (SUBJECT_MAP as Record<string, string>)[key] || raw.trim();
 }
 
 // ─── Level normalisation ────────────────────────────────────────────────────
@@ -121,9 +121,9 @@ const LEVEL_MAP = {
   universite: 'Université',
 };
 
-export function normalizeLevel(raw) {
+export function normalizeLevel(raw: string): string {
   if (!raw) return '';
-  return LEVEL_MAP[raw.trim().toLowerCase()] || raw.trim();
+  return (LEVEL_MAP as Record<string, string>)[raw.trim().toLowerCase()] || raw.trim();
 }
 
 // ─── Year normalisation ─────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ const MONTH_LABELS = {
  *   "2016-2022"  →  { year: 2022, session: '' }
  *   "Modèle"  →  { year: 0, session: '' }
  */
-export function normalizeYear(raw) {
+export function normalizeYear(raw: any) {
   const str = String(raw || '').trim();
   if (!str) return { year: 0, session: '' };
 
@@ -167,7 +167,7 @@ export function normalizeYear(raw) {
     new RegExp(`(${MONTH_RE.source})\\s*(\\d{4})`, 'i'),
   );
   if (monthYearMatch) {
-    const month = MONTH_LABELS[monthYearMatch[1].toLowerCase()] || monthYearMatch[1];
+    const month = (MONTH_LABELS as Record<string, string>)[monthYearMatch[1].toLowerCase()] || monthYearMatch[1];
     const yr = parseInt(monthYearMatch[2], 10);
     return { year: yr, session: `${month} ${yr}` };
   }
@@ -263,7 +263,7 @@ const TITLE_NOISE = [
 /**
  * Extract series info (e.g. "SVT, SES, SMP") from a raw exam title.
  */
-function extractSeries(title) {
+function extractSeries(title: string): string {
   // Match patterns like "SÉRIES : (SVT, SES, SMP)" or "SÉRIE : LLA"
   const m = title.match(/S[ÉE]RIES?\s*:?\s*\(?([A-Za-z,/\s-]+)\)?/i);
   if (!m) return '';
@@ -277,7 +277,7 @@ function extractSeries(title) {
 /**
  * Extract session month/year from the raw title string.
  */
-function extractSession(title) {
+function extractSession(title: string): string {
   const m = title.match(
     new RegExp(
       `(?:SESSION\\s+(?:ORDINAIRE|EXTRAORDINAIRE)\\s*)?[-–—]?\\s*(${MONTH_RE.source})\\s*[-–—]?\\s*(\\d{4})`,
@@ -285,7 +285,7 @@ function extractSession(title) {
     ),
   );
   if (!m) return '';
-  const month = MONTH_LABELS[m[1].toLowerCase()] || m[1];
+  const month = (MONTH_LABELS as Record<string, string>)[m[1].toLowerCase()] || m[1];
   return `${month} ${m[2]}`;
 }
 
@@ -317,8 +317,8 @@ const SUBJECT_TITLE_ALIASES = {
 /** Filière codes — never a topic, dropped wherever they appear. */
 const SERIES_TOKENS = new Set(['SVT', 'SMP', 'SES', 'LLA', 'LL', 'LET', 'LA', 'ARTS', 'ALL', 'ES']);
 
-const stripDiacritics = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const topicKey = (tok) => stripDiacritics(String(tok).toLowerCase()).replace(/[^a-z0-9]/g, '');
+const stripDiacritics = (s: any): string => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const topicKey = (tok: any): string => stripDiacritics(String(tok).toLowerCase()).replace(/[^a-z0-9]/g, '');
 
 /**
  * Normalized (lowercased, accent-stripped) words that are pure administrative
@@ -354,7 +354,7 @@ const ANSWER_KEY_CODE_G = /[\s:]+(?:SR|NS)\b/gi;
  * Classify the exam "session type" from the raw title so we can show a clean,
  * human label ("Bac permanent", "Sujet type") when there is no real topic.
  */
-function detectExamType(raw) {
+function detectExamType(raw: string): string {
   const s = stripDiacritics(raw).toUpperCase();
   if (/TEXTE\s+MODELE/.test(s)) return 'modèle';
   if (/REMEDIATION/.test(s)) return 'remédiation';
@@ -366,7 +366,7 @@ function detectExamType(raw) {
 }
 
 /** Is this parenthesised group only filière codes (e.g. "SVT, SMP")? */
-function isSeriesGroup(inner) {
+function isSeriesGroup(inner: any): boolean {
   const toks = String(inner).split(/[\s,/&.-]+/).filter(Boolean);
   return toks.length > 0 && toks.every((t) => SERIES_TOKENS.has(t.toUpperCase()));
 }
@@ -383,7 +383,7 @@ function isSeriesGroup(inner) {
  *      - If topic duplicates the subject, omit it
  *      - If no topic and no extra metadata, use: "[Subject] — Bac [Year]"
  */
-export function examTitleParts(exam) {
+export function examTitleParts(exam: any) {
   const rawTitle = String(exam.exam_title || '').trim();
   const subject = normalizeSubject(exam.subject);
   const { year, session: yearSession } = normalizeYear(exam.year);
@@ -400,7 +400,7 @@ export function examTitleParts(exam) {
   // ── Stage 2: strip every spelling of the subject ──
   // Accent-safe boundaries — a plain `\bÉconomie\b` never matches "ÉCONOMIE"
   // because `\b` doesn't fire next to accented letters.
-  const removeWord = (text, word) => {
+  const removeWord = (text: string, word: any): string => {
     if (!word) return text;
     const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return text.replace(
@@ -410,7 +410,7 @@ export function examTitleParts(exam) {
   };
   cleaned = removeWord(cleaned, subject);
   if (exam.subject) cleaned = removeWord(cleaned, String(exam.subject).trim());
-  for (const re of SUBJECT_TITLE_ALIASES[subject] || []) cleaned = cleaned.replace(re, ' ');
+  for (const re of (SUBJECT_TITLE_ALIASES as Record<string, RegExp[]>)[subject] || []) cleaned = cleaned.replace(re, ' ');
 
   // ── Stage 3: strip residual structured noise (elisions, series, codes, dates) ──
   cleaned = cleaned
@@ -478,7 +478,7 @@ export function examTitleParts(exam) {
  * Compose the canonical one-line title string from structured parts:
  *   "[Subject] — [Topic] · [Series] · [Session|Year]"
  */
-export function composeExamTitle(parts) {
+export function composeExamTitle(parts: any) {
   const { subject, topic, series, session, year, examType } = parts;
   const out = [subject || 'Examen'];
   // Prefer the real topic; otherwise fall back to a clean session-type label
@@ -501,7 +501,7 @@ export function composeExamTitle(parts) {
 }
 
 /** Produce a short, clean one-line exam title (Subject — Topic · Session). */
-export function normalizeExamTitle(exam) {
+export function normalizeExamTitle(exam: any): string {
   return composeExamTitle(examTitleParts(exam));
 }
 
@@ -517,12 +517,12 @@ const EXAM_TYPE_LABELS = {
 };
 
 /** Short label for a session "type" (e.g. "Bac permanent"), or '' if none. */
-export function examTypeLabel(examType) {
-  return EXAM_TYPE_LABELS[examType] || '';
+export function examTypeLabel(examType: any): string {
+  return (EXAM_TYPE_LABELS as Record<string, string>)[examType] || '';
 }
 
 /** "Juillet 2022" → "Session de juillet" (the year is shown separately). */
-export function sessionLabel(session) {
+export function sessionLabel(session: any): string {
   const m = String(session || '').match(/^([A-Za-zÀ-ÿ]+)\s+\d{4}$/);
   if (!m) return '';
   const month = m[1].toLowerCase();
@@ -531,7 +531,7 @@ export function sessionLabel(session) {
 }
 
 /** Bare capitalised month from a session ("mars 2021" → "Mars"), or '' if none. */
-function sessionMonth(session) {
+function sessionMonth(session: any): string {
   const m = String(session || '').match(/^([A-Za-zÀ-ÿ]+)\s+\d{4}$/);
   return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : '';
 }
@@ -544,7 +544,7 @@ function sessionMonth(session) {
  * otherwise a clean session/type label — never a bare year or a generic
  * "Épreuve".
  */
-export function examCardName({ topic, session, examType }) {
+export function examCardName({ topic, session, examType }: { topic: any; session: any; examType: any }) {
   const typeLbl = examTypeLabel(examType);
   if (topic) {
     return { heading: topic, sub: typeLbl || sessionLabel(session) };
@@ -577,8 +577,8 @@ const SUBJECT_COLORS = {
   Mixed: '#787671',
 };
 
-export function subjectColor(subject) {
-  return SUBJECT_COLORS[subject] || '#0A66C2';
+export function subjectColor(subject: any): string {
+  return (SUBJECT_COLORS as Record<string, string>)[subject] || '#0A66C2';
 }
 
 // ─── Question type metadata ─────────────────────────────────────────────────
@@ -595,8 +595,8 @@ export const QUESTION_TYPE_META = {
   unknown: { icon: 'HelpCircle', label: 'Autre', gradable: false },
 };
 
-export function questionTypeMeta(type) {
-  return QUESTION_TYPE_META[type] || QUESTION_TYPE_META.unknown;
+export function questionTypeMeta(type: any) {
+  return (QUESTION_TYPE_META as Record<string, any>)[type] || QUESTION_TYPE_META.unknown;
 }
 
 // ─── Build index ────────────────────────────────────────────────────────────
@@ -606,10 +606,10 @@ export function questionTypeMeta(type) {
  * Enriches each exam object with precomputed fields (_subject, _level, etc.)
  * and returns { exams, levels, subjects, years }.
  */
-export function buildExamIndex(rawExams) {
-  const levelSet = new Set();
-  const subjectSet = new Set();
-  const yearSet = new Set();
+export function buildExamIndex(rawExams: any[]) {
+  const levelSet = new Set<string>();
+  const subjectSet = new Set<string>();
+  const yearSet = new Set<number>();
 
   const exams = rawExams.map((exam, idx) => {
     const subj = normalizeSubject(exam.subject);
@@ -621,7 +621,7 @@ export function buildExamIndex(rawExams) {
 
     let qCount = 0;
     let autoGradable = 0;
-    const typeCounts = {};
+    const typeCounts: Record<string, number> = {};
 
     const sections = exam.sections || [];
     if (sections.length === 0 && exam._questionCount != null) {
@@ -635,7 +635,7 @@ export function buildExamIndex(rawExams) {
           qCount++;
           const t = q.type || 'unknown';
           typeCounts[t] = (typeCounts[t] || 0) + 1;
-          const meta = QUESTION_TYPE_META[t] || QUESTION_TYPE_META.unknown;
+          const meta = (QUESTION_TYPE_META as Record<string, any>)[t] || QUESTION_TYPE_META.unknown;
           if ((meta.gradable && q.correct) || (q.answer_parts && q.answer_parts.length > 0)) autoGradable++;
         }
       }
@@ -678,7 +678,7 @@ export function buildExamIndex(rawExams) {
  * Extract the sub-exercise letter prefix from a question number.
  * "A.1" → "A", "B.3" → "B", "C" → "C", "II.A.2" → "II.A", "5" → null
  */
-function subExerciseGroup(num) {
+function subExerciseGroup(num: any): string | null {
   if (!num) return null;
   const s = String(num).trim();
   // Match leading letter-based prefix: A.1 → A, II.A.2 → II.A, B → B
@@ -700,7 +700,7 @@ function subExerciseGroup(num) {
  *
  * Returns { cleanText, directive, wordPool }
  */
-export function cleanQuestionText(text, number, isFirstInGroup) {
+export function cleanQuestionText(text: any, number: any, isFirstInGroup: any) {
   if (!text) return { cleanText: '', directive: '', wordPool: '' };
 
   let t = text;
@@ -807,7 +807,7 @@ const CONSIGNE_HEADER_RE =
  *
  * Returns { rules: string[], cleanedText: string }.
  */
-export function parseConsignes(text) {
+export function parseConsignes(text: any) {
   if (!text || !text.trim()) return { rules: [], cleanedText: '' };
 
   const trimmed = text.trim();
@@ -885,7 +885,7 @@ export function parseConsignes(text) {
  * Each question gets sectionTitle/sectionInstructions attached,
  * plus cleaned text and sub-exercise grouping metadata.
  */
-export function flattenQuestions(exam) {
+export function flattenQuestions(exam: any) {
   const flat = [];
   for (const sec of exam.sections || []) {
     let prevGroup = null;
@@ -923,13 +923,13 @@ export function flattenQuestions(exam) {
 
 // ─── Exam stats ─────────────────────────────────────────────────────────────
 
-export function examStats(exam) {
+export function examStats(exam: any) {
   let total = 0;
   let gradable = 0;
   for (const sec of exam.sections || []) {
     for (const q of sec.questions || []) {
       total++;
-      const meta = QUESTION_TYPE_META[q.type] || QUESTION_TYPE_META.unknown;
+      const meta = (QUESTION_TYPE_META as Record<string, any>)[q.type] || QUESTION_TYPE_META.unknown;
       // Gradable if: type supports auto-grading with a correct answer,
       // OR question has answer_parts for scaffold grading
       if ((meta.gradable && q.correct) || (q.answer_parts && q.answer_parts.length > 0)) gradable++;
@@ -944,7 +944,7 @@ export function examStats(exam) {
  * Normalize a string for comparison: lowercase, strip accents, collapse whitespace,
  * remove surrounding $ for LaTeX, trim.
  */
-function normalizeAnswer(s) {
+function normalizeAnswer(s: any): string {
   if (!s) return '';
   return s
     .toString()
@@ -971,17 +971,17 @@ const MATH_SUBJECTS_SET = new Set([
  * words of the expected answer (word-subset matching). This handles cases
  * like accepting "Souvnans" for "Lakou Souvnans", or the full phrase.
  */
-function fuzzyTextMatch(user, expected) {
+function fuzzyTextMatch(user: any, expected: any): boolean {
   if (!user || !expected) return false;
-  const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
   const u = norm(user);
   const e = norm(expected);
   // Exact accent-stripped match
   if (u === e) return true;
   // Word-subset: if expected has multiple words, accept if user typed any
   // significant word (length >= 3) that matches a word in expected
-  const expectedWords = e.split(' ').filter(w => w.length >= 3);
-  const userWords = u.split(' ').filter(w => w.length >= 3);
+  const expectedWords = e.split(' ').filter((w: string) => w.length >= 3);
+  const userWords = u.split(' ').filter((w: string) => w.length >= 3);
   if (expectedWords.length > 1 && userWords.length > 0) {
     // Accept if user provided at least one significant matching word
     const matchCount = userWords.filter(uw => expectedWords.some(ew => ew === uw)).length;
@@ -995,7 +995,7 @@ function fuzzyTextMatch(user, expected) {
  * Returns true for exact match, numeric proximity (±1%), CAS equivalence,
  * or (for non-math subjects) fuzzy text match with word-subset support.
  */
-function answerMatches(userVal, expectedAnswer, alternatives = [], options = {}) {
+function answerMatches(userVal: any, expectedAnswer: any, alternatives: any[] = [], options: Record<string, any> = {}) {
   const user = normalizeAnswer(userVal);
   if (!user) return false;
   const isMathSubject = options.subject ? MATH_SUBJECTS_SET.has(options.subject) : true;
@@ -1035,7 +1035,7 @@ function answerMatches(userVal, expectedAnswer, alternatives = [], options = {})
  * single step show the answer "written out with holes" (e.g. `]_, _[ ∪ ]_, _[`)
  * where each hole is its own small input.
  */
-export function parseTemplatedSlots(userVal) {
+export function parseTemplatedSlots(userVal: any) {
   if (typeof userVal !== 'string') return null;
   const t = userVal.trim();
   if (!t.startsWith('{')) return null;
@@ -1047,7 +1047,7 @@ export function parseTemplatedSlots(userVal) {
 }
 
 /** Substitute slot values into a template's `{n}` markers (for display/feedback). */
-export function reconstructTemplate(template, slots = []) {
+export function reconstructTemplate(template: any, slots: any[] = []) {
   if (!template) return '';
   return String(template).replace(/\{(\d+)\}/g, (_, n) => {
     const v = slots[Number(n)];
@@ -1056,22 +1056,22 @@ export function reconstructTemplate(template, slots = []) {
 }
 
 /** Is this answer_part an inline fill-in template (has a template + slot specs)? */
-export function isTemplatedPart(part) {
+export function isTemplatedPart(part: any): boolean {
   return !!(part && part.template && Array.isArray(part.slots) && part.slots.length > 0);
 }
 
 /** Is this answer_part a matrix grid (has a matrix shape + row-major slot specs)? */
-export function isMatrixPart(part) {
+export function isMatrixPart(part: any): boolean {
   return !!(part && part.matrix && Array.isArray(part.slots) && part.slots.length > 0);
 }
 
 /** True for any slot-based blank — inline template OR matrix grid. */
-function isSlotPart(part) {
+function isSlotPart(part: any): boolean {
   return !!(part && Array.isArray(part.slots) && part.slots.length > 0);
 }
 
 /** Rebuild a `\begin{pmatrix}…\end{pmatrix}` string from row-major slot values. */
-export function reconstructMatrix(matrix, slots = []) {
+export function reconstructMatrix(matrix: any, slots: any[] = []) {
   const rows = matrix?.rows || 0;
   const cols = matrix?.cols || 0;
   const lines = [];
@@ -1087,7 +1087,7 @@ export function reconstructMatrix(matrix, slots = []) {
 }
 
 /** Reconstruct a slot-based part's filled value for feedback display. */
-function reconstructSlotValue(part, slots) {
+function reconstructSlotValue(part: any, slots: any) {
   if (part.template) return reconstructTemplate(part.template, slots);
   if (part.matrix) return reconstructMatrix(part.matrix, slots);
   return (slots || []).filter(Boolean).join(', ');
@@ -1097,14 +1097,14 @@ function reconstructSlotValue(part, slots) {
  * Grade each scaffold blank against its answer_parts entry.
  * Returns array of { blankIndex, correct, userValue, expectedAnswer, label }.
  */
-export function gradeScaffoldBlanks(scaffoldValues, answerParts, options = {}) {
-  return (answerParts || []).map((part, i) => {
+export function gradeScaffoldBlanks(scaffoldValues: any, answerParts: any, options: Record<string, any> = {}) {
+  return (answerParts || []).map((part: any, i: any) => {
     const userVal = scaffoldValues[i] || '';
     let isCorrect;
     let displayUser = userVal;
     if (isSlotPart(part)) {
       const userSlots = parseTemplatedSlots(userVal) || [];
-      isCorrect = part.slots.every((s, k) =>
+      isCorrect = part.slots.every((s: any, k: any) =>
         answerMatches(userSlots[k] || '', s.answer, s.alternatives || [], options));
       displayUser = reconstructSlotValue(part, userSlots);
     } else {
@@ -1125,7 +1125,7 @@ export function gradeScaffoldBlanks(scaffoldValues, answerParts, options = {}) {
  * Parse a stored scaffold answer (JSON: {"scaffold":[...]}) into its value
  * array, or null if `userAnswer` is not a scaffold payload.
  */
-export function parseScaffoldAnswer(userAnswer) {
+export function parseScaffoldAnswer(userAnswer: any) {
   if (typeof userAnswer !== 'string') return null;
   const trimmed = userAnswer.trim();
   if (!trimmed.startsWith('{')) return null;
@@ -1147,20 +1147,20 @@ export function parseScaffoldAnswer(userAnswer) {
  * value — this is what lets math/science questions use the interactive
  * fill-in-the-solution flow instead of single-answer string matching.
  */
-export function gradeScaffoldAnswer(question, userAnswer, options = {}) {
+export function gradeScaffoldAnswer(question: any, userAnswer: any, options: Record<string, any> = {}) {
   if (!question.scaffold_text || !question.scaffold_blanks) return null;
   const scaffoldValues = parseScaffoldAnswer(userAnswer);
   if (!scaffoldValues) return null;
 
   const pts = question.points || 1;
-  const filled = scaffoldValues.filter(v => v && String(v).trim());
+  const filled = scaffoldValues.filter((v: any) => v && String(v).trim());
   if (filled.length === 0) {
     return { status: 'unanswered', awarded: 0, maxPoints: pts, ratio: 0 };
   }
 
   if (question.answer_parts && question.answer_parts.length > 0) {
     const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts, options);
-    const correctBlanks = blankResults.filter(r => r.correct).length;
+    const correctBlanks = blankResults.filter((r: any) => r.correct).length;
     const totalBlanks = question.answer_parts.length;
     const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
     const awarded = Math.round(pts * ratio * 100) / 100;
@@ -1183,7 +1183,7 @@ export function gradeScaffoldAnswer(question, userAnswer, options = {}) {
 // ─── Matching-question grading ──────────────────────────────────────────────
 
 const MATCH_SHORT_TOKEN = /^[a-z0-9]{1,3}$/i;
-const matchNorm = (s) => String(s ?? '').trim().toLowerCase();
+const matchNorm = (s: any): string => String(s ?? '').trim().toLowerCase();
 
 /**
  * Read one answer string into a { left, right } pair.
@@ -1191,7 +1191,7 @@ const matchNorm = (s) => String(s ?? '').trim().toLowerCase();
  *   "d", "e- freezing"     → positional (left = position i+1, right = lead token)
  * Returns null when the string is not a letter/number match (e.g. a full word).
  */
-function parseMatchingPair(answer, i) {
+function parseMatchingPair(answer: any, i: number) {
   const a = String(answer ?? '').trim();
   if (!a) return null;
   const two = a.match(/^([a-z0-9]{1,3})\s*[-–—:.)]\s*([a-z0-9]{1,3})$/i);
@@ -1202,23 +1202,23 @@ function parseMatchingPair(answer, i) {
 }
 
 /** Parse a legend entry "a) some text" / "a - text" → { key, text } or null. */
-function parseLegendEntry(entry) {
+function parseLegendEntry(entry: any) {
   const m = String(entry ?? '').match(/^\s*([a-z0-9]{1,3})\s*[-–—:.)]\s*(.+)$/i);
   return m ? { key: matchNorm(m[1]), text: m[2].trim() } : null;
 }
 
 /** Strip a leading "1."/"a)" enumerator and drop boilerplate "Matching pair x". */
-function cleanMatchingLabel(label) {
+function cleanMatchingLabel(label: any): string {
   const t = String(label ?? '').trim();
   if (!t || /^matching\s+pair/i.test(t)) return '';
   return t.replace(/^[a-z0-9]{1,3}\s*[-–—:.)]\s*/i, '').trim();
 }
 
 /** Best-effort left-item texts from a numbered question stem ("1. foo 2. bar"). */
-function parseMatchingLeftFromText(questionText) {
+function parseMatchingLeftFromText(questionText: any) {
   const t = String(questionText ?? '').replace(/\r/g, '');
   const re = /(?:^|\n|\s)(\d{1,2}|[a-z])\s*[-–—.)]\s+/gi;
-  const idxs = [];
+  const idxs: Array<{ key: string; start: number }> = [];
   let m;
   while ((m = re.exec(t)) !== null) idxs.push({ key: matchNorm(m[1]), start: m.index + m[0].length });
   if (idxs.length < 2) return [];
@@ -1236,16 +1236,16 @@ function parseMatchingLeftFromText(questionText) {
  * letter/number matching (free-text tables, grouping tasks, missing key). The
  * null case is what keeps those questions on the manual-review path.
  */
-export function parseMatchingKey(question) {
+export function parseMatchingKey(question: any) {
   if (!question || question.type !== 'matching') return null;
   const parts = Array.isArray(question.answer_parts) ? question.answer_parts : [];
-  let answers = parts.map((p) => String(p?.answer ?? '').trim());
-  let labels = parts.map((p) => String(p?.label ?? '').trim());
+  let answers = parts.map((p: any) => String(p?.answer ?? '').trim());
+  let labels = parts.map((p: any) => String(p?.label ?? '').trim());
 
   // Combined single string "1-f, 2-e, 3-b" → explode (labels no longer align).
   const nonEmpty = answers.filter(Boolean);
   if (nonEmpty.length === 1 && /[,;]/.test(nonEmpty[0]) && /[-–—:)]/.test(nonEmpty[0])) {
-    answers = nonEmpty[0].split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
+    answers = nonEmpty[0].split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean);
     labels = answers.map(() => '');
   }
   if (answers.filter(Boolean).length < 2) return null;
@@ -1266,7 +1266,7 @@ export function parseMatchingKey(question) {
 
   // Right-hand legend: prefer question.options; otherwise the key's own letters.
   const rights = [...new Set(pairs.map((p) => p.right))];
-  const legendText = {};
+  const legendText: Record<string, string> = {};
   const opts = question.options;
   if (opts && typeof opts === 'object' && !Array.isArray(opts)) {
     const keys = Object.keys(opts);
@@ -1291,7 +1291,7 @@ export function parseMatchingKey(question) {
 
   // Left-hand items: answer-part labels → question stem → bare keys.
   const fromText = parseMatchingLeftFromText(question.question);
-  const byKey = {};
+  const byKey: Record<string, string> = {};
   for (const it of fromText) byKey[it.key] = it.text;
   const leftItems = pairs.map((p, i) => {
     let text = cleanMatchingLabel(p.label);
@@ -1300,16 +1300,16 @@ export function parseMatchingKey(question) {
     return { key: p.left, text: text || '' };
   });
 
-  const key = {};
+  const key: Record<string, string> = {};
   for (const p of pairs) key[p.left] = p.right;
   return { pairs: pairs.map((p) => ({ left: p.left, right: p.right })), key, leftItems, rightOptions };
 }
 
 /** Parse a stored matching answer into { left: right } selections, or null. */
-export function parseMatchingSelections(userAnswer) {
+export function parseMatchingSelections(userAnswer: any) {
   if (userAnswer == null) return null;
   if (typeof userAnswer === 'object' && !Array.isArray(userAnswer)) {
-    const out = {};
+    const out: Record<string, string> = {};
     let any = false;
     for (const [k, v] of Object.entries(userAnswer)) {
       const val = matchNorm(v);
@@ -1325,7 +1325,7 @@ export function parseMatchingSelections(userAnswer) {
       if (obj && typeof obj === 'object' && !obj.scaffold) return parseMatchingSelections(obj);
     } catch { /* not JSON */ }
   }
-  const out = {};
+  const out: Record<string, string> = {};
   let any = false;
   for (const seg of s.split(/[,;\n]+/)) {
     const m = seg.trim().match(/^([a-z0-9]{1,3})\s*[-–—:.)]\s*([a-z0-9]{1,3})$/i);
@@ -1339,7 +1339,7 @@ export function parseMatchingSelections(userAnswer) {
  * result { status, awarded, maxPoints, ratio, blankResults } or null when the
  * question is not a clean, auto-gradable matching (caller keeps manual review).
  */
-export function gradeMatchingAnswer(question, userAnswer) {
+export function gradeMatchingAnswer(question: any, userAnswer: any) {
   const parsed = parseMatchingKey(question);
   if (!parsed) return null;
   const pts = question.points || 1;
@@ -1387,9 +1387,9 @@ export function gradeMatchingAnswer(question, userAnswer) {
  * the /api/grade-essay endpoint.  When provided for an essay question the
  * function uses it instead of returning 'manual'.
  */
-export function gradeSingleQuestion(question, userAnswer, preGradedEssay, options = {}) {
+export function gradeSingleQuestion(question: any, userAnswer: any, preGradedEssay: any, options: Record<string, any> = {}) {
   const pts = question.points || 1;
-  const meta = QUESTION_TYPE_META[question.type] || QUESTION_TYPE_META.unknown;
+  const meta = (QUESTION_TYPE_META as Record<string, any>)[question.type] || QUESTION_TYPE_META.unknown;
 
   // No answer
   if (userAnswer == null || userAnswer === '') {
@@ -1468,10 +1468,10 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
         }
       } catch { /* not scaffold JSON */ }
 
-      if (scaffoldValues && scaffoldValues.filter(v => v && v.trim()).length > 0) {
+      if (scaffoldValues && scaffoldValues.filter((v: any) => v && v.trim()).length > 0) {
         if (question.answer_parts && question.answer_parts.length > 0) {
           const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts, options);
-          const correctBlanks = blankResults.filter(r => r.correct).length;
+          const correctBlanks = blankResults.filter((r: any) => r.correct).length;
           const totalBlanks = question.answer_parts.length;
           const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
           const awarded = Math.round(pts * ratio * 100) / 100;
@@ -1482,7 +1482,7 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
             result: { awarded, maxPoints: pts, blankResults },
           };
         }
-        const filled = scaffoldValues.filter(v => v && v.trim());
+        const filled = scaffoldValues.filter((v: any) => v && v.trim());
         if (filled.length === question.scaffold_blanks.length) {
           return {
             question,
@@ -1505,9 +1505,9 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
       if (effectiveUser && effectiveUser.trim()) {
         const allAcceptable = [question.final_answer];
         if (question.answer_parts) {
-          question.answer_parts.forEach(p => {
+          question.answer_parts.forEach((p: any) => {
             if (p.answer) allAcceptable.push(p.answer);
-            (p.alternatives || []).forEach(a => allAcceptable.push(a));
+            (p.alternatives || []).forEach((a: any) => allAcceptable.push(a));
           });
         }
         const isCorrect = answerMatches(effectiveUser, question.final_answer, allAcceptable.slice(1), options);
@@ -1549,7 +1549,7 @@ export function gradeSingleQuestion(question, userAnswer, preGradedEssay, option
  * Accepts optional `options` — { track, subject } for coefficient-weighted scoring.
  * Returns { summary, results }.
  */
-export function gradeExam(questions, answers, preGradedResults = {}, options = {}) {
+export function gradeExam(questions: any, answers: any, preGradedResults: Record<number, any> = {}, options: Record<string, any> = {}) {
   let totalPoints = 0;
   let earnedPoints = 0;
   let correctCount = 0;
@@ -1558,7 +1558,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
   let manualReview = 0;
   let autoGraded = 0;
 
-  const results = questions.map((q, i) => {
+  const results = questions.map((q: any, i: number) => {
     // Use pre-graded result if available (from immediate feedback mode)
     if (preGradedResults[i]) {
       const pre = preGradedResults[i];
@@ -1579,7 +1579,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
     const pts = q.points || 1;
     totalPoints += pts;
 
-    const meta = QUESTION_TYPE_META[q.type] || QUESTION_TYPE_META.unknown;
+    const meta = (QUESTION_TYPE_META as Record<string, any>)[q.type] || QUESTION_TYPE_META.unknown;
 
     // No answer provided
     if (userAnswer == null || userAnswer === '') {
@@ -1655,13 +1655,13 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
           }
         } catch { /* not scaffold JSON */ }
 
-        if (scaffoldValues && scaffoldValues.filter(v => v && v.trim()).length > 0) {
+        if (scaffoldValues && scaffoldValues.filter((v: any) => v && v.trim()).length > 0) {
           autoGraded++;
 
           // If answer_parts exist, grade each blank against them
           if (q.answer_parts && q.answer_parts.length > 0) {
             const blankResults = gradeScaffoldBlanks(scaffoldValues, q.answer_parts, options);
-            const correctBlanks = blankResults.filter(r => r.correct).length;
+            const correctBlanks = blankResults.filter((r: any) => r.correct).length;
             const totalBlanks = q.answer_parts.length;
             const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
             const awarded = Math.round(pts * ratio * 100) / 100;
@@ -1680,7 +1680,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
           }
 
           // No answer_parts — fall back to scaffold-complete (full credit for effort)
-          const filled = scaffoldValues.filter(v => v && v.trim());
+          const filled = scaffoldValues.filter((v: any) => v && v.trim());
           if (filled.length === q.scaffold_blanks.length) {
             correctCount++;
             earnedPoints += pts;
@@ -1705,9 +1705,9 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
         if (effectiveUser && effectiveUser.trim()) {
           const allAcceptable = [q.final_answer];
           if (q.answer_parts) {
-            q.answer_parts.forEach(p => {
+            q.answer_parts.forEach((p: any) => {
               if (p.answer) allAcceptable.push(p.answer);
-              (p.alternatives || []).forEach(a => allAcceptable.push(a));
+              (p.alternatives || []).forEach((a: any) => allAcceptable.push(a));
             });
           }
 
@@ -1756,7 +1756,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
     };
   });
 
-  const summary = {
+  const summary: Record<string, any> = {
     totalPoints,
     earnedPoints,
     correctCount,
@@ -1784,7 +1784,7 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
   return { summary, results };
 }
 
-function checkAnswer(question, userAnswer, options = {}) {
+function checkAnswer(question: any, userAnswer: any, options: Record<string, any> = {}) {
   const correct = (question.correct || '').trim().toLowerCase();
   const user = String(userAnswer).trim().toLowerCase();
 
@@ -1796,12 +1796,12 @@ function checkAnswer(question, userAnswer, options = {}) {
 
     case 'multiple_select': {
       // User answer is JSON array of selected keys, correct_keys is array of correct keys
-      let userKeys = [];
+      let userKeys: string[] = [];
       try {
         const parsed = JSON.parse(String(userAnswer));
-        if (Array.isArray(parsed)) userKeys = parsed.map(k => String(k).trim().toLowerCase()).sort();
+        if (Array.isArray(parsed)) userKeys = parsed.map((k: any) => String(k).trim().toLowerCase()).sort();
       } catch { userKeys = [user]; }
-      const correctKeys = (question.correct_keys || correct.split(',')).map(k => String(k).trim().toLowerCase()).sort();
+      const correctKeys = (question.correct_keys || correct.split(',')).map((k: any) => String(k).trim().toLowerCase()).sort();
       return userKeys.length === correctKeys.length && userKeys.every((k, i) => k === correctKeys[i]);
     }
 
@@ -1851,7 +1851,7 @@ function checkAnswer(question, userAnswer, options = {}) {
       if (casResult.correct) return true;
 
       // Loose text match (ignore accents and extra spaces)
-      const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+      const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
       if (norm(effectiveUser) === norm(correctClean)) return true;
 
       // Word-subset fuzzy match for non-math subjects

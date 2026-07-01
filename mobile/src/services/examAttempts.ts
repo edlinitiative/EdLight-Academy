@@ -7,9 +7,9 @@ import {
 } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity } from './streakService';
 
-function cleanUndefined(obj) {
+function cleanUndefined(obj: any) {
   if (!obj || typeof obj !== 'object') return obj;
-  const out = {};
+  const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
     out[k] = v;
@@ -22,14 +22,14 @@ function hasFirebaseAuth() {
   return !!auth.currentUser;
 }
 
-export async function loadExamAttemptDraft(userId, examId) {
+export async function loadExamAttemptDraft(userId: string, examId: string) {
   if (!userId || !examId || !hasFirebaseAuth()) return null;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data() : null;
 }
 
-export async function saveExamAttemptDraft(userId, examId, draft) {
+export async function saveExamAttemptDraft(userId: string, examId: string, draft: any) {
   if (!userId || !examId || !hasFirebaseAuth()) return;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
 
@@ -43,7 +43,7 @@ export async function saveExamAttemptDraft(userId, examId, draft) {
   await setDoc(ref, payload, { merge: true });
 }
 
-export async function markExamAttemptSubmitted(userId, examId, extra = {}) {
+export async function markExamAttemptSubmitted(userId: string, examId: string, extra: any = {}) {
   if (!userId || !examId || !hasFirebaseAuth()) return;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
   await setDoc(ref, {

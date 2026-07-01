@@ -145,8 +145,8 @@ export const TRACK_COEFFICIENTS = {
  * Get the coefficient for a given subject in a given track.
  * Returns 1 (default) if the subject or track is unknown.
  */
-export function getCoefficient(track, subject) {
-  return TRACK_COEFFICIENTS[track]?.[subject] ?? 1;
+export function getCoefficient(track: string, subject: string) {
+  return (TRACK_COEFFICIENTS as Record<string, Record<string, number>>)[track]?.[subject] ?? 1;
 }
 
 // ─── Universal Subjects ─────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ export const DEFAULT_SUBJECT_ORDER = [
  *     { tracks: ['LET', 'ARTS'], directive: 'Pas de problème.' },
  *   ]
  */
-export function parseTrackDirectives(instructions) {
+export function parseTrackDirectives(instructions: string | null | undefined) {
   if (!instructions) return [];
 
   const directives = [];
@@ -244,7 +244,7 @@ export function parseTrackDirectives(instructions) {
 /**
  * Get the directive for a specific track from parsed directives.
  */
-export function getDirectiveForTrack(directives, trackCode) {
+export function getDirectiveForTrack(directives: any[], trackCode: string) {
   for (const d of directives) {
     if (d.tracks.includes(trackCode)) return d.directive;
   }

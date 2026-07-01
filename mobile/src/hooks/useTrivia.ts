@@ -19,13 +19,13 @@ import {
   setLeaderboardOptIn as svcSetLeaderboardOptIn,
 } from '../services/triviaService';
 
-const triviaKey = (uid) => ['trivia-profile', uid];
+const triviaKey = (uid: string | null) => ['trivia-profile', uid];
 
 export function useTrivia() {
   const user = useStore((s) => s.user);
   const uid = user?.uid ?? null;
   const qc = useQueryClient();
-  const [lastReward, setLastReward] = useState(null);
+  const [lastReward, setLastReward] = useState<any>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: triviaKey(uid),
@@ -39,7 +39,7 @@ export function useTrivia() {
   const daily = getDailyChallengeState(safe);
 
   const recordResult = useCallback(
-    async ({ category, score, total, isDaily }) => {
+    async ({ category, score, total, isDaily }: { category: any; score: number; total: number; isDaily?: boolean }) => {
       if (!uid) {
         // Guest: show what they *would* have earned, but don't persist.
         const reward = {
@@ -61,7 +61,7 @@ export function useTrivia() {
   );
 
   const setLeaderboardOptIn = useCallback(
-    async (opts) => {
+    async (opts: any) => {
       if (!uid) return;
       const updated = await svcSetLeaderboardOptIn(uid, opts);
       if (updated) qc.setQueryData(triviaKey(uid), updated);

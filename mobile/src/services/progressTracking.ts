@@ -40,7 +40,7 @@ import { recordActivity as recordStreakActivity } from './streakService';
 /**
  * Mark a video as watched
  */
-export async function trackVideoProgress(userId, courseId, videoId, watchData) {
+export async function trackVideoProgress(userId: string, courseId: string, videoId: string, watchData: any) {
   if (!userId) return;
   
   try {
@@ -97,7 +97,7 @@ export async function trackVideoProgress(userId, courseId, videoId, watchData) {
 /**
  * Mark a lesson as completed
  */
-export async function markLessonComplete(userId, courseId, lessonId) {
+export async function markLessonComplete(userId: string, courseId: string, lessonId: string) {
   if (!userId) return;
   
   try {
@@ -129,7 +129,7 @@ export async function markLessonComplete(userId, courseId, lessonId) {
 /**
  * Track quiz attempt
  */
-export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
+export async function trackQuizAttempt(userId: string, courseId: string, quizId: string, attemptData: any) {
   if (!userId) return;
   
   try {
@@ -230,7 +230,7 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
 /**
  * Award points to user
  */
-export async function awardPoints(userId, courseId, points, reason) {
+export async function awardPoints(userId: string, courseId: string, points: number, reason: string) {
   if (!userId) return;
 
   try {
@@ -249,7 +249,7 @@ export async function awardPoints(userId, courseId, points, reason) {
  * @param {string} courseId
  * @param {*} previousLastStudyDate - The lastStudyDate from BEFORE the current write (avoids race condition)
  */
-async function updateStreak(userId, courseId, previousLastStudyDate) {
+async function updateStreak(userId: string, courseId: string, previousLastStudyDate: any) {
   try {
     const progressRef = doc(db, 'users', userId, 'progress', courseId);
     const progressDoc = await getDoc(progressRef);
@@ -272,7 +272,7 @@ async function updateStreak(userId, courseId, previousLastStudyDate) {
     }
     
     // Calculate days difference
-    const diffTime = Math.abs(now - lastStudyDate);
+    const diffTime = Math.abs(now.getTime() - (lastStudyDate as any).getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     let currentStreak = data.currentStreak || 1;
@@ -317,7 +317,7 @@ async function updateStreak(userId, courseId, previousLastStudyDate) {
 /**
  * Award badge to user
  */
-export async function awardBadge(userId, courseId, badgeId) {
+export async function awardBadge(userId: string, courseId: string, badgeId: string) {
   if (!userId) return;
   
   try {
@@ -345,7 +345,7 @@ export async function awardBadge(userId, courseId, badgeId) {
         legend_streak: { name: '100 Day Streak', icon: '👑' },
       };
       
-      const badgeInfo = badgeNames[badgeId] || { name: badgeId, icon: '🏅' };
+      const badgeInfo = (badgeNames as Record<string, any>)[badgeId] || { name: badgeId, icon: '🏅' };
       await notifyAchievement(userId, { badgeId, ...badgeInfo });
     }
   } catch (error) {
@@ -356,7 +356,7 @@ export async function awardBadge(userId, courseId, badgeId) {
 /**
  * Check and award achievements
  */
-async function checkAchievements(userId, courseId) {
+async function checkAchievements(userId: string, courseId: string) {
   try {
     const progressRef = doc(db, 'users', userId, 'progress', courseId);
     const progressDoc = await getDoc(progressRef);
@@ -371,9 +371,9 @@ async function checkAchievements(userId, courseId) {
     let totalAttempts = 0;
     let perfectScores = 0;
     
-    Object.values(quizAttempts).forEach(quiz => {
+    Object.values(quizAttempts).forEach((quiz: any) => {
       totalAttempts += quiz.attempts.length;
-      quiz.attempts.forEach(attempt => {
+      quiz.attempts.forEach((attempt: any) => {
         if (attempt.score === attempt.totalQuestions) {
           perfectScores++;
         }
@@ -395,7 +395,7 @@ async function checkAchievements(userId, courseId) {
 /**
  * Get user's progress for a course
  */
-export async function getCourseProgress(userId, courseId) {
+export async function getCourseProgress(userId: string, courseId: string) {
   if (!userId) return null;
   
   try {
@@ -416,14 +416,14 @@ export async function getCourseProgress(userId, courseId) {
 /**
  * Get all progress for a user across all courses
  */
-export async function getAllUserProgress(userId) {
+export async function getAllUserProgress(userId: string) {
   if (!userId) return [];
   
   try {
     const progressCollection = collection(db, 'users', userId, 'progress');
     const snapshot = await getDocs(progressCollection);
     
-    const progress = [];
+    const progress: any[] = [];
     snapshot.forEach(doc => {
       progress.push({
         courseId: doc.id,

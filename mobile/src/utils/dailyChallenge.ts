@@ -11,7 +11,7 @@
  */
 
 /** xfnv1a string hash → 32-bit seed. */
-function hashSeed(str) {
+function hashSeed(str: string): number {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
@@ -21,7 +21,7 @@ function hashSeed(str) {
 }
 
 /** mulberry32 — tiny deterministic PRNG. */
-function mulberry32(seed) {
+function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return function next() {
     a |= 0;
@@ -33,7 +33,7 @@ function mulberry32(seed) {
 }
 
 /** Seeded Fisher–Yates shuffle (does not mutate input). */
-function seededShuffle(arr, rng) {
+function seededShuffle(arr: any[], rng: () => number): any[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
@@ -51,7 +51,7 @@ function seededShuffle(arr, rng) {
  * @param {number} count               — number of questions (default 10)
  * @returns {Array} questions tagged with `__category` for theming
  */
-export function getDailyChallengeQuestions(questionsByCategory: Record<string, any[]> = {}, dateStr, count = 10) {
+export function getDailyChallengeQuestions(questionsByCategory: Record<string, any[]> = {}, dateStr: string, count = 10) {
   const pool = [];
   for (const [catId, list] of Object.entries(questionsByCategory)) {
     for (const q of list || []) {
@@ -65,6 +65,6 @@ export function getDailyChallengeQuestions(questionsByCategory: Record<string, a
 }
 
 /** Stable numeric id for a day's challenge (useful for keys / dedupe). */
-export function dailyChallengeId(dateStr) {
+export function dailyChallengeId(dateStr: string): string {
   return `daily-${dateStr}`;
 }

@@ -18,12 +18,12 @@
  *   • mergeSubjectStats(...sources)                      → [{ subject, pct, attempts }]
  */
 
-function clamp(n, min, max) {
+function clamp(n: number, min: number, max: number) {
   if (typeof n !== 'number' || Number.isNaN(n)) return min;
   return Math.max(min, Math.min(max, n));
 }
 
-function toNumberOrNull(v) {
+function toNumberOrNull(v: any) {
   const n = typeof v === 'string' ? parseFloat(v) : v;
   return typeof n === 'number' && !Number.isNaN(n) ? n : null;
 }
@@ -40,7 +40,7 @@ export const READINESS_BANDS = [
 ];
 
 /** Return the band descriptor for a 0–100 readiness score. */
-export function readinessBand(score) {
+export function readinessBand(score: number) {
   const s = clamp(score, 0, 100);
   let band = READINESS_BANDS[0];
   for (const b of READINESS_BANDS) {
@@ -146,7 +146,7 @@ export function mergeSubjectStats(...sources: Array<Record<string, any> | null |
  *   subjectsTracked: number,
  * }}
  */
-export function computeReadiness({ subjectStats = [], coefficients = {} } = {}) {
+export function computeReadiness({ subjectStats = [] as any[], coefficients = {} as Record<string, number> } = {}) {
   const statsBySubject = new Map();
   for (const s of subjectStats || []) {
     if (!s || !s.subject) continue;

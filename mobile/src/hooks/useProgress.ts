@@ -6,8 +6,8 @@ import { getCurrentUser } from '../services/firebase';
 /**
  * Hook to get and track user's progress for a specific course
  */
-export function useCourseProgress(courseId) {
-  const [progress, setProgress] = useState(null);
+export function useCourseProgress(courseId: string) {
+  const [progress, setProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useStore();
   
@@ -38,7 +38,7 @@ export function useCourseProgress(courseId) {
  * Hook to get all user's progress across all courses
  */
 export function useAllProgress() {
-  const [progress, setProgress] = useState([]);
+  const [progress, setProgress] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useStore();
   
@@ -68,7 +68,7 @@ export function useAllProgress() {
 /**
  * Calculate course completion percentage
  */
-export function calculateCompletionPercentage(progress, totalLessons) {
+export function calculateCompletionPercentage(progress: any, totalLessons: any) {
   if (!progress || !totalLessons) return 0;
   
   const completedCount = progress.completedLessons?.length || 0;
@@ -78,7 +78,7 @@ export function calculateCompletionPercentage(progress, totalLessons) {
 /**
  * Check if a lesson is completed
  */
-export function isLessonCompleted(progress, lessonId) {
+export function isLessonCompleted(progress: any, lessonId: any) {
   if (!progress) return false;
   return progress.completedLessons?.includes(lessonId) || false;
 }
@@ -86,7 +86,7 @@ export function isLessonCompleted(progress, lessonId) {
 /**
  * Get quiz best score
  */
-export function getQuizBestScore(progress, quizId) {
+export function getQuizBestScore(progress: any, quizId: any) {
   if (!progress || !progress.quizAttempts?.[quizId]) return null;
   
   const attempts = progress.quizAttempts[quizId].attempts;
@@ -95,7 +95,7 @@ export function getQuizBestScore(progress, quizId) {
   let bestScore = 0;
   let bestAttempt = null;
   
-  attempts.forEach(attempt => {
+  attempts.forEach((attempt: any) => {
     const percentage = (attempt.score / attempt.totalQuestions) * 100;
     if (percentage > bestScore) {
       bestScore = percentage;
@@ -109,7 +109,7 @@ export function getQuizBestScore(progress, quizId) {
 /**
  * Get total quiz attempts
  */
-export function getQuizAttemptCount(progress, quizId) {
+export function getQuizAttemptCount(progress: any, quizId: any) {
   if (!progress || !progress.quizAttempts?.[quizId]) return 0;
   return progress.quizAttempts[quizId].attempts?.length || 0;
 }

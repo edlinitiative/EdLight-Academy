@@ -47,11 +47,11 @@ export function weekId(date = new Date()) {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
-function entriesRef(id) {
+function entriesRef(id: string) {
   return collection(db, 'leaderboards', id, 'entries');
 }
 
-function entryRef(id, uid) {
+function entryRef(id: string, uid: string) {
   return doc(db, 'leaderboards', id, 'entries', uid);
 }
 
@@ -65,7 +65,7 @@ function entryRef(id, uid) {
  * @param {number} xp    — XP earned in this event (must be ≥ 0)
  * @param {Object} meta  — { displayName, level, school, city }
  */
-export async function addWeeklyXp(uid, xp, meta: any = {}) {
+export async function addWeeklyXp(uid: string, xp: number, meta: any = {}) {
   if (!uid || !xp || xp <= 0) return;
   const id = weekId();
   try {
@@ -92,7 +92,7 @@ export async function addWeeklyXp(uid, xp, meta: any = {}) {
  * Update only the public profile fields of the current week's entry (e.g. after
  * the learner changes their alias or school) without touching XP.
  */
-export async function updateEntryProfile(uid, meta: any = {}) {
+export async function updateEntryProfile(uid: string, meta: any = {}) {
   if (!uid) return;
   const id = weekId();
   try {
@@ -132,7 +132,7 @@ export async function getWeeklyTop(max = 50, id = weekId()) {
 }
 
 /** A single learner's entry for the current week (or null). */
-export async function getUserWeeklyEntry(uid, id = weekId()) {
+export async function getUserWeeklyEntry(uid: string, id = weekId()) {
   if (!uid) return null;
   try {
     const snap = await getDoc(entryRef(id, uid));

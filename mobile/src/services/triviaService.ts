@@ -80,12 +80,12 @@ export function defaultTriviaProfile() {
   };
 }
 
-function profileRef(uid) {
+function profileRef(uid: string) {
   return doc(db, 'users', uid, 'gamification', 'profile');
 }
 
 /** Load the gamification profile (defaults when none exists / offline). */
-export async function loadTriviaProfile(uid) {
+export async function loadTriviaProfile(uid: string) {
   if (!uid) return defaultTriviaProfile();
   try {
     const snap = await getDoc(profileRef(uid));
@@ -106,7 +106,7 @@ export async function loadTriviaProfile(uid) {
 }
 
 /** Daily-challenge status derived from a profile + today's date. */
-export function getDailyChallengeState(profile, today = todayStr()) {
+export function getDailyChallengeState(profile: any, today = todayStr()) {
   const dc = profile?.dailyChallenge;
   const completedToday = !!dc && dc.date === today && !!dc.completed;
   return {
@@ -125,7 +125,7 @@ export function getDailyChallengeState(profile, today = todayStr()) {
  *
  * @returns {{ profile, xpEarned, leveledUp, prevLevel, newLevel }}
  */
-export async function recordTriviaResult(uid, { category, score = 0, total = 0, isDaily = false }) {
+export async function recordTriviaResult(uid: string, { category, score = 0, total = 0, isDaily = false }: { category: any; score: number; total: number; isDaily?: boolean }) {
   if (!uid) {
     const xpEarned = computeXpEarned({ score, total, isDaily });
     return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1 };
@@ -212,7 +212,7 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
  * Opt in/out of the leaderboard and set the public alias / school. When opting
  * in we also seed/refresh this week's entry so the learner shows up immediately.
  */
-export async function setLeaderboardOptIn(uid, { optedIn, displayName, school, city }) {
+export async function setLeaderboardOptIn(uid: string, { optedIn, displayName, school, city }: { optedIn?: boolean; displayName?: string; school?: string; city?: string }) {
   if (!uid) return null;
   try {
     const current = await loadTriviaProfile(uid);

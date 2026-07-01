@@ -55,27 +55,27 @@ export function todayStr() {
 }
 
 /** Parse YYYY-MM-DD to midnight Date object. */
-function parseDate(str) {
+function parseDate(str: string) {
   const [y, m, d] = str.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
 
 /** Number of calendar days between two YYYY-MM-DD strings. */
-function daysBetween(a, b) {
+function daysBetween(a: any, b: any) {
   const msA = parseDate(a).getTime();
   const msB = parseDate(b).getTime();
   return Math.round(Math.abs(msB - msA) / 86_400_000);
 }
 
 /** Trim activeDays to the latest N entries. */
-function trimActiveDays(days, limit = ACTIVE_DAYS_WINDOW) {
+function trimActiveDays(days: any[], limit = ACTIVE_DAYS_WINDOW) {
   const sorted = [...new Set(days)].sort();
   return sorted.slice(-limit);
 }
 
 // ─── Firestore ref helper ───────────────────────────────────────────────────
 
-function streakRef(db, doc, uid) {
+function streakRef(db: any, doc: any, uid: string) {
   return doc(db, 'users', uid, 'streaks', 'global');
 }
 
@@ -85,13 +85,13 @@ function streakRef(db, doc, uid) {
  * Load the user's global streak data.
  * Returns a default object if none exists yet.
  */
-export async function loadStreak(uid) {
+export async function loadStreak(uid: string) {
   if (!uid) return defaultStreak();
   try {
     const { db, doc, getDoc } = await loadFirestore();
     const snap = await getDoc(streakRef(db, doc, uid));
     if (!snap.exists()) return defaultStreak();
-    return { ...defaultStreak(), ...snap.data() };
+    return { ...defaultStreak(), ...(snap.data() as any) };
   } catch (err) {
     console.error('[Streak] loadStreak error:', err);
     return defaultStreak();
@@ -105,7 +105,7 @@ export async function loadStreak(uid) {
  * Returns { streak, newMilestones } where newMilestones is an array of
  * milestone objects the user *just* unlocked (empty if none).
  */
-export async function recordActivity(uid) {
+export async function recordActivity(uid: string) {
   if (!uid) return { streak: defaultStreak(), newMilestones: [] };
 
   const today = todayStr();
@@ -148,7 +148,7 @@ export async function recordActivity(uid) {
     activeDays = trimActiveDays([...activeDays, today]);
 
     // Check milestones
-    const newMilestones = [];
+    const newMilestones: any[] = [];
     for (const m of STREAK_MILESTONES) {
       if (currentStreak >= m.days && !milestones.includes(m.id)) {
         milestones.push(m.id);
@@ -181,7 +181,7 @@ export async function recordActivity(uid) {
  * Award a streak freeze token (e.g. for completing a weekly challenge).
  * Max 2 freezes at a time.
  */
-export async function awardStreakFreeze(uid) {
+export async function awardStreakFreeze(uid: string) {
   if (!uid) return;
   try {
     const { db, doc, setDoc, serverTimestamp } = await loadFirestore();
@@ -197,7 +197,7 @@ export async function awardStreakFreeze(uid) {
  * Build a 7×N grid for the heatmap calendar component.
  * Returns { weeks: [[{date, active, level}]] } for the last `numWeeks` weeks.
  */
-export function buildHeatmapData(activeDays = [], numWeeks = 12) {
+export function buildHeatmapData(activeDays: string[] = [], numWeeks = 12) {
   const activeSet = new Set(activeDays);
   const today = new Date();
   const todayDay = today.getDay(); // 0=Sun
@@ -240,7 +240,7 @@ export function buildHeatmapData(activeDays = [], numWeeks = 12) {
 /**
  * Get the next milestone the user is working towards.
  */
-export function getNextMilestone(currentStreak, unlockedMilestones = []) {
+export function getNextMilestone(currentStreak: number, unlockedMilestones: string[] = []) {
   for (const m of STREAK_MILESTONES) {
     if (!unlockedMilestones.includes(m.id)) {
       return { ...m, remaining: m.days - currentStreak };

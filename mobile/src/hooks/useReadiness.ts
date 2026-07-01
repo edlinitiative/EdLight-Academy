@@ -16,7 +16,7 @@ const BASE_URL = 'https://edlight-academy.web.app';
 export function useReadiness() {
   const { user, track } = useStore();
   const uid = user?.uid ?? null;
-  const coefficients = useMemo(() => TRACK_COEFFICIENTS[track] || {}, [track]);
+  const coefficients = useMemo(() => (track ? (TRACK_COEFFICIENTS as Record<string, any>)[track] : null) || {}, [track]);
 
   const { data: subjectByExamId, isLoading: indexLoading } = useQuery({
     queryKey: ['exam-subject-index'],

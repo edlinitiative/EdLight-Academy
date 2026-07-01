@@ -8,9 +8,9 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-function cleanUndefined(obj) {
+function cleanUndefined(obj: any) {
   if (!obj || typeof obj !== 'object') return obj;
-  const out = {};
+  const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
     out[k] = v;
@@ -23,7 +23,7 @@ function hasFirebaseAuth() {
   return !!auth.currentUser;
 }
 
-export async function saveExamResult(userId, examId, data) {
+export async function saveExamResult(userId: string, examId: string, data: any) {
   if (!userId || !examId || !hasFirebaseAuth()) return;
   const ref = doc(db, 'users', userId, 'examResults', examId);
   await setDoc(ref, cleanUndefined({
@@ -33,7 +33,7 @@ export async function saveExamResult(userId, examId, data) {
   }), { merge: true });
 }
 
-export async function loadExamResult(userId, examId) {
+export async function loadExamResult(userId: string, examId: string) {
   if (!userId || !examId || !hasFirebaseAuth()) return null;
   const ref = doc(db, 'users', userId, 'examResults', examId);
   const snap = await getDoc(ref);
@@ -45,11 +45,11 @@ export async function loadExamResult(userId, examId) {
  * Used to show "already done / best score" badges on the exam browser without
  * re-grading. Returns {} when not signed in.
  */
-export async function loadAllExamResultSummaries(userId) {
+export async function loadAllExamResultSummaries(userId: string) {
   if (!userId || !hasFirebaseAuth()) return {};
   const col = collection(db, 'users', userId, 'examResults');
   const snap = await getDocs(col);
-  const out = {};
+  const out: Record<string, any> = {};
   snap.forEach((d) => {
     const data = d.data() || {};
     out[d.id] = {

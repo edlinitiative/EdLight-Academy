@@ -28,7 +28,7 @@ export default function AuthScreen() {
 
   const [, response, promptAsync] = Google.useAuthRequest({
     // Fill these from app.json / EAS environment
-    expoClientId: '',
+    clientId: '',
     iosClientId: '',
     androidClientId: '',
     webClientId: '',

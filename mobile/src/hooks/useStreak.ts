@@ -35,7 +35,7 @@ export function useStreak() {
   const uid = user?.uid ?? null;
   const qc = useQueryClient();
 
-  const [newMilestones, setNewMilestones] = useState([]);
+  const [newMilestones, setNewMilestones] = useState<any[]>([]);
 
   const { data: streak, isLoading } = useQuery({
     queryKey: STREAK_KEY,

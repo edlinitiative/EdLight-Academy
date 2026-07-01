@@ -44,7 +44,7 @@ function shuffle<T>(arr: T[]): T[] {
  * count=0 → use all questions.
  */
 function prepareQuestions(categoryId: string, count: number): PreparedQuestion[] {
-  const raw: any[] = TRIVIA_QUESTIONS[categoryId] ?? [];
+  const raw: any[] = (TRIVIA_QUESTIONS as Record<string, any[]>)[categoryId] ?? [];
   const pool = shuffle(raw).slice(0, count === 0 ? raw.length : count);
   return pool.map((q: any) => {
     const correctAnswer: string = q.options[q.answer];
@@ -82,7 +82,7 @@ function TriviaHeader() {
         <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
           <View
             className="h-2 bg-amber-400 rounded-full"
-            style={{ width: `${Math.min(100, (level?.progress ?? 0) * 100)}%` }}
+            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%` }}
           />
         </View>
         <Text className="text-xs text-gray-400 font-semibold">
@@ -126,7 +126,7 @@ function CategoryPicker({
 
       <View className="px-4 gap-3">
         {TRIVIA_CATEGORIES.map((cat: any) => {
-          const qCount = TRIVIA_QUESTIONS[cat.id]?.length ?? 0;
+          const qCount = (TRIVIA_QUESTIONS as Record<string, any[]>)[cat.id]?.length ?? 0;
           return (
             <TouchableOpacity
               key={cat.id}
@@ -214,7 +214,7 @@ function RoundPicker({
   onBack: () => void;
   isCreole: boolean;
 }) {
-  const totalQuestions = TRIVIA_QUESTIONS[category.id]?.length ?? 0;
+  const totalQuestions = (TRIVIA_QUESTIONS as Record<string, any[]>)[category.id]?.length ?? 0;
 
   return (
     <View className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>

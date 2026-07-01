@@ -21,7 +21,7 @@
  *   "\\sqrt[3]{8}"             →  "Math.pow(8,1/(3))"
  *   "3\\pi"                    →  "3*Math.PI"
  */
-export function latexToJs(raw) {
+export function latexToJs(raw: any): string | null {
   if (!raw || typeof raw !== 'string') return null;
 
   let s = raw.trim();
@@ -125,7 +125,7 @@ export function latexToJs(raw) {
  * Safely evaluate a JS math expression string to a number.
  * Returns NaN on failure.
  */
-export function safeEvaluate(expr) {
+export function safeEvaluate(expr: any): number {
   if (!expr || typeof expr !== 'string') return NaN;
 
   // Whitelist: only allow digits, operators, parens, dots, commas, and Math.*
@@ -148,7 +148,7 @@ export function safeEvaluate(expr) {
  * Evaluate an expression that might be plain text, a number, or LaTeX.
  * Tries: 1) direct parseFloat  2) LaTeX→JS→eval  3) plain expression eval
  */
-export function evaluateExpression(raw) {
+export function evaluateExpression(raw: any): number {
   if (raw == null) return NaN;
   const s = String(raw).trim();
   if (!s) return NaN;
@@ -185,8 +185,8 @@ export function evaluateExpression(raw) {
  * @param {number} [tolerance=0.001] - Absolute tolerance
  * @returns {{ equivalent: boolean, valueA: number|null, valueB: number|null }}
  */
-export function areExpressionsEquivalent(a, b, tolerance = 0.001) {
-  const result = { equivalent: false, valueA: null, valueB: null };
+export function areExpressionsEquivalent(a: any, b: any, tolerance = 0.001) {
+  const result: { equivalent: boolean; valueA: number | null; valueB: number | null } = { equivalent: false, valueA: null, valueB: null };
 
   const valA = evaluateExpression(a);
   const valB = evaluateExpression(b);
@@ -214,7 +214,7 @@ export function areExpressionsEquivalent(a, b, tolerance = 0.001) {
  * Normalize an answer string for comparison: strip $ delimiters, trim,
  * normalize whitespace, replace comma decimals with dots.
  */
-export function normalizeAnswer(text) {
+export function normalizeAnswer(text: any): string {
   if (!text) return '';
   return String(text)
     .replace(/^\$\$?|\$\$?$/g, '')   // strip $ / $$
@@ -231,7 +231,7 @@ export function normalizeAnswer(text) {
  * Enhanced answer checking: tries text matching first, then CAS equivalence.
  * Returns { correct: boolean, method: string, details: object }
  */
-export function checkWithCAS(userAnswer, correctAnswer) {
+export function checkWithCAS(userAnswer: any, correctAnswer: any) {
   const user = normalizeAnswer(userAnswer);
   const correct = normalizeAnswer(correctAnswer);
 
@@ -241,7 +241,7 @@ export function checkWithCAS(userAnswer, correctAnswer) {
   if (user === correct) return { correct: true, method: 'exact', details: {} };
 
   // 2.  Accent-normalized text match
-  const norm = (s) =>
+  const norm = (s: string) =>
     s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
   if (norm(user) === norm(correct))
     return { correct: true, method: 'normalized', details: {} };
