@@ -44,7 +44,7 @@ function subjectColor(name: string): string {
 }
 
 export default function ReadinessCard() {
-  const { overall, subjects, focus, isLoading } = useReadiness();
+  const { overall, subjects, focus, hasData, isLoading } = useReadiness() as any;
 
   if (isLoading) {
     return (
@@ -55,8 +55,9 @@ export default function ReadinessCard() {
   }
 
   const pct = Math.round(overall ?? 0);
-  const stroke = scoreColor(pct);
-  const dashArray = (pct / 100) * CIRCUMFERENCE;
+  // No exam attempts yet → neutral ring with "—" (PWA behaviour), not a red 0%.
+  const stroke = hasData ? scoreColor(pct) : '#e5e7eb';
+  const dashArray = hasData ? (pct / 100) * CIRCUMFERENCE : 0;
 
   // Top subjects by coefficient weight, descending
   const topSubjects = (subjects || []).slice(0, 5);
@@ -83,23 +84,30 @@ export default function ReadinessCard() {
               stroke="#f0f0f0"
               strokeWidth={14}
             />
-            {/* Progress arc */}
-            <Circle
-              cx={52} cy={52} r={RADIUS}
-              fill="none"
-              stroke={stroke}
-              strokeWidth={14}
-              strokeDasharray={`${dashArray} ${CIRCUMFERENCE}`}
-              strokeLinecap="round"
-              rotation={-90}
-              origin="52, 52"
-            />
+            {/* Progress arc — omitted entirely with no data (a rounded cap at
+                0% would still paint a stray dot on the track) */}
+            {hasData && (
+              <Circle
+                cx={52} cy={52} r={RADIUS}
+                fill="none"
+                stroke={stroke}
+                strokeWidth={14}
+                strokeDasharray={`${dashArray} ${CIRCUMFERENCE}`}
+                strokeLinecap="round"
+                rotation={-90}
+                origin="52, 52"
+              />
+            )}
           </Svg>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>{pct}%</Text>
-            <Text style={{ fontSize: 9, color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              {scoreLabel(pct)}
+            <Text style={{ fontSize: 22, fontWeight: '800', color: hasData ? '#111827' : '#94a3b8' }}>
+              {hasData ? `${pct}%` : '—'}
             </Text>
+            {hasData && (
+              <Text style={{ fontSize: 9, color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {scoreLabel(pct)}
+              </Text>
+            )}
           </View>
         </View>
 

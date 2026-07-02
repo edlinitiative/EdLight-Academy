@@ -117,7 +117,7 @@ function CategoryPicker({
     >
       <View className="px-4 pt-4 pb-3">
         <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
-          {isCreole ? 'Jèt Trivia' : 'Trivia Games'}
+          {isCreole ? 'Jèt Trivia' : 'Jeu Trivia'}
         </Text>
         <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
           {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
@@ -244,7 +244,7 @@ function RoundPicker({
       </View>
 
       <View className="px-4 gap-3">
-        {ROUND_OPTIONS.map((opt) => {
+        {ROUND_OPTIONS.filter((opt) => opt.count === 0 || opt.count <= totalQuestions).map((opt) => {
           const actualCount = opt.count === 0 ? totalQuestions : Math.min(opt.count, totalQuestions);
           const disabled = actualCount === 0;
           return (
@@ -406,9 +406,8 @@ function QuizPlayer({
   };
 
   const handleNext = () => {
-    const newScore = confirmed && selected === q.correctAnswer ? score : score;
     if (idx + 1 >= questions.length) {
-      onFinish(newScore, questions.length);
+      onFinish(score, questions.length);
     } else {
       setIdx((i) => i + 1);
     }

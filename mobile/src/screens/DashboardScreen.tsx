@@ -285,7 +285,8 @@ export default function DashboardScreen() {
                       elevation: 2,
                     }}
                   >
-                    <View className="flex-1 p-4">
+                    {/* No flex-1 here: the card is auto-height, flex-1 collapses it */}
+                    <View className="p-4">
                         <View className="flex-row items-center gap-3">
                           <View
                             className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"

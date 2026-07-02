@@ -192,7 +192,25 @@ export default function ProfileScreen() {
             style={{ backgroundColor: '#0857A6' }}
             activeOpacity={0.85}
           >
-            <Text className="text-white font-bold text-base">{t('Se connecter', 'Konekte')}</Text>
+            <Text className="text-white font-bold text-base">{t('Créer un compte', 'Kreye yon kont')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={toggleAuthModal} activeOpacity={0.85}>
+            <Text className="font-semibold text-base" style={{ color: '#0857A6' }}>
+              {t('Se connecter', 'Konekte')}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Language toggle — guests can switch too (PWA parity) */}
+          <TouchableOpacity
+            onPress={() => setLanguage(isCreole ? 'fr' : 'ht')}
+            className="flex-row items-center gap-2 mt-4 px-4 py-2 rounded-full"
+            style={{ backgroundColor: '#0857A614' }}
+            activeOpacity={0.85}
+          >
+            <Languages color="#0857A6" size={16} />
+            <Text className="text-sm font-medium" style={{ color: '#0857A6' }}>
+              {isCreole ? 'Français' : 'Kreyòl Ayisyen'}
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

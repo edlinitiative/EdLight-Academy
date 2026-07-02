@@ -8,7 +8,7 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, ChevronLeft, ChevronRight, Send } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, gradeExam, normalizeSubject } from '../utils/examUtils';
+import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
@@ -29,7 +29,7 @@ function QuestionNav({ current, total, answers, onGoto }: {
   onGoto: (i: number) => void;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4 py-2">
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4 py-2" style={{ flexGrow: 0 }}>
       {Array.from({ length: total }, (_, i) => {
         const answered = answers[i] != null && answers[i] !== '';
         const active = i === current;
@@ -262,7 +262,7 @@ export default function ExamTakeScreen() {
           <ArrowLeft color="#374151" size={22} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-sm" numberOfLines={1}>{exam?.exam_title ?? exam?.title ?? 'Examen'}</Text>
+          <Text className="font-bold text-gray-900 text-sm" numberOfLines={1}>{exam ? normalizeExamTitle(exam) : 'Examen'}</Text>
           <Text className="text-xs text-gray-500">{answeredCount}/{questions.length} réponses</Text>
         </View>
         <TouchableOpacity

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Platform,
+  View, Text, ScrollView, TouchableOpacity, Platform, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -29,20 +29,57 @@ function extractYouTubeId(url: string): string | null {
 }
 
 function VideoPlayer({ videoUrl }: { videoUrl: string }) {
+  const [failed, setFailed] = useState(false);
   const ytId = extractYouTubeId(videoUrl);
   const embedUrl = ytId
     ? `https://www.youtube.com/embed/${ytId}?playsinline=1`
     : videoUrl;
 
+  // Embed via an HTML shell with baseUrl set to the web app's origin: many
+  // course videos are embed-restricted by domain, and YouTube rejects players
+  // with no/unknown referrer ("Error 153"). WKWebView ignores custom Referer
+  // headers, but baseUrl makes the iframe's parent document — and therefore
+  // the referrer YouTube sees — the EdLight origin, same as the PWA.
+  const html = `<!doctype html><html><head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>html,body{margin:0;padding:0;background:#000;height:100%;overflow:hidden}</style>
+    </head><body>
+    <iframe src="${embedUrl}" style="position:absolute;inset:0;width:100%;height:100%;border:0"
+      allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+    </body></html>`;
+
+  if (failed) {
+    return (
+      <View
+        className="w-full items-center justify-center gap-2"
+        style={{ aspectRatio: 16 / 9, backgroundColor: '#111827' }}
+      >
+        <PlayCircle color="#9ca3af" size={36} />
+        <Text className="text-gray-400 text-xs">Vidéo indisponible pour le moment</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="w-full bg-black" style={{ aspectRatio: 16 / 9 }}>
       <WebView
-        source={{ uri: embedUrl }}
+        source={{ html, baseUrl: 'https://edlight-academy.web.app' }}
         allowsFullscreenVideo
         mediaPlaybackRequiresUserAction={false}
-        className="flex-1"
+        // WebView needs a real style — className is not applied to native views
+        // from react-native-webview, which left the player blank.
+        style={{ flex: 1, backgroundColor: '#000000' }}
+        containerStyle={{ flex: 1 }}
         originWhitelist={['*']}
         javaScriptEnabled
+        startInLoadingState
+        renderLoading={() => (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000' }}>
+            <ActivityIndicator color="#ffffff" />
+          </View>
+        )}
+        onError={() => setFailed(true)}
+        onHttpError={() => setFailed(true)}
       />
     </View>
   );
