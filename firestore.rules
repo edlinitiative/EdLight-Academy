@@ -88,12 +88,13 @@ service cloud.firestore {
     }
 
     // Weekly XP leaderboard (leaderboards/{weekId}/entries/{uid}).
-    // Anyone signed-in can read the board; a user may only write their OWN entry
-    // (document id must equal their uid, and the payload's uid must match).
-    // XP is client-reported for this MVP — add a Cloud Function validator later
-    // if abuse appears.
+    // The board is public — entries are opt-in and only contain a chosen
+    // display alias, so guests can browse it (web + mobile). A user may only
+    // write their OWN entry (document id must equal their uid, and the
+    // payload's uid must match). XP is client-reported for this MVP — add a
+    // Cloud Function validator later if abuse appears.
     match /leaderboards/{periodId}/entries/{entryId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create, update: if request.auth != null
                             && request.auth.uid == entryId
                             && request.resource.data.uid == entryId;

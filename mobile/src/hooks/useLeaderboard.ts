@@ -11,10 +11,6 @@ export function useLeaderboard(max = 25) {
     queryKey: ['leaderboard-weekly', id, max],
     queryFn: () => getWeeklyTop(max, id),
     staleTime: 2 * 60 * 1000,
-    // Firestore rules require auth to read the board — skip the query for
-    // guests so we don't spam permission-denied errors (they see the same
-    // empty state either way, matching the PWA).
-    enabled: !!uid,
   });
 
   const list = entries || [];

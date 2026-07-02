@@ -61,3 +61,7 @@ yarn-error.log*
 # Python
 __pycache__/
 *.py[cod]
+
+# Firebase admin keys — never commit
+*firebase-adminsdk*.json
+*serviceaccount*.json
