@@ -31,6 +31,7 @@ const StudyPlan = lazyWithRetry(() => import('./pages/StudyPlan'));
 const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
 const Profile = lazyWithRetry(() => import('./pages/Profile'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
+const FigureEmbed = lazyWithRetry(() => import('./pages/FigureEmbed'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -75,6 +76,9 @@ export default function App() {
                 <Route path="profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
+
+              {/* Chrome-free figure embed for the mobile app's WebView */}
+              <Route path="/figure-embed" element={<FigureEmbed />} />
 
               {/* Admin routes — own layout with dedicated navbar */}
               <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>

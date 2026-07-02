@@ -14,7 +14,9 @@ import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
-import FigureRenderer from '../components/FigureRenderer';
+import ExamFigure from '../components/ExamFigure';
+import ExamAnswerInput, { WordCountAnswer, looksMathy } from '../components/ExamAnswerInput';
+import ScaffoldAnswer, { usesScaffold, scaffoldNeedsMath, MATH_SUBJECTS } from '../components/ScaffoldAnswer';
 import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import ExamSectionContext from '../components/ExamSectionContext';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -434,6 +436,9 @@ export default function ExamTakeScreen() {
     }
   }
 
+  // Normalized subject drives the scaffold / math-input routing (PWA parity).
+  const subject = useMemo(() => normalizeSubject(exam?.subject ?? ''), [exam?.subject]);
+
   const sectionSummary: ExamSectionSummary[] = useMemo(() => {
     if (!exam) return [];
     return (exam.sections ?? []).map((sec: any, i: number) => ({
@@ -496,6 +501,8 @@ export default function ExamTakeScreen() {
   const progress = Math.round((answeredCount / questions.length) * 100);
   const points = Number(q?.points) || 0;
   const questionText = String(q?._displayText ?? q?.question ?? '');
+  const rawAnswer = answers[safeIdx];
+  const answerText = Array.isArray(rawAnswer) ? rawAnswer.join(', ') : String(rawAnswer ?? '');
 
   // Section context for the current question. Prefer the exam-level metadata
   // (which knows about `passage`); fall back to what flattenQuestions attached.
@@ -570,7 +577,7 @@ export default function ExamTakeScreen() {
             <View style={[{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER }, cardShadow]}>
               <MathText text={questionText} style={{ fontSize: 16, color: TEXT, lineHeight: 24 }} />
               {q?.has_figure && q?.figure_description ? (
-                <FigureRenderer description={String(q.figure_description)} />
+                <ExamFigure description={String(q.figure_description)} />
               ) : null}
             </View>
           </View>
@@ -587,21 +594,40 @@ export default function ExamTakeScreen() {
               answer={answers[safeIdx] ?? null}
               onAnswer={(a) => setAnswer(safeIdx, a)}
             />
-          ) : qType === 'essay' ? (
+          ) : usesScaffold(q, subject) ? (
+            // Step-by-step scaffold (PWA parity): authored solution text with
+            // numbered blanks; persists {scaffold:[…]} through the same
+            // answers/autosave/submit flow.
+            <ScaffoldAnswer
+              question={q}
+              value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
+              onChange={(v) => setAnswer(safeIdx, v)}
+              mathMode={scaffoldNeedsMath(q, subject)}
+            />
+          ) : qType === 'essay' || qType === 'short_answer' ? (
             <View style={{ gap: 8 }}>
               <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>Rédige ta réponse</Text>
-              <OpenQuestion
-                answer={answers[safeIdx] ?? null}
-                onAnswer={(a) => setAnswer(safeIdx, a)}
-                placeholder="Rédigez votre réponse…"
-                minHeight={140}
+              <WordCountAnswer
+                value={answerText}
+                onChangeText={(v) => setAnswer(safeIdx, v)}
+                type={qType === 'short_answer' ? 'short_answer' : 'essay'}
               />
             </View>
           ) : (
-            <OpenQuestion
-              answer={answers[safeIdx] ?? null}
-              onAnswer={(a) => setAnswer(safeIdx, a)}
-              placeholder="Votre réponse…"
+            <ExamAnswerInput
+              value={answerText}
+              onChangeText={(v) => setAnswer(safeIdx, v)}
+              placeholder={
+                qType === 'fill_blank'
+                  ? 'Complétez le blanc…'
+                  : qType === 'calculation'
+                    ? 'Entrez votre résultat…'
+                    : 'Votre réponse…'
+              }
+              mathy={
+                MATH_SUBJECTS.has(subject) &&
+                looksMathy(typeof q?.correct === 'string' ? q.correct : undefined, questionText)
+              }
             />
           )}
         </ScrollView>
