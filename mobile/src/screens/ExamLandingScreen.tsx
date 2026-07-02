@@ -102,9 +102,6 @@ export default function ExamLandingScreen() {
                 activeOpacity={0.82}
                 style={{ flexDirection: 'row' }}
               >
-                {/* Left accent stripe */}
-                <View style={{ width: 4, backgroundColor: level.color }} />
-
                 <View style={{ flex: 1, padding: 16 }}>
                   {/* Icon */}
                   <View

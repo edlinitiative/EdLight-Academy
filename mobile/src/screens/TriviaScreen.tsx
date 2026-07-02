@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import { SvgUri } from 'react-native-svg';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
@@ -13,6 +14,9 @@ import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
 import MathText from '../components/MathText';
 import { scheduleTriviaReminder, notifyLeaderboardRank } from '../services/notificationService';
+
+// Deck cover art lives on the web app's hosting (same files the PWA renders).
+const ASSET_BASE = 'https://edlight-academy.web.app';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -145,22 +149,23 @@ function CategoryPicker({
                 overflow: 'hidden',
               }}
             >
-              <View style={{ padding: 16 }}>
-                {/* Icon badge */}
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    backgroundColor: cat.color + '18',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginBottom: 10,
-                  }}
-                >
-                  <Text style={{ fontSize: 24 }}>{cat.icon ?? '🎯'}</Text>
-                </View>
+              {/* Cover art banner — same SVG deck covers as the PWA */}
+              <View style={{ height: 130, backgroundColor: cat.color, overflow: 'hidden' }}>
+                {cat.image ? (
+                  <SvgUri
+                    uri={`${ASSET_BASE}${cat.image}`}
+                    width="100%"
+                    height="100%"
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                ) : (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 40 }}>{cat.icon ?? '🎯'}</Text>
+                  </View>
+                )}
+              </View>
 
+              <View style={{ padding: 16 }}>
                 <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>
                   {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
                 </Text>

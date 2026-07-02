@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckCircle2, Trophy, ChevronRight, BookOpen } from 'lucide-react-native';
-import { useAppData } from '../hooks/useData';
+import { usePracticeQuizzes } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 
@@ -117,7 +117,7 @@ function QuizResultScreen({ score, total, onRetry, onBack }: {
 }
 
 export default function QuizzesScreen() {
-  const { data, isLoading, isError, refetch, isFetching } = useAppData();
+  const { data, isLoading, isError, refetch, isFetching } = usePracticeQuizzes();
   const { language, recordQuizAttempt } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -127,9 +127,9 @@ export default function QuizzesScreen() {
   const [lastResult, setLastResult] = useState<{ score: number; total: number } | null>(null);
 
   const quizzes = useMemo(() => {
-    if (!data?.quizzes) return [];
-    return Array.isArray(data.quizzes)
-      ? data.quizzes.filter((q: any) => (q.questions?.length ?? 0) > 0)
+    if (!data) return [];
+    return Array.isArray(data)
+      ? data.filter((q: any) => (q.questions?.length ?? 0) > 0)
       : [];
   }, [data]);
 

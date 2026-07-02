@@ -5,7 +5,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Search, BookOpen, BookMarked, ChevronRight, SlidersHorizontal } from 'lucide-react-native';
+import {
+  Search, BookOpen, BookMarked, ChevronRight, ChevronLeft,
+  Calculator, Atom, FlaskConical, TrendingUp, GraduationCap,
+} from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
@@ -14,13 +17,43 @@ import { CoursesParamList } from '../navigation/CoursesNavigator';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
 
-const SUBJECTS = ['Tout', 'MATH', 'PHYS', 'CHEM', 'ECON'];
-const LEVELS = ['Tout', 'NSI', 'NSII', 'NSIII', 'NSIV'];
+/**
+ * Browse flow: pick your grade (NS I–IV) → pick a subject → see only those
+ * courses. An NSI student never has to scroll past NSIV material. Search stays
+ * global (searches every course, whatever step you're on).
+ */
+const LEVELS = [
+  { code: 'NSI', label: 'NS I', sublabel: '1ère année du secondaire' },
+  { code: 'NSII', label: 'NS II', sublabel: '2ème année du secondaire' },
+  { code: 'NSIII', label: 'NS III', sublabel: '3ème année du secondaire' },
+  { code: 'NSIV', label: 'NS IV', sublabel: 'Terminale — année du Bac' },
+];
+
+const SUBJECT_META: Record<string, { name: string; nameHt: string; color: string; Icon: any }> = {
+  MATH: { name: 'Mathématiques', nameHt: 'Matematik', color: '#2563eb', Icon: Calculator },
+  PHYS: { name: 'Physique', nameHt: 'Fizik', color: '#0857A6', Icon: Atom },
+  CHEM: { name: 'Chimie', nameHt: 'Chimi', color: '#0891b2', Icon: FlaskConical },
+  ECON: { name: 'Économie', nameHt: 'Ekonomi', color: '#d97706', Icon: TrendingUp },
+};
+
+function subjectMeta(code: string) {
+  return SUBJECT_META[code] ?? { name: code, nameHt: code, color: '#0857A6', Icon: BookOpen };
+}
 
 function countLessons(course: any): number {
   const units = Array.isArray(course?.modules) ? course.modules : [];
   return units.reduce((s: number, u: any) => s + (u?.lessons?.length ?? 0), 0) || course?.videoCount || 0;
 }
+
+const cardShadow = {
+  shadowColor: '#0857A6',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.06,
+  shadowRadius: 6,
+  elevation: 2,
+  borderWidth: 1,
+  borderColor: '#e8edf5',
+} as const;
 
 function CourseCard({
   course,
@@ -40,7 +73,7 @@ function CourseCard({
       onPress={onPress}
       activeOpacity={0.85}
       className="bg-white rounded-2xl mb-3"
-      style={{ shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: '#e8edf5' }}
+      style={cardShadow}
     >
       <View className="p-4">
         <View className="flex-row items-center gap-3">
@@ -52,15 +85,7 @@ function CourseCard({
           </View>
           <View className="flex-1">
             <Text className="font-bold text-gray-900 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
-            <View className="flex-row items-center gap-2 mt-1 flex-wrap">
-              <View style={{ backgroundColor: color + '18', borderRadius: 100 }} className="px-2 py-0.5">
-                <Text style={{ color, fontSize: 11, fontWeight: '600' }}>{course.subject}</Text>
-              </View>
-              <View style={{ backgroundColor: color + '12', borderRadius: 100 }} className="px-2 py-0.5">
-                <Text style={{ color, fontSize: 11, fontWeight: '600' }}>{course.level}</Text>
-              </View>
-              <Text className="text-xs text-gray-400">{totalLessons} leçons</Text>
-            </View>
+            <Text className="text-xs text-gray-400 mt-1">{totalLessons} leçons</Text>
           </View>
           <View className="items-end flex-shrink-0">
             <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : '#9ca3af' }}>
@@ -79,6 +104,38 @@ function CourseCard({
   );
 }
 
+function DrillCard({
+  title, subtitle, badge, color, Icon, onPress,
+}: {
+  title: string; subtitle: string; badge: string; color: string; Icon: any; onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      className="bg-white rounded-2xl mb-3"
+      style={cardShadow}
+    >
+      <View className="flex-row items-center p-4 gap-3">
+        <View
+          className="w-12 h-12 rounded-xl items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: color + '16' }}
+        >
+          <Icon color={color} size={22} />
+        </View>
+        <View className="flex-1">
+          <Text className="font-bold text-gray-900 text-base">{title}</Text>
+          <Text className="text-xs text-gray-500 mt-0.5">{subtitle}</Text>
+        </View>
+        <View className="items-end flex-shrink-0 flex-row items-center gap-2">
+          <Text className="text-xs text-gray-400">{badge}</Text>
+          <ChevronRight color="#9ca3af" size={18} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function CoursesScreen() {
   const navigation = useNavigation<Nav>();
   const { language, progress } = useStore();
@@ -87,11 +144,9 @@ export default function CoursesScreen() {
 
   const { data: courses, isLoading, isError, refetch, isFetching } = useCourses();
   const [search, setSearch] = useState('');
-  const [subject, setSubject] = useState('Tout');
-  const [level, setLevel] = useState('Tout');
-  const [showFilters, setShowFilters] = useState(false);
+  const [level, setLevel] = useState<string | null>(null);
+  const [subject, setSubject] = useState<string | null>(null);
 
-  // Build lessonId → completed map from local progress store
   const completedIds = useMemo(() => {
     const ids = new Set<string>();
     Object.entries(progress).forEach(([id, p]: [string, any]) => {
@@ -100,7 +155,6 @@ export default function CoursesScreen() {
     return ids;
   }, [progress]);
 
-  // Count completed lessons per course (using local progress)
   function completedForCourse(course: any): number {
     const units = Array.isArray(course?.modules) ? course.modules : [];
     let count = 0;
@@ -112,72 +166,99 @@ export default function CoursesScreen() {
     return count;
   }
 
-  const filtered = useMemo(() => {
-    if (!courses) return [];
-    return courses.filter((c) => {
-      if (subject !== 'Tout' && c.subject !== subject) return false;
-      if (level !== 'Tout' && c.level !== level) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return c.name?.toLowerCase().includes(q) || c.subject?.toLowerCase().includes(q);
-      }
-      return true;
+  const all = courses ?? [];
+  const searching = search.trim().length > 0;
+
+  // Global search: flat results across every level and subject.
+  const searchResults = useMemo(() => {
+    if (!searching) return [];
+    const q = search.toLowerCase();
+    return all.filter((c) =>
+      c.name?.toLowerCase().includes(q)
+      || c.subject?.toLowerCase().includes(q)
+      || subjectMeta(c.subject).name.toLowerCase().includes(q),
+    );
+  }, [all, search, searching]);
+
+  const levelCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    all.forEach((c) => { m[c.level] = (m[c.level] ?? 0) + 1; });
+    return m;
+  }, [all]);
+
+  const subjectsForLevel = useMemo(() => {
+    if (!level) return [];
+    const m = new Map<string, number>();
+    all.forEach((c) => {
+      if (c.level === level) m.set(c.subject, (m.get(c.subject) ?? 0) + 1);
     });
-  }, [courses, subject, level, search]);
+    return Array.from(m.entries()).sort((a, b) =>
+      subjectMeta(a[0]).name.localeCompare(subjectMeta(b[0]).name, 'fr'));
+  }, [all, level]);
+
+  const courseList = useMemo(() => {
+    if (!level || !subject) return [];
+    return all.filter((c) => c.level === level && c.subject === subject);
+  }, [all, level, subject]);
 
   if (isLoading) return <LoadingState message={t('Chargement des cours…', 'Chajman kou yo…')} />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
+
+  const levelInfo = LEVELS.find((l) => l.code === level);
+  const subjInfo = subject ? subjectMeta(subject) : null;
+
+  // Contextual header: title + back affordance per drill step.
+  const headerTitle = searching
+    ? t('Recherche', 'Rechèch')
+    : !level
+      ? t('Cours', 'Kou yo')
+      : !subject
+        ? (levelInfo?.label ?? level)
+        : (isCreole ? subjInfo?.nameHt : subjInfo?.name) ?? subject;
+
+  const headerSubtitle = searching
+    ? null
+    : !level
+      ? t('Choisis ton niveau pour commencer', 'Chwazi nivo ou pou kòmanse')
+      : !subject
+        ? t('Choisis une matière', 'Chwazi yon matyè')
+        : (levelInfo?.label ?? level);
+
+  const canGoBack = !searching && (level !== null);
+  const goBack = () => {
+    if (subject) setSubject(null);
+    else setLevel(null);
+  };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
       {/* Header + search */}
       <View className="px-5 pt-5 pb-3 bg-white border-b border-gray-100">
-        <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5, marginBottom: 12 }}>{t('Cours', 'Kou yo')}</Text>
-        <View className="flex-row gap-2">
-          <View className="flex-1 flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3">
-            <Search color="#9ca3af" size={18} />
-            <TextInput
-              className="flex-1 py-3 ml-2 text-gray-900 text-sm"
-              placeholder={t('Rechercher un cours…', 'Chèche kou…')}
-              value={search}
-              onChangeText={setSearch}
-              placeholderTextColor="#9ca3af"
-            />
+        <View className="flex-row items-center mb-3">
+          {canGoBack && (
+            <TouchableOpacity onPress={goBack} className="mr-2 -ml-1 p-1">
+              <ChevronLeft color="#374151" size={24} />
+            </TouchableOpacity>
+          )}
+          <View className="flex-1">
+            <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
+              {headerTitle}
+            </Text>
+            {headerSubtitle ? (
+              <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{headerSubtitle}</Text>
+            ) : null}
           </View>
-          <TouchableOpacity
-            onPress={() => setShowFilters((v) => !v)}
-            className={`w-11 h-11 rounded-xl items-center justify-center ${showFilters ? 'bg-primary-600' : 'bg-gray-100'}`}
-          >
-            <SlidersHorizontal color={showFilters ? '#fff' : '#6b7280'} size={18} />
-          </TouchableOpacity>
         </View>
-
-        {showFilters && (
-          <View className="mt-3 gap-2">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {SUBJECTS.map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  onPress={() => setSubject(s)}
-                  className={`px-4 py-2 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-gray-100'}`}
-                >
-                  <Text className={`text-sm font-semibold ${subject === s ? 'text-white' : 'text-gray-600'}`}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {LEVELS.map((l) => (
-                <TouchableOpacity
-                  key={l}
-                  onPress={() => setLevel(l)}
-                  className={`px-4 py-2 rounded-full ${level === l ? 'bg-primary-600' : 'bg-gray-100'}`}
-                >
-                  <Text className={`text-sm font-semibold ${level === l ? 'text-white' : 'text-gray-600'}`}>{l}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3">
+          <Search color="#9ca3af" size={18} />
+          <TextInput
+            className="flex-1 py-3 ml-2 text-gray-900 text-sm"
+            placeholder={t('Rechercher un cours…', 'Chèche kou…')}
+            value={search}
+            onChangeText={setSearch}
+            placeholderTextColor="#9ca3af"
+          />
+        </View>
       </View>
 
       <ScrollView
@@ -186,48 +267,87 @@ export default function CoursesScreen() {
         contentContainerStyle={{ paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Banque de Questions banner */}
-        <TouchableOpacity
-          activeOpacity={0.82}
-          onPress={() => navigation.navigate('Quizzes', {})}
-          className="mb-4"
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: '#e8edf5',
-            shadowColor: '#0857A6',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.06,
-            shadowRadius: 6,
-            elevation: 2,
-          }}
-        >
-          <View className="flex-row items-center p-4 gap-3">
-            <View
-              className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: '#7c3aed18' }}
+        {searching ? (
+          searchResults.length === 0 ? (
+            <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
+          ) : (
+            <>
+              <Text className="text-xs text-gray-400 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
+              {searchResults.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  completedCount={completedForCourse(course)}
+                  onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
+                />
+              ))}
+            </>
+          )
+        ) : !level ? (
+          <>
+            {/* Banque de Questions banner (top-level only) */}
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={() => navigation.navigate('Quizzes', {})}
+              className="mb-4 bg-white rounded-2xl"
+              style={cardShadow}
             >
-              <BookMarked color="#7c3aed" size={20} />
-            </View>
-            <View className="flex-1">
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
-                {t('Banque de Questions', 'Fich Kesyon')}
-              </Text>
-              <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
-              </Text>
-            </View>
-            <ChevronRight color="#7c3aed" size={20} />
-          </View>
-        </TouchableOpacity>
+              <View className="flex-row items-center p-4 gap-3">
+                <View
+                  className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: '#7c3aed18' }}
+                >
+                  <BookMarked color="#7c3aed" size={20} />
+                </View>
+                <View className="flex-1">
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
+                    {t('Banque de Questions', 'Fich Kesyon')}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                    {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
+                  </Text>
+                </View>
+                <ChevronRight color="#7c3aed" size={20} />
+              </View>
+            </TouchableOpacity>
 
-        {filtered.length === 0 ? (
+            {LEVELS.filter((l) => (levelCounts[l.code] ?? 0) > 0).map((l) => (
+              <DrillCard
+                key={l.code}
+                title={l.label}
+                subtitle={isCreole ? l.sublabel : l.sublabel}
+                badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
+                color="#0857A6"
+                Icon={GraduationCap}
+                onPress={() => setLevel(l.code)}
+              />
+            ))}
+          </>
+        ) : !subject ? (
+          subjectsForLevel.length === 0 ? (
+            <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
+          ) : (
+            subjectsForLevel.map(([code, count]) => {
+              const meta = subjectMeta(code);
+              return (
+                <DrillCard
+                  key={code}
+                  title={isCreole ? meta.nameHt : meta.name}
+                  subtitle={levelInfo?.label ?? level}
+                  badge={`${count} ${t('cours', 'kou')}`}
+                  color={meta.color}
+                  Icon={meta.Icon}
+                  onPress={() => setSubject(code)}
+                />
+              );
+            })
+          )
+        ) : courseList.length === 0 ? (
           <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
         ) : (
           <>
-            <Text className="text-xs text-gray-400 mb-3">{filtered.length} {t('cours', 'kou')}</Text>
-            {filtered.map((course) => (
+            <Text className="text-xs text-gray-400 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
+            {courseList.map((course) => (
               <CourseCard
                 key={course.id}
                 course={course}

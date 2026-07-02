@@ -31,6 +31,7 @@ const LEVEL_FILTER_MAP: Record<string, string[]> = {
 };
 
 function questionCount(exam: any): number {
+  if (typeof exam._questionCount === 'number') return exam._questionCount;
   if (typeof exam.question_count === 'number') return exam.question_count;
   const sections = Array.isArray(exam.sections) ? exam.sections : [];
   return sections.reduce((s: number, sec: any) => s + (Array.isArray(sec.questions) ? sec.questions.length : 0), 0);
