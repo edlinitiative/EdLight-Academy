@@ -64,16 +64,19 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
         <Text className="text-xs text-gray-400 font-semibold uppercase mb-3">
           Question {idx + 1} / {questions.length}
         </Text>
-        <View style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
           <Text className="text-base text-gray-900 leading-6">{q.question ?? q.stem ?? ''}</Text>
         </View>
         {options.map((opt, i) => (
           <TouchableOpacity
             key={i}
             onPress={() => handleSelect(opt)}
-            className={`flex-row items-center p-4 rounded-xl border-2 mb-3 gap-3 ${
-              selected === opt ? 'border-primary-600 bg-blue-50' : 'border-gray-200 bg-white'
-            }`}
+            className="flex-row items-center p-4 rounded-xl mb-3 gap-3"
+            style={{
+              borderWidth: 1,
+              borderColor: selected === opt ? '#0857A6' : '#e8edf5',
+              backgroundColor: selected === opt ? '#eaf2fb' : '#ffffff',
+            }}
           >
             <View className={`w-8 h-8 rounded-full items-center justify-center ${selected === opt ? 'bg-primary-600' : 'bg-gray-100'}`}>
               <Text className={`text-sm font-bold ${selected === opt ? 'text-white' : 'text-gray-500'}`}>{letters[i]}</Text>
@@ -86,11 +89,14 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
         <TouchableOpacity
           onPress={handleNext}
           disabled={!selected}
-          className={`py-4 rounded-2xl items-center ${selected ? 'bg-primary-600' : 'bg-gray-200'}`}
+          className={`flex-row py-4 rounded-2xl items-center justify-center gap-1 ${selected ? 'bg-primary-600' : 'bg-gray-200'}`}
         >
           <Text className={`font-bold text-base ${selected ? 'text-white' : 'text-gray-400'}`}>
-            {idx === questions.length - 1 ? 'Terminer' : 'Suivant →'}
+            {idx === questions.length - 1 ? 'Terminer' : 'Suivant'}
           </Text>
+          {idx < questions.length - 1 && (
+            <ChevronRight color={selected ? '#ffffff' : '#9ca3af'} size={18} />
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -103,7 +109,9 @@ function QuizResultScreen({ score, total, onRetry, onBack }: {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   return (
     <View className="flex-1 items-center justify-center p-8" style={{ backgroundColor: "#f4f6fb" }}>
-      <Text className="text-6xl mb-4">{pct >= 70 ? '🏆' : pct >= 50 ? '👍' : '💪'}</Text>
+      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+        <Trophy color="#0857A6" size={32} />
+      </View>
       <Text className="text-4xl font-bold text-gray-900 mb-1">{score}/{total}</Text>
       <Text className="text-xl text-primary-600 font-semibold mb-6">{pct}% correct</Text>
       <TouchableOpacity onPress={onRetry} className="w-full bg-primary-600 py-4 rounded-2xl items-center mb-3">
@@ -213,7 +221,7 @@ export default function QuizzesScreen() {
                 gap: 12,
               }}
             >
-              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#eff6ff', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center' }}>
                 <BookOpen color="#0857A6" size={20} />
               </View>
               <View style={{ flex: 1 }}>

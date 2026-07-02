@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Target, ChevronRight } from 'lucide-react-native';
 import { useReadiness } from '../hooks/useReadiness';
+import { getSubjectColor, SUBJECT_COLORS } from '../utils/shared';
 import { LoadingState } from './StateViews';
 
 const RADIUS = 45;
@@ -24,23 +25,9 @@ function scoreLabel(pct: number): string {
   return 'Excellent !';
 }
 
-const SUBJECT_COLORS: Record<string, string> = {
-  mathématiques: '#4A93DD',
-  physique: '#0857A6',
-  chimie: '#0e7490',
-  svt: '#15803d',
-  français: '#f59e0b',
-  anglais: '#8b5cf6',
-  économie: '#10b981',
-  histoire: '#f97316',
-};
-
 function subjectColor(name: string): string {
-  const key = String(name || '').toLowerCase();
-  for (const [k, v] of Object.entries(SUBJECT_COLORS)) {
-    if (key.includes(k)) return v;
-  }
-  return '#6b7280';
+  const key = String(name || '').toUpperCase();
+  return key in SUBJECT_COLORS ? getSubjectColor(key) : '#64748b';
 }
 
 export default function ReadinessCard() {
@@ -70,7 +57,7 @@ export default function ReadinessCard() {
     <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Target color="#0857A6" size={18} />
-        <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15 }}>Score de préparation</Text>
+        <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16 }}>Score de préparation</Text>
       </View>
 
       <View className="flex-row items-center gap-5">

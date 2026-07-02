@@ -87,11 +87,15 @@ function ExamCard({
                 <Text className="text-xs text-gray-400">{qCount} question{qCount > 1 ? 's' : ''}</Text>
               ) : null}
               {done && pct !== null ? (
-                <View className="px-2 py-0.5 rounded-full bg-emerald-50">
-                  <Text className="text-xs text-emerald-700 font-semibold">✓ {pct}%</Text>
+                <View className="flex-row items-center gap-1">
+                  <CheckCircle2 color="#10b981" size={12} />
+                  <Text className="text-xs text-emerald-700 font-semibold">{pct}%</Text>
                 </View>
               ) : done ? (
-                <Text className="text-xs text-emerald-600 font-medium">✓ Terminé</Text>
+                <View className="flex-row items-center gap-1">
+                  <CheckCircle2 color="#10b981" size={12} />
+                  <Text className="text-xs text-emerald-600 font-medium">Terminé</Text>
+                </View>
               ) : null}
             </View>
           </View>
@@ -222,7 +226,7 @@ export default function ExamBrowserScreen() {
 
       {/* Search */}
       <View className="px-4 pt-3 pb-2 bg-white border-b border-gray-100">
-        <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3 mb-2.5">
+        <View className="flex-row items-center bg-gray-50 border rounded-xl px-3 mb-3" style={{ borderColor: '#e8edf5' }}>
           <Search color="#9ca3af" size={16} />
           <TextInput
             className="flex-1 py-3 ml-2 text-sm text-gray-900"
@@ -248,7 +252,7 @@ export default function ExamBrowserScreen() {
 
       {/* Active filters row */}
       {(yearFilter !== 'Tout' || statusFilter !== 'all') && (
-        <View className="flex-row items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100">
+        <View className="flex-row items-center gap-2 px-4 py-2 border-b" style={{ backgroundColor: '#f4f6fb', borderBottomColor: '#e8edf5' }}>
           {yearFilter !== 'Tout' && (
             <TouchableOpacity
               onPress={() => setYearFilter('Tout')}

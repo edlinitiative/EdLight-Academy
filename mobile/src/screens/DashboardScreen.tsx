@@ -63,7 +63,7 @@ function KpiCard({
   iconBg: string;
 }) {
   return (
-    <View className="flex-1 rounded-2xl p-3 items-center gap-1.5" style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+    <View className="flex-1 rounded-2xl p-3 items-center gap-1.5" style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
       <View
         className="w-9 h-9 rounded-xl items-center justify-center"
         style={{ backgroundColor: iconBg }}
@@ -154,18 +154,18 @@ export default function DashboardScreen() {
         {/* Header banner                                                        */}
         {/* ------------------------------------------------------------------ */}
         <View
-          style={{ backgroundColor: '#0857A6' }}
-          className="px-5 pt-5 pb-7"
+          style={{ backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#eef1f6' }}
+          className="px-5 pt-5 pb-5"
         >
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-4">
-              <Text className="text-blue-200 text-sm font-medium">
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b' }}>
                 {t('Tableau de bord', 'Tablo bò')}
               </Text>
-              <Text className="text-white text-2xl font-bold mt-0.5" numberOfLines={1}>
-                {greeting}, {firstName || t('Étudiant', 'Elèv')} 👋
+              <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', marginTop: 2 }} numberOfLines={1}>
+                {greeting}, {firstName || t('Étudiant', 'Elèv')}
               </Text>
-              <Text className="text-blue-200 text-sm mt-1">
+              <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
                 {t('Prêt à apprendre aujourd\'hui ?', 'Ou pare pou aprann jodi a ?')}
               </Text>
             </View>
@@ -173,9 +173,9 @@ export default function DashboardScreen() {
             {/* Avatar initials */}
             <View
               className="w-12 h-12 rounded-full items-center justify-center"
-              style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
+              style={{ backgroundColor: '#eaf2fb' }}
             >
-              <Text className="text-white font-bold text-base">{initials}</Text>
+              <Text style={{ color: '#0857A6', fontWeight: '800', fontSize: 16 }}>{initials}</Text>
             </View>
           </View>
         </View>
@@ -184,15 +184,15 @@ export default function DashboardScreen() {
         {/* Resume banner — below header, above KPI strip                        */}
         {/* ------------------------------------------------------------------ */}
         {lastActivity ? (
-          <View className="px-5 mb-3" style={{ marginTop: -16 }}>
+          <View className="px-5 mt-4 mb-3">
             <ResumeBanner />
           </View>
         ) : null}
 
         {/* ------------------------------------------------------------------ */}
-        {/* KPI strip — overlaps header slightly when no banner                  */}
+        {/* KPI strip                                                            */}
         {/* ------------------------------------------------------------------ */}
-        <View className="flex-row gap-2 px-5 mb-5" style={lastActivity ? undefined : { marginTop: -16 }}>
+        <View className="flex-row gap-2 px-5 mb-5" style={lastActivity ? undefined : { marginTop: 16 }}>
           <KpiCard
             icon={<Flame color="#ef4444" size={18} />}
             value={streak?.currentStreak ?? 0}
@@ -203,19 +203,19 @@ export default function DashboardScreen() {
             icon={<Target color="#0857A6" size={18} />}
             value={totalQuizzes}
             label={t('Quiz', 'Quiz')}
-            iconBg="#eff6ff"
+            iconBg="#eaf2fb"
           />
           <KpiCard
-            icon={<BookOpen color="#10b981" size={18} />}
+            icon={<BookOpen color="#0857A6" size={18} />}
             value={enrolledCourses.length}
             label={t('Cours', 'Kou')}
-            iconBg="#ecfdf5"
+            iconBg="#eaf2fb"
           />
           <KpiCard
-            icon={<Award color="#f59e0b" size={18} />}
+            icon={<Award color="#0857A6" size={18} />}
             value={avgScore > 0 ? `${avgScore}%` : '—'}
             label={t('Moy.', 'Moy.')}
-            iconBg="#fffbeb"
+            iconBg="#eaf2fb"
           />
         </View>
 
@@ -235,7 +235,7 @@ export default function DashboardScreen() {
         {/* ReadinessCard — SVG donut + subject bars                             */}
         {/* ------------------------------------------------------------------ */}
         <View className="px-5 mb-5">
-          <Text className="text-base font-bold text-gray-900 mb-3">
+          <Text className="mb-3" style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
             {t('Niveau de préparation', 'Nivo preparasyon')}
           </Text>
           <ReadinessCard />
@@ -247,7 +247,7 @@ export default function DashboardScreen() {
         {displayCourses.length > 0 && (
           <View className="px-5 mb-5">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-base font-bold text-gray-900">
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
                 {t('Continuer à apprendre', 'Kontinye aprann')}
               </Text>
               <TouchableOpacity
@@ -350,7 +350,7 @@ export default function DashboardScreen() {
         {/* ------------------------------------------------------------------ */}
         <View className="px-5 mb-5">
           <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-base font-bold text-gray-900">
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
               {t('Classement', 'Klasman')}
             </Text>
             <TouchableOpacity

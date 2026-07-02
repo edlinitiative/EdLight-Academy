@@ -10,6 +10,7 @@ import {
   Calculator, Atom, FlaskConical, TrendingUp, GraduationCap,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
+import { getSubjectColor } from '../utils/shared';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
@@ -23,21 +24,22 @@ type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
  * global (searches every course, whatever step you're on).
  */
 const LEVELS = [
-  { code: 'NSI', label: 'NS I', sublabel: '1ère année du secondaire' },
-  { code: 'NSII', label: 'NS II', sublabel: '2ème année du secondaire' },
-  { code: 'NSIII', label: 'NS III', sublabel: '3ème année du secondaire' },
-  { code: 'NSIV', label: 'NS IV', sublabel: 'Terminale — année du Bac' },
+  { code: 'NSI', label: 'NS I', sublabel: '1ère année du secondaire', sublabelHt: 'Premye ane segondè' },
+  { code: 'NSII', label: 'NS II', sublabel: '2ème année du secondaire', sublabelHt: 'Dezyèm ane segondè' },
+  { code: 'NSIII', label: 'NS III', sublabel: '3ème année du secondaire', sublabelHt: 'Twazyèm ane segondè' },
+  { code: 'NSIV', label: 'NS IV', sublabel: 'Terminale — année du Bac', sublabelHt: 'Tèminal — ane Bak la' },
 ];
 
-const SUBJECT_META: Record<string, { name: string; nameHt: string; color: string; Icon: any }> = {
-  MATH: { name: 'Mathématiques', nameHt: 'Matematik', color: '#2563eb', Icon: Calculator },
-  PHYS: { name: 'Physique', nameHt: 'Fizik', color: '#0857A6', Icon: Atom },
-  CHEM: { name: 'Chimie', nameHt: 'Chimi', color: '#0891b2', Icon: FlaskConical },
-  ECON: { name: 'Économie', nameHt: 'Ekonomi', color: '#d97706', Icon: TrendingUp },
+const SUBJECT_META: Record<string, { name: string; nameHt: string; Icon: any }> = {
+  MATH: { name: 'Mathématiques', nameHt: 'Matematik', Icon: Calculator },
+  PHYS: { name: 'Physique', nameHt: 'Fizik', Icon: Atom },
+  CHEM: { name: 'Chimie', nameHt: 'Chimi', Icon: FlaskConical },
+  ECON: { name: 'Économie', nameHt: 'Ekonomi', Icon: TrendingUp },
 };
 
 function subjectMeta(code: string) {
-  return SUBJECT_META[code] ?? { name: code, nameHt: code, color: '#0857A6', Icon: BookOpen };
+  const meta = SUBJECT_META[code] ?? { name: code, nameHt: code, Icon: BookOpen };
+  return { ...meta, color: getSubjectColor(code) };
 }
 
 function countLessons(course: any): number {
@@ -188,13 +190,24 @@ export default function CoursesScreen() {
 
   const subjectsForLevel = useMemo(() => {
     if (!level) return [];
-    const m = new Map<string, number>();
+    const m = new Map<string, any[]>();
     all.forEach((c) => {
-      if (c.level === level) m.set(c.subject, (m.get(c.subject) ?? 0) + 1);
+      if (c.level === level) m.set(c.subject, [...(m.get(c.subject) ?? []), c]);
     });
     return Array.from(m.entries()).sort((a, b) =>
       subjectMeta(a[0]).name.localeCompare(subjectMeta(b[0]).name, 'fr'));
   }, [all, level]);
+
+  // One course in the subject (the common case) → open it directly instead of
+  // showing a redundant single-card list.
+  const openSubject = (code: string, group: any[]) => {
+    if (group.length === 1) {
+      const course = group[0];
+      navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name });
+      return;
+    }
+    setSubject(code);
+  };
 
   const courseList = useMemo(() => {
     if (!level || !subject) return [];
@@ -249,7 +262,7 @@ export default function CoursesScreen() {
             ) : null}
           </View>
         </View>
-        <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-3">
+        <View className="flex-row items-center bg-gray-50 border rounded-xl px-3" style={{ borderColor: '#e8edf5' }}>
           <Search color="#9ca3af" size={18} />
           <TextInput
             className="flex-1 py-3 ml-2 text-gray-900 text-sm"
@@ -295,9 +308,9 @@ export default function CoursesScreen() {
               <View className="flex-row items-center p-4 gap-3">
                 <View
                   className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#7c3aed18' }}
+                  style={{ backgroundColor: '#eaf2fb' }}
                 >
-                  <BookMarked color="#7c3aed" size={20} />
+                  <BookMarked color="#0857A6" size={20} />
                 </View>
                 <View className="flex-1">
                   <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
@@ -307,7 +320,7 @@ export default function CoursesScreen() {
                     {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
                   </Text>
                 </View>
-                <ChevronRight color="#7c3aed" size={20} />
+                <ChevronRight color="#0857A6" size={20} />
               </View>
             </TouchableOpacity>
 
@@ -315,7 +328,7 @@ export default function CoursesScreen() {
               <DrillCard
                 key={l.code}
                 title={l.label}
-                subtitle={isCreole ? l.sublabel : l.sublabel}
+                subtitle={isCreole ? l.sublabelHt : l.sublabel}
                 badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
                 color="#0857A6"
                 Icon={GraduationCap}
@@ -327,17 +340,18 @@ export default function CoursesScreen() {
           subjectsForLevel.length === 0 ? (
             <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
           ) : (
-            subjectsForLevel.map(([code, count]) => {
+            subjectsForLevel.map(([code, group]) => {
               const meta = subjectMeta(code);
+              const lessons = group.reduce((s: number, c: any) => s + countLessons(c), 0);
               return (
                 <DrillCard
                   key={code}
                   title={isCreole ? meta.nameHt : meta.name}
-                  subtitle={levelInfo?.label ?? level}
-                  badge={`${count} ${t('cours', 'kou')}`}
+                  subtitle={`${lessons} ${t('leçons', 'leson')}`}
+                  badge={group.length > 1 ? `${group.length} ${t('cours', 'kou')}` : ''}
                   color={meta.color}
                   Icon={meta.Icon}
-                  onPress={() => setSubject(code)}
+                  onPress={() => openSubject(code, group)}
                 />
               );
             })

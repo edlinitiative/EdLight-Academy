@@ -10,8 +10,8 @@ type Nav = BottomTabNavigationProp<TabParamList>;
 
 const ACCENT: Record<string, string> = {
   lesson: '#0857A6',
-  exam: '#ef4444',
-  quiz: '#7c3aed',
+  exam: '#0857A6',
+  quiz: '#0857A6',
 };
 
 const EYEBROW: Record<string, string> = {
@@ -42,13 +42,13 @@ export default function ResumeBanner() {
     <View
       style={{
         backgroundColor: '#ffffff',
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: '#e8edf5',
         shadowColor: '#0857A6',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
-        shadowRadius: 8,
+        shadowRadius: 6,
         elevation: 2,
         flexDirection: 'row',
         alignItems: 'center',

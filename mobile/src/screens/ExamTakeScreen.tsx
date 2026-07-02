@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler, KeyboardAvoidingView, Platform,
@@ -15,12 +15,26 @@ import useStore from '../contexts/store';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
 import FigureRenderer from '../components/FigureRenderer';
+import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Route = RouteProp<ExamsParamList, 'ExamTake'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamTake'>;
 
 type Answer = string | string[] | null;
+
+const PRIMARY = '#0857A6';
+const TEXT = '#0f172a';
+const MUTED = '#64748b';
+const BORDER = '#e8edf5';
+
+const cardShadow = {
+  shadowColor: PRIMARY,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  elevation: 1,
+} as const;
 
 function QuestionNav({ current, total, answers, onGoto }: {
   current: number;
@@ -29,7 +43,12 @@ function QuestionNav({ current, total, answers, onGoto }: {
   onGoto: (i: number) => void;
 }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4 py-2" style={{ flexGrow: 0 }}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={{ flexGrow: 0 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
+    >
       {Array.from({ length: total }, (_, i) => {
         const answered = answers[i] != null && answers[i] !== '';
         const active = i === current;
@@ -37,11 +56,19 @@ function QuestionNav({ current, total, answers, onGoto }: {
           <TouchableOpacity
             key={i}
             onPress={() => onGoto(i)}
-            className={`w-9 h-9 rounded-full items-center justify-center mr-2 ${
-              active ? 'bg-primary-600' : answered ? 'bg-emerald-100' : 'bg-gray-100'
-            }`}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 8,
+              backgroundColor: active ? PRIMARY : answered ? '#e6f0f9' : '#ffffff',
+              borderWidth: active ? 0 : 1,
+              borderColor: BORDER,
+            }}
           >
-            <Text className={`text-xs font-bold ${active ? 'text-white' : answered ? 'text-emerald-700' : 'text-gray-500'}`}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#ffffff' : answered ? PRIMARY : MUTED }}>
               {i + 1}
             </Text>
           </TouchableOpacity>
@@ -60,21 +87,40 @@ function MCQQuestion({ question, answer, onAnswer }: {
   const letters = ['A', 'B', 'C', 'D', 'E'];
 
   return (
-    <View className="gap-3">
+    <View style={{ gap: 10 }}>
       {options.map((opt, idx) => {
         const selected = answer === opt || answer === letters[idx] || (Array.isArray(answer) && answer.includes(opt));
         return (
           <TouchableOpacity
             key={idx}
             onPress={() => onAnswer(opt)}
-            className={`flex-row items-center p-4 rounded-xl border-2 gap-3 ${
-              selected ? 'border-primary-600 bg-blue-50' : 'border-gray-200 bg-white'
-            }`}
+            style={[
+              {
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                padding: 14,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: selected ? PRIMARY : BORDER,
+                backgroundColor: selected ? '#eef4fb' : '#ffffff',
+              },
+              selected ? undefined : cardShadow,
+            ]}
           >
-            <View className={`w-8 h-8 rounded-full items-center justify-center ${selected ? 'bg-primary-600' : 'bg-gray-100'}`}>
-              <Text className={`text-sm font-bold ${selected ? 'text-white' : 'text-gray-500'}`}>{letters[idx]}</Text>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: selected ? PRIMARY : '#f1f5f9',
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: selected ? '#ffffff' : MUTED }}>{letters[idx]}</Text>
             </View>
-            <MathText text={String(opt)} style={{ flex: 1, fontSize: 14, color: '#374151' }} />
+            <MathText text={String(opt)} style={{ flex: 1, fontSize: 15, lineHeight: 22, color: TEXT }} />
           </TouchableOpacity>
         );
       })}
@@ -89,13 +135,26 @@ function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…' }: {
 }) {
   return (
     <TextInput
-      className="bg-white border-2 border-gray-200 rounded-xl p-4 text-gray-900 text-base min-h-[100px]"
+      style={[
+        {
+          backgroundColor: '#ffffff',
+          borderWidth: 1,
+          borderColor: BORDER,
+          borderRadius: 16,
+          padding: 16,
+          fontSize: 16,
+          lineHeight: 24,
+          color: TEXT,
+          minHeight: 120,
+        },
+        cardShadow,
+      ]}
       value={String(answer ?? '')}
       onChangeText={onAnswer}
       multiline
       textAlignVertical="top"
       placeholder={placeholder}
-      placeholderTextColor="#9ca3af"
+      placeholderTextColor="#94a3b8"
     />
   );
 }
@@ -103,18 +162,30 @@ function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…' }: {
 function TrueFalseQuestion({ answer, onAnswer }: { answer: Answer; onAnswer: (a: Answer) => void }) {
   const opts = ['Vrai', 'Faux'];
   return (
-    <View className="flex-row gap-3">
-      {opts.map((opt) => (
-        <TouchableOpacity
-          key={opt}
-          onPress={() => onAnswer(opt)}
-          className={`flex-1 py-4 rounded-xl items-center border-2 ${
-            answer === opt ? 'border-primary-600 bg-blue-50' : 'border-gray-200 bg-white'
-          }`}
-        >
-          <Text className={`font-bold text-base ${answer === opt ? 'text-primary-600' : 'text-gray-600'}`}>{opt}</Text>
-        </TouchableOpacity>
-      ))}
+    <View style={{ flexDirection: 'row', gap: 10 }}>
+      {opts.map((opt) => {
+        const selected = answer === opt;
+        return (
+          <TouchableOpacity
+            key={opt}
+            onPress={() => onAnswer(opt)}
+            style={[
+              {
+                flex: 1,
+                paddingVertical: 16,
+                borderRadius: 16,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: selected ? PRIMARY : BORDER,
+                backgroundColor: selected ? '#eef4fb' : '#ffffff',
+              },
+              selected ? undefined : cardShadow,
+            ]}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: selected ? PRIMARY : MUTED }}>{opt}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -132,7 +203,13 @@ export default function ExamTakeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // 'overview' shows the exam intro; 'questions' is the live question flow
+  const [phase, setPhase] = useState<'overview' | 'questions'>('overview');
+  const [hasDraft, setHasDraft] = useState(false);
+  const draftIdxRef = useRef<number | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   useEffect(() => {
     let active = true;
@@ -152,10 +229,15 @@ export default function ExamTakeScreen() {
           subtitle: subject ?? lvl ?? undefined,
           ts: Date.now(),
         });
-        // Load draft
+        // Load draft (in-progress attempts only)
         if (user?.uid) {
           const draft = await loadExamAttemptDraft(user.uid, examId);
-          if (draft?.answers) setAnswers(draft.answers);
+          if (!active) return;
+          if (draft?.answers && draft.status !== 'submitted') {
+            setAnswers(draft.answers);
+            if (Object.keys(draft.answers).length > 0) setHasDraft(true);
+            if (Number.isFinite(draft.currentIdx)) draftIdxRef.current = draft.currentIdx;
+          }
         }
       })
       .catch(() => { if (active) setError(true); })
@@ -163,20 +245,24 @@ export default function ExamTakeScreen() {
     return () => { active = false; };
   }, [examId, user?.uid]);
 
-  // Auto-save draft every 10s
+  // Auto-save draft every 10s (only while actually taking the exam)
   useEffect(() => {
-    if (!user?.uid || questions.length === 0) return;
+    if (!user?.uid || questions.length === 0 || phase !== 'questions') return;
     const save = () => {
       saveExamAttemptDraft(user.uid, examId, { answers, currentIdx }).catch(console.warn);
     };
     draftTimer.current = setTimeout(save, 10000);
     return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
-  }, [answers, currentIdx, user?.uid, examId, questions.length]);
+  }, [answers, currentIdx, user?.uid, examId, questions.length, phase]);
 
   // Android back button
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      handleBack();
+      if (phaseRef.current === 'overview') {
+        navigation.goBack();
+      } else {
+        handleBack();
+      }
       return true;
     });
     return () => sub.remove();
@@ -191,6 +277,14 @@ export default function ExamTakeScreen() {
         { text: 'Quitter', style: 'destructive', onPress: () => navigation.goBack() },
       ],
     );
+  }
+
+  function handleStart() {
+    const idx = draftIdxRef.current;
+    if (hasDraft && idx != null && idx >= 0 && idx < questions.length) {
+      setCurrentIdx(idx);
+    }
+    setPhase('questions');
   }
 
   function setAnswer(idx: number, value: Answer) {
@@ -243,41 +337,68 @@ export default function ExamTakeScreen() {
     }
   }
 
+  const sectionSummary: ExamSectionSummary[] = useMemo(() => {
+    if (!exam) return [];
+    return (exam.sections ?? []).map((sec: any, i: number) => ({
+      title: String(sec.section_title || sec.title || sec.name || `Section ${i + 1}`).trim(),
+      count: (sec.questions ?? []).length,
+    }));
+  }, [exam]);
+
   if (loading) return <LoadingState message="Chargement de l'examen…" />;
   if (error || !exam) return <ErrorState />;
   if (questions.length === 0) return <ErrorState message="Cet examen n'a pas de questions." />;
 
+  const answeredCount = Object.keys(answers).length;
+
+  // ── Overview / intro step (before the first question) ──────────────────────
+  if (phase === 'overview') {
+    return (
+      <ExamOverview
+        exam={exam}
+        sections={sectionSummary}
+        questionCount={questions.length}
+        hasProgress={hasDraft}
+        answeredCount={answeredCount}
+        onStart={handleStart}
+        onBack={() => navigation.goBack()}
+      />
+    );
+  }
+
+  // ── Question flow ───────────────────────────────────────────────────────────
   const q = questions[currentIdx];
   const qType = (q?.type ?? '').toLowerCase();
   const isFirst = currentIdx === 0;
   const isLast = currentIdx === questions.length - 1;
-  const answeredCount = Object.keys(answers).length;
   const progress = Math.round((answeredCount / questions.length) * 100);
+  const sectionTitle = String(q?.sectionTitle ?? '').trim();
+  const points = Number(q?.points) || 0;
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f6fb' }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100 gap-3">
-        <TouchableOpacity onPress={handleBack} className="p-1">
-          <ArrowLeft color="#374151" size={22} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: BORDER }}>
+        <TouchableOpacity onPress={handleBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <ArrowLeft color={TEXT} size={22} />
         </TouchableOpacity>
-        <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-sm" numberOfLines={1}>{exam ? normalizeExamTitle(exam) : 'Examen'}</Text>
-          <Text className="text-xs text-gray-500">{answeredCount}/{questions.length} réponses</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: TEXT }} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
+          <Text style={{ fontSize: 12, color: MUTED }}>{answeredCount}/{questions.length} réponses</Text>
         </View>
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={submitting}
-          className="bg-primary-600 px-4 py-2 rounded-xl flex-row items-center gap-1"
+          style={{ backgroundColor: PRIMARY, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: submitting ? 0.6 : 1 }}
         >
           <Send color="#fff" size={14} />
-          <Text className="text-white font-semibold text-sm">{submitting ? '…' : 'Soumettre'}</Text>
+          <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>{submitting ? '…' : 'Soumettre'}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Progress */}
-      <View className="h-1 bg-gray-200">
-        <View className="h-1 bg-primary-600" style={{ width: `${progress}%` }} />
+      <View style={{ height: 3, backgroundColor: BORDER }}>
+        <View style={{ height: 3, backgroundColor: PRIMARY, width: `${progress}%` }} />
       </View>
 
       {/* Question nav */}
@@ -290,17 +411,27 @@ export default function ExamTakeScreen() {
 
       {/* Question */}
       <KeyboardAvoidingView
-        className="flex-1"
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32, padding: 16 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32, padding: 16 }}>
           {/* Question label */}
-          <View className="mb-4">
-            <Text className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">
-              Question {currentIdx + 1} / {questions.length}
-            </Text>
-            <View style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
-              <MathText text={q._displayText ?? q.question ?? ''} style={{ fontSize: 15, color: '#111827', lineHeight: 22 }} />
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                Question {currentIdx + 1} / {questions.length}
+              </Text>
+              {sectionTitle ? (
+                <View style={{ backgroundColor: '#e6f0f9', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, maxWidth: '60%' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: PRIMARY }} numberOfLines={1}>{sectionTitle}</Text>
+                </View>
+              ) : null}
+              {points > 0 ? (
+                <Text style={{ fontSize: 11, color: MUTED }}>{points} pt{points > 1 ? 's' : ''}</Text>
+              ) : null}
+            </View>
+            <View style={[{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER }, cardShadow]}>
+              <MathText text={q._displayText ?? q.question ?? ''} style={{ fontSize: 16, color: TEXT, lineHeight: 24 }} />
               {q.has_figure && q.figure_description ? (
                 <FigureRenderer description={q.figure_description} />
               ) : null}
@@ -330,30 +461,30 @@ export default function ExamTakeScreen() {
       </KeyboardAvoidingView>
 
       {/* Navigation buttons */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-t border-gray-100 gap-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: BORDER }}>
         <TouchableOpacity
           onPress={() => setCurrentIdx((i) => Math.max(0, i - 1))}
           disabled={isFirst}
-          className={`flex-row items-center gap-1 px-4 py-2.5 rounded-xl border border-gray-200 ${isFirst ? 'opacity-40' : ''}`}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BORDER, opacity: isFirst ? 0.4 : 1 }}
         >
-          <ChevronLeft color="#374151" size={18} />
-          <Text className="text-gray-700 font-medium text-sm">Préc.</Text>
+          <ChevronLeft color={TEXT} size={18} />
+          <Text style={{ color: TEXT, fontWeight: '500', fontSize: 13 }}>Préc.</Text>
         </TouchableOpacity>
-        <View className="flex-1" />
+        <View style={{ flex: 1 }} />
         {isLast ? (
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={submitting}
-            className="flex-row items-center gap-1 bg-primary-600 px-5 py-2.5 rounded-xl"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, opacity: submitting ? 0.6 : 1 }}
           >
-            <Text className="text-white font-bold text-sm">Terminer</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>Terminer</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => setCurrentIdx((i) => Math.min(questions.length - 1, i + 1))}
-            className="flex-row items-center gap-1 bg-primary-600 px-4 py-2.5 rounded-xl"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
           >
-            <Text className="text-white font-medium text-sm">Suiv.</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>Suiv.</Text>
             <ChevronRight color="#fff" size={18} />
           </TouchableOpacity>
         )}

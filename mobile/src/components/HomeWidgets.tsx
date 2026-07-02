@@ -4,7 +4,6 @@ import { ClipboardList, Zap, Trophy, BookOpen, ChevronRight } from 'lucide-react
 import { useLeaderboard } from '../hooks/useLeaderboard';
 
 interface WidgetProps {
-  accent: string;
   icon: React.ReactNode;
   title: string;
   value: string | number;
@@ -12,7 +11,7 @@ interface WidgetProps {
   onPress?: () => void;
 }
 
-function Widget({ accent, icon, title, value, sub, onPress }: WidgetProps) {
+function Widget({ icon, title, value, sub, onPress }: WidgetProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -39,7 +38,7 @@ function Widget({ accent, icon, title, value, sub, onPress }: WidgetProps) {
             width: 36,
             height: 36,
             borderRadius: 10,
-            backgroundColor: accent + '16',
+            backgroundColor: '#eaf2fb',
             alignItems: 'center',
             justifyContent: 'center',
           }}
@@ -49,7 +48,7 @@ function Widget({ accent, icon, title, value, sub, onPress }: WidgetProps) {
         <ChevronRight color="#cbd5e1" size={14} />
       </View>
       <View style={{ marginTop: 10 }}>
-        <Text style={{ color: accent, fontSize: 20, fontWeight: '800', letterSpacing: -0.5, lineHeight: 24 }} numberOfLines={1}>
+        <Text style={{ color: '#0f172a', fontSize: 20, fontWeight: '800', letterSpacing: -0.5, lineHeight: 24 }} numberOfLines={1}>
           {value}
         </Text>
         <Text style={{ color: '#0f172a', fontSize: 12, fontWeight: '600', marginTop: 2 }}>{title}</Text>
@@ -80,7 +79,6 @@ export default function HomeWidgets({
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <View style={{ flex: 1, gap: 10 }}>
         <Widget
-          accent="#0857A6"
           icon={<ClipboardList color="#0857A6" size={18} />}
           title="Examens Bac"
           value="≥ 5 ans"
@@ -88,8 +86,7 @@ export default function HomeWidgets({
           onPress={onNavigateExams}
         />
         <Widget
-          accent="#7c3aed"
-          icon={<Zap color="#7c3aed" size={18} />}
+          icon={<Zap color="#0857A6" size={18} />}
           title="Défi Trivia"
           value="Jouer"
           sub="Gagne des XP"
@@ -98,16 +95,14 @@ export default function HomeWidgets({
       </View>
       <View style={{ flex: 1, gap: 10 }}>
         <Widget
-          accent="#d97706"
-          icon={<Trophy color="#d97706" size={18} />}
+          icon={<Trophy color="#0857A6" size={18} />}
           title="Classement"
           value={myRank ? `#${myRank}` : '—'}
           sub="Cette semaine"
           onPress={onNavigateTrivia}
         />
         <Widget
-          accent="#10b981"
-          icon={<BookOpen color="#10b981" size={18} />}
+          icon={<BookOpen color="#0857A6" size={18} />}
           title={recommendedCourse ? 'Continuer' : 'Mes cours'}
           value={recommendedCourse ? (recommendedCourse.name?.slice(0, 14) ?? 'Cours') : enrolledCount > 0 ? `${enrolledCount}` : 'Explorer'}
           sub={recommendedCourse ? (recommendedCourse.level ?? 'cours') : 'Catalogue'}

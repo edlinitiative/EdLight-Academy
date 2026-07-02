@@ -3,18 +3,21 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { GraduationCap, ChevronRight, BookOpen, TrendingUp, Check } from 'lucide-react-native';
+import {
+  GraduationCap, ChevronRight, BookOpen, Landmark, Check,
+  Calculator, Atom, FlaskConical, Leaf, PenLine, Globe,
+} from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
 
 const TRACKS = [
-  { code: 'SVT', shortLabel: 'SVT', color: '#10b981' },
-  { code: 'SMP', shortLabel: 'SMP', color: '#3b82f6' },
-  { code: 'SES', shortLabel: 'SES', color: '#f59e0b' },
-  { code: 'LETT', shortLabel: 'LETT', color: '#ec4899' },
-  { code: 'TEC', shortLabel: 'TEC', color: '#8b5cf6' },
+  { code: 'SVT', shortLabel: 'SVT' },
+  { code: 'SMP', shortLabel: 'SMP' },
+  { code: 'SES', shortLabel: 'SES' },
+  { code: 'LETT', shortLabel: 'LETT' },
+  { code: 'TEC', shortLabel: 'TEC' },
 ];
 
 const LEVELS = [
@@ -23,34 +26,31 @@ const LEVELS = [
     label: 'Terminale (Bac)',
     sublabel: 'Examens officiels du Baccalauréat',
     description: 'Révise les sujets des 5 dernières années.',
-    color: '#0857A6',
-    emoji: '🎓',
+    Icon: GraduationCap,
   },
   {
     id: '9e',
     label: '9ème Année',
     sublabel: 'Examens du cycle fondamental',
     description: 'Prépare les épreuves nationales de 9ème.',
-    color: '#10b981',
-    emoji: '📚',
+    Icon: BookOpen,
   },
   {
     id: 'university',
     label: 'Université',
     sublabel: "Examens d'entrée et concours",
     description: 'Accès aux études supérieures.',
-    color: '#7c3aed',
-    emoji: '🏛️',
+    Icon: Landmark,
   },
 ];
 
 const SUBJECTS = [
-  { code: 'Mathématiques', color: '#2563eb', emoji: '📐' },
-  { code: 'Physique', color: '#0857A6', emoji: '⚛️' },
-  { code: 'Chimie', color: '#0891b2', emoji: '⚗️' },
-  { code: 'SVT', color: '#10b981', emoji: '🌿' },
-  { code: 'Français', color: '#d97706', emoji: '✍️' },
-  { code: 'Anglais', color: '#7c3aed', emoji: '🌍' },
+  { code: 'Mathématiques', Icon: Calculator },
+  { code: 'Physique', Icon: Atom },
+  { code: 'Chimie', Icon: FlaskConical },
+  { code: 'SVT', Icon: Leaf },
+  { code: 'Français', Icon: PenLine },
+  { code: 'Anglais', Icon: Globe },
 ];
 
 export default function ExamLandingScreen() {
@@ -90,9 +90,9 @@ export default function ExamLandingScreen() {
                 borderWidth: 1,
                 borderColor: '#e8edf5',
                 shadowColor: '#0857A6',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.07,
-                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
                 elevation: 2,
                 overflow: 'hidden',
               }}
@@ -109,13 +109,13 @@ export default function ExamLandingScreen() {
                       width: 48,
                       height: 48,
                       borderRadius: 12,
-                      backgroundColor: level.color + '14',
+                      backgroundColor: '#eaf2fb',
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginBottom: 10,
                     }}
                   >
-                    <Text style={{ fontSize: 26 }}>{level.emoji}</Text>
+                    <level.Icon color="#0857A6" size={24} />
                   </View>
 
                   <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
@@ -124,10 +124,10 @@ export default function ExamLandingScreen() {
 
                   {/* Explorer link */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                    <Text style={{ color: level.color, fontSize: 14, fontWeight: '700' }}>
+                    <Text style={{ color: '#0857A6', fontSize: 14, fontWeight: '700' }}>
                       {t('Explorer', 'Eksplore')}
                     </Text>
-                    <ChevronRight color={level.color} size={16} />
+                    <ChevronRight color="#0857A6" size={16} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -153,13 +153,13 @@ export default function ExamLandingScreen() {
                             paddingHorizontal: 12,
                             paddingVertical: 6,
                             borderRadius: 99,
-                            borderWidth: 1.5,
-                            borderColor: active ? tr.color : '#e8edf5',
-                            backgroundColor: active ? tr.color + '14' : '#f8faff',
+                            borderWidth: 1,
+                            borderColor: active ? '#0857A6' : '#e8edf5',
+                            backgroundColor: active ? '#eaf2fb' : '#f8faff',
                           }}
                         >
-                          {active && <Check color={tr.color} size={12} />}
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? tr.color : '#64748b' }}>
+                          {active && <Check color="#0857A6" size={12} />}
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#0857A6' : '#64748b' }}>
                             {tr.shortLabel}
                           </Text>
                         </TouchableOpacity>
@@ -174,7 +174,7 @@ export default function ExamLandingScreen() {
 
         {/* Subject quick-links */}
         <View className="px-5 mt-6">
-          <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15, marginBottom: 12 }}>
+          <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, marginBottom: 12 }}>
             {t('Par matière', 'Pa matye')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -196,11 +196,13 @@ export default function ExamLandingScreen() {
                   shadowColor: '#0857A6',
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.06,
-                  shadowRadius: 4,
+                  shadowRadius: 6,
                   elevation: 1,
                 }}
               >
-                <Text style={{ fontSize: 14 }}>{subj.emoji}</Text>
+                <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center' }}>
+                  <subj.Icon color="#0857A6" size={13} />
+                </View>
                 <Text style={{ fontSize: 13, fontWeight: '500', color: '#374151' }}>{subj.code}</Text>
               </TouchableOpacity>
             ))}

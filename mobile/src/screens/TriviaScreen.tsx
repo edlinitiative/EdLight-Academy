@@ -75,18 +75,18 @@ function TriviaHeader() {
   const { streak } = useStreak();
 
   return (
-    <View className="flex-row items-center bg-white border-b border-gray-100 px-4 gap-3" style={{ height: 44 }}>
+    <View className="flex-row items-center bg-white border-b border-gray-100 px-4 gap-3" style={{ paddingVertical: 10 }}>
       {/* XP section */}
-      <Zap color="#f59e0b" size={16} />
+      <Zap color="#0857A6" size={16} />
       <View className="flex-1 flex-row items-center gap-2">
-        <Text className="text-xs font-bold text-amber-500 w-10">
+        <Text className="text-xs font-bold w-10" style={{ color: '#0857A6' }}>
           {profile?.xp ?? 0} XP
         </Text>
         {/* Level progress bar */}
         <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
           <View
-            className="h-2 bg-amber-400 rounded-full"
-            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%` }}
+            className="h-2 rounded-full"
+            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: '#0857A6' }}
           />
         </View>
         <Text className="text-xs text-gray-400 font-semibold">
@@ -174,23 +174,21 @@ function CategoryPicker({
                 </Text>
 
                 {/* Question count chip */}
-                <View style={{ alignSelf: 'flex-start', backgroundColor: cat.color + '14', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 }}>
-                  <Text style={{ color: cat.color, fontSize: 11, fontWeight: '600' }}>
+                <View style={{ alignSelf: 'flex-start', backgroundColor: '#eaf2fb', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 }}>
+                  <Text style={{ color: '#0857A6', fontSize: 11, fontWeight: '600' }}>
                     {qCount} question{qCount !== 1 ? 's' : ''}
                   </Text>
                 </View>
 
                 {/* Jouer link */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                  <Text style={{ color: cat.color, fontSize: 14, fontWeight: '700' }}>
+                  <Text style={{ color: '#0857A6', fontSize: 14, fontWeight: '700' }}>
                     {isCreole ? 'Jwe' : 'Jouer'}
                   </Text>
-                  <ChevronRight color={cat.color} size={16} />
+                  <ChevronRight color="#0857A6" size={16} />
                 </View>
               </View>
 
-              {/* Bottom accent bar */}
-              <View style={{ height: 3, backgroundColor: cat.color }} />
             </TouchableOpacity>
           );
         })}
@@ -230,7 +228,7 @@ function RoundPicker({
         </TouchableOpacity>
         <View
           className="w-8 h-8 rounded-lg items-center justify-center mr-2"
-          style={{ backgroundColor: category.color + '22' }}
+          style={{ backgroundColor: '#eaf2fb' }}
         >
           <Text style={{ fontSize: 16 }}>{category.icon}</Text>
         </View>
@@ -260,10 +258,12 @@ function RoundPicker({
               activeOpacity={0.82}
               className="bg-white rounded-2xl px-5 py-4 flex-row items-center"
               style={{
-                shadowColor: '#000',
+                borderWidth: 1,
+                borderColor: '#e8edf5',
+                shadowColor: '#0857A6',
                 shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.05,
-                shadowRadius: 3,
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
                 elevation: 1,
                 opacity: disabled ? 0.4 : 1,
               }}
@@ -275,7 +275,7 @@ function RoundPicker({
                 <Text className="text-sm text-gray-500 mt-0.5">{opt.desc}</Text>
               </View>
               <View className="items-end">
-                <Text className="text-sm font-semibold text-amber-500">{opt.time}</Text>
+                <Text className="text-sm font-semibold" style={{ color: '#0857A6' }}>{opt.time}</Text>
                 <ChevronRight color="#d1d5db" size={16} />
               </View>
             </TouchableOpacity>
@@ -443,7 +443,7 @@ function QuizPlayer({
                   className="w-6 h-6 rounded-full items-center justify-center"
                   style={{
                     backgroundColor: isCurrent
-                      ? '#3b82f6'
+                      ? '#0857A6'
                       : isAnswered
                       ? '#10b981'
                       : '#e5e7eb',
@@ -463,10 +463,10 @@ function QuizPlayer({
             })}
           </ScrollView>
 
-          {/* Star score badge */}
-          <View className="flex-row items-center bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 gap-1">
-            <Text style={{ fontSize: 13 }}>⭐</Text>
-            <Text className="text-amber-600 font-bold text-sm">{score}</Text>
+          {/* Score badge */}
+          <View className="flex-row items-center rounded-full px-2.5 py-1 gap-1" style={{ backgroundColor: '#eaf2fb' }}>
+            <Trophy color="#0857A6" size={13} />
+            <Text className="font-bold text-sm" style={{ color: '#0857A6' }}>{score}</Text>
           </View>
         </View>
 
@@ -476,7 +476,7 @@ function QuizPlayer({
             className="h-1 rounded-full"
             style={{
               width: `${((idx + 1) / questions.length) * 100}%`,
-              backgroundColor: category.color,
+              backgroundColor: '#0857A6',
             }}
           />
         </View>
@@ -522,10 +522,12 @@ function QuizPlayer({
         <View
           className="bg-white rounded-2xl p-5 mb-5"
           style={{
-            shadowColor: '#000',
+            borderWidth: 1,
+            borderColor: '#e8edf5',
+            shadowColor: '#0857A6',
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.06,
-            shadowRadius: 4,
+            shadowRadius: 6,
             elevation: 2,
           }}
         >
@@ -539,7 +541,9 @@ function QuizPlayer({
             const isSelected = opt === selected;
             const isCorrectOpt = opt === q.correctAnswer;
 
-            let borderColor = '#e5e7eb';
+            // Feedback stays quiet: no colored fills or borders — the answer
+            // state is carried by text color and the check/cross icon only.
+            let borderColor = '#e8edf5';
             let bgColor = '#fff';
             let labelBg = '#f3f4f6';
             let labelText = '#6b7280';
@@ -547,20 +551,16 @@ function QuizPlayer({
 
             if (confirmed) {
               if (isCorrectOpt) {
-                borderColor = '#10b981';
-                bgColor = '#f0fdf4';
-                labelBg = '#10b981';
-                labelText = '#fff';
+                textColor = '#059669';
+                labelText = '#059669';
               } else if (isSelected) {
-                borderColor = '#ef4444';
-                bgColor = '#fef2f2';
-                labelBg = '#ef4444';
-                labelText = '#fff';
+                textColor = '#dc2626';
+                labelText = '#dc2626';
               }
             } else if (isSelected) {
-              borderColor = '#f59e0b';
-              bgColor = '#fffbeb';
-              labelBg = '#f59e0b';
+              borderColor = '#0857A6';
+              bgColor = '#eaf2fb';
+              labelBg = '#0857A6';
               labelText = '#fff';
             }
 
@@ -572,13 +572,13 @@ function QuizPlayer({
                 activeOpacity={0.8}
                 className="flex-row items-center rounded-xl overflow-hidden"
                 style={{
-                  borderWidth: 2,
+                  borderWidth: 1,
                   borderColor,
                   backgroundColor: bgColor,
-                  shadowColor: '#000',
+                  shadowColor: '#0857A6',
                   shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 2,
+                  shadowOpacity: 0.06,
+                  shadowRadius: 6,
                   elevation: 1,
                 }}
               >
@@ -615,25 +615,14 @@ function QuizPlayer({
           })}
         </View>
 
-        {/* Feedback panel */}
+        {/* Feedback — just the verdict word, no box, border or fill */}
         {confirmed && (
-          <View
-            className="mt-4 bg-white rounded-xl p-4"
-            style={{
-              borderLeftWidth: 4,
-              borderLeftColor: isCorrect ? '#10b981' : '#ef4444',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.05,
-              shadowRadius: 3,
-              elevation: 1,
-            }}
-          >
+          <View className="mt-4 px-1">
             <View className="flex-row items-center gap-2 mb-1">
               {isCorrect ? (
-                <Check color="#10b981" size={18} />
+                <Check color="#059669" size={18} />
               ) : (
-                <X color="#ef4444" size={18} />
+                <X color="#dc2626" size={18} />
               )}
               <Text
                 className="font-bold text-base"
@@ -665,7 +654,7 @@ function QuizPlayer({
             disabled={!selected}
             activeOpacity={0.85}
             className="py-4 rounded-2xl items-center"
-            style={{ backgroundColor: selected ? '#f59e0b' : '#e5e7eb' }}
+            style={{ backgroundColor: selected ? '#0857A6' : '#e5e7eb' }}
           >
             <Text
               className="font-bold text-base"
@@ -678,8 +667,8 @@ function QuizPlayer({
           <TouchableOpacity
             onPress={handleNext}
             activeOpacity={0.85}
-            className="py-4 rounded-2xl items-center"
-            style={{ backgroundColor: category.color }}
+            className="flex-row py-4 rounded-2xl items-center justify-center gap-1"
+            style={{ backgroundColor: '#0857A6' }}
           >
             <Text className="text-white font-bold text-base">
               {idx + 1 >= questions.length
@@ -687,9 +676,10 @@ function QuizPlayer({
                   ? 'Wè rezilta yo'
                   : 'Voir les résultats'
                 : isCreole
-                ? 'Swivan →'
-                : 'Suivant →'}
+                ? 'Swivan'
+                : 'Suivant'}
             </Text>
+            {idx + 1 < questions.length && <ChevronRight color="#ffffff" size={18} />}
           </TouchableOpacity>
         )}
       </View>
@@ -750,14 +740,15 @@ function TriviaResults({
 }) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const xpEarned = score * 10;
-  const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '⭐' : '💪';
 
   return (
     <ScrollView
       className="flex-1" style={{ backgroundColor: "#f4f6fb" }}
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 40, paddingBottom: 48 }}
     >
-      <Text style={{ fontSize: 48, marginBottom: 16 }}>{emoji}</Text>
+      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+        <Trophy color="#0857A6" size={32} />
+      </View>
 
       <ScoreRing score={score} total={total} />
 
@@ -770,9 +761,9 @@ function TriviaResults({
       </Text>
 
       {/* XP earned badge */}
-      <View className="flex-row items-center gap-2 bg-amber-50 border border-amber-200 rounded-full px-4 py-2 mt-3 mb-8">
-        <Zap color="#f59e0b" size={16} />
-        <Text className="text-amber-600 font-bold text-sm">
+      <View className="flex-row items-center gap-2 rounded-full px-4 py-2 mt-3 mb-8" style={{ backgroundColor: '#eaf2fb' }}>
+        <Zap color="#0857A6" size={16} />
+        <Text className="font-bold text-sm" style={{ color: '#0857A6' }}>
           +{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}
         </Text>
       </View>
@@ -780,10 +771,10 @@ function TriviaResults({
       {/* Category tag */}
       <View
         className="flex-row items-center gap-2 rounded-xl px-4 py-2 mb-8"
-        style={{ backgroundColor: category.color + '18' }}
+        style={{ backgroundColor: '#eaf2fb' }}
       >
         <Text style={{ fontSize: 18 }}>{category.icon}</Text>
-        <Text className="font-semibold text-sm" style={{ color: category.color }}>
+        <Text className="font-semibold text-sm" style={{ color: '#0857A6' }}>
           {isCreole ? (category.nameHt ?? category.name) : category.name}
         </Text>
       </View>
@@ -792,7 +783,8 @@ function TriviaResults({
       <TouchableOpacity
         onPress={onRetry}
         activeOpacity={0.85}
-        className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3 bg-amber-500"
+        className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
+        style={{ backgroundColor: '#0857A6' }}
       >
         <RefreshCw color="#fff" size={18} />
         <Text className="text-white font-bold text-base">
@@ -926,7 +918,7 @@ export default function TriviaScreen() {
             </TouchableOpacity>
             <View
               className="w-7 h-7 rounded-lg items-center justify-center mr-2"
-              style={{ backgroundColor: selectedCategory.color + '22' }}
+              style={{ backgroundColor: '#eaf2fb' }}
             >
               <Text style={{ fontSize: 14 }}>{selectedCategory.icon}</Text>
             </View>
@@ -935,7 +927,7 @@ export default function TriviaScreen() {
                 ? (selectedCategory.nameHt ?? selectedCategory.name)
                 : selectedCategory.name}
             </Text>
-            <Trophy color="#f59e0b" size={18} />
+            <Trophy color="#0857A6" size={18} />
           </View>
 
           <QuizPlayer
@@ -951,7 +943,7 @@ export default function TriviaScreen() {
         <View className="flex-1">
           {/* Results nav bar */}
           <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
-            <Trophy color="#f59e0b" size={18} />
+            <Trophy color="#0857A6" size={18} />
             <Text className="font-bold text-gray-900 ml-2">
               {isCreole ? 'Rezilta' : 'Résultats'}
             </Text>

@@ -22,7 +22,10 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
 
   return (
     <View
-      className={`flex-row items-center py-2.5 px-3 rounded-xl mb-1.5 ${isMe ? 'bg-blue-50 border border-blue-200' : 'bg-white border border-gray-100'}`}
+      className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
+      style={isMe
+        ? { backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#0857A6' }
+        : { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5' }}
     >
       {/* Rank badge */}
       <View
@@ -52,7 +55,7 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
 
       {/* XP */}
       <View className="items-end">
-        <Text className="text-sm font-bold text-amber-600">{entry.xp ?? 0}</Text>
+        <Text className="text-sm font-bold" style={{ color: '#0857A6' }}>{entry.xp ?? 0}</Text>
         <Text className="text-xs text-gray-400">XP</Text>
       </View>
     </View>
@@ -95,11 +98,11 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
     <View style={cardStyle}>
       {!compact && (
         <View className="flex-row items-center gap-2 mb-3">
-          <Trophy color="#f59e0b" size={18} />
-          <Text className="font-bold text-gray-900 text-base">Classement de la semaine</Text>
+          <Trophy color="#0857A6" size={18} />
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>Classement de la semaine</Text>
           {myRank && (
-            <View className="ml-auto bg-amber-100 px-2 py-0.5 rounded-full">
-              <Text className="text-xs font-bold text-amber-700">#{myRank}</Text>
+            <View className="ml-auto px-2 py-0.5 rounded-full" style={{ backgroundColor: '#eaf2fb' }}>
+              <Text className="text-xs font-bold" style={{ color: '#0857A6' }}>#{myRank}</Text>
             </View>
           )}
         </View>

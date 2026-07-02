@@ -222,19 +222,17 @@ export default function CourseDetailScreen() {
         </View>
       )}
 
-      {/* Video player or header banner */}
+      {/* Video player (no decorative banner when nothing is playing) */}
       {activeLesson?.videoUrl ? (
         <VideoPlayer videoUrl={activeLesson.videoUrl} />
-      ) : (
+      ) : activeLesson ? (
         <View
           className="w-full items-center justify-center"
-          style={{ height: activeLesson ? 80 : 120, backgroundColor: (course.color ?? '#0857A6') + '15' }}
+          style={{ height: 80, backgroundColor: (course.color ?? '#0857A6') + '15' }}
         >
-          {activeLesson
-            ? <Text className="text-gray-500 text-sm">{activeLesson.type === 'video' ? 'Vidéo non disponible' : 'Quiz / Exercice'}</Text>
-            : <BookOpen color={course.color ?? '#0857A6'} size={48} />}
+          <Text className="text-gray-500 text-sm">{activeLesson.type === 'video' ? 'Vidéo non disponible' : 'Quiz / Exercice'}</Text>
         </View>
-      )}
+      ) : null}
 
       {/* Active lesson info + mark complete */}
       {activeLesson && (
@@ -299,19 +297,7 @@ export default function CourseDetailScreen() {
             {course.description ? (
               <Text className="text-sm text-gray-500 leading-relaxed">{course.description}</Text>
             ) : null}
-            <View className="flex-row items-center gap-3 mt-3 flex-wrap">
-              {course.subject && (
-                <View className="px-3 py-1 rounded-full" style={{ backgroundColor: (course.color ?? '#0857A6') + '18' }}>
-                  <Text className="text-xs font-semibold" style={{ color: course.color ?? '#0857A6' }}>{course.subject}</Text>
-                </View>
-              )}
-              {course.level && (
-                <View className="px-3 py-1 rounded-full bg-gray-100">
-                  <Text className="text-xs font-semibold text-gray-600">{course.level}</Text>
-                </View>
-              )}
-              <Text className="text-xs text-gray-400">{allLessons.length} leçons · {course.modules?.length ?? 0} unités</Text>
-            </View>
+            <Text className="text-xs text-gray-400 mt-3">{allLessons.length} leçons · {course.modules?.length ?? 0} unités</Text>
           </View>
         )}
         {(course.modules ?? []).map((unit: any) => (

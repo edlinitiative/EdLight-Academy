@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, Lock, User, Eye, EyeOff, Check } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import {
   loginWithEmailPassword,
@@ -106,8 +106,8 @@ export default function AuthScreen() {
               style={{ width: 80, height: 80, marginBottom: 16 }}
               resizeMode="contain"
             />
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827' }}>EdLight Academy</Text>
-            <Text style={{ color: '#6b7280', marginTop: 4, textAlign: 'center' }}>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a' }}>EdLight Academy</Text>
+            <Text style={{ color: '#64748b', marginTop: 4, textAlign: 'center' }}>
               Préparez votre Bac avec confiance
             </Text>
           </View>
@@ -119,7 +119,7 @@ export default function AuthScreen() {
                 key={tab}
                 onPress={() => setActiveTab(tab)}
                 className={`flex-1 py-2.5 rounded-lg items-center`}
-                style={activeTab === tab ? { backgroundColor: '#ffffff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 2 } : {}}
+                style={activeTab === tab ? { backgroundColor: '#ffffff', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 2 } : {}}
               >
                 <Text className={`font-semibold text-sm ${activeTab === tab ? 'text-primary-600' : 'text-gray-500'}`}>
                   {tab === 'signin' ? 'Connexion' : 'Inscription'}
@@ -131,7 +131,7 @@ export default function AuthScreen() {
           {/* Form */}
           <View className="px-6 gap-3">
             {!isSignIn && (
-              <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-4">
+              <View className="flex-row items-center bg-gray-50 rounded-xl px-4" style={{ borderWidth: 1, borderColor: '#e8edf5' }}>
                 <User color="#9ca3af" size={18} />
                 <TextInput
                   className="flex-1 py-3.5 ml-3 text-gray-900 text-base"
@@ -144,7 +144,7 @@ export default function AuthScreen() {
               </View>
             )}
 
-            <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-4">
+            <View className="flex-row items-center bg-gray-50 rounded-xl px-4" style={{ borderWidth: 1, borderColor: '#e8edf5' }}>
               <Mail color="#9ca3af" size={18} />
               <TextInput
                 className="flex-1 py-3.5 ml-3 text-gray-900 text-base"
@@ -158,7 +158,7 @@ export default function AuthScreen() {
               />
             </View>
 
-            <View className="flex-row items-center bg-gray-50 border border-gray-200 rounded-xl px-4">
+            <View className="flex-row items-center bg-gray-50 rounded-xl px-4" style={{ borderWidth: 1, borderColor: '#e8edf5' }}>
               <Lock color="#9ca3af" size={18} />
               <TextInput
                 className="flex-1 py-3.5 ml-3 text-gray-900 text-base"
@@ -176,9 +176,14 @@ export default function AuthScreen() {
 
             {isSignIn && (
               <TouchableOpacity onPress={handleReset} className="items-end">
-                <Text className="text-primary-600 text-sm">
-                  {resetSent ? 'Email envoyé ✓' : 'Mot de passe oublié ?'}
-                </Text>
+                {resetSent ? (
+                  <View className="flex-row items-center gap-1">
+                    <Check color="#0857A6" size={14} />
+                    <Text className="text-primary-600 text-sm">Email envoyé</Text>
+                  </View>
+                ) : (
+                  <Text className="text-primary-600 text-sm">Mot de passe oublié ?</Text>
+                )}
               </TouchableOpacity>
             )}
 
@@ -201,9 +206,12 @@ export default function AuthScreen() {
             <TouchableOpacity
               onPress={() => promptAsync()}
               disabled={loading}
-              className="border border-gray-300 rounded-2xl py-3.5 items-center flex-row justify-center gap-3"
+              className="rounded-2xl py-3.5 items-center flex-row justify-center gap-3"
+              style={{ borderWidth: 1, borderColor: '#e8edf5' }}
             >
-              <Text className="text-lg">🇬</Text>
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#0857A6', fontWeight: '800', fontSize: 13 }}>G</Text>
+              </View>
               <Text className="text-gray-700 font-semibold">Continuer avec Google</Text>
             </TouchableOpacity>
           </View>
