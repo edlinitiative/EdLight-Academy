@@ -241,6 +241,16 @@ function parseTable(desc) {
       continue;
     }
 
+    // Pattern B2: unquoted label — "ligne, étiquetée $x_i$, contient les valeurs ..."
+    // (math labels arrive as $…$ with no quotes around them)
+    const etiBare = sent.match(
+      /ligne\s*,?\s*(?:est\s+)?étiquetée\s+(\$[^$]+\$|[^\s,]+)\s*,?\s*contient\s+(?:les\s+)?(?:valeurs?|entrées?|intervalles?)\s*:?\s*(.+)/i
+    );
+    if (etiBare) {
+      rowEntries.push({ label: etiBare[1].trim(), values: splitValues(etiBare[2]) });
+      continue;
+    }
+
     // Pattern C: "(première|deuxième|...) ligne contient les valeurs TYPE: VAL1, ..."
     const frMatch = sent.match(
       /(?:première|deuxième|troisième|quatrième|cinquième|first|second|third)\s+(?:ligne|row)\s+.*?contient?\s+(?:les\s+)?(?:valeurs?|probabilités?)\s*(?:([^:]+?):\s*)?(\S.+)/i

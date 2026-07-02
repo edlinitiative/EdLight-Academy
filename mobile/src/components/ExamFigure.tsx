@@ -38,13 +38,31 @@ interface ExamFigureProps {
 
 export default function ExamFigure({ description }: ExamFigureProps) {
   const [height, setHeight] = useState(120);
+  const [width, setWidth] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
+  // The description travels in the `d` query param — WKWebView mangles long
+  // encoded hash fragments, which silently truncated multi-row figures. The
+  // measured card width travels as ?w= so the page pins its viewport to
+  // exactly this width before first paint.
   const uri = useMemo(
-    () => `${EMBED_BASE}#${encodeURIComponent(String(description ?? ''))}`,
-    [description],
+    () => `${EMBED_BASE}?d=${encodeURIComponent(String(description ?? ''))}${width > 0 ? `&w=${Math.round(width)}` : ''}`,
+    [description, width],
   );
+
+  // WKWebView can pick a wide legacy layout viewport and crop the page to the
+  // left half. Pin the page's viewport to the WebView's measured width so the
+  // figure lays out at exactly the card size, then re-report the height.
+  const viewportFix = width > 0
+    ? `(function(){
+        var m = document.querySelector('meta[name=viewport]');
+        if (!m) { m = document.createElement('meta'); m.name = 'viewport'; document.head.appendChild(m); }
+        m.setAttribute('content', 'width=${Math.round(width)}, initial-scale=1, maximum-scale=1');
+        var post = function(){ window.ReactNativeWebView && window.ReactNativeWebView.postMessage(String(document.body.scrollHeight)); };
+        setTimeout(post, 100); setTimeout(post, 400);
+      })(); true;`
+    : 'true;';
 
   return (
     <View style={{ marginTop: 14 }}>
@@ -69,9 +87,14 @@ export default function ExamFigure({ description }: ExamFigureProps) {
           </Text>
         </View>
       ) : (
-        <View style={[card, cardShadow, { overflow: 'hidden' }]}>
+        <View
+          style={[card, cardShadow, { overflow: 'hidden' }]}
+          onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        >
           <WebView
+            key={width > 0 ? `w${Math.round(width)}` : 'init'}
             source={{ uri }}
+            injectedJavaScript={viewportFix}
             style={{ height, backgroundColor: '#ffffff' }}
             onMessage={(e) => {
               const h = Number(e.nativeEvent?.data);
