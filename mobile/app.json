@@ -12,17 +12,19 @@
       "resizeMode": "contain",
       "backgroundColor": "#0857A6"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.edlight.academy"
+      "bundleIdentifier": "com.edlightacademy"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0857A6"
       },
-      "package": "org.edlight.academy"
+      "package": "com.edlightacademy"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -44,7 +46,11 @@
       "firebaseProjectId": "edlight-academy",
       "firebaseStorageBucket": "edlight-academy.firebasestorage.app",
       "firebaseMessagingSenderId": "618990331083",
-      "firebaseAppId": "1:618990331083:web:1af6a46399f9251a35e74e"
-    }
+      "firebaseAppId": "1:618990331083:web:1af6a46399f9251a35e74e",
+      "eas": {
+        "projectId": "84d5c2a1-53bc-443c-8a93-e17a1207322b"
+      }
+    },
+    "owner": "edlight-initiative"
   }
 }
