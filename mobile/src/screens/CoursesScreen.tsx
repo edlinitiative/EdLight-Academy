@@ -129,7 +129,7 @@ export default function CoursesScreen() {
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
       {/* Header + search */}
       <View className="px-5 pt-5 pb-3 bg-white border-b border-gray-100">
         <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5, marginBottom: 12 }}>{t('Cours', 'Kou yo')}</Text>

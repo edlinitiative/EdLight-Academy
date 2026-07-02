@@ -177,7 +177,7 @@ export default function QuizzesScreen() {
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top']}>
       <View className="px-5 pt-6 pb-3">
         <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>{t('Quiz', 'Quiz yo')}</Text>
         <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>{quizzes.length} {t('quiz disponibles', 'quiz disponib')}</Text>
