@@ -101,6 +101,10 @@ export async function updateEntryProfile(uid: string, meta: any = {}) {
       {
         uid,
         weekId: id,
+        // Seed xp so the entry is visible to the orderBy('xp') board query —
+        // Firestore drops documents that lack the ordered field. increment(0)
+        // creates it as 0 on opt-in and leaves any earned XP untouched.
+        xp: increment(0),
         ...(meta.displayName != null ? { displayName: meta.displayName } : {}),
         ...(meta.level != null ? { level: meta.level } : {}),
         ...(meta.school !== undefined ? { school: meta.school } : {}),
