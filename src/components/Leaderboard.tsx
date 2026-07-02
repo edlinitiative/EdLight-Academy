@@ -18,24 +18,23 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import './Leaderboard.css';
 
+// First name only — the board is publicly readable, so never expose any part
+// of the last name (not even an initial).
 function defaultAlias(user) {
   const name = user?.name || user?.displayName || '';
   const parts = String(name).trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'Élève';
-  const first = parts[0];
-  const initial = parts.length > 1 ? ` ${parts[parts.length - 1][0].toUpperCase()}.` : '';
-  return `${first}${initial}`;
+  return parts[0] || 'Élève';
 }
 
 // Anonymized example ranking shown when the board is still empty so the feature
 // never looks dead. Always clearly labelled as an example — never blended with
 // real entries.
 const SAMPLE_LEADERBOARD = [
-  { rank: 1, displayName: 'Marie L.', level: 7, xp: 1240 },
-  { rank: 2, displayName: 'Jean P.', level: 6, xp: 1080 },
-  { rank: 3, displayName: 'Naïka D.', level: 5, xp: 920 },
-  { rank: 4, displayName: 'Samuel R.', level: 4, xp: 760 },
-  { rank: 5, displayName: 'Wideline C.', level: 4, xp: 640 },
+  { rank: 1, displayName: 'Marie', level: 7, xp: 1240 },
+  { rank: 2, displayName: 'Jean', level: 6, xp: 1080 },
+  { rank: 3, displayName: 'Naïka', level: 5, xp: 920 },
+  { rank: 4, displayName: 'Samuel', level: 4, xp: 760 },
+  { rank: 5, displayName: 'Wideline', level: 4, xp: 640 },
 ];
 
 function RankBadge({ rank }) {
