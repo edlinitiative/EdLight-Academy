@@ -1,38 +1,71 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const KATEX_HTML = (math: string, display: boolean) => `
+/**
+ * Render mixed prose + LaTeX. The whole string is NOT LaTeX — only the
+ * segments delimited by $…$ / $$…$$ / \(…\) are. KaTeX's auto-render walks the
+ * text nodes and typesets just those, so plain French sentences stay plain
+ * (the old code fed the entire sentence to katex.render, which painted it in
+ * KaTeX's red error style and clipped it at a fixed height).
+ *
+ * The WebView reports its rendered height back through postMessage so long,
+ * wrapping questions are never cut off.
+ */
+const KATEX_HTML = (text: string, display: boolean) => `
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
-  body { margin: 0; padding: 4px; font-family: system-ui; background: transparent; }
-  .katex { font-size: ${display ? '1.1em' : '1em'}; }
+  body {
+    margin: 0; padding: 2px;
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 16px; line-height: 1.5; color: #0f172a;
+    background: transparent;
+  }
+  .katex { font-size: ${display ? '1.15em' : '1.05em'}; }
 </style>
 </head>
 <body>
 <div id="math"></div>
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    try {
-      katex.render(${JSON.stringify(math)}, document.getElementById("math"), {
-        throwOnError: false,
-        displayMode: ${display},
-      });
-    } catch(e) {
-      document.getElementById("math").textContent = ${JSON.stringify(math)};
+  function postHeight() {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(String(document.body.scrollHeight));
     }
+  }
+  document.addEventListener("DOMContentLoaded", function() {
+    var el = document.getElementById("math");
+    el.textContent = ${JSON.stringify(text)};
+    try {
+      if (typeof renderMathInElement === 'function') {
+        renderMathInElement(el, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\\\(', right: '\\\\)', display: false },
+            { left: '\\\\[', right: '\\\\]', display: true },
+          ],
+          throwOnError: false,
+        });
+      }
+    } catch (e) { /* leave plain text */ }
+    postHeight();
+    setTimeout(postHeight, 150);
+    setTimeout(postHeight, 500);
   });
 </script>
 </body>
 </html>
 `;
 
-const HAS_MATH = /\$|\\\(|\\frac|\\sqrt|\\int|\\sum|\\prod|\\lim|\\pm|\\times/;
+// Only reach for the WebView when the text plausibly contains typeset math:
+// paired $…$ delimiters or an actual TeX command.
+const HAS_MATH = /\$[^$]+\$|\\\(|\\\[|\\frac|\\sqrt|\\int|\\sum|\\prod|\\lim|\\pm|\\times|\\cdot|\\div/;
 
 interface MathTextProps {
   text: string;
@@ -41,16 +74,22 @@ interface MathTextProps {
 }
 
 export function MathText({ text, display = false, style }: MathTextProps) {
-  if (!text) return null;
-  if (!HAS_MATH.test(text)) return <Text style={style}>{text}</Text>;
+  const safeText = String(text ?? '');
+  const hasMath = HAS_MATH.test(safeText);
+  const [height, setHeight] = useState(display ? 44 : 28);
+  const html = useMemo(() => KATEX_HTML(safeText, display), [safeText, display]);
 
-  const html = useMemo(() => KATEX_HTML(text, display), [text, display]);
-  const h = display ? 60 : 32;
+  if (!safeText) return null;
+  if (!hasMath) return <Text style={style}>{safeText}</Text>;
 
   return (
     <WebView
       source={{ html }}
-      style={{ height: h, backgroundColor: 'transparent', ...style }}
+      style={{ height, backgroundColor: 'transparent', ...style }}
+      onMessage={(e) => {
+        const h = Number(e.nativeEvent?.data);
+        if (Number.isFinite(h) && h > 0) setHeight(Math.min(Math.max(h, 24), 800));
+      }}
       scrollEnabled={false}
       showsVerticalScrollIndicator={false}
       originWhitelist={['*']}
@@ -61,13 +100,7 @@ export function MathText({ text, display = false, style }: MathTextProps) {
 export function MathBlock({ latex }: { latex: string }) {
   return (
     <View className="my-2">
-      <WebView
-        source={{ html: KATEX_HTML(latex, true) }}
-        style={{ height: 60, backgroundColor: 'transparent' }}
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-        originWhitelist={['*']}
-      />
+      <MathText text={`$$${String(latex ?? '')}$$`} display />
     </View>
   );
 }

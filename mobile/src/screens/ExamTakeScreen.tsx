@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  Alert, BackHandler, KeyboardAvoidingView, Platform,
+  Alert, BackHandler, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -37,44 +37,94 @@ const cardShadow = {
   elevation: 1,
 } as const;
 
-function QuestionNav({ current, total, answers, onGoto }: {
+// Fixed item widths so the auto-scroll offset can be computed without
+// measuring: dot 36 + 8 gap, section chip 30 + 8 gap.
+const NAV_DOT_W = 44;
+const NAV_CHIP_W = 38;
+
+function sectionNumeral(title: string, fallback: number): string {
+  const m = /^\s*(?:section\s+)?([IVXLC]+|\d+)\b/i.exec(String(title ?? ''));
+  return m ? m[1].toUpperCase() : String(fallback);
+}
+
+function QuestionNav({ current, total, answers, sections, onGoto }: {
   current: number;
   total: number;
   answers: Record<number, Answer>;
+  sections: { title: string; start: number; end: number }[];
   onGoto: (i: number) => void;
 }) {
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Keep the active question centered as the student navigates.
+  useEffect(() => {
+    const chipsBefore = sections.filter((s) => s.start <= current).length;
+    const itemCenter = chipsBefore * NAV_CHIP_W + current * NAV_DOT_W + 16 + 18;
+    const x = itemCenter - Dimensions.get('window').width / 2;
+    scrollRef.current?.scrollTo({ x: Math.max(0, x), animated: true });
+  }, [current, sections]);
+
+  const items: React.ReactNode[] = [];
+  for (let i = 0; i < total; i++) {
+    const sectionIdx = sections.findIndex((s) => s.start === i);
+    if (sectionIdx >= 0) {
+      const s = sections[sectionIdx];
+      const inSection = current >= s.start && current <= s.end;
+      items.push(
+        <TouchableOpacity
+          key={`s${sectionIdx}`}
+          onPress={() => onGoto(s.start)}
+          hitSlop={{ top: 6, bottom: 6 }}
+          style={{
+            width: 30,
+            height: 36,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 8,
+            backgroundColor: inSection ? '#eaf2fb' : '#f4f6fb',
+          }}
+        >
+          <Text style={{ fontSize: 11, fontWeight: '800', color: inSection ? PRIMARY : MUTED }}>
+            {sectionNumeral(s.title, sectionIdx + 1)}
+          </Text>
+        </TouchableOpacity>,
+      );
+    }
+    const answered = answers[i] != null && answers[i] !== '';
+    const active = i === current;
+    items.push(
+      <TouchableOpacity
+        key={i}
+        onPress={() => onGoto(i)}
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 999,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 8,
+          backgroundColor: active ? PRIMARY : answered ? '#e6f0f9' : '#ffffff',
+          borderWidth: active ? 0 : 1,
+          borderColor: BORDER,
+        }}
+      >
+        <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#ffffff' : answered ? PRIMARY : MUTED }}>
+          {i + 1}
+        </Text>
+      </TouchableOpacity>,
+    );
+  }
+
   return (
     <ScrollView
+      ref={scrollRef}
       horizontal
       showsHorizontalScrollIndicator={false}
       style={{ flexGrow: 0 }}
       contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}
     >
-      {Array.from({ length: total }, (_, i) => {
-        const answered = answers[i] != null && answers[i] !== '';
-        const active = i === current;
-        return (
-          <TouchableOpacity
-            key={i}
-            onPress={() => onGoto(i)}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 999,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 8,
-              backgroundColor: active ? PRIMARY : answered ? '#e6f0f9' : '#ffffff',
-              borderWidth: active ? 0 : 1,
-              borderColor: BORDER,
-            }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#ffffff' : answered ? PRIMARY : MUTED }}>
-              {i + 1}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+      {items}
     </ScrollView>
   );
 }
@@ -486,6 +536,7 @@ export default function ExamTakeScreen() {
         current={safeIdx}
         total={questions.length}
         answers={answers}
+        sections={sectionMeta}
         onGoto={setCurrentIdx}
       />
 
