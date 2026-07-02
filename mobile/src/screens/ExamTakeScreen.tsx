@@ -16,6 +16,7 @@ import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
 import FigureRenderer from '../components/FigureRenderer';
 import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
+import ExamSectionContext from '../components/ExamSectionContext';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Route = RouteProp<ExamsParamList, 'ExamTake'>;
@@ -78,22 +79,66 @@ function QuestionNav({ current, total, answers, onGoto }: {
   );
 }
 
+/**
+ * Real exam data ships `options` in several shapes:
+ *   - an object keyed by letter: { a: "both", b: "either", … }  (most common)
+ *   - an array of strings
+ *   - null / missing
+ * Normalize everything to [{ key, label, value }] where `value` is what gets
+ * stored as the answer (the letter key for object options — matching the
+ * grader, which compares against `question.correct` like "c" — and the label
+ * text for legacy array options).
+ */
+function normalizeOptions(raw: any): { key: string; label: string; value: string }[] {
+  const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  if (Array.isArray(raw)) {
+    return raw
+      .filter((opt) => opt != null)
+      .map((opt, i) => {
+        const label = typeof opt === 'string' ? opt : String(opt?.text ?? opt?.label ?? opt);
+        return { key: letters[i] ?? String(i + 1), label, value: label };
+      });
+  }
+  if (raw && typeof raw === 'object') {
+    return Object.entries(raw)
+      .filter(([, v]) => v != null)
+      .map(([k, v]) => {
+        const label = typeof v === 'string' ? v : String(v);
+        return { key: String(k), label, value: String(k) };
+      });
+  }
+  return [];
+}
+
 function MCQQuestion({ question, answer, onAnswer }: {
   question: any;
   answer: Answer;
   onAnswer: (a: Answer) => void;
 }) {
-  const options: string[] = question.options ?? question.choices ?? [];
-  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const entries = normalizeOptions(question?.options ?? question?.choices);
+
+  // No usable options → let the student type the answer instead of crashing.
+  if (entries.length === 0) {
+    return (
+      <View style={{ gap: 8 }}>
+        <Text style={{ fontSize: 12, color: MUTED }}>Options non disponibles — écris ta réponse :</Text>
+        <OpenQuestion answer={answer} onAnswer={onAnswer} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ gap: 10 }}>
-      {options.map((opt, idx) => {
-        const selected = answer === opt || answer === letters[idx] || (Array.isArray(answer) && answer.includes(opt));
+      {entries.map(({ key, label, value }, idx) => {
+        const selected =
+          answer === value ||
+          answer === label ||
+          (typeof answer === 'string' && answer.toLowerCase() === key.toLowerCase()) ||
+          (Array.isArray(answer) && (answer.includes(value) || answer.includes(label)));
         return (
           <TouchableOpacity
             key={idx}
-            onPress={() => onAnswer(opt)}
+            onPress={() => onAnswer(value)}
             style={[
               {
                 flexDirection: 'row',
@@ -118,9 +163,9 @@ function MCQQuestion({ question, answer, onAnswer }: {
                 backgroundColor: selected ? PRIMARY : '#f1f5f9',
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: selected ? '#ffffff' : MUTED }}>{letters[idx]}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: selected ? '#ffffff' : MUTED }}>{key.toUpperCase()}</Text>
             </View>
-            <MathText text={String(opt)} style={{ flex: 1, fontSize: 15, lineHeight: 22, color: TEXT }} />
+            <MathText text={String(label)} style={{ flex: 1, fontSize: 15, lineHeight: 22, color: TEXT }} />
           </TouchableOpacity>
         );
       })}
@@ -128,11 +173,13 @@ function MCQQuestion({ question, answer, onAnswer }: {
   );
 }
 
-function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…' }: {
+function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…', minHeight = 120 }: {
   answer: Answer;
   onAnswer: (a: Answer) => void;
   placeholder?: string;
+  minHeight?: number;
 }) {
+  const value = Array.isArray(answer) ? answer.join(', ') : String(answer ?? '');
   return (
     <TextInput
       style={[
@@ -145,11 +192,11 @@ function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…' }: {
           fontSize: 16,
           lineHeight: 24,
           color: TEXT,
-          minHeight: 120,
+          minHeight,
         },
         cardShadow,
       ]}
-      value={String(answer ?? '')}
+      value={value}
       onChangeText={onAnswer}
       multiline
       textAlignVertical="top"
@@ -340,9 +387,31 @@ export default function ExamTakeScreen() {
   const sectionSummary: ExamSectionSummary[] = useMemo(() => {
     if (!exam) return [];
     return (exam.sections ?? []).map((sec: any, i: number) => ({
-      title: String(sec.section_title || sec.title || sec.name || `Section ${i + 1}`).trim(),
-      count: (sec.questions ?? []).length,
+      title: String(sec?.section_title || sec?.title || sec?.name || `Section ${i + 1}`).trim(),
+      count: Array.isArray(sec?.questions) ? sec.questions.length : 0,
     }));
+  }, [exam]);
+
+  // Per-section context (title, instructions, passage) mapped onto the flat
+  // question index range, so we know which section each question belongs to
+  // and whether it is the section's first question.
+  const sectionMeta = useMemo(() => {
+    const metas: { title: string; instructions: string; passage: string; start: number; end: number }[] = [];
+    let cursor = 0;
+    const sections: any[] = Array.isArray(exam?.sections) ? exam.sections : [];
+    sections.forEach((sec: any, i: number) => {
+      const count = Array.isArray(sec?.questions) ? sec.questions.length : 0;
+      if (count === 0) return;
+      metas.push({
+        title: String(sec?.section_title || sec?.title || sec?.name || `Section ${i + 1}`).trim(),
+        instructions: typeof sec?.instructions === 'string' ? sec.instructions.trim() : '',
+        passage: typeof sec?.passage === 'string' ? sec.passage.trim() : '',
+        start: cursor,
+        end: cursor + count - 1,
+      });
+      cursor += count;
+    });
+    return metas;
   }, [exam]);
 
   if (loading) return <LoadingState message="Chargement de l'examen…" />;
@@ -367,13 +436,24 @@ export default function ExamTakeScreen() {
   }
 
   // ── Question flow ───────────────────────────────────────────────────────────
-  const q = questions[currentIdx];
-  const qType = (q?.type ?? '').toLowerCase();
-  const isFirst = currentIdx === 0;
-  const isLast = currentIdx === questions.length - 1;
+  // Clamp the index so a stale draft index (or any out-of-range value) can
+  // never make `q` undefined.
+  const safeIdx = Math.min(Math.max(currentIdx, 0), questions.length - 1);
+  const q = questions[safeIdx] ?? {};
+  const qType = String(q?.type ?? '').toLowerCase();
+  const isFirst = safeIdx === 0;
+  const isLast = safeIdx === questions.length - 1;
   const progress = Math.round((answeredCount / questions.length) * 100);
-  const sectionTitle = String(q?.sectionTitle ?? '').trim();
   const points = Number(q?.points) || 0;
+  const questionText = String(q?._displayText ?? q?.question ?? '');
+
+  // Section context for the current question. Prefer the exam-level metadata
+  // (which knows about `passage`); fall back to what flattenQuestions attached.
+  const section = sectionMeta.find((s) => safeIdx >= s.start && safeIdx <= s.end) ?? null;
+  const sectionTitle = section?.title ?? String(q?.sectionTitle ?? '').trim();
+  const sectionInstructions = section?.instructions ?? String(q?.sectionInstructions ?? '').trim();
+  const sectionPassage = section?.passage ?? '';
+  const isSectionStart = section ? safeIdx === section.start : safeIdx === 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f6fb' }} edges={['top']}>
@@ -403,7 +483,7 @@ export default function ExamTakeScreen() {
 
       {/* Question nav */}
       <QuestionNav
-        current={currentIdx}
+        current={safeIdx}
         total={questions.length}
         answers={answers}
         onGoto={setCurrentIdx}
@@ -415,25 +495,31 @@ export default function ExamTakeScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32, padding: 16 }}>
+          {/* Section context — full intro on the section's first question,
+              compact chip + "Consignes" toggle on the following ones. Keyed by
+              question index so the toggle resets when navigating. */}
+          <ExamSectionContext
+            key={safeIdx}
+            title={sectionTitle}
+            instructions={sectionInstructions}
+            passage={sectionPassage}
+            isSectionStart={isSectionStart}
+          />
+
           {/* Question label */}
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                Question {currentIdx + 1} / {questions.length}
+                Question {safeIdx + 1} / {questions.length}
               </Text>
-              {sectionTitle ? (
-                <View style={{ backgroundColor: '#e6f0f9', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, maxWidth: '60%' }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: PRIMARY }} numberOfLines={1}>{sectionTitle}</Text>
-                </View>
-              ) : null}
               {points > 0 ? (
                 <Text style={{ fontSize: 11, color: MUTED }}>{points} pt{points > 1 ? 's' : ''}</Text>
               ) : null}
             </View>
             <View style={[{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER }, cardShadow]}>
-              <MathText text={q._displayText ?? q.question ?? ''} style={{ fontSize: 16, color: TEXT, lineHeight: 24 }} />
-              {q.has_figure && q.figure_description ? (
-                <FigureRenderer description={q.figure_description} />
+              <MathText text={questionText} style={{ fontSize: 16, color: TEXT, lineHeight: 24 }} />
+              {q?.has_figure && q?.figure_description ? (
+                <FigureRenderer description={String(q.figure_description)} />
               ) : null}
             </View>
           </View>
@@ -442,19 +528,29 @@ export default function ExamTakeScreen() {
           {['mcq', 'multiple_choice', 'qcm'].includes(qType) ? (
             <MCQQuestion
               question={q}
-              answer={answers[currentIdx] ?? null}
-              onAnswer={(a) => setAnswer(currentIdx, a)}
+              answer={answers[safeIdx] ?? null}
+              onAnswer={(a) => setAnswer(safeIdx, a)}
             />
           ) : qType === 'true_false' ? (
             <TrueFalseQuestion
-              answer={answers[currentIdx] ?? null}
-              onAnswer={(a) => setAnswer(currentIdx, a)}
+              answer={answers[safeIdx] ?? null}
+              onAnswer={(a) => setAnswer(safeIdx, a)}
             />
+          ) : qType === 'essay' ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>Rédige ta réponse</Text>
+              <OpenQuestion
+                answer={answers[safeIdx] ?? null}
+                onAnswer={(a) => setAnswer(safeIdx, a)}
+                placeholder="Rédigez votre réponse…"
+                minHeight={140}
+              />
+            </View>
           ) : (
             <OpenQuestion
-              answer={answers[currentIdx] ?? null}
-              onAnswer={(a) => setAnswer(currentIdx, a)}
-              placeholder={qType === 'essay' ? 'Rédigez votre réponse…' : 'Votre réponse…'}
+              answer={answers[safeIdx] ?? null}
+              onAnswer={(a) => setAnswer(safeIdx, a)}
+              placeholder="Votre réponse…"
             />
           )}
         </ScrollView>
@@ -463,7 +559,7 @@ export default function ExamTakeScreen() {
       {/* Navigation buttons */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: BORDER }}>
         <TouchableOpacity
-          onPress={() => setCurrentIdx((i) => Math.max(0, i - 1))}
+          onPress={() => setCurrentIdx(Math.max(0, safeIdx - 1))}
           disabled={isFirst}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BORDER, opacity: isFirst ? 0.4 : 1 }}
         >
@@ -481,7 +577,7 @@ export default function ExamTakeScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            onPress={() => setCurrentIdx((i) => Math.min(questions.length - 1, i + 1))}
+            onPress={() => setCurrentIdx(Math.min(questions.length - 1, safeIdx + 1))}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
           >
             <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>Suiv.</Text>
