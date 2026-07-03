@@ -1,49 +1,98 @@
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Image } from 'react-native';
 
 interface AvatarProps {
   name?: string;
   uri?: string | null;
+  /** Stable per-user seed for the generated character (prefer uid; falls back to name) */
+  seed?: string;
   size?: number;
 }
 
-function initialsOf(name: string): string {
+// FNV-1a 32-bit hash — deterministic starting point for the identicon bits
+function fnv1a(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+// 5x5 horizontally mirrored pixel grid (3 unique columns), classic identicon style
+function identiconRows(seed: string): boolean[][] {
+  let h = fnv1a(seed) || 1;
+  const next = () => {
+    // xorshift32
+    h ^= h << 13;
+    h >>>= 0;
+    h ^= h >>> 17;
+    h ^= h << 5;
+    h >>>= 0;
+    return h;
+  };
+  const rows: boolean[][] = [];
+  for (let r = 0; r < 5; r++) {
+    const half = [0, 0, 0].map(() => next() % 2 === 0);
+    rows.push([half[0], half[1], half[2], half[1], half[0]]);
+  }
+  return rows;
+}
+
+// Last-resort offline fallback: locally rendered deterministic pixel identicon
+function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
+  const rows = React.useMemo(() => identiconRows(seed), [seed]);
+  const cell = Math.round((size * 0.6) / 5);
   return (
-    String(name)
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((p) => p[0])
-      .join('')
-      .slice(0, 2)
-      .toUpperCase() || 'EL'
+    <View>
+      {rows.map((row, r) => (
+        <View key={r} style={{ flexDirection: 'row' }}>
+          {row.map((on, c) => (
+            <View
+              key={c}
+              style={{ width: cell, height: cell, backgroundColor: on ? '#0857A6' : 'transparent' }}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }
 
-export default function Avatar({ name = '', uri, size = 48 }: AvatarProps) {
-  const [failed, setFailed] = React.useState(false);
+export default function Avatar({ name = '', uri, seed, size = 48 }: AvatarProps) {
+  const [photoFailed, setPhotoFailed] = React.useState(false);
+  const [characterFailed, setCharacterFailed] = React.useState(false);
 
-  // Retry the image if the uri changes (e.g. user re-signs in with Google)
-  React.useEffect(() => setFailed(false), [uri]);
+  const charSeed = seed || name || 'edlight';
 
-  const showImage = !!uri && !failed;
+  // Retry images if the source changes (e.g. user re-signs in with Google)
+  React.useEffect(() => setPhotoFailed(false), [uri]);
+  React.useEffect(() => setCharacterFailed(false), [charSeed]);
+
+  const showPhoto = !!uri && !photoFailed;
+  const characterUri = `https://api.dicebear.com/9.x/pixel-art/png?seed=${encodeURIComponent(charSeed)}&size=96`;
 
   return (
     <View
       className="rounded-full items-center justify-center overflow-hidden"
       style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#eaf2fb' }}
     >
-      {showImage ? (
+      {showPhoto ? (
         <Image
           source={{ uri: uri as string }}
           style={{ width: size, height: size, borderRadius: size / 2 }}
-          onError={() => setFailed(true)}
+          onError={() => setPhotoFailed(true)}
           accessibilityLabel={name || 'Avatar'}
         />
+      ) : characterFailed ? (
+        <PixelIdenticon seed={charSeed} size={size} />
       ) : (
-        <Text style={{ color: '#0857A6', fontWeight: '800', fontSize: Math.round(size / 3) }}>
-          {initialsOf(name)}
-        </Text>
+        <Image
+          source={{ uri: characterUri }}
+          style={{ width: size, height: size }}
+          onError={() => setCharacterFailed(true)}
+          accessibilityLabel={name || 'Avatar'}
+        />
       )}
     </View>
   );

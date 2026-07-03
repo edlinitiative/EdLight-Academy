@@ -158,10 +158,11 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
-            {/* Avatar photo (falls back to initials) */}
+            {/* Avatar photo (falls back to a pixel-art character) */}
             <Avatar
               name={user?.name || user?.displayName || ''}
               uri={user?.picture || user?.profile_picture || ''}
+              seed={user?.uid || ''}
               size={48}
             />
           </View>
