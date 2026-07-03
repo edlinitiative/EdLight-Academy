@@ -10,6 +10,7 @@ import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
 import { getFirstName } from '../utils/shared';
 import { LoadingState, ErrorState } from '../components/StateViews';
+import Avatar from '../components/ui/Avatar';
 import ProgressBar from '../components/ProgressBar';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
@@ -33,18 +34,6 @@ function calculateCompletionPercentage(progress: any, totalLessons: number): num
   if (!progress || totalLessons === 0) return 0;
   const completed = progress?.completedLessons?.length ?? 0;
   return Math.min(100, Math.round((completed / totalLessons) * 100));
-}
-
-function initialsOf(user: any): string {
-  const name = user?.name || user?.displayName || '';
-  return String(name)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((p: string) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'EL';
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +86,6 @@ export default function DashboardScreen() {
   const avgScore = totalQuizzes > 0
     ? Math.round(allAttemptsList.reduce((sum: number, a: any) => sum + (typeof a.score === 'number' ? a.score * 100 : typeof a.percentage === 'number' ? a.percentage : 0), 0) / totalQuizzes)
     : 0;
-  const initials = initialsOf(user);
 
   // Build a courseId → progress map
   const progressByCourseId = React.useMemo(() => {
@@ -170,13 +158,13 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
-            {/* Avatar initials */}
-            <View
-              className="w-12 h-12 rounded-full items-center justify-center"
-              style={{ backgroundColor: '#eaf2fb' }}
-            >
-              <Text style={{ color: '#0857A6', fontWeight: '800', fontSize: 16 }}>{initials}</Text>
-            </View>
+            {/* Avatar photo (falls back to a pixel-art character) */}
+            <Avatar
+              name={user?.name || user?.displayName || ''}
+              uri={user?.picture || user?.profile_picture || ''}
+              seed={user?.uid || ''}
+              size={48}
+            />
           </View>
         </View>
 
