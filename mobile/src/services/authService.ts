@@ -67,6 +67,16 @@ export async function loginWithGoogleCredential(idToken: string, accessToken?: s
 
 export async function logoutUser() {
   const { logout } = await loadFirebase();
+  // Best-effort: stop remote pushes to this device before signing out.
+  try {
+    const uid = useStore.getState().user?.uid;
+    if (uid) {
+      const { unregisterPushToken } = await import('./pushService');
+      await unregisterPushToken(uid);
+    }
+  } catch {
+    // never block logout
+  }
   await logout();
 }
 
