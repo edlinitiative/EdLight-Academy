@@ -38,17 +38,32 @@ async function fetchCoursesFromFirestore(): Promise<any[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+// Dedupe concurrent background refreshes (several loaders share collections).
+const inflightRefreshes = new Map<string, Promise<any[]>>();
+
+function refreshCollection(name: string, cacheKey: string): Promise<any[]> {
+  let p = inflightRefreshes.get(cacheKey);
+  if (!p) {
+    p = (async () => {
+      const snap = await getDocs(collection(db, name));
+      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (arr.length > 0) await writeCache(cacheKey, arr);
+      return arr;
+    })().finally(() => inflightRefreshes.delete(cacheKey));
+    inflightRefreshes.set(cacheKey, p);
+  }
+  return p;
+}
+
 async function fetchCollectionCached(name: string, cacheKey: string): Promise<any[]> {
   const cached = await readCache(cacheKey);
-  if (cached && Date.now() - cached.t < DAY_MS) return cached.data;
-  try {
-    const snap = await getDocs(collection(db, name));
-    const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    if (arr.length > 0) await writeCache(cacheKey, arr);
-    return arr;
-  } catch {
-    return cached?.data ?? [];
+  if (cached) {
+    // Stale-while-revalidate: an expired copy still renders instantly;
+    // kick off a background refresh so the next read is fresh.
+    if (Date.now() - cached.t >= DAY_MS) refreshCollection(name, cacheKey).catch(() => {});
+    return cached.data;
   }
+  return refreshCollection(name, cacheKey).catch(() => []);
 }
 
 const fetchVideosCached = () => fetchCollectionCached('videos', VIDEOS_CACHE_KEY);
@@ -155,24 +170,34 @@ async function writeCachedCourses(data: any[]) {
   } catch { /* ignore */ }
 }
 
-export async function loadCoursesData(): Promise<any[]> {
-  // Fresh cache → render immediately with zero Firestore reads.
-  const cached = await getCachedCourses();
-  if (cached && Date.now() - cached.updatedAt < 60 * 60 * 1000) return cached.data;
+let inflightCoursesRefresh: Promise<any[]> | null = null;
 
-  try {
-    const [firestoreCourses, videosArr, quizArr] = await Promise.all([
-      fetchCoursesFromFirestore(),
-      fetchVideosCached(),
-      fetchQuizQuestionsCached(),
-    ]);
-    const courses = transformFirestoreCourses(firestoreCourses, toMap(videosArr), toMap(quizArr));
-    if (courses.length > 0) await writeCachedCourses(courses);
-    return courses;
-  } catch (err) {
-    if (cached) return cached.data; // stale beats an error screen
-    throw err;
+function refreshCoursesData(): Promise<any[]> {
+  if (!inflightCoursesRefresh) {
+    inflightCoursesRefresh = (async () => {
+      const [firestoreCourses, videosArr, quizArr] = await Promise.all([
+        fetchCoursesFromFirestore(),
+        fetchVideosCached(),
+        fetchQuizQuestionsCached(),
+      ]);
+      const courses = transformFirestoreCourses(firestoreCourses, toMap(videosArr), toMap(quizArr));
+      if (courses.length > 0) await writeCachedCourses(courses);
+      return courses;
+    })().finally(() => { inflightCoursesRefresh = null; });
   }
+  return inflightCoursesRefresh;
+}
+
+export async function loadCoursesData(): Promise<any[]> {
+  // Cached copy (fresh OR stale) → render immediately with zero Firestore
+  // reads. An expired cache triggers a background refresh so the next mount
+  // is fresh: a stale copy always beats a spinner.
+  const cached = await getCachedCourses();
+  if (cached) {
+    if (Date.now() - cached.updatedAt >= 60 * 60 * 1000) refreshCoursesData().catch(() => {});
+    return cached.data;
+  }
+  return refreshCoursesData();
 }
 
 // ─── Practice quizzes (grouped from the question bank) ─────────────────────

@@ -1,5 +1,5 @@
 import './global.css';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import {
   requestPermissions,
   scheduleDailyStudyReminder,
 } from './src/services/notificationService';
+import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,26 @@ function AuthGate() {
 
 function App() {
   const { theme, setActiveTab } = useStore();
+  // Seed the query cache from AsyncStorage BEFORE the first screen mounts so
+  // cold starts render last-known data instantly (refetch happens in the
+  // background). The read takes a few ms — the splash screen covers it.
+  const [cacheHydrated, setCacheHydrated] = useState(false);
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    hydrateQueryCache(queryClient).finally(() => {
+      if (cancelled) return;
+      setCacheHydrated(true);
+      // Only start persisting after hydration so a partial startup snapshot
+      // can never overwrite the previously saved cache.
+      unsubscribe = persistQueryCacheOnChange(queryClient);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
 
   // Handle notification taps — route user to the right screen.
   useEffect(() => {
@@ -67,6 +88,8 @@ function App() {
     });
     return () => sub.remove();
   }, []);
+
+  if (!cacheHydrated) return null;
 
   return (
     <SafeAreaProvider>
