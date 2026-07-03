@@ -127,11 +127,11 @@ export default function ExamBrowserScreen() {
     let active = true;
     setLoading(true);
     setError(false);
-    Promise.all([
-      fetchFullCatalog(),
-      user?.uid ? loadAllExamResultSummaries(user.uid) : Promise.resolve({} as Record<string, any>),
-    ])
-      .then(([catalog, res]) => {
+    // The catalog index is cache-first and drives the list — render as soon
+    // as it arrives. The "done / best score" badges come from Firestore and
+    // fill in when ready; they must never block the list behind a spinner.
+    fetchFullCatalog()
+      .then((catalog) => {
         if (!active) return;
         const filters = LEVEL_FILTER_MAP[level] ?? [];
         const levelExams = catalog.filter((e: any) => {
@@ -144,10 +144,17 @@ export default function ExamBrowserScreen() {
           return yb - ya;
         });
         setExams(levelExams);
-        setResults(res);
       })
       .catch(() => { if (active) setError(true); })
       .finally(() => { if (active) setLoading(false); });
+
+    if (user?.uid) {
+      loadAllExamResultSummaries(user.uid)
+        .then((res) => { if (active) setResults(res); })
+        .catch(() => {});
+    } else {
+      setResults({});
+    }
     return () => { active = false; };
   }, [level, user?.uid, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
