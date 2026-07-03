@@ -3,15 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { TRACK_COEFFICIENTS } from '../config/trackConfig';
 import { normalizeSubject } from '../utils/examUtils';
-import { normalizeExamCatalog } from '../utils/examCatalog';
+import { fetchCatalogIndex } from '../utils/examCatalog';
 import { listRecentExamResults } from '../services/userActivity';
 import {
   computeReadiness,
   aggregateExamResultsBySubject,
   mergeSubjectStats,
 } from '../services/readinessService';
-
-const BASE_URL = 'https://edlight-academy.web.app';
 
 export function useReadiness() {
   const { user, track } = useStore();
@@ -21,9 +19,10 @@ export function useReadiness() {
   const { data: subjectByExamId, isLoading: indexLoading } = useQuery({
     queryKey: ['exam-subject-index'],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}/exam_catalog_index.json`);
-      if (!res.ok) throw new Error('Failed to load exam catalog index');
-      const data = normalizeExamCatalog(await res.json());
+      // Cache-first (AsyncStorage) with background refresh — the raw fetch
+      // here used to re-download the ~280 KB index on every cold start.
+      const data = await fetchCatalogIndex();
+      if (!data.length) throw new Error('Failed to load exam catalog index');
       const map: Record<string, string> = {};
       for (const e of data) {
         const id = e.exam_id || e.id;

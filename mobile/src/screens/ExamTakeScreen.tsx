@@ -326,11 +326,14 @@ export default function ExamTakeScreen() {
   useEffect(() => {
     let active = true;
     fetchSingleExam(examId)
-      .then(async (e) => {
+      .then((e) => {
         if (!active) return;
         setExam(e);
         const qs = flattenQuestions(e) as any[];
         setQuestions(qs);
+        // Show the overview NOW — the draft (a Firestore read, slow on cold
+        // start) loads in the background and must not hold the spinner.
+        setLoading(false);
         // Record activity so the dashboard can show "Resume where you left off"
         const subject = e?.subject ? normalizeSubject(e.subject) : undefined;
         const lvl: string | undefined = level ?? undefined;
@@ -343,17 +346,22 @@ export default function ExamTakeScreen() {
         });
         // Load draft (in-progress attempts only)
         if (user?.uid) {
-          const draft = await loadExamAttemptDraft(user.uid, examId);
-          if (!active) return;
-          if (draft?.answers && draft.status !== 'submitted') {
-            setAnswers(draft.answers);
-            if (Object.keys(draft.answers).length > 0) setHasDraft(true);
-            if (Number.isFinite(draft.currentIdx)) draftIdxRef.current = draft.currentIdx;
-          }
+          loadExamAttemptDraft(user.uid, examId)
+            .then((draft) => {
+              if (!active) return;
+              // Only apply while still on the overview: a late-arriving draft
+              // must never clobber answers the user has started entering.
+              if (phaseRef.current !== 'overview') return;
+              if (draft?.answers && draft.status !== 'submitted') {
+                setAnswers(draft.answers);
+                if (Object.keys(draft.answers).length > 0) setHasDraft(true);
+                if (Number.isFinite(draft.currentIdx)) draftIdxRef.current = draft.currentIdx;
+              }
+            })
+            .catch(() => {});
         }
       })
-      .catch(() => { if (active) setError(true); })
-      .finally(() => { if (active) setLoading(false); });
+      .catch(() => { if (active) { setError(true); setLoading(false); } });
     return () => { active = false; };
   }, [examId, user?.uid]);
 

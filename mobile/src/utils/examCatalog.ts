@@ -32,30 +32,42 @@ export function isNumericId(id: any): boolean {
  * Fetch the slim catalog index (metadata for every exam, no questions).
  * This is what browse/list screens should render from.
  */
+let inflightIndexRefresh: Promise<any[]> | null = null;
+
+function refreshCatalogIndex(): Promise<any[]> {
+  if (!inflightIndexRefresh) {
+    inflightIndexRefresh = (async () => {
+      const res = await fetch(`${BASE_URL}/exam_catalog_index.json`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = normalizeExamCatalog(await res.json());
+      if (data.length > 0) {
+        AsyncStorage.setItem(INDEX_CACHE_KEY, JSON.stringify({ t: Date.now(), data })).catch(() => {});
+      }
+      return data;
+    })().finally(() => { inflightIndexRefresh = null; });
+  }
+  return inflightIndexRefresh;
+}
+
 export async function fetchCatalogIndex(): Promise<any[]> {
-  // Serve from cache first so lists render instantly.
+  // Serve from cache first (fresh OR stale) so lists render instantly; an
+  // expired copy triggers a background refresh for the next read.
   let cached: { t: number; data: any[] } | null = null;
   try {
     const raw = await AsyncStorage.getItem(INDEX_CACHE_KEY);
     if (raw) cached = JSON.parse(raw);
   } catch { /* ignore */ }
 
-  if (cached?.data?.length && Date.now() - (cached.t || 0) < INDEX_CACHE_TTL) {
+  if (cached?.data?.length) {
+    if (Date.now() - (cached.t || 0) >= INDEX_CACHE_TTL) refreshCatalogIndex().catch(() => {});
     return cached.data;
   }
 
   try {
-    const res = await fetch(`${BASE_URL}/exam_catalog_index.json`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = normalizeExamCatalog(await res.json());
-    if (data.length > 0) {
-      AsyncStorage.setItem(INDEX_CACHE_KEY, JSON.stringify({ t: Date.now(), data })).catch(() => {});
-    }
-    return data;
+    return await refreshCatalogIndex();
   } catch (err) {
     console.warn('[examCatalog] Could not fetch catalog index:', err);
-    // Stale cache beats an empty screen.
-    return cached?.data ?? [];
+    return [];
   }
 }
 
@@ -66,6 +78,10 @@ export async function fetchCatalogIndex(): Promise<any[]> {
 export async function fetchFullCatalog(): Promise<any[]> {
   return fetchCatalogIndex();
 }
+
+// Exam content is static — memoize per session so e.g. the results screen
+// doesn't re-download the exam the take screen just fetched.
+const examMemo = new Map<string, any>();
 
 /** Fetch a single exam (with questions) by ID. */
 export async function fetchSingleExam(examIdParam: string | number): Promise<any | null> {
@@ -79,13 +95,19 @@ export async function fetchSingleExam(examIdParam: string | number): Promise<any
     if (!id) return null;
   }
 
+  if (examMemo.has(id)) return examMemo.get(id);
+
   try {
     const res = await fetch(`${BASE_URL}/exams/${encodeURIComponent(id)}.json`);
     if (res.ok) {
       // Firebase Hosting SPA redirect returns HTML with status 200 when the
       // file doesn't exist — check content-type before attempting JSON parse.
       const ct = res.headers.get('content-type') || '';
-      if (ct.includes('json')) return await res.json();
+      if (ct.includes('json')) {
+        const exam = await res.json();
+        examMemo.set(id, exam);
+        return exam;
+      }
     }
     // Last resort: the slim index entry (metadata only, no questions).
     const catalog = await fetchCatalogIndex();

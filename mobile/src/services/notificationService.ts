@@ -3,9 +3,6 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
 
-// Non-React module: read the language at call time from the store.
-const t = (fr: string, ht: string) => (useStore.getState().language === 'ht' ? ht : fr);
-
 // ─── Foreground handler ───────────────────────────────────────────────────────
 // Controls how notifications appear when the app is in the foreground.
 // Call this once at module load (before any component mounts).
@@ -19,6 +16,54 @@ Notifications.setNotificationHandler({
 });
 
 const DAILY_REMINDER_KEY = '@edlight:daily_reminder_id';
+const NOTIF_ENABLED_KEY = '@edlight:notifications_enabled';
+
+// Bilingual copy — same inline t(fr, ht) house pattern as the screens, but we
+// read the language from the store directly since we're outside React.
+const t = (fr: string, ht: string) => (useStore.getState().language === 'ht' ? ht : fr);
+
+// ─── User preference (source of truth for the Profile toggle) ───────────────
+
+/**
+ * Whether notifications are enabled for this user.
+ * - '@edlight:notifications_enabled' unset (null) → enabled by default, as long
+ *   as the OS permission is granted (notifications work out of the box).
+ * - 'false' → user opted out via the Profile toggle.
+ * - 'true'  → user explicitly opted in.
+ */
+export async function areNotificationsEnabled(): Promise<boolean> {
+  try {
+    const val = await AsyncStorage.getItem(NOTIF_ENABLED_KEY);
+    if (val === 'false') return false;
+    if (val === 'true') return true;
+    // Unset — default to enabled when the OS permission is granted.
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/** Persist the user's notifications preference (Profile toggle). */
+export async function setNotificationsEnabled(value: boolean): Promise<void> {
+  await AsyncStorage.setItem(NOTIF_ENABLED_KEY, String(value));
+}
+
+/**
+ * Internal guard used by every notify/schedule function:
+ * OS permission granted AND the user has not opted out.
+ */
+async function canNotify(): Promise<boolean> {
+  try {
+    const [{ status }, pref] = await Promise.all([
+      Notifications.getPermissionsAsync(),
+      AsyncStorage.getItem(NOTIF_ENABLED_KEY),
+    ]);
+    return status === 'granted' && pref !== 'false';
+  } catch {
+    return false;
+  }
+}
 
 // ─── Permissions ─────────────────────────────────────────────────────────────
 
@@ -37,14 +82,14 @@ export async function requestPermissions(): Promise<boolean> {
         lightColor: '#0857A6',
       }),
       Notifications.setNotificationChannelAsync('reminders', {
-        name: t("Rappels d'étude", 'Rapèl etid'),
+        name: "Rappels d'étude",
         importance: Notifications.AndroidImportance.DEFAULT,
-        description: t('Rappels quotidiens pour vos révisions', 'Rapèl chak jou pou revizyon ou'),
+        description: 'Rappels quotidiens pour vos révisions',
       }),
       Notifications.setNotificationChannelAsync('achievements', {
-        name: t('Succès et badges', 'Siksè ak baj'),
+        name: 'Succès et badges',
         importance: Notifications.AndroidImportance.HIGH,
-        description: t('Notifications pour vos accomplissements', 'Notifikasyon pou akonplisman ou'),
+        description: 'Notifications pour vos accomplissements',
       }),
     ]);
   }
@@ -60,15 +105,14 @@ export async function requestPermissions(): Promise<boolean> {
 // ─── Immediate notifications ──────────────────────────────────────────────────
 
 export async function notifyAchievement(_userId: string, achievement: any): Promise<void> {
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted') return;
+  if (!(await canNotify())) return;
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: t('Nouveau succès ! 🎉', 'Nouvo siksè! 🎉'),
+      title: t('Nouveau succès ! 🎉', 'Nouvo siksè ! 🎉'),
       body: t(
         `Tu as gagné le badge « ${achievement.name} » ! ${achievement.icon || ''}`,
-        `Ou genyen baj « ${achievement.name} »! ${achievement.icon || ''}`,
+        `Ou genyen badj « ${achievement.name} » ! ${achievement.icon || ''}`,
       ).trim(),
       sound: true,
       data: { type: 'achievement', badgeId: achievement.badgeId },
@@ -79,20 +123,19 @@ export async function notifyAchievement(_userId: string, achievement: any): Prom
 }
 
 export async function notifyStreak(_userId: string, streakDays: number): Promise<void> {
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted') return;
+  if (!(await canNotify())) return;
 
   const messages: Record<number, string> = {
-    7: t("🔥 Incroyable ! Tu as une série de 7 jours d'étude !", '🔥 Enkwayab! Ou gen yon seri 7 jou etid!'),
-    30: t('⚡ Légendaire ! 30 jours de révision consécutifs !', '⚡ Lejandè! 30 jou revizyon youn dèyè lòt!'),
-    100: t('👑 Héros ! 100 jours de série atteints !', '👑 Ewo! Ou rive nan 100 jou seri!'),
+    7: t("🔥 Incroyable ! Tu as une série de 7 jours d'étude !", '🔥 Enkwayab ! Ou gen yon seri 7 jou etid !'),
+    30: t('⚡ Légendaire ! 30 jours de révision consécutifs !', '⚡ Lejandè ! 30 jou revizyon youn apre lòt !'),
+    100: t('👑 Héros ! 100 jours de série atteints !', '👑 Ewo ! Ou rive nan yon seri 100 jou !'),
   };
   const body = messages[streakDays]
-    ?? t(`🔥 Tu es sur une série de ${streakDays} jours !`, `🔥 Ou sou yon seri ${streakDays} jou!`);
+    ?? t(`🔥 Tu es sur une série de ${streakDays} jours !`, `🔥 Ou sou yon seri ${streakDays} jou !`);
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: t('Série en cours ! 🔥', 'Seri ou an mach! 🔥'),
+      title: t('Série en cours ! 🔥', 'Seri ou an mach ! 🔥'),
       body,
       sound: true,
       data: { type: 'streak', streakDays },
@@ -109,15 +152,17 @@ export async function notifyStreak(_userId: string, streakDays: number): Promise
  * Persists the notification ID so it can be cancelled later.
  */
 export async function scheduleDailyStudyReminder(hour = 18, minute = 0): Promise<void> {
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted') return;
+  if (!(await canNotify())) return;
 
   await cancelDailyStudyReminder();
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: t("C'est l'heure de réviser ! 📚", 'Li lè pou revize! 📚'),
-      body: t('Continuez vos révisions et gardez votre série active.', 'Kontinye revizyon ou epi kenbe seri ou aktif.'),
+      title: t("C'est l'heure de réviser ! 📚", 'Li lè pou revize ! 📚'),
+      body: t(
+        'Continuez vos révisions et gardez votre série active.',
+        'Kontinye revizyon ou yo epi kenbe seri ou aktif.',
+      ),
       sound: true,
       data: { type: 'study-reminder' },
       ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
@@ -150,8 +195,7 @@ export async function cancelDailyStudyReminder(): Promise<void> {
  * Re-scheduling is idempotent — we cancel the previous one first.
  */
 export async function scheduleTriviaReminder(): Promise<void> {
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted') return;
+  if (!(await canNotify())) return;
 
   // Cancel existing trivia reminders to avoid duplicates
   const all = await Notifications.getAllScheduledNotificationsAsync();
@@ -167,8 +211,11 @@ export async function scheduleTriviaReminder(): Promise<void> {
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: t('Quiz du jour disponible ! 🎯', 'Quiz jodi a disponib! 🎯'),
-      body: t('Testez vos connaissances et grimpez dans le classement.', 'Teste konesans ou epi monte nan klasman an.'),
+      title: t('Quiz du jour disponible ! 🎯', 'Quiz jodi a disponib ! 🎯'),
+      body: t(
+        'Testez vos connaissances et grimpez dans le classement.',
+        'Teste konesans ou epi monte nan klasman an.',
+      ),
       sound: true,
       data: { type: 'trivia-reminder' },
       ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
@@ -182,17 +229,17 @@ export async function scheduleTriviaReminder(): Promise<void> {
 
 /** Notify that the user has moved up on the leaderboard (best-effort). */
 export async function notifyLeaderboardRank(rank: number): Promise<void> {
-  const { status } = await Notifications.getPermissionsAsync();
-  if (status !== 'granted') return;
+  if (!(await canNotify())) return;
   if (rank > 10) return; // only notify for top 10
 
   const icon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏆';
+  const top = rank <= 3 ? '3' : '10';
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: t(`${icon} Tu es #${rank} du classement !`, `${icon} Ou se #${rank} nan klasman an!`),
+      title: t(`${icon} Tu es #${rank} du classement !`, `${icon} Ou #${rank} nan klasman an !`),
       body: t(
-        `Continue ainsi pour rester dans le top ${rank <= 3 ? '3' : '10'} cette semaine.`,
-        `Kontinye konsa pou rete nan top ${rank <= 3 ? '3' : '10'} semèn sa a.`,
+        `Continue ainsi pour rester dans le top ${top} cette semaine.`,
+        `Kontinye konsa pou rete nan top ${top} semèn sa a.`,
       ),
       sound: false,
       data: { type: 'leaderboard' },

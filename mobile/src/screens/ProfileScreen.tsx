@@ -7,7 +7,6 @@ import {
   Sprout, Brain,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { useTrivia } from '../hooks/useTrivia';
@@ -16,11 +15,13 @@ import { getFirstName } from '../utils/shared';
 import ProgressBar from '../components/ProgressBar';
 import ReadinessCard from '../components/ReadinessCard';
 import Leaderboard from '../components/Leaderboard';
-import { scheduleDailyStudyReminder } from '../services/notificationService';
-
-// ── constants ────────────────────────────────────────────────────────────────
-
-const NOTIF_ENABLED_KEY = '@edlight:notifications_enabled';
+import {
+  areNotificationsEnabled,
+  setNotificationsEnabled as persistNotificationsEnabled,
+  requestPermissions,
+  scheduleDailyStudyReminder,
+} from '../services/notificationService';
+import { registerForPushNotifications } from '../services/pushService';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -130,23 +131,39 @@ export default function ProfileScreen() {
     return `${Math.round(avg * 100)}%`;
   })();
 
-  // Notifications toggle state
+  // Notifications toggle state — reflects reality: enabled by default when the
+  // OS permission is granted, unless the user explicitly opted out.
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(NOTIF_ENABLED_KEY).then((val) => {
-      setNotificationsEnabled(val === 'true');
-    }).catch(() => {});
+    areNotificationsEnabled().then(setNotificationsEnabled).catch(() => {});
   }, []);
 
   async function handleNotificationToggle(value: boolean) {
     setNotificationsEnabled(value);
-    await AsyncStorage.setItem(NOTIF_ENABLED_KEY, String(value));
+    await persistNotificationsEnabled(value);
     if (value) {
+      const granted = await requestPermissions();
+      if (!granted) {
+        // OS permission denied — the toggle can't actually enable anything.
+        setNotificationsEnabled(false);
+        await persistNotificationsEnabled(false);
+        return;
+      }
       await scheduleDailyStudyReminder();
+      if (user?.uid) registerForPushNotifications(user.uid).catch(() => {});
     } else {
       await Notifications.cancelAllScheduledNotificationsAsync();
     }
+  }
+
+  function handleLanguageChange(next: string) {
+    setLanguage(next);
+    // The daily reminder text is baked in at schedule time — re-schedule it so
+    // it matches the new language (no-op when notifications are off).
+    areNotificationsEnabled()
+      .then((enabled) => { if (enabled) return scheduleDailyStudyReminder(); })
+      .catch(() => {});
   }
 
   // Progress value: level.progress is a 0–1 fraction; ProgressBar expects 0–100
@@ -203,7 +220,7 @@ export default function ProfileScreen() {
 
           {/* Language toggle — guests can switch too (PWA parity) */}
           <TouchableOpacity
-            onPress={() => setLanguage(isCreole ? 'fr' : 'ht')}
+            onPress={() => handleLanguageChange(isCreole ? 'fr' : 'ht')}
             className="flex-row items-center gap-2 mt-4 px-4 py-2 rounded-full"
             style={{ backgroundColor: '#0857A614' }}
             activeOpacity={0.85}
@@ -407,7 +424,7 @@ export default function ProfileScreen() {
             <SettingsTile
               label={language === 'fr' ? 'Langue : Français' : 'Lang : Kreyòl'}
               icon={<Languages color="#0857A6" size={22} />}
-              onPress={() => setLanguage(language === 'fr' ? 'ht' : 'fr')}
+              onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
             />
             <SettingsTile
               label={theme === 'light' ? t('Mode nuit', 'Mòd nuit') : t('Mode jour', 'Mòd jou')}
