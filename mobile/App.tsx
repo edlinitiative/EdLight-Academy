@@ -4,14 +4,17 @@ import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { registerRootComponent } from 'expo';
+import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { onAuthStateChange, upsertUserDocument } from './src/services/firebase';
 import useStore from './src/contexts/store';
 import AppNavigator from './src/navigation/AppNavigator';
 import {
+  areNotificationsEnabled,
   requestPermissions,
   scheduleDailyStudyReminder,
 } from './src/services/notificationService';
+import { registerForPushNotifications } from './src/services/pushService';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
 
 const queryClient = new QueryClient({
@@ -37,9 +40,15 @@ function AuthGate() {
           picture: firebaseUser.photoURL || '',
         });
         // Request notification permission after sign-in, then schedule the
-        // daily study reminder. Best-effort — never blocks the auth flow.
+        // daily study reminder and register the Expo push token — but only
+        // when the user's Notifications toggle allows it. Best-effort — never
+        // blocks the auth flow.
         requestPermissions()
-          .then((granted) => { if (granted) scheduleDailyStudyReminder(); })
+          .then(async (granted) => {
+            if (!granted || !(await areNotificationsEnabled())) return;
+            await scheduleDailyStudyReminder();
+            await registerForPushNotifications(firebaseUser.uid);
+          })
           .catch(() => {});
       } else {
         logout();
@@ -78,11 +87,17 @@ function App() {
   // Handle notification taps — route user to the right screen.
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const type = response.notification.request.content.data?.type as string | undefined;
+      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+      const type = data?.type as string | undefined;
       if (type === 'trivia-reminder' || type === 'leaderboard') {
         setActiveTab('trivia');
       } else if (type === 'study-reminder') {
         setActiveTab('courses');
+      } else if (typeof data?.tab === 'string') {
+        // Generic case for remote pushes: { data: { tab: 'trivia' } } etc.
+        setActiveTab(data.tab);
+      } else if (typeof data?.url === 'string') {
+        Linking.openURL(data.url).catch(() => {});
       }
       // achievement / streak — no navigation needed; they're ambient
     });
