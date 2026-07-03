@@ -1,6 +1,10 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import useStore from '../contexts/store';
+
+// Non-React module: read the language at call time from the store.
+const t = (fr: string, ht: string) => (useStore.getState().language === 'ht' ? ht : fr);
 
 // ─── Foreground handler ───────────────────────────────────────────────────────
 // Controls how notifications appear when the app is in the foreground.
@@ -33,14 +37,14 @@ export async function requestPermissions(): Promise<boolean> {
         lightColor: '#0857A6',
       }),
       Notifications.setNotificationChannelAsync('reminders', {
-        name: "Rappels d'étude",
+        name: t("Rappels d'étude", 'Rapèl etid'),
         importance: Notifications.AndroidImportance.DEFAULT,
-        description: 'Rappels quotidiens pour vos révisions',
+        description: t('Rappels quotidiens pour vos révisions', 'Rapèl chak jou pou revizyon ou'),
       }),
       Notifications.setNotificationChannelAsync('achievements', {
-        name: 'Succès et badges',
+        name: t('Succès et badges', 'Siksè ak baj'),
         importance: Notifications.AndroidImportance.HIGH,
-        description: 'Notifications pour vos accomplissements',
+        description: t('Notifications pour vos accomplissements', 'Notifikasyon pou akonplisman ou'),
       }),
     ]);
   }
@@ -61,8 +65,11 @@ export async function notifyAchievement(_userId: string, achievement: any): Prom
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Nouveau succès ! 🎉',
-      body: `Tu as gagné le badge « ${achievement.name} » ! ${achievement.icon || ''}`.trim(),
+      title: t('Nouveau succès ! 🎉', 'Nouvo siksè! 🎉'),
+      body: t(
+        `Tu as gagné le badge « ${achievement.name} » ! ${achievement.icon || ''}`,
+        `Ou genyen baj « ${achievement.name} »! ${achievement.icon || ''}`,
+      ).trim(),
       sound: true,
       data: { type: 'achievement', badgeId: achievement.badgeId },
       ...(Platform.OS === 'android' ? { channelId: 'achievements' } : {}),
@@ -76,15 +83,16 @@ export async function notifyStreak(_userId: string, streakDays: number): Promise
   if (status !== 'granted') return;
 
   const messages: Record<number, string> = {
-    7: "🔥 Incroyable ! Tu as une série de 7 jours d'étude !",
-    30: '⚡ Légendaire ! 30 jours de révision consécutifs !',
-    100: '👑 Héros ! 100 jours de série atteints !',
+    7: t("🔥 Incroyable ! Tu as une série de 7 jours d'étude !", '🔥 Enkwayab! Ou gen yon seri 7 jou etid!'),
+    30: t('⚡ Légendaire ! 30 jours de révision consécutifs !', '⚡ Lejandè! 30 jou revizyon youn dèyè lòt!'),
+    100: t('👑 Héros ! 100 jours de série atteints !', '👑 Ewo! Ou rive nan 100 jou seri!'),
   };
-  const body = messages[streakDays] ?? `🔥 Tu es sur une série de ${streakDays} jours !`;
+  const body = messages[streakDays]
+    ?? t(`🔥 Tu es sur une série de ${streakDays} jours !`, `🔥 Ou sou yon seri ${streakDays} jou!`);
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Série en cours ! 🔥',
+      title: t('Série en cours ! 🔥', 'Seri ou an mach! 🔥'),
       body,
       sound: true,
       data: { type: 'streak', streakDays },
@@ -108,8 +116,8 @@ export async function scheduleDailyStudyReminder(hour = 18, minute = 0): Promise
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: "C'est l'heure de réviser ! 📚",
-      body: 'Continuez vos révisions et gardez votre série active.',
+      title: t("C'est l'heure de réviser ! 📚", 'Li lè pou revize! 📚'),
+      body: t('Continuez vos révisions et gardez votre série active.', 'Kontinye revizyon ou epi kenbe seri ou aktif.'),
       sound: true,
       data: { type: 'study-reminder' },
       ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
@@ -159,8 +167,8 @@ export async function scheduleTriviaReminder(): Promise<void> {
 
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: 'Quiz du jour disponible ! 🎯',
-      body: 'Testez vos connaissances et grimpez dans le classement.',
+      title: t('Quiz du jour disponible ! 🎯', 'Quiz jodi a disponib! 🎯'),
+      body: t('Testez vos connaissances et grimpez dans le classement.', 'Teste konesans ou epi monte nan klasman an.'),
       sound: true,
       data: { type: 'trivia-reminder' },
       ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
@@ -181,8 +189,11 @@ export async function notifyLeaderboardRank(rank: number): Promise<void> {
   const icon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏆';
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: `${icon} Tu es #${rank} du classement !`,
-      body: `Continue ainsi pour rester dans le top ${rank <= 3 ? '3' : '10'} cette semaine.`,
+      title: t(`${icon} Tu es #${rank} du classement !`, `${icon} Ou se #${rank} nan klasman an!`),
+      body: t(
+        `Continue ainsi pour rester dans le top ${rank <= 3 ? '3' : '10'} cette semaine.`,
+        `Kontinye konsa pou rete nan top ${rank <= 3 ? '3' : '10'} semèn sa a.`,
+      ),
       sound: false,
       data: { type: 'leaderboard' },
       ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),

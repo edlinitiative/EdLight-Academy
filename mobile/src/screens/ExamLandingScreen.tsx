@@ -24,22 +24,31 @@ const LEVELS = [
   {
     id: 'terminale',
     label: 'Terminale (Bac)',
+    labelHt: 'Tèminal (Bak)',
     sublabel: 'Examens officiels du Baccalauréat',
+    sublabelHt: 'Egzamen ofisyèl Bakaloreya a',
     description: 'Révise les sujets des 5 dernières années.',
+    descriptionHt: 'Revize sijè 5 dènye ane yo.',
     Icon: GraduationCap,
   },
   {
     id: '9e',
     label: '9ème Année',
+    labelHt: '9yèm Ane',
     sublabel: 'Examens du cycle fondamental',
+    sublabelHt: 'Egzamen sik fondamantal la',
     description: 'Prépare les épreuves nationales de 9ème.',
+    descriptionHt: 'Prepare eprèv nasyonal 9yèm yo.',
     Icon: BookOpen,
   },
   {
     id: 'university',
     label: 'Université',
+    labelHt: 'Inivèsite',
     sublabel: "Examens d'entrée et concours",
+    sublabelHt: 'Egzamen antre ak konkou',
     description: 'Accès aux études supérieures.',
+    descriptionHt: 'Aksè nan etid siperyè.',
     Icon: Landmark,
   },
 ];
@@ -118,9 +127,9 @@ export default function ExamLandingScreen() {
                     <level.Icon color="#0857A6" size={24} />
                   </View>
 
-                  <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
-                  <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
-                  <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{level.description}</Text>
+                  <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{isCreole ? level.labelHt : level.label}</Text>
+                  <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, lineHeight: 18 }}>{isCreole ? level.sublabelHt : level.sublabel}</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{isCreole ? level.descriptionHt : level.description}</Text>
 
                   {/* Explorer link */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>

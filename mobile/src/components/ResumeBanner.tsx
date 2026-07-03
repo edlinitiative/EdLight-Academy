@@ -20,15 +20,24 @@ const EYEBROW: Record<string, string> = {
   quiz: 'Quiz',
 };
 
+const EYEBROW_HT: Record<string, string> = {
+  lesson: 'Leson',
+  exam: 'Egzamen',
+  quiz: 'Quiz',
+};
+
 export default function ResumeBanner() {
   const navigation = useNavigation<Nav>();
   const lastActivity = useStore((s) => s.lastActivity);
   const clearActivity = useStore((s) => s.clearActivity);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   if (!lastActivity) return null;
 
   const accent = ACCENT[lastActivity.type] ?? '#0857A6';
-  const eyebrow = EYEBROW[lastActivity.type] ?? 'Activité';
+  const eyebrow = (isCreole ? EYEBROW_HT : EYEBROW)[lastActivity.type] ?? t('Activité', 'Aktivite');
 
   function handleResume() {
     if (lastActivity!.type === 'exam') {
@@ -112,7 +121,7 @@ export default function ResumeBanner() {
         }}
       >
         <Play color="#ffffff" size={12} fill="#ffffff" />
-        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>Reprendre</Text>
+        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>{t('Reprendre', 'Kontinye')}</Text>
       </TouchableOpacity>
 
       {/* Dismiss button */}

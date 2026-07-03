@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
+import useStore from '../contexts/store';
 
 /**
  * Answer inputs for open exam questions, mirroring the PWA (src/pages/ExamTake.tsx):
@@ -127,6 +128,7 @@ export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
 // ── Live LaTeX preview ───────────────────────────────────────────────────────
 
 export function MathPreview({ value }: { value: string }) {
+  const isCreole = useStore((s) => s.language) === 'ht';
   if (!hasLatexMarkers(value)) return null;
   return (
     <View
@@ -149,7 +151,7 @@ export function MathPreview({ value }: { value: string }) {
           marginBottom: 4,
         }}
       >
-        Aperçu
+        {isCreole ? 'Apèsi' : 'Aperçu'}
       </Text>
       <MathText text={value} style={{ fontSize: 15, color: TEXT }} />
     </View>
@@ -167,6 +169,8 @@ export function WordCountAnswer({ value, onChangeText, type }: {
   onChangeText: (v: string) => void;
   type: 'essay' | 'short_answer';
 }) {
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const isShort = type === 'short_answer';
   const minWords = isShort ? SHORT_ANSWER_MIN_WORDS : ESSAY_MIN_WORDS;
   const targetWords = isShort ? SHORT_ANSWER_TARGET_WORDS : ESSAY_TARGET_WORDS;
@@ -181,12 +185,12 @@ export function WordCountAnswer({ value, onChangeText, type }: {
         onChangeText={onChangeText}
         multiline
         textAlignVertical="top"
-        placeholder="Rédigez votre réponse…"
+        placeholder={t('Rédigez votre réponse…', 'Ekri repons ou…')}
         placeholderTextColor="#94a3b8"
       />
       <Text style={{ fontSize: 12, color: reachedMin ? OK_GREEN : MUTED, paddingLeft: 4 }}>
-        {wc} mot{wc !== 1 ? 's' : ''} · minimum {minWords}
-        {reachedMin && wc < targetWords ? ` · visez ~${targetWords}` : ''}
+        {t(`${wc} mot${wc !== 1 ? 's' : ''} · minimum ${minWords}`, `${wc} mo · minimòm ${minWords}`)}
+        {reachedMin && wc < targetWords ? t(` · visez ~${targetWords}`, ` · vize ~${targetWords}`) : ''}
       </Text>
     </View>
   );
@@ -197,7 +201,7 @@ export function WordCountAnswer({ value, onChangeText, type }: {
 export default function ExamAnswerInput({
   value,
   onChangeText,
-  placeholder = 'Votre réponse…',
+  placeholder,
   minHeight = 100,
   mathy = false,
 }: {
@@ -207,6 +211,8 @@ export default function ExamAnswerInput({
   minHeight?: number;
   mathy?: boolean;
 }) {
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const resolvedPlaceholder = placeholder ?? (isCreole ? 'Repons ou…' : 'Votre réponse…');
   return (
     <View style={{ gap: 8 }}>
       {mathy ? <MathChips onInsert={(c) => onChangeText(value + c)} /> : null}
@@ -216,7 +222,7 @@ export default function ExamAnswerInput({
         onChangeText={onChangeText}
         multiline
         textAlignVertical="top"
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         placeholderTextColor="#94a3b8"
       />
       <MathPreview value={value} />

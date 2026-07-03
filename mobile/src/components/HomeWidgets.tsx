@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ClipboardList, Zap, Trophy, BookOpen, ChevronRight } from 'lucide-react-native';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import useStore from '../contexts/store';
 
 interface WidgetProps {
   icon: React.ReactNode;
@@ -74,38 +75,41 @@ export default function HomeWidgets({
   recommendedCourse,
 }: HomeWidgetsProps) {
   const { myRank } = useLeaderboard(25);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <View style={{ flex: 1, gap: 10 }}>
         <Widget
           icon={<ClipboardList color="#0857A6" size={18} />}
-          title="Examens Bac"
-          value="≥ 5 ans"
-          sub="Sujets officiels"
+          title={t('Examens Bac', 'Egzamen Bak')}
+          value={t('≥ 5 ans', '≥ 5 an')}
+          sub={t('Sujets officiels', 'Sijè ofisyèl')}
           onPress={onNavigateExams}
         />
         <Widget
           icon={<Zap color="#0857A6" size={18} />}
-          title="Défi Trivia"
-          value="Jouer"
-          sub="Gagne des XP"
+          title={t('Défi Trivia', 'Defi Trivia')}
+          value={t('Jouer', 'Jwe')}
+          sub={t('Gagne des XP', 'Genyen XP')}
           onPress={onNavigateTrivia}
         />
       </View>
       <View style={{ flex: 1, gap: 10 }}>
         <Widget
           icon={<Trophy color="#0857A6" size={18} />}
-          title="Classement"
+          title={t('Classement', 'Klasman')}
           value={myRank ? `#${myRank}` : '—'}
-          sub="Cette semaine"
+          sub={t('Cette semaine', 'Semèn sa a')}
           onPress={onNavigateTrivia}
         />
         <Widget
           icon={<BookOpen color="#0857A6" size={18} />}
-          title={recommendedCourse ? 'Continuer' : 'Mes cours'}
-          value={recommendedCourse ? (recommendedCourse.name?.slice(0, 14) ?? 'Cours') : enrolledCount > 0 ? `${enrolledCount}` : 'Explorer'}
-          sub={recommendedCourse ? (recommendedCourse.level ?? 'cours') : 'Catalogue'}
+          title={recommendedCourse ? t('Continuer', 'Kontinye') : t('Mes cours', 'Kou mwen yo')}
+          value={recommendedCourse ? (recommendedCourse.name?.slice(0, 14) ?? t('Cours', 'Kou')) : enrolledCount > 0 ? `${enrolledCount}` : t('Explorer', 'Eksplore')}
+          sub={recommendedCourse ? (recommendedCourse.level ?? t('cours', 'kou')) : t('Catalogue', 'Katalòg')}
           onPress={onNavigateCourses}
         />
       </View>

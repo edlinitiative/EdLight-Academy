@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Crown, Medal, Trophy } from 'lucide-react-native';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import useStore from '../contexts/store';
 
 function rankBadge(rank: number) {
   if (rank === 1) return { icon: <Crown size={16} color="#FFD700" />, bg: '#FFD70020', text: '#B8860B' };
@@ -12,6 +13,9 @@ function rankBadge(rank: number) {
 
 function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean; compact?: boolean }) {
   const badge = rankBadge(entry.rank);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const initials = String(entry.displayName || '?')
     .trim()
     .split(/\s+/)
@@ -45,8 +49,8 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
       {/* Name + school */}
       <View className="flex-1">
         <Text className={`text-sm font-semibold ${isMe ? 'text-blue-800' : 'text-gray-900'}`} numberOfLines={1}>
-          {entry.displayName || 'Élève'}
-          {isMe ? ' (vous)' : ''}
+          {entry.displayName || t('Élève', 'Elèv')}
+          {isMe ? t(' (vous)', ' (ou menm)') : ''}
         </Text>
         {!compact && entry.school && (
           <Text className="text-xs text-gray-400" numberOfLines={1}>{entry.school}</Text>
@@ -70,6 +74,9 @@ interface LeaderboardProps {
 export default function Leaderboard({ compact = false, maxRows = 10 }: LeaderboardProps) {
   const { entries, myEntry, myRank, isLoading } = useLeaderboard(maxRows);
   const myUid = myEntry?.id;
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const displayList = entries.slice(0, maxRows);
 
@@ -78,7 +85,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   if (isLoading) {
     return (
       <View style={{ ...cardStyle, alignItems: 'center', paddingVertical: 32 }}>
-        <Text style={{ color: '#94a3b8', fontSize: 14 }}>Chargement…</Text>
+        <Text style={{ color: '#94a3b8', fontSize: 14 }}>{t('Chargement…', 'Chajman…')}</Text>
       </View>
     );
   }
@@ -88,7 +95,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
       <View style={{ ...cardStyle, alignItems: 'center', paddingVertical: 24 }}>
         <Trophy color="#d1d5db" size={32} />
         <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 8, textAlign: 'center' }}>
-          Aucune entrée cette semaine.{'\n'}Joue au Trivia pour apparaître !
+          {t('Aucune entrée cette semaine.', 'Poko gen antre semèn sa a.')}{'\n'}{t('Joue au Trivia pour apparaître !', 'Jwe Trivia pou parèt!')}
         </Text>
       </View>
     );
@@ -99,7 +106,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
       {!compact && (
         <View className="flex-row items-center gap-2 mb-3">
           <Trophy color="#0857A6" size={18} />
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>Classement de la semaine</Text>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{t('Classement de la semaine', 'Klasman semèn nan')}</Text>
           {myRank && (
             <View className="ml-auto px-2 py-0.5 rounded-full" style={{ backgroundColor: '#eaf2fb' }}>
               <Text className="text-xs font-bold" style={{ color: '#0857A6' }}>#{myRank}</Text>

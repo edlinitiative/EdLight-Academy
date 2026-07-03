@@ -30,6 +30,9 @@ function extractYouTubeId(url: string): string | null {
 
 function VideoPlayer({ videoUrl }: { videoUrl: string }) {
   const [failed, setFailed] = useState(false);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const ytId = extractYouTubeId(videoUrl);
   const embedUrl = ytId
     ? `https://www.youtube.com/embed/${ytId}?playsinline=1`
@@ -55,7 +58,7 @@ function VideoPlayer({ videoUrl }: { videoUrl: string }) {
         style={{ aspectRatio: 16 / 9, backgroundColor: '#111827' }}
       >
         <PlayCircle color="#9ca3af" size={36} />
-        <Text className="text-gray-400 text-xs">Vidéo indisponible pour le moment</Text>
+        <Text className="text-gray-400 text-xs">{t('Vidéo indisponible pour le moment', 'Videyo pa disponib pou kounye a')}</Text>
       </View>
     );
   }
@@ -92,6 +95,8 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress }: {
   onLessonPress: (lesson: any) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
   const unitDone = (unit.lessons ?? []).filter((l: any) => completedIds.has(l.id)).length;
   const unitTotal = (unit.lessons ?? []).length;
 
@@ -103,7 +108,7 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress }: {
       >
         <View className="flex-1">
           <Text className="font-bold text-gray-800 text-sm">{unit.title}</Text>
-          <Text className="text-xs text-gray-500 mt-0.5">{unitDone}/{unitTotal} leçons</Text>
+          <Text className="text-xs text-gray-500 mt-0.5">{unitDone}/{unitTotal} {isCreole ? 'leson' : 'leçons'}</Text>
         </View>
         {open ? <ChevronDown color="#6b7280" size={18} /> : <ChevronRight color="#6b7280" size={18} />}
       </TouchableOpacity>
@@ -148,6 +153,9 @@ export default function CourseDetailScreen() {
   const { courseId } = route.params;
   const { data: courses, isLoading, isError } = useCourses();
   const { progress, updateProgress, incrementGuestInteraction, recordActivity } = useStore();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
 
@@ -211,7 +219,7 @@ export default function CourseDetailScreen() {
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="font-bold text-gray-900 text-base" numberOfLines={1}>{course.name}</Text>
-          <Text className="text-xs text-gray-400">{completedCount}/{allLessons.length} leçons</Text>
+          <Text className="text-xs text-gray-400">{completedCount}/{allLessons.length} {t('leçons', 'leson')}</Text>
         </View>
       </View>
 
@@ -230,7 +238,7 @@ export default function CourseDetailScreen() {
           className="w-full items-center justify-center"
           style={{ height: 80, backgroundColor: (course.color ?? '#0857A6') + '15' }}
         >
-          <Text className="text-gray-500 text-sm">{activeLesson.type === 'video' ? 'Vidéo non disponible' : 'Quiz / Exercice'}</Text>
+          <Text className="text-gray-500 text-sm">{activeLesson.type === 'video' ? t('Vidéo non disponible', 'Videyo pa disponib') : t('Quiz / Exercice', 'Quiz / Egzèsis')}</Text>
         </View>
       ) : null}
 
@@ -245,7 +253,7 @@ export default function CourseDetailScreen() {
             {isAlreadyDone ? (
               <View className="flex-row items-center gap-2 px-4 py-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
                 <CheckCircle2 color="#10b981" size={16} />
-                <Text className="text-emerald-700 text-sm font-semibold">Terminé</Text>
+                <Text className="text-emerald-700 text-sm font-semibold">{t('Terminé', 'Fini')}</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -254,7 +262,7 @@ export default function CourseDetailScreen() {
                 style={{ backgroundColor: course.color ?? '#0857A6' }}
               >
                 <CheckCircle2 color="#fff" size={16} />
-                <Text className="text-white text-sm font-bold">Marquer terminé</Text>
+                <Text className="text-white text-sm font-bold">{t('Marquer terminé', 'Make kòm fini')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -267,13 +275,13 @@ export default function CourseDetailScreen() {
               className={`flex-row items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 ${activeIndex <= 0 ? 'opacity-30' : ''}`}
             >
               <ChevronLeft color="#374151" size={16} />
-              <Text className="text-gray-700 text-xs font-medium">Préc.</Text>
+              <Text className="text-gray-700 text-xs font-medium">{t('Préc.', 'Anvan')}</Text>
             </TouchableOpacity>
             <View className="flex-1" />
             {isLastLesson ? (
               <View className="flex-row items-center gap-1 px-3 py-2 bg-amber-50 rounded-xl border border-amber-200">
                 <Trophy color="#f59e0b" size={16} />
-                <Text className="text-amber-700 text-xs font-semibold">Dernière leçon</Text>
+                <Text className="text-amber-700 text-xs font-semibold">{t('Dernière leçon', 'Dènye leson')}</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -281,7 +289,7 @@ export default function CourseDetailScreen() {
                 className="flex-row items-center gap-1 px-3 py-2 rounded-xl"
                 style={{ backgroundColor: course.color ?? '#0857A6' }}
               >
-                <Text className="text-white text-xs font-medium">Suiv.</Text>
+                <Text className="text-white text-xs font-medium">{t('Suiv.', 'Pwochen')}</Text>
                 <ChevronRight color="#fff" size={16} />
               </TouchableOpacity>
             )}
@@ -297,7 +305,7 @@ export default function CourseDetailScreen() {
             {course.description ? (
               <Text className="text-sm text-gray-500 leading-relaxed">{course.description}</Text>
             ) : null}
-            <Text className="text-xs text-gray-400 mt-3">{allLessons.length} leçons · {course.modules?.length ?? 0} unités</Text>
+            <Text className="text-xs text-gray-400 mt-3">{t(`${allLessons.length} leçons · ${course.modules?.length ?? 0} unités`, `${allLessons.length} leson · ${course.modules?.length ?? 0} inite`)}</Text>
           </View>
         )}
         {(course.modules ?? []).map((unit: any) => (

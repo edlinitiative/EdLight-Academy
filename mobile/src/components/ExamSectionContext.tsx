@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react-native';
+import useStore from '../contexts/store';
 
 const PRIMARY = '#0857A6';
 const TEXT = '#0f172a';
@@ -43,7 +44,9 @@ function cleanExamText(raw: unknown): string {
 // the capped scrollable card instead of inline, so the question stays on screen.
 const LONG_INSTRUCTIONS = 280;
 
-function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; label?: string }) {
+function PassageCard({ passage, label }: { passage: string; label?: string }) {
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const resolvedLabel = label ?? (isCreole ? 'Tèks pou li' : 'Texte à lire');
   return (
     <View
       style={[
@@ -61,7 +64,7 @@ function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; la
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 12 }}>
         <BookOpen color={PRIMARY} size={14} />
         <Text style={{ fontSize: 11, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-          {label}
+          {resolvedLabel}
         </Text>
       </View>
       <ScrollView
@@ -96,6 +99,8 @@ export default function ExamSectionContext({
   isSectionStart: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const safeTitle = cleanExamText(title);
   const safeInstructions = cleanExamText(instructions);
@@ -105,7 +110,7 @@ export default function ExamSectionContext({
   if (!safeTitle && !safeInstructions && !safePassage) return null;
 
   const { numeral, name } = parseSectionTitle(safeTitle);
-  const displayTitle = numeral ? `Section ${numeral} — ${name}` : safeTitle;
+  const displayTitle = numeral ? `${t('Section', 'Seksyon')} ${numeral} — ${name}` : safeTitle;
 
   // ── Prominent intro (first question of the section) ────────────────────────
   if (isSectionStart) {
@@ -124,7 +129,7 @@ export default function ExamSectionContext({
           ]}
         >
           <Text style={{ fontSize: 11, fontWeight: '700', color: PRIMARY, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
-            Nouvelle section
+            {t('Nouvelle section', 'Nouvo seksyon')}
           </Text>
           <Text style={{ fontSize: 17, fontWeight: '800', color: TEXT, lineHeight: 23 }}>
             {displayTitle}
@@ -136,7 +141,7 @@ export default function ExamSectionContext({
           ) : null}
         </View>
         {safeInstructions && longInstructions ? (
-          <PassageCard passage={safeInstructions} label="Consignes et texte" />
+          <PassageCard passage={safeInstructions} label={t('Consignes et texte', 'Konsiy ak tèks')} />
         ) : null}
         {safePassage ? <PassageCard passage={safePassage} /> : null}
       </View>
@@ -168,7 +173,7 @@ export default function ExamSectionContext({
             }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: MUTED }}>Consignes</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: MUTED }}>{t('Consignes', 'Konsiy')}</Text>
             {expanded ? <ChevronUp color={MUTED} size={13} /> : <ChevronDown color={MUTED} size={13} />}
           </TouchableOpacity>
         ) : null}
@@ -177,7 +182,7 @@ export default function ExamSectionContext({
       {expanded ? (
         <View style={{ marginTop: 10, gap: 10 }}>
           {safeInstructions && longInstructions ? (
-            <PassageCard passage={safeInstructions} label="Consignes et texte" />
+            <PassageCard passage={safeInstructions} label={t('Consignes et texte', 'Konsiy ak tèks')} />
           ) : safeInstructions ? (
             <View
               style={[

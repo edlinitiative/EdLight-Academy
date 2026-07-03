@@ -30,9 +30,12 @@ const BAR_MARGIN = 16;
 
 export default function TabNavigator() {
   const theme = useStore((s) => s.theme);
+  const language = useStore((s) => s.language);
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
   const bg = dark ? '#111827' : '#ffffff';
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   // Float above the home indicator on notched phones, 12px above the edge elsewhere.
   const bottomOffset = Math.max(insets.bottom, 12);
@@ -73,7 +76,7 @@ export default function TabNavigator() {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarLabel: 'Accueil',
+          tabBarLabel: t('Accueil', 'Akèy'),
           tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
         }}
       />
@@ -81,7 +84,7 @@ export default function TabNavigator() {
         name="Courses"
         component={CoursesNavigator}
         options={{
-          tabBarLabel: 'Cours',
+          tabBarLabel: t('Cours', 'Kou'),
           tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
         }}
       />
@@ -89,7 +92,7 @@ export default function TabNavigator() {
         name="Exams"
         component={ExamsNavigator}
         options={{
-          tabBarLabel: 'Exams',
+          tabBarLabel: t('Exams', 'Egzamen'),
           tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size} />,
         }}
       />
@@ -105,7 +108,7 @@ export default function TabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profil',
+          tabBarLabel: t('Profil', 'Pwofil'),
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />
