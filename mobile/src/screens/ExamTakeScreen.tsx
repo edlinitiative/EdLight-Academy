@@ -167,13 +167,15 @@ function MCQQuestion({ question, answer, onAnswer }: {
   answer: Answer;
   onAnswer: (a: Answer) => void;
 }) {
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const entries = normalizeOptions(question?.options ?? question?.choices);
 
   // No usable options → let the student type the answer instead of crashing.
   if (entries.length === 0) {
     return (
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 12, color: MUTED }}>Options non disponibles — écris ta réponse :</Text>
+        <Text style={{ fontSize: 12, color: MUTED }}>{t('Options non disponibles — écris ta réponse :', 'Opsyon yo pa disponib — ekri repons ou:')}</Text>
         <OpenQuestion answer={answer} onAnswer={onAnswer} />
       </View>
     );
@@ -225,12 +227,14 @@ function MCQQuestion({ question, answer, onAnswer }: {
   );
 }
 
-function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…', minHeight = 120 }: {
+function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120 }: {
   answer: Answer;
   onAnswer: (a: Answer) => void;
   placeholder?: string;
   minHeight?: number;
 }) {
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const value = Array.isArray(answer) ? answer.join(', ') : String(answer ?? '');
   return (
     <TextInput
@@ -252,17 +256,24 @@ function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…', min
       onChangeText={onAnswer}
       multiline
       textAlignVertical="top"
-      placeholder={placeholder}
+      placeholder={placeholder ?? t('Votre réponse…', 'Repons ou…')}
       placeholderTextColor="#94a3b8"
     />
   );
 }
 
 function TrueFalseQuestion({ answer, onAnswer }: { answer: Answer; onAnswer: (a: Answer) => void }) {
-  const opts = ['Vrai', 'Faux'];
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  // Keep the stored value French ('Vrai'/'Faux') — the grader compares it
+  // against the exam data — and only translate the visible label.
+  const opts = [
+    { value: 'Vrai', label: t('Vrai', 'Vre') },
+    { value: 'Faux', label: t('Faux', 'Fo') },
+  ];
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
-      {opts.map((opt) => {
+      {opts.map(({ value: opt, label }) => {
         const selected = answer === opt;
         return (
           <TouchableOpacity
@@ -281,7 +292,7 @@ function TrueFalseQuestion({ answer, onAnswer }: { answer: Answer; onAnswer: (a:
               selected ? undefined : cardShadow,
             ]}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: selected ? PRIMARY : MUTED }}>{opt}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: selected ? PRIMARY : MUTED }}>{label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -293,7 +304,9 @@ export default function ExamTakeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, recordActivity } = useStore();
+  const { user, recordActivity, language } = useStore();
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [exam, setExam] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -327,7 +340,7 @@ export default function ExamTakeScreen() {
         recordActivity({
           type: 'exam',
           path: examId,
-          title: e?.exam_title ?? e?.title ?? e?.name ?? 'Examen',
+          title: e?.exam_title ?? e?.title ?? e?.name ?? t('Examen', 'Egzamen'),
           subtitle: subject ?? lvl ?? undefined,
           ts: Date.now(),
         });
@@ -377,11 +390,11 @@ export default function ExamTakeScreen() {
 
   function handleBack() {
     Alert.alert(
-      'Quitter l\'examen ?',
-      'Votre progression est sauvegardée automatiquement.',
+      t('Quitter l\'examen ?', 'Kite egzamen an?'),
+      t('Votre progression est sauvegardée automatiquement.', 'Pwogrè ou sove otomatikman.'),
       [
-        { text: 'Continuer', style: 'cancel' },
-        { text: 'Quitter', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: t('Continuer', 'Kontinye'), style: 'cancel' },
+        { text: t('Quitter', 'Kite'), style: 'destructive', onPress: () => navigation.goBack() },
       ],
     );
   }
@@ -404,11 +417,14 @@ export default function ExamTakeScreen() {
 
     if (unanswered > 0) {
       Alert.alert(
-        `${unanswered} question${unanswered > 1 ? 's' : ''} sans réponse`,
-        'Voulez-vous quand même soumettre ?',
+        t(
+          `${unanswered} question${unanswered > 1 ? 's' : ''} sans réponse`,
+          `${unanswered} kesyon san repons`,
+        ),
+        t('Voulez-vous quand même soumettre ?', 'Èske ou vle voye l kanmenm?'),
         [
-          { text: 'Continuer à répondre', style: 'cancel' },
-          { text: 'Soumettre', onPress: doSubmit },
+          { text: t('Continuer à répondre', 'Kontinye reponn'), style: 'cancel' },
+          { text: t('Soumettre', 'Voye'), onPress: doSubmit },
         ],
       );
     } else {
@@ -438,7 +454,7 @@ export default function ExamTakeScreen() {
 
       navigation.replace('ExamResults', { level, examId });
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de soumettre. Réessayez.');
+      Alert.alert(t('Erreur', 'Erè'), t('Impossible de soumettre. Réessayez.', 'Nou pa t ka voye l. Eseye ankò.'));
     } finally {
       setSubmitting(false);
     }
@@ -450,10 +466,10 @@ export default function ExamTakeScreen() {
   const sectionSummary: ExamSectionSummary[] = useMemo(() => {
     if (!exam) return [];
     return (exam.sections ?? []).map((sec: any, i: number) => ({
-      title: String(sec?.section_title || sec?.title || sec?.name || `Section ${i + 1}`).trim(),
+      title: String(sec?.section_title || sec?.title || sec?.name || t(`Section ${i + 1}`, `Seksyon ${i + 1}`)).trim(),
       count: Array.isArray(sec?.questions) ? sec.questions.length : 0,
     }));
-  }, [exam]);
+  }, [exam, isCreole]);
 
   // Per-section context (title, instructions, passage) mapped onto the flat
   // question index range, so we know which section each question belongs to
@@ -466,7 +482,7 @@ export default function ExamTakeScreen() {
       const count = Array.isArray(sec?.questions) ? sec.questions.length : 0;
       if (count === 0) return;
       metas.push({
-        title: String(sec?.section_title || sec?.title || sec?.name || `Section ${i + 1}`).trim(),
+        title: String(sec?.section_title || sec?.title || sec?.name || t(`Section ${i + 1}`, `Seksyon ${i + 1}`)).trim(),
         instructions: typeof sec?.instructions === 'string' ? sec.instructions.trim() : '',
         passage: typeof sec?.passage === 'string' ? sec.passage.trim() : '',
         start: cursor,
@@ -475,11 +491,11 @@ export default function ExamTakeScreen() {
       cursor += count;
     });
     return metas;
-  }, [exam]);
+  }, [exam, isCreole]);
 
-  if (loading) return <LoadingState message="Chargement de l'examen…" />;
+  if (loading) return <LoadingState message={t("Chargement de l'examen…", 'Chajman egzamen an…')} />;
   if (error || !exam) return <ErrorState />;
-  if (questions.length === 0) return <ErrorState message="Cet examen n'a pas de questions." />;
+  if (questions.length === 0) return <ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} />;
 
   const answeredCount = Object.keys(answers).length;
 
@@ -529,7 +545,7 @@ export default function ExamTakeScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: TEXT }} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
-          <Text style={{ fontSize: 12, color: MUTED }}>{answeredCount}/{questions.length} réponses</Text>
+          <Text style={{ fontSize: 12, color: MUTED }}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
         </View>
         <TouchableOpacity
           onPress={handleSubmit}
@@ -537,7 +553,7 @@ export default function ExamTakeScreen() {
           style={{ backgroundColor: PRIMARY, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: submitting ? 0.6 : 1 }}
         >
           <Send color="#fff" size={14} />
-          <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>{submitting ? '…' : 'Soumettre'}</Text>
+          <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>{submitting ? '…' : t('Soumettre', 'Voye')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -576,7 +592,7 @@ export default function ExamTakeScreen() {
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                Question {safeIdx + 1} / {questions.length}
+                {t('Question', 'Kesyon')} {safeIdx + 1} / {questions.length}
               </Text>
               {points > 0 ? (
                 <Text style={{ fontSize: 11, color: MUTED }}>{points} pt{points > 1 ? 's' : ''}</Text>
@@ -614,7 +630,7 @@ export default function ExamTakeScreen() {
             />
           ) : qType === 'essay' || qType === 'short_answer' ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>Rédige ta réponse</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>{t('Rédige ta réponse', 'Ekri repons ou')}</Text>
               <WordCountAnswer
                 value={answerText}
                 onChangeText={(v) => setAnswer(safeIdx, v)}
@@ -627,10 +643,10 @@ export default function ExamTakeScreen() {
               onChangeText={(v) => setAnswer(safeIdx, v)}
               placeholder={
                 qType === 'fill_blank'
-                  ? 'Complétez le blanc…'
+                  ? t('Complétez le blanc…', 'Ranpli espas vid la…')
                   : qType === 'calculation'
-                    ? 'Entrez votre résultat…'
-                    : 'Votre réponse…'
+                    ? t('Entrez votre résultat…', 'Antre rezilta ou…')
+                    : t('Votre réponse…', 'Repons ou…')
               }
               mathy={
                 MATH_SUBJECTS.has(subject) &&
@@ -649,7 +665,7 @@ export default function ExamTakeScreen() {
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BORDER, opacity: isFirst ? 0.4 : 1 }}
         >
           <ChevronLeft color={TEXT} size={18} />
-          <Text style={{ color: TEXT, fontWeight: '500', fontSize: 13 }}>Préc.</Text>
+          <Text style={{ color: TEXT, fontWeight: '500', fontSize: 13 }}>{t('Préc.', 'Anvan')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         {isLast ? (
@@ -658,14 +674,14 @@ export default function ExamTakeScreen() {
             disabled={submitting}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, opacity: submitting ? 0.6 : 1 }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>Terminer</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>{t('Terminer', 'Fini')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => setCurrentIdx(Math.min(questions.length - 1, safeIdx + 1))}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>Suiv.</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>{t('Suiv.', 'Pwochen')}</Text>
             <ChevronRight color="#fff" size={18} />
           </TouchableOpacity>
         )}

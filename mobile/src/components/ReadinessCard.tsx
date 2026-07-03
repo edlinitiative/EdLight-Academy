@@ -5,6 +5,7 @@ import { Target, ChevronRight } from 'lucide-react-native';
 import { useReadiness } from '../hooks/useReadiness';
 import { getSubjectColor, SUBJECT_COLORS } from '../utils/shared';
 import { LoadingState } from './StateViews';
+import useStore from '../contexts/store';
 
 const RADIUS = 45;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -17,12 +18,12 @@ function scoreColor(pct: number): string {
   return '#10b981';
 }
 
-function scoreLabel(pct: number): string {
-  if (pct < 40) return 'À travailler';
-  if (pct < 60) return 'En progrès';
-  if (pct < 75) return 'Bien';
-  if (pct < 90) return 'Très bien';
-  return 'Excellent !';
+function scoreLabel(pct: number, isCreole: boolean): string {
+  if (pct < 40) return isCreole ? 'Pou travay' : 'À travailler';
+  if (pct < 60) return isCreole ? 'Ap pwogrese' : 'En progrès';
+  if (pct < 75) return isCreole ? 'Byen' : 'Bien';
+  if (pct < 90) return isCreole ? 'Trè byen' : 'Très bien';
+  return isCreole ? 'Ekselan!' : 'Excellent !';
 }
 
 function subjectColor(name: string): string {
@@ -32,6 +33,9 @@ function subjectColor(name: string): string {
 
 export default function ReadinessCard() {
   const { overall, subjects, focus, hasData, isLoading } = useReadiness() as any;
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   if (isLoading) {
     return (
@@ -57,7 +61,7 @@ export default function ReadinessCard() {
     <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Target color="#0857A6" size={18} />
-        <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16 }}>Score de préparation</Text>
+        <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16 }}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
       </View>
 
       <View className="flex-row items-center gap-5">
@@ -92,7 +96,7 @@ export default function ReadinessCard() {
             </Text>
             {hasData && (
               <Text style={{ fontSize: 9, color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                {scoreLabel(pct)}
+                {scoreLabel(pct, isCreole)}
               </Text>
             )}
           </View>
@@ -102,7 +106,7 @@ export default function ReadinessCard() {
         <View className="flex-1 gap-2">
           {topSubjects.length === 0 ? (
             <Text className="text-xs text-gray-400 italic">
-              Passe des examens pour voir tes scores
+              {t('Passe des examens pour voir tes scores', 'Pase egzamen pou wè nòt ou yo')}
             </Text>
           ) : (
             topSubjects.map((s: any) => {
@@ -137,7 +141,7 @@ export default function ReadinessCard() {
         >
           <View>
             <Text className="text-xs font-semibold" style={{ color: focusColor }}>
-              Focus recommandé
+              {t('Focus recommandé', 'Fokis rekòmande')}
             </Text>
             <Text className="text-sm font-bold text-gray-800 mt-0.5" numberOfLines={1}>
               {focusSubject}

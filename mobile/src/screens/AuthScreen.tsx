@@ -19,6 +19,9 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function AuthScreen() {
   const { setUser, setActiveTab, activeTab } = useStore();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,7 +52,7 @@ export default function AuthScreen() {
       const user = await loginWithGoogleCredential(idToken, accessToken);
       setUser(user);
     } catch (e: any) {
-      Alert.alert('Erreur Google', e.message);
+      Alert.alert(t('Erreur Google', 'Erè Google'), e.message);
     } finally {
       setLoading(false);
     }
@@ -57,7 +60,7 @@ export default function AuthScreen() {
 
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Champs requis', 'Veuillez remplir tous les champs.');
+      Alert.alert(t('Champs requis', 'Chan obligatwa'), t('Veuillez remplir tous les champs.', 'Tanpri ranpli tout chan yo.'));
       return;
     }
     setLoading(true);
@@ -68,7 +71,7 @@ export default function AuthScreen() {
           : await registerWithEmailPassword(email.trim(), password, name.trim());
       setUser(user);
     } catch (e: any) {
-      Alert.alert('Erreur', e.message || 'Une erreur est survenue.');
+      Alert.alert(t('Erreur', 'Erè'), e.message || t('Une erreur est survenue.', 'Gen yon erè ki rive.'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +79,7 @@ export default function AuthScreen() {
 
   async function handleReset() {
     if (!email.trim()) {
-      Alert.alert('Email requis', 'Entrez votre adresse email pour réinitialiser.');
+      Alert.alert(t('Email requis', 'Imèl obligatwa'), t('Entrez votre adresse email pour réinitialiser.', 'Antre adrès imèl ou pou reyinisyalize modpas la.'));
       return;
     }
     setLoading(true);
@@ -84,7 +87,7 @@ export default function AuthScreen() {
       await sendPasswordReset(email.trim());
       setResetSent(true);
     } catch (e: any) {
-      Alert.alert('Erreur', e.message);
+      Alert.alert(t('Erreur', 'Erè'), e.message);
     } finally {
       setLoading(false);
     }
@@ -108,7 +111,7 @@ export default function AuthScreen() {
             />
             <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a' }}>EdLight Academy</Text>
             <Text style={{ color: '#64748b', marginTop: 4, textAlign: 'center' }}>
-              Préparez votre Bac avec confiance
+              {t('Préparez votre Bac avec confiance', 'Prepare Bakaloreya ou ak konfyans')}
             </Text>
           </View>
 
@@ -122,7 +125,7 @@ export default function AuthScreen() {
                 style={activeTab === tab ? { backgroundColor: '#ffffff', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 2 } : {}}
               >
                 <Text className={`font-semibold text-sm ${activeTab === tab ? 'text-primary-600' : 'text-gray-500'}`}>
-                  {tab === 'signin' ? 'Connexion' : 'Inscription'}
+                  {tab === 'signin' ? t('Connexion', 'Konekte') : t('Inscription', 'Enskri')}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -135,7 +138,7 @@ export default function AuthScreen() {
                 <User color="#9ca3af" size={18} />
                 <TextInput
                   className="flex-1 py-3.5 ml-3 text-gray-900 text-base"
-                  placeholder="Nom complet"
+                  placeholder={t('Nom complet', 'Non konplè')}
                   value={name}
                   onChangeText={setName}
                   autoCapitalize="words"
@@ -148,7 +151,7 @@ export default function AuthScreen() {
               <Mail color="#9ca3af" size={18} />
               <TextInput
                 className="flex-1 py-3.5 ml-3 text-gray-900 text-base"
-                placeholder="Adresse email"
+                placeholder={t('Adresse email', 'Adrès imèl')}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -162,7 +165,7 @@ export default function AuthScreen() {
               <Lock color="#9ca3af" size={18} />
               <TextInput
                 className="flex-1 py-3.5 ml-3 text-gray-900 text-base"
-                placeholder="Mot de passe"
+                placeholder={t('Mot de passe', 'Modpas')}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPw}
@@ -179,10 +182,10 @@ export default function AuthScreen() {
                 {resetSent ? (
                   <View className="flex-row items-center gap-1">
                     <Check color="#0857A6" size={14} />
-                    <Text className="text-primary-600 text-sm">Email envoyé</Text>
+                    <Text className="text-primary-600 text-sm">{t('Email envoyé', 'Imèl voye')}</Text>
                   </View>
                 ) : (
-                  <Text className="text-primary-600 text-sm">Mot de passe oublié ?</Text>
+                  <Text className="text-primary-600 text-sm">{t('Mot de passe oublié ?', 'Ou bliye modpas ou?')}</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -193,13 +196,13 @@ export default function AuthScreen() {
               className={`bg-primary-600 rounded-2xl py-4 items-center mt-2 ${loading ? 'opacity-60' : ''}`}
             >
               <Text className="text-white font-bold text-base">
-                {loading ? 'Chargement…' : isSignIn ? 'Se connecter' : 'Créer un compte'}
+                {loading ? t('Chargement…', 'Chajman…') : isSignIn ? t('Se connecter', 'Konekte') : t('Créer un compte', 'Kreye yon kont')}
               </Text>
             </TouchableOpacity>
 
             <View className="flex-row items-center my-2">
               <View className="flex-1 h-px bg-gray-200" />
-              <Text className="text-gray-400 text-sm mx-3">ou</Text>
+              <Text className="text-gray-400 text-sm mx-3">{t('ou', 'oswa')}</Text>
               <View className="flex-1 h-px bg-gray-200" />
             </View>
 
@@ -212,7 +215,7 @@ export default function AuthScreen() {
               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: '#0857A6', fontWeight: '800', fontSize: 13 }}>G</Text>
               </View>
-              <Text className="text-gray-700 font-semibold">Continuer avec Google</Text>
+              <Text className="text-gray-700 font-semibold">{t('Continuer avec Google', 'Kontinye ak Google')}</Text>
             </TouchableOpacity>
           </View>
 

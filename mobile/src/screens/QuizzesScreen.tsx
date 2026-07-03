@@ -11,6 +11,8 @@ import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 type QuizState = 'list' | 'taking' | 'results';
 
 function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, total: number) => void }) {
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const questions = useMemo(() => {
     const qs = quiz.questions ?? [];
     return qs.slice(0, 20);
@@ -23,9 +25,9 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
   if (questions.length === 0) {
     return (
       <View className="flex-1 items-center justify-center p-6">
-        <Text className="text-gray-500 text-base">Ce quiz n'a pas de questions.</Text>
+        <Text className="text-gray-500 text-base">{t("Ce quiz n'a pas de questions.", 'Quiz sa a pa gen kesyon.')}</Text>
         <TouchableOpacity onPress={() => onFinish(0, 0)} className="mt-4 bg-primary-600 px-6 py-3 rounded-xl">
-          <Text className="text-white font-bold">Retour</Text>
+          <Text className="text-white font-bold">{t('Retour', 'Retounen')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -62,7 +64,7 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
       </View>
       <ScrollView className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 32 }}>
         <Text className="text-xs text-gray-400 font-semibold uppercase mb-3">
-          Question {idx + 1} / {questions.length}
+          {t('Question', 'Kesyon')} {idx + 1} / {questions.length}
         </Text>
         <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
           <Text className="text-base text-gray-900 leading-6">{q.question ?? q.stem ?? ''}</Text>
@@ -92,7 +94,7 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
           className={`flex-row py-4 rounded-2xl items-center justify-center gap-1 ${selected ? 'bg-primary-600' : 'bg-gray-200'}`}
         >
           <Text className={`font-bold text-base ${selected ? 'text-white' : 'text-gray-400'}`}>
-            {idx === questions.length - 1 ? 'Terminer' : 'Suivant'}
+            {idx === questions.length - 1 ? t('Terminer', 'Fini') : t('Suivant', 'Pwochen')}
           </Text>
           {idx < questions.length - 1 && (
             <ChevronRight color={selected ? '#ffffff' : '#9ca3af'} size={18} />
@@ -106,6 +108,8 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
 function QuizResultScreen({ score, total, onRetry, onBack }: {
   score: number; total: number; onRetry: () => void; onBack: () => void;
 }) {
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   return (
     <View className="flex-1 items-center justify-center p-8" style={{ backgroundColor: "#f4f6fb" }}>
@@ -113,12 +117,12 @@ function QuizResultScreen({ score, total, onRetry, onBack }: {
         <Trophy color="#0857A6" size={32} />
       </View>
       <Text className="text-4xl font-bold text-gray-900 mb-1">{score}/{total}</Text>
-      <Text className="text-xl text-primary-600 font-semibold mb-6">{pct}% correct</Text>
+      <Text className="text-xl text-primary-600 font-semibold mb-6">{pct}% {t('correct', 'kòrèk')}</Text>
       <TouchableOpacity onPress={onRetry} className="w-full bg-primary-600 py-4 rounded-2xl items-center mb-3">
-        <Text className="text-white font-bold text-base">Recommencer</Text>
+        <Text className="text-white font-bold text-base">{t('Recommencer', 'Rekòmanse')}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onBack} className="w-full border border-gray-300 bg-white py-4 rounded-2xl items-center">
-        <Text className="text-gray-700 font-semibold text-base">Retour aux quiz</Text>
+        <Text className="text-gray-700 font-semibold text-base">{t('Retour aux quiz', 'Retounen nan quiz yo')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -226,7 +230,7 @@ export default function QuizzesScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '600', color: '#0f172a', fontSize: 14 }} numberOfLines={2}>{quiz.title}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{quiz.questions?.length ?? 0} questions</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{quiz.questions?.length ?? 0} {t('questions', 'kesyon')}</Text>
               </View>
               <ChevronRight color="#cbd5e1" size={18} />
             </TouchableOpacity>

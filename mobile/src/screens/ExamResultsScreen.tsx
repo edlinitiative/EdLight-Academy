@@ -17,6 +17,9 @@ type Route = RouteProp<ExamsParamList, 'ExamResults'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamResults'>;
 
 function ScoreGauge({ percentage }: { percentage: number }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const color = percentage >= 70 ? '#10b981' : percentage >= 50 ? '#f59e0b' : '#ef4444';
   return (
     <View className="items-center py-8">
@@ -25,13 +28,16 @@ function ScoreGauge({ percentage }: { percentage: number }) {
       </View>
       <Text className="text-5xl font-bold" style={{ color }}>{percentage}%</Text>
       <Text className="text-gray-500 mt-1">
-        {percentage >= 70 ? 'Excellent !' : percentage >= 50 ? 'Bien essayé !' : 'Continue à réviser !'}
+        {percentage >= 70 ? t('Excellent !', 'Ekselan!') : percentage >= 50 ? t('Bien essayé !', 'Bon jefò!') : t('Continue à réviser !', 'Kontinye revize!')}
       </Text>
     </View>
   );
 }
 
 function QuestionReviewItem({ question, index, answer }: { question: any; index: number; answer: any }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [expanded, setExpanded] = useState(false);
   const correctAnswer = question.correct_answer ?? question.answer ?? question.solution;
   const given = answer?.given ?? answer;
@@ -63,14 +69,14 @@ function QuestionReviewItem({ question, index, answer }: { question: any; index:
         <View className="px-4 pb-3 gap-2">
           <View className="h-px bg-gray-200 mb-1" />
           <View className="flex-row gap-2">
-            <Text className="text-xs font-semibold text-gray-400 w-20">Votre réponse</Text>
+            <Text className="text-xs font-semibold text-gray-400 w-20">{t('Votre réponse', 'Repons ou')}</Text>
             <Text className="flex-1 text-xs font-medium" style={{ color: isUnanswered ? '#9ca3af' : isCorrect ? '#10b981' : '#ef4444' }}>
-              {isUnanswered ? 'Sans réponse' : String(given)}
+              {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
             </Text>
           </View>
           {!isCorrect && correctAnswer != null && (
             <View className="flex-row gap-2">
-              <Text className="text-xs font-semibold text-gray-400 w-20">Bonne réponse</Text>
+              <Text className="text-xs font-semibold text-gray-400 w-20">{t('Bonne réponse', 'Bon repons')}</Text>
               <Text className="flex-1 text-xs font-medium text-emerald-700">{String(correctAnswer)}</Text>
             </View>
           )}
@@ -85,10 +91,10 @@ function QuestionReviewItem({ question, index, answer }: { question: any; index:
   );
 }
 
-function computeMastery(questions: any[], answers: Record<string, any>) {
+function computeMastery(questions: any[], answers: Record<string, any>, isCreole: boolean) {
   const groups: Record<string, { correct: number; total: number }> = {};
   questions.forEach((q, i) => {
-    const section = q.sectionTitle || q.section || 'Général';
+    const section = q.sectionTitle || q.section || (isCreole ? 'Jeneral' : 'Général');
     if (!groups[section]) groups[section] = { correct: 0, total: 0 };
     groups[section].total++;
     const given = answers[i]?.given ?? answers[i];
@@ -102,6 +108,9 @@ function computeMastery(questions: any[], answers: Record<string, any>) {
 }
 
 function MasteryBar({ section, pct, correct, total }: { section: string; pct: number; correct: number; total: number }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const color = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
   return (
     <View style={{ marginBottom: 12 }}>
@@ -112,7 +121,7 @@ function MasteryBar({ section, pct, correct, total }: { section: string; pct: nu
       <View style={{ height: 6, backgroundColor: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
         <View style={{ width: `${pct}%` as any, height: 6, backgroundColor: color, borderRadius: 99 }} />
       </View>
-      <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{correct}/{total} correctes</Text>
+      <Text style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{t(`${correct}/${total} correctes`, `${correct}/${total} kòrèk`)}</Text>
     </View>
   );
 }
@@ -121,7 +130,9 @@ export default function ExamResultsScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, incrementGuestInteraction } = useStore();
+  const { user, incrementGuestInteraction, language } = useStore();
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [result, setResult] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -145,7 +156,7 @@ export default function ExamResultsScreen() {
       .finally(() => setLoading(false));
   }, [user?.uid, examId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <LoadingState message="Chargement des résultats…" />;
+  if (loading) return <LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />;
 
   const summary = result?.summary ?? {};
   const percentage = summary.percentage ?? result?.percentage ?? 0;
@@ -170,7 +181,7 @@ export default function ExamResultsScreen() {
         <TouchableOpacity onPress={() => navigation.popToTop()} className="p-1 mr-3">
           <ArrowLeft color="#374151" size={22} />
         </TouchableOpacity>
-        <Text className="font-bold text-gray-900 text-base">Résultats</Text>
+        <Text className="font-bold text-gray-900 text-base">{t('Résultats', 'Rezilta')}</Text>
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
@@ -190,9 +201,9 @@ export default function ExamResultsScreen() {
         {/* Stats */}
         <View className="flex-row gap-3 mx-4 mt-4">
           {[
-            { label: 'Correctes', value: String(correct), icon: <CheckCircle2 color="#10b981" size={20} />, color: '#10b981' },
-            { label: 'Incorrectes', value: String(total - correct), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
-            { label: 'Score', value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color="#f59e0b" size={20} />, color: '#f59e0b' },
+            { label: t('Correctes', 'Kòrèk'), value: String(correct), icon: <CheckCircle2 color="#10b981" size={20} />, color: '#10b981' },
+            { label: t('Incorrectes', 'Pa kòrèk'), value: String(total - correct), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
+            { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color="#f59e0b" size={20} />, color: '#f59e0b' },
           ].map((stat) => (
             <View key={stat.label} style={{ flex: 1, backgroundColor: '#ffffff', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1, alignItems: 'center', gap: 4 }}>
               {stat.icon}
@@ -204,11 +215,11 @@ export default function ExamResultsScreen() {
 
         {/* Mastery by section */}
         {questions.length > 0 && (() => {
-          const mastery = computeMastery(questions, answers);
+          const mastery = computeMastery(questions, answers, isCreole);
           if (mastery.length <= 1) return null;
           return (
             <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
-              <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15, marginBottom: 14 }}>Par section</Text>
+              <Text style={{ fontWeight: '700', color: '#0f172a', fontSize: 15, marginBottom: 14 }}>{t('Par section', 'Pa seksyon')}</Text>
               {mastery.map((m) => (
                 <MasteryBar key={m.section} section={m.section} pct={m.pct} correct={m.correct} total={m.total} />
               ))}
@@ -219,9 +230,9 @@ export default function ExamResultsScreen() {
         {/* Exam info */}
         {result && (
           <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
-            <Text className="font-semibold text-gray-900 mb-1">{result.title ?? 'Examen'}</Text>
-            {result.subject && <Text className="text-sm text-gray-500">Matière : {result.subject}</Text>}
-            {result.level && <Text className="text-sm text-gray-500">Niveau : {result.level}</Text>}
+            <Text className="font-semibold text-gray-900 mb-1">{result.title ?? t('Examen', 'Egzamen')}</Text>
+            {result.subject && <Text className="text-sm text-gray-500">{t(`Matière : ${result.subject}`, `Matyè : ${result.subject}`)}</Text>}
+            {result.level && <Text className="text-sm text-gray-500">{t(`Niveau : ${result.level}`, `Nivo : ${result.level}`)}</Text>}
           </View>
         )}
 
@@ -229,13 +240,13 @@ export default function ExamResultsScreen() {
         {questions.length > 0 && (
           <View className="mx-4 mt-5">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-base font-bold text-gray-900">Revue des questions</Text>
-              <Text className="text-xs text-gray-400">{questions.length} questions</Text>
+              <Text className="text-base font-bold text-gray-900">{t('Revue des questions', 'Revizyon kesyon yo')}</Text>
+              <Text className="text-xs text-gray-400">{t(`${questions.length} questions`, `${questions.length} kesyon`)}</Text>
             </View>
 
             {/* Filter tabs */}
             <View className="flex-row bg-gray-100 rounded-xl p-1 mb-4">
-              {([['all', 'Toutes'], ['wrong', 'À revoir'], ['correct', 'Réussies']] as const).map(([val, label]) => (
+              {([['all', t('Toutes', 'Tout')], ['wrong', t('À revoir', 'Pou revize')], ['correct', t('Réussies', 'Reyisi')]] as const).map(([val, label]) => (
                 <TouchableOpacity
                   key={val}
                   onPress={() => setReviewFilter(val)}
@@ -249,7 +260,7 @@ export default function ExamResultsScreen() {
 
             {filteredQuestions.length === 0 ? (
               <View className="items-center py-6">
-                <Text className="text-gray-400 text-sm">Aucune question dans ce filtre.</Text>
+                <Text className="text-gray-400 text-sm">{t('Aucune question dans ce filtre.', 'Pa gen okenn kesyon nan filt sa a.')}</Text>
               </View>
             ) : (
               filteredQuestions.map((q, i) => {
@@ -274,13 +285,13 @@ export default function ExamResultsScreen() {
             className="flex-row items-center justify-center gap-2 bg-primary-600 py-4 rounded-2xl"
           >
             <RefreshCw color="#fff" size={18} />
-            <Text className="text-white font-bold text-base">Recommencer</Text>
+            <Text className="text-white font-bold text-base">{t('Recommencer', 'Rekòmanse')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('ExamBrowser', { level })}
             className="flex-row items-center justify-center gap-2 border border-gray-300 py-4 rounded-2xl bg-white"
           >
-            <Text className="text-gray-700 font-semibold text-base">Voir d'autres examens</Text>
+            <Text className="text-gray-700 font-semibold text-base">{t("Voir d'autres examens", 'Wè lòt egzamen')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
