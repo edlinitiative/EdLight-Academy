@@ -76,7 +76,7 @@ function transformFirestoreCourses(
   videosMap = new Map<string, any>(),
   quizzesMap = new Map<string, any>(),
 ): any[] {
-  const transformed = firestoreCourses.map((course) => {
+  const transformed = firestoreCourses.filter((course) => !course.hidden).map((course) => {
     const [subjectPart, levelPart] = course.id.split('-');
     const subjectCode = subjectPart?.toUpperCase() ?? '';
     const rawLevel = levelPart?.toUpperCase() ?? '';
