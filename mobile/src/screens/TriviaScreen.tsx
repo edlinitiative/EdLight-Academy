@@ -105,12 +105,11 @@ function TriviaHeader() {
 // Two-column illustrated card grid. Cards share ONE calm neutral treatment
 // (clean white surface, soft slate shadow, hairline border); only the SVG
 // illustration carries colour — no per-category background tints.
-const CARD_H_PAD = 16; // grid outer horizontal padding
-const CARD_GAP = 12;   // gutter between the two columns
-const CARD_WIDTH = Math.floor(
-  (Dimensions.get('window').width - CARD_H_PAD * 2 - CARD_GAP) / 2,
+const GRID_PAD = 12; // grid outer horizontal padding
+const COL_GAP = 10;  // gutter between the three columns
+const TILE_SIZE = Math.floor(
+  (Dimensions.get('window').width - GRID_PAD * 2 - COL_GAP * 2) / 3,
 );
-const CARD_IMG_HEIGHT = Math.round(CARD_WIDTH * 0.66);
 const ASSET_BASE_URL = 'https://edlight-academy.web.app';
 
 function CategoryPicker({
@@ -135,79 +134,68 @@ function CategoryPicker({
         </Text>
       </View>
 
-      {/* Illustrated cards, 2 per row */}
+      {/* App-icon grid: illustrated squircle tiles, 3 per row */}
       <View
         style={{
           flexDirection: 'row',
           flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          paddingHorizontal: CARD_H_PAD,
+          gap: COL_GAP,
+          paddingHorizontal: GRID_PAD,
         }}
       >
-        {TRIVIA_CATEGORIES.map((cat: any) => {
-          const questionCount =
-            (TRIVIA_QUESTIONS as Record<string, any[]>)[cat.id]?.length ?? 0;
-          return (
-            <TouchableOpacity
-              key={cat.id}
-              onPress={() => onSelect(cat.id)}
-              activeOpacity={0.85}
+        {TRIVIA_CATEGORIES.map((cat: any) => (
+          <TouchableOpacity
+            key={cat.id}
+            onPress={() => onSelect(cat.id)}
+            activeOpacity={0.8}
+            style={{ width: TILE_SIZE, alignItems: 'center', marginBottom: 6 }}
+          >
+            {/* Shadow on the outer view; clipped illustration on the inner. */}
+            <View
               style={{
-                width: CARD_WIDTH,
-                marginBottom: CARD_GAP,
-                borderRadius: 20,
-                backgroundColor: '#ffffff',
-                borderWidth: 1,
-                borderColor: '#eef2f7',
-                // Soft, unified slate shadow across every card
+                borderRadius: 22,
                 shadowColor: '#0f172a',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.08,
-                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
                 elevation: 3,
               }}
             >
-              {/* Illustration area — rounded, contained, calm neutral backdrop */}
               <View
                 style={{
-                  height: CARD_IMG_HEIGHT,
-                  borderTopLeftRadius: 20,
-                  borderTopRightRadius: 20,
-                  backgroundColor: '#f1f5f9',
+                  width: TILE_SIZE,
+                  height: TILE_SIZE,
+                  borderRadius: 22,
                   overflow: 'hidden',
+                  backgroundColor: '#f1f5f9',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: '#eef2f7',
                 }}
               >
                 {cat.image ? (
                   <SvgUri
                     uri={`${ASSET_BASE_URL}${cat.image}`}
-                    width={CARD_WIDTH}
-                    height={CARD_IMG_HEIGHT}
+                    width={TILE_SIZE}
+                    height={TILE_SIZE}
                     preserveAspectRatio="xMidYMid slice"
                   />
                 ) : (
-                  <Text style={{ fontSize: 44 }}>{cat.icon ?? '🎯'}</Text>
+                  <Text style={{ fontSize: 38 }}>{cat.icon ?? '🎯'}</Text>
                 )}
               </View>
+            </View>
 
-              {/* Label + subtle question count */}
-              <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 12 }}>
-                <Text
-                  numberOfLines={1}
-                  style={{ fontSize: 14.5, fontWeight: '700', color: '#0f172a', letterSpacing: -0.2 }}
-                >
-                  {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-                </Text>
-                {questionCount > 0 && (
-                  <Text style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 3, fontWeight: '600' }}>
-                    {questionCount} {isCreole ? 'kesyon' : 'questions'}
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+            {/* Name (reserve 2 lines so tiles align) */}
+            <Text
+              numberOfLines={2}
+              style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30, letterSpacing: -0.2 }}
+            >
+              {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </ScrollView>
   );

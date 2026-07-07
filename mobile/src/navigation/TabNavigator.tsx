@@ -24,7 +24,7 @@ export type TabParamList = {
 const Tab = createBottomTabNavigator<TabParamList>();
 
 const ACTIVE = '#0857A6';
-const INACTIVE = '#9ca3af';
+const INACTIVE = '#111827';
 
 // Floating pill bar (Instagram-style): detached from the screen edge, rounded,
 // elevated. Sized explicitly so labels never clip, whatever the device width.
