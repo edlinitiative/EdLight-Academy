@@ -68,6 +68,12 @@ export function usesScaffold(q: any, subject: string): boolean {
   if (!q) return false;
   if (q.type === 'essay') return false;
   if (NATIVE_INPUT_TYPES.has(q.type)) return false;
+  // The "Complète la démarche" fill-in-the-steps scaffold only makes sense for
+  // math-like subjects (equations solved step by step). For languages / others,
+  // `scaffold_text`/`answer_parts` is really the worked solution or model answer
+  // — it must NOT become the answer input; it's surfaced as a hint instead, and
+  // the question uses its natural input (fill_blank text, short_answer, etc.).
+  if (!MATH_SUBJECTS.has(subject)) return false;
   if (!q.scaffold_text || !q.scaffold_blanks) return false;
   if (!scaffoldDataOk(q)) return false;
   if (typeof q.scaffold_ready === 'boolean') return q.scaffold_ready;
