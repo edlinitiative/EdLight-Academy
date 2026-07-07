@@ -292,7 +292,7 @@ export default function CoursesScreen() {
       <ScrollView
         className="flex-1 px-5 pt-4"
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#0857A6" />}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
         {searching ? (
