@@ -5,6 +5,7 @@ import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { CourseCard } from '../components/Course';
 import { EmptyState, ErrorState } from '../components/StateViews';
+import { Skeleton } from '../components/Skeleton';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
@@ -165,9 +166,9 @@ export default function Courses() {
         <div className="container">
           <div className="page-header" style={{ marginBottom: '2rem' }}>
             <div>
-              <div className="skeleton" style={{ height: 22, width: 120, borderRadius: 999, marginBottom: '0.75rem' }} />
-              <div className="skeleton" style={{ height: 32, width: '60%', marginBottom: '0.5rem' }} />
-              <div className="skeleton" style={{ height: 16, width: '40%' }} />
+              <Skeleton width={120} height={22} radius={999} style={{ marginBottom: '0.75rem' }} />
+              <Skeleton width="60%" height={32} style={{ marginBottom: '0.5rem' }} />
+              <Skeleton width="40%" height={16} />
             </div>
           </div>
           <div className="grid grid--courses">

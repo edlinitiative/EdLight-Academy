@@ -138,7 +138,8 @@ const fetchQuizzesFromFirestore = async () => {
  */
 const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quizzesMap = new Map()) => {
 
-  const transformed = firestoreCourses.map(course => {
+  // Skip courses flagged `hidden` (old, un-migrated levels not ready for the catalog).
+  const transformed = firestoreCourses.filter(course => !course.hidden).map(course => {
     // Parse course ID (e.g., chem-ns1)
     const [subjectPart, levelPart] = course.id.split('-');
     const subjectCode = subjectPart ? subjectPart.toUpperCase() : '';
