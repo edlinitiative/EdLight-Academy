@@ -199,6 +199,9 @@ function transformFirestoreCourses(
       duration: course.length || 0,
       modules,
       instructor: 'EdLight Academy',
+      // `coming_soon` courses render as a disabled teaser; clearing the flag
+      // (on migration) makes them normal automatically.
+      comingSoon: !!course.coming_soon,
     };
   });
 

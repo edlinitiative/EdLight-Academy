@@ -4332,6 +4332,31 @@ textarea:focus-visible,
 	color: var(--text-400);
 }
 
+/* Coming-soon subject: muted, non-interactive, with a badge. */
+.subject-tile--soon {
+	cursor: default;
+	opacity: 0.72;
+	background: var(--surface-muted, #f4f6fb);
+}
+.subject-tile--soon:hover,
+.subject-tile--soon:focus-visible {
+	transform: none;
+	box-shadow: none;
+	border-color: var(--border);
+}
+.subject-tile__soon-badge {
+	flex-shrink: 0;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--primary-600);
+	background: rgba(10, 102, 194, 0.1);
+	border-radius: 999px;
+	padding: 0.3rem 0.6rem;
+	white-space: nowrap;
+}
+
 .subject-tile__startcta {
 	display: inline-flex;
 	align-items: center;

@@ -240,6 +240,9 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
       duration: course.length || 0,
       modules: modules,
       instructor: 'EdLight Academy',
+      // `coming_soon` courses stay in the catalog but render as a disabled
+      // teaser; clearing the flag (on migration) makes them normal automatically.
+      comingSoon: !!course.coming_soon,
       // Keep original Firestore data for reference
       _firestore: {
         number_of_units: course.number_of_units,
