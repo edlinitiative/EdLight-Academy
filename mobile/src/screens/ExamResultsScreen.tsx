@@ -173,7 +173,7 @@ export default function ExamResultsScreen() {
         <Text className="font-bold text-gray-900 text-base">Résultats</Text>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Score */}
         <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, overflow: 'hidden' }}>
           <ScoreGauge percentage={Math.round(percentage)} />

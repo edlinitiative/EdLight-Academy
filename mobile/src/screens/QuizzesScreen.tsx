@@ -60,7 +60,7 @@ function QuizRunner({ quiz, onFinish }: { quiz: any; onFinish: (score: number, t
       <View className="h-1 bg-gray-200">
         <View className="h-1 bg-primary-600" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
       </View>
-      <ScrollView className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 100 }}>
         <Text className="text-xs text-gray-400 font-semibold uppercase mb-3">
           Question {idx + 1} / {questions.length}
         </Text>
@@ -194,7 +194,7 @@ export default function QuizzesScreen() {
       <ScrollView
         className="flex-1 px-5"
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
         {quizzes.length === 0 ? (
           <EmptyState message={t('Aucun quiz disponible.', 'Pa gen quiz disponib.')} />

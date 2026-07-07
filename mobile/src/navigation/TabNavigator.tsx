@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { LayoutDashboard, BookOpen, ClipboardList, Zap, User } from 'lucide-react-native';
 import useStore from '../contexts/store';
 
@@ -30,27 +31,79 @@ const INACTIVE = '#9ca3af';
 const BAR_HEIGHT = 62;
 const BAR_MARGIN = 16;
 
+// Two taps on the SAME tab within this window trigger a data refresh.
+const DOUBLE_TAP_MS = 350;
+
+// Rounded highlight behind the focused tab's icon. Themed tint of the brand
+// color — subtle in light mode, a touch stronger in dark so it reads.
+function TabIcon({
+  Icon,
+  color,
+  size,
+  focused,
+  dark,
+}: {
+  Icon: typeof LayoutDashboard;
+  color: string;
+  size: number;
+  focused: boolean;
+  dark: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.iconPill,
+        focused && {
+          backgroundColor: dark ? 'rgba(56,132,214,0.24)' : 'rgba(8,87,166,0.12)',
+        },
+      ]}
+    >
+      <Icon color={color} size={size} />
+    </View>
+  );
+}
+
 export default function TabNavigator() {
   const theme = useStore((s) => s.theme);
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
+  const queryClient = useQueryClient();
+
+  // Tracks the last tab press so we can detect a quick double-tap on the same tab.
+  const lastPress = useRef<{ name: string; time: number }>({ name: '', time: 0 });
 
   // Float above the home indicator on notched phones, 12px above the edge elsewhere.
   const bottomOffset = Math.max(insets.bottom, 12);
 
   return (
     <Tab.Navigator
+      // No paddingBottom here: content scrolls UNDER the translucent floating bar
+      // (each screen adds its own bottom padding so nothing is permanently hidden).
       sceneContainerStyle={{
         backgroundColor: dark ? '#0b1220' : '#f4f6fb',
-        paddingBottom: BAR_HEIGHT + bottomOffset,
       }}
+      screenListeners={({ route }) => ({
+        // Single tap keeps default behavior (navigate / pop-to-top of the stack).
+        // A second tap on the same tab within DOUBLE_TAP_MS refreshes all data.
+        tabPress: () => {
+          const now = Date.now();
+          const prev = lastPress.current;
+          if (prev.name === route.name && now - prev.time < DOUBLE_TAP_MS) {
+            queryClient.invalidateQueries();
+            lastPress.current = { name: '', time: 0 };
+          } else {
+            lastPress.current = { name: route.name, time: now };
+          }
+        },
+      })}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: INACTIVE,
         tabBarAllowFontScaling: false,
         // Frosted-glass pill: a translucent BlurView background lets the app
-        // show through, with a thin light rim for the glass edge.
+        // show through, with a thin light rim for the glass edge. The overlay is
+        // kept light so scrolling content stays visible (blurred) behind it.
         tabBarBackground: () => (
           <BlurView
             intensity={dark ? 40 : 55}
@@ -60,7 +113,7 @@ export default function TabNavigator() {
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: dark ? 'rgba(17,24,39,0.5)' : 'rgba(255,255,255,0.55)' },
+                { backgroundColor: dark ? 'rgba(17,24,39,0.35)' : 'rgba(255,255,255,0.3)' },
               ]}
             />
           </BlurView>
@@ -94,7 +147,9 @@ export default function TabNavigator() {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'Accueil',
-          tabBarIcon: ({ color, size }) => <LayoutDashboard color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon Icon={LayoutDashboard} color={color} size={size} focused={focused} dark={dark} />
+          ),
         }}
       />
       <Tab.Screen
@@ -102,7 +157,9 @@ export default function TabNavigator() {
         component={CoursesNavigator}
         options={{
           tabBarLabel: 'Cours',
-          tabBarIcon: ({ color, size }) => <BookOpen color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon Icon={BookOpen} color={color} size={size} focused={focused} dark={dark} />
+          ),
         }}
       />
       <Tab.Screen
@@ -110,7 +167,9 @@ export default function TabNavigator() {
         component={ExamsNavigator}
         options={{
           tabBarLabel: 'Exams',
-          tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon Icon={ClipboardList} color={color} size={size} focused={focused} dark={dark} />
+          ),
         }}
       />
       <Tab.Screen
@@ -118,7 +177,9 @@ export default function TabNavigator() {
         component={TriviaScreen}
         options={{
           tabBarLabel: 'Trivia',
-          tabBarIcon: ({ color, size }) => <Zap color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon Icon={Zap} color={color} size={size} focused={focused} dark={dark} />
+          ),
         }}
       />
       <Tab.Screen
@@ -126,9 +187,19 @@ export default function TabNavigator() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Profil',
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          tabBarIcon: ({ color, size, focused }) => (
+            <TabIcon Icon={User} color={color} size={size} focused={focused} dark={dark} />
+          ),
         }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  iconPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 3,
+    borderRadius: 14,
+  },
+});

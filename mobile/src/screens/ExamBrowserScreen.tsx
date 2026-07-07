@@ -286,7 +286,7 @@ export default function ExamBrowserScreen() {
 
       <ScrollView
         className="flex-1 px-4 pt-3"
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
       >
         {filtered.length === 0 ? (

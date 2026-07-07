@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, SvgUri } from 'react-native-svg';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
@@ -29,16 +28,6 @@ interface PreparedQuestion {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/** Lighten (pct>0) or darken (pct<0) a #rrggbb hex — used for tile gradients. */
-function shade(hex: string, pct: number): string {
-  const h = String(hex || '#0857A6').replace('#', '');
-  let r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-  if (pct < 0) { const f = 1 + pct; r *= f; g *= f; b *= f; }
-  else { r += (255 - r) * pct; g += (255 - g) * pct; b += (255 - b) * pct; }
-  const to = (c: number) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
-  return `#${to(r)}${to(g)}${to(b)}`;
-}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -113,6 +102,17 @@ function TriviaHeader() {
 
 // ─── CategoryPicker ───────────────────────────────────────────────────────────
 
+// Two-column illustrated card grid. Cards share ONE calm neutral treatment
+// (clean white surface, soft slate shadow, hairline border); only the SVG
+// illustration carries colour — no per-category background tints.
+const CARD_H_PAD = 16; // grid outer horizontal padding
+const CARD_GAP = 12;   // gutter between the two columns
+const CARD_WIDTH = Math.floor(
+  (Dimensions.get('window').width - CARD_H_PAD * 2 - CARD_GAP) / 2,
+);
+const CARD_IMG_HEIGHT = Math.round(CARD_WIDTH * 0.66);
+const ASSET_BASE_URL = 'https://edlight-academy.web.app';
+
 function CategoryPicker({
   onSelect,
   isCreole,
@@ -123,7 +123,7 @@ function CategoryPicker({
   return (
     <ScrollView
       style={{ backgroundColor: '#f4f6fb' }}
-      contentContainerStyle={{ paddingTop: 12, paddingBottom: 110 }}
+      contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
     >
       <View className="px-4 pt-4 pb-3">
@@ -135,58 +135,76 @@ function CategoryPicker({
         </Text>
       </View>
 
-      {/* App-icon grid: each game is a rounded "squircle" tile, 3 per row. */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 }}>
+      {/* Illustrated cards, 2 per row */}
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          paddingHorizontal: CARD_H_PAD,
+        }}
+      >
         {TRIVIA_CATEGORIES.map((cat: any) => {
+          const questionCount =
+            (TRIVIA_QUESTIONS as Record<string, any[]>)[cat.id]?.length ?? 0;
           return (
             <TouchableOpacity
               key={cat.id}
               onPress={() => onSelect(cat.id)}
-              activeOpacity={0.8}
-              style={{ width: '33.333%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 6 }}
+              activeOpacity={0.85}
+              style={{
+                width: CARD_WIDTH,
+                marginBottom: CARD_GAP,
+                borderRadius: 20,
+                backgroundColor: '#ffffff',
+                borderWidth: 1,
+                borderColor: '#eef2f7',
+                // Soft, unified slate shadow across every card
+                shadowColor: '#0f172a',
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.08,
+                shadowRadius: 12,
+                elevation: 3,
+              }}
             >
-              {/* App icon — soft colored shadow on an outer view, gradient +
-                  top gloss on the clipped inner tile for depth. */}
+              {/* Illustration area — rounded, contained, calm neutral backdrop */}
               <View
                 style={{
-                  borderRadius: 22,
-                  shadowColor: cat.color,
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 10,
-                  elevation: 5,
+                  height: CARD_IMG_HEIGHT,
+                  borderTopLeftRadius: 20,
+                  borderTopRightRadius: 20,
+                  backgroundColor: '#f1f5f9',
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <LinearGradient
-                  colors={[shade(cat.color, 0.22), cat.color, shade(cat.color, -0.2)]}
-                  start={{ x: 0.1, y: 0 }}
-                  end={{ x: 0.9, y: 1 }}
-                  style={{
-                    width: 78,
-                    height: 78,
-                    borderRadius: 22,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.28)',
-                  }}
-                >
-                  {/* Glossy top highlight */}
-                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 34, backgroundColor: 'rgba(255,255,255,0.16)' }} />
-                  <Text style={{ fontSize: 36, textShadowColor: 'rgba(0,0,0,0.18)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}>
-                    {cat.icon ?? '🎯'}
-                  </Text>
-                </LinearGradient>
+                {cat.image ? (
+                  <SvgUri
+                    uri={`${ASSET_BASE_URL}${cat.image}`}
+                    width={CARD_WIDTH}
+                    height={CARD_IMG_HEIGHT}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                ) : (
+                  <Text style={{ fontSize: 44 }}>{cat.icon ?? '🎯'}</Text>
+                )}
               </View>
 
-              {/* Name (reserve 2 lines so all tiles align) */}
-              <Text
-                numberOfLines={2}
-                style={{ fontSize: 12.5, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginTop: 9, lineHeight: 16, minHeight: 32, letterSpacing: -0.2 }}
-              >
-                {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-              </Text>
+              {/* Label + subtle question count */}
+              <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 12 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{ fontSize: 14.5, fontWeight: '700', color: '#0f172a', letterSpacing: -0.2 }}
+                >
+                  {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
+                </Text>
+                {questionCount > 0 && (
+                  <Text style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 3, fontWeight: '600' }}>
+                    {questionCount} {isCreole ? 'kesyon' : 'questions'}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
