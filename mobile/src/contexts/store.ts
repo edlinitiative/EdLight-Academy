@@ -20,6 +20,7 @@ export interface AppState {
   hydrated: boolean;
   track: string | null;
   onboardingCompleted: boolean;
+  tourCompleted: boolean;
   languageChosen: boolean;
   theme: 'light' | 'dark';
   enrolledCourses: any[];
@@ -38,6 +39,7 @@ export interface AppState {
   setLanguage: (language: string) => void;
   setTrack: (track: string | null) => void;
   setOnboardingCompleted: (completed: boolean) => void;
+  setTourCompleted: (completed: boolean) => void;
   setLanguageChosen: (chosen: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -66,6 +68,7 @@ const useStore = create<AppState>()(
       hydrated: false,
       track: null,
       onboardingCompleted: false,
+      tourCompleted: false,
       languageChosen: false,
       theme: 'light',
       enrolledCourses: [],
@@ -84,6 +87,7 @@ const useStore = create<AppState>()(
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
+      setTourCompleted: (completed) => set({ tourCompleted: !!completed }),
       setLanguageChosen: (chosen) => set({ languageChosen: !!chosen }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
@@ -157,6 +161,7 @@ const useStore = create<AppState>()(
         language: s.language,
         track: s.track,
         onboardingCompleted: s.onboardingCompleted,
+        tourCompleted: s.tourCompleted,
         languageChosen: s.languageChosen,
         theme: s.theme,
         enrolledCourses: s.enrolledCourses,
@@ -170,5 +175,15 @@ const useStore = create<AppState>()(
     },
   ),
 );
+
+// `hydrated` starts false and is only meaningful once AsyncStorage rehydration
+// has finished — flip it true then so first-run gates (language picker,
+// onboarding tour) actually fire. Registered after creation to avoid
+// referencing `useStore` before its declaration.
+if (useStore.persist.hasHydrated()) {
+  useStore.setState({ hydrated: true });
+} else {
+  useStore.persist.onFinishHydration(() => useStore.setState({ hydrated: true }));
+}
 
 export default useStore;

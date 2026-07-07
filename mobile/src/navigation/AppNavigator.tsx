@@ -6,6 +6,7 @@ import useStore from '../contexts/store';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
 import WelcomeLanguageModal from '../components/WelcomeLanguageModal';
+import OnboardingModal from '../components/OnboardingModal';
 import NetworkStatus from '../components/NetworkStatus';
 
 export type RootParamList = {
@@ -54,6 +55,7 @@ export default function AppNavigator() {
         </Stack.Navigator>
         <AuthModal />
         <WelcomeLanguageModal />
+        <OnboardingModal />
       </NavigationContainer>
     </>
   );
