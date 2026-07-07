@@ -149,6 +149,8 @@ export default function Courses() {
         enrolledCount: enrolledItems.length,
         pct,
         resume,
+        // Whole subject not yet migrated — show a disabled "coming soon" tile.
+        comingSoon: sorted.length > 0 && sorted.every((c) => c.comingSoon),
       };
     });
     list.sort((a, b) => {
@@ -315,6 +317,26 @@ export default function Courses() {
             <div className="subjects-grid">
               {subjectGroups.map((g) => {
                 const label = t(`subjects.${g.code}`, { defaultValue: g.code });
+
+                // Coming-soon subject: disabled teaser tile (auto-flips to a
+                // normal tile once the course data is migrated + flag cleared).
+                if (g.comingSoon) {
+                  return (
+                    <div
+                      key={g.code}
+                      className="subject-tile subject-tile--soon"
+                      aria-disabled="true"
+                      aria-label={`${label} — ${t('courses.comingSoon', 'Bientôt disponible')}`}
+                    >
+                      <span className="subject-tile__body">
+                        <span className="subject-tile__name">{label}</span>
+                        <span className="subject-tile__stat">{t('courses.comingSoonSub', 'Cours en préparation')}</span>
+                      </span>
+                      <span className="subject-tile__soon-badge">{t('courses.comingSoon', 'Bientôt disponible')}</span>
+                    </div>
+                  );
+                }
+
                 return (
                   <button
                     key={g.code}

@@ -69,13 +69,15 @@ function CourseCard({
   const totalLessons = countLessons(course);
   const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
   const color = course.color ?? '#0857A6';
+  const soon = !!course.comingSoon;
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={soon ? undefined : onPress}
+      disabled={soon}
       activeOpacity={0.85}
       className="bg-white rounded-2xl mb-3"
-      style={cardShadow}
+      style={[cardShadow, soon ? { opacity: 0.7 } : null]}
     >
       <View className="p-4">
         <View className="flex-row items-center gap-3">
@@ -87,16 +89,22 @@ function CourseCard({
           </View>
           <View className="flex-1">
             <Text className="font-bold text-gray-900 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
-            <Text className="text-xs text-gray-400 mt-1">{totalLessons} leçons</Text>
+            <Text className="text-xs text-gray-400 mt-1">{soon ? 'Cours en préparation' : `${totalLessons} leçons`}</Text>
           </View>
-          <View className="items-end flex-shrink-0">
-            <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : '#9ca3af' }}>
-              {pct}%
-            </Text>
-            <ChevronRight color="#9ca3af" size={16} className="mt-1" />
-          </View>
+          {soon ? (
+            <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
+              <Text style={{ color: '#0857A6', fontSize: 11, fontWeight: '700' }}>Bientôt</Text>
+            </View>
+          ) : (
+            <View className="items-end flex-shrink-0">
+              <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : '#9ca3af' }}>
+                {pct}%
+              </Text>
+              <ChevronRight color="#9ca3af" size={16} className="mt-1" />
+            </View>
+          )}
         </View>
-        {pct > 0 && (
+        {!soon && pct > 0 && (
           <View className="mt-3">
             <ProgressBar value={pct} color={color} height={4} />
           </View>
@@ -107,16 +115,17 @@ function CourseCard({
 }
 
 function DrillCard({
-  title, subtitle, badge, color, Icon, onPress,
+  title, subtitle, badge, color, Icon, onPress, comingSoon = false,
 }: {
-  title: string; subtitle: string; badge: string; color: string; Icon: any; onPress: () => void;
+  title: string; subtitle: string; badge: string; color: string; Icon: any; onPress: () => void; comingSoon?: boolean;
 }) {
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={comingSoon ? undefined : onPress}
+      disabled={comingSoon}
       activeOpacity={0.85}
       className="bg-white rounded-2xl mb-3"
-      style={cardShadow}
+      style={[cardShadow, comingSoon ? { opacity: 0.7 } : null]}
     >
       <View className="flex-row items-center p-4 gap-3">
         <View
@@ -129,10 +138,16 @@ function DrillCard({
           <Text className="font-bold text-gray-900 text-base">{title}</Text>
           <Text className="text-xs text-gray-500 mt-0.5">{subtitle}</Text>
         </View>
-        <View className="items-end flex-shrink-0 flex-row items-center gap-2">
-          <Text className="text-xs text-gray-400">{badge}</Text>
-          <ChevronRight color="#9ca3af" size={18} />
-        </View>
+        {comingSoon ? (
+          <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
+            <Text style={{ color: '#0857A6', fontSize: 11, fontWeight: '700' }}>{badge}</Text>
+          </View>
+        ) : (
+          <View className="items-end flex-shrink-0 flex-row items-center gap-2">
+            <Text className="text-xs text-gray-400">{badge}</Text>
+            <ChevronRight color="#9ca3af" size={18} />
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -342,15 +357,17 @@ export default function CoursesScreen() {
           ) : (
             subjectsForLevel.map(([code, group]) => {
               const meta = subjectMeta(code);
+              const soon = group.length > 0 && group.every((c: any) => c.comingSoon);
               const lessons = group.reduce((s: number, c: any) => s + countLessons(c), 0);
               return (
                 <DrillCard
                   key={code}
                   title={isCreole ? meta.nameHt : meta.name}
-                  subtitle={`${lessons} ${t('leçons', 'leson')}`}
-                  badge={group.length > 1 ? `${group.length} ${t('cours', 'kou')}` : ''}
+                  subtitle={soon ? t('Cours en préparation', 'Kou ap prepare') : `${lessons} ${t('leçons', 'leson')}`}
+                  badge={soon ? t('Bientôt', 'Talè') : (group.length > 1 ? `${group.length} ${t('cours', 'kou')}` : '')}
                   color={meta.color}
                   Icon={meta.Icon}
+                  comingSoon={soon}
                   onPress={() => openSubject(code, group)}
                 />
               );
