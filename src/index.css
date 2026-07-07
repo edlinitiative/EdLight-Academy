@@ -3262,6 +3262,49 @@ textarea.input-field {
 	border: 1px solid rgba(10, 102, 194, 0.16);
 }
 
+/* ---------- Embedded "Quiz du programme" practice card (course lessons) ---------- */
+.unit-quiz {
+	display: grid;
+	gap: 1.15rem;
+	padding: 1.35rem 1.5rem;
+}
+.unit-quiz__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+.unit-quiz__heading {
+	display: grid;
+	gap: 0.15rem;
+	min-width: 0;
+}
+.unit-quiz__heading .quiz-card__heading {
+	font-size: 1.15rem;
+	line-height: 1.2;
+	margin: 0;
+}
+.unit-quiz__meta {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+/* One action bar: primary actions on the left, "Fermer" pushed to the right. */
+.unit-quiz .quiz-card__controls {
+	margin-top: 0.35rem;
+	align-items: center;
+}
+.unit-quiz .quiz-card__controls .button--ghost {
+	margin-left: auto;
+}
+/* Clear selection feedback before the answer is checked. */
+.radio-option:has(input:checked):not(.radio-option--correct):not(.radio-option--wrong) {
+	border-color: var(--primary-500);
+	background: rgba(10, 102, 194, 0.1);
+}
+
 /* Practice (Quizzes) page layout */
 .practice-layout {
 	display: grid;

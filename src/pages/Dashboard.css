@@ -314,7 +314,9 @@ button.dash-activity__tag { cursor: pointer; }
 }
 .dash-studyplan .dash-panel__title { color: #fff; }
 .dash-studyplan .dash-panel__title svg { color: #fff; }
-.dash-studyplan__text { margin: 0; font-size: 0.9rem; line-height: 1.55; color: rgba(255,255,255,.9); }
+/* Compound selector so it outranks `.section p` (0,1,1) which would otherwise
+   win over a single class and force dark --text-600 on the blue card. */
+.dash-studyplan .dash-studyplan__text { margin: 0; font-size: 0.9rem; line-height: 1.55; color: rgba(255,255,255,.9); }
 .dash-studyplan__btn {
   justify-self: start;
   display: inline-flex; align-items: center; gap: 0.4rem;
