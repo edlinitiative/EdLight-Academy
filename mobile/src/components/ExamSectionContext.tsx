@@ -107,7 +107,10 @@ export default function ExamSectionContext({
   const { numeral, name } = parseSectionTitle(safeTitle);
   const displayTitle = numeral ? `Section ${numeral} — ${name}` : safeTitle;
 
-  // ── Prominent intro (first question of the section) ────────────────────────
+  // ── Section intro (first question of the section) ──────────────────────────
+  // Title stays prominent; the consignes (often long, generic exam-wide rules)
+  // are behind a collapsed "Consignes" toggle so they never push the question
+  // off-screen. Any reading passage stays visible (students need to read it).
   if (isSectionStart) {
     return (
       <View style={{ marginBottom: 16, gap: 10 }}>
@@ -126,16 +129,43 @@ export default function ExamSectionContext({
           <Text style={{ fontSize: 11, fontWeight: '700', color: PRIMARY, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
             Nouvelle section
           </Text>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: TEXT, lineHeight: 23 }}>
-            {displayTitle}
-          </Text>
-          {safeInstructions && !longInstructions ? (
-            <Text style={{ fontSize: 14, lineHeight: 21, color: '#334155', marginTop: 8 }}>
+          {safeTitle ? (
+            <Text style={{ fontSize: 17, fontWeight: '800', color: TEXT, lineHeight: 23 }}>
+              {displayTitle}
+            </Text>
+          ) : null}
+
+          {safeInstructions ? (
+            <TouchableOpacity
+              onPress={() => setExpanded((v) => !v)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                marginTop: 12,
+                alignSelf: 'flex-start',
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: BORDER,
+                backgroundColor: '#f8fafc',
+              }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>Consignes</Text>
+              {expanded ? <ChevronUp color={PRIMARY} size={14} /> : <ChevronDown color={PRIMARY} size={14} />}
+            </TouchableOpacity>
+          ) : null}
+
+          {expanded && safeInstructions && !longInstructions ? (
+            <Text style={{ fontSize: 14, lineHeight: 21, color: '#334155', marginTop: 12 }}>
               {safeInstructions}
             </Text>
           ) : null}
         </View>
-        {safeInstructions && longInstructions ? (
+
+        {expanded && safeInstructions && longInstructions ? (
           <PassageCard passage={safeInstructions} label="Consignes et texte" />
         ) : null}
         {safePassage ? <PassageCard passage={safePassage} /> : null}
