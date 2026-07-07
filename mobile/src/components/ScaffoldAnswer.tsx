@@ -198,26 +198,37 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
     [question?.scaffold_text],
   );
 
+  // When the authored scaffold text is just blank markers (e.g. "{{0}}") with no
+  // real prose — common for simple fill-in-the-blank questions — the "Complète
+  // la démarche" card is empty noise. Only show it when there's actual guidance
+  // text (strip circled markers ①..⑳ and "(n)" fallbacks, then check for prose).
+  const hasDemarcheText = useMemo(
+    () => displayText.replace(/[①-⑳]/g, '').replace(/\(\d+\)/g, '').trim().length > 0,
+    [displayText],
+  );
+
   if (blanks.length === 0) return null; // usesScaffold() guards this upstream
 
   return (
     <View style={{ gap: 12 }}>
-      {/* Authored solution text with ①②③ markers */}
-      <View style={[card, cardShadow, { padding: 16 }]}>
-        <Text
-          style={{
-            fontSize: 11,
-            fontWeight: '700',
-            color: MUTED,
-            textTransform: 'uppercase',
-            letterSpacing: 0.8,
-            marginBottom: 8,
-          }}
-        >
-          Complète la démarche
-        </Text>
-        <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: TEXT }} />
-      </View>
+      {/* Authored solution text with ①②③ markers — omitted when it's marker-only. */}
+      {hasDemarcheText ? (
+        <View style={[card, cardShadow, { padding: 16 }]}>
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: MUTED,
+              textTransform: 'uppercase',
+              letterSpacing: 0.8,
+              marginBottom: 8,
+            }}
+          >
+            Complète la démarche
+          </Text>
+          <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: TEXT }} />
+        </View>
+      ) : null}
 
       {/* One row per blank */}
       {blanks.map((blank, i) => {
