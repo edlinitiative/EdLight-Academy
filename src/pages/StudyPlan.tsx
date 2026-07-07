@@ -27,6 +27,7 @@ import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
 import { auth, authedFetch } from '../services/firebase';
+import { Skeleton } from '../components/Skeleton';
 
 // ─── Local exam catalog hook (same pattern as ExamBrowser) ──────────────────
 
@@ -238,10 +239,28 @@ export default function StudyPlan() {
   // ── Loading states ────────────────────────────────────────────────
   if (planLoading || examsLoading || resultsLoading || appDataLoading) {
     return (
-      <div className="sp">
-        <div className="sp-loading">
-          <div className="spinner" />
-          <p>{isCreole ? 'Chajman...' : 'Chargement du plan d\'étude...'}</p>
+      <div className="sp" aria-busy="true">
+        <header className="sp-topbar">
+          <div className="sp-topbar__left">
+            <Skeleton width={200} height={26} />
+          </div>
+          <div className="sp-topbar__actions">
+            <Skeleton variant="circle" width={38} height={38} />
+            <Skeleton variant="circle" width={38} height={38} />
+          </div>
+        </header>
+        <div className="sp-dashboard">
+          <main className="sp-main">
+            <Skeleton width="100%" height={120} radius={16} />
+            <section className="sp-section" style={{ marginTop: '1.25rem' }}>
+              <Skeleton width={160} height={20} style={{ marginBottom: '1rem' }} />
+              <div className="skeleton-lines" style={{ gap: '0.75rem' }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} width="100%" height={72} radius={14} />
+                ))}
+              </div>
+            </section>
+          </main>
         </div>
       </div>
     );

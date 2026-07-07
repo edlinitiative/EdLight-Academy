@@ -3719,6 +3719,39 @@ textarea.input-field {
 .skeleton-metric__value { height: 32px; width: 42%; }
 .skeleton-metric__cap   { height: 13px; width: 80%; }
 
+/* Reusable <Skeleton> / <SkeletonText> primitives (components/Skeleton.tsx).
+   Compose page-shaped skeletons from these so loading mirrors the real layout. */
+.skeleton-lines {
+	display: flex;
+	flex-direction: column;
+	gap: 0.55rem;
+}
+.skeleton-lines .skeleton { border-radius: 6px; }
+
+/* A row of primitives — thin wrapper used to shape headers/stat rows. */
+.skeleton-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+.skeleton-row--between { justify-content: space-between; }
+
+@media (prefers-reduced-motion: reduce) {
+	.skeleton { animation: none; }
+}
+
+/* Non-interactive skeleton exam card — keep the card surface, drop the
+   pointer/hover affordances so it reads as a placeholder, not a button. */
+.exam-card--skeleton {
+	cursor: default;
+	pointer-events: none;
+}
+.exam-card--skeleton:hover {
+	transform: none !important;
+	box-shadow: var(--shadow-sm) !important;
+	border-color: var(--border) !important;
+}
+
 .loading-spinner {
 	width: 44px;
 	height: 44px;

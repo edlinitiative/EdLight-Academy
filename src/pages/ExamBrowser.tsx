@@ -8,6 +8,7 @@ import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
+import { Skeleton } from '../components/Skeleton';
 
 const PAGE_SIZE = 24;
 
@@ -318,13 +319,27 @@ const ExamBrowser = () => {
   if (isLoading) {
     return (
       <section className="section">
-        <div className="container">
+        <div className="container" aria-busy="true">
           <div className="page-header">
             <h1 className="page-header__title">Examens</h1>
             <p className="page-header__subtitle">Chargement du catalogue…</p>
           </div>
-          <div className="card card--centered card--loading">
-            <div className="loading-spinner" />
+          <div className="grid grid--exams" style={{ marginTop: '1.5rem' }}>
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div key={i} className="card exam-card exam-card--skeleton">
+                <div className="skeleton-row skeleton-row--between">
+                  <Skeleton width={54} height={16} radius={999} />
+                  <Skeleton width={40} height={16} radius={999} />
+                </div>
+                <Skeleton width="85%" height={20} style={{ marginTop: '0.75rem' }} />
+                <Skeleton width="55%" height={14} style={{ marginTop: '0.6rem' }} />
+                <div className="skeleton-row" style={{ marginTop: '0.9rem' }}>
+                  <Skeleton width={70} height={22} radius={999} />
+                  <Skeleton width={58} height={22} radius={999} />
+                </div>
+                <Skeleton width={64} height={14} style={{ marginTop: '1rem' }} />
+              </div>
+            ))}
           </div>
         </div>
       </section>

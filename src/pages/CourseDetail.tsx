@@ -11,6 +11,7 @@ import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import CourseOverview from '../components/CourseOverview';
 import { ErrorState } from '../components/StateViews';
+import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
 import { useTranslation } from 'react-i18next';
@@ -317,10 +318,32 @@ export default function CourseDetail() {
 
   if (isLoading) {
     return (
-      <div className="section">
-        <div className="container">
-          <div className="card card--centered card--loading">
-            <div className="loading-spinner" />
+      <div className="section course-detail">
+        <div className="container course-detail__container">
+          <div className="course-overview" aria-busy="true">
+            <Skeleton width={120} height={16} radius={999} style={{ marginBottom: '1.25rem' }} />
+            <header className="course-overview__hero">
+              <div className="skeleton-row" style={{ marginBottom: '0.9rem' }}>
+                <Skeleton width={96} height={24} radius={999} />
+                <Skeleton width={64} height={24} radius={999} />
+              </div>
+              <Skeleton width="70%" height={34} style={{ marginBottom: '0.9rem' }} />
+              <SkeletonText lines={2} lastWidth="80%" />
+              <div className="skeleton-row" style={{ marginTop: '1.1rem', gap: '1.25rem' }}>
+                <Skeleton width={110} height={18} />
+                <Skeleton width={110} height={18} />
+                <Skeleton width={90} height={18} />
+              </div>
+              <Skeleton width="100%" height={48} radius={12} style={{ marginTop: '1.5rem', maxWidth: 320 }} />
+            </header>
+            <section className="course-overview__content">
+              <Skeleton width={180} height={24} style={{ marginBottom: '1rem' }} />
+              <div className="skeleton-lines" style={{ gap: '0.75rem' }}>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} width="100%" height={64} radius={12} />
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       </div>

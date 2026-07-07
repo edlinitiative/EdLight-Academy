@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
+import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +12,7 @@ import { subjectThumbs } from './home/content';
 const Quizzes = () => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
-  const { data: appData, isError, isFetching, refetch } = useAppData();
+  const { data: appData, isLoading, isError, isFetching, refetch } = useAppData();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
 
@@ -167,6 +168,40 @@ const Quizzes = () => {
       <section className="section quiz-page">
         <div className="container">
           <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+        </div>
+      </section>
+    );
+  }
+
+  if (isLoading && !appData) {
+    return (
+      <section className="section quiz-page">
+        <div className="container" aria-busy="true">
+          <div className="page-header">
+            <Skeleton width={220} height={30} style={{ marginBottom: '0.75rem' }} />
+            <SkeletonText lines={2} lastWidth="70%" />
+          </div>
+          <div className="quiz-layout">
+            <div className="quiz-filters">
+              <div className="card">
+                <Skeleton width="100%" height={160} radius={12} style={{ marginBottom: '1rem' }} />
+                <Skeleton width={200} height={20} style={{ marginBottom: '1rem' }} />
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} style={{ marginBottom: '1rem' }}>
+                    <Skeleton width={90} height={13} style={{ marginBottom: '0.5rem' }} />
+                    <Skeleton width="100%" height={44} radius={10} />
+                  </div>
+                ))}
+                <Skeleton width="100%" height={44} radius={999} style={{ marginTop: '1rem' }} />
+              </div>
+            </div>
+            <div className="quiz-panel">
+              <div className="card">
+                <Skeleton width="45%" height={24} style={{ marginBottom: '1rem' }} />
+                <SkeletonText lines={4} lastWidth="55%" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     );

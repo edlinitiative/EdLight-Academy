@@ -24,6 +24,7 @@ import {
   subjectColor,
   parseConsignes,
 } from '../utils/examUtils';
+import { Skeleton } from '../components/Skeleton';
 
 /** Format hierarchical question number for display (e.g. "A.1" → "A.1", "5" → "5") */
 function formatQuestionLabel(q, globalIndex) {
@@ -956,11 +957,52 @@ const ExamTake = () => {
 
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
+    // Render the exam-detail SHELL immediately (functional back button + the
+    // preview layout scaffold) with skeletons where the per-exam JSON will land,
+    // instead of blocking on a full-page spinner. This makes opening an exam
+    // feel instant even while its ~250–300 KB paper is still downloading.
     return (
-      <section className="section">
+      <section className="section exam-take exam-take--preview" aria-busy="true">
         <div className="container">
-          <div className="card card--centered card--loading">
-            <div className="loading-spinner" />
+          <div className="exam-take__topbar exam-take__topbar--preview">
+            <button className="exam-take__back-btn" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
+              ← Examens
+            </button>
+            <div className="exam-take__topbar-center">
+              <Skeleton width={180} height={16} />
+            </div>
+          </div>
+
+          <div className="exam-take__preview-scroll card">
+            <div className="exam-take__preview-intro">
+              <div className="exam-cover__hero">
+                <Skeleton width={110} height={26} radius={999} style={{ margin: '0 auto' }} />
+                <Skeleton width="60%" height={30} style={{ margin: '1rem auto 0.5rem' }} />
+                <Skeleton width={90} height={16} style={{ margin: '0 auto' }} />
+                <div className="exam-cover__stats" style={{ marginTop: '1.25rem' }}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="exam-cover__stat">
+                      <Skeleton width={44} height={28} style={{ margin: '0 auto' }} />
+                      <Skeleton width={60} height={13} style={{ margin: '0.4rem auto 0' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="exam-cover__body">
+                <div className="exam-cover__panel exam-cover__panel--sections">
+                  <Skeleton width={140} height={20} style={{ marginBottom: '0.9rem' }} />
+                  <div className="skeleton-lines" style={{ gap: '0.7rem' }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="skeleton-row skeleton-row--between">
+                        <Skeleton width="60%" height={16} />
+                        <Skeleton width={28} height={16} radius={999} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
