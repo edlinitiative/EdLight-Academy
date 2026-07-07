@@ -4,7 +4,17 @@ import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
 import { useTranslation } from 'react-i18next';
 
-export default function DirectBankQuiz({ item, onScore }) {
+export const MAX_ATTEMPTS = 3;
+
+export default function DirectBankQuiz({
+  item,
+  onScore,
+  hideHeader = false,
+  onNext,
+  canAdvance = false,
+  isLast = false,
+  onClose,
+}) {
   const { t } = useTranslation();
   const katexReady = useKatex();
   const [selected, setSelected] = useState(null);
@@ -12,7 +22,7 @@ export default function DirectBankQuiz({ item, onScore }) {
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(null);
   const [attempts, setAttempts] = useState(0);
-  const maxAttempts = 3;
+  const maxAttempts = MAX_ATTEMPTS;
 
   const derivedHints = useMemo(() => {
     const base = Array.isArray(item?.hints) ? item.hints.filter(Boolean) : [];
@@ -46,7 +56,7 @@ export default function DirectBankQuiz({ item, onScore }) {
     if (isCorrect) {
       setSubmitted(true);
       setCorrect(true);
-      if (onScore) onScore({ correct: 1, message: 'correct' });
+      if (onScore) onScore({ correct: 1, message: 'correct', attemptsLeft: maxAttempts - attempts });
       return;
     }
     const next = attempts + 1;
@@ -54,11 +64,11 @@ export default function DirectBankQuiz({ item, onScore }) {
     if (next >= maxAttempts) {
       setSubmitted(true);
       setCorrect(false);
-      if (onScore) onScore({ correct: 0, message: 'exhausted_attempts' });
+      if (onScore) onScore({ correct: 0, message: 'exhausted_attempts', attemptsLeft: 0 });
     } else {
       // allow another try without submitting
       setCorrect(false);
-      if (onScore) onScore({ correct: 0, message: `attempt_${next}` });
+      if (onScore) onScore({ correct: 0, message: `attempt_${next}`, attemptsLeft: maxAttempts - next });
     }
   };
 
@@ -86,12 +96,14 @@ export default function DirectBankQuiz({ item, onScore }) {
 
   return (
     <div className="direct-bank-quiz">
-      <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
-        <div className="quiz-card__title">
-          <span className="quiz-card__label">{t('quizzes.curriculumPractice', 'Exercices du programme')}</span>
+      {!hideHeader && (
+        <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
+          <div className="quiz-card__title">
+            <span className="quiz-card__label">{t('quizzes.curriculumPractice', 'Exercices du programme')}</span>
+          </div>
+          <Status />
         </div>
-        <Status />
-      </div>
+      )}
 
       <div className="quiz-card__question" dangerouslySetInnerHTML={renderWithKatex(item.stem, katexReady)} />
 
@@ -153,19 +165,6 @@ export default function DirectBankQuiz({ item, onScore }) {
         </div>
       )}
 
-      <div className="quiz-card__controls">
-        <button
-          type="button"
-          className="button button--primary button--sm"
-          onClick={handleCheck}
-          disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf') ? selected === null : textAns.trim().length === 0)}
-        >
-          {submitted
-            ? t('quizzes.answered', 'Répondu')
-            : (attempts > 0 ? t('quizzes.tryAgain', 'Réessayer') : t('quizzes.check', 'Vérifier'))}
-        </button>
-      </div>
-
       {submitted && (
         <div className={`quiz-card__explanation quiz-card__explanation--${correct ? 'correct' : 'wrong'}`} style={{ marginTop: '0.75rem' }}>
           {correct ? (
@@ -193,6 +192,39 @@ export default function DirectBankQuiz({ item, onScore }) {
           )}
         </div>
       )}
+
+      {/* Unified action bar. `Vérifier` hides once answered when a parent
+          provides `onNext`, so the primary action becomes `Suivant`. The
+          standalone usages (no onNext/onClose) keep just the check button. */}
+      <div className="quiz-card__controls">
+        {(!submitted || !onNext) && (
+          <button
+            type="button"
+            className="button button--primary button--sm"
+            onClick={handleCheck}
+            disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf') ? selected === null : textAns.trim().length === 0)}
+          >
+            {submitted
+              ? t('quizzes.answered', 'Répondu')
+              : (attempts > 0 ? t('quizzes.tryAgain', 'Réessayer') : t('quizzes.check', 'Vérifier'))}
+          </button>
+        )}
+        {onNext && (
+          <button
+            type="button"
+            className="button button--primary button--sm"
+            onClick={onNext}
+            disabled={!canAdvance}
+          >
+            {isLast ? t('quizzes.finish', 'Terminer') : t('common.next', 'Suivant')}
+          </button>
+        )}
+        {onClose && (
+          <button type="button" className="button button--ghost button--sm" onClick={onClose}>
+            {t('common.close', 'Fermer')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

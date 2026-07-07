@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import DirectBankQuiz from './DirectBankQuiz';
+import { Check } from 'lucide-react';
+import DirectBankQuiz, { MAX_ATTEMPTS } from './DirectBankQuiz';
 import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';
 import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
@@ -71,6 +72,11 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   const [score, setScore] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
   const [finished, setFinished] = useState(false);
+  // `outcome`: null (unanswered) | 'correct' | 'out'. `attemptsLeft` drives the
+  // header status chip. Both are lifted here from DirectBankQuiz (which hides its
+  // own header when embedded) so the header shows a single, non-duplicated status.
+  const [outcome, setOutcome] = useState(null);
+  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const startedAtRef = useRef(Date.now());
 
   useEffect(() => {
@@ -80,6 +86,13 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     setFinished(false);
     startedAtRef.current = Date.now();
   }, [subjectCode, unitId]);
+
+  // Reset per-question status whenever the active question changes.
+  useEffect(() => {
+    setCanAdvance(false);
+    setOutcome(null);
+    setAttemptsLeft(MAX_ATTEMPTS);
+  }, [idx]);
 
   // Track quiz completion
   useEffect(() => {
@@ -108,11 +121,16 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
 
   const handleScore = (evt) => {
     if (!evt) return;
-    if (evt.message === 'correct' && !canAdvance) {
-      setScore((s) => s + 1);
+    if (evt.message === 'correct') {
+      if (!canAdvance) setScore((s) => s + 1);
       setCanAdvance(true);
+      setOutcome('correct');
     } else if (evt.message === 'exhausted_attempts') {
       setCanAdvance(true);
+      setOutcome('out');
+      setAttemptsLeft(0);
+    } else if (typeof evt.attemptsLeft === 'number') {
+      setAttemptsLeft(evt.attemptsLeft);
     }
   };
 
@@ -137,15 +155,19 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   }
 
   if (finished) {
+    const pct = items.length ? Math.round((score / items.length) * 100) : 0;
     return (
-      <div className="card" style={{ padding: '1rem' }}>
-        <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
-          <div className="quiz-card__title">
-            <span className="quiz-card__label">{t('quizzes.unitQuiz', 'Quiz de l\'unité')}</span>
+      <div className="card unit-quiz">
+        <div className="unit-quiz__header">
+          <div className="unit-quiz__heading">
+            <span className="quiz-card__label">{t('quizzes.curriculumPractice', 'Quiz du programme')}</span>
             <h3 className="quiz-card__heading">{t('quizzes.results', 'Résultats')}</h3>
           </div>
+          <span className={`chip ${pct >= 60 ? 'chip--success' : 'chip--warning'}`}>{pct}%</span>
         </div>
-        <p className="text-muted">{t('quizzes.scoreOutOf', 'Votre score : {{score}} sur {{total}}.', { score, total: items.length })}</p>
+        <p className="text-muted" style={{ margin: 0 }}>
+          {t('quizzes.scoreOutOf', 'Votre score : {{score}} sur {{total}}.', { score, total: items.length })}
+        </p>
         <div className="quiz-card__controls">
           <button className="button button--primary button--sm" onClick={() => {
             // restart
@@ -187,30 +209,33 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   const progress = `${idx + 1} / ${items.length}`;
 
   return (
-    <div className="card" style={{ padding: '1rem' }}>
-      <div className="quiz-card__header" style={{ marginBottom: '0.5rem' }}>
-        <div className="quiz-card__title">
-          <span className="quiz-card__label">{t('quizzes.unitQuiz', 'Quiz de l\'unité')}</span>
+    <div className="card unit-quiz">
+      <div className="unit-quiz__header">
+        <div className="unit-quiz__heading">
+          <span className="quiz-card__label">{t('quizzes.curriculumPractice', 'Quiz du programme')}</span>
           <h3 className="quiz-card__heading">{t('quizzes.questionN', 'Question {{n}}', { n: idx + 1 })}</h3>
         </div>
-        <span className="chip chip--ghost">{progress}</span>
+        <div className="unit-quiz__meta">
+          <span className="chip chip--ghost">{progress}</span>
+          {outcome === 'correct' ? (
+            <span className="chip chip--success"><Check size={14} /> {t('quizzes.correctChip', 'Correct')}</span>
+          ) : outcome === 'out' ? (
+            <span className="chip chip--danger">{t('quizzes.outOfTries', 'Plus d\'essais')}</span>
+          ) : (
+            <span className="chip chip--ghost">{t('quizzes.triesLeft', '{{count}} essai restant', { count: attemptsLeft })}</span>
+          )}
+        </div>
       </div>
 
-      <DirectBankQuiz item={current} onScore={handleScore} />
-
-      <div className="quiz-card__controls">
-        <button
-          type="button"
-          className="button button--primary button--sm"
-          onClick={goNext}
-          disabled={!canAdvance}
-        >
-          {idx + 1 >= items.length ? t('quizzes.finish', 'Terminer') : t('common.next', 'Suivant')}
-        </button>
-        {onClose && (
-          <button type="button" className="button button--ghost button--sm" onClick={onClose}>{t('common.close', 'Fermer')}</button>
-        )}
-      </div>
+      <DirectBankQuiz
+        item={current}
+        onScore={handleScore}
+        hideHeader
+        onNext={goNext}
+        canAdvance={canAdvance}
+        isLast={idx + 1 >= items.length}
+        onClose={onClose}
+      />
     </div>
   );
 }

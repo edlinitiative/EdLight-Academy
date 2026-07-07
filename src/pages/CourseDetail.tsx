@@ -197,6 +197,8 @@ export default function CourseDetail() {
     setView('overview');
     setActiveModule(0);
     setActiveLesson(0);
+    setShowQuiz(false);
+    setShowFlashcards(false);
   }, [courseId]);
 
   useEffect(() => {
@@ -209,10 +211,12 @@ export default function CourseDetail() {
     // reset lesson to the first when switching modules
     setActiveLesson(0);
     setShowQuiz(false);
+    setShowFlashcards(false);
   }, [activeModule]);
 
   useEffect(() => {
     setShowQuiz(false);
+    setShowFlashcards(false);
   }, [activeLesson]);
 
   // Remember where the learner was so Home can offer "Reprendre où vous étiez".
