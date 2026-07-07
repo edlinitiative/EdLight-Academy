@@ -84,8 +84,6 @@ export const LEVELS = {
   ns3: {
     courseId: 'math-ns3', roman: 'NSIII', label: 'Mathématiques NS3',
     description: "Cours complet de Mathématiques du Nouveau Secondaire 3 (NS3), enseigné en vidéo par EdLight. Vous y aborderez les vecteurs et le produit scalaire dans l'espace, les inéquations et la bijection réciproque, les suites (arithmétiques, géométriques, récurrentes), la géométrie dans l'espace (sphère, distance, orthogonalité) et la statistique à une variable.",
-    // NOTE: 22 of 24 uploaded. Pending (upload limit): "Vecteurs Dimension 3" (#21)
-    // and "Position de l'Espace" (#23) — add to their chapters when uploaded.
     chapters: [
       { title: 'Vecteurs et Produit Scalaire', videos: [
         ['Produit de Vecteurs (Partie 1)', '1hNy43Qla1g'],
@@ -114,7 +112,9 @@ export const LEVELS = {
         ['Distance (Partie 1)', 'B44YHJW8_Fs'],
         ['Distance (Partie 2)', 'k3PgXLur2CU'],
         ['Orthogonalité et Parallélisme', 'wXx_Wonpuis'],
+        ['Vecteurs Dimension 3', 'dpE2rNs9nYc'],
         ['Plan Médiateur', 'DLkqGgwDq_I'],
+        ["Position de l'Espace", 'YtlKVjTgzoY'],
       ]},
       { title: 'Statistique', videos: [
         ['Statistique à une Variable', 'UREITHnolgo'],
