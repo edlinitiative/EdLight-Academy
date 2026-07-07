@@ -1,4 +1,6 @@
 import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LayoutDashboard, BookOpen, ClipboardList, Zap, User } from 'lucide-react-native';
@@ -32,7 +34,6 @@ export default function TabNavigator() {
   const theme = useStore((s) => s.theme);
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
-  const bg = dark ? '#111827' : '#ffffff';
 
   // Float above the home indicator on notched phones, 12px above the edge elsewhere.
   const bottomOffset = Math.max(insets.bottom, 12);
@@ -48,6 +49,22 @@ export default function TabNavigator() {
         tabBarActiveTintColor: ACTIVE,
         tabBarInactiveTintColor: INACTIVE,
         tabBarAllowFontScaling: false,
+        // Frosted-glass pill: a translucent BlurView background lets the app
+        // show through, with a thin light rim for the glass edge.
+        tabBarBackground: () => (
+          <BlurView
+            intensity={dark ? 40 : 55}
+            tint={dark ? 'dark' : 'light'}
+            style={[StyleSheet.absoluteFill, { borderRadius: BAR_HEIGHT / 2, overflow: 'hidden' }]}
+          >
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: dark ? 'rgba(17,24,39,0.5)' : 'rgba(255,255,255,0.55)' },
+              ]}
+            />
+          </BlurView>
+        ),
         tabBarStyle: {
           position: 'absolute',
           left: BAR_MARGIN,
@@ -55,8 +72,11 @@ export default function TabNavigator() {
           bottom: bottomOffset,
           height: BAR_HEIGHT,
           borderRadius: BAR_HEIGHT / 2,
-          backgroundColor: bg,
+          backgroundColor: 'transparent',
           borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.6)',
+          overflow: 'hidden',
           paddingTop: 8,
           paddingBottom: 10,
           shadowColor: '#000',

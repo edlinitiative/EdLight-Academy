@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
@@ -28,6 +29,16 @@ interface PreparedQuestion {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Lighten (pct>0) or darken (pct<0) a #rrggbb hex — used for tile gradients. */
+function shade(hex: string, pct: number): string {
+  const h = String(hex || '#0857A6').replace('#', '');
+  let r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  if (pct < 0) { const f = 1 + pct; r *= f; g *= f; b *= f; }
+  else { r += (255 - r) * pct; g += (255 - g) * pct; b += (255 - b) * pct; }
+  const to = (c: number) => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -127,43 +138,54 @@ function CategoryPicker({
       {/* App-icon grid: each game is a rounded "squircle" tile, 3 per row. */}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 }}>
         {TRIVIA_CATEGORIES.map((cat: any) => {
-          const qCount = (TRIVIA_QUESTIONS as Record<string, any[]>)[cat.id]?.length ?? 0;
           return (
             <TouchableOpacity
               key={cat.id}
               onPress={() => onSelect(cat.id)}
-              activeOpacity={0.75}
+              activeOpacity={0.8}
               style={{ width: '33.333%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 6 }}
             >
-              {/* App icon */}
+              {/* App icon — soft colored shadow on an outer view, gradient +
+                  top gloss on the clipped inner tile for depth. */}
               <View
                 style={{
-                  width: 76,
-                  height: 76,
-                  borderRadius: 20,
-                  backgroundColor: cat.color,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
+                  borderRadius: 22,
                   shadowColor: cat.color,
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.28,
-                  shadowRadius: 7,
-                  elevation: 4,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 10,
+                  elevation: 5,
                 }}
               >
-                <Text style={{ fontSize: 38, lineHeight: 44 }}>{cat.icon ?? '🎯'}</Text>
+                <LinearGradient
+                  colors={[shade(cat.color, 0.22), cat.color, shade(cat.color, -0.2)]}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 0.9, y: 1 }}
+                  style={{
+                    width: 78,
+                    height: 78,
+                    borderRadius: 22,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.28)',
+                  }}
+                >
+                  {/* Glossy top highlight */}
+                  <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 34, backgroundColor: 'rgba(255,255,255,0.16)' }} />
+                  <Text style={{ fontSize: 36, textShadowColor: 'rgba(0,0,0,0.18)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 }}>
+                    {cat.icon ?? '🎯'}
+                  </Text>
+                </LinearGradient>
               </View>
 
               {/* Name (reserve 2 lines so all tiles align) */}
               <Text
                 numberOfLines={2}
-                style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30 }}
+                style={{ fontSize: 12.5, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginTop: 9, lineHeight: 16, minHeight: 32, letterSpacing: -0.2 }}
               >
                 {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-              </Text>
-              <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
-                {qCount} Q
               </Text>
             </TouchableOpacity>
           );
