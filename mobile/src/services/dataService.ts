@@ -15,6 +15,14 @@ const VIDEOS_CACHE_KEY = 'edlight:videos:v1';
 const QUIZ_QUESTIONS_CACHE_KEY = 'edlight:quizQuestions:v1';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// PRIMARY data source: a CDN-edge-cached serverless endpoint that reads the
+// courses/videos/quizzes collections ONCE server-side and returns them in a
+// single request. Many concurrent clients hit the CDN instead of each reading
+// the entire collections straight from Firestore. If this fails or returns
+// malformed data, the loaders fall back to per-collection Firestore reads.
+const CATALOG_URL = 'https://academy.edlight.org/api/catalog';
+const CATALOG_FETCH_TIMEOUT_MS = 10000;
+
 // The videos (618 docs) and quizzes (2684 docs) collections barely change, but
 // were re-read from Firestore on every screen mount — the main reason pages
 // felt slow. Cache them for a day; a stale copy always beats a spinner.
@@ -38,6 +46,48 @@ async function fetchCoursesFromFirestore(): Promise<any[]> {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+// Deduped fetch of the combined catalog endpoint. On success it also writes the
+// videos + quizzes caches (the same caches read by fetchVideosCached /
+// fetchQuizQuestionsCached) so per-collection reads benefit too. Returns null
+// on any failure OR malformed payload so callers can fall back to Firestore.
+let inflightCatalog: Promise<{ courses: any[]; videos: any[]; quizzes: any[] } | null> | null = null;
+
+function fetchCatalog(): Promise<{ courses: any[]; videos: any[]; quizzes: any[] } | null> {
+  if (!inflightCatalog) {
+    inflightCatalog = (async () => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), CATALOG_FETCH_TIMEOUT_MS);
+        let json: any;
+        try {
+          const resp = await fetch(CATALOG_URL, { signal: controller.signal });
+          if (!resp.ok) return null;
+          json = await resp.json();
+        } finally {
+          clearTimeout(timer);
+        }
+        // Malformed guard: all three must be arrays.
+        if (!json || !Array.isArray(json.courses) || !Array.isArray(json.videos) || !Array.isArray(json.quizzes)) {
+          return null;
+        }
+        const courses = json.courses as any[];
+        const videos = json.videos as any[];
+        const quizzes = json.quizzes as any[];
+        // Populate the per-collection caches used by fetchVideosCached /
+        // fetchQuizQuestionsCached (skip empty arrays, matching writeCache use).
+        await Promise.all([
+          videos.length > 0 ? writeCache(VIDEOS_CACHE_KEY, videos) : Promise.resolve(),
+          quizzes.length > 0 ? writeCache(QUIZ_QUESTIONS_CACHE_KEY, quizzes) : Promise.resolve(),
+        ]);
+        return { courses, videos, quizzes };
+      } catch {
+        return null;
+      }
+    })().finally(() => { inflightCatalog = null; });
+  }
+  return inflightCatalog;
+}
+
 // Dedupe concurrent background refreshes (several loaders share collections).
 const inflightRefreshes = new Map<string, Promise<any[]>>();
 
@@ -55,15 +105,24 @@ function refreshCollection(name: string, cacheKey: string): Promise<any[]> {
   return p;
 }
 
+// Refresh videos/quizzes via the PRIMARY catalog endpoint (one request that
+// also refreshes the sibling cache); FALL BACK to a direct per-collection
+// Firestore read if the endpoint fails or returns malformed data.
+async function refreshCollectionViaCatalog(name: string, cacheKey: string): Promise<any[]> {
+  const catalog = await fetchCatalog();
+  if (catalog) return cacheKey === VIDEOS_CACHE_KEY ? catalog.videos : catalog.quizzes;
+  return refreshCollection(name, cacheKey);
+}
+
 async function fetchCollectionCached(name: string, cacheKey: string): Promise<any[]> {
   const cached = await readCache(cacheKey);
   if (cached) {
     // Stale-while-revalidate: an expired copy still renders instantly;
     // kick off a background refresh so the next read is fresh.
-    if (Date.now() - cached.t >= DAY_MS) refreshCollection(name, cacheKey).catch(() => {});
+    if (Date.now() - cached.t >= DAY_MS) refreshCollectionViaCatalog(name, cacheKey).catch(() => {});
     return cached.data;
   }
-  return refreshCollection(name, cacheKey).catch(() => []);
+  return refreshCollectionViaCatalog(name, cacheKey).catch(() => []);
 }
 
 const fetchVideosCached = () => fetchCollectionCached('videos', VIDEOS_CACHE_KEY);
@@ -175,11 +234,16 @@ let inflightCoursesRefresh: Promise<any[]> | null = null;
 function refreshCoursesData(): Promise<any[]> {
   if (!inflightCoursesRefresh) {
     inflightCoursesRefresh = (async () => {
-      const [firestoreCourses, videosArr, quizArr] = await Promise.all([
-        fetchCoursesFromFirestore(),
-        fetchVideosCached(),
-        fetchQuizQuestionsCached(),
-      ]);
+      // PRIMARY: one CDN-cached request for all three collections. FALLBACK:
+      // per-collection Firestore reads (with their own SWR caching).
+      const catalog = await fetchCatalog();
+      const [firestoreCourses, videosArr, quizArr] = catalog
+        ? [catalog.courses, catalog.videos, catalog.quizzes]
+        : await Promise.all([
+            fetchCoursesFromFirestore(),
+            fetchVideosCached(),
+            fetchQuizQuestionsCached(),
+          ]);
       const courses = transformFirestoreCourses(firestoreCourses, toMap(videosArr), toMap(quizArr));
       if (courses.length > 0) await writeCachedCourses(courses);
       return courses;
@@ -271,11 +335,16 @@ export async function loadPracticeQuizzes(): Promise<any[]> {
 }
 
 export async function loadAppData(): Promise<any> {
-  const [firestoreCourses, videosArr, quizArr] = await Promise.all([
-    fetchCoursesFromFirestore(),
-    fetchVideosCached(),
-    fetchQuizQuestionsCached(),
-  ]);
+  // PRIMARY: one CDN-cached request for all three collections. FALLBACK:
+  // per-collection Firestore reads (with their own SWR caching).
+  const catalog = await fetchCatalog();
+  const [firestoreCourses, videosArr, quizArr] = catalog
+    ? [catalog.courses, catalog.videos, catalog.quizzes]
+    : await Promise.all([
+        fetchCoursesFromFirestore(),
+        fetchVideosCached(),
+        fetchQuizQuestionsCached(),
+      ]);
 
   const courses = transformFirestoreCourses(firestoreCourses, toMap(videosArr), toMap(quizArr));
   const quizzes = groupQuestionsIntoQuizzes(quizArr);
