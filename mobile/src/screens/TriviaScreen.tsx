@@ -4,7 +4,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
-import { SvgUri } from 'react-native-svg';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
@@ -14,9 +13,6 @@ import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
 import MathText from '../components/MathText';
 import { scheduleTriviaReminder, notifyLeaderboardRank } from '../services/notificationService';
-
-// Deck cover art lives on the web app's hosting (same files the PWA renders).
-const ASSET_BASE = 'https://edlight-academy.web.app';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -116,7 +112,7 @@ function CategoryPicker({
   return (
     <ScrollView
       style={{ backgroundColor: '#f4f6fb' }}
-      contentContainerStyle={{ paddingTop: 12, paddingBottom: 32 }}
+      contentContainerStyle={{ paddingTop: 12, paddingBottom: 110 }}
       showsVerticalScrollIndicator={false}
     >
       <View className="px-4 pt-4 pb-3">
@@ -128,67 +124,47 @@ function CategoryPicker({
         </Text>
       </View>
 
-      <View className="px-4 gap-3">
+      {/* App-icon grid: each game is a rounded "squircle" tile, 3 per row. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 }}>
         {TRIVIA_CATEGORIES.map((cat: any) => {
           const qCount = (TRIVIA_QUESTIONS as Record<string, any[]>)[cat.id]?.length ?? 0;
           return (
             <TouchableOpacity
               key={cat.id}
               onPress={() => onSelect(cat.id)}
-              activeOpacity={0.82}
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: '#e8edf5',
-                shadowColor: '#0857A6',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.06,
-                shadowRadius: 6,
-                elevation: 2,
-                overflow: 'hidden',
-              }}
+              activeOpacity={0.75}
+              style={{ width: '33.333%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 6 }}
             >
-              {/* Cover art banner — same SVG deck covers as the PWA */}
-              <View style={{ height: 130, backgroundColor: cat.color, overflow: 'hidden' }}>
-                {cat.image ? (
-                  <SvgUri
-                    uri={`${ASSET_BASE}${cat.image}`}
-                    width="100%"
-                    height="100%"
-                    preserveAspectRatio="xMidYMid slice"
-                  />
-                ) : (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 40 }}>{cat.icon ?? '🎯'}</Text>
-                  </View>
-                )}
+              {/* App icon */}
+              <View
+                style={{
+                  width: 76,
+                  height: 76,
+                  borderRadius: 20,
+                  backgroundColor: cat.color,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  shadowColor: cat.color,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.28,
+                  shadowRadius: 7,
+                  elevation: 4,
+                }}
+              >
+                <Text style={{ fontSize: 38, lineHeight: 44 }}>{cat.icon ?? '🎯'}</Text>
               </View>
 
-              <View style={{ padding: 16 }}>
-                <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>
-                  {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-                </Text>
-                <Text style={{ color: '#64748b', fontSize: 13, marginTop: 3, lineHeight: 18 }} numberOfLines={2}>
-                  {isCreole ? (cat.descriptionHt ?? cat.description) : cat.description}
-                </Text>
-
-                {/* Question count chip */}
-                <View style={{ alignSelf: 'flex-start', backgroundColor: '#eaf2fb', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3, marginTop: 8 }}>
-                  <Text style={{ color: '#0857A6', fontSize: 11, fontWeight: '600' }}>
-                    {qCount} question{qCount !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-
-                {/* Jouer link */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                  <Text style={{ color: '#0857A6', fontSize: 14, fontWeight: '700' }}>
-                    {isCreole ? 'Jwe' : 'Jouer'}
-                  </Text>
-                  <ChevronRight color="#0857A6" size={16} />
-                </View>
-              </View>
-
+              {/* Name (reserve 2 lines so all tiles align) */}
+              <Text
+                numberOfLines={2}
+                style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30 }}
+              >
+                {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
+              </Text>
+              <Text style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
+                {qCount} Q
+              </Text>
             </TouchableOpacity>
           );
         })}
