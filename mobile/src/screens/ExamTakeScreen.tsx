@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, ChevronLeft, ChevronRight, Send } from 'lucide-react-native';
+import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
@@ -285,6 +285,57 @@ function TrueFalseQuestion({ answer, onAnswer }: { answer: Answer; onAnswer: (a:
           </TouchableOpacity>
         );
       })}
+    </View>
+  );
+}
+
+function cleanHint(raw: unknown): string {
+  return String(raw ?? '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?[a-z][^>]*>/gi, '')
+    .replace(/\*\*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Progressive hint reveal. The authored `hints` are the real guidance for a
+ * question (the "démarche"), shown on demand so students try first — one hint
+ * at a time. Reset per question via a `key` on the caller side.
+ */
+function ExamHint({ hints }: { hints?: any }) {
+  const clean = (Array.isArray(hints) ? hints : []).map(cleanHint).filter(Boolean);
+  const [shown, setShown] = useState(0);
+  if (clean.length === 0) return null;
+
+  if (shown === 0) {
+    return (
+      <TouchableOpacity
+        onPress={() => setShown(1)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BORDER, backgroundColor: '#ffffff' }}
+      >
+        <Lightbulb color={PRIMARY} size={16} />
+        <Text style={{ fontSize: 13, fontWeight: '600', color: PRIMARY }}>Besoin d'un indice ?</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View style={{ marginTop: 16, backgroundColor: '#fffdf5', borderRadius: 16, borderWidth: 1, borderColor: '#f1e6c4', padding: 14, gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Lightbulb color="#b7791f" size={15} />
+        <Text style={{ fontSize: 12, fontWeight: '700', color: '#b7791f', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+          {clean.length > 1 ? `Indice ${shown} / ${clean.length}` : 'Indice'}
+        </Text>
+      </View>
+      {clean.slice(0, shown).map((h, i) => (
+        <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 14, lineHeight: 21, color: TEXT }} />
+      ))}
+      {shown < clean.length ? (
+        <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', marginTop: 4 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: PRIMARY }}>Indice suivant →</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -638,6 +689,11 @@ export default function ExamTakeScreen() {
               }
             />
           )}
+
+          {/* Progressive hints (the authored "démarche" as on-demand help).
+              Keyed distinctly from ExamSectionContext (same parent) + per
+              question so the reveal state resets when navigating. */}
+          <ExamHint key={`hint-${safeIdx}`} hints={q?.hints} />
         </ScrollView>
       </KeyboardAvoidingView>
 
