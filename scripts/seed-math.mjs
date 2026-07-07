@@ -121,7 +121,57 @@ export const LEVELS = {
       ]},
     ],
   },
-  ns4: { courseId: 'math-ns4', roman: 'NSIV', label: 'Mathématiques NS4', description: 'Cours de Mathématiques NS4 — EdLight.', chapters: [] },
+  ns4: {
+    courseId: 'math-ns4', roman: 'NSIV', label: 'Mathématiques NS4',
+    description: "Cours complet de Mathématiques du Nouveau Secondaire 4 (NS4), enseigné en vidéo par EdLight. Vous y étudierez les nombres complexes, les limites de fonctions, la continuité et les dérivées, les probabilités, les statistiques (à une et deux variables) et le barycentre.",
+    chapters: [
+      { title: 'Les Nombres Complexes', videos: [
+        ['Nombres Complexes (Partie 1)', 'ztUcXCU82pA'],
+        ['Nombres Complexes (Partie 2)', 'sPPJXZcghjo'],
+        ['Nombres Complexes (Partie 3)', 'jpdp5q7Z1UY'],
+        ['Nombres Complexes (Partie 4)', 'kll66UyNnJU'],
+        ['Nombres Complexes (Partie 5)', 'gGqb9Olbjtg'],
+        ['Nombres Complexes (Partie 6)', 'IL6OyGrX8s4'],
+        ['Nombres Complexes (Partie 7)', 'Itydqa5MvM0'],
+      ]},
+      { title: 'Les Limites', videos: [
+        ['Limites et Fonctions', 'lhMTZcyyNog'],
+        ['Limites (Partie 2)', 'fn29m7kBRLM'],
+        ['Limites et Théories', 'eu9kLoTuun0'],
+        ['Limites : Exercices (Partie 1)', 'dRYZNWU21yI'],
+        ['Limites : Exercices (Partie 2)', 'H18Q10Nm3A8'],
+        ['Limites des Fonctions Trigonométriques', '-QU38-p-ZiA'],
+      ]},
+      { title: 'Continuité et Dérivées', videos: [
+        ['Continuité des Fonctions', 'PNzc2MW8LYo'],
+        ['Dérivées et Fonctions', 'JH_sSDwehqo'],
+        ['Dérivées des Fonctions Usuelles (Partie 1)', 'T2cWBXAfQAI'],
+        ['Dérivées des Fonctions Usuelles (Partie 2)', '-G6_sKgt1BE'],
+        ['Dérivées et Propriétés', '0MlizklnEaw'],
+        ['Dérivée et Équation de la Tangente', 'xIDNsSoPGhE'],
+        ['Dérivée de la Tangente', 'a-w05kOjZYU'],
+        ['Dérivée et Interprétation Cinématique', '8UPe4mfLzcI'],
+      ]},
+      { title: 'Probabilités', videos: [
+        ['Probabilité', 'yeu73yexgac'],
+        ['Probabilités et Propriétés', '5Y5825cB-sA'],
+        ["Cas d'Équiprobabilité", 'nQFngrYPKMo'],
+        ['Probabilité : Exercices (Partie 1)', '-BLh7gNS1oE'],
+        ['Probabilité : Exercices (Partie 2)', 't45wca8376w'],
+        ['Probabilité : Exercices (Partie 3)', 'lmOfrjnHS9s'],
+      ]},
+      { title: 'Statistiques', videos: [
+        ['Statistiques', 'O0UhA4Klsnw'],
+        ['Statistique à une Variable', 'wYZk6Rkjbws'],
+        ['Statistiques à Deux Variables (Partie 1)', '2UTyVY1N7oM'],
+        ['Statistiques à Deux Variables (Partie 2)', 'fSbp6DYzgV0'],
+        ['Nuage, Points et Corrélation', 'glz9OW0vI9Y'],
+      ]},
+      { title: 'Le Barycentre', videos: [
+        ['Barycentre', 'lnRjHU6WVVE'],
+      ]},
+    ],
+  },
 };
 
 export function buildCourseAndVideos(level) {
