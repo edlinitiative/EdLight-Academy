@@ -65,6 +65,7 @@ function TabIcon({
 
 export default function TabNavigator() {
   const theme = useStore((s) => s.theme);
+  const focusMode = useStore((s) => s.focusMode);
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
   const queryClient = useQueryClient();
@@ -118,26 +119,30 @@ export default function TabNavigator() {
             />
           </BlurView>
         ),
-        tabBarStyle: {
-          position: 'absolute',
-          left: BAR_MARGIN,
-          right: BAR_MARGIN,
-          bottom: bottomOffset,
-          height: BAR_HEIGHT,
-          borderRadius: BAR_HEIGHT / 2,
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          borderWidth: 1,
-          borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.6)',
-          overflow: 'hidden',
-          paddingTop: 8,
-          paddingBottom: 10,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: dark ? 0.5 : 0.14,
-          shadowRadius: 18,
-          elevation: 12,
-        },
+        // Focus mode (exam-taking, trivia gameplay) hides the floating bar so it
+        // never overlaps a screen's own bottom actions (e.g. the Submit button).
+        tabBarStyle: focusMode
+          ? { display: 'none' }
+          : {
+              position: 'absolute',
+              left: BAR_MARGIN,
+              right: BAR_MARGIN,
+              bottom: bottomOffset,
+              height: BAR_HEIGHT,
+              borderRadius: BAR_HEIGHT / 2,
+              backgroundColor: 'transparent',
+              borderTopWidth: 0,
+              borderWidth: 1,
+              borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.6)',
+              overflow: 'hidden',
+              paddingTop: 8,
+              paddingBottom: 10,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: dark ? 0.5 : 0.14,
+              shadowRadius: 18,
+              elevation: 12,
+            },
         tabBarItemStyle: { paddingHorizontal: 0 },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       }}

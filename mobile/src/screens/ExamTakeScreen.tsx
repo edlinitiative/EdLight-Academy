@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Alert, BackHandler, KeyboardAvoidingView, Platform, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
@@ -344,7 +344,16 @@ export default function ExamTakeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, recordActivity } = useStore();
+  const { user, recordActivity, setFocusMode } = useStore();
+
+  // Hide the floating tab bar while taking an exam so it never covers the
+  // question navigation / submit controls. Restored when leaving the screen.
+  useFocusEffect(
+    useCallback(() => {
+      setFocusMode(true);
+      return () => setFocusMode(false);
+    }, [setFocusMode]),
+  );
 
   const [exam, setExam] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);

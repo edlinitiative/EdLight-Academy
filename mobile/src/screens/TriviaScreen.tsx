@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
+import { useFocusEffect } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
@@ -812,7 +813,7 @@ function TriviaResults({
 // ─── Main TriviaScreen ────────────────────────────────────────────────────────
 
 export default function TriviaScreen() {
-  const { user, language, incrementGuestInteraction } = useStore();
+  const { user, language, incrementGuestInteraction, setFocusMode } = useStore();
   const isCreole = language === 'ht';
 
   const { level } = useTrivia();
@@ -823,6 +824,15 @@ export default function TriviaScreen() {
   const [roundSize, setRoundSize] = useState(10);
   const [questions, setQuestions] = useState<PreparedQuestion[]>([]);
   const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+
+  // Hide the floating tab bar during an active game / results so it never
+  // covers the answer & confirm buttons. Reset when leaving the Trivia tab.
+  useFocusEffect(
+    useCallback(() => {
+      setFocusMode(phase === 'playing' || phase === 'results');
+      return () => setFocusMode(false);
+    }, [phase, setFocusMode]),
+  );
 
   // Start from category selection
   const handleSelectCategory = useCallback((categoryId: string) => {
