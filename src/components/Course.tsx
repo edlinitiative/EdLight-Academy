@@ -88,18 +88,17 @@ export const CourseCard = React.memo(function CourseCard({ course }) {
       onKeyDown={handleKeyDown}
       aria-label={`${subjectLabel} · ${levelLabel} — ${course.name}`}
     >
-      <div className="course-card__head">
-        <div className="course-card__tags">
-          <span
-            className="course-card__badge"
-            style={{ background: (course.color || '#0A66C2') + '1f', color: course.color || 'var(--primary-600)' }}
-          >
-            {subjectLabel}
-          </span>
-          <span className="course-card__badge course-card__badge--level">{levelLabel}</span>
+      {/*
+        No subject/level pills here: this card only renders inside a subject's
+        level view, where the page title already states the subject and the
+        card title (e.g. "NS1") already states the level — the badges just
+        repeated both. Keep only the "enrolled" chip.
+      */}
+      {isEnrolled && (
+        <div className="course-card__head">
+          <span className="chip chip--success">{t('courses.enrolled')}</span>
         </div>
-        {isEnrolled && <span className="chip chip--success">{t('courses.enrolled')}</span>}
-      </div>
+      )}
 
       {heading && <h3 className="course-card__title">{heading}</h3>}
       {description && <p className="course-card__description">{description}</p>}
