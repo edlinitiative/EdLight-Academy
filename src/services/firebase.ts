@@ -11,7 +11,7 @@ import { getAuth,
   updateProfile,
   getAdditionalUserInfo,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, increment, writeBatch } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, arrayRemove, increment, writeBatch } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
@@ -625,6 +625,73 @@ export async function updateComment(commentId, text) {
     return { success: true };
   } catch (error) {
     console.error('[Firebase] Error updating comment:', error);
+    throw error;
+  }
+}
+
+// ============================================
+// COMMENT MODERATION (UGC policy)
+// ============================================
+
+/**
+ * Report a comment for moderation. Writes a doc to the top-level
+ * `commentReports` collection for admin review.
+ * @param {string} commentId - The reported comment ID
+ * @param {string} threadKey - The thread the comment belongs to
+ * @param {string} reason - Optional reason (defaults to 'inappropriate')
+ * @param {Object} user - The reporting user (must have uid)
+ */
+export async function reportComment(commentId, threadKey, reason, user) {
+  try {
+    const reportsRef = collection(db, 'commentReports');
+    await addDoc(reportsRef, {
+      commentId,
+      threadKey,
+      reporterId: user.uid,
+      reason: reason || 'inappropriate',
+      created_at: serverTimestamp()
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error reporting comment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Block a user: add their id to the current user's `blockedUsers` array.
+ * @param {string} currentUid - The blocking (current) user's id
+ * @param {string} blockedId - The id of the user to block
+ */
+export async function blockUser(currentUid, blockedId) {
+  try {
+    const userRef = doc(db, 'users', currentUid);
+    await setDoc(userRef, {
+      blockedUsers: arrayUnion(blockedId),
+      updated_at: serverTimestamp()
+    }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error blocking user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Unblock a user: remove their id from the current user's `blockedUsers` array.
+ * @param {string} currentUid - The current user's id
+ * @param {string} blockedId - The id of the user to unblock
+ */
+export async function unblockUser(currentUid, blockedId) {
+  try {
+    const userRef = doc(db, 'users', currentUid);
+    await setDoc(userRef, {
+      blockedUsers: arrayRemove(blockedId),
+      updated_at: serverTimestamp()
+    }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error('[Firebase] Error unblocking user:', error);
     throw error;
   }
 }
