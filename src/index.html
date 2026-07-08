@@ -58,9 +58,78 @@
     // server-side sender) to enable push when the app is fully closed.
     window.EDLIGHT_PUSH_VAPID_KEY = "BBKQE5-4ixoeM-3W8oHsgiuiwGhRTovWtFL_bkKrjJoJdRLvKWxguJcHMTqMPOxOxD67UwTZKduRJwRO84JeJSo";
   </script>
+
+  <!-- Structured data: helps Google understand the site and can enrich search
+       results. Static (no JS needed), so crawlers see it on the first response. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": "EdLight Academy",
+    "alternateName": "EdLight",
+    "url": "https://academy.edlight.org/",
+    "logo": "https://academy.edlight.org/assets/logo.png",
+    "description": "Plateforme éducative gratuite qui aide les élèves haïtiens à préparer le Baccalauréat : cours de physique, chimie, mathématiques et économie, avec vidéos, quiz et examens blancs, en français et en créole haïtien.",
+    "email": "info@edlight.org",
+    "sameAs": ["https://edlight.org"],
+    "areaServed": { "@type": "Country", "name": "Haiti" },
+    "inLanguage": ["fr", "ht"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "EdLight Academy",
+    "url": "https://academy.edlight.org/",
+    "inLanguage": "fr"
+  }
+  </script>
+
+  <!-- Google Analytics 4 (gtag). Enables traffic measurement and lets Google
+       Ads import GA4 conversions (link Ads <-> GA4 in the Ads UI). To also fire
+       an Ads-native conversion, add your AW-XXXXXXX id to the config() calls. -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-KNBX35H1X1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-KNBX35H1X1');
+    // gtag('config', 'AW-XXXXXXXXX'); // <- add your Google Ads conversion id here
+  </script>
 </head>
 <body>
-  <noscript>Veuillez activer JavaScript pour utiliser cette application.</noscript>
-  <div id="root"></div>
+  <!--
+    Static, crawlable fallback content. React (createRoot) replaces #root on
+    mount, so real users see the full app; search engines, the Google Ads
+    landing-page crawler, and link-preview bots (WhatsApp/Facebook) that don't
+    run JS still get meaningful HTML and internal links on the first response.
+    Inline styles keep it presentable before the CSS bundle loads.
+  -->
+  <div id="root">
+    <div style="max-width:720px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,-apple-system,sans-serif;color:#232322;text-align:center">
+      <h1 style="font-size:1.9rem;line-height:1.2;margin:0 0 12px">EdLight Academy</h1>
+      <p style="font-size:1.05rem;line-height:1.5;color:#4a4a48;margin:0 0 24px">
+        Cours de physique, chimie, mathématiques et économie pour les élèves haïtiens.
+        Vidéos courtes, quiz interactifs et examens blancs du Baccalauréat —
+        gratuit, en français et en créole haïtien (Kreyòl).
+      </p>
+      <nav aria-label="Sections principales" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
+        <a href="/courses" style="color:#0A66C2;text-decoration:none">Cours</a>
+        <a href="/exams" style="color:#0A66C2;text-decoration:none">Examens blancs</a>
+        <a href="/quizzes" style="color:#0A66C2;text-decoration:none">Quiz</a>
+        <a href="/about" style="color:#0A66C2;text-decoration:none">À propos</a>
+        <a href="/faq" style="color:#0A66C2;text-decoration:none">FAQ</a>
+        <a href="/contact" style="color:#0A66C2;text-decoration:none">Contact</a>
+      </nav>
+      <p style="margin-top:28px;color:#8a8a86;font-size:0.9rem">Chargement de l’application…</p>
+    </div>
+  </div>
+  <noscript>
+    EdLight Academy — plateforme éducative gratuite pour les élèves haïtiens.
+    Activez JavaScript pour l’expérience interactive complète, ou explorez les
+    <a href="/courses">cours</a>, <a href="/exams">examens</a> et
+    <a href="/quizzes">quiz</a>.
+  </noscript>
 </body>
 </html>
