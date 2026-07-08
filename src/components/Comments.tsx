@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Flag, Ban, Trash2 } from 'lucide-react';
 import { addComment, addReply, subscribeToComments, subscribeToReplies } from '../services/firebase';
-import { getCurrentUser } from '../services/firebase';
+import { getCurrentUser, reportComment, blockUser, deleteComment, getUserProfile } from '../services/firebase';
 import useStore from '../contexts/store';
 
 function timeAgo(timestamp, language) {
@@ -39,6 +39,25 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
   const [replyOpen, setReplyOpen] = useState({}); // {commentId: boolean}
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
+  // Moderation (UGC): blocked author ids, locally-reported comment ids, transient notice
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [reportedIds, setReportedIds] = useState([]);
+  const [notice, setNotice] = useState('');
+  const currentUid = getCurrentUser()?.uid;
+
+  // Load the current user's blocked authors so their comments stay hidden
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!isAuthenticated || !user) {
+      setBlockedUsers([]);
+      return;
+    }
+    let active = true;
+    getUserProfile(user.uid).then((profile) => {
+      if (active && Array.isArray(profile?.blockedUsers)) setBlockedUsers(profile.blockedUsers);
+    });
+    return () => { active = false; };
+  }, [isAuthenticated]);
 
   // Subscribe to comments for this thread
   useEffect(() => {
@@ -119,6 +138,47 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
     }
   };
 
+  const handleReport = async (comment) => {
+    const user = getCurrentUser();
+    if (!user) return onRequireAuth();
+    try {
+      await reportComment(comment.id, threadKey, 'inappropriate', user);
+      setReportedIds((ids) => (ids.includes(comment.id) ? ids : [...ids, comment.id]));
+      setNotice(isCreole ? 'Mèsi, ou siyale kòmantè sa a' : 'Merci, ce commentaire a été signalé');
+      setTimeout(() => setNotice(''), 4000);
+    } catch (error) {
+      console.error('Error reporting comment:', error);
+      alert(isCreole ? 'Nou pa rive siyale kòmantè a. Eseye ankò.' : 'Impossible de signaler le commentaire. Réessayez.');
+    }
+  };
+
+  const handleBlock = async (comment) => {
+    const user = getCurrentUser();
+    if (!user) return onRequireAuth();
+    try {
+      await blockUser(user.uid, comment.authorId);
+      setBlockedUsers((ids) => (ids.includes(comment.authorId) ? ids : [...ids, comment.authorId]));
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      alert(isCreole ? 'Nou pa rive bloke itilizatè a. Eseye ankò.' : 'Impossible de bloquer l’utilisateur. Réessayez.');
+    }
+  };
+
+  const handleDelete = async (comment) => {
+    if (!window.confirm(isCreole ? 'Efase kòmantè sa a ?' : 'Supprimer ce commentaire ?')) return;
+    try {
+      await deleteComment(comment.id);
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert(isCreole ? 'Nou pa rive efase kòmantè a. Eseye ankò.' : 'Impossible de supprimer le commentaire. Réessayez.');
+    }
+  };
+
+  // Hide comments the user blocked or already reported this session
+  const visibleComments = comments.filter(
+    (c) => !reportedIds.includes(c.id) && !blockedUsers.includes(c.authorId),
+  );
+
   return (
     <section className="comments card">
       <div className="comments__header">
@@ -163,19 +223,25 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
         </div>
       </div>
 
+      {notice && (
+        <div className="text-muted" style={{ fontSize: '0.85rem', padding: '0.5rem 0' }} role="status">
+          {notice}
+        </div>
+      )}
+
       <div className="comments__list">
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
             <div className="loading-spinner" style={{ width: '32px', height: '32px' }} />
           </div>
-        ) : comments.length === 0 ? (
+        ) : visibleComments.length === 0 ? (
           <div className="text-muted" style={{ fontSize: '0.9rem' }}>
             {isCreole
               ? 'Pa gen kòmantè ankò. Se ou menm ki ka poze premye kesyon an.'
               : 'Aucun commentaire pour le moment. Soyez le premier à poser une question.'}
           </div>
         ) : (
-          comments.map((c) => {
+          visibleComments.map((c) => {
             const replies = commentReplies[c.id] || [];
             return (
               <div key={c.id} className="comment">
@@ -197,6 +263,35 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
                     >
                       {isCreole ? 'Reponn' : 'Répondre'} {c.replyCount > 0 && `(${c.replyCount})`}
                     </button>
+                    {currentUid && c.authorId === currentUid ? (
+                      <button
+                        className="button button--ghost button--sm"
+                        type="button"
+                        title={isCreole ? 'Efase' : 'Supprimer'}
+                        onClick={() => handleDelete(c)}
+                      >
+                        <Trash2 size={14} /> {isCreole ? 'Efase' : 'Supprimer'}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="button button--ghost button--sm"
+                          type="button"
+                          title={isCreole ? 'Sinyale' : 'Signaler'}
+                          onClick={() => handleReport(c)}
+                        >
+                          <Flag size={14} /> {isCreole ? 'Sinyale' : 'Signaler'}
+                        </button>
+                        <button
+                          className="button button--ghost button--sm"
+                          type="button"
+                          title={isCreole ? 'Bloke' : 'Bloquer'}
+                          onClick={() => handleBlock(c)}
+                        >
+                          <Ban size={14} /> {isCreole ? 'Bloke' : 'Bloquer'}
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {replies.length > 0 && (

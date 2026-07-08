@@ -32,6 +32,8 @@ import {
   onSnapshot,
   getDocs,
   updateDoc,
+  arrayUnion,
+  arrayRemove,
   increment,
   writeBatch,
 } from 'firebase/firestore';
@@ -184,4 +186,46 @@ export function subscribeToComments(threadKey: string, callback: (c: any[]) => v
     snap.forEach((d) => comments.push({ id: d.id, ...d.data() }));
     callback(comments);
   }, () => callback([]));
+}
+
+/** Delete a comment (and its replies). Author or admin only (enforced by rules). */
+export async function deleteComment(commentId: string) {
+  const repliesRef = collection(db, 'comments', commentId, 'replies');
+  const repliesSnap = await getDocs(repliesRef);
+  await Promise.all(repliesSnap.docs.map((d) => deleteDoc(d.ref)));
+  await deleteDoc(doc(db, 'comments', commentId));
+  return { success: true };
+}
+
+// ─── Comment moderation (UGC policy) ────────────────────────────────────────
+
+/** Report a comment for moderation — writes to the top-level `commentReports`. */
+export async function reportComment(commentId: string, threadKey: string, reason: string, user: any) {
+  const reportsRef = collection(db, 'commentReports');
+  await addDoc(reportsRef, {
+    commentId,
+    threadKey,
+    reporterId: user.uid,
+    reason: reason || 'inappropriate',
+    created_at: serverTimestamp(),
+  });
+  return { success: true };
+}
+
+/** Block a user: add their id to the current user's `blockedUsers` array. */
+export async function blockUser(currentUid: string, blockedId: string) {
+  await setDoc(doc(db, 'users', currentUid), {
+    blockedUsers: arrayUnion(blockedId),
+    updated_at: serverTimestamp(),
+  }, { merge: true });
+  return { success: true };
+}
+
+/** Unblock a user: remove their id from the current user's `blockedUsers` array. */
+export async function unblockUser(currentUid: string, blockedId: string) {
+  await setDoc(doc(db, 'users', currentUid), {
+    blockedUsers: arrayRemove(blockedId),
+    updated_at: serverTimestamp(),
+  }, { merge: true });
+  return { success: true };
 }
