@@ -16,6 +16,7 @@ import { LoadingState, ErrorState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import LessonPractice from '../components/LessonPractice';
 import PracticeSpotlight from '../components/PracticeSpotlight';
+import LessonComments from '../components/LessonComments';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
@@ -325,6 +326,10 @@ export default function CourseDetailScreen() {
 
       {/* Module list */}
       <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Per-lesson discussion (shared thread with the web app) */}
+        {activeLesson && (
+          <LessonComments threadKey={`comments:${course.id}:${activeLesson.id}`} isCreole={isCreole} />
+        )}
         {!activeLesson && (
           <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
             <Text className="font-semibold text-gray-900 mb-1">{course.name}</Text>
