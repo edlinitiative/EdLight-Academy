@@ -8,12 +8,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import {
   ArrowLeft, BookOpen, ChevronDown, ChevronRight, PlayCircle, ClipboardList,
-  CheckCircle2, ChevronLeft, Trophy,
+  CheckCircle2, ChevronLeft, Trophy, Sparkles,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
+import LessonPractice from '../components/LessonPractice';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
@@ -147,9 +148,11 @@ export default function CourseDetailScreen() {
   const route = useRoute<Route>();
   const { courseId } = route.params;
   const { data: courses, isLoading, isError } = useCourses();
-  const { progress, updateProgress, incrementGuestInteraction, recordActivity } = useStore();
+  const { progress, updateProgress, incrementGuestInteraction, recordActivity, language } = useStore();
+  const isCreole = language === 'ht';
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
+  const [practiceMode, setPracticeMode] = useState<'flashcards' | 'exercices' | null>(null);
 
   const course = useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
 
@@ -259,6 +262,25 @@ export default function CourseDetailScreen() {
             )}
           </View>
 
+          {/* Flashcards + Exercices — per-lesson practice (same quiz bank as web) */}
+          <View className="flex-row gap-3 mt-3">
+            <TouchableOpacity
+              onPress={() => setPracticeMode('flashcards')}
+              className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
+            >
+              <Sparkles color="#0857A6" size={16} />
+              <Text className="text-gray-800 text-sm font-semibold">Flashcards</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setPracticeMode('exercices')}
+              className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl"
+              style={{ backgroundColor: course.color ?? '#0857A6' }}
+            >
+              <ClipboardList color="#fff" size={16} />
+              <Text className="text-white text-sm font-bold">{isCreole ? 'Egzèsis' : 'Exercices'}</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Prev / Next navigation */}
           <View className="flex-row gap-2 mt-3">
             <TouchableOpacity
@@ -310,6 +332,18 @@ export default function CourseDetailScreen() {
           />
         ))}
       </ScrollView>
+
+      {activeLesson && (
+        <LessonPractice
+          visible={practiceMode != null}
+          onClose={() => setPracticeMode(null)}
+          subjectCode={course.code}
+          unitNo={activeLesson.unit_no}
+          lessonNo={activeLesson.lesson_no}
+          initialMode={practiceMode ?? 'flashcards'}
+          isCreole={isCreole}
+        />
+      )}
     </SafeAreaView>
   );
 }
