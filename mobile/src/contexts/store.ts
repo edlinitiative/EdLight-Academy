@@ -21,6 +21,7 @@ export interface AppState {
   track: string | null;
   onboardingCompleted: boolean;
   tourCompleted: boolean;
+  practiceTipSeen: boolean;
   languageChosen: boolean;
   theme: 'light' | 'dark';
   enrolledCourses: any[];
@@ -40,6 +41,7 @@ export interface AppState {
   setTrack: (track: string | null) => void;
   setOnboardingCompleted: (completed: boolean) => void;
   setTourCompleted: (completed: boolean) => void;
+  setPracticeTipSeen: (seen: boolean) => void;
   setLanguageChosen: (chosen: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -69,6 +71,7 @@ const useStore = create<AppState>()(
       track: null,
       onboardingCompleted: false,
       tourCompleted: false,
+      practiceTipSeen: false,
       languageChosen: false,
       theme: 'light',
       enrolledCourses: [],
@@ -88,6 +91,7 @@ const useStore = create<AppState>()(
       setTrack: (track) => set({ track }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       setTourCompleted: (completed) => set({ tourCompleted: !!completed }),
+      setPracticeTipSeen: (seen) => set({ practiceTipSeen: !!seen }),
       setLanguageChosen: (chosen) => set({ languageChosen: !!chosen }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
@@ -162,6 +166,7 @@ const useStore = create<AppState>()(
         track: s.track,
         onboardingCompleted: s.onboardingCompleted,
         tourCompleted: s.tourCompleted,
+        practiceTipSeen: s.practiceTipSeen,
         languageChosen: s.languageChosen,
         theme: s.theme,
         enrolledCourses: s.enrolledCourses,

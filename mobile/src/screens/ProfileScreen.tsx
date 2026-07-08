@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, GraduationCap,
+  Flame, Trophy, Zap, LogOut, Moon, Sun, Languages,
   Award, CheckCircle2, Target, BookOpen, Bell,
   Sprout, Brain,
 } from 'lucide-react-native';
@@ -192,9 +192,11 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
         <View className="flex-1 items-center justify-center px-8 gap-5">
-          <View className="w-20 h-20 rounded-2xl items-center justify-center" style={{ backgroundColor: '#0857A6' }}>
-            <GraduationCap color="#fff" size={36} />
-          </View>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={{ width: 96, height: 96 }}
+            resizeMode="contain"
+          />
           <Text className="text-xl font-bold text-gray-900 text-center">
             {t('Votre profil EdLight', 'Pwofil EdLight ou')}
           </Text>

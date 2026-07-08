@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Platform, ActivityIndicator,
 } from 'react-native';
@@ -15,6 +15,7 @@ import useStore from '../contexts/store';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import LessonPractice from '../components/LessonPractice';
+import PracticeSpotlight from '../components/PracticeSpotlight';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
@@ -148,11 +149,22 @@ export default function CourseDetailScreen() {
   const route = useRoute<Route>();
   const { courseId } = route.params;
   const { data: courses, isLoading, isError } = useCourses();
-  const { progress, updateProgress, incrementGuestInteraction, recordActivity, language } = useStore();
+  const { progress, updateProgress, incrementGuestInteraction, recordActivity, language,
+    practiceTipSeen, setPracticeTipSeen } = useStore();
   const isCreole = language === 'ht';
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
   const [practiceMode, setPracticeMode] = useState<'flashcards' | 'exercices' | null>(null);
+  const [showPracticeTip, setShowPracticeTip] = useState(false);
+  const practiceRowRef = useRef<View>(null);
+
+  // First time a lesson is opened, coach-mark the Flashcards/Exercices buttons.
+  useEffect(() => {
+    if (activeLesson && !practiceTipSeen) {
+      const t = setTimeout(() => setShowPracticeTip(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, [activeLesson?.id, practiceTipSeen]);
 
   const course = useMemo(() => courses?.find((c) => c.id === courseId), [courses, courseId]);
 
@@ -263,7 +275,7 @@ export default function CourseDetailScreen() {
           </View>
 
           {/* Flashcards + Exercices — per-lesson practice (same quiz bank as web) */}
-          <View className="flex-row gap-3 mt-3">
+          <View ref={practiceRowRef} collapsable={false} className="flex-row gap-3 mt-3">
             <TouchableOpacity
               onPress={() => setPracticeMode('flashcards')}
               className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
@@ -344,6 +356,17 @@ export default function CourseDetailScreen() {
           isCreole={isCreole}
         />
       )}
+
+      <PracticeSpotlight
+        visible={showPracticeTip && !practiceTipSeen && practiceMode == null}
+        targetRef={practiceRowRef}
+        onDismiss={() => { setPracticeTipSeen(true); setShowPracticeTip(false); }}
+        title={isCreole ? 'Revize leson sa a' : 'Révise cette leçon'}
+        body={isCreole
+          ? 'Sèvi ak Flashcards pou memorize, epi Egzèsis pou antrene w sou leson sa a.'
+          : "Utilise les Flashcards pour mémoriser et les Exercices pour t'entraîner sur cette leçon."}
+        cta={isCreole ? 'Konpri' : 'Compris'}
+      />
     </SafeAreaView>
   );
 }
