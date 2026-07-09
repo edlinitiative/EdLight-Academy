@@ -24,38 +24,41 @@ function shuffle(arr) {
 function CategoryPicker({ onSelect, isCreole }) {
   return (
     <div className="trivia-landing">
+      <div className="trivia-landing__header">
+        <h1 className="trivia-landing__title">{isCreole ? 'Jèt Trivia' : 'Jeu Trivia'}</h1>
+        <p className="trivia-landing__subtitle">
+          {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
+        </p>
+      </div>
       <div className="trivia-landing__grid">
         {TRIVIA_CATEGORIES.map((cat) => (
           <button
             key={cat.id}
-            className="trivia-cat-card"
+            className="trivia-cat-tile"
             onClick={() => onSelect(cat.id)}
             aria-label={`${isCreole ? cat.nameHt : cat.name} — ${TRIVIA_QUESTIONS[cat.id].length} ${isCreole ? 'kesyon' : 'questions'}`}
           >
-            <div className="trivia-cat-card__media" style={{ '--cat-color': cat.color } as React.CSSProperties}>
+            <span className="trivia-cat-tile__media">
               <img
-                className="trivia-cat-card__img"
+                className="trivia-cat-tile__img"
                 src={cat.image}
                 alt=""
-                width={400}
-                height={225}
+                width={200}
+                height={200}
                 loading="lazy"
                 decoding="async"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  img.style.display = 'none';
+                  const fallback = img.nextElementSibling as HTMLElement | null;
+                  if (fallback) fallback.style.display = 'flex';
+                }}
               />
-              <h2 className="trivia-cat-card__title">{isCreole ? cat.nameHt : cat.name}</h2>
-            </div>
-            <div className="trivia-cat-card__body">
-              <p className="trivia-cat-card__desc">{isCreole ? cat.descriptionHt : cat.description}</p>
-            </div>
-            <div className="trivia-cat-card__footer">
-              <span className="trivia-cat-card__count">
-                {TRIVIA_QUESTIONS[cat.id].length} {isCreole ? 'kesyon' : 'questions'}
+              <span className="trivia-cat-tile__emoji" aria-hidden style={{ display: 'none' }}>
+                {cat.icon}
               </span>
-              <span className="trivia-cat-card__cta">
-                {isCreole ? 'Jwe →' : 'Jouer →'}
-              </span>
-            </div>
+            </span>
+            <span className="trivia-cat-tile__title">{isCreole ? cat.nameHt : cat.name}</span>
           </button>
         ))}
       </div>
