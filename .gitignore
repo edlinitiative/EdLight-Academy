@@ -1,7 +1,18 @@
 # dependencies
 /node_modules
+/mobile/node_modules/
 /.pnp
 .pnp.js
+
+# Expo local caches
+/mobile/.expo/
+/app.json
+
+# Playwright MCP scratch output
+/.playwright-mcp/
+
+# Stray/experimental Expo project scaffold (not part of this repo)
+/edlight-academy/
 
 # testing
 /coverage
