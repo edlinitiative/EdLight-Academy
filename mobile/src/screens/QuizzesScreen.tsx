@@ -181,7 +181,7 @@ export default function QuizzesScreen() {
     );
   }
 
-  if (isLoading) return <LoadingState message={t('Chargement des quiz…', 'Chajman quiz yo…')} />;
+  if (isLoading) return <LoadingState message={t('Chargement des quiz…', 'Ap chaje quiz yo…')} />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   return (

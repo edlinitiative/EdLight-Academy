@@ -175,7 +175,7 @@ export default function ExamLandingScreen() {
         {/* Subject quick-links */}
         <View className="px-5 mt-6">
           <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, marginBottom: 12 }}>
-            {t('Par matière', 'Pa matye')}
+            {t('Par matière', 'Pa matyè')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {SUBJECTS.map((subj) => (

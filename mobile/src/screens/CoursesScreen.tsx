@@ -229,7 +229,7 @@ export default function CoursesScreen() {
     return all.filter((c) => c.level === level && c.subject === subject);
   }, [all, level, subject]);
 
-  if (isLoading) return <LoadingState message={t('Chargement des cours…', 'Chajman kou yo…')} />;
+  if (isLoading) return <LoadingState message={t('Chargement des cours…', 'Ap chaje kou yo…')} />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   const levelInfo = LEVELS.find((l) => l.code === level);
@@ -297,7 +297,7 @@ export default function CoursesScreen() {
       >
         {searching ? (
           searchResults.length === 0 ? (
-            <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
+            <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
           ) : (
             <>
               <Text className="text-xs text-gray-400 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
@@ -329,7 +329,7 @@ export default function CoursesScreen() {
                 </View>
                 <View className="flex-1">
                   <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
-                    {t('Banque de Questions', 'Fich Kesyon')}
+                    {t('Banque de Questions', 'Bank Kesyon')}
                   </Text>
                   <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                     {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
@@ -353,7 +353,7 @@ export default function CoursesScreen() {
           </>
         ) : !subject ? (
           subjectsForLevel.length === 0 ? (
-            <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
+            <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
           ) : (
             subjectsForLevel.map(([code, group]) => {
               const meta = subjectMeta(code);
@@ -374,7 +374,7 @@ export default function CoursesScreen() {
             })
           )
         ) : courseList.length === 0 ? (
-          <EmptyState message={t('Aucun cours trouvé.', 'Pa gen kou jwenn.')} />
+          <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
         ) : (
           <>
             <Text className="text-xs text-gray-400 mb-3">{courseList.length} {t('cours', 'kou')}</Text>

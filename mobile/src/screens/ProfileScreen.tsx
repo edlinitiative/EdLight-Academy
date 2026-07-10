@@ -429,7 +429,7 @@ export default function ProfileScreen() {
               onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
             />
             <SettingsTile
-              label={theme === 'light' ? t('Mode nuit', 'Mòd nuit') : t('Mode jour', 'Mòd jou')}
+              label={theme === 'light' ? t('Mode nuit', 'Mòd nwit') : t('Mode jour', 'Mòd jou')}
               icon={theme === 'light'
                 ? <Moon color="#6b7280" size={22} />
                 : <Sun color="#f59e0b" size={22} />}

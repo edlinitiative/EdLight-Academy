@@ -112,7 +112,7 @@ export default function DashboardScreen() {
   // ---------------------------------------------------------------------------
 
   if (isLoading) {
-    return <LoadingState message={t('Chargement du tableau de bord…', 'Chajman tablo bò…')} />;
+    return <LoadingState message={t('Chargement du tableau de bord…', 'Ap chaje tablodbò a…')} />;
   }
 
   if (isError) {
@@ -148,7 +148,7 @@ export default function DashboardScreen() {
           <View className="flex-row items-start justify-between">
             <View className="flex-1 pr-4">
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b' }}>
-                {t('Tableau de bord', 'Tablo bò')}
+                {t('Tableau de bord', 'Tablodbò')}
               </Text>
               <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', marginTop: 2 }} numberOfLines={1}>
                 {greeting}, {firstName || t('Étudiant', 'Elèv')}

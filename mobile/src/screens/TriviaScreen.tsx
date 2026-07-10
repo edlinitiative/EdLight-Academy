@@ -128,7 +128,7 @@ function CategoryPicker({
     >
       <View className="px-4 pt-4 pb-3">
         <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
-          {isCreole ? 'Jèt Trivia' : 'Jeu Trivia'}
+          {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
         </Text>
         <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
           {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
