@@ -56,7 +56,7 @@ export default function HeroSection({ t }: { t: TFn }) {
 
           <div className="lp-hero__visual">
             <div className="lp-hero__glow" aria-hidden="true" />
-            <div className="lp-hero__frame">
+            <div className="lp-hero__frame hatch-frame">
               <img
                 src={heroSrc}
                 alt={t('Élève haïtien apprenant en ligne', 'Elèv ayisyen k ap aprann sou entènèt')}
