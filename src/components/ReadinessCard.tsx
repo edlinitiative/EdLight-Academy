@@ -2,8 +2,8 @@
  * ReadinessCard — the flagship "Exam Readiness Score"
  * ───────────────────────────────────────────────────
  * One number parents, students and schools all understand. Shows the overall
- * coefficient-weighted score, a per-subject breakdown (sorted by Bac weight),
- * and a single "focus this week" recommendation.
+ * coefficient-weighted score as a horizontal segmented gauge, a per-subject
+ * breakdown (sorted by Bac weight), and a single "focus this week" tip.
  */
 
 import React from 'react';
@@ -11,28 +11,61 @@ import { useNavigate } from 'react-router-dom';
 import { Target, Lightbulb, TrendingUp, ClipboardList } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useReadiness } from '../hooks/useReadiness';
-import { subjectColor } from '../utils/examUtils';
 import { localizeSubject } from '../utils/localizeSubject';
 import './ReadinessCard.css';
+
+const SEG_COUNT = 20;
+
+// Semantic tone for a 0–100 figure: ≥70 good, ≥60 warn, else crit.
+const toneVar = (pct: number) =>
+  pct >= 70
+    ? 'var(--st-good, #157f43)'
+    : pct >= 60
+      ? 'var(--st-warn, #bd6f0f)'
+      : 'var(--st-crit, #c93434)';
+
+// Map readiness band tones to the warm semantic tokens.
+const BAND_TONE_VAR: Record<string, string> = {
+  danger: 'var(--st-crit, #c93434)',
+  warning: 'var(--st-warn, #bd6f0f)',
+  caution: 'var(--st-warn, #bd6f0f)',
+  good: 'var(--st-good, #157f43)',
+  excellent: 'var(--st-good, #157f43)',
+};
+
+// Short mono chip code from a localized subject name (letters only, 4 chars).
+const subjectCode = (name: string) =>
+  (name || '').replace(/[^\p{L}]/gu, '').slice(0, 4).toUpperCase() || '···';
 
 export default function ReadinessCard({ maxSubjects = 6 }) {
   const navigate = useNavigate();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
 
-  const { overall, hasData, band, subjects, focus, strongest, isLoading, track } = useReadiness();
+  const {
+    overall,
+    hasData,
+    band,
+    subjects,
+    focus,
+    strongest,
+    isLoading,
+    track,
+    subjectsWithData,
+    subjectsTracked,
+    totalAttempts,
+  } = useReadiness();
 
-  const t = (fr, ht) => (isCreole ? ht : fr);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   if (isLoading) {
     return (
       <div className="readiness-card readiness-card--loading">
-        <div className="skeleton readiness-card__ring-skeleton" />
         <div className="readiness-card__body">
-          <div className="skeleton" style={{ height: 16, width: '60%', marginBottom: 12 }} />
-          <div className="skeleton" style={{ height: 10, width: '100%', marginBottom: 8 }} />
-          <div className="skeleton" style={{ height: 10, width: '90%', marginBottom: 8 }} />
-          <div className="skeleton" style={{ height: 10, width: '80%' }} />
+          <div className="skeleton" style={{ height: 34, width: '45%', marginBottom: 14 }} />
+          <div className="skeleton" style={{ height: 13, width: '100%', marginBottom: 12 }} />
+          <div className="skeleton" style={{ height: 10, width: '70%', marginBottom: 8 }} />
+          <div className="skeleton" style={{ height: 10, width: '85%' }} />
         </div>
       </div>
     );
@@ -60,7 +93,18 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
   }
 
   const shownSubjects = subjects.slice(0, maxSubjects);
-  const ringColor = hasData ? band.color : '#cbd5e1';
+
+  // Segmented gauge: fill cells up to overall%, the leading edge takes a
+  // semantic tone so the bar reads its own health at a glance.
+  const filled = hasData ? Math.min(SEG_COUNT, Math.ceil((overall / 100) * SEG_COUNT)) : 0;
+  const leadColor = toneVar(overall);
+
+  const statusColor = hasData
+    ? (BAND_TONE_VAR[band.tone] || 'var(--st-accent, #0857a6)')
+    : 'var(--st-muted, #746a59)';
+  const statusLabel = hasData
+    ? (isCreole ? band.labelHt : band.label)
+    : t('Pas encore de score', 'Poko gen nòt');
 
   return (
     <div className="readiness-card" data-tone={band.tone}>
@@ -70,61 +114,90 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
         </span>
         {strongest && hasData && (
           <span className="readiness-card__strong" title={t('Votre point fort', 'Pwen fò ou')}>
-            <TrendingUp size={13} /> {localizeSubject(strongest.subject, language)} {strongest.pct}%
+            <TrendingUp size={13} /> {localizeSubject(strongest.subject, language)}{' '}
+            <span className="num">{strongest.pct}%</span>
           </span>
         )}
       </div>
 
-      <div className="readiness-card__main">
-        <div
-          className="readiness-ring"
-          style={{ '--pct': `${hasData ? overall : 0}%`, '--ring-color': ringColor } as React.CSSProperties}
-          role="img"
-          aria-label={t(`Score de préparation ${overall}%`, `Nòt preparasyon ${overall}%`)}
-        >
-          <div className="readiness-ring__inner">
-            <span className="readiness-ring__value">{hasData ? `${overall}` : '—'}</span>
-            <span className="readiness-ring__unit">{hasData ? '%' : ''}</span>
+      {/* ── Segmented readiness gauge ── */}
+      <div className="readiness-gauge">
+        <div className="readiness-gauge__head">
+          <div className="readiness-gauge__value num">
+            {hasData ? overall : '—'}
+            <small>{t('% prêt', '% pare')}</small>
           </div>
+          <span className="readiness-gauge__status" style={{ color: statusColor }}>
+            <span className="readiness-gauge__status-dot" style={{ background: statusColor }} />
+            {statusLabel}
+          </span>
         </div>
 
-        <div className="readiness-card__summary">
-          <span className="readiness-card__band" style={{ color: hasData ? band.color : 'var(--text-500)' }}>
-            {hasData ? (isCreole ? band.labelHt : band.label) : t('Pas encore de score', 'Poko gen nòt')}
-          </span>
-          <p className="readiness-card__caption text-muted">
-            {hasData
-              ? t(
-                  'Score pondéré par les coefficients de votre filière.',
-                  'Nòt ki kalkile selon koyefisyan filyè ou.',
-                )
-              : t(
-                  'Faites un examen blanc pour générer votre score.',
-                  'Fè yon egzamen blan pou jenere nòt ou.',
-                )}
-          </p>
+        <div
+          className="readiness-gauge__seg"
+          role="img"
+          aria-label={t(`Score de préparation ${overall} pour cent`, `Nòt preparasyon ${overall} pou san`)}
+        >
+          {Array.from({ length: SEG_COUNT }).map((_, i) => {
+            const on = i < filled;
+            const isLead = on && i === filled - 1;
+            return (
+              <span
+                key={i}
+                className={`readiness-gauge__cell${on ? ' is-on' : ''}${isLead ? ' is-lead' : ''}`}
+                style={on ? { background: isLead ? leadColor : 'var(--st-accent, #0857a6)' } : undefined}
+              />
+            );
+          })}
         </div>
+
+        {hasData && (
+          <div className="readiness-gauge__foot">
+            <span className="readiness-gauge__foot-label">
+              <span className="num">{subjectsWithData}/{subjectsTracked}</span>{' '}
+              {t('matières évaluées', 'matyè evalye')}
+            </span>
+            <span className="readiness-gauge__foot-label">
+              <span className="num">{totalAttempts}</span>{' '}
+              {t('évaluations', 'evalyasyon')}
+            </span>
+          </div>
+        )}
       </div>
+
+      <p className="readiness-card__caption text-muted">
+        {hasData
+          ? t(
+              'Score pondéré par les coefficients de votre filière.',
+              'Nòt ki kalkile selon koyefisyan filyè ou.',
+            )
+          : t(
+              'Faites un examen blanc pour générer votre score.',
+              'Fè yon egzamen blan pou jenere nòt ou.',
+            )}
+      </p>
 
       {hasData ? (
         <div className="readiness-card__subjects">
           {shownSubjects.map((s) => {
-            const color = subjectColor(s.subject);
+            const pctColor = s.hasData ? toneVar(s.pct) : 'var(--st-line-strong, rgba(64,50,26,0.22))';
+            const localized = localizeSubject(s.subject, language);
             return (
               <div className="readiness-subject" key={s.subject}>
                 <div className="readiness-subject__head">
-                  <span className="readiness-subject__name">{localizeSubject(s.subject, language)}</span>
+                  <span className="readiness-subject__code">{subjectCode(localized)}</span>
+                  <span className="readiness-subject__name">{localized}</span>
                   <span className="readiness-subject__coeff" title={t('Coefficient', 'Koyefisyan')}>
                     ×{s.coeff}
                   </span>
-                  <span className="readiness-subject__pct">
-                    {s.hasData ? `${s.pct}%` : t('—', '—')}
+                  <span className="readiness-subject__pct num" style={{ color: pctColor }}>
+                    {s.hasData ? `${s.pct}%` : '—'}
                   </span>
                 </div>
                 <div className="readiness-subject__bar">
                   <span
                     className="readiness-subject__fill"
-                    style={{ width: `${s.hasData ? s.pct : 0}%`, background: color }}
+                    style={{ width: `${s.hasData ? s.pct : 0}%`, background: pctColor }}
                   />
                 </div>
               </div>

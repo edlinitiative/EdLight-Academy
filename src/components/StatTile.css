@@ -1,0 +1,128 @@
+/* ══════════════════════════════════════════════════════════════════════
+   StatTile — warm "Structured-Technical" stat tile + responsive row.
+   Reads --st-* tokens from an ancestor .dash--st; every var() has a light
+   fallback so it also works standalone. Dark mode: tokens flip inside
+   .dash--st automatically; explicit [data-theme="dark"] overrides below give
+   dark fallbacks for standalone use.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Responsive tile grid — 4-up wide, 2-up narrow (matches .tiles) */
+.stat-tile-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+@media (max-width: 640px) {
+  .stat-tile-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* The tile */
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px 16px 13px;
+  background: var(--st-surface, #fffefb);
+  color: var(--st-ink, #1b2230);
+  border: 1px solid var(--st-line, rgba(64, 50, 26, 0.12));
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(64, 50, 26, 0.05);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+/* Hover: subtle lift + stronger border + soft shadow */
+.stat-tile:hover {
+  border-color: var(--st-line-strong, rgba(64, 50, 26, 0.22));
+  box-shadow: 0 4px 18px -6px rgba(64, 50, 26, 0.15);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-tile {
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  .stat-tile:hover {
+    transform: none;
+  }
+}
+
+/* Mono uppercase micro-label */
+.stat-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--st-mono, ui-monospace, "Geist Mono", Menlo, monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--st-muted, #746a59);
+}
+.stat-tile__icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--st-muted, #746a59);
+}
+
+/* Value row */
+.stat-tile__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.stat-tile__value {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  color: var(--st-ink, #1b2230);
+}
+.stat-tile__unit {
+  margin-left: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--st-muted, #746a59);
+}
+
+/* Delta / caption line — mono, colored by tone */
+.stat-tile__delta {
+  font-family: var(--st-mono, ui-monospace, "Geist Mono", Menlo, monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--st-muted, #746a59);
+}
+.stat-tile__delta-marker {
+  font-size: 9px;
+}
+.stat-tile__delta--good { color: var(--st-good, #157f43); }
+.stat-tile__delta--accent { color: var(--st-accent, #0857a6); }
+.stat-tile__delta--warn { color: var(--st-warn, #bd6f0f); }
+.stat-tile__delta--muted { color: var(--st-muted, #746a59); }
+
+/* ── Dark mode ──────────────────────────────────────────────────────────
+   Inside .dash--st the --st-* tokens already flip, so var() resolves to the
+   dark value with no help. These rules cover STANDALONE use (no .dash--st
+   ancestor): var() falls through to the dark fallbacks below. */
+[data-theme="dark"] .stat-tile {
+  background: var(--st-surface, #111a2b);
+  color: var(--st-ink, #e6ecf5);
+  border-color: var(--st-line, rgba(255, 255, 255, 0.10));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .stat-tile:hover {
+  border-color: var(--st-line-strong, rgba(255, 255, 255, 0.20));
+  box-shadow: 0 6px 22px -6px rgba(0, 0, 0, 0.55);
+}
+[data-theme="dark"] .stat-tile__label,
+[data-theme="dark"] .stat-tile__icon,
+[data-theme="dark"] .stat-tile__unit,
+[data-theme="dark"] .stat-tile__delta--muted { color: var(--st-muted, #8291a6); }
+[data-theme="dark"] .stat-tile__value { color: var(--st-ink, #e6ecf5); }
+[data-theme="dark"] .stat-tile__delta--good { color: var(--st-good, #2fbf6b); }
+[data-theme="dark"] .stat-tile__delta--accent { color: var(--st-accent, #4a93dd); }
+[data-theme="dark"] .stat-tile__delta--warn { color: var(--st-warn, #f0a03e); }

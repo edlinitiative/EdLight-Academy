@@ -357,31 +357,45 @@ button.dash-activity__tag { cursor: pointer; }
    tabular numerals, status dots + semantic bars. Academy blue accent.
    ══════════════════════════════════════════════════════════════════════ */
 .dash--st {
-  --st-ground: #faf5ec;
-  --st-surface: #fffdf9;
-  --st-ink: #1a2230;
-  --st-ink-2: #444a52;
-  --st-muted: #726a5c;
-  --st-line: rgba(74, 58, 33, 0.14);
-  --st-line-strong: rgba(74, 58, 33, 0.26);
+  /* Warm-light primary (values match the approved design artifact). */
+  --st-ground: #faf6ee;
+  --st-band: #f4ede0;
+  --st-surface: #fffefb;
+  --st-surface-2: #fbf7ef;
+  --st-ink: #1b2230;
+  --st-ink-2: #434c5a;
+  --st-muted: #746a59;
+  --st-faint: #ab9f8b;
+  --st-line: rgba(64, 50, 26, 0.12);
+  --st-line-strong: rgba(64, 50, 26, 0.22);
   --st-accent: #0857a6;
-  --st-good: #158043;
-  --st-warn: #c1720f;
-  --st-crit: #cf3636;
+  --st-accent-600: #064883;
+  --st-accent-tint: rgba(8, 87, 166, 0.08);
+  --st-good: #157f43;
+  --st-warn: #bd6f0f;
+  --st-crit: #c93434;
+  --st-dot: rgba(64, 50, 26, 0.09);
   --st-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
+/* Dark = opt-in night mode (kept per product; warm-light is primary). */
 [data-theme="dark"] .dash--st {
-  --st-ground: #0b1220;
-  --st-surface: #111a2b;
-  --st-ink: #e6ecf5;
-  --st-ink-2: #b7c3d6;
-  --st-muted: #8291a6;
+  --st-ground: #0a111e;
+  --st-band: #0d1524;
+  --st-surface: #121c2e;
+  --st-surface-2: #0f1727;
+  --st-ink: #e8eef7;
+  --st-ink-2: #b6c2d5;
+  --st-muted: #8496ac;
+  --st-faint: #566880;
   --st-line: rgba(255, 255, 255, 0.10);
-  --st-line-strong: rgba(255, 255, 255, 0.20);
-  --st-accent: #4a93dd;
-  --st-good: #2fbf6b;
+  --st-line-strong: rgba(255, 255, 255, 0.19);
+  --st-accent: #57a0e6;
+  --st-accent-600: #78b3ec;
+  --st-accent-tint: rgba(87, 160, 230, 0.15);
+  --st-good: #34c470;
   --st-warn: #f0a03e;
   --st-crit: #f26a6a;
+  --st-dot: rgba(255, 255, 255, 0.06);
 }
 
 /* Warm ground for the whole dashboard section */
@@ -465,3 +479,16 @@ button.dash-activity__tag { cursor: pointer; }
 /* Empty-state + study-plan buttons keep sharp corners */
 .dash--st .button,
 .dash--st .dash-studyplan__btn { border-radius: 6px !important; }
+
+/* ── ST hero + tiles layout (integration scaffolding) ─────────────────── */
+.dash--st .dash__hero {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 16px;
+  margin: 0 0 16px;
+}
+.dash--st .dash__hero > .readiness-card { margin: 0; }
+.dash--st .dash__tiles { margin: 0 0 18px; }
+@media (max-width: 900px) {
+  .dash--st .dash__hero { grid-template-columns: 1fr; }
+}

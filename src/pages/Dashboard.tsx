@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Flame, Target, ClipboardList, BookOpen, ChevronRight, BarChart3, CheckCircle2 } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 import useStore from '../contexts/store';
 import ReadinessCard from '../components/ReadinessCard';
-import HomeWidgets from '../components/HomeWidgets';
+import Countdown from '../components/Countdown';
+import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
@@ -95,8 +97,6 @@ export default function Dashboard() {
     staleTime: 60 * 1000,
   });
 
-  const coursesInProgress = enrolledCourses.length;
-
   // Quiz stats: prefer Firestore attempts (cross-device), fallback to local attempts.
   const fallbackQuizAttemptsList = Object.entries(quizAttempts)
     .flatMap(([quizId, attempts]) => (attempts || []).map((attempt) => ({ ...attempt, quizId })))
@@ -147,6 +147,8 @@ export default function Dashboard() {
     () => (allProgress || []).reduce((m, p) => Math.max(m, p?.currentStreak || 0), 0),
     [allProgress]
   );
+
+  const { myRank } = useLeaderboard(50);
 
   const firstName = getFirstName(user);
 
@@ -239,14 +241,47 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* "What should I do next?" — countdown, daily challenge, rank, recommendation */}
-        <HomeWidgets recommendedCourse={recommendedCourse} />
+        {/* HERO — flagship readiness gauge + Bac countdown */}
+        <div className="dash__hero" data-reveal>
+          <ReadinessCard />
+          <Countdown />
+        </div>
+
+        {/* Glanceable stat tiles */}
+        <div className="dash__tiles" data-reveal>
+          <StatTileRow>
+            <StatTile
+              label={isCreole ? 'Seri' : 'Série'}
+              value={currentStreak}
+              unit={isCreole ? 'jou' : 'j'}
+              tone={currentStreak > 0 ? 'good' : 'muted'}
+              delta={isCreole ? 'jou youn dèyè lòt' : 'jours consécutifs'}
+            />
+            <StatTile
+              label={isCreole ? 'Quiz fini' : 'Quiz faits'}
+              value={quizzesTaken}
+              tone="accent"
+              delta={isCreole ? 'total' : 'au total'}
+            />
+            <StatTile
+              label={isCreole ? 'Mwayèn' : 'Score moyen'}
+              value={quizzesTaken ? `${avgScore}` : '—'}
+              unit={quizzesTaken ? '%' : undefined}
+              tone={avgScore >= 70 ? 'good' : avgScore >= 50 ? 'warn' : 'muted'}
+              delta={isCreole ? 'sou tout quiz yo' : 'sur tous les quiz'}
+            />
+            <StatTile
+              label={isCreole ? 'Klasman' : 'Rang · classe'}
+              value={myRank ? `#${myRank}` : '—'}
+              tone="accent"
+              delta={isCreole ? 'semèn sa a' : 'cette semaine'}
+            />
+          </StatTileRow>
+        </div>
 
         <div className="dash__body">
           {/* ───────────── MAIN COLUMN ───────────── */}
           <div className="dash__main">
-            {/* Flagship: "are you ready for the Bac?" */}
-            <ReadinessCard />
 
             {/* Continue learning */}
             <section className="dash-panel">
@@ -413,30 +448,6 @@ export default function Dashboard() {
 
           {/* ───────────── SIDE COLUMN ───────────── */}
           <aside className="dash__side">
-            {/* Compact KPI strip (replaces the old metric-card + ProgressDashboard sprawl) */}
-            <div className="dash-kpis">
-              <div className="dash-kpi">
-                <span className="dash-kpi__icon"><BookOpen size={17} /></span>
-                <span className="dash-kpi__value">{coursesInProgress}</span>
-                <span className="dash-kpi__label">{isCreole ? 'Kou aktif' : 'Cours actifs'}</span>
-              </div>
-              <div className="dash-kpi dash-kpi--green">
-                <span className="dash-kpi__icon"><CheckCircle2 size={17} /></span>
-                <span className="dash-kpi__value">{quizzesTaken}</span>
-                <span className="dash-kpi__label">{isCreole ? 'Quiz fini' : 'Quiz faits'}</span>
-              </div>
-              <div className="dash-kpi dash-kpi--violet">
-                <span className="dash-kpi__icon"><BarChart3 size={17} /></span>
-                <span className="dash-kpi__value">{quizzesTaken ? `${avgScore}%` : '—'}</span>
-                <span className="dash-kpi__label">{isCreole ? 'Mwayèn' : 'Score moyen'}</span>
-              </div>
-              <div className="dash-kpi dash-kpi--amber">
-                <span className="dash-kpi__icon"><Flame size={17} /></span>
-                <span className="dash-kpi__value">{currentStreak}</span>
-                <span className="dash-kpi__label">{isCreole ? 'Seri jou' : 'Série'}</span>
-              </div>
-            </div>
-
             {/* Weekly leaderboard */}
             <Leaderboard variant="compact" />
 
