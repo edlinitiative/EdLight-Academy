@@ -45,10 +45,17 @@ export async function loginWithEmailPassword(email, password) {
     const { signIn, upsertUserDocument } = await loadFirebase();
     const result = await signIn(email, password);
     const user = result.user;
-    
-    // Update user document in Firestore (update last_seen)
-    await upsertUserDocument(user, false);
-    
+
+    // Update user document in Firestore (update last_seen). This is a
+    // non-critical side-effect: authentication has already succeeded, so a
+    // Firestore hiccup here must NOT fail the login (which would leave the
+    // sign-in modal stuck open over an already-authenticated app).
+    try {
+      await upsertUserDocument(user, false);
+    } catch (err) {
+      console.warn('Could not update user document on login:', err);
+    }
+
     // Sync track/onboarding from Firestore
     await syncUserProfile(user.uid);
     
@@ -68,9 +75,15 @@ export async function registerWithEmailPassword(email, password, name) {
     const { signUp, upsertUserDocument } = await loadFirebase();
     const result = await signUp(email, password, name);
     const user = result.user;
-    
-    // Create user document in Firestore (new user)
-    await upsertUserDocument(user, true);
+
+    // Create user document in Firestore (new user). Non-critical: if this
+    // write fails the account still exists and the document is created on the
+    // next login (upsert recreates a missing doc), so it must not fail signup.
+    try {
+      await upsertUserDocument(user, true);
+    } catch (err) {
+      console.warn('Could not create user document on signup:', err);
+    }
     
     return {
       uid: user.uid,
@@ -90,10 +103,15 @@ export async function loginWithGoogle() {
     const user = result.user;
     
     const isNewUser = result.isNewUser ?? false;
-    
-    // Create or update user document in Firestore
-    await upsertUserDocument(user, isNewUser);
-    
+
+    // Create or update user document in Firestore. Non-critical side-effect —
+    // auth already succeeded, so a Firestore failure must not fail the login.
+    try {
+      await upsertUserDocument(user, isNewUser);
+    } catch (err) {
+      console.warn('Could not upsert user document on Google login:', err);
+    }
+
     // Sync track/onboarding from Firestore
     await syncUserProfile(user.uid);
     

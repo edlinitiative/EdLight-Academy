@@ -24,6 +24,29 @@ export function AuthModal({ onClose }) {
   const modalRef = useRef(null);
 
   const setUser = useStore(state => state.setUser);
+  const isAuthenticated = useStore(state => state.isAuthenticated);
+
+  // Auth is the source of truth for "am I signed in". Close the modal as soon
+  // as the store reports an authenticated session — this covers the case where
+  // Firebase auth succeeds but a non-critical follow-up (e.g. a Firestore
+  // last_seen write) throws, which would otherwise leave this modal stuck open
+  // on top of an already-logged-in app.
+  //
+  // `confirmingRef` is set synchronously by our own submit handlers before they
+  // flip auth state, so when the sign-in/sign-up we initiated succeeds we let
+  // its timed close run (preserving the brief confirmation, incl. the signup
+  // "check your email" notice). The effect then only auto-closes when auth
+  // becomes true by some *other* path (e.g. Firebase's global listener firing
+  // after a follow-up write threw). A ref, not the `success` state, so it can't
+  // be missed by an intermediate render before setSuccess commits.
+  const confirmingRef = useRef(false);
+  const autoClosedRef = useRef(false);
+  useEffect(() => {
+    if (isAuthenticated && !confirmingRef.current && !autoClosedRef.current) {
+      autoClosedRef.current = true;
+      onClose();
+    }
+  }, [isAuthenticated, onClose]);
 
   // Lock the page behind the sheet, trap focus inside it, and enable
   // drag-down-to-dismiss on touch — the .auth-modal element is the scroller.
@@ -85,6 +108,9 @@ export function AuthModal({ onClose }) {
         userData = await registerWithEmailPassword(email, password, name);
       }
 
+      // Mark that we're showing our own confirmation, so the auth-reactive
+      // effect lets this timed close run instead of closing instantly.
+      confirmingRef.current = true;
       setUser(userData);
       if (activeTab === 'signin') {
         setSuccess(t('auth.signedIn'));
@@ -134,6 +160,7 @@ export function AuthModal({ onClose }) {
 
     try {
       const userData = await loginWithGoogle();
+      confirmingRef.current = true;
       setUser(userData);
       setSuccess(t('auth.googleSuccess'));
 

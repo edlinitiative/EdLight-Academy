@@ -226,7 +226,10 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
             onClick={() => handleSelect(idx)}
             disabled={answered}
           >
-            <span className="trivia-option__letter">
+            {/* A/B/C/D is a pure UI scaffold, not content. Mark it non-translatable
+                so browser auto-translation (e.g. Google Translate on the French
+                page) can't turn a lone "A" into "HAS". */}
+            <span className="trivia-option__letter" translate="no">
               {String.fromCharCode(65 + idx)}
             </span>
             <span className="trivia-option__text">{opt}</span>
