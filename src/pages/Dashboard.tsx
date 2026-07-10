@@ -242,13 +242,13 @@ export default function Dashboard() {
         </header>
 
         {/* HERO — flagship readiness gauge + Bac countdown */}
-        <div className="dash__hero" data-reveal>
+        <div className="dash__hero">
           <ReadinessCard />
           <Countdown />
         </div>
 
         {/* Glanceable stat tiles */}
-        <div className="dash__tiles" data-reveal>
+        <div className="dash__tiles">
           <StatTileRow>
             <StatTile
               label={isCreole ? 'Seri' : 'Série'}

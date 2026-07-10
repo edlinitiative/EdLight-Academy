@@ -8,7 +8,7 @@
  * Hand-written (no build tooling) so it stays simple and reviewable.
  * Bump CACHE_VERSION to force-refresh all caches after a structural change.
  */
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;

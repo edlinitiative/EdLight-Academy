@@ -398,8 +398,12 @@ button.dash-activity__tag { cursor: pointer; }
   --st-dot: rgba(255, 255, 255, 0.06);
 }
 
-/* Warm ground for the whole dashboard section */
-.section:has(.dash--st) { background: var(--st-ground) !important; }
+/* Warm ground for the whole dashboard section. Literal values (not var(--st-*))
+   because the section is the ANCESTOR of .dash--st and CSS custom properties do
+   not inherit upward. `background:` (shorthand) also cancels the global blue
+   radial body-gradient that would otherwise bleed through at the top. */
+.section:has(.dash--st) { background: #faf6ee !important; }
+[data-theme="dark"] .section:has(.dash--st) { background: #0a111e !important; }
 
 .dash--st .num,
 .dash--st .dash-kpi__value,
