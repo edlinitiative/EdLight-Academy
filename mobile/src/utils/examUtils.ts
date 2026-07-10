@@ -1387,6 +1387,71 @@ export function gradeMatchingAnswer(question: any, userAnswer: any) {
  * the /api/grade-essay endpoint.  When provided for an essay question the
  * function uses it instead of returning 'manual'.
  */
+// Operator synonyms for the guided condition builder — normalize spellings.
+const CONDITION_OPERATORS: Record<string, string> = {
+  '>': '>',
+  '<': '<',
+  '=': '=', '==': '=',
+  '≥': '≥', '>=': '≥', '⩾': '≥', '=>': '≥',
+  '≤': '≤', '<=': '≤', '⩽': '≤', '=<': '≤',
+  '≠': '≠', '!=': '≠', '<>': '≠', '=/=': '≠',
+};
+function normalizeOperator(op: any): string {
+  if (op == null) return '';
+  const s = String(op).trim();
+  return CONDITION_OPERATORS[s] || s;
+}
+
+/**
+ * Grade a guided "condition builder" answer. The question carries
+ * `conditions: [{ left, operator, value, alternatives? }]`; the student's answer
+ * is a JSON array of `{ operator, value }` rows. A row satisfies an expected
+ * condition iff operator matches (synonym-aware) AND value matches via
+ * answerMatches. Order-independent; proportional score. Returns null when the
+ * question has no `conditions` (callers fall through unchanged).
+ */
+function gradeConditionsAnswer(question: any, userAnswer: any, options: Record<string, any> = {}) {
+  const conditions = question.conditions;
+  if (!Array.isArray(conditions) || conditions.length === 0) return null;
+
+  let rows: any[] = [];
+  try {
+    const parsed = typeof userAnswer === 'string' ? JSON.parse(userAnswer) : userAnswer;
+    if (Array.isArray(parsed)) rows = parsed;
+    else if (parsed && Array.isArray(parsed.conditions)) rows = parsed.conditions;
+  } catch { /* not condition JSON */ }
+
+  const hasContent = rows.some(
+    (r) => r && (String(r.operator || '').trim() || String(r.value || '').trim()),
+  );
+  if (!hasContent) return { status: 'unanswered' };
+
+  const used = new Array(rows.length).fill(false);
+  const blankResults = conditions.map((cond: any) => {
+    const expectedOp = normalizeOperator(cond.operator);
+    let matchIdx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      if (used[i] || !rows[i]) continue;
+      const opOk = normalizeOperator(rows[i].operator) === expectedOp;
+      const valOk = answerMatches(rows[i].value, cond.value, cond.alternatives || [], options);
+      if (opOk && valOk) { matchIdx = i; break; }
+    }
+    if (matchIdx >= 0) used[matchIdx] = true;
+    return {
+      label: cond.left,
+      correct: matchIdx >= 0,
+      expected: `${cond.left} ${cond.operator} ${cond.value}`,
+      userValue: matchIdx >= 0 ? `${rows[matchIdx].operator || ''} ${rows[matchIdx].value || ''}`.trim() : '',
+    };
+  });
+
+  const correctCount = blankResults.filter((b: any) => b.correct).length;
+  const total = conditions.length;
+  const ratio = total > 0 ? correctCount / total : 0;
+  const status = correctCount === total ? 'correct' : correctCount > 0 ? 'partial' : 'incorrect';
+  return { status, ratio, blankResults };
+}
+
 export function gradeSingleQuestion(question: any, userAnswer: any, preGradedEssay: any, options: Record<string, any> = {}) {
   const pts = question.points || 1;
   const meta = (QUESTION_TYPE_META as Record<string, any>)[question.type] || QUESTION_TYPE_META.unknown;
@@ -1398,6 +1463,22 @@ export function gradeSingleQuestion(question: any, userAnswer: any, preGradedEss
       userAnswer: null,
       status: 'unanswered',
       result: { awarded: 0, maxPoints: pts },
+    };
+  }
+
+  // Guided condition-builder answer ([{operator,value}]) — grade by structured
+  // conditions regardless of the free-text `correct`.
+  const conditionsGraded = gradeConditionsAnswer(question, userAnswer, options);
+  if (conditionsGraded) {
+    if (conditionsGraded.status === 'unanswered') {
+      return { question, userAnswer: null, status: 'unanswered', result: { awarded: 0, maxPoints: pts } };
+    }
+    const awarded = Math.round(pts * (conditionsGraded.ratio || 0) * 100) / 100;
+    return {
+      question,
+      userAnswer,
+      status: conditionsGraded.status,
+      result: { awarded, maxPoints: pts, blankResults: conditionsGraded.blankResults },
     };
   }
 
@@ -1589,6 +1670,33 @@ export function gradeExam(questions: any, answers: any, preGradedResults: Record
         userAnswer: null,
         status: 'unanswered',
         result: { awarded: 0, maxPoints: pts },
+      };
+    }
+
+    // Guided condition-builder answer ([{operator,value}]) — grade by structured
+    // conditions regardless of the free-text `correct`. Mirrors gradeSingleQuestion.
+    const conditionsGraded = gradeConditionsAnswer(q, userAnswer, options);
+    if (conditionsGraded) {
+      if (conditionsGraded.status === 'unanswered') {
+        unanswered++;
+        return {
+          question: q,
+          userAnswer: null,
+          status: 'unanswered',
+          result: { awarded: 0, maxPoints: pts },
+        };
+      }
+      const awarded = Math.round(pts * (conditionsGraded.ratio || 0) * 100) / 100;
+      autoGraded++;
+      earnedPoints += awarded;
+      if (conditionsGraded.status === 'correct') correctCount++;
+      else if (conditionsGraded.status === 'partial') correctCount += conditionsGraded.ratio || 0;
+      else incorrectCount++;
+      return {
+        question: q,
+        userAnswer,
+        status: conditionsGraded.status,
+        result: { awarded, maxPoints: pts, blankResults: conditionsGraded.blankResults },
       };
     }
 

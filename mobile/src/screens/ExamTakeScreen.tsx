@@ -17,6 +17,7 @@ import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
 import ExamAnswerInput, { WordCountAnswer, looksMathy } from '../components/ExamAnswerInput';
 import ScaffoldAnswer, { usesScaffold, scaffoldNeedsMath, MATH_SUBJECTS } from '../components/ScaffoldAnswer';
+import ConditionBuilder from '../components/ConditionBuilder';
 import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import ExamSectionContext from '../components/ExamSectionContext';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -651,7 +652,15 @@ export default function ExamTakeScreen() {
           </View>
 
           {/* Answer area */}
-          {['mcq', 'multiple_choice', 'qcm'].includes(qType) ? (
+          {Array.isArray(q?.conditions) && q.conditions.length > 0 ? (
+            // Guided condition builder (domain / sign / inequality) — pre-filled
+            // left expr + operator picker + value; graded by gradeConditionsAnswer.
+            <ConditionBuilder
+              question={q}
+              value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
+              onChange={(v) => setAnswer(safeIdx, v)}
+            />
+          ) : ['mcq', 'multiple_choice', 'qcm'].includes(qType) ? (
             <MCQQuestion
               question={q}
               answer={answers[safeIdx] ?? null}

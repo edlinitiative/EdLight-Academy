@@ -1,4 +1,4 @@
-import { gradeSingleQuestion } from '../examUtils';
+import { gradeSingleQuestion, gradeExam } from '../examUtils';
 
 /**
  * Grading contract for the guided "condition builder" answer type.
@@ -81,5 +81,26 @@ describe('condition-builder grading', () => {
     const plain = { type: 'fill_blank', points: 1, correct: '42' };
     const r = gradeSingleQuestion(plain, '42');
     expect(r.status).toBe('correct');
+  });
+
+  // Final-submit path: gradeExam duplicates grading logic (does not delegate to
+  // gradeSingleQuestion), so conditions must be handled there too.
+  it('grades conditions on the final-submit path (gradeExam)', () => {
+    const { summary, results } = gradeExam(
+      [domainQuestion],
+      { 0: answer([{ operator: '>', value: '0' }, { operator: '≠', value: '2' }]) },
+    );
+    expect(results[0].status).toBe('correct');
+    expect(results[0].result.awarded).toBe(4);
+    expect(summary.earnedPoints).toBe(4);
+  });
+
+  it('gives partial credit on gradeExam too', () => {
+    const { results } = gradeExam(
+      [domainQuestion],
+      { 0: answer([{ operator: '>', value: '0' }, { operator: '=', value: '2' }]) },
+    );
+    expect(results[0].status).toBe('partial');
+    expect(results[0].result.awarded).toBe(2);
   });
 });

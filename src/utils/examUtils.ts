@@ -1684,6 +1684,33 @@ export function gradeExam(questions, answers, preGradedResults = {}, options = {
       };
     }
 
+    // Guided condition-builder answer ([{operator,value}]) — grade by structured
+    // conditions regardless of the free-text `correct`. Mirrors gradeSingleQuestion.
+    const conditionsGraded = gradeConditionsAnswer(q, userAnswer, options);
+    if (conditionsGraded) {
+      if (conditionsGraded.status === 'unanswered') {
+        unanswered++;
+        return {
+          question: q,
+          userAnswer: null,
+          status: 'unanswered',
+          result: { awarded: 0, maxPoints: pts },
+        };
+      }
+      const awarded = Math.round(pts * conditionsGraded.ratio * 100) / 100;
+      autoGraded++;
+      earnedPoints += awarded;
+      if (conditionsGraded.status === 'correct') correctCount++;
+      else if (conditionsGraded.status === 'partial') correctCount += conditionsGraded.ratio || 0;
+      else incorrectCount++;
+      return {
+        question: q,
+        userAnswer,
+        status: conditionsGraded.status,
+        result: { awarded, maxPoints: pts, blankResults: conditionsGraded.blankResults },
+      };
+    }
+
     // Interactive scaffold answer ({scaffold:[...]}) — grade by blanks,
     // regardless of any single `correct` value (math/science included).
     const scaffoldGraded = gradeScaffoldAnswer(q, userAnswer, options);
