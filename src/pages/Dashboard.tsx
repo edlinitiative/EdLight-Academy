@@ -212,12 +212,19 @@ export default function Dashboard() {
 
   return (
     <section className="section">
-      <div className="container dash">
+      <div className="container dash dash--st">
+        <div className="dash__statusline">
+          <span className="dash__status-dot" aria-hidden="true" />
+          <span>{isCreole ? 'Sesyon aktif' : 'Session active'}</span>
+          <span className="dash__status-sep">·</span>
+          <span>{isCreole ? 'Tablodbò' : 'Tableau de bord'}</span>
+          <span className="dash__status-sep">·</span>
+          <span>{isCreole ? 'Preparasyon Bak' : 'Préparation Bac'}</span>
+        </div>
         <header className="dash__header">
           <div>
-            <span className="dash__eyebrow">{isCreole ? 'Tablodbò' : 'Tableau de bord'}</span>
             <h1 className="dash__title">
-              {isCreole ? 'Bonjou ' : 'Bonjour '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>
+              {isCreole ? 'Bonjou, ' : 'Bonjour, '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>.
             </h1>
             <p className="dash__subtitle">
               {isCreole

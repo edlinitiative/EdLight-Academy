@@ -349,3 +349,119 @@ button.dash-activity__tag { cursor: pointer; }
   .dash *::before,
   .dash *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   STRUCTURED-TECHNICAL — warm "mission-control" dashboard skin
+   Scoped to .dash--st so it never bleeds. Warm paper ground, monospace
+   micro-labels, tight grotesque headings, sharp corners, hairline borders,
+   tabular numerals, status dots + semantic bars. Academy blue accent.
+   ══════════════════════════════════════════════════════════════════════ */
+.dash--st {
+  --st-ground: #faf5ec;
+  --st-surface: #fffdf9;
+  --st-ink: #1a2230;
+  --st-ink-2: #444a52;
+  --st-muted: #726a5c;
+  --st-line: rgba(74, 58, 33, 0.14);
+  --st-line-strong: rgba(74, 58, 33, 0.26);
+  --st-accent: #0857a6;
+  --st-good: #158043;
+  --st-warn: #c1720f;
+  --st-crit: #cf3636;
+  --st-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+[data-theme="dark"] .dash--st {
+  --st-ground: #0b1220;
+  --st-surface: #111a2b;
+  --st-ink: #e6ecf5;
+  --st-ink-2: #b7c3d6;
+  --st-muted: #8291a6;
+  --st-line: rgba(255, 255, 255, 0.10);
+  --st-line-strong: rgba(255, 255, 255, 0.20);
+  --st-accent: #4a93dd;
+  --st-good: #2fbf6b;
+  --st-warn: #f0a03e;
+  --st-crit: #f26a6a;
+}
+
+/* Warm ground for the whole dashboard section */
+.section:has(.dash--st) { background: var(--st-ground) !important; }
+
+.dash--st .num,
+.dash--st .dash-kpi__value,
+.dash--st .dash-course__pct,
+.dash--st .dash-activity__tag { font-variant-numeric: tabular-nums; }
+
+/* Status line */
+.dash--st .dash__statusline {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-family: var(--st-mono); text-transform: uppercase; letter-spacing: 0.09em;
+  font-size: 11px; color: var(--st-muted); margin-bottom: 14px;
+}
+.dash--st .dash__status-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--st-good);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--st-good) 22%, transparent);
+}
+.dash--st .dash__status-sep { color: var(--st-line-strong); }
+
+/* Heading — tight grotesque, not serif; accent on the name */
+.dash--st .dash__title {
+  font-family: var(--font-sans) !important;
+  font-weight: 800; letter-spacing: -0.025em; font-size: clamp(26px, 4vw, 38px);
+  color: var(--st-ink);
+}
+.dash--st .dash__title b { color: var(--st-accent); font-weight: 800; }
+.dash--st .dash__subtitle { color: var(--st-muted); }
+
+/* Panels, KPIs, courses → sharp corners + hairline + warm surface */
+.dash--st .dash-panel,
+.dash--st .dash-kpi,
+.dash--st .dash-course,
+.dash--st .dash-studyplan {
+  background: var(--st-surface) !important;
+  border: 1px solid var(--st-line) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+.dash--st .dash-course:hover,
+.dash--st .dash-kpi:hover { border-color: var(--st-line-strong) !important; }
+
+/* Panel + KPI micro-labels → monospace */
+.dash--st .dash-panel__title,
+.dash--st .dash-kpi__label {
+  font-family: var(--st-mono); text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 11px; color: var(--st-muted); font-weight: 500;
+}
+.dash--st .dash-panel__title { font-size: 12px; color: var(--st-ink-2); }
+.dash--st .dash-panel__title svg { color: var(--st-accent); }
+.dash--st .dash-panel__link { font-family: var(--st-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--st-accent); }
+.dash--st .dash-panel__count {
+  font-family: var(--st-mono); font-size: 10px; background: var(--st-line);
+  color: var(--st-muted); border-radius: 3px; padding: 1px 6px;
+}
+
+/* KPI values → big tabular grotesque */
+.dash--st .dash-kpi__value { font-weight: 800; letter-spacing: -0.02em; color: var(--st-ink); }
+.dash--st .dash-kpi__icon { color: var(--st-accent); background: none; }
+.dash--st .dash-kpi--green .dash-kpi__icon { color: var(--st-good); }
+.dash--st .dash-kpi--violet .dash-kpi__icon { color: var(--st-accent); }
+.dash--st .dash-kpi--amber .dash-kpi__icon { color: var(--st-warn); }
+
+/* Course progress bar + percentage */
+.dash--st .dash-course__pct { font-family: var(--st-mono); font-weight: 600; color: var(--st-accent); }
+.dash--st .dash-course__bar { background: var(--st-line); border-radius: 3px; }
+.dash--st .dash-course__bar > span { background: var(--st-accent); border-radius: 3px; }
+.dash--st .dash-course__meta { font-family: var(--st-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--st-muted); }
+.dash--st .dash-course__badge { border-radius: 5px; }
+
+/* Activity rows → mono date, semantic tag chips (sharp) */
+.dash--st .dash-activity__date { font-family: var(--st-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--st-muted); }
+.dash--st .dash-activity__tag {
+  border-radius: 4px !important; font-family: var(--st-mono); font-weight: 600; font-size: 12px;
+}
+.dash--st .dash-activity__tag--success { color: var(--st-good) !important; }
+.dash--st .dash-activity__tag--error { color: var(--st-crit) !important; }
+
+/* Empty-state + study-plan buttons keep sharp corners */
+.dash--st .button,
+.dash--st .dash-studyplan__btn { border-radius: 6px !important; }
