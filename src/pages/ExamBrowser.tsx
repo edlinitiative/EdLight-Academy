@@ -21,6 +21,9 @@ const DIFFICULTY_META = {
   5: { label: 'Difficile', tier: 'hard' },
 };
 
+/** Creole difficulty labels, keyed by tier (parallel to DIFFICULTY_META). */
+const DIFFICULTY_LABEL_HT = { easy: 'Fasil', medium: 'Mwayen', hard: 'Difisil' };
+
 function difficultyMeta(d) {
   return DIFFICULTY_META[d] || null;
 }
@@ -118,6 +121,9 @@ const ExamBrowser = () => {
   const userTrack = useStore((s) => s.track);
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
   const isTerminale = level === 'terminale';
   const [trackFilter, setTrackFilter] = useState('');
   const [showTrackSelector, setShowTrackSelector] = useState(false);
@@ -321,8 +327,8 @@ const ExamBrowser = () => {
       <section className="section">
         <div className="container" aria-busy="true">
           <div className="page-header">
-            <h1 className="page-header__title">Examens</h1>
-            <p className="page-header__subtitle">Chargement du catalogue…</p>
+            <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
+            <p className="page-header__subtitle">{t('Chargement du catalogue…', 'Ap chaje katalòg la…')}</p>
           </div>
           <div className="grid grid--exams" style={{ marginTop: '1.5rem' }}>
             {Array.from({ length: 9 }).map((_, i) => (
@@ -351,10 +357,10 @@ const ExamBrowser = () => {
       <section className="section">
         <div className="container">
           <div className="page-header">
-            <h1 className="page-header__title">Examens</h1>
+            <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
           </div>
           <div className="card card--message">
-            <p>Erreur: {error.message}</p>
+            <p>{t('Erreur', 'Erè')}: {error.message}</p>
           </div>
         </div>
       </section>
@@ -366,12 +372,12 @@ const ExamBrowser = () => {
       <div className="container">
         {/* Header */}
         <div className="page-header exam-browser__header">
-          <h1 className="page-header__title">{LEVEL_LABELS[level] || 'Examens Nationaux'}</h1>
+          <h1 className="page-header__title">{LEVEL_LABELS[level] || t('Examens Nationaux', 'Egzamen Nasyonal')}</h1>
           <p className="page-header__subtitle">
-            Banque d'examens officiels du MENFP{level ? `, ${LEVEL_LABELS[level]}` : ''}
+            {t("Banque d'examens officiels du MENFP", 'Bank egzamen ofisyèl MENFP')}{level ? `, ${LEVEL_LABELS[level]}` : ''}
           </p>
           <p className="page-header__count">
-            {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
+            {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
           </p>
         </div>
 
@@ -384,10 +390,10 @@ const ExamBrowser = () => {
                 <input
                   className="exam-browser__search"
                   type="search"
-                  placeholder="Rechercher…"
+                  placeholder={t('Rechercher…', 'Chèche…')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  aria-label="Rechercher un examen"
+                  aria-label={t('Rechercher un examen', 'Chèche yon egzamen')}
                   enterKeyHint="search"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -398,7 +404,7 @@ const ExamBrowser = () => {
                 className={`exam-browser__filter-toggle ${showFilters ? 'exam-browser__filter-toggle--open' : ''}`}
                 onClick={() => setShowFilters((v) => !v)}
                 aria-expanded={showFilters}
-                aria-label="Filtres"
+                aria-label={t('Filtres', 'Filt')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
                 {dropdownCount > 0 && <span className="exam-browser__filter-badge">{dropdownCount}</span>}
@@ -412,9 +418,9 @@ const ExamBrowser = () => {
                 className="exam-browser__select"
                 value={subjectFilter}
                 onChange={(e) => setSubjectFilter(e.target.value)}
-                aria-label="Filtrer par matière"
+                aria-label={t('Filtrer par matière', 'Filtre dapre matyè')}
               >
-                <option value="">Matière</option>
+                <option value="">{t('Matière', 'Matyè')}</option>
                 {subjects.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -424,9 +430,9 @@ const ExamBrowser = () => {
                 className="exam-browser__select"
                 value={yearFilter}
                 onChange={(e) => setYearFilter(e.target.value)}
-                aria-label="Filtrer par année"
+                aria-label={t('Filtrer par année', 'Filtre dapre ane')}
               >
-                <option value="">Année</option>
+                <option value="">{t('Année', 'Ane')}</option>
                 {years.map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -436,12 +442,12 @@ const ExamBrowser = () => {
                 className="exam-browser__select"
                 value={difficultyFilter}
                 onChange={(e) => setDifficultyFilter(e.target.value)}
-                aria-label="Filtrer par difficulté"
+                aria-label={t('Filtrer par difficulté', 'Filtre dapre difikilte')}
               >
-                <option value="">Difficulté</option>
-                <option value="easy">Facile</option>
-                <option value="medium">Moyen</option>
-                <option value="hard">Difficile</option>
+                <option value="">{t('Difficulté', 'Difikilte')}</option>
+                <option value="easy">{t('Facile', 'Fasil')}</option>
+                <option value="medium">{t('Moyen', 'Mwayen')}</option>
+                <option value="hard">{t('Difficile', 'Difisil')}</option>
               </select>
             </div>
             )}
@@ -454,7 +460,7 @@ const ExamBrowser = () => {
                   onClick={() => setTrackFilter('')}
                   type="button"
                 >
-                  Toutes
+                  {t('Toutes', 'Tout')}
                 </button>
                 {TRACKS.map((t) => (
                   <button
@@ -474,7 +480,7 @@ const ExamBrowser = () => {
                     onClick={() => setShowTrackSelector(true)}
                     type="button"
                   >
-                    Définir ma filière
+                    {t('Définir ma filière', 'Chwazi filyè m')}
                   </button>
                 )}
               </div>
@@ -482,20 +488,20 @@ const ExamBrowser = () => {
 
             {/* Status filter + reset */}
             <div className="exam-browser__summary">
-              <div className="exam-browser__status-filter" role="group" aria-label="Filtrer par statut">
+              <div className="exam-browser__status-filter" role="group" aria-label={t('Filtrer par statut', 'Filtre dapre eta')}>
                 <button
                   type="button"
                   className={`exam-browser__status-chip ${!statusFilter ? 'exam-browser__status-chip--active' : ''}`}
                   onClick={() => setStatusFilter('')}
                 >
-                  Tous
+                  {t('Tous', 'Tout')}
                 </button>
                 <button
                   type="button"
                   className={`exam-browser__status-chip ${statusFilter === 'todo' ? 'exam-browser__status-chip--active' : ''}`}
                   onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
                 >
-                  À faire
+                  {t('À faire', 'Pou fè')}
                 </button>
                 <button
                   type="button"
@@ -503,7 +509,7 @@ const ExamBrowser = () => {
                   onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
                   disabled={summary.done === 0 && statusFilter !== 'done'}
                 >
-                  Terminés
+                  {t('Terminés', 'Fini')}
                 </button>
               </div>
 
@@ -512,10 +518,10 @@ const ExamBrowser = () => {
                   className="exam-browser__clear-btn"
                   onClick={clearFilters}
                   type="button"
-                  aria-label="Réinitialiser les filtres"
+                  aria-label={t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  Effacer
+                  {t('Effacer', 'Efase')}
                 </button>
               )}
             </div>
@@ -525,14 +531,14 @@ const ExamBrowser = () => {
         {/* Results */}
         {filtered.length === 0 ? (
           <div className="card card--message exam-browser__empty">
-            <p>Aucun examen trouvé. Essayez de modifier vos filtres.</p>
+            <p>{t('Aucun examen trouvé. Essayez de modifier vos filtres.', 'Nou pa jwenn okenn egzamen. Eseye chanje filt ou yo.')}</p>
             {hasActiveFilters && (
               <button
                 className="button button--ghost"
                 onClick={clearFilters}
                 type="button"
               >
-                Réinitialiser les filtres
+                {t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}
               </button>
             )}
           </div>
@@ -540,8 +546,8 @@ const ExamBrowser = () => {
           <div className="exam-browser__results">
             <div className="exam-browser__results-head">
               <p className="exam-browser__results-count">
-                {summary.exams} examen{summary.exams !== 1 ? 's' : ''}
-                {summary.done > 0 && <> · {summary.done} terminé{summary.done !== 1 ? 's' : ''}</>}
+                {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
+                {summary.done > 0 && <> · {summary.done} {t('terminé', 'fini')}{summary.done !== 1 ? t('s', '') : ''}</>}
               </p>
               {groups.length > 1 && !forceOpen && (
                 <button
@@ -549,7 +555,7 @@ const ExamBrowser = () => {
                   className="exam-browser__expand-all"
                   onClick={() => setAllOpen(!allOpen)}
                 >
-                  {allOpen ? 'Tout réduire' : 'Tout développer'}
+                  {allOpen ? t('Tout réduire', 'Fèmen tout') : t('Tout développer', 'Louvri tout')}
                 </button>
               )}
             </div>
@@ -568,7 +574,7 @@ const ExamBrowser = () => {
                     <span className="exam-section__swatch" style={{ background: g.color }} aria-hidden="true" />
                     <span className="exam-section__name">{g.subject}</span>
                     <span className="exam-section__count">{g.exams.length}</span>
-                    {g.coef != null && <span className="exam-section__coef">Coef. {g.coef}</span>}
+                    {g.coef != null && <span className="exam-section__coef">{t('Coef.', 'Koef.')} {g.coef}</span>}
                     <svg
                       className={`exam-section__chevron ${open ? 'is-open' : ''}`}
                       width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -631,6 +637,9 @@ const ExamBrowser = () => {
  * and surfaces year, filière, length and difficulty as quiet metadata.
  */
 function ExamCard({ exam, onClick, attempt }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
   const subject = exam._subject || 'Examen';
   // The section header already carries the subject and the card shows the year
   // as a chip, so the heading leads with the real differentiator (topic) and
@@ -656,14 +665,14 @@ function ExamCard({ exam, onClick, attempt }) {
       className={`card exam-card ${attempt ? 'exam-card--done' : ''}`}
       onClick={onClick}
       type="button"
-      aria-label={`${subject} — ${heading}${exam._year ? `, ${exam._year}` : ''}${attempt ? ', déjà fait' : ''}`}
+      aria-label={`${subject} — ${heading}${exam._year ? `, ${exam._year}` : ''}${attempt ? t(', déjà fait', ', deja fèt') : ''}`}
     >
       <div className="exam-card__top">
         <span className="exam-card__year">{exam._year || '—'}</span>
         {attempt && (
           <span className={`exam-card__score exam-card__score${scoreTone}`}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-            {pct != null ? `${pct}%` : 'Fait'}
+            {pct != null ? `${pct}%` : t('Fait', 'Fèt')}
           </span>
         )}
       </div>
@@ -672,16 +681,16 @@ function ExamCard({ exam, onClick, attempt }) {
       {sub && <p className="exam-card__sub" title={sub}>{sub}</p>}
 
       <div className="exam-card__meta">
-        <span>{qCount} question{qCount !== 1 ? 's' : ''}</span>
+        <span>{qCount} {t('question', 'kesyon')}{qCount !== 1 ? t('s', '') : ''}</span>
         {duration > 0 && <span>{duration} min</span>}
-        {diff && <span className={`exam-card__diff exam-card__diff--${diff.tier}`}>{diff.label}</span>}
+        {diff && <span className={`exam-card__diff exam-card__diff--${diff.tier}`}>{t(diff.label, DIFFICULTY_LABEL_HT[diff.tier])}</span>}
       </div>
 
       {tracks.length > 0 && (
-        <p className="exam-card__tracks">Filière : {tracks.join(' · ')}</p>
+        <p className="exam-card__tracks">{t('Filière', 'Filyè')} : {tracks.join(' · ')}</p>
       )}
 
-      <span className="exam-card__cta">Aperçu →</span>
+      <span className="exam-card__cta">{t('Aperçu', 'Apèsi')} →</span>
     </button>
   );
 }

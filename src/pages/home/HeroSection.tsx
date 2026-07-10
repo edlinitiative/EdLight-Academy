@@ -28,7 +28,7 @@ export default function HeroSection({ t }: { t: TFn }) {
             <p className="lp-hero__lede">
               {t(
                 'Cours, quiz adaptatifs et examens blancs alignés sur le programme officiel, pensés pour les élèves haïtiens et conçus comme une expérience premium.',
-                'Kou, quiz adaptatif ak egzamen blan ki swiv pwogram ofisyèl la, pou elèv ayisyen, fè tankou yon eksperyans premye klas.'
+                'Kou, quiz adaptatif ak egzamen blan ki swiv pwogram ofisyèl la, pou elèv ayisyen, epi ki fèt tankou yon eksperyans premye klas.'
               )}
             </p>
 

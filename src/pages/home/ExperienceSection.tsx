@@ -25,7 +25,7 @@ export default function ExperienceSection({ t }: { t: TFn }) {
             <ul className="lp-checklist">
               <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Vidéos HD avec sous-titres en français et créole', 'Videyo HD ak soustit an franse ak kreyòl')}</li>
               <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Installable comme une app, accessible hors-ligne', 'Enstale l tankou yon app, itilize l san entènèt')}</li>
-              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Corrections rédigées par des enseignants', 'Koreksyon ekri pa pwofèsè')}</li>
+              <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Corrections rédigées par des enseignants', 'Koreksyon pwofesè ekri')}</li>
               <li><span className="lp-check"><Check size={14} strokeWidth={3} /></span> {t('Progression synchronisée sur tous vos appareils', 'Pwogresyon ou senkronize sou tout aparèy ou')}</li>
             </ul>
             <div className="lp-hero__actions">
@@ -40,7 +40,7 @@ export default function ExperienceSection({ t }: { t: TFn }) {
             <div className="lp-panel">
               <div className="lp-panel__head">
                 <div className="lp-panel__dots"><span /><span /><span /></div>
-                <span>{t('Tableau de bord', 'Tablo de bò')}</span>
+                <span>{t('Tableau de bord', 'Tablodbò')}</span>
               </div>
               <div className="lp-panel__body">
                 <div className="lp-panel__row">

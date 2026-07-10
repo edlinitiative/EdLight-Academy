@@ -21,7 +21,9 @@ import {
 } from '../services/pushNotificationService';
 
 export default function NotificationCenter({ onClose }) {
-  const { user } = useStore();
+  const { user, language } = useStore();
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
   const [activeTab, setActiveTab] = useState('notifications'); // 'notifications' or 'settings'
   const [notifications, setNotifications] = useState([]);
   const [reminders, setReminders] = useState([]);
@@ -92,8 +94,8 @@ export default function NotificationCenter({ onClose }) {
     tomorrow.setHours(18, 0, 0, 0);
     
     await createStudyReminder(user.uid, {
-      title: "Rappel d'étude quotidien",
-      message: 'Continue ton apprentissage ✨',
+      title: t("Rappel d'étude quotidien", 'Rapèl etid chak jou'),
+      message: t('Continue ton apprentissage ✨', 'Kontinye aprann ✨'),
       scheduledFor: tomorrow.toISOString(),
       recurring: true,
       recurringPattern: 'daily',
@@ -113,8 +115,8 @@ export default function NotificationCenter({ onClose }) {
           /* push optional */
         }
       }
-      await showLocalNotification('Notifications activées ✅', {
-        body: 'Tu recevras tes rappels et tes succès ici.',
+      await showLocalNotification(t('Notifications activées ✅', 'Notifikasyon aktive ✅'), {
+        body: t('Tu recevras tes rappels et tes succès ici.', 'W ap resevwa rapèl ou yo ak siksè ou yo isit la.'),
         tag: 'welcome',
         url: '/dashboard',
       });
@@ -126,12 +128,12 @@ export default function NotificationCenter({ onClose }) {
     // backend isn't configured or reached no devices, fall back to a local one.
     const server = await sendSelfTestPush({
       title: 'Test EdLight 🔔',
-      body: 'Ceci est une notification de test.',
+      body: t('Ceci est une notification de test.', 'Sa a se yon notifikasyon tès.'),
       url: '/dashboard',
     });
     if (server && server.delivered > 0) return;
     await showLocalNotification('Test EdLight 🔔', {
-      body: 'Ceci est une notification de test.',
+      body: t('Ceci est une notification de test.', 'Sa a se yon notifikasyon tès.'),
       tag: 'test',
       url: '/dashboard',
     });
@@ -141,7 +143,7 @@ export default function NotificationCenter({ onClose }) {
     return (
       <div className="notification-center">
         <div className="notification-center__header">
-          <h3>Notifications</h3>
+          <h3>{t('Notifications', 'Notifikasyon')}</h3>
           <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
         </div>
         <div className="notification-center__loading">
@@ -154,7 +156,7 @@ export default function NotificationCenter({ onClose }) {
   return (
     <div className="notification-center">
       <div className="notification-center__header">
-        <h3>Notifications et rappels</h3>
+        <h3>{t('Notifications et rappels', 'Notifikasyon ak rapèl')}</h3>
         <button className="button button--ghost button--sm" onClick={onClose}><X size={16} /></button>
       </div>
 
@@ -163,19 +165,19 @@ export default function NotificationCenter({ onClose }) {
           className={`notification-center__tab ${activeTab === 'notifications' ? 'notification-center__tab--active' : ''}`}
           onClick={() => setActiveTab('notifications')}
         >
-          Notifications {notifications.length > 0 && `(${notifications.length})`}
+          {t('Notifications', 'Notifikasyon')} {notifications.length > 0 && `(${notifications.length})`}
         </button>
         <button
           className={`notification-center__tab ${activeTab === 'reminders' ? 'notification-center__tab--active' : ''}`}
           onClick={() => setActiveTab('reminders')}
         >
-          Rappels {reminders.length > 0 && `(${reminders.length})`}
+          {t('Rappels', 'Rapèl')} {reminders.length > 0 && `(${reminders.length})`}
         </button>
         <button
           className={`notification-center__tab ${activeTab === 'settings' ? 'notification-center__tab--active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          Réglages
+          {t('Réglages', 'Reglaj')}
         </button>
       </div>
 
@@ -184,14 +186,14 @@ export default function NotificationCenter({ onClose }) {
           <div className="notification-permission">
             <div className="notification-permission__icon"><BellRing size={20} /></div>
             <div className="notification-permission__text">
-              <strong>Activer les notifications</strong>
-              <span>Reçois tes rappels d'étude et tes succès, même quand l'app est en arrière-plan.</span>
+              <strong>{t('Activer les notifications', 'Aktive notifikasyon yo')}</strong>
+              <span>{t("Reçois tes rappels d'étude et tes succès, même quand l'app est en arrière-plan.", "Resevwa rapèl etid ou yo ak siksè ou yo, menm lè app la nan background.")}</span>
             </div>
             {permission === 'denied' ? (
-              <span className="notification-permission__blocked">Bloquées dans le navigateur</span>
+              <span className="notification-permission__blocked">{t('Bloquées dans le navigateur', 'Bloke nan navigatè a')}</span>
             ) : (
               <button className="button button--primary button--sm" onClick={handleEnableNotifications}>
-                Activer
+                {t('Activer', 'Aktive')}
               </button>
             )}
           </div>
@@ -206,7 +208,7 @@ export default function NotificationCenter({ onClose }) {
                     className="button button--ghost button--sm"
                     onClick={handleMarkAllRead}
                   >
-                    Tout marquer comme lu
+                    {t('Tout marquer comme lu', 'Make tout kòm li')}
                   </button>
                 </div>
                 {notifications.map(notif => (
@@ -219,13 +221,13 @@ export default function NotificationCenter({ onClose }) {
                       <div className="notification-item__title">{notif.title}</div>
                       <div className="notification-item__message">{notif.message}</div>
                       <div className="notification-item__time">
-                        {notif.createdAt?.toDate ? new Date(notif.createdAt.toDate()).toLocaleString() : 'Just now'}
+                        {notif.createdAt?.toDate ? new Date(notif.createdAt.toDate()).toLocaleString() : t('À l’instant', 'Kounye a')}
                       </div>
                     </div>
                     <button
                       className="notification-item__dismiss"
                       onClick={() => handleMarkRead(notif.id)}
-                      title="Dismiss"
+                      title={t('Marquer comme lu', 'Make kòm li')}
                     >
                       <Check size={16} />
                     </button>
@@ -234,8 +236,8 @@ export default function NotificationCenter({ onClose }) {
               </>
             ) : (
               <div className="notification-empty">
-                <p><PartyPopper size={18} /> Tu es à jour !</p>
-                <p className="text-muted">Aucune nouvelle notification</p>
+                <p><PartyPopper size={18} /> {t('Tu es à jour !', 'Ou ajou !')}</p>
+                <p className="text-muted">{t('Aucune nouvelle notification', 'Pa gen nouvo notifikasyon')}</p>
               </div>
             )}
           </div>
@@ -248,7 +250,7 @@ export default function NotificationCenter({ onClose }) {
                 className="button button--primary button--sm"
                 onClick={handleCreateReminder}
               >
-                + Créer un rappel
+                {t('+ Créer un rappel', '+ Kreye yon rapèl')}
               </button>
             </div>
             {reminders.length > 0 ? (
@@ -258,14 +260,14 @@ export default function NotificationCenter({ onClose }) {
                     <div className="reminder-item__title">{reminder.title}</div>
                     <div className="reminder-item__message">{reminder.message}</div>
                     <div className="reminder-item__schedule">
-                      {reminder.recurring && <><Repeat size={12} /> Récurrent • </>}
-                      Prévu : {new Date(reminder.scheduledFor).toLocaleString()}
+                      {reminder.recurring && <><Repeat size={12} /> {t('Récurrent', 'Repetitif')} • </>}
+                      {t('Prévu :', 'Previ :')} {new Date(reminder.scheduledFor).toLocaleString()}
                     </div>
                   </div>
                   <button
                     className="reminder-item__delete"
                     onClick={() => handleDeleteReminder(reminder.id)}
-                    title="Delete reminder"
+                    title={t('Supprimer le rappel', 'Efase rapèl la')}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -273,8 +275,8 @@ export default function NotificationCenter({ onClose }) {
               ))
             ) : (
               <div className="notification-empty">
-                <p><Clock size={18} /> Aucun rappel actif</p>
-                <p className="text-muted">Crée un rappel pour rester régulier</p>
+                <p><Clock size={18} /> {t('Aucun rappel actif', 'Pa gen rapèl aktif')}</p>
+                <p className="text-muted">{t('Crée un rappel pour rester régulier', 'Kreye yon rapèl pou ou rete regilye')}</p>
               </div>
             )}
           </div>
@@ -282,7 +284,7 @@ export default function NotificationCenter({ onClose }) {
 
         {activeTab === 'settings' && preferences && (
           <div className="notification-settings">
-            <h4>Préférences de notification</h4>
+            <h4>{t('Préférences de notification', 'Preferans notifikasyon')}</h4>
             
             <div className="notification-setting">
               <label className="notification-setting__label">
@@ -291,9 +293,9 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.emailNotifications}
                   onChange={(e) => handlePreferenceChange('emailNotifications', e.target.checked)}
                 />
-                <span>Notifications par e-mail</span>
+                <span>{t('Notifications par e-mail', 'Notifikasyon pa imèl')}</span>
               </label>
-              <p className="text-muted">Reçois les mises à jour importantes par e-mail</p>
+              <p className="text-muted">{t('Reçois les mises à jour importantes par e-mail', 'Resevwa mizajou enpòtan yo pa imèl')}</p>
             </div>
 
             <div className="notification-setting">
@@ -303,9 +305,9 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.studyReminders}
                   onChange={(e) => handlePreferenceChange('studyReminders', e.target.checked)}
                 />
-                <span>Rappels d'étude</span>
+                <span>{t("Rappels d'étude", 'Rapèl etid')}</span>
               </label>
-              <p className="text-muted">Reçois des rappels pour garder ta série d'apprentissage</p>
+              <p className="text-muted">{t("Reçois des rappels pour garder ta série d'apprentissage", 'Resevwa rapèl pou kenbe seri aprantisaj ou')}</p>
             </div>
 
             <div className="notification-setting">
@@ -315,9 +317,9 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.achievementNotifications}
                   onChange={(e) => handlePreferenceChange('achievementNotifications', e.target.checked)}
                 />
-                <span>Notifications de succès</span>
+                <span>{t('Notifications de succès', 'Notifikasyon siksè')}</span>
               </label>
-              <p className="text-muted">Célèbre chaque nouveau badge gagné</p>
+              <p className="text-muted">{t('Célèbre chaque nouveau badge gagné', 'Selebre chak nouvo badj ou genyen')}</p>
             </div>
 
             <div className="notification-setting">
@@ -327,14 +329,14 @@ export default function NotificationCenter({ onClose }) {
                   checked={preferences.weeklyProgress}
                   onChange={(e) => handlePreferenceChange('weeklyProgress', e.target.checked)}
                 />
-                <span>Rapport de progrès hebdomadaire</span>
+                <span>{t('Rapport de progrès hebdomadaire', 'Rapò pwogrè chak semèn')}</span>
               </label>
-              <p className="text-muted">Reçois un résumé de tes progrès de la semaine</p>
+              <p className="text-muted">{t('Reçois un résumé de tes progrès de la semaine', 'Resevwa yon rezime pwogrè ou pou semèn nan')}</p>
             </div>
 
             <div className="notification-setting">
               <label className="notification-setting__label">
-                <span>Heure du rappel</span>
+                <span>{t('Heure du rappel', 'Lè rapèl la')}</span>
                 <input
                   type="time"
                   value={preferences.reminderTime}
@@ -342,28 +344,28 @@ export default function NotificationCenter({ onClose }) {
                   className="notification-setting__time-input"
                 />
               </label>
-              <p className="text-muted">Heure par défaut des rappels quotidiens</p>
+              <p className="text-muted">{t('Heure par défaut des rappels quotidiens', 'Lè pa defo pou rapèl chak jou yo')}</p>
             </div>
 
             <div className="notification-setting">
               <div className="notification-setting__label">
-                <span>Notifications sur cet appareil</span>
+                <span>{t('Notifications sur cet appareil', 'Notifikasyon sou aparèy sa a')}</span>
                 {permission === 'granted' ? (
                   <button className="button button--ghost button--sm" onClick={handleTestNotification}>
-                    Tester
+                    {t('Tester', 'Teste')}
                   </button>
                 ) : permission === 'denied' ? (
-                  <span className="text-muted">Bloquées</span>
+                  <span className="text-muted">{t('Bloquées', 'Bloke')}</span>
                 ) : (
                   <button className="button button--primary button--sm" onClick={handleEnableNotifications}>
-                    Activer
+                    {t('Activer', 'Aktive')}
                   </button>
                 )}
               </div>
               <p className="text-muted">
                 {permission === 'granted'
-                  ? 'Activées — tu recevras rappels et succès sur cet appareil.'
-                  : 'Autorise les notifications pour recevoir tes rappels.'}
+                  ? t('Activées — tu recevras rappels et succès sur cet appareil.', 'Aktive — w ap resevwa rapèl ak siksè sou aparèy sa a.')
+                  : t('Autorise les notifications pour recevoir tes rappels.', 'Otorize notifikasyon yo pou ou resevwa rapèl ou yo.')}
               </p>
             </div>
           </div>

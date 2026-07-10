@@ -56,9 +56,9 @@ export const getFeatured = (t: TFn): FeaturedCourse[] => [
 
 export const getPillars = (t: TFn): Pillar[] => [
   { eyebrow: '01', icon: <BookOpen size={22} strokeWidth={1.8} />, title: t('Cours structurés', 'Kou estriktire'), desc: t('Une progression claire du NS I au NS IV, alignée sur les programmes officiels.', 'Yon pwogresyon klè soti NS I rive NS IV, daprè pwogram ofisyèl yo.') },
-  { eyebrow: '02', icon: <Target size={22} strokeWidth={1.8} />, title: t('Quiz adaptatifs', 'Quiz adaptatif'), desc: t('Des questions ciblées qui s’ajustent à votre niveau et renforcent vos lacunes.', 'Kesyon ki ajiste ak nivo ou epi ranfòse pwen fèb yo.') },
-  { eyebrow: '03', icon: <PenLine size={22} strokeWidth={1.8} />, title: t('Examens blancs', 'Egzamen blan'), desc: t('Simulez le Bac dans des conditions réelles, avec correction détaillée.', 'Simile Bak la nan kondisyon reyèl ak koreksyon detaye.') },
-  { eyebrow: '04', icon: <BarChart3 size={22} strokeWidth={1.8} />, title: t('Suivi premium', 'Swivi premye klas'), desc: t('Tableaux de bord, streaks et plans d’étude personnalisés.', 'Tablo de bò, seri jou ak plan etid pèsonalize.') },
+  { eyebrow: '02', icon: <Target size={22} strokeWidth={1.8} />, title: t('Quiz adaptatifs', 'Quiz adaptatif'), desc: t('Des questions ciblées qui s’ajustent à votre niveau et renforcent vos lacunes.', 'Kesyon vize ki ajiste ak nivo ou epi ranfòse pwen fèb ou yo.') },
+  { eyebrow: '03', icon: <PenLine size={22} strokeWidth={1.8} />, title: t('Examens blancs', 'Egzamen blan'), desc: t('Simulez le Bac dans des conditions réelles, avec correction détaillée.', 'Antrene w pou Bak la nan kondisyon reyèl, ak koreksyon detaye.') },
+  { eyebrow: '04', icon: <BarChart3 size={22} strokeWidth={1.8} />, title: t('Suivi premium', 'Swivi premye klas'), desc: t('Tableaux de bord, streaks et plans d’étude personnalisés.', 'Tablodbò, seri jou ak plan etid pèsonalize.') },
 ];
 
 export const getStats = (t: TFn): Stat[] => [
@@ -71,7 +71,7 @@ export const getStats = (t: TFn): Stat[] => [
 export const getTestimonials = (t: TFn): Testimonial[] => [
   { quote: t('« EdLight a transformé ma préparation au Bac. Les corrections détaillées ont fait toute la différence. »', '« EdLight chanje preparasyon Bak mwen. Koreksyon detaye yo fè yon gwo diferans. »'), name: 'Carline J.', role: t('Élève NS IV, Port-au-Prince', 'Elèv NS IV, Pòtoprens') },
   { quote: t('« Les quiz interactifs rendent l’apprentissage addictif. Je viens chaque jour. »', '« Quiz entèaktif yo rann aprantisaj la trè enteresan. Mwen vini chak jou. »'), name: 'Jean P.', role: t('Élève NS III, Cap-Haïtien', 'Elèv NS III, Okap') },
-  { quote: t('« Une plateforme moderne, pensée pour les élèves haïtiens. Enfin ! »', '« Yon platfòm modèn, panse pou elèv ayisyen. Anfen ! »'), name: 'Mme Pierre', role: t('Enseignante, Les Cayes', 'Pwofesè, Okay') },
+  { quote: t('« Une plateforme moderne, pensée pour les élèves haïtiens. Enfin ! »', '« Yon platfòm modèn, ki fèt pou elèv ayisyen yo. Anfen ! »'), name: 'Mme Pierre', role: t('Enseignante, Les Cayes', 'Pwofesè, Okay') },
 ];
 
 /** Inline arrow glyph reused across hero CTA and section links. */

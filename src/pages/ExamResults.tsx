@@ -60,6 +60,9 @@ function computeMastery(results, keyFn) {
 
 /** A single labelled mastery progress bar. */
 function MasteryBar({ label, pct, count, review }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
   const tone = pct >= 75 ? 'good' : pct >= 50 ? 'mid' : 'low';
   return (
     <div className="exam-results__mastery-row">
@@ -71,15 +74,19 @@ function MasteryBar({ label, pct, count, review }) {
         <div className={`exam-results__mastery-fill exam-results__mastery-fill--${tone}`} style={{ width: `${pct}%` }} />
       </div>
       <span className="exam-results__mastery-meta">
-        {count} question{count !== 1 ? 's' : ''}
-        {review > 0 && <> · <strong>{review} à revoir</strong></>}
+        {count} {t('question', 'kesyon')}{count !== 1 ? t('s', '') : ''}
+        {review > 0 && <> · <strong>{review} {t('à revoir', 'pou revize')}</strong></>}
       </span>
     </div>
   );
 }
 
 /** Renders scaffold blank answers in the results view with per-blank grading */
-function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {  let values = [];
+function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
+  let values = [];
   try {
     const parsed = JSON.parse(answer);
     if (parsed && parsed.scaffold) values = parsed.scaffold;
@@ -111,7 +118,7 @@ function ScaffoldResultDisplay({ answer, blanks, blankResults, modelAnswer }) { 
       {/* Show model answer (full solution) when available */}
       {modelAnswer && (
         <details className="scaffold-result__solution">
-          <summary className="scaffold-result__solution-toggle"><BookOpen size={14} /> Voir la solution complète</summary>
+          <summary className="scaffold-result__solution-toggle"><BookOpen size={14} /> {t('Voir la solution complète', 'Wè solisyon konplè a')}</summary>
           <div className="scaffold-result__solution-body">
             <InstructionRenderer text={modelAnswer} />
           </div>
@@ -125,6 +132,9 @@ const ExamResults = () => {
   const { level, examId } = useParams();
   const navigate = useNavigate();
   const userId = useStore((s) => s.user?.uid);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
 
   // Fetch ONLY this exam (a few KB) instead of the full 27 MB catalog.
   const { data: exam } = useQuery({
@@ -221,10 +231,10 @@ const ExamResults = () => {
         <div className="container">
           <div className="card card--message">
             <p>
-              {remoteLoading ? 'Chargement des résultats…' : 'Aucun résultat trouvé pour cet examen.'}
+              {remoteLoading ? t('Chargement des résultats…', 'Ap chaje rezilta yo…') : t('Aucun résultat trouvé pour cet examen.', 'Nou pa jwenn okenn rezilta pou egzamen sa a.')}
             </p>
             <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← Retour aux examens
+              ← {t('Retour aux examens', 'Retounen nan egzamen yo')}
             </button>
           </div>
         </div>
@@ -243,7 +253,7 @@ const ExamResults = () => {
   const dashOffset = circumference - (circumference * pct) / 100;
 
   // Grade label
-  const gradeLabel = pct >= 80 ? 'Excellent !' : pct >= 60 ? 'Bien' : pct >= 40 ? 'Passable' : 'À améliorer';
+  const gradeLabel = pct >= 80 ? t('Excellent !', 'Ekselan !') : pct >= 60 ? t('Bien', 'Byen') : pct >= 40 ? t('Passable', 'Pasab') : t('À améliorer', 'Pou amelyore');
   const GradeIcon = pct >= 80 ? Trophy : pct >= 60 ? ThumbsUp : pct >= 40 ? BookOpen : Dumbbell;
 
   const ringColor = pct >= 60 ? 'var(--success-500)' : pct >= 40 ? 'var(--warning-500)' : 'var(--danger-500)';
@@ -288,11 +298,11 @@ const ExamResults = () => {
         {/* Header */}
         <div className="page-header exam-results__header">
           <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-            ← Retour aux examens
+            ← {t('Retour aux examens', 'Retounen nan egzamen yo')}
           </button>
-          <h1 className="page-header__title">Résultats</h1>
+          <h1 className="page-header__title">{t('Résultats', 'Rezilta')}</h1>
           <p className="page-header__subtitle" style={{ color }}>
-            {subject}, {examTitle || 'Examen'} {storedLevel && `(${storedLevel})`}
+            {subject}, {examTitle || t('Examen', 'Egzamen')} {storedLevel && `(${storedLevel})`}
           </p>
         </div>
 
@@ -323,29 +333,29 @@ const ExamResults = () => {
         <div className="exam-results__stats-grid">
           <div className="exam-results__stat-card">
             <span className="exam-results__stat-number">{summary.earnedPoints}</span>
-            <span className="exam-results__stat-label">Points obtenus / {summary.totalPoints}</span>
+            <span className="exam-results__stat-label">{t('Points obtenus', 'Pwen ou genyen')} / {summary.totalPoints}</span>
           </div>
           <div className="exam-results__stat-card exam-results__stat-card--correct">
             <span className="exam-results__stat-number">{summary.correctCount}</span>
-            <span className="exam-results__stat-label">Réponses correctes</span>
+            <span className="exam-results__stat-label">{t('Réponses correctes', 'Repons kòrèk')}</span>
           </div>
           <div className="exam-results__stat-card exam-results__stat-card--incorrect">
             <span className="exam-results__stat-number">{summary.incorrectCount}</span>
-            <span className="exam-results__stat-label">Réponses incorrectes</span>
+            <span className="exam-results__stat-label">{t('Réponses incorrectes', 'Repons pa kòrèk')}</span>
           </div>
           <div className="exam-results__stat-card">
             <span className="exam-results__stat-number">{summary.unanswered}</span>
-            <span className="exam-results__stat-label">Sans réponse</span>
+            <span className="exam-results__stat-label">{t('Sans réponse', 'San repons')}</span>
           </div>
           {summary.manualReview > 0 && (
             <div className="exam-results__stat-card exam-results__stat-card--manual">
               <span className="exam-results__stat-number">{summary.manualReview}</span>
-              <span className="exam-results__stat-label">Correction manuelle</span>
+              <span className="exam-results__stat-label">{t('Correction manuelle', 'Koreksyon manyèl')}</span>
             </div>
           )}
           <div className="exam-results__stat-card">
             <span className="exam-results__stat-number">{summary.autoGraded}</span>
-            <span className="exam-results__stat-label">Auto-corrigées</span>
+            <span className="exam-results__stat-label">{t('Auto-corrigées', 'Korije otomatikman')}</span>
           </div>
         </div>
 
@@ -353,14 +363,14 @@ const ExamResults = () => {
         {summary.coefficient && summary.coefficient > 1 && trackInfo && (
           <div className="exam-results__weighted">
             <h3 className="exam-results__weighted-title">
-              <BarChart3 size={16} /> Score pondéré, Filière {trackInfo.icon} {trackInfo.shortLabel}
+              <BarChart3 size={16} /> {t('Score pondéré, Filière', 'Nòt pondere, Filyè')} {trackInfo.icon} {trackInfo.shortLabel}
             </h3>
             <div className="exam-results__weighted-row">
-              <span>Coefficient {subject}</span>
+              <span>{t('Coefficient', 'Koyefisyan')} {subject}</span>
               <span className="exam-results__coeff-badge">×{summary.coefficient}</span>
             </div>
             <div className="exam-results__weighted-row">
-              <span>Points pondérés</span>
+              <span>{t('Points pondérés', 'Pwen pondere')}</span>
               <span className="exam-results__weighted-value">
                 {summary.weightedEarned} / {summary.weightedTotal}
               </span>
@@ -373,7 +383,7 @@ const ExamResults = () => {
       <div className="exam-results__mastery">
         <div className="exam-results__mastery-col">
           <h2 className="exam-results__mastery-title">
-            <Target size={18} /> Maîtrise par compétence
+            <Target size={18} /> {t('Maîtrise par compétence', 'Metriz dapre konpetans')}
           </h2>
           {masteryByType.map((g) => (
             <MasteryBar key={g.key} label={g.key} pct={g.pct} count={g.count} review={g.review} />
@@ -382,7 +392,7 @@ const ExamResults = () => {
         {showSectionMastery && (
           <div className="exam-results__mastery-col">
             <h2 className="exam-results__mastery-title">
-              <BarChart3 size={18} /> Maîtrise par section
+              <BarChart3 size={18} /> {t('Maîtrise par section', 'Metriz dapre seksyon')}
             </h2>
             {masteryBySection.map((g) => (
               <MasteryBar key={g.key} label={g.key} pct={g.pct} count={g.count} review={g.review} />
@@ -392,15 +402,15 @@ const ExamResults = () => {
         {reviewCount > 0 && (
           <div className="exam-results__focus-cta">
             <div className="exam-results__focus-text">
-              <strong>{reviewCount} question{reviewCount !== 1 ? 's' : ''} à revoir.</strong>{' '}
-              Concentrez-vous sur vos erreurs pour progresser plus vite.
+              <strong>{reviewCount} {t('question', 'kesyon')}{reviewCount !== 1 ? t('s', '') : ''} {t('à revoir.', 'pou revize.')}</strong>{' '}
+              {t('Concentrez-vous sur vos erreurs pour progresser plus vite.', 'Konsantre sou erè ou yo pou ou pwogrese pi vit.')}
             </div>
             <div className="exam-results__focus-actions">
               <button className="button button--primary button--sm" onClick={() => setPracticeOpen(true)} type="button">
-                <Target size={15} /> M'entraîner ({reviewCount})
+                <Target size={15} /> {t("M'entraîner", 'Antrene m')} ({reviewCount})
               </button>
               <button className="button button--ghost button--sm" onClick={focusOnMistakes} type="button">
-                <Eye size={15} /> Voir mes erreurs
+                <Eye size={15} /> {t('Voir mes erreurs', 'Wè erè m yo')}
               </button>
             </div>
           </div>
@@ -412,24 +422,30 @@ const ExamResults = () => {
         <div className="exam-results__next-head">
           <span className="exam-results__next-icon"><Lightbulb size={20} /></span>
           <div className="exam-results__next-copy">
-            <h2 className="exam-results__next-title">Et maintenant&nbsp;?</h2>
+            <h2 className="exam-results__next-title">{t('Et maintenant', 'E kounye a')}&nbsp;?</h2>
             <p className="exam-results__next-sub">
               {masteredSubject ? (
-                <>Excellent travail en <strong>{subject}</strong> — gardez le rythme pour consolider votre score de préparation au Bac.</>
+                isCreole
+                  ? <>Bèl travay nan <strong>{subject}</strong> — kenbe ritm nan pou konsolide nòt preparasyon Bac ou.</>
+                  : <>Excellent travail en <strong>{subject}</strong> — gardez le rythme pour consolider votre score de préparation au Bac.</>
               ) : weakestArea ? (
-                <>Votre point faible sur cet examen&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Renforcez-le pour faire monter votre score de préparation au Bac.</>
+                isCreole
+                  ? <>Pwen fèb ou nan egzamen sa a&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Ranfòse l pou fè nòt preparasyon Bac ou monte.</>
+                  : <>Votre point faible sur cet examen&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Renforcez-le pour faire monter votre score de préparation au Bac.</>
               ) : (
-                <>Continuez à vous entraîner en <strong>{subject}</strong> pour faire monter votre score de préparation au Bac.</>
+                isCreole
+                  ? <>Kontinye antrene nan <strong>{subject}</strong> pou fè nòt preparasyon Bac ou monte.</>
+                  : <>Continuez à vous entraîner en <strong>{subject}</strong> pour faire monter votre score de préparation au Bac.</>
               )}
             </p>
           </div>
         </div>
         <div className="exam-results__next-actions">
           <button className="button button--primary" onClick={() => navigate(studyTarget)} type="button">
-            <Target size={16} /> {courseCode ? `S'entraîner en ${subject}` : 'Réviser cette matière'}
+            <Target size={16} /> {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
           </button>
           <button className="button button--ghost" onClick={() => navigate('/dashboard')} type="button">
-            <BarChart3 size={16} /> Voir mon score de préparation
+            <BarChart3 size={16} /> {t('Voir mon score de préparation', 'Wè nòt preparasyon mwen')}
           </button>
         </div>
       </div>
@@ -437,8 +453,8 @@ const ExamResults = () => {
       {/* Detailed results */}
       <div className="exam-results__details">
         <div className="exam-results__details-head">
-          <h2 className="exam-results__details-title">Détails par question</h2>
-          <div className="exam-results__filter-chips" role="tablist" aria-label="Filtrer les questions">
+          <h2 className="exam-results__details-title">{t('Détails par question', 'Detay dapre kesyon')}</h2>
+          <div className="exam-results__filter-chips" role="tablist" aria-label={t('Filtrer les questions', 'Filtre kesyon yo')}>
             <button
               type="button"
               role="tab"
@@ -446,7 +462,7 @@ const ExamResults = () => {
               className={`exam-results__filter-chip ${reviewFilter === 'all' ? 'exam-results__filter-chip--active' : ''}`}
               onClick={() => setReviewFilter('all')}
             >
-              Toutes ({results.length})
+              {t('Toutes', 'Tout')} ({results.length})
             </button>
             <button
               type="button"
@@ -456,7 +472,7 @@ const ExamResults = () => {
               onClick={() => setReviewFilter('review')}
               disabled={reviewCount === 0}
             >
-              À revoir ({reviewCount})
+              {t('À revoir', 'Pou revize')} ({reviewCount})
             </button>
             <button
               type="button"
@@ -466,14 +482,14 @@ const ExamResults = () => {
               onClick={() => setReviewFilter('mastered')}
               disabled={masteredCount === 0}
             >
-              Réussies ({masteredCount})
+              {t('Réussies', 'Reyisi')} ({masteredCount})
             </button>
           </div>
         </div>
 
         {filteredResults.length === 0 && (
           <div className="card card--message exam-results__filter-empty">
-            <p>Aucune question dans cette catégorie.</p>
+            <p>{t('Aucune question dans cette catégorie.', 'Pa gen kesyon nan kategori sa a.')}</p>
           </div>
         )}
 
@@ -514,7 +530,7 @@ const ExamResults = () => {
               {/* User answer */}
               {r.userAnswer && (
                 <div className="exam-results__item-answer">
-                  <strong>Votre réponse :</strong>{' '}
+                  <strong>{t('Votre réponse :', 'Repons ou :')}</strong>{' '}
                   {r.status === 'scaffold-complete' || r.status === 'partial' || (r.userAnswer.startsWith('{') && r.userAnswer.includes('"scaffold"'))
                     ? <ScaffoldResultDisplay
                         answer={r.userAnswer}
@@ -532,7 +548,7 @@ const ExamResults = () => {
               {/* Correct answer */}
               {(r.question.correct || r.question.final_answer) && (
                 <div className="exam-results__item-correct">
-                  <strong>Réponse correcte :</strong>{' '}
+                  <strong>{t('Réponse correcte :', 'Bon repons :')}</strong>{' '}
                   {r.question.type === 'multiple_choice' && r.question.options
                     ? <span>{(r.question.correct || '').toUpperCase()}) <InstructionRenderer text={r.question.options[r.question.correct] || r.question.correct} inline /></span>
                     : <InstructionRenderer text={String(r.question.correct || r.question.final_answer)} inline />
@@ -543,7 +559,7 @@ const ExamResults = () => {
               {/* Model answer — show full solution for questions with answer_parts */}
               {!r.question.correct && r.question.model_answer && r.status !== 'scaffold-complete' && r.status !== 'partial' && (
                 <details className="exam-results__item-solution">
-                  <summary><BookOpen size={14} /> Voir la solution complète</summary>
+                  <summary><BookOpen size={14} /> {t('Voir la solution complète', 'Wè solisyon konplè a')}</summary>
                   <div className="exam-results__item-solution-body">
                     <InstructionRenderer text={r.question.model_answer} />
                   </div>
@@ -553,7 +569,7 @@ const ExamResults = () => {
               {/* Multiple approaches for proofs/calculations */}
               {r.question.approaches && r.question.approaches.length > 1 && (
                 <details className="exam-results__item-approaches">
-                  <summary><RefreshCw size={14} /> Approches alternatives ({r.question.approaches.length})</summary>
+                  <summary><RefreshCw size={14} /> {t('Approches alternatives', 'Lòt apwòch')} ({r.question.approaches.length})</summary>
                   <div className="exam-results__item-approaches-body">
                     {r.question.approaches.map((approach, ai) => (
                       <div key={ai} className="exam-results__approach">
@@ -587,15 +603,15 @@ const ExamResults = () => {
           onClick={() => navigate(`/exams/${level}/${examId}`)}
           type="button"
         >
-          <RefreshCw size={16} /> Recommencer cet examen
+          <RefreshCw size={16} /> {t('Recommencer cet examen', 'Rekòmanse egzamen sa a')}
         </button>
         {reviewCount > 0 && (
           <button className="button button--secondary" onClick={() => setPracticeOpen(true)} type="button">
-            <Target size={16} /> M'entraîner sur mes {reviewCount} erreur{reviewCount !== 1 ? 's' : ''}
+            <Target size={16} /> {isCreole ? `Antrene sou ${reviewCount} erè m yo` : `M'entraîner sur mes ${reviewCount} erreur${reviewCount !== 1 ? 's' : ''}`}
           </button>
         )}
         <button className="button button--ghost" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-          <PenLine size={16} /> Choisir un autre examen
+          <PenLine size={16} /> {t('Choisir un autre examen', 'Chwazi yon lòt egzamen')}
         </button>
       </div>
       </div>
@@ -619,6 +635,9 @@ const ExamResults = () => {
  */
 function ProofOrPlainAnswer({ answer, correctAnswer }) {
   const katexReady = useKatex();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
 
   // Try to parse as proof JSON
   let proofData = null;
@@ -680,10 +699,10 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
       {proofData.finalAnswer && (
         <div className={`ka-results__answer ${casVerdict ? (casVerdict.correct ? 'ka-results__answer--correct' : 'ka-results__answer--incorrect') : ''}`}>
           <div className="ka-results__answer-row">
-            <span className="ka-results__answer-label"><Target size={14} /> Résultat final</span>
+            <span className="ka-results__answer-label"><Target size={14} /> {t('Résultat final', 'Rezilta final')}</span>
             {casVerdict && (
               <span className={`ka-results__cas ${casVerdict.correct ? 'ka-results__cas--correct' : 'ka-results__cas--incorrect'}`}>
-                {casVerdict.correct ? <><Check size={14} /> Correct</> : <><X size={14} /> Incorrect</>}
+                {casVerdict.correct ? <><Check size={14} /> {t('Correct', 'Kòrèk')}</> : <><X size={14} /> {t('Incorrect', 'Pa kòrèk')}</>}
               </span>
             )}
           </div>
@@ -704,20 +723,23 @@ function ProofOrPlainAnswer({ answer, correctAnswer }) {
 
       {/* Summary line */}
       <div className="ka-results__summary">
-        {filledSteps.length} étape{filledSteps.length !== 1 ? 's' : ''} complétée{filledSteps.length !== 1 ? 's' : ''}
+        {filledSteps.length} {t('étape', 'etap')}{filledSteps.length !== 1 ? t('s', '') : ''} {t('complétée', 'fini')}{filledSteps.length !== 1 ? t('s', '') : ''}
       </div>
     </div>
   );
 }
 
 function StatusBadge({ status }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
   const map = {
-    correct:            { label: <><Check size={12} /> Correct</>, cls: 'exam-results__badge--correct' },
-    incorrect:          { label: <><X size={12} /> Incorrect</>, cls: 'exam-results__badge--incorrect' },
-    partial:            { label: '◐ Partiel', cls: 'exam-results__badge--partial' },
-    manual:             { label: <><Eye size={12} /> Révision</>, cls: 'exam-results__badge--manual' },
-    unanswered:         { label: '— Vide', cls: 'exam-results__badge--unanswered' },
-    'scaffold-complete': { label: <><PenLine size={12} /> Complété</>, cls: 'exam-results__badge--correct' },
+    correct:            { label: <><Check size={12} /> {t('Correct', 'Kòrèk')}</>, cls: 'exam-results__badge--correct' },
+    incorrect:          { label: <><X size={12} /> {t('Incorrect', 'Pa kòrèk')}</>, cls: 'exam-results__badge--incorrect' },
+    partial:            { label: t('◐ Partiel', '◐ Pasyèl'), cls: 'exam-results__badge--partial' },
+    manual:             { label: <><Eye size={12} /> {t('Révision', 'Revizyon')}</>, cls: 'exam-results__badge--manual' },
+    unanswered:         { label: t('— Vide', '— Vid'), cls: 'exam-results__badge--unanswered' },
+    'scaffold-complete': { label: <><PenLine size={12} /> {t('Complété', 'Fini')}</>, cls: 'exam-results__badge--correct' },
   };
   const m = map[status] || map.unanswered;
   return <span className={`exam-results__badge ${m.cls}`}>{m.label}</span>;

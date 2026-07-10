@@ -337,7 +337,7 @@ export default function StudyPlan() {
           <button className="sp-btn sp-btn--ghost" onClick={handleGenerate} title={isCreole ? 'Rejenere' : 'Régénérer'}>
             <RefreshCw size={16} />
           </button>
-          <button className="sp-btn sp-btn--ghost sp-btn--danger" onClick={() => setShowConfirmDelete(true)} title={isCreole ? 'Siprime' : 'Supprimer'}>
+          <button className="sp-btn sp-btn--ghost sp-btn--danger" onClick={() => setShowConfirmDelete(true)} title={isCreole ? 'Efase' : 'Supprimer'}>
             <Trash2 size={16} />
           </button>
         </div>
@@ -534,14 +534,14 @@ export default function StudyPlan() {
       {showConfirmDelete && (
         <div className="sp-overlay" onClick={() => setShowConfirmDelete(false)}>
           <div className="sp-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{isCreole ? 'Siprime plan sa a?' : 'Supprimer ce plan ?'}</h3>
+            <h3>{isCreole ? 'Efase plan sa a?' : 'Supprimer ce plan ?'}</h3>
             <p>{isCreole ? 'Aksyon sa a pa ka defèt.' : 'Cette action est irréversible.'}</p>
             <div className="sp-modal__actions">
               <button className="btn btn--outline" onClick={() => setShowConfirmDelete(false)}>
                 {isCreole ? 'Anile' : 'Annuler'}
               </button>
               <button className="btn btn--danger" onClick={async () => { await deletePlan(); setShowConfirmDelete(false); }}>
-                {isCreole ? 'Siprime' : 'Supprimer'}
+                {isCreole ? 'Efase' : 'Supprimer'}
               </button>
             </div>
           </div>

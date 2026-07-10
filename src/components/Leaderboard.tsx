@@ -220,7 +220,7 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
           ) : (
             <div className="leaderboard__form">
               <label className="leaderboard__field">
-                <span>{t('Pseudo affiché', 'Non yo afiche')}</span>
+                <span>{t('Pseudo affiché', 'Ti non pou afiche')}</span>
                 <input
                   className="input-field"
                   value={alias}

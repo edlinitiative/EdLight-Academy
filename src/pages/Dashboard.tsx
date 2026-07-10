@@ -215,7 +215,7 @@ export default function Dashboard() {
       <div className="container dash">
         <header className="dash__header">
           <div>
-            <span className="dash__eyebrow">{isCreole ? 'Tablo de bò' : 'Tableau de bord'}</span>
+            <span className="dash__eyebrow">{isCreole ? 'Tablodbò' : 'Tableau de bord'}</span>
             <h1 className="dash__title">
               {isCreole ? 'Bonjou ' : 'Bonjour '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>
             </h1>
@@ -314,7 +314,7 @@ export default function Dashboard() {
                 <div className="dash-panel__head">
                   <h2 className="dash-panel__title"><Target size={18} /> Quiz</h2>
                   <button className="dash-panel__link" onClick={() => navigate('/quizzes')} type="button">
-                    {isCreole ? 'Ale' : 'Voir'} <ChevronRight size={15} />
+                    {isCreole ? 'Wè' : 'Voir'} <ChevronRight size={15} />
                   </button>
                 </div>
 
@@ -358,7 +358,7 @@ export default function Dashboard() {
                     )}
                   </h2>
                   <button className="dash-panel__link" onClick={() => navigate('/exams')} type="button">
-                    {isCreole ? 'Ale' : 'Voir'} <ChevronRight size={15} />
+                    {isCreole ? 'Wè' : 'Voir'} <ChevronRight size={15} />
                   </button>
                 </div>
 
@@ -373,7 +373,7 @@ export default function Dashboard() {
                       const title = a?.exam_title || a?.examTitle || a?.exam_id || (isCreole ? 'Egzamen' : 'Examen');
                       const dateMs = a?.updated_at_ms || a?.submitted_at_ms || a?.started_at_ms || Date.now();
                       const urlLevel = levelToUrl(a?.level);
-                      const ctaLabel = isSubmitted ? (isCreole ? 'Rezilta' : 'Résultats') : (isCreole ? 'Repran' : 'Reprendre');
+                      const ctaLabel = isSubmitted ? (isCreole ? 'Rezilta' : 'Résultats') : (isCreole ? 'Kontinye' : 'Reprendre');
                       const onOpen = () => {
                         if (!a?.exam_id || !urlLevel) return navigate('/exams');
                         if (isSubmitted) return navigate(`/exams/${urlLevel}/${a.exam_id}/results`);

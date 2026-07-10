@@ -212,6 +212,9 @@ const ExamTake = () => {
   const navigate = useNavigate();
   const katexReady = useKatex();
   const userId = useStore((s) => s.user?.uid);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
 
   const { data: exam, isLoading, error } = useExam(examId);
 
@@ -460,14 +463,16 @@ const ExamTake = () => {
             aria-labelledby="exam-resume-dialog-title"
             aria-describedby="exam-resume-dialog-desc"
           >
-            <h3 id="exam-resume-dialog-title">Reprendre votre examen ?</h3>
+            <h3 id="exam-resume-dialog-title">{t('Reprendre votre examen ?', 'Kontinye egzamen ou an ?')}</h3>
             <p id="exam-resume-dialog-desc">
-              Nous avons trouvé une tentative en cours sur ce compte. Vous pouvez reprendre là où vous étiez,
-              ou recommencer (cela effacera votre progression enregistrée).
+              {t(
+                'Nous avons trouvé une tentative en cours sur ce compte. Vous pouvez reprendre là où vous étiez, ou recommencer (cela effacera votre progression enregistrée).',
+                'Nou jwenn yon eseye ki an kou sou kont sa a. Ou ka kontinye kote ou te rete a, oswa rekòmanse (sa ap efase pwogrè ou anrejistre a).'
+              )}
             </p>
             <div className="exam-take__modal-actions">
               <button className="button button--primary" onClick={handleResume} type="button">
-                Reprendre
+                {t('Reprendre', 'Kontinye')}
               </button>
               <button
                 className="button button--ghost"
@@ -477,10 +482,10 @@ const ExamTake = () => {
                 }}
                 type="button"
               >
-                Recommencer
+                {t('Recommencer', 'Rekòmanse')}
               </button>
               <button className="button button--ghost" onClick={() => setShowResumePrompt(false)} type="button">
-                Fermer
+                {t('Fermer', 'Fèmen')}
               </button>
             </div>
           </div>
@@ -497,16 +502,16 @@ const ExamTake = () => {
             aria-labelledby="exam-restart-dialog-title"
             aria-describedby="exam-restart-dialog-desc"
           >
-            <h3 id="exam-restart-dialog-title">Recommencer l'examen ?</h3>
+            <h3 id="exam-restart-dialog-title">{t("Recommencer l'examen ?", 'Rekòmanse egzamen an ?')}</h3>
             <p id="exam-restart-dialog-desc" className="exam-take__modal-warning">
-              ⚠️ Cette action effacera vos réponses enregistrées pour cet examen.
+              ⚠️ {t('Cette action effacera vos réponses enregistrées pour cet examen.', 'Aksyon sa a ap efase repons ou anrejistre pou egzamen sa a.')}
             </p>
             <div className="exam-take__modal-actions">
               <button className="button button--ghost" onClick={() => setShowRestartConfirm(false)} type="button">
-                Annuler
+                {t('Annuler', 'Anile')}
               </button>
               <button className="button button--primary" onClick={handleConfirmRestart} type="button">
-                Oui, recommencer
+                {t('Oui, recommencer', 'Wi, rekòmanse')}
               </button>
             </div>
           </div>
@@ -650,14 +655,14 @@ const ExamTake = () => {
         if (response.ok) {
           essayResult = await response.json();
         } else {
-          essayResult = { isCorrect: false, feedback: 'Évaluation automatique indisponible.', score: 'N/A' };
+          essayResult = { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' };
         }
         const result = gradeSingleQuestion(q, userAnswer, essayResult, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
       } catch {
         const result = gradeSingleQuestion(q, userAnswer, {
           isCorrect: false,
-          feedback: 'Erreur de connexion, votre réponse sera évaluée manuellement.',
+          feedback: t('Erreur de connexion, votre réponse sera évaluée manuellement.', 'Erè koneksyon, y ap korije repons ou an alamen.'),
           score: 'N/A',
         }, { subject });
         setQuestionResults((prev) => ({ ...prev, [qIndex]: result }));
@@ -873,7 +878,7 @@ const ExamTake = () => {
           } catch { /* network error — fall through */ }
           return {
             index: job.index,
-            essayResult: { isCorrect: false, feedback: 'Évaluation automatique indisponible.', score: 'N/A' },
+            essayResult: { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
           };
         })
       );
@@ -966,7 +971,7 @@ const ExamTake = () => {
         <div className="container">
           <div className="exam-take__topbar exam-take__topbar--preview">
             <button className="exam-take__back-btn" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← Examens
+              ← {t('Examens', 'Egzamen')}
             </button>
             <div className="exam-take__topbar-center">
               <Skeleton width={180} height={16} />
@@ -1014,9 +1019,9 @@ const ExamTake = () => {
       <section className="section">
         <div className="container">
           <div className="card card--message">
-            <p>Examen introuvable.</p>
+            <p>{t('Examen introuvable.', 'Nou pa jwenn egzamen an.')}</p>
             <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)}>
-              ← Retour aux examens
+              ← {t('Retour aux examens', 'Retounen nan egzamen yo')}
             </button>
           </div>
         </div>
@@ -1034,7 +1039,7 @@ const ExamTake = () => {
           {/* Top bar — mobile-first compact */}
           <div className="exam-take__topbar exam-take__topbar--preview">
             <button className="exam-take__back-btn" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← Examens
+              ← {t('Examens', 'Egzamen')}
             </button>
             <div className="exam-take__topbar-center">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>
@@ -1060,22 +1065,22 @@ const ExamTake = () => {
                   {durationMin > 0 && (
                     <div className="exam-cover__stat">
                       <span className="exam-cover__stat-value">{durationMin}</span>
-                      <span className="exam-cover__stat-label">minutes</span>
+                      <span className="exam-cover__stat-label">{t('minutes', 'minit')}</span>
                     </div>
                   )}
                   {exam.total_points > 0 && (
                     <div className="exam-cover__stat">
                       <span className="exam-cover__stat-value">{exam.total_points}</span>
-                      <span className="exam-cover__stat-label">points</span>
+                      <span className="exam-cover__stat-label">{t('points', 'pwen')}</span>
                     </div>
                   )}
                   <div className="exam-cover__stat">
                     <span className="exam-cover__stat-value">{totalQ}</span>
-                    <span className="exam-cover__stat-label">questions</span>
+                    <span className="exam-cover__stat-label">{t('questions', 'kesyon')}</span>
                   </div>
                   <div className="exam-cover__stat">
                     <span className="exam-cover__stat-value">{sectionSummary.length}</span>
-                    <span className="exam-cover__stat-label">{sectionSummary.length > 1 ? 'sections' : 'section'}</span>
+                    <span className="exam-cover__stat-label">{sectionSummary.length > 1 ? t('sections', 'seksyon') : t('section', 'seksyon')}</span>
                   </div>
                 </div>
               </div>
@@ -1084,7 +1089,7 @@ const ExamTake = () => {
                 <div className="exam-cover__panel exam-cover__panel--sections">
                   <h2 className="exam-cover__panel-heading">
                     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                    Structure
+                    {t('Structure', 'Estrikti')}
                   </h2>
                   <ol className="exam-cover__section-list">
                     {sectionSummary.map((sec, i) => (
@@ -1101,7 +1106,7 @@ const ExamTake = () => {
                   <div className="exam-cover__panel exam-cover__panel--rules">
                     <h2 className="exam-cover__panel-heading">
                       <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      Consignes
+                      {t('Consignes', 'Konsiy')}
                     </h2>
                     <ul className="exam-cover__rules-list">
                       {examInfo.rules.map((rule, i) => (
@@ -1118,7 +1123,7 @@ const ExamTake = () => {
               <div className="exam-cover__feedback-mode">
                 <h2 className="exam-cover__panel-heading">
                   <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  Mode de correction
+                  {t('Mode de correction', 'Fason koreksyon')}
                 </h2>
                 <div className="exam-cover__feedback-options">
                   <label
@@ -1136,8 +1141,8 @@ const ExamTake = () => {
                     <div className="exam-cover__feedback-content">
                       <span className="exam-cover__feedback-icon">⚡</span>
                       <div>
-                        <strong>Résultat immédiat</strong>
-                        <p>Voir la correction après chaque question</p>
+                        <strong>{t('Résultat immédiat', 'Rezilta imedyat')}</strong>
+                        <p>{t('Voir la correction après chaque question', 'Wè koreksyon an apre chak kesyon')}</p>
                       </div>
                     </div>
                   </label>
@@ -1156,8 +1161,8 @@ const ExamTake = () => {
                     <div className="exam-cover__feedback-content">
                       <span className="exam-cover__feedback-icon">📋</span>
                       <div>
-                        <strong>Résultat à la fin</strong>
-                        <p>Voir tous les résultats après avoir soumis l'examen</p>
+                        <strong>{t('Résultat à la fin', 'Rezilta nan fen an')}</strong>
+                        <p>{t("Voir tous les résultats après avoir soumis l'examen", 'Wè tout rezilta yo apre ou fin soumèt egzamen an')}</p>
                       </div>
                     </div>
                   </label>
@@ -1166,7 +1171,7 @@ const ExamTake = () => {
             </div>
 
             <p className="exam-take__preview-hint">
-              Parcourez les questions ci-dessous, puis cliquez sur <strong>Commencer</strong> quand vous êtes prêt.
+              {t('Parcourez les questions ci-dessous, puis cliquez sur ', 'Gade kesyon yo anba a, epi klike sou ')}<strong>{t('Commencer', 'Kòmanse')}</strong>{t(' quand vous êtes prêt.', ' lè ou pare.')}
             </p>
 
             {/* Render all sections and questions continuously */}
@@ -1195,7 +1200,7 @@ const ExamTake = () => {
                   {(section.passage || (cleanInstructions && cleanInstructions.length > 200)) && (
                     <div className="exam-take__preview-passage">
                       <div className="exam-take__preview-passage-label">
-                        📖 Texte de référence
+                        📖 {t('Texte de référence', 'Tèks referans')}
                         {section.passage && section.passage_reconstructed && <ReconstructedBadge />}
                       </div>
                       <InstructionRenderer text={section.passage || cleanInstructions} />
@@ -1241,7 +1246,7 @@ const ExamTake = () => {
                           {/* Word pool (if present) */}
                           {wordPool && (
                             <div className="exam-take__preview-word-pool">
-                              <div className="exam-take__preview-word-pool-label">📚 Vocabulaire</div>
+                              <div className="exam-take__preview-word-pool-label">📚 {t('Vocabulaire', 'Vokabilè')}</div>
                               <InstructionRenderer text={wordPool} />
                             </div>
                           )}
@@ -1313,12 +1318,12 @@ const ExamTake = () => {
                 onClick={() => setViewState('active')}
                 type="button"
               >
-                <span>Commencer l'examen</span>
+                <span>{t("Commencer l'examen", 'Kòmanse egzamen an')}</span>
                 <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </button>
-              <p className="exam-take__preview-cta-hint">Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀</p>
+              <p className="exam-take__preview-cta-hint">{t('Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀', 'Kwonomèt la ap kòmanse lè ou klike sou bouton sa a. Bòn chans ! 🍀')}</p>
             </div>
           </div>
 
@@ -1367,7 +1372,7 @@ const ExamTake = () => {
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
             <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← Examens
+              ← {t('Examens', 'Egzamen')}
             </button>
             <div className="exam-take__exam-info">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>
@@ -1384,7 +1389,7 @@ const ExamTake = () => {
                 className={`exam-take__timer ${isTimerWarning ? 'exam-take__timer--warning' : ''}`}
                 aria-live={isTimerWarning ? 'polite' : 'off'}
                 aria-atomic="true"
-                aria-label={`Temps restant: ${formatTime(secondsLeft)}`}
+                aria-label={`${t('Temps restant', 'Tan ki rete')}: ${formatTime(secondsLeft)}`}
               >
                 <span aria-hidden="true">⏱</span> {formatTime(secondsLeft)}
               </span>
@@ -1394,7 +1399,7 @@ const ExamTake = () => {
               onClick={() => setShowConfirm(true)}
               type="button"
             >
-              Soumettre
+              {t('Soumettre', 'Soumèt')}
             </button>
           </div>
         </div>
@@ -1425,14 +1430,14 @@ const ExamTake = () => {
                 <span className="exam-take__nav-ring-pct">{progressPct}<small>%</small></span>
               </div>
               <div className="exam-take__nav-progress-meta">
-                <span className="exam-take__nav-progress-title">Progression</span>
-                <span className="exam-take__nav-progress-detail">{answeredCount} sur {questions.length}</span>
+                <span className="exam-take__nav-progress-title">{t('Progression', 'Pwogrè')}</span>
+                <span className="exam-take__nav-progress-detail">{answeredCount} {t('sur', 'sou')} {questions.length}</span>
               </div>
             </div>
 
             <div className="exam-take__nav-divider" />
 
-            <div className="exam-take__nav-sections" role="navigation" aria-label="Navigation des questions par section">
+            <div className="exam-take__nav-sections" role="navigation" aria-label={t('Navigation des questions par section', 'Navigasyon kesyon yo pa seksyon')}>
               {sectionGroups.map((sec) => {
                 const isCurrentSection = currentQ >= sec.start && currentQ <= sec.end;
                 const secAnswered = Array.from({ length: sec.count }).filter((_, off) => {
@@ -1468,9 +1473,9 @@ const ExamTake = () => {
                             key={i}
                             className={cls}
                             onClick={() => setCurrentQ(targetGroup ? targetGroup.start : i)}
-                            title={`Question ${formatQuestionLabel(q, i)}`}
+                            title={`${t('Question', 'Kesyon')} ${formatQuestionLabel(q, i)}`}
                             type="button"
-                            aria-label={`Aller à la question ${formatQuestionLabel(q, i)}`}
+                            aria-label={`${t('Aller à la question', 'Ale nan kesyon')} ${formatQuestionLabel(q, i)}`}
                           >
                             {label}
                             {hasAnswer && !isInCurrentGroup && <span className="exam-take__nav-btn-check" aria-hidden="true" />}
@@ -1531,7 +1536,7 @@ const ExamTake = () => {
           {/* Word pool callout — shown once for the group */}
           {groupQuestions[0]._wordPool && (
             <div className="exam-take__word-pool">
-              <span className="exam-take__word-pool-label">Banque de mots :</span>{' '}
+              <span className="exam-take__word-pool-label">{t('Banque de mots :', 'Bank mo :')}</span>{' '}
               <span className="exam-take__word-pool-words">{groupQuestions[0]._wordPool}</span>
             </div>
           )}
@@ -1642,19 +1647,19 @@ const ExamTake = () => {
                                   onClick={() => gradeQuestionImmediate(qIdx)}
                                 >
                                   {gradingInProgress[qIdx] ? (
-                                    <><span className="loading-spinner loading-spinner--inline" /> Évaluation…</>
+                                    <><span className="loading-spinner loading-spinner--inline" /> {t('Évaluation…', 'Koreksyon…')}</>
                                   ) : (
-                                    '✓ Évaluer'
+                                    t('✓ Évaluer', '✓ Korije')
                                   )}
                                 </button>
                                 <span className="exam-take__check-hint">
                                   {wc < minWords
-                                    ? `Min. ${minWords} mots (${wc})`
+                                    ? `${t('Min.', 'Min.')} ${minWords} ${t('mots', 'mo')} (${wc})`
                                     : wc < targetWords
-                                      ? `${wc} mots · visez ~${targetWords}`
+                                      ? `${wc} ${t('mots · visez', 'mo · vize')} ~${targetWords}`
                                       : wc > maxWords
-                                        ? `${wc} mots · un peu long`
-                                        : `${wc} mots ✓`}
+                                        ? `${wc} ${t('mots · un peu long', 'mo · yon ti jan long')}`
+                                        : `${wc} ${t('mots', 'mo')} ✓`}
                                 </span>
                               </>
                             );
@@ -1667,7 +1672,7 @@ const ExamTake = () => {
                           disabled={!answers[qIdx] || answers[qIdx] === ''}
                           onClick={() => gradeQuestionImmediate(qIdx)}
                         >
-                          ✓ Vérifier
+                          {t('✓ Vérifier', '✓ Verifye')}
                         </button>
                       )}
                     </div>
@@ -1689,7 +1694,7 @@ const ExamTake = () => {
           {/* Group counter */}
           {groupQuestions.length > 1 && (
             <div className="exam-take__group-counter">
-              {groupQuestions[0]._subExGroup ? `Groupe ${groupQuestions[0]._subExGroup}` : 'Groupe'}, {groupQuestions.length} questions ({groupQuestions[0]._flatIdx + 1}–{groupQuestions[groupQuestions.length - 1]._flatIdx + 1} sur {questions.length})
+              {groupQuestions[0]._subExGroup ? `${t('Groupe', 'Gwoup')} ${groupQuestions[0]._subExGroup}` : t('Groupe', 'Gwoup')}, {groupQuestions.length} {t('questions', 'kesyon')} ({groupQuestions[0]._flatIdx + 1}–{groupQuestions[groupQuestions.length - 1]._flatIdx + 1} {t('sur', 'sou')} {questions.length})
             </div>
           )}
 
@@ -1704,7 +1709,7 @@ const ExamTake = () => {
               }}
               type="button"
             >
-              ← Précédent
+              ← {t('Précédent', 'Anvan')}
             </button>
             {!isLastGroup ? (
               <button
@@ -1715,7 +1720,7 @@ const ExamTake = () => {
                 }}
                 type="button"
               >
-                Suivant →
+                {t('Suivant', 'Pwochen')} →
               </button>
             ) : (
               <button
@@ -1723,7 +1728,7 @@ const ExamTake = () => {
                 onClick={() => setShowConfirm(true)}
                 type="button"
               >
-                Terminer l'examen
+                {t("Terminer l'examen", 'Fini egzamen an')}
               </button>
             )}
           </div>
@@ -1741,20 +1746,20 @@ const ExamTake = () => {
             aria-labelledby="exam-submit-dialog-title"
             aria-describedby="exam-submit-dialog-desc"
           >
-            <h3 id="exam-submit-dialog-title">Soumettre l'examen ?</h3>
+            <h3 id="exam-submit-dialog-title">{t("Soumettre l'examen ?", 'Soumèt egzamen an ?')}</h3>
             <p id="exam-submit-dialog-desc">
-              Vous avez répondu à <strong>{answeredCount}</strong> sur{' '}
-              <strong>{questions.length}</strong> questions.
+              {t('Vous avez répondu à', 'Ou reponn')} <strong>{answeredCount}</strong> {t('sur', 'sou')}{' '}
+              <strong>{questions.length}</strong> {t('questions.', 'kesyon.')}
               {answeredCount < questions.length && (
                 <span className="exam-take__modal-warning">
-                  {' '}⚠️ {questions.length - answeredCount} question{questions.length - answeredCount > 1 ? 's' : ''} sans réponse.
+                  {' '}⚠️ {questions.length - answeredCount} {t(`question${questions.length - answeredCount > 1 ? 's' : ''} sans réponse.`, 'kesyon san repons.')}
                 </span>
               )}
             </p>
 
             {unansweredIndices.length > 0 && (
               <div className="exam-take__modal-jump">
-                <div className="exam-take__modal-jump-title">Aller aux questions sans réponse :</div>
+                <div className="exam-take__modal-jump-title">{t('Aller aux questions sans réponse :', 'Ale nan kesyon san repons yo :')}</div>
                 <div className="exam-take__modal-jump-buttons">
                   <button
                     className="button button--ghost button--sm"
@@ -1766,7 +1771,7 @@ const ExamTake = () => {
                     }}
                     type="button"
                   >
-                    Prochaine sans réponse
+                    {t('Prochaine sans réponse', 'Pwochen san repons')}
                   </button>
                   {unansweredIndices.slice(0, 12).map((i) => (
                     <button
@@ -1778,7 +1783,7 @@ const ExamTake = () => {
                         setShowConfirm(false);
                       }}
                       type="button"
-                      aria-label={`Aller à la question ${formatQuestionLabel(questions[i], i)}`}
+                      aria-label={`${t('Aller à la question', 'Ale nan kesyon')} ${formatQuestionLabel(questions[i], i)}`}
                     >
                       {formatNavLabel(questions[i], i)}
                     </button>
@@ -1792,13 +1797,13 @@ const ExamTake = () => {
 
             <div className="exam-take__modal-actions">
               <button className="button button--ghost" onClick={() => setShowConfirm(false)} type="button" disabled={submitting}>
-                Continuer l'examen
+                {t("Continuer l'examen", 'Kontinye egzamen an')}
               </button>
               <button className="button button--primary" onClick={handleSubmit} type="button" disabled={submitting}>
                 {submitting ? (
-                  <><span className="loading-spinner loading-spinner--inline" /> Évaluation en cours…</>
+                  <><span className="loading-spinner loading-spinner--inline" /> {t('Évaluation en cours…', 'Koreksyon an ap fèt…')}</>
                 ) : (
-                  'Soumettre maintenant'
+                  t('Soumettre maintenant', 'Soumèt kounye a')
                 )}
               </button>
             </div>
@@ -1818,7 +1823,7 @@ const ExamTake = () => {
           >
             <div className="exam-take__passage-panel-header">
               <h3 id="exam-passage-title">
-                📖 Texte de référence
+                📖 {t('Texte de référence', 'Tèks referans')}
                 {sectionPassage && currentSection?.passage_reconstructed && <ReconstructedBadge />}
               </h3>
               <button className="exam-take__passage-panel-close" onClick={() => setShowPassage(false)} type="button">✕</button>
@@ -1839,6 +1844,8 @@ const ExamTake = () => {
 // ── Section Header (short instructions inline) ─────────────────────────────
 
 function SectionHeader({ title, instructions }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const [collapsed, setCollapsed] = useState(false);
   const hasInstructions = !!instructions?.trim();
 
@@ -1856,7 +1863,7 @@ function SectionHeader({ title, instructions }) {
           <button
             className="exam-take__section-toggle"
             type="button"
-            aria-label={collapsed ? 'Afficher les instructions' : 'Masquer les instructions'}
+            aria-label={collapsed ? t('Afficher les instructions', 'Montre konsiy yo') : t('Masquer les instructions', 'Kache konsiy yo')}
             tabIndex={-1}
           >
             {collapsed ? '▶' : '▼'}
@@ -1879,12 +1886,17 @@ function SectionHeader({ title, instructions }) {
  * that this is a practice text, not the verbatim official passage.
  */
 function ReconstructedBadge() {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   return (
     <span
       className="exam-take__passage-recon-badge"
-      title="Texte reconstitué fidèlement à partir des questions et du corrigé. Le scan original de l’épreuve n’a pas été numérisé."
+      title={t(
+        "Texte reconstitué fidèlement à partir des questions et du corrigé. Le scan original de l’épreuve n’a pas été numérisé.",
+        "Tèks la rekonstwi fidèlman apati kesyon yo ak koreksyon an. Yo pa t numerize eskann orijinal eprèv la."
+      )}
     >
-      ✎ Texte reconstitué
+      ✎ {t('Texte reconstitué', 'Tèks rekonstwi')}
     </span>
   );
 }
@@ -1892,6 +1904,8 @@ function ReconstructedBadge() {
 // ── Reading Passage (always-visible panel for comprehension text) ────────────
 
 function ReadingPassage({ text, reconstructed }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const [expanded, setExpanded] = useState(true);
   if (!text) return null;
 
@@ -1899,24 +1913,25 @@ function ReadingPassage({ text, reconstructed }) {
     <div className={`exam-take__reading-passage ${expanded ? '' : 'exam-take__reading-passage--collapsed'}`}>
       <div className="exam-take__reading-passage-bar" onClick={() => setExpanded((e) => !e)}>
         <span className="exam-take__reading-passage-icon">📖</span>
-        <span className="exam-take__reading-passage-label">Texte de référence</span>
+        <span className="exam-take__reading-passage-label">{t('Texte de référence', 'Tèks referans')}</span>
         {reconstructed && <ReconstructedBadge />}
         <button
           className="exam-take__reading-passage-toggle"
           type="button"
-          aria-label={expanded ? 'Réduire le texte' : 'Afficher le texte'}
+          aria-label={expanded ? t('Réduire le texte', 'Rediksyon tèks la') : t('Afficher le texte', 'Montre tèks la')}
           tabIndex={-1}
         >
-          {expanded ? '▲ Réduire' : '▼ Afficher le texte'}
+          {expanded ? t('▲ Réduire', '▲ Redui') : t('▼ Afficher le texte', '▼ Montre tèks la')}
         </button>
       </div>
       {expanded && (
         <div className="exam-take__reading-passage-body">
           {reconstructed && (
             <p className="exam-take__passage-recon-note">
-              Le texte original de cette épreuve n’a pas été numérisé. Voici une
-              reconstitution fidèle, élaborée à partir des questions et du
-              corrigé, pour vous permettre de vous entraîner.
+              {t(
+                "Le texte original de cette épreuve n’a pas été numérisé. Voici une reconstitution fidèle, élaborée à partir des questions et du corrigé, pour vous permettre de vous entraîner.",
+                "Yo pa t numerize tèks orijinal eprèv sa a. Men yon rekonstriksyon fidèl, ki fèt apati kesyon yo ak koreksyon an, pou pèmèt ou pratike."
+              )}
             </p>
           )}
           <InstructionRenderer text={text} />
@@ -1935,19 +1950,20 @@ function ReadingPassage({ text, reconstructed }) {
  * useful exam-technique practice.
  */
 function MissingPassageNotice({ reference }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   return (
     <div className="exam-take__missing-passage" role="note">
       <div className="exam-take__missing-passage-head">
         <span className="exam-take__missing-passage-icon" aria-hidden="true">📄</span>
-        <strong>Texte de lecture non disponible</strong>
+        <strong>{t('Texte de lecture non disponible', 'Tèks lekti a pa disponib')}</strong>
       </div>
       <p className="exam-take__missing-passage-body">
         {reference
-          ? <>Le texte de référence (« {reference} ») de cet examen officiel n’a pas été numérisé.{' '}</>
-          : <>Le texte de lecture de cet examen officiel n’a pas été numérisé.{' '}</>}
-        Les questions ci-dessous sont conservées pour vous entraîner au{' '}
-        <em>type de questions</em> et à la méthode de compréhension. Répondez à
-        partir du texte de votre épreuve papier si vous l’avez.
+          ? <>{t('Le texte de référence (« ', 'Tèks referans (« ')}{reference}{t(' ») de cet examen officiel n’a pas été numérisé.', ' ») egzamen ofisyèl sa a pa t numerize.')}{' '}</>
+          : <>{t('Le texte de lecture de cet examen officiel n’a pas été numérisé.', 'Tèks lekti egzamen ofisyèl sa a pa t numerize.')}{' '}</>}
+        {t('Les questions ci-dessous sont conservées pour vous entraîner au ', 'Nou kenbe kesyon anba yo pou ou ka pratike sou ')}
+        <em>{t('type de questions', 'tip kesyon an')}</em>{t(' et à la méthode de compréhension. Répondez à partir du texte de votre épreuve papier si vous l’avez.', ' ak metòd konpreyansyon an. Reponn apati tèks eprèv papye ou an si ou genyen l.')}
       </p>
     </div>
   );
@@ -2025,6 +2041,8 @@ function FillBlankText({ text, index, value, onChange, disabled }) {
 // ── Question Hints (progressive reveal for ALL question types) ───────────────
 
 function QuestionHints({ hints }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const [revealed, setRevealed] = useState(0);
 
   if (!hints || !Array.isArray(hints) || hints.length === 0) return null;
@@ -2039,7 +2057,7 @@ function QuestionHints({ hints }) {
           type="button"
           className="qa-hints__btn"
           onClick={() => setRevealed(r => r + 1)}
-          title={revealed === 0 ? 'Obtenir un indice' : 'Indice suivant'}
+          title={revealed === 0 ? t('Obtenir un indice', 'Jwenn yon endis') : t('Indice suivant', 'Endis swivan')}
         >
           💡 <span className="qa-hints__counter">{revealed}/{hints.length}</span>
         </button>
@@ -2141,9 +2159,12 @@ function balanceMathDelimiters(s) {
  * LaTeX). Exposes focus() so the step dots and keyboard nav keep working.
  */
 const MathSelect = React.forwardRef(function MathSelect(
-  { id, value, options, onChange, onFocus, onBlur, disabled, ariaLabel, placeholder = '— Choisir —' },
+  { id, value, options, onChange, onFocus, onBlur, disabled, ariaLabel, placeholder },
   ref
 ) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
+  const ph = placeholder ?? t('— Choisir —', '— Chwazi —');
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
   const btnRef = useRef(null);
@@ -2217,7 +2238,7 @@ const MathSelect = React.forwardRef(function MathSelect(
         <span className="ka-mathselect__value">
           {value
             ? <MathText text={asMath(value)} />
-            : <span className="ka-mathselect__placeholder">{placeholder}</span>}
+            : <span className="ka-mathselect__placeholder">{ph}</span>}
         </span>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
@@ -2269,6 +2290,8 @@ const TemplatedBlank = React.forwardRef(function TemplatedBlank(
   { template, slots = [], value, onChange, disabled, ariaLabel, onComplete },
   ref
 ) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const tokens = useMemo(() => tokenizeTemplate(template || ''), [template]);
   const slotVals = useMemo(() => {
     if (value) {
@@ -2319,7 +2342,7 @@ const TemplatedBlank = React.forwardRef(function TemplatedBlank(
             onChange={e => setSlot(tk.i, e.target.value)}
             onKeyDown={e => onSlotKey(e, tk.i)}
             disabled={disabled}
-            aria-label={spec.label || `${ariaLabel || 'champ'} ${tk.i + 1}`}
+            aria-label={spec.label || `${ariaLabel || t('champ', 'chan')} ${tk.i + 1}`}
             placeholder={isNum ? '#' : '?'}
           />
         );
@@ -2338,6 +2361,8 @@ const MatrixBlank = React.forwardRef(function MatrixBlank(
   { rows, cols, slots = [], value, onChange, disabled, ariaLabel, onComplete },
   ref
 ) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const slotVals = useMemo(() => {
     if (value) {
       try {
@@ -2388,7 +2413,7 @@ const MatrixBlank = React.forwardRef(function MatrixBlank(
               onChange={e => setCell(i, e.target.value)}
               onKeyDown={e => onCellKey(e, i)}
               disabled={disabled}
-              aria-label={`${ariaLabel || 'matrice'} ligne ${r} colonne ${c}`}
+              aria-label={`${ariaLabel || t('matrice', 'matris')} ${t('ligne', 'liy')} ${r} ${t('colonne', 'kolòn')} ${c}`}
               placeholder={isNum ? '#' : '?'}
             />
           );
@@ -2400,6 +2425,8 @@ const MatrixBlank = React.forwardRef(function MatrixBlank(
 });
 
 function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const template = question.scaffold_text;
   const blanks = question.scaffold_blanks || [];
   const answerParts = question.answer_parts || [];
@@ -2612,13 +2639,13 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
       {checked && allCorrect && (
         <div className="ka-scaffold__banner ka-scaffold__banner--correct">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-          <span>Correct !</span>
+          <span>{t('Correct !', 'Kòrèk !')}</span>
         </div>
       )}
       {checked && incorrectCount > 0 && (
         <div className="ka-scaffold__banner ka-scaffold__banner--incorrect">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          <span>Incorrect — réessayez.</span>
+          <span>{t('Incorrect — réessayez.', 'Pa kòrèk — eseye ankò.')}</span>
         </div>
       )}
 
@@ -2652,7 +2679,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                       value={blankValues[bi] || ''}
                       onChange={val => setBlank(bi, val)}
                       onComplete={checkAnswers}
-                      ariaLabel={blank.label || `Étape ${bi + 1}`}
+                      ariaLabel={blank.label || `${t('Étape', 'Etap')} ${bi + 1}`}
                       disabled={allCorrect}
                     />
                   ) : (
@@ -2663,7 +2690,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                       value={blankValues[bi] || ''}
                       onChange={val => setBlank(bi, val)}
                       onComplete={checkAnswers}
-                      ariaLabel={blank.label || `Étape ${bi + 1}`}
+                      ariaLabel={blank.label || `${t('Étape', 'Etap')} ${bi + 1}`}
                       disabled={allCorrect}
                     />
                   )
@@ -2677,7 +2704,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                       onChange={val => setBlank(bi, val)}
                       onFocus={() => setFocusedBlank(bi)}
                       onBlur={() => setFocusedBlank(null)}
-                      ariaLabel={blank.label || `Étape ${bi + 1}`}
+                      ariaLabel={blank.label || `${t('Étape', 'Etap')} ${bi + 1}`}
                       disabled={allCorrect}
                     />
                   ) : (
@@ -2689,10 +2716,10 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                       onChange={e => setBlank(bi, e.target.value)}
                       onFocus={() => setFocusedBlank(bi)}
                       onBlur={() => setFocusedBlank(null)}
-                      aria-label={blank.label || `Étape ${bi + 1}`}
+                      aria-label={blank.label || `${t('Étape', 'Etap')} ${bi + 1}`}
                       disabled={allCorrect}
                     >
-                      <option value="">— Choisir —</option>
+                      <option value="">{t('— Choisir —', '— Chwazi —')}</option>
                       {answerParts[bi].options.map((opt, oi) => (
                         <option key={oi} value={opt}>{opt}</option>
                       ))}
@@ -2707,9 +2734,9 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                     onFocus={() => setFocusedBlank(bi)}
                     onBlur={() => setFocusedBlank(null)}
                     onKeyDown={e => handleKeyDown(e, bi)}
-                    placeholder={answerParts[bi]?.kind === 'number' ? 'Nombre' : 'Votre réponse'}
+                    placeholder={answerParts[bi]?.kind === 'number' ? t('Nombre', 'Nonm') : t('Votre réponse', 'Repons ou')}
                     inputMode={answerParts[bi]?.kind === 'number' ? 'decimal' : undefined}
-                    ariaLabel={blank.label || `Étape ${bi + 1}`}
+                    ariaLabel={blank.label || `${t('Étape', 'Etap')} ${bi + 1}`}
                     disabled={allCorrect}
                     compact={totalBlanks > 4}
                   />
@@ -2724,8 +2751,8 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                     onFocus={() => setFocusedBlank(bi)}
                     onBlur={() => setFocusedBlank(null)}
                     onKeyDown={e => handleKeyDown(e, bi)}
-                    placeholder="Votre réponse"
-                    aria-label={blank.label || `Étape ${bi + 1}`}
+                    placeholder={t('Votre réponse', 'Repons ou')}
+                    aria-label={blank.label || `${t('Étape', 'Etap')} ${bi + 1}`}
                     disabled={allCorrect}
                   />
                 )}
@@ -2733,7 +2760,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
               {/* Show AI grading spinner for pending blanks */}
               {vState === 'pending' && (
                 <div className="ka-scaffold__ai-loading">
-                  <span className="ka-scaffold__spinner" /> Évaluation en cours…
+                  <span className="ka-scaffold__spinner" /> {t('Évaluation en cours…', 'Koreksyon an ap fèt…')}
                 </div>
               )}
               {/* Show AI feedback when available */}
@@ -2745,7 +2772,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
               {/* Show correct answer on wrong attempt */}
               {vState === false && answerParts[bi] && (
                 <div className="ka-scaffold__correction">
-                  Réponse : <MathText text={asMath(answerParts[bi].answer)} />
+                  {t('Réponse :', 'Repons :')} <MathText text={asMath(answerParts[bi].answer)} />
                 </div>
               )}
             </div>
@@ -2761,7 +2788,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
             onClick={() => setShowSolution(s => !s)}
             type="button"
           >
-            {showSolution ? 'Masquer la démarche' : 'Voir la démarche'}
+            {showSolution ? t('Masquer la démarche', 'Kache demach la') : t('Voir la démarche', 'Wè demach la')}
           </button>
           {showSolution && (
             <div className="ka-scaffold__hint-body">
@@ -2790,9 +2817,9 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
                 key={bi}
                 className={dotClass}
                 onClick={() => inputRefs.current[bi]?.focus()}
-                title={`Étape ${bi + 1}`}
+                title={`${t('Étape', 'Etap')} ${bi + 1}`}
                 type="button"
-                aria-label={`Aller à l'étape ${bi + 1}`}
+                aria-label={`${t("Aller à l'étape", 'Ale nan etap')} ${bi + 1}`}
               />
             );
           })}
@@ -2804,7 +2831,7 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
           disabled={!allFilled || allCorrect || grading}
           type="button"
         >
-          {grading ? 'Évaluation…' : allCorrect ? 'Terminé ✓' : checked ? 'Revérifier' : 'Vérifier'}
+          {grading ? t('Évaluation…', 'Koreksyon…') : allCorrect ? t('Terminé ✓', 'Fini ✓') : checked ? t('Revérifier', 'Reverifye') : t('Vérifier', 'Verifye')}
         </button>
       </div>
     </div>
@@ -2814,16 +2841,18 @@ function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }
 // ── Immediate Feedback Card (shown inline after grading a question) ─────────
 
 function ImmediateFeedback({ result, question, color }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const [showExplanation, setShowExplanation] = useState(false);
   const { status, essayFeedback } = result;
 
   const statusConfig = {
-    correct: { icon: '✓', label: 'Correct', cls: 'exam-take__feedback--correct' },
-    partial: { icon: '◐', label: 'Partiellement correct', cls: 'exam-take__feedback--partial' },
-    incorrect: { icon: '✗', label: 'Incorrect', cls: 'exam-take__feedback--incorrect' },
-    'scaffold-complete': { icon: '✓', label: 'Complété', cls: 'exam-take__feedback--correct' },
-    manual: { icon: '👁', label: 'Évaluation manuelle', cls: 'exam-take__feedback--manual' },
-    unanswered: { icon: '—', label: 'Sans réponse', cls: 'exam-take__feedback--unanswered' },
+    correct: { icon: '✓', label: t('Correct', 'Kòrèk'), cls: 'exam-take__feedback--correct' },
+    partial: { icon: '◐', label: t('Partiellement correct', 'Kòrèk an pati'), cls: 'exam-take__feedback--partial' },
+    incorrect: { icon: '✗', label: t('Incorrect', 'Pa kòrèk'), cls: 'exam-take__feedback--incorrect' },
+    'scaffold-complete': { icon: '✓', label: t('Complété', 'Konplè'), cls: 'exam-take__feedback--correct' },
+    manual: { icon: '👁', label: t('Évaluation manuelle', 'Koreksyon alamen'), cls: 'exam-take__feedback--manual' },
+    unanswered: { icon: '—', label: t('Sans réponse', 'San repons'), cls: 'exam-take__feedback--unanswered' },
   };
   const cfg = statusConfig[status] || statusConfig.manual;
 
@@ -2846,10 +2875,10 @@ function ImmediateFeedback({ result, question, color }) {
       {essayFeedback && (
         <div className="exam-take__feedback-essay">
           <div className="exam-take__feedback-essay-score">
-            <span>🤖 Note IA :</span> <strong>{essayFeedback.score}</strong>
+            <span>🤖 {t('Note IA :', 'Nòt IA :')}</span> <strong>{essayFeedback.score}</strong>
             {essayFeedback.capped && (
               <span className="exam-take__feedback-essay-capped" title={essayFeedback.wordMessage || ''}>
-                · limitée par la longueur
+                {t('· limitée par la longueur', '· limite akoz longè a')}
               </span>
             )}
           </div>
@@ -2877,13 +2906,13 @@ function ImmediateFeedback({ result, question, color }) {
 
           {Array.isArray(essayFeedback.strengths) && essayFeedback.strengths.length > 0 && (
             <div className="exam-take__feedback-points exam-take__feedback-points--strength">
-              <span className="exam-take__feedback-points-title">Points forts</span>
+              <span className="exam-take__feedback-points-title">{t('Points forts', 'Pwen fò')}</span>
               <ul>{essayFeedback.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
             </div>
           )}
           {Array.isArray(essayFeedback.improvements) && essayFeedback.improvements.length > 0 && (
             <div className="exam-take__feedback-points exam-take__feedback-points--improve">
-              <span className="exam-take__feedback-points-title">À améliorer</span>
+              <span className="exam-take__feedback-points-title">{t('À améliorer', 'Pou amelyore')}</span>
               <ul>{essayFeedback.improvements.map((s, i) => <li key={i}>{s}</li>)}</ul>
             </div>
           )}
@@ -2893,7 +2922,7 @@ function ImmediateFeedback({ result, question, color }) {
       {/* Correct answer (for non-essay auto-gradable) */}
       {status === 'incorrect' && question.correct && question.type !== 'essay' && (
         <div className="exam-take__feedback-correct">
-          <span className="exam-take__feedback-correct-label">Réponse correcte :</span>{' '}
+          <span className="exam-take__feedback-correct-label">{t('Réponse correcte :', 'Bon repons :')}</span>{' '}
           <strong><MathText text={
             question.type === 'multiple_choice' && question.options
               ? `${question.correct.toUpperCase()}. ${question.options[question.correct] || question.correct}`
@@ -2923,7 +2952,7 @@ function ImmediateFeedback({ result, question, color }) {
             type="button"
             onClick={() => setShowExplanation((s) => !s)}
           >
-            {showExplanation ? '▲ Masquer l\'explication' : '▼ Voir l\'explication'}
+            {showExplanation ? t("▲ Masquer l'explication", '▲ Kache eksplikasyon an') : t("▼ Voir l'explication", '▼ Wè eksplikasyon an')}
           </button>
           {showExplanation && (
             <div className="exam-take__feedback-explain-body">
@@ -2934,13 +2963,13 @@ function ImmediateFeedback({ result, question, color }) {
               )}
               {question.model_answer && (
                 <div className="exam-take__feedback-explain-model">
-                  <strong>Réponse modèle :</strong>
+                  <strong>{t('Réponse modèle :', 'Repons modèl :')}</strong>
                   <InstructionRenderer text={question.model_answer} />
                 </div>
               )}
               {keyPoints.length > 0 && (
                 <div className="exam-take__feedback-keypoints">
-                  <strong>Points clés attendus :</strong>
+                  <strong>{t('Points clés attendus :', 'Pwen kle nou atann :')}</strong>
                   <ul>
                     {keyPoints.map((p, i) => (
                       <li key={i}>
@@ -3009,6 +3038,8 @@ const ENCOURAGEMENTS = [
 ];
 
 function ProofInput({ question, index, value, onChange }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const katexReady = useKatex();
   const questionText = question?._displayText || question?.question || '';
   const subtype = useMemo(() => detectProofSubtype(questionText), [questionText]);
@@ -3054,7 +3085,10 @@ function ProofInput({ question, index, value, onChange }) {
     const updated = steps.map((s, i) => i === stepIdx ? { ...s, [field]: val } : s);
     // Show encouragement when a step is first completed
     if (field === 'math' && val.trim() && !steps[stepIdx].math?.trim()) {
-      setEncouragement(ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)]);
+      const msgs = language === 'ht'
+        ? ['Byen fèt ! 🎉', 'Sa bon ! Kontinye 💪', 'Bravo ! 👏', 'Bon travay ! ⭐', 'Byen rezone ! 🧠']
+        : ENCOURAGEMENTS;
+      setEncouragement(msgs[Math.floor(Math.random() * msgs.length)]);
       setTimeout(() => setEncouragement(''), 2000);
     }
     serialize(updated, finalAnswer);
@@ -3127,7 +3161,7 @@ function ProofInput({ question, index, value, onChange }) {
 
               {/* Step content */}
               <div className="ka-step__content">
-                <div className="ka-step__label">Étape {i + 1}</div>
+                <div className="ka-step__label">{t('Étape', 'Etap')} {i + 1}</div>
 
                 {/* Hint pill (revealed progressively) */}
                 {hintVisible && hint && !isDone && (
@@ -3142,7 +3176,7 @@ function ProofInput({ question, index, value, onChange }) {
                   className="ka-step__input"
                   value={step.math}
                   onChange={(e) => setStepField(i, 'math', e.target.value)}
-                  placeholder={isDone ? '' : 'Écrivez votre expression ici…'}
+                  placeholder={isDone ? '' : t('Écrivez votre expression ici…', 'Ekri ekspresyon ou an isit la…')}
                   rows={1}
                   spellCheck="false"
                 />
@@ -3166,7 +3200,7 @@ function ProofInput({ question, index, value, onChange }) {
                     type="button"
                     className="ka-step__remove"
                     onClick={() => removeStep(i)}
-                    aria-label="Supprimer cette étape"
+                    aria-label={t('Supprimer cette étape', 'Efase etap sa a')}
                   >
                     ✕
                   </button>
@@ -3180,11 +3214,11 @@ function ProofInput({ question, index, value, onChange }) {
       {/* Bottom actions */}
       <div className="ka-proof__actions">
         <button type="button" className="ka-proof__add-btn" onClick={addStep}>
-          + Ajouter une étape
+          + {t('Ajouter une étape', 'Ajoute yon etap')}
         </button>
         {canRevealHint && (
           <button type="button" className="ka-proof__hint-btn" onClick={revealNextHint}>
-            💡 Obtenir un indice
+            💡 {t('Obtenir un indice', 'Jwenn yon endis')}
           </button>
         )}
       </div>
@@ -3194,15 +3228,15 @@ function ProofInput({ question, index, value, onChange }) {
         <div className="ka-proof__answer">
           <div className="ka-proof__answer-header">
             <span className="ka-proof__answer-icon">🎯</span>
-            <label className="ka-proof__answer-label">{subtype.finalLabel || 'Résultat final'}</label>
-            <span className="ka-proof__answer-badge">Vérifié automatiquement</span>
+            <label className="ka-proof__answer-label">{subtype.finalLabel || t('Résultat final', 'Rezilta final')}</label>
+            <span className="ka-proof__answer-badge">{t('Vérifié automatiquement', 'Verifye otomatikman')}</span>
           </div>
           <input
             className="ka-proof__answer-input"
             type="text"
             value={finalAnswer}
             onChange={(e) => setFinalAnswer(e.target.value)}
-            placeholder={`Votre ${(subtype.finalLabel || 'résultat').toLowerCase()}…`}
+            placeholder={t(`Votre ${(subtype.finalLabel || 'résultat').toLowerCase()}…`, `${(subtype.finalLabel || 'rezilta').toLowerCase()} ou…`)}
           />
           {finalAnswer && (/\$/.test(finalAnswer) || /\\[a-zA-Z]/.test(finalAnswer)) && katexReady && (
             <div className="ka-proof__answer-preview">
@@ -3217,12 +3251,14 @@ function ProofInput({ question, index, value, onChange }) {
 
 /** Collapsible justification picker — click to expand, minimal when collapsed */
 function JustificationPicker({ value, onChange }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const [open, setOpen] = useState(false);
 
   if (!open && !value) {
     return (
       <button type="button" className="ka-justify__toggle" onClick={() => setOpen(true)}>
-        + Justification
+        + {t('Justification', 'Jistifikasyon')}
       </button>
     );
   }
@@ -3241,7 +3277,7 @@ function JustificationPicker({ value, onChange }) {
           }
         }}
       >
-        <option value="">— Choisir —</option>
+        <option value="">{t('— Choisir —', '— Chwazi —')}</option>
         {JUSTIFICATION_OPTIONS.slice(1).map(opt => (
           <option key={opt} value={opt}>{opt}</option>
         ))}
@@ -3252,7 +3288,7 @@ function JustificationPicker({ value, onChange }) {
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Justification personnalisée…"
+          placeholder={t('Justification personnalisée…', 'Jistifikasyon pèsonèl…')}
         />
       )}
       {!value && (
@@ -3263,19 +3299,21 @@ function JustificationPicker({ value, onChange }) {
 }
 
 function MCQInput({ question, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const options = question.options || {};
   const entries = Object.entries(options);
 
   if (entries.length === 0) {
     return (
       <div className="exam-take__no-options">
-        <p>Options non disponibles pour cette question. Tapez votre réponse :</p>
+        <p>{t('Options non disponibles pour cette question. Tapez votre réponse :', 'Opsyon yo pa disponib pou kesyon sa a. Tape repons ou :')}</p>
         <input
           className="exam-take__text-input"
           type="text"
           value={value}
           onChange={(e) => onChange(index, e.target.value)}
-          placeholder="Votre réponse…"
+          placeholder={t('Votre réponse…', 'Repons ou…')}
         />
       </div>
     );
@@ -3308,6 +3346,8 @@ function MCQInput({ question, index, value, onChange, disabled }) {
 }
 
 function MultiSelectInput({ question, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const options = question.options || {};
   const entries = Object.entries(options);
 
@@ -3331,13 +3371,13 @@ function MultiSelectInput({ question, index, value, onChange, disabled }) {
   if (entries.length === 0) {
     return (
       <div className="exam-take__no-options">
-        <p>Options non disponibles pour cette question. Tapez votre réponse :</p>
+        <p>{t('Options non disponibles pour cette question. Tapez votre réponse :', 'Opsyon yo pa disponib pou kesyon sa a. Tape repons ou :')}</p>
         <input
           className="exam-take__text-input"
           type="text"
           value={value}
           onChange={(e) => onChange(index, e.target.value)}
-          placeholder="Votre réponse…"
+          placeholder={t('Votre réponse…', 'Repons ou…')}
         />
       </div>
     );
@@ -3345,7 +3385,7 @@ function MultiSelectInput({ question, index, value, onChange, disabled }) {
 
   return (
     <div className="exam-take__mcq-options exam-take__mcq-options--multi">
-      <p className="exam-take__multi-hint">☑️ Plusieurs réponses possibles</p>
+      <p className="exam-take__multi-hint">☑️ {t('Plusieurs réponses possibles', 'Plizyè repons posib')}</p>
       {entries.map(([key, text]) => {
         const isSelected = selected.includes(key);
         return (
@@ -3371,11 +3411,13 @@ function MultiSelectInput({ question, index, value, onChange, disabled }) {
 }
 
 function TrueFalseInput({ index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   return (
     <div className="exam-take__tf-options">
       {[
-        { key: 'vrai', label: '✅ Vrai' },
-        { key: 'faux', label: '❌ Faux' },
+        { key: 'vrai', label: t('✅ Vrai', '✅ Vre') },
+        { key: 'faux', label: t('❌ Faux', '❌ Fo') },
       ].map(({ key, label }) => {
         const isSelected = value === key;
         return (
@@ -3443,16 +3485,18 @@ function buildRubricDetailed(question) {
 
 /** Collapsible "your response should address…" guide shown above free-text inputs. */
 function RubricGuide({ question }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const rubric = buildRubricLabels(question);
   if (rubric.length === 0) return null;
   return (
     <div className="exam-take__rubric-guide">
-      <span className="exam-take__rubric-guide-title">Votre réponse devrait aborder :</span>
+      <span className="exam-take__rubric-guide-title">{t('Votre réponse devrait aborder :', 'Repons ou an ta dwe pale sou :')}</span>
       <ul className="exam-take__rubric-guide-list">
         {rubric.map((r, i) => (
           <li key={i}>
             {r.label}
-            {r.count > 1 && <span className="exam-take__rubric-guide-count"> ({r.count} éléments)</span>}
+            {r.count > 1 && <span className="exam-take__rubric-guide-count"> ({r.count} {t('éléments', 'eleman')})</span>}
           </li>
         ))}
       </ul>
@@ -3461,6 +3505,8 @@ function RubricGuide({ question }) {
 }
 
 function ShortAnswerInput({ question, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
 
   return (
@@ -3470,21 +3516,23 @@ function ShortAnswerInput({ question, index, value, onChange, disabled }) {
         className="exam-take__short-answer-input"
         value={value}
         onChange={(e) => onChange(index, e.target.value)}
-        placeholder="Rédigez votre réponse ici…"
+        placeholder={t('Rédigez votre réponse ici…', 'Ekri repons ou an isit la…')}
         rows={6}
         disabled={disabled}
       />
       <div className="exam-take__short-answer-wordcount">
-        {wordCount} mot{wordCount !== 1 ? 's' : ''}
+        {wordCount} {t(wordCount !== 1 ? 'mots' : 'mot', 'mo')}
       </div>
     </div>
   );
 }
 
 function TextInput({ type, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const placeholders = {
-    fill_blank: 'Complétez le blanc…',
-    calculation: 'Entrez votre résultat…',
+    fill_blank: t('Complétez le blanc…', 'Ranpli espas vid la…'),
+    calculation: t('Entrez votre résultat…', 'Antre rezilta ou…'),
   };
 
   return (
@@ -3493,13 +3541,15 @@ function TextInput({ type, index, value, onChange, disabled }) {
       type="text"
       value={value}
       onChange={(e) => onChange(index, e.target.value)}
-      placeholder={placeholders[type] || 'Votre réponse…'}
+      placeholder={placeholders[type] || t('Votre réponse…', 'Repons ou…')}
       disabled={disabled}
     />
   );
 }
 
 function EssayInput({ question, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const wordCount = (value || '').trim().split(/\s+/).filter(Boolean).length;
   const textareaRef = useRef(null);
 
@@ -3526,12 +3576,12 @@ function EssayInput({ question, index, value, onChange, disabled }) {
           value={value}
           onChange={(e) => onChange(index, e.target.value)}
           onInput={(e) => autoGrow(e.currentTarget)}
-          placeholder="Rédigez votre réponse ici…"
+          placeholder={t('Rédigez votre réponse ici…', 'Ekri repons ou an isit la…')}
           rows={4}
           disabled={disabled}
         />
         <div className="exam-take__essay-wordcount">
-          {wordCount} mot{wordCount !== 1 ? 's' : ''}
+          {wordCount} {t(wordCount !== 1 ? 'mots' : 'mot', 'mo')}
         </div>
       </div>
     </>
@@ -3539,6 +3589,8 @@ function EssayInput({ question, index, value, onChange, disabled }) {
 }
 
 function MatchingInput({ question, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const parsed = useMemo(() => parseMatchingKey(question), [question]);
   const selections = useMemo(() => {
     try { return value ? JSON.parse(value) : {}; } catch { return {}; }
@@ -3560,7 +3612,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
     return (
       <div className="exam-take__matching-structured">
         <div className="exam-take__matching-progress">
-          {matchedCount}/{leftItems.length} associés
+          {matchedCount}/{leftItems.length} {t('associés', 'asosye')}
         </div>
         {showLegend && (
           <ul className="exam-take__matching-legend">
@@ -3584,9 +3636,9 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
                 value={selections[it.key] || ''}
                 onChange={(e) => setMatch(it.key, e.target.value)}
                 disabled={disabled}
-                aria-label={`Correspondance pour l'élément ${it.key}`}
+                aria-label={`${t("Correspondance pour l'élément", 'Korespondans pou eleman')} ${it.key}`}
               >
-                <option value="">— Choisir —</option>
+                <option value="">{t('— Choisir —', '— Chwazi —')}</option>
                 {rightOptions.map((o) => (
                   <option key={o.key} value={o.key}>
                     {o.text ? `${o.key.toUpperCase()}. ${o.text}` : o.key.toUpperCase()}
@@ -3604,7 +3656,7 @@ function MatchingInput({ question, index, value, onChange, disabled }) {
   return (
     <div className="exam-take__matching">
       <p className="exam-take__matching-hint">
-        Entrez vos correspondances (ex: 1-B, 2-A, 3-C)
+        {t('Entrez vos correspondances (ex: 1-B, 2-A, 3-C)', 'Antre korespondans ou yo (egz: 1-B, 2-A, 3-C)')}
       </p>
       <input
         className="exam-take__text-input"

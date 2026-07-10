@@ -74,7 +74,7 @@ export default function Profile() {
           </div>
 
           <div className="profile-links profile-links--guest">
-            <Link to="/about" className="profile-link"><Info size={18} /> {t('À propos', 'Konsènan')}<ChevronRight size={16} /></Link>
+            <Link to="/about" className="profile-link"><Info size={18} /> {t('À propos', 'Sou nou')}<ChevronRight size={16} /></Link>
             <button className="profile-link" onClick={() => toggleTheme()}>
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               {theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
@@ -209,7 +209,7 @@ export default function Profile() {
             <div className="profile-espace-grid">
               <Link to="/dashboard" className="profile-espace-tile">
                 <LayoutDashboard size={22} />
-                <span>{t('Tableau', 'Tablo')}</span>
+                <span>{t('Tableau', 'Tablodbò')}</span>
               </Link>
               <Link to="/study-plan" className="profile-espace-tile">
                 <CalendarCheck size={22} />
@@ -225,7 +225,7 @@ export default function Profile() {
               </button>
               <Link to="/about" className="profile-espace-tile">
                 <Info size={22} />
-                <span>{t('À propos', 'Konsènan')}</span>
+                <span>{t('À propos', 'Sou nou')}</span>
               </Link>
             </div>
             <button type="button" className="profile-link profile-link--danger" onClick={handleLogout}>
@@ -241,7 +241,7 @@ export default function Profile() {
             <p className="text-muted">
               {t(
                 'Bientôt : obtenez des certificats vérifiables en complétant des parcours et des examens blancs.',
-                'Talè : jwenn sètifika verifyab lè w konplete parcou ak egzamen blan.',
+                'Talè : jwenn sètifika verifyab lè w konplete pakou ak egzamen blan.',
               )}
             </p>
             <span className="profile-soon-badge">{t('Bientôt', 'Talè')}</span>

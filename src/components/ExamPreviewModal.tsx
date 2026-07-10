@@ -7,6 +7,7 @@ import { subjectColor, QUESTION_TYPE_META } from '../utils/examUtils';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 import InstructionRenderer from './InstructionRenderer';
+import useStore from '../contexts/store';
 
 /** Map the numeric difficulty (1–5) to a 3-tier label + tone (mirrors ExamBrowser). */
 const DIFFICULTY_META = {
@@ -16,6 +17,9 @@ const DIFFICULTY_META = {
   4: { label: 'Difficile', tier: 'hard' },
   5: { label: 'Difficile', tier: 'hard' },
 };
+
+/** Creole difficulty labels, keyed by tier (parallel to DIFFICULTY_META). */
+const DIFFICULTY_LABEL_HT = { easy: 'Fasil', medium: 'Mwayen', hard: 'Difisil' };
 
 const LANG_LABEL = { fr: 'Français', ht: 'Kreyòl', en: 'English', es: 'Español' };
 
@@ -34,6 +38,9 @@ const LANG_LABEL = { fr: 'Français', ht: 'Kreyòl', en: 'English', es: 'Españo
  */
 export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
   const navigate = useNavigate();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr, ht) => (isCreole ? ht : fr);
 
   const id = exam.exam_id || exam._idx;
   const color = subjectColor(exam._subject);
@@ -131,7 +138,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
       className="exam-preview"
       role="dialog"
       aria-modal="true"
-      aria-label={`Aperçu de l'examen : ${title}`}
+      aria-label={`${t("Aperçu de l'examen", 'Apèsi egzamen an')} : ${title}`}
       onClick={onClose}
     >
       <div
@@ -142,7 +149,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
         onTouchMove={swipe.onTouchMove}
         onTouchEnd={swipe.onTouchEnd}
       >
-        <button className="exam-preview__close" onClick={onClose} type="button" aria-label="Fermer l'aperçu">
+        <button className="exam-preview__close" onClick={onClose} type="button" aria-label={t("Fermer l'aperçu", 'Fèmen apèsi a')}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
         </button>
 
@@ -153,7 +160,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
             {exam._level && <span className="exam-preview__tag">{exam._level}</span>}
             {diff && (
               <span className={`exam-preview__tag exam-preview__tag--diff exam-preview__tag--${diff.tier}`}>
-                {diff.label}
+                {t(diff.label, DIFFICULTY_LABEL_HT[diff.tier])}
               </span>
             )}
             {exam.language && (
@@ -168,7 +175,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
           {attempt && (
             <div className={`exam-preview__attempt exam-preview__attempt${tone}`}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-              <span>{pct != null ? `Meilleur score : ${pct}%` : 'Déjà tenté'}</span>
+              <span>{pct != null ? t(`Meilleur score : ${pct}%`, `Pi bon nòt : ${pct}%`) : t('Déjà tenté', 'Deja eseye')}</span>
               {attemptDate && <span className="exam-preview__attempt-date">· {attemptDate}</span>}
             </div>
           )}
@@ -177,36 +184,38 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
           <div className="exam-preview__stats">
             <div className="exam-preview__stat">
               <span className="exam-preview__stat-value">{qCount}</span>
-              <span className="exam-preview__stat-label">question{qCount !== 1 ? 's' : ''}</span>
+              <span className="exam-preview__stat-label">{t('question', 'kesyon')}{qCount !== 1 ? t('s', '') : ''}</span>
             </div>
             {duration > 0 && (
               <div className="exam-preview__stat">
                 <span className="exam-preview__stat-value">{duration}</span>
-                <span className="exam-preview__stat-label">minutes</span>
+                <span className="exam-preview__stat-label">{t('minutes', 'minit')}</span>
               </div>
             )}
             {points > 0 && (
               <div className="exam-preview__stat">
                 <span className="exam-preview__stat-value">{points}</span>
-                <span className="exam-preview__stat-label">points</span>
+                <span className="exam-preview__stat-label">{t('points', 'pwen')}</span>
               </div>
             )}
             <div className="exam-preview__stat">
               <span className="exam-preview__stat-value">{sectionCount || (isLoading ? '…' : '—')}</span>
-              <span className="exam-preview__stat-label">section{sectionCount > 1 ? 's' : ''}</span>
+              <span className="exam-preview__stat-label">{t('section', 'seksyon')}{sectionCount > 1 ? t('s', '') : ''}</span>
             </div>
           </div>
 
           {autoGradable > 0 && (
             <p className="exam-preview__autograde">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>
-              {autoGradable} question{autoGradable !== 1 ? 's' : ''} corrigée{autoGradable !== 1 ? 's' : ''} automatiquement
+              {isCreole
+                ? `${autoGradable} kesyon korije otomatikman`
+                : `${autoGradable} question${autoGradable !== 1 ? 's' : ''} corrigée${autoGradable !== 1 ? 's' : ''} automatiquement`}
             </p>
           )}
 
           {/* Section structure */}
           <section className="exam-preview__block">
-            <h3 className="exam-preview__block-title">Structure</h3>
+            <h3 className="exam-preview__block-title">{t('Structure', 'Estrikti')}</h3>
             {isLoading ? (
               <div className="exam-preview__skeleton">
                 <span /><span /><span />
@@ -222,14 +231,14 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
                 ))}
               </ol>
             ) : (
-              <p className="exam-preview__muted">Structure indisponible.</p>
+              <p className="exam-preview__muted">{t('Structure indisponible.', 'Estrikti pa disponib.')}</p>
             )}
           </section>
 
           {/* Question-type breakdown */}
           {typeEntries.length > 0 && (
             <section className="exam-preview__block">
-              <h3 className="exam-preview__block-title">Types de questions</h3>
+              <h3 className="exam-preview__block-title">{t('Types de questions', 'Kalite kesyon')}</h3>
               <div className="exam-preview__chips">
                 {typeEntries.map(([type, count]) => {
                   const meta = QUESTION_TYPE_META[type] || QUESTION_TYPE_META.unknown;
@@ -246,7 +255,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
           {/* Tracks / filières */}
           {tracks.length > 0 && (
             <section className="exam-preview__block">
-              <h3 className="exam-preview__block-title">Filières</h3>
+              <h3 className="exam-preview__block-title">{t('Filières', 'Filyè')}</h3>
               <div className="exam-preview__chips">
                 {tracks.map((t) => (
                   <span key={t} className="exam-preview__chip exam-preview__chip--track">
@@ -260,7 +269,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
           {/* Sample question teaser */}
           {sample && (
             <section className="exam-preview__block">
-              <h3 className="exam-preview__block-title">Aperçu d'une question</h3>
+              <h3 className="exam-preview__block-title">{t("Aperçu d'une question", 'Apèsi yon kesyon')}</h3>
               <div className="exam-preview__sample">
                 <div className="exam-preview__sample-text">
                   <InstructionRenderer text={sample.question} inline={false} />
@@ -279,7 +288,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
               </div>
               <p className="exam-preview__sample-note">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-                Commencez l'examen pour voir les {qCount} questions.
+                {isCreole ? `Kòmanse egzamen an pou wè ${qCount} kesyon yo.` : `Commencez l'examen pour voir les ${qCount} questions.`}
               </p>
             </section>
           )}
@@ -290,7 +299,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
           <div className="exam-preview__footer-actions">
             <button className="exam-preview__btn exam-preview__btn--ghost" onClick={fullPreview} type="button">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>
-              Aperçu complet
+              {t('Aperçu complet', 'Apèsi konplè')}
             </button>
             <button
               ref={startBtnRef}
@@ -300,12 +309,12 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
               type="button"
               aria-keyshortcuts="Enter"
             >
-              <span>{attempt ? 'Refaire' : 'Commencer'}</span>
+              <span>{attempt ? t('Refaire', 'Refè') : t('Commencer', 'Kòmanse')}</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
             </button>
           </div>
           <p className="exam-preview__footer-hint">
-            <kbd>Entrée</kbd> pour commencer <kbd>Échap</kbd> pour fermer
+            <kbd>Entrée</kbd> {t('pour commencer', 'pou kòmanse')} <kbd>Échap</kbd> {t('pour fermer', 'pou fèmen')}
           </p>
         </div>
       </div>

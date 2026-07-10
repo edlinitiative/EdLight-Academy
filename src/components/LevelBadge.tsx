@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import { useTrivia } from '../hooks/useTrivia';
+import useStore from '../contexts/store';
 
 /**
  * LevelBadge — compact XP-level chip for the navbar.
@@ -13,6 +14,8 @@ import { useTrivia } from '../hooks/useTrivia';
  */
 export function LevelBadge() {
   const { level, isAuthed, isLoading } = useTrivia();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
 
   if (!isAuthed || isLoading) return null;
 
@@ -24,8 +27,8 @@ export function LevelBadge() {
     <Link
       to="/profile"
       className="level-badge"
-      title={`Niveau ${lvl} — ${xp} XP`}
-      aria-label={`Niveau ${lvl}, ${pct}% vers le niveau suivant`}
+      title={isCreole ? `Nivo ${lvl} — ${xp} XP` : `Niveau ${lvl} — ${xp} XP`}
+      aria-label={isCreole ? `Nivo ${lvl}, ${pct}% pou rive nan pwochen nivo a` : `Niveau ${lvl}, ${pct}% vers le niveau suivant`}
       style={{ '--lvl-pct': `${pct}%` } as React.CSSProperties}
     >
       <span className="level-badge__ring" aria-hidden="true">

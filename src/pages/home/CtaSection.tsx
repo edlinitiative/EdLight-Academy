@@ -21,7 +21,7 @@ export default function CtaSection({ t }: { t: TFn }) {
             <p className="lp-cta__desc">
               {t(
                 'Rejoignez les milliers d’élèves qui préparent leur avenir avec EdLight Academy.',
-                'Rejwenn dè milye elèv k ap prepare avni yo ak EdLight Academy.'
+                'Rejwenn plizyè milye elèv k ap prepare avni yo ak EdLight Academy.'
               )}
             </p>
             <div className="lp-hero__actions">

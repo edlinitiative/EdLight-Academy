@@ -53,7 +53,7 @@ const APPROACH_ITEMS = [
 const VALUES = [
   { label: 'Accessibilité', labelHt: 'Aksesibilite', desc: "L'éducation de qualité est un droit, pas un privilège.", descHt: 'Edikasyon kalite se yon dwa, se pa yon privilèj.' },
   { label: 'Excellence', labelHt: 'Eksèlans', desc: 'Nous visons les meilleurs standards pédagogiques haïtiens et mondiaux.', descHt: 'Nou vize pi bon estanda pedagojik ayisyen ak mondyal.' },
-  { label: 'Communauté', labelHt: 'Kominote', desc: 'Construit par et pour les élèves et enseignants haïtiens.', descHt: 'Konstwi pa ak pou elèv ak pwofesè ayisyen.' },
+  { label: 'Communauté', labelHt: 'Kominote', desc: 'Construit par et pour les élèves et enseignants haïtiens.', descHt: 'Bati pa elèv ak pwofesè ayisyen, epi pou yo menm.' },
 ];
 
 /* The concrete learning loop — explains how a student actually uses EdLight. */
@@ -62,13 +62,13 @@ const STEPS = [
     n: '1',
     titleFr: 'Apprenez', titleHt: 'Aprann',
     descFr: 'Regardez des leçons vidéo courtes, organisées par matière, niveau et unité.',
-    descHt: 'Gade leçon videyo kout, ki òganize pa matyè, nivò ak inite.',
+    descHt: 'Gade leson videyo kout, ki òganize pa matyè, nivo ak inite.',
   },
   {
     n: '2',
     titleFr: 'Pratiquez', titleHt: 'Pratike',
     descFr: 'Renforcez chaque leçon avec des exercices ciblés et des indices progressifs.',
-    descHt: 'Ranfòse chak leçon ak egzèsis ki vize ak endis pwogresif.',
+    descHt: 'Ranfòse chak leson ak egzèsis ki byen vize epi endis pwogresif.',
   },
   {
     n: '3',
@@ -80,7 +80,7 @@ const STEPS = [
     n: '4',
     titleFr: 'Progressez', titleHt: 'Avanse',
     descFr: 'Suivez vos résultats en temps réel et voyez exactement quoi réviser ensuite.',
-    descHt: 'Swiv rezilta ou an tan reyèl epi wè egzakteman kisa pou revize apè.',
+    descHt: 'Swiv rezilta ou an tan reyèl epi wè egzakteman kisa pou revize apre sa.',
   },
 ];
 
@@ -171,7 +171,7 @@ export default function About() {
           </h2>
           <p className="text-muted" style={{ marginBottom: '1.75rem', maxWidth: '46rem' }}>
             {isCreole
-              ? 'Yon bouk aprantisaj senp ki mennen ou soti nan premye leçon an rive nan jou egzamen an.'
+              ? 'Yon bouk aprantisaj senp ki mennen ou soti nan premye leson an rive nan jou egzamen an.'
               : "Une boucle d’apprentissage simple qui vous accompagne de la première leçon au jour de l’examen."}
           </p>
           <div className="about-steps">

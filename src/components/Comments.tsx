@@ -109,7 +109,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
       setDraft('');
     } catch (error) {
       console.error('Error posting comment:', error);
-      alert(isCreole ? 'Nou pa rive poste kòmantè a. Tanpri eseye ankò.' : 'Impossible de publier le commentaire. Veuillez réessayer.');
+      alert(isCreole ? 'Nou pa rive voye kòmantè a. Tanpri eseye ankò.' : 'Impossible de publier le commentaire. Veuillez réessayer.');
     } finally {
       setPosting(false);
     }
@@ -132,7 +132,7 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
       setReplyOpen((o) => ({ ...o, [parentId]: false }));
     } catch (error) {
       console.error('Error posting reply:', error);
-      alert(isCreole ? 'Nou pa rive poste repons lan. Tanpri eseye ankò.' : 'Impossible de publier la réponse. Veuillez réessayer.');
+      alert(isCreole ? 'Nou pa rive voye repons lan. Tanpri eseye ankò.' : 'Impossible de publier la réponse. Veuillez réessayer.');
     } finally {
       setPosting(false);
     }
@@ -277,10 +277,10 @@ export default function Comments({ threadKey, isAuthenticated, onRequireAuth }) 
                         <button
                           className="button button--ghost button--sm"
                           type="button"
-                          title={isCreole ? 'Sinyale' : 'Signaler'}
+                          title={isCreole ? 'Siyale' : 'Signaler'}
                           onClick={() => handleReport(c)}
                         >
-                          <Flag size={14} /> {isCreole ? 'Sinyale' : 'Signaler'}
+                          <Flag size={14} /> {isCreole ? 'Siyale' : 'Signaler'}
                         </button>
                         <button
                           className="button button--ghost button--sm"

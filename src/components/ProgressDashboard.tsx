@@ -21,7 +21,7 @@ export default function ProgressDashboard() {
     return (
       <div className="card">
         <h3>{isCreole ? 'Pwogrè ou' : 'Votre progression'}</h3>
-        <p className="text-muted">{isCreole ? 'Kòmanse aprann pou suiv pwogrè ou!' : 'Commencez à apprendre pour suivre votre progression !'}</p>
+        <p className="text-muted">{isCreole ? 'Kòmanse aprann pou swiv pwogrè ou!' : 'Commencez à apprendre pour suivre votre progression !'}</p>
       </div>
     );
   }

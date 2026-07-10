@@ -25,7 +25,7 @@ function CategoryPicker({ onSelect, isCreole }) {
   return (
     <div className="trivia-landing">
       <div className="trivia-landing__header">
-        <h1 className="trivia-landing__title">{isCreole ? 'Jèt Trivia' : 'Jeu Trivia'}</h1>
+        <h1 className="trivia-landing__title">{isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}</h1>
         <p className="trivia-landing__subtitle">
           {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
         </p>
@@ -312,7 +312,7 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole, rew
             )}
             {reward.guest && (
               <span className="trivia-reward__guest">
-                {isCreole ? 'Konekte pou sove XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
+                {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
               </span>
             )}
           </div>

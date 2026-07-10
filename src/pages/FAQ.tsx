@@ -27,7 +27,7 @@ const faqsFr = [
 const faqsHt = [
   {
     q: 'Kijan pou mwen kòmanse aprann?',
-    a: 'Klike “Kòmanse aprann” sou paj dakèy la pou konekte, oswa gade kou yo pou chwazi yon matyè ak nivo NS. Louvri yon kou pou swiv inite ak leson yo.'
+    a: 'Klike “Kòmanse aprann” sou paj akèy la pou konekte, oswa gade kou yo pou chwazi yon matyè ak yon nivo NS. Louvri yon kou pou swiv inite ak leson yo.'
   },
   {
     q: 'Kote mwen jwenn kesyon pratik yo?',
@@ -35,7 +35,7 @@ const faqsHt = [
   },
   {
     q: 'Poukisa pa gen kesyon pou inite mwen an?',
-    a: 'Gen kèk inite nou poko fin ajoute. Esaye yon lòt inite nan menm kou a oswa yon lòt nivo. Nou ajoute nouvo kesyon regilyèman.'
+    a: 'Gen kèk inite nou poko fin ajoute. Eseye yon lòt inite nan menm kou a oswa yon lòt nivo. Nou ajoute nouvo kesyon regilyèman.'
   },
   {
     q: 'Èske nou sipòte ekriti matematik?',
@@ -60,7 +60,7 @@ export default function FAQ() {
             <h1>{isCreole ? 'Kesyon yo poze souvan (FAQ)' : 'Foire aux questions (FAQ)'}</h1>
             <p className="text-muted">
               {isCreole
-                ? 'Repons pou kesyon moun poze sou kou yo, pratik, ak kòmanse.'
+                ? 'Repons pou kesyon moun poze souvan sou kou yo, pratik la, ak jan pou kòmanse.'
                 : 'Réponses aux questions fréquentes sur les cours, la pratique et le démarrage.'}
             </p>
           </div>

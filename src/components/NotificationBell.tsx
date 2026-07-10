@@ -10,7 +10,8 @@ import useStore from '../contexts/store';
  * bundle (consistent with the app's lazy-Firebase strategy).
  */
 export default function NotificationBell({ className = '' }) {
-  const { user, isAuthenticated, showNotifications, toggleNotifications } = useStore();
+  const { user, isAuthenticated, showNotifications, toggleNotifications, language } = useStore();
+  const isCreole = language === 'ht';
   const [count, setCount] = useState(0);
 
   const refresh = useCallback(async () => {
@@ -51,10 +52,10 @@ export default function NotificationBell({ className = '' }) {
       type="button"
       className={`notif-bell ${className}`.trim()}
       onClick={() => toggleNotifications()}
-      aria-label={count > 0 ? `Notifications (${count} non lues)` : 'Notifications'}
+      aria-label={count > 0 ? (isCreole ? `Notifikasyon (${count} ou poko li)` : `Notifications (${count} non lues)`) : (isCreole ? 'Notifikasyon' : 'Notifications')}
       aria-haspopup="dialog"
       aria-expanded={showNotifications}
-      title="Notifications"
+      title={isCreole ? 'Notifikasyon' : 'Notifications'}
     >
       <Bell size={18} strokeWidth={2} aria-hidden="true" />
       {count > 0 && (
