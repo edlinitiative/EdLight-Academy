@@ -490,6 +490,7 @@ button.dash-activity__tag { cursor: pointer; }
   grid-template-columns: 1.55fr 1fr;
   gap: 16px;
   margin: 0 0 16px;
+  align-items: start; /* each hero card takes its natural height (no stretch void) */
 }
 .dash--st .dash__hero > .readiness-card { margin: 0; }
 .dash--st .dash__tiles { margin: 0 0 18px; }
