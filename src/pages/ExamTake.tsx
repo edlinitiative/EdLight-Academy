@@ -1575,8 +1575,24 @@ const ExamTake = () => {
                   </div>
                 )}
 
-                {/* Question text — inline blanks for fill_blank, normal renderer otherwise */}
-                {gq.type === 'fill_blank' && hasInlineBlanks(gq._displayText || gq.question) ? (
+                {/* Condition builder takes priority, then inline blanks, then the normal renderer */}
+                {Array.isArray(gq.conditions) && gq.conditions.length > 0 ? (
+                  <>
+                    <div className="exam-take__question-text">
+                      <InstructionRenderer text={gq._displayText || gq.question} />
+                    </div>
+                    <div className="exam-take__answer-area">
+                      <QuestionInput
+                        question={gq}
+                        index={qIdx}
+                        value={answers[qIdx] ?? ''}
+                        onChange={setAnswer}
+                        disabled={isLocked}
+                        subject={subject}
+                      />
+                    </div>
+                  </>
+                ) : gq.type === 'fill_blank' && hasInlineBlanks(gq._displayText || gq.question) ? (
                   <div className="exam-take__question-text">
                     <FillBlankText
                       text={gq._displayText || gq.question}
@@ -2993,6 +3009,12 @@ function ImmediateFeedback({ result, question, color }) {
 function QuestionInput({ question, index, value, onChange, disabled, subject }) {
   const type = question.type || 'unknown';
 
+  // Route guided condition questions to the condition builder (pre-filled left
+  // side + operator picker + value), regardless of the declared question type.
+  if (Array.isArray(question.conditions) && question.conditions.length > 0) {
+    return <ConditionBuilderInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
+  }
+
   // Route proof / demonstration questions to the step-by-step input
   if (isProofQuestion(question, subject)) {
     return <ProofInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
@@ -3017,6 +3039,75 @@ function QuestionInput({ question, index, value, onChange, disabled, subject }) 
     default:
       return <TextInput type={type} index={index} value={value} onChange={onChange} disabled={disabled} />;
   }
+}
+
+// ── Guided Condition Builder Input ───────────────────────────────────────
+// For domain / sign / inequality answers: each condition shows a pre-filled
+// left expression, an operator picker (> ≥ < ≤ = ≠), and a value field. The
+// answer serializes to a JSON array of { operator, value } aligned by row to
+// question.conditions, and is graded by gradeConditionsAnswer in examUtils.
+
+const CONDITION_OP_CHOICES = ['>', '≥', '<', '≤', '=', '≠'];
+
+function ConditionBuilderInput({ question, index, value, onChange, disabled }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
+  const conditions = question.conditions || [];
+
+  const rows = useMemo(() => {
+    let parsed = [];
+    try {
+      const p = typeof value === 'string' ? JSON.parse(value) : value;
+      if (Array.isArray(p)) parsed = p;
+      else if (p && Array.isArray(p.conditions)) parsed = p.conditions;
+    } catch { /* no answer yet */ }
+    return conditions.map((_, i) => ({
+      operator: parsed[i]?.operator || '',
+      value: parsed[i]?.value || '',
+    }));
+  }, [value, conditions]);
+
+  const update = (i, patch) => {
+    const next = rows.map((r, j) => (j === i ? { ...r, ...patch } : r));
+    onChange(index, JSON.stringify(next));
+  };
+
+  return (
+    <div className="exam-take__conditions">
+      <p className="exam-take__conditions-hint">
+        {t('Complétez chaque condition :', 'Konplete chak kondisyon :')}
+      </p>
+      {conditions.map((cond, i) => (
+        <div className="exam-take__condition-row" key={i}>
+          <span className="exam-take__condition-left">
+            <MathText text={`$${cond.left}$`} />
+          </span>
+          <select
+            className="exam-take__condition-op"
+            value={rows[i].operator}
+            onChange={(e) => update(i, { operator: e.target.value })}
+            disabled={disabled}
+            aria-label={t('Signe', 'Siy')}
+          >
+            <option value="">–</option>
+            {CONDITION_OP_CHOICES.map((op) => (
+              <option key={op} value={op}>{op}</option>
+            ))}
+          </select>
+          <input
+            className="exam-take__condition-value"
+            type="text"
+            inputMode="text"
+            value={rows[i].value}
+            onChange={(e) => update(i, { value: e.target.value })}
+            placeholder={t('valeur', 'valè')}
+            disabled={disabled}
+            aria-label={t('Valeur', 'Valè')}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Proof / Demonstration Step-by-Step Input (Khan Academy style) ─────────

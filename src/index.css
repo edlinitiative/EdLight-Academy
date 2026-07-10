@@ -16935,3 +16935,54 @@ textarea:focus {
 .course-card__cta {
 	border-radius: var(--r-btn) !important;
 }
+
+/* ── Guided condition builder (exam answers) ───────────────────────────── */
+.exam-take__conditions {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3);
+}
+.exam-take__conditions-hint {
+	font-size: var(--text-sm);
+	color: var(--text-500);
+	margin: 0 0 var(--space-1);
+}
+.exam-take__condition-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-3);
+	flex-wrap: wrap;
+}
+.exam-take__condition-left {
+	min-width: 3.5rem;
+	font-size: var(--text-lg);
+	color: var(--text-900);
+}
+.exam-take__condition-op {
+	font-size: var(--text-lg);
+	font-weight: 700;
+	text-align: center;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--r-btn);
+	background: var(--surface);
+	color: var(--text-900);
+	cursor: pointer;
+	min-width: 3.5rem;
+}
+.exam-take__condition-value {
+	flex: 1;
+	min-width: 6rem;
+	max-width: 12rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--border-strong);
+	border-radius: var(--r-btn);
+	background: var(--surface);
+	color: var(--text-900);
+	font-size: var(--text-base);
+}
+.exam-take__condition-op:focus-visible,
+.exam-take__condition-value:focus-visible {
+	outline: 2px solid var(--primary-500);
+	outline-offset: 1px;
+}
