@@ -65,15 +65,14 @@ New utility classes:
   }
   ```
 - `.meta-strip` / `.meta-strip__item` — flex row of icon + `.font-label` + bold value.
-- `.reveal` / `.reveal--in` — starting `opacity:0; translateY(12px)`, transitioning to
-  visible; wrapped in `@media (prefers-reduced-motion: no-preference)` so reduced-motion
-  users get no transform.
+### Motion — reuse the existing `data-reveal` system
 
-### Motion primitive (`src/components/Reveal.tsx`)
-
-A tiny wrapper: `IntersectionObserver` adds `.reveal--in` when the element enters the
-viewport (once). Respects `prefers-reduced-motion` (renders visible immediately if the
-user prefers reduced motion). No dependency added.
+Academy already ships a scroll-reveal system: elements with the `data-reveal`
+attribute fade + rise once visible, driven by an `IntersectionObserver` in
+`Layout.tsx` and the `[data-reveal]` rules in `index.css` (already reduced-motion
+safe). The home sections already use it. So motion is **not** a new primitive —
+we simply add `data-reveal` to the catalog/static/in-app surfaces that lack it.
+No new component or dependency.
 
 ### Per-surface application
 

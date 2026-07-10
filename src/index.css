@@ -31,6 +31,13 @@
 	--radius-lg: 16px;
 	--radius-md: 12px;
 	--radius-sm: 8px;
+	/* ── Editorial radii ───────────────────────────────────────────────
+	   Near-sharp corners for the marketing/catalog "editorial" surfaces
+	   (see docs/superpowers/specs/2026-07-10-academy-editorial-polish-design.md).
+	   Deliberately tighter than the soft --radius-* scale above. */
+	--r-panel: 10px;   /* large hero / feature panels */
+	--r-card: 6px;     /* editorial content cards, chips */
+	--r-btn: 6px;      /* editorial buttons */
 	/* ── Type scale ────────────────────────────────────────────────────
 	   Canonical sizes (12/14/16/20/24/32). Prefer these over one-off values
 	   so headings and body text stay consistent across the platform. */
@@ -16775,4 +16782,156 @@ textarea:focus {
 		scroll-behavior: auto !important;
 		transition-duration: 0.001ms !important;
 	}
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   EDITORIAL POLISH LAYER
+   Shared, color-agnostic style utilities that port the print-editorial
+   look of the marketing site onto Academy. Colors are unchanged — this is
+   type, corners, borders, a signature hatched frame, and scroll motion.
+   Spec: docs/superpowers/specs/2026-07-10-academy-editorial-polish-design.md
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Display headings — Literata serif, tight tracking. */
+.font-editorial {
+	font-family: var(--font-serif);
+	letter-spacing: -0.02em;
+	font-weight: 600;
+}
+
+/* Eyebrows / labels / meta — Geist Mono, uppercase, tracked. */
+.font-label {
+	font-family: var(--font-mono);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	font-size: var(--text-xs);
+	font-weight: 500;
+	color: var(--text-500);
+}
+
+/* Signature hatched offset frame: a letterpress diagonal-stripe shadow that
+   peeks off the bottom-right of a card. Uses the existing ink colour — no new
+   colour is introduced. Apply sparingly (hero aside card, one featured CTA). */
+.hatch-frame {
+	position: relative;
+}
+.hatch-frame::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	transform: translate(6px, 6px);
+	z-index: -1;
+	border: 1px solid var(--text-900);
+	background: repeating-linear-gradient(45deg, var(--text-900) 0 1px, transparent 1px 6px);
+	opacity: 0.9;
+	border-radius: inherit;
+	pointer-events: none;
+}
+
+/* Metadata strip: icon · MONO LABEL · bold value rows. */
+.meta-strip {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-5);
+	align-items: flex-start;
+}
+.meta-strip__item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+}
+.meta-strip__item svg {
+	flex: none;
+	color: var(--text-500);
+}
+.meta-strip__body {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.25;
+}
+.meta-strip__label {
+	font-family: var(--font-mono);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	font-size: 0.6875rem; /* 11px */
+	color: var(--text-500);
+}
+.meta-strip__value {
+	font-weight: 700;
+	color: var(--text-900);
+}
+
+/* Scroll-reveal reuses the existing platform system: add the `data-reveal`
+   attribute (handled by Layout's IntersectionObserver + the [data-reveal]
+   rules earlier in this file). No separate reveal styles are needed here. */
+
+/* ── Editorial application ─────────────────────────────────────────────
+   Applies the editorial signatures to the public marketing, catalog, and
+   landing surfaces by restyling their existing classes. Placed last so it
+   wins the cascade over the earlier cohesion layer. Colours are untouched. */
+
+/* Eyebrows → flat monospace labels (drop the pill chrome). */
+.lp-eyebrow,
+.page-header__eyebrow,
+.exam-landing__eyebrow,
+.trivia-landing__eyebrow,
+.sp-hero__eyebrow,
+.quiz-hero__eyebrow {
+	display: inline-flex !important;
+	align-items: center !important;
+	gap: 0.5em !important;
+	background: transparent !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	padding: 0 !important;
+	color: var(--text-500) !important;
+	font-family: var(--font-mono) !important;
+	text-transform: uppercase !important;
+	font-size: 0.7rem !important;
+	font-weight: 500 !important;
+	letter-spacing: 0.14em !important;
+}
+
+/* Display titles → Literata serif, tight tracking. */
+.lp-hero__title,
+.lp-section__title,
+.lp-cta__title,
+.lp-pillar__title,
+.lp-course__title,
+.lp-panel__head,
+.page-header__title,
+.exam-landing__title,
+.trivia-landing__title,
+.about-hero__title,
+.about-offering__title,
+.about-step__title,
+.about-values__title,
+.section__title {
+	font-family: var(--font-serif) !important;
+	letter-spacing: -0.02em !important;
+}
+
+/* Marketing / catalog / landing cards & panels → near-sharp corners.
+   Borders stay hairline (already set by the cohesion layer). */
+.lp-course,
+.lp-pillar,
+.course-card,
+.exam-card,
+.trivia-cat-card,
+.about-offering__item,
+.about-step,
+.about-values__item {
+	border-radius: var(--r-card) !important;
+}
+.lp-panel,
+.lp-hero__frame,
+.lp-cta {
+	border-radius: var(--r-panel) !important;
+}
+
+/* Editorial buttons → matching near-sharp radius. */
+.button,
+.lp-btn,
+.course-card__cta {
+	border-radius: var(--r-btn) !important;
 }
