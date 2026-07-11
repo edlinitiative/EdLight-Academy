@@ -6,6 +6,7 @@ import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import { useTriviaContent } from '../hooks/useTriviaContent';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
 import { todayStr } from '../services/streakService';
 import './TriviaGames.css';
@@ -21,7 +22,7 @@ function shuffle(arr) {
 }
 
 /* ─── Category Selection Screen ─── */
-function CategoryPicker({ onSelect, isCreole }) {
+function CategoryPicker({ onSelect, isCreole, categories = TRIVIA_CATEGORIES as any[], questions = TRIVIA_QUESTIONS as Record<string, any[]> }) {
   return (
     <div className="trivia-landing">
       <div className="trivia-landing__header">
@@ -31,12 +32,12 @@ function CategoryPicker({ onSelect, isCreole }) {
         </p>
       </div>
       <div className="trivia-landing__grid">
-        {TRIVIA_CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <button
             key={cat.id}
             className="trivia-cat-tile"
             onClick={() => onSelect(cat.id)}
-            aria-label={`${isCreole ? cat.nameHt : cat.name} — ${TRIVIA_QUESTIONS[cat.id].length} ${isCreole ? 'kesyon' : 'questions'}`}
+            aria-label={`${isCreole ? cat.nameHt : cat.name} — ${(questions[cat.id] || []).length} ${isCreole ? 'kesyon' : 'questions'}`}
           >
             <span className="trivia-cat-tile__media">
               <img
@@ -67,9 +68,9 @@ function CategoryPicker({ onSelect, isCreole }) {
 }
 
 /* ─── Difficulty / Round Size Picker ─── */
-function RoundPicker({ category, onStart, onBack, isCreole }) {
-  const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
-  const total = TRIVIA_QUESTIONS[category].length;
+function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_CATEGORIES as any[], questions = TRIVIA_QUESTIONS as Record<string, any[]> }) {
+  const cat = categories.find((c) => c.id === category);
+  const total = (questions[category] || []).length;
 
   const rounds = [
     { count: 10, label: isCreole ? 'Rapid, 10 kesyon' : 'Rapide, 10 questions', icon: <Zap size={18} /> },
@@ -106,14 +107,14 @@ function RoundPicker({ category, onStart, onBack, isCreole }) {
 }
 
 /* ─── Active Game Screen ─── */
-function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: providedQuestions = null, accentColor = null }) {
-  const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
+function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: providedQuestions = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[], questionsMap = TRIVIA_QUESTIONS as Record<string, any[]> }) {
+  const cat = categories.find((c) => c.id === category);
   const questions = useMemo(
     () =>
       providedQuestions && providedQuestions.length
         ? providedQuestions
-        : shuffle(TRIVIA_QUESTIONS[category] || []).slice(0, count),
-    [category, count, providedQuestions],
+        : shuffle(questionsMap[category] || []).slice(0, count),
+    [category, count, providedQuestions, questionsMap],
   );
   const accent = accentColor || cat?.color || '#0A66C2';
 
@@ -255,8 +256,8 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
 }
 
 /* ─── Results Screen ─── */
-function TriviaResults({ category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null }) {
-  const cat = TRIVIA_CATEGORIES.find((c) => c.id === category);
+function TriviaResults({ category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[] }) {
+  const cat = categories.find((c) => c.id === category);
   const accent = accentColor || cat?.color || '#0A66C2';
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
 
@@ -386,6 +387,8 @@ export default function TriviaGames() {
   const location = useLocation();
   const { recordResult, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
+  // Merged trivia content (static floor + optional Firestore overlay).
+  const { categories, questions } = useTriviaContent();
 
   // States: 'pick' | 'round' | 'play' | 'results'
   const [screen, setScreen] = useState('pick');
@@ -402,7 +405,7 @@ export default function TriviaGames() {
   useFocusMode(screen === 'play');
 
   const startDaily = useCallback(() => {
-    const qs = getDailyChallengeQuestions(TRIVIA_QUESTIONS, todayStr(), 10);
+    const qs = getDailyChallengeQuestions(questions, todayStr(), 10);
     if (!qs.length) return;
     setDailyQuestions(qs);
     setCategory('daily');
@@ -410,7 +413,7 @@ export default function TriviaGames() {
     setReward(null);
     setPlayNonce((n) => n + 1);
     setScreen('play');
-  }, []);
+  }, [questions]);
 
   // Deep-link from the home "Défi du jour" widget:
   // navigate('/trivia', { state: { startDaily: true } }).
@@ -484,7 +487,12 @@ export default function TriviaGames() {
         <>
           {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
           <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
-          <CategoryPicker onSelect={handleCategorySelect} isCreole={isCreole} />
+          <CategoryPicker
+            onSelect={handleCategorySelect}
+            isCreole={isCreole}
+            categories={categories}
+            questions={questions}
+          />
         </>
       )}
       {screen === 'round' && (
@@ -493,6 +501,8 @@ export default function TriviaGames() {
           onStart={handleStart}
           onBack={handleBack}
           isCreole={isCreole}
+          categories={categories}
+          questions={questions}
         />
       )}
       {screen === 'play' && (
@@ -505,6 +515,8 @@ export default function TriviaGames() {
           onFinish={handleFinish}
           onBack={handleBack}
           isCreole={isCreole}
+          categories={categories}
+          questionsMap={questions}
         />
       )}
       {screen === 'results' && (
@@ -517,6 +529,7 @@ export default function TriviaGames() {
           onReplay={handleReplay}
           onHome={handleHome}
           isCreole={isCreole}
+          categories={categories}
         />
       )}
     </div>

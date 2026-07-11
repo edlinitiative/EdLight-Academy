@@ -12755,24 +12755,24 @@ textarea:focus-visible,
    Answer Verification — Admin page for reviewing AI answers
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Sits inside the admin console shell (.admin-main already provides page
+   padding), so no outer container padding/centering here. */
 .av-page {
-	padding: 2rem 1rem 4rem;
-	max-width: 900px;
-	margin: 0 auto;
+	max-width: 940px;
 }
 
-/* Header */
+/* Header — admin-page head on the left, save action on the right */
 .av-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
 	gap: 1rem;
-	margin-bottom: 1.5rem;
+	margin-bottom: 1.25rem;
 	flex-wrap: wrap;
 }
 
-.av-header h1 {
-	margin: 0.25rem 0 0.25rem;
+.av-header .admin-page__head {
+	margin-bottom: 0;
 }
 
 .av-header__actions {
@@ -12780,6 +12780,45 @@ textarea:focus-visible,
 	align-items: center;
 	gap: 0.75rem;
 	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+/* In-page explainer note (uses .admin-card look) */
+.av-explainer {
+	padding: 14px 16px;
+	margin-bottom: 20px;
+	font-size: 0.9rem;
+	line-height: 1.55;
+	color: var(--asb-muted, #64748b);
+}
+
+.av-explainer p {
+	margin: 0;
+}
+
+.av-explainer strong {
+	color: var(--asb-ink, #1e293b);
+	font-weight: 650;
+}
+
+.av-explainer code {
+	font-family: var(--asb-mono, ui-monospace, monospace);
+	font-size: 0.82em;
+	background: color-mix(in srgb, var(--asb-accent, #0857a6) 10%, transparent);
+	color: var(--asb-accent, #0857a6);
+	padding: 1px 5px;
+	border-radius: 3px;
+}
+
+.av-explainer kbd {
+	display: inline-block;
+	padding: 0.05rem 0.35rem;
+	background: color-mix(in srgb, var(--asb-ink, #1e293b) 8%, transparent);
+	border: 1px solid var(--asb-line, #e2e8f0);
+	border-radius: 4px;
+	font-size: 0.78em;
+	font-family: inherit;
+	margin: 0 0.1rem;
 }
 
 /* Progress bar */

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ClipboardCheck } from 'lucide-react';
 import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import {
@@ -70,10 +71,10 @@ function FilterBar({ stats, filters, onFilterChange, subjects, examItems }) {
   return (
     <div className="av-filter-bar">
       <div className="av-filter-bar__stats">
-        <span className="av-stat av-stat--verified">✓ {stats.verified} verified</span>
-        <span className="av-stat av-stat--pending">◌ {stats.pending} pending</span>
-        <span className="av-stat av-stat--rejected">✗ {stats.rejected} rejected</span>
-        <span className="av-stat av-stat--total">{stats.total} total</span>
+        <span className="av-stat av-stat--verified">✓ {stats.verified} validées</span>
+        <span className="av-stat av-stat--pending">◌ {stats.pending} en attente</span>
+        <span className="av-stat av-stat--rejected">✗ {stats.rejected} rejetées</span>
+        <span className="av-stat av-stat--total">{stats.total} au total</span>
       </div>
       <div className="av-filter-bar__controls">
         <select
@@ -81,17 +82,17 @@ function FilterBar({ stats, filters, onFilterChange, subjects, examItems }) {
           value={filters.status}
           onChange={e => onFilterChange({ ...filters, status: e.target.value })}
         >
-          <option value="pending">Pending review</option>
-          <option value="verified">Verified ✓</option>
-          <option value="rejected">Rejected ✗</option>
-          <option value="all">All questions</option>
+          <option value="pending">En attente</option>
+          <option value="verified">Validées ✓</option>
+          <option value="rejected">Rejetées ✗</option>
+          <option value="all">Toutes les questions</option>
         </select>
         <select
           className="av-select"
           value={filters.subject}
           onChange={e => onFilterChange({ ...filters, subject: e.target.value })}
         >
-          <option value="">All subjects</option>
+          <option value="">Toutes les matières</option>
           {subjects.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select
@@ -99,12 +100,12 @@ function FilterBar({ stats, filters, onFilterChange, subjects, examItems }) {
           value={filters.type}
           onChange={e => onFilterChange({ ...filters, type: e.target.value })}
         >
-          <option value="">All types</option>
-          <option value="proof">Proof / Démonstration</option>
-          <option value="calculation">Calculation</option>
-          <option value="fill_blank">Fill in blank</option>
-          <option value="short_answer">Short answer</option>
-          <option value="essay">Essay / Long answer</option>
+          <option value="">Tous les types</option>
+          <option value="proof">Démonstration</option>
+          <option value="calculation">Calcul</option>
+          <option value="fill_blank">Texte à trous</option>
+          <option value="short_answer">Réponse courte</option>
+          <option value="essay">Rédaction / Réponse longue</option>
         </select>
       </div>
     </div>
@@ -141,48 +142,48 @@ function AnswerPartEditor({ part, partIndex, onChange }) {
   return (
     <div className={`av-part ${editing ? 'av-part--editing' : ''}`}>
       <div className="av-part__header">
-        <span className="av-part__label">{part.label || `Part ${partIndex + 1}`}</span>
+        <span className="av-part__label">{part.label || `Partie ${partIndex + 1}`}</span>
         {!editing && (
           <button className="av-btn av-btn--sm av-btn--ghost" onClick={() => setEditing(true)}>
-            ✏️ Edit
+            ✏️ Modifier
           </button>
         )}
       </div>
 
       {editing ? (
         <div className="av-part__edit-form">
-          <label className="av-label">Primary answer</label>
+          <label className="av-label">Réponse principale</label>
           <input
             className="av-input"
             value={localAnswer}
             onChange={e => setLocalAnswer(e.target.value)}
-            placeholder="Correct answer"
+            placeholder="Réponse correcte"
           />
 
           <label className="av-label" style={{ marginTop: '0.5rem' }}>
-            Alternatives (one per line)
+            Alternatives (une par ligne)
           </label>
           <textarea
             className="av-textarea"
             value={localAlts}
             onChange={e => setLocalAlts(e.target.value)}
-            placeholder="Alternative accepted answers, one per line"
+            placeholder="Réponses alternatives acceptées, une par ligne"
             rows={Math.max(3, (part.alternatives || []).length + 1)}
           />
 
           <div className="av-part__edit-actions">
-            <button className="av-btn av-btn--sm av-btn--primary" onClick={handleSave}>Save</button>
-            <button className="av-btn av-btn--sm av-btn--ghost" onClick={handleCancel}>Cancel</button>
+            <button className="av-btn av-btn--sm av-btn--primary" onClick={handleSave}>Enregistrer</button>
+            <button className="av-btn av-btn--sm av-btn--ghost" onClick={handleCancel}>Annuler</button>
           </div>
         </div>
       ) : (
         <div className="av-part__display">
           <div className="av-part__answer">
-            <strong>Answer:</strong> <MathText text={part.answer} />
+            <strong>Réponse :</strong> <MathText text={part.answer} />
           </div>
           {part.alternatives && part.alternatives.length > 0 && (
             <div className="av-part__alts">
-              <span className="av-part__alts-label">Also accepts:</span>
+              <span className="av-part__alts-label">Accepte aussi :</span>
               {part.alternatives.map((alt, i) => (
                 <span key={i} className="av-part__alt-chip"><MathText text={alt} /></span>
               ))}
@@ -203,7 +204,7 @@ function ApproachViewer({ approaches }) {
 
   return (
     <div className="av-approaches">
-      <h4 className="av-approaches__title">Solution Approaches ({approaches.length})</h4>
+      <h4 className="av-approaches__title">Approches de résolution ({approaches.length})</h4>
       {approaches.map((approach, i) => (
         <div key={i} className="av-approach">
           <button
@@ -211,9 +212,9 @@ function ApproachViewer({ approaches }) {
             onClick={() => setExpanded(expanded === i ? null : i)}
           >
             <span className="av-approach__name">
-              {expanded === i ? '▾' : '▸'} {approach.name || `Approach ${i + 1}`}
+              {expanded === i ? '▾' : '▸'} {approach.name || `Approche ${i + 1}`}
             </span>
-            <span className="av-approach__step-count">{(approach.steps || []).length} steps</span>
+            <span className="av-approach__step-count">{(approach.steps || []).length} étapes</span>
           </button>
           {expanded === i && (
             <ol className="av-approach__steps">
@@ -296,9 +297,9 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
       {/* Section context */}
       {section?.instructions && (
         <div className="av-card__context">
-          <strong>Section:</strong> {section.title || 'Untitled'}
+          <strong>Section :</strong> {section.title || 'Sans titre'}
           <details className="av-card__instructions">
-            <summary>Section instructions</summary>
+            <summary>Consignes de la section</summary>
             <MathText text={section.instructions} />
           </details>
         </div>
@@ -307,7 +308,7 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
       {/* Parent question (for sub_questions) */}
       {item.parentQuestion && (
         <div className="av-card__parent">
-          <span className="av-card__parent-label">Parent question:</span>
+          <span className="av-card__parent-label">Question parente :</span>
           <MathText text={item.parentQuestion.question} />
         </div>
       )}
@@ -315,11 +316,11 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
       {/* Question text */}
       <div className="av-card__question">
         <h3 className="av-card__question-text">
-          <MathText text={q.question || q.text || '(no question text)'} />
+          <MathText text={q.question || q.text || '(pas de texte de question)'} />
         </h3>
         {q.figure_description && (
           <div className="av-card__figure">
-            <span className="av-card__figure-label">📊 Figure:</span>
+            <span className="av-card__figure-label">📊 Figure :</span>
             <span className="av-card__figure-text">{q.figure_description.substring(0, 200)}</span>
           </div>
         )}
@@ -331,7 +332,7 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
           className="av-btn av-btn--ghost"
           onClick={() => setShowModelAnswer(!showModelAnswer)}
         >
-          {showModelAnswer ? '▾ Hide' : '▸ Show'} full model answer
+          {showModelAnswer ? '▾ Masquer' : '▸ Afficher'} le corrigé complet
         </button>
         {showModelAnswer && (
           <div className="av-card__model-answer-text">
@@ -347,7 +348,7 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
       {parts.length > 0 && (
         <div className="av-card__parts">
           <h4 className="av-card__parts-title">
-            Graded Answer Parts ({parts.length} blank{parts.length !== 1 ? 's' : ''})
+            Parties notées ({parts.length} champ{parts.length !== 1 ? 's' : ''})
           </h4>
           {parts.map((part, i) => (
             <AnswerPartEditor
@@ -363,13 +364,13 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
       {/* Final answer */}
       {(q.final_answer || editedFinalAnswer !== null) && (
         <div className="av-card__final-answer">
-          <label className="av-label">Final Answer</label>
+          <label className="av-label">Réponse finale</label>
           <div className="av-card__final-answer-row">
             <input
               className="av-input"
               value={finalAnswer}
               onChange={e => setEditedFinalAnswer(e.target.value)}
-              placeholder="Final answer"
+              placeholder="Réponse finale"
             />
           </div>
         </div>
@@ -378,7 +379,7 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
       {/* Scaffold preview */}
       {q.scaffold_text && (
         <details className="av-card__scaffold-preview">
-          <summary>Preview scaffold (student view)</summary>
+          <summary>Aperçu de la trame (vue élève)</summary>
           <div className="av-card__scaffold-text">
             <MathText text={q.scaffold_text.replace(/\{\{(\d+)\}\}/g, (_, n) => {
               const p = parts[parseInt(n, 10)];
@@ -393,23 +394,23 @@ function ReviewCard({ item, onAction, currentIndex, totalFiltered }) {
         <button
           className="av-btn av-btn--success av-btn--lg"
           onClick={handleApprove}
-          title="Mark as verified (correct)"
+          title="Marquer comme validée (correcte)"
         >
-          ✓ {hasEdits ? 'Save & Approve' : 'Approve'}
+          ✓ {hasEdits ? 'Enregistrer et approuver' : 'Approuver'}
         </button>
         <button
           className="av-btn av-btn--danger av-btn--lg"
           onClick={handleReject}
-          title="Mark as rejected (needs regeneration)"
+          title="Marquer comme rejetée (à régénérer)"
         >
-          ✗ Reject
+          ✗ Rejeter
         </button>
       </div>
 
       {/* Edit indicator */}
       {hasEdits && (
         <div className="av-card__edit-notice">
-          ⚠️ You have unsaved edits. Click "Save &amp; Approve" to apply changes.
+          ⚠️ Modifications non enregistrées. Cliquez sur « Enregistrer et approuver » pour les appliquer.
         </div>
       )}
     </div>
@@ -581,18 +582,18 @@ export default function AnswerVerification() {
 
   if (isLoading) {
     return (
-      <div className="container av-page">
+      <div className="av-page">
         <div className="loading-spinner" />
-        <p className="text-muted" style={{ textAlign: 'center' }}>Loading exam catalog…</p>
+        <p className="text-muted" style={{ textAlign: 'center' }}>Chargement du catalogue d'examens…</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container av-page">
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <h2>Failed to load catalog</h2>
+      <div className="av-page">
+        <div className="admin-card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <h2>Échec du chargement du catalogue</h2>
           <p className="text-muted">{error.message}</p>
         </div>
       </div>
@@ -600,12 +601,15 @@ export default function AnswerVerification() {
   }
 
   return (
-    <div className="container av-page">
-      {/* Page header */}
+    <div className="av-page">
+      {/* Page header — admin console pattern */}
       <div className="av-header">
-        <div>
-          <h1>Answer Verification</h1>
-          <p className="text-muted">Review and approve AI-generated answers for exam questions</p>
+        <div className="admin-page__head">
+          <div className="admin-page__eyebrow"><ClipboardCheck size={13} /> CONTENU</div>
+          <h1 className="admin-page__title">Vérification des réponses</h1>
+          <p className="admin-page__subtitle">
+            Relecture et validation des corrigés générés par IA pour les examens blancs.
+          </p>
         </div>
         <div className="av-header__actions">
           <button
@@ -613,15 +617,28 @@ export default function AnswerVerification() {
             onClick={handleSave}
             disabled={saving || pendingChanges.current === 0}
           >
-            {saving ? 'Saving…' : `💾 Save Catalog (${pendingChanges.current} changes)`}
+            {saving ? 'Enregistrement…' : `💾 Enregistrer le catalogue (${pendingChanges.current} modif.)`}
           </button>
           {saveStatus === 'success' && (
-            <span className="av-save-status av-save-status--success">✓ Downloaded! Replace public/exam_catalog.json with the downloaded file.</span>
+            <span className="av-save-status av-save-status--success">✓ Téléchargé ! Remplacez public/exam_catalog.json par le fichier téléchargé.</span>
           )}
           {saveStatus === 'error' && (
-            <span className="av-save-status av-save-status--error">✗ Save failed</span>
+            <span className="av-save-status av-save-status--error">✗ Échec de l'enregistrement</span>
           )}
         </div>
+      </div>
+
+      {/* In-page explainer */}
+      <div className="admin-card av-explainer">
+        <p>
+          Cet outil sert à relire les <strong>corrigés générés par IA</strong> pour les questions
+          des examens blancs. Pour chaque question, vérifiez la réponse finale, les parties notées
+          et les alternatives acceptées, puis cliquez sur <strong>Approuver</strong> (marque la
+          réponse comme validée) ou <strong>Rejeter</strong> (à régénérer). Naviguez au clavier
+          avec <kbd>←</kbd>/<kbd>k</kbd> et <kbd>→</kbd>/<kbd>j</kbd>. Une fois terminé,
+          « Enregistrer le catalogue » télécharge un <code>exam_catalog.json</code> mis à jour,
+          qu'il faut ensuite committer dans le dépôt (<code>public/exam_catalog.json</code>).
+        </p>
       </div>
 
       {/* Progress bar */}
@@ -631,7 +648,7 @@ export default function AnswerVerification() {
           style={{ width: `${stats.total ? (stats.verified / stats.total) * 100 : 0}%` }}
         />
         <span className="av-progress-bar__label">
-          {stats.verified} / {stats.total} verified ({stats.total ? Math.round((stats.verified / stats.total) * 100) : 0}%)
+          {stats.verified} / {stats.total} validées ({stats.total ? Math.round((stats.verified / stats.total) * 100) : 0}%)
         </span>
       </div>
 
@@ -647,15 +664,15 @@ export default function AnswerVerification() {
       {/* Navigation bar */}
       <div className="av-nav">
         <button className="av-btn av-btn--ghost" onClick={goPrev} disabled={currentIndex <= 0}>
-          ← Prev
+          ← Précédent
         </button>
         <span className="av-nav__position">
           {filteredItems.length > 0
-            ? `Question ${currentIndex + 1} of ${filteredItems.length}`
-            : 'No questions match filters'}
+            ? `Question ${currentIndex + 1} sur ${filteredItems.length}`
+            : 'Aucune question ne correspond aux filtres'}
         </span>
         <button className="av-btn av-btn--ghost" onClick={goNext} disabled={currentIndex >= filteredItems.length - 1}>
-          Next →
+          Suivant →
         </button>
       </div>
 
@@ -671,21 +688,21 @@ export default function AnswerVerification() {
       ) : (
         <div className="av-empty">
           <div className="av-empty__icon">🎉</div>
-          <h3>All caught up!</h3>
+          <h3>Tout est à jour !</h3>
           <p className="text-muted">
             {filters.status === 'pending'
-              ? 'No more questions pending review with the current filters.'
-              : 'No questions match the current filters.'}
+              ? 'Aucune autre question en attente de relecture avec les filtres actuels.'
+              : 'Aucune question ne correspond aux filtres actuels.'}
           </p>
           {stats.pending === 0 && stats.total > 0 && (
-            <p className="text-muted">All {stats.total} answers have been reviewed.</p>
+            <p className="text-muted">Les {stats.total} réponses ont toutes été relues.</p>
           )}
         </div>
       )}
 
       {/* Keyboard shortcuts help */}
       <div className="av-shortcuts">
-        <span>Keyboard: <kbd>←</kbd> / <kbd>k</kbd> prev · <kbd>→</kbd> / <kbd>j</kbd> next</span>
+        <span>Clavier : <kbd>←</kbd> / <kbd>k</kbd> précédent · <kbd>→</kbd> / <kbd>j</kbd> suivant</span>
       </div>
     </div>
   );
