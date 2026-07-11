@@ -16986,3 +16986,115 @@ textarea:focus {
 	outline: 2px solid var(--primary-500);
 	outline-offset: 1px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   GLOBAL EDITORIAL SYSTEM  (app-wide "neo-brutalist" polish)
+   Ports the code.edlight.org signature into Academy's blue palette on
+   EVERY page: chunky Space Grotesk display headings, a highlighter swatch
+   device, solid ink hairline borders + BOLD hard offset shadows (letterpress),
+   sharp 4px corners, tactile press-buttons. Last block = wins the cascade.
+   ══════════════════════════════════════════════════════════════════════ */
+:root {
+  --ed-editorial: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --ed-ink: #1b2230;
+  --ed-border: #1b2230;
+  --ed-shadow: 3px 3px 0 0 #1b2230;
+  --ed-shadow-hero: 5px 5px 0 0 rgba(27, 34, 48, 0.9);
+  --ed-shadow-btn: 3px 3px 0 0 #1b2230;
+  --ed-highlight: #ffd233;
+  --ed-highlight-ink: #1b2230;
+  --ed-r: 4px;
+}
+[data-theme="dark"] {
+  --ed-ink: #e8eef7;
+  --ed-border: rgba(255, 255, 255, 0.28);
+  --ed-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.55);
+  --ed-shadow-hero: 5px 5px 0 0 rgba(0, 0, 0, 0.6);
+  --ed-shadow-btn: 3px 3px 0 0 rgba(0, 0, 0, 0.6);
+  --ed-highlight: #ffd233;
+  --ed-highlight-ink: #0a111e;
+}
+
+/* ── Chunky editorial display headings across pages ── */
+.page-header__title,
+.lp-hero__title,
+.lp-section__title,
+.lp-cta__title,
+.about-hero__title,
+.exam-landing__title,
+.trivia-landing__title,
+.quiz-hero__title,
+.section > .container > h1:first-child {
+  font-family: var(--ed-editorial) !important;
+  letter-spacing: -0.03em !important;
+  font-weight: 700 !important;
+}
+
+/* Highlighter swatch device — apply .ed-mark (or the accent word span). */
+.ed-mark,
+.lp-hero__title-accent,
+.lp-text-accent {
+  background: var(--ed-highlight) !important;
+  color: var(--ed-highlight-ink) !important;
+  -webkit-text-fill-color: var(--ed-highlight-ink) !important;
+  padding: 0 0.22em !important;
+  border-radius: 2px !important;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ── Cards → solid ink border + BOLD hard offset shadow + sharp 4px ── */
+.card,
+.course-card,
+.exam-card,
+.trivia-cat-card,
+.quiz-card,
+.level-card,
+.metric-card,
+.lp-course,
+.lp-pillar,
+.lp-panel,
+.readiness-card,
+.about-offering__item,
+.about-step,
+.about-values__item {
+  border: 1px solid var(--ed-border) !important;
+  border-radius: var(--ed-r) !important;
+  box-shadow: var(--ed-shadow) !important;
+}
+
+/* Interactive cards press toward their shadow on hover. */
+a.card:hover,
+button.card:hover,
+.card--interactive:hover,
+.course-card:hover,
+.exam-card:hover,
+.trivia-cat-card:hover,
+.lp-course:hover,
+.lp-pillar:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 4px 4px 0 0 var(--ed-border) !important;
+}
+
+/* ── Tactile primary buttons — hard shadow that presses in on hover ── */
+.button--primary,
+.lp-btn--primary {
+  border: 1px solid var(--ed-border) !important;
+  border-radius: var(--ed-r) !important;
+  box-shadow: var(--ed-shadow-btn) !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease !important;
+}
+.button--primary:hover,
+.lp-btn--primary:hover {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 1px 1px 0 0 var(--ed-border) !important;
+}
+.button--secondary,
+.lp-btn--ghost,
+.button { border-radius: var(--ed-r) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  a.card:hover, button.card:hover, .card--interactive:hover, .course-card:hover,
+  .exam-card:hover, .trivia-cat-card:hover, .lp-course:hover, .lp-pillar:hover,
+  .button--primary:hover, .lp-btn--primary:hover { transform: none !important; }
+}

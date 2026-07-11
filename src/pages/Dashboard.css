@@ -379,9 +379,11 @@ button.dash-activity__tag { cursor: pointer; }
   /* Editorial / neo-brutalist signature (mirrors code.edlight.org). */
   --st-editorial: "Space Grotesk", "Inter", system-ui, sans-serif;
   --st-border: #1b2230;                 /* solid ink hairline on cards */
-  --st-shadow-hard: 3px 3px 0 0 rgba(27, 34, 48, 0.12);
-  --st-shadow-hero: 5px 5px 0 0 rgba(27, 34, 48, 0.16);
-  --st-shadow-btn: 2px 2px 0 0 #1b2230;
+  /* Bold, full-ink offset shadows (letterpress) — matches code.edlight.org.
+     Faint low-opacity shadows read as generic; these punch. */
+  --st-shadow-hard: 3px 3px 0 0 #1b2230;
+  --st-shadow-hero: 5px 5px 0 0 rgba(27, 34, 48, 0.9);
+  --st-shadow-btn: 3px 3px 0 0 #1b2230;
   --st-highlight: #ffd233;              /* highlighter swatch behind the name */
   --st-highlight-ink: #1b2230;
 }
@@ -404,10 +406,10 @@ button.dash-activity__tag { cursor: pointer; }
   --st-warn: #f0a03e;
   --st-crit: #f26a6a;
   --st-dot: rgba(255, 255, 255, 0.06);
-  --st-border: rgba(255, 255, 255, 0.22);
-  --st-shadow-hard: 3px 3px 0 0 rgba(0, 0, 0, 0.5);
-  --st-shadow-hero: 5px 5px 0 0 rgba(0, 0, 0, 0.55);
-  --st-shadow-btn: 2px 2px 0 0 rgba(0, 0, 0, 0.6);
+  --st-border: rgba(255, 255, 255, 0.28);
+  --st-shadow-hard: 3px 3px 0 0 rgba(0, 0, 0, 0.55);
+  --st-shadow-hero: 5px 5px 0 0 rgba(0, 0, 0, 0.6);
+  --st-shadow-btn: 3px 3px 0 0 rgba(0, 0, 0, 0.6);
   --st-highlight: #ffd233;
   --st-highlight-ink: #0a111e;
 }
