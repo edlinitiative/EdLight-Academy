@@ -1,186 +1,104 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { RefreshCw, BookOpen, ChevronRight } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
-import { db, removeLessonFromCourse, updateCourse } from '../services/firebase';
+import { db } from '../services/firebase';
+import useStore from '../contexts/store';
 
+/**
+ * Course list (admin console) — a compact, scannable table of courses. Each row
+ * links to a per-course subpage (/admin/content/courses/:id) that manages that
+ * course's units and lessons. Uses the shared admin primitives.
+ */
 export default function CourseManager() {
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState(null);
-  const [expandedCourse, setExpandedCourse] = useState(null);
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
+
+  useEffect(() => { loadCourses(); }, []);
 
   async function loadCourses() {
     try {
       setLoading(true);
-      const coursesRef = collection(db, 'courses');
-      const snapshot = await getDocs(coursesRef);
-      const data = [];
-      snapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() });
-      });
+      const snapshot = await getDocs(collection(db, 'courses'));
+      const data: any[] = [];
+      snapshot.forEach((d) => data.push({ id: d.id, ...d.data() }));
+      data.sort((a, b) => String(a.id).localeCompare(String(b.id)));
       setCourses(data);
     } catch (error) {
       console.error('Error loading courses:', error);
-      setMessage({ type: 'error', text: `Error: ${error.message}` });
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleRemoveLesson(courseId, unitId, lessonId, lessonTitle) {
-    if (!confirm(`Are you sure you want to remove "${lessonTitle}" from this course?`)) {
-      return;
-    }
-
-    try {
-      setMessage({ type: 'info', text: 'Removing lesson...' });
-      await removeLessonFromCourse(courseId, unitId, lessonId);
-      setMessage({ type: 'success', text: `✅ Successfully removed "${lessonTitle}"` });
-      
-      // Reload courses
-      await loadCourses();
-      
-      setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
-      console.error('Error removing lesson:', error);
-      setMessage({ type: 'error', text: `❌ Error: ${error.message}` });
-      setTimeout(() => setMessage(null), 5000);
-    }
-  }
-
-  if (loading) {
-    return (
-      <section className="section">
-        <div className="container">
-          <div style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
-            <div className="loading-spinner" />
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const filtered = courses.filter((c) => {
+    if (!q.trim()) return true;
+    const hay = `${c.display_name || c.name || ''} ${c.id} ${c.subject || ''}`.toLowerCase();
+    return hay.includes(q.trim().toLowerCase());
+  });
 
   return (
-    <section className="section" style={{ paddingTop: '2rem' }}>
-      <div className="container">
-        <div className="page-header" style={{ marginBottom: '2rem' }}>
-          <div>
-            <h1>Course Structure Manager</h1>
-            <p className="text-muted">View and manage course units and lessons</p>
-          </div>
-          <button className="button button--ghost" onClick={loadCourses}>
-            Reload Courses
-          </button>
-        </div>
-
-        {message && (
-          <div 
-            className={`form-message form-message--${message.type}`} 
-            style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: 'var(--radius-md)' }}
-          >
-            {message.text}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {courses.map((course) => (
-            <div key={course.id} className="card">
-              <div 
-                onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)}
-                style={{ 
-                  cursor: 'pointer', 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  padding: '1rem',
-                  borderBottom: expandedCourse === course.id ? '1px solid var(--border)' : 'none'
-                }}
-              >
-                <div>
-                  <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{course.display_name || course.name}</h2>
-                  <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                    {course.id} • {course.units?.length || 0} units • {course.number_of_lessons || 0} lessons
-                  </p>
-                </div>
-                <span style={{ fontSize: '1.5rem', transform: expandedCourse === course.id ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
-                  ▸
-                </span>
-              </div>
-
-              {expandedCourse === course.id && (
-                <div style={{ padding: '1rem' }}>
-                  {(course.units || []).map((unit, unitIdx) => (
-                    <div key={unit.unitId || unitIdx} style={{ marginBottom: '1.5rem', paddingLeft: '1rem', borderLeft: '3px solid var(--primary)' }}>
-                      <h3 style={{ fontSize: '1.125rem', marginBottom: '0.75rem', color: 'var(--primary)' }}>
-                        Unit {unitIdx + 1}: {unit.title}
-                      </h3>
-                      <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: '1rem' }}>
-                        Unit ID: {unit.unitId || unit.id} • {unit.lessons?.length || 0} lessons
-                      </p>
-
-                      {(unit.lessons || []).length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {unit.lessons.map((lesson, lessonIdx) => (
-                            <div 
-                              key={lesson.lessonId || lessonIdx}
-                              style={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between', 
-                                alignItems: 'center',
-                                padding: '0.75rem 1rem',
-                                background: 'var(--surface)',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--border)'
-                              }}
-                            >
-                              <div style={{ flex: 1 }}>
-                                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                                  <span className="badge" style={{ fontSize: '0.75rem' }}>
-                                    {unitIdx + 1}.{lessonIdx + 1}
-                                  </span>
-                                  <span style={{ fontWeight: 500 }}>{lesson.title}</span>
-                                  <span className="chip chip--ghost" style={{ fontSize: '0.75rem' }}>
-                                    {lesson.type || 'lesson'}
-                                  </span>
-                                </div>
-                                <p className="text-muted" style={{ fontSize: '0.8125rem', marginTop: '0.25rem', marginLeft: '2.5rem' }}>
-                                  Lesson ID: {lesson.lessonId} • Order: {lesson.order}
-                                </p>
-                              </div>
-                              <button
-                                className="button button--ghost button--sm"
-                                style={{ color: 'var(--danger)' }}
-                                onClick={() => handleRemoveLesson(course.id, unit.unitId || unit.id, lesson.lessonId, lesson.title)}
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-muted" style={{ fontStyle: 'italic' }}>No lessons in this unit</p>
-                      )}
-                    </div>
-                  ))}
-
-                  {(!course.units || course.units.length === 0) && (
-                    <p className="text-muted" style={{ fontStyle: 'italic' }}>No units found in this course</p>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {courses.length === 0 && (
-          <div className="card card--message">
-            <p className="text-muted">No courses found in Firestore.</p>
-          </div>
-        )}
+    <div>
+      <div className="admin-page__head">
+        <div className="admin-page__eyebrow"><BookOpen size={13} /> {t('CONTENU', 'KONTNI')}</div>
+        <h1 className="admin-page__title">{t('Cours', 'Kou')}</h1>
+        <p className="admin-page__subtitle">
+          {t('Gérez les unités et leçons de chaque cours.', 'Jere inite ak leson chak kou.')}
+        </p>
       </div>
-    </section>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+        <input
+          className="admin-input"
+          style={{ maxWidth: 320 }}
+          placeholder={t('Rechercher un cours…', 'Chèche yon kou…')}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button className="admin-btn admin-btn--ghost" onClick={loadCourses} type="button">
+          <RefreshCw size={13} style={{ verticalAlign: '-2px', marginRight: 6 }} />
+          {t('Recharger', 'Rechaje')}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="admin-empty">{t('Chargement…', 'Ap chaje…')}</div>
+      ) : filtered.length === 0 ? (
+        <div className="admin-card admin-empty">{t('Aucun cours trouvé.', 'Pa gen kou.')}</div>
+      ) : (
+        <div className="admin-card admin-table__scroll">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>{t('Cours', 'Kou')}</th>
+                <th>ID</th>
+                <th style={{ textAlign: 'right' }}>{t('Unités', 'Inite')}</th>
+                <th style={{ textAlign: 'right' }}>{t('Leçons', 'Leson')}</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c) => (
+                <tr key={c.id}>
+                  <td style={{ fontWeight: 600 }}>{c.display_name || c.name || c.id}</td>
+                  <td style={{ fontFamily: 'var(--asb-mono, monospace)', color: 'var(--asb-muted)', fontSize: 12 }}>{c.id}</td>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.units?.length || 0}</td>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.number_of_lessons || 0}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <Link to={`/admin/content/courses/${c.id}`} className="admin-btn">
+                      {t('Gérer', 'Jere')} <ChevronRight size={13} style={{ verticalAlign: '-2px' }} />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }

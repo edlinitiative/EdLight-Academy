@@ -25,6 +25,7 @@ const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const CourseManager = lazyWithRetry(() => import('./pages/CourseManager'));
 // Admin console pages
 const AdminOverview = lazyWithRetry(() => import('./pages/admin/AdminOverview'));
+const AdminCourseDetail = lazyWithRetry(() => import('./pages/admin/AdminCourseDetail'));
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminUserDetail = lazyWithRetry(() => import('./pages/admin/AdminUserDetail'));
 const AdminModeration = lazyWithRetry(() => import('./pages/admin/AdminModeration'));
@@ -97,6 +98,7 @@ export default function App() {
                 <Route index element={<AdminOverview />} />
                 {/* Content */}
                 <Route path="content/courses" element={<CourseManager />} />
+                <Route path="content/courses/:courseId" element={<AdminCourseDetail />} />
                 <Route path="content/videos" element={<AdminVideos />} />
                 <Route path="content/quizzes" element={<AdminQuizzes />} />
                 <Route path="content/exams" element={<AdminExams />} />
