@@ -376,6 +376,14 @@ button.dash-activity__tag { cursor: pointer; }
   --st-crit: #c93434;
   --st-dot: rgba(64, 50, 26, 0.09);
   --st-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Editorial / neo-brutalist signature (mirrors code.edlight.org). */
+  --st-editorial: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --st-border: #1b2230;                 /* solid ink hairline on cards */
+  --st-shadow-hard: 3px 3px 0 0 rgba(27, 34, 48, 0.12);
+  --st-shadow-hero: 5px 5px 0 0 rgba(27, 34, 48, 0.16);
+  --st-shadow-btn: 2px 2px 0 0 #1b2230;
+  --st-highlight: #ffd233;              /* highlighter swatch behind the name */
+  --st-highlight-ink: #1b2230;
 }
 /* Dark = opt-in night mode (kept per product; warm-light is primary). */
 [data-theme="dark"] .dash--st {
@@ -396,6 +404,12 @@ button.dash-activity__tag { cursor: pointer; }
   --st-warn: #f0a03e;
   --st-crit: #f26a6a;
   --st-dot: rgba(255, 255, 255, 0.06);
+  --st-border: rgba(255, 255, 255, 0.22);
+  --st-shadow-hard: 3px 3px 0 0 rgba(0, 0, 0, 0.5);
+  --st-shadow-hero: 5px 5px 0 0 rgba(0, 0, 0, 0.55);
+  --st-shadow-btn: 2px 2px 0 0 rgba(0, 0, 0, 0.6);
+  --st-highlight: #ffd233;
+  --st-highlight-ink: #0a111e;
 }
 
 /* Warm ground for the whole dashboard section. Literal values (not var(--st-*))
@@ -422,27 +436,43 @@ button.dash-activity__tag { cursor: pointer; }
 }
 .dash--st .dash__status-sep { color: var(--st-line-strong); }
 
-/* Heading — tight grotesque, not serif; accent on the name */
+/* Heading — chunky editorial grotesque; NAME gets a highlighter swatch. */
 .dash--st .dash__title {
-  font-family: var(--font-sans) !important;
-  font-weight: 800; letter-spacing: -0.025em; font-size: clamp(26px, 4vw, 38px);
-  color: var(--st-ink);
+  font-family: var(--st-editorial) !important;
+  font-weight: 700; letter-spacing: -0.03em; font-size: clamp(28px, 4.4vw, 46px);
+  line-height: 1.05; color: var(--st-ink);
 }
-.dash--st .dash__title b { color: var(--st-accent); font-weight: 800; }
+.dash--st .dash__title b {
+  font-weight: 700;
+  color: var(--st-highlight-ink);
+  background: var(--st-highlight);
+  -webkit-text-fill-color: var(--st-highlight-ink); /* cancel any global gradient-clip */
+  padding: 0 0.22em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  border-radius: 2px;
+}
 .dash--st .dash__subtitle { color: var(--st-muted); }
 
-/* Panels, KPIs, courses → sharp corners + hairline + warm surface */
+/* Cards → solid ink border + hard offset shadow + sharp 4px (editorial). */
 .dash--st .dash-panel,
 .dash--st .dash-kpi,
 .dash--st .dash-course,
 .dash--st .dash-studyplan {
   background: var(--st-surface) !important;
-  border: 1px solid var(--st-line) !important;
-  border-radius: 6px !important;
-  box-shadow: none !important;
+  border: 1px solid var(--st-border) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--st-shadow-hard) !important;
 }
-.dash--st .dash-course:hover,
-.dash--st .dash-kpi:hover { border-color: var(--st-line-strong) !important; }
+.dash--st .dash-course {
+  box-shadow: none !important; /* nested rows: border only, no stacked shadows */
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+.dash--st .dash-course:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--st-shadow-hard) !important;
+}
+.dash--st .dash-kpi:hover { transform: translate(-1px, -1px); }
 
 /* Panel + KPI micro-labels → monospace */
 .dash--st .dash-panel__title,
@@ -480,9 +510,50 @@ button.dash-activity__tag { cursor: pointer; }
 .dash--st .dash-activity__tag--success { color: var(--st-good) !important; }
 .dash--st .dash-activity__tag--error { color: var(--st-crit) !important; }
 
-/* Empty-state + study-plan buttons keep sharp corners */
-.dash--st .button,
-.dash--st .dash-studyplan__btn { border-radius: 6px !important; }
+/* Tactile primary buttons — hard offset shadow that "presses" on hover. */
+.dash--st .button--primary,
+.dash--st .dash-studyplan__btn,
+.dash--st .readiness-focus__cta,
+.dash--st .readiness-card__cta {
+  border-radius: 4px !important;
+  border: 1px solid var(--st-border) !important;
+  box-shadow: var(--st-shadow-btn) !important;
+  transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+}
+.dash--st .button--primary:hover,
+.dash--st .dash-studyplan__btn:hover,
+.dash--st .readiness-card__cta:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 0 var(--st-border) !important;
+}
+.dash--st .button { border-radius: 4px !important; }
+
+/* ── Component cards inherit the editorial treatment (ink border + hard
+   offset shadow + 4px + Space Grotesk headings). ── */
+.dash--st .readiness-card,
+.dash--st .stat-tile,
+.dash--st .leaderboard {
+  border: 1px solid var(--st-border) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--st-shadow-hard) !important;
+}
+/* Hero cards get the stronger letterpress shadow. */
+.dash--st .dash__hero .readiness-card,
+.dash--st .dash__hero .countdown-cd {
+  border: 1px solid var(--st-border) !important;
+  border-radius: 4px !important;
+  box-shadow: var(--st-shadow-hero) !important;
+}
+.dash--st .stat-tile:hover { transform: translate(-1px, -1px); box-shadow: var(--st-shadow-hero) !important; }
+
+/* Chunky editorial numerals + headings across the dashboard cards. */
+.dash--st .readiness-gauge__value,
+.dash--st .stat-tile__value,
+.dash--st .dash-kpi__value,
+.dash--st .dash__title,
+.dash--st .countdown-cd__big {
+  font-family: var(--st-editorial) !important;
+}
 
 /* ── ST hero + tiles layout (integration scaffolding) ─────────────────── */
 .dash--st .dash__hero {
