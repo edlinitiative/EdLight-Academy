@@ -118,6 +118,17 @@ service cloud.firestore {
       allow read: if true; // Anyone can read quizzes
       allow write: if isAdmin(); // Only admins can write
     }
+
+    // Trivia content: Public read (guests play the game), admin write.
+    // Categories + questions migrated from static code via the admin editor.
+    match /trivia_categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /trivia_questions/{questionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     
     // Comments collection: Authenticated users can read/write with restrictions
     match /comments/{commentId} {
