@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Target, Layers, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Target, Layers, Check, Sigma, Atom, FlaskConical, LineChart, BookOpen } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { CourseCard } from '../components/Course';
@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
+
+// Friendly glyph per subject — gives each card an identity beyond its name.
+const SUBJECT_ICONS = { MATH: Sigma, PHYS: Atom, CHEM: FlaskConical, ECON: LineChart };
 
 function countCourseLessons(course) {
   const units = Array.isArray(course?.modules) ? course.modules : [];
@@ -317,22 +320,24 @@ export default function Courses() {
             <div className="subjects-grid">
               {subjectGroups.map((g) => {
                 const label = t(`subjects.${g.code}`, { defaultValue: g.code });
+                const Icon = SUBJECT_ICONS[g.code] || BookOpen;
+                const accentStyle = { '--accent': g.accent } as React.CSSProperties;
 
-                // Coming-soon subject: disabled teaser tile (auto-flips to a
-                // normal tile once the course data is migrated + flag cleared).
+                // Coming-soon subject: friendly dashed placeholder (auto-flips
+                // to a live card once the course data is migrated).
                 if (g.comingSoon) {
                   return (
                     <div
                       key={g.code}
-                      className="subject-tile subject-tile--soon"
+                      className="subject-card subject-card--soon"
+                      style={accentStyle}
                       aria-disabled="true"
                       aria-label={`${label} — ${t('courses.comingSoon', 'Bientôt disponible')}`}
                     >
-                      <span className="subject-tile__body">
-                        <span className="subject-tile__name">{label}</span>
-                        <span className="subject-tile__stat">{t('courses.comingSoonSub', 'Cours en préparation')}</span>
-                      </span>
-                      <span className="subject-tile__soon-badge">{t('courses.comingSoon', 'Bientôt disponible')}</span>
+                      <span className="subject-card__icon"><Icon size={22} strokeWidth={2.2} /></span>
+                      <span className="subject-card__name">{label}</span>
+                      <span className="subject-card__meta">{t('courses.comingSoonSub', 'Cours en préparation')}</span>
+                      <span className="subject-card__soon">{t('courses.comingSoon', 'Bientôt disponible')}</span>
                     </div>
                   );
                 }
@@ -341,28 +346,31 @@ export default function Courses() {
                   <button
                     key={g.code}
                     type="button"
-                    className="subject-tile"
+                    className="subject-card"
+                    style={accentStyle}
                     onClick={() => { setSubject(g.code); setFilter('all'); }}
                     aria-label={label}
                   >
-                    <span className="subject-tile__body">
-                      <span className="subject-tile__name">{label}</span>
-                      <span className="subject-tile__stat">
-                        {t('courses.levelCount', { count: g.items.length })}
-                        {g.enrolledCount > 0 && <> · {g.enrolledCount} {t('courses.enrolledShort')}</>}
-                      </span>
-                      {g.enrolledCount > 0 && (
-                        <span className="subject-tile__progress">
-                          <span className="progress-bar">
-                            <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
-                          </span>
-                          <span className="subject-tile__pct">{g.pct}%</span>
-                        </span>
-                      )}
+                    <span className="subject-card__icon"><Icon size={22} strokeWidth={2.2} /></span>
+                    <span className="subject-card__name">{label}</span>
+                    <span className="subject-card__meta">
+                      {t('courses.levelCount', { count: g.items.length })}
+                      {g.enrolledCount > 0 && <> · {g.enrolledCount} {t('courses.enrolledShort')}</>}
                     </span>
-                    {g.enrolledCount > 0
-                      ? <ChevronRight size={18} className="subject-tile__chevron" aria-hidden="true" />
-                      : <span className="subject-tile__startcta">{t('courses.start', 'Commencer')} <ChevronRight size={15} /></span>}
+                    {g.enrolledCount > 0 && (
+                      <span className="subject-card__progress">
+                        <span className="progress-bar">
+                          <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
+                        </span>
+                        <span className="subject-card__pct">{g.pct}%</span>
+                      </span>
+                    )}
+                    <span className="subject-card__cta">
+                      {g.enrolledCount > 0
+                        ? t('courses.continue', 'Continuer')
+                        : t('courses.start', 'Commencer')}
+                      <ChevronRight size={16} />
+                    </span>
                   </button>
                 );
               })}
