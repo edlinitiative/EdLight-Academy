@@ -466,6 +466,15 @@ button.dash-activity__tag { cursor: pointer; }
   border-radius: 4px !important;
   box-shadow: var(--st-shadow-hard) !important;
 }
+/* Study-plan card: the base component paints white text on a blue gradient,
+   but the ST scope repaints the card with the light paper surface above — so
+   the base white text/title would be invisible. Repaint them in ink. */
+.dash--st .dash-studyplan { color: var(--st-ink) !important; }
+.dash--st .dash-studyplan .dash-panel__title,
+.dash--st .dash-studyplan .dash-panel__title svg { color: var(--st-ink-2); }
+.dash--st .dash-studyplan .dash-panel__title svg { color: var(--st-accent); }
+.dash--st .dash-studyplan .dash-studyplan__text { color: var(--st-muted) !important; }
+
 .dash--st .dash-course {
   box-shadow: none !important; /* nested rows: border only, no stacked shadows */
   transition: transform 0.14s ease, box-shadow 0.14s ease;

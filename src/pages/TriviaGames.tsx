@@ -28,40 +28,31 @@ function CategoryPicker({ onSelect, isCreole, categories = TRIVIA_CATEGORIES as 
       <div className="trivia-landing__header">
         <h1 className="trivia-landing__title">{isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}</h1>
         <p className="trivia-landing__subtitle">
-          {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
+          {isCreole
+            ? 'Chwazi yon kategori pou kòmanse jwe'
+            : 'Choisissez une catégorie pour commencer à jouer'}
         </p>
       </div>
       <div className="trivia-landing__grid">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            className="trivia-cat-tile"
-            onClick={() => onSelect(cat.id)}
-            aria-label={`${isCreole ? cat.nameHt : cat.name} — ${(questions[cat.id] || []).length} ${isCreole ? 'kesyon' : 'questions'}`}
-          >
-            <span className="trivia-cat-tile__media">
-              <img
-                className="trivia-cat-tile__img"
-                src={cat.image}
-                alt=""
-                width={200}
-                height={200}
-                loading="lazy"
-                decoding="async"
-                onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement;
-                  img.style.display = 'none';
-                  const fallback = img.nextElementSibling as HTMLElement | null;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-              <span className="trivia-cat-tile__emoji" aria-hidden style={{ display: 'none' }}>
-                {cat.icon}
+        {categories.map((cat) => {
+          const count = (questions[cat.id] || []).length;
+          const name = isCreole ? cat.nameHt || cat.name : cat.name;
+          return (
+            <button
+              key={cat.id}
+              className="trivia-cat"
+              style={{ ['--cat' as any]: cat.color || '#0A66C2' }}
+              onClick={() => onSelect(cat.id)}
+              aria-label={`${name} — ${count} ${isCreole ? 'kesyon' : 'questions'}`}
+            >
+              <span className="trivia-cat__icon" aria-hidden="true">{cat.icon}</span>
+              <span className="trivia-cat__name">{name}</span>
+              <span className="trivia-cat__count">
+                {count} {isCreole ? 'kesyon' : 'questions'}
               </span>
-            </span>
-            <span className="trivia-cat-tile__title">{isCreole ? cat.nameHt : cat.name}</span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -85,7 +76,13 @@ function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_
         ← {isCreole ? 'Retounen' : 'Retour'}
       </button>
       <div className="trivia-round-picker__header">
-        <img className="trivia-round-picker__thumb" src={cat.image} alt="" width={400} height={225} />
+        <span
+          className="trivia-round-picker__badge"
+          style={{ ['--cat' as any]: cat?.color || '#0A66C2' }}
+          aria-hidden="true"
+        >
+          {cat?.icon}
+        </span>
         <h2>{isCreole ? cat.nameHt : cat.name}</h2>
         <p>{isCreole ? 'Chwazi konbyen kesyon ou vle reponn' : 'Choisissez le nombre de questions'}</p>
       </div>

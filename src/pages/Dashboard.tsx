@@ -215,14 +215,6 @@ export default function Dashboard() {
   return (
     <section className="section">
       <div className="container dash dash--st">
-        <div className="dash__statusline">
-          <span className="dash__status-dot" aria-hidden="true" />
-          <span>{isCreole ? 'Sesyon aktif' : 'Session active'}</span>
-          <span className="dash__status-sep">·</span>
-          <span>{isCreole ? 'Tablodbò' : 'Tableau de bord'}</span>
-          <span className="dash__status-sep">·</span>
-          <span>{isCreole ? 'Preparasyon Bak' : 'Préparation Bac'}</span>
-        </div>
         <header className="dash__header">
           <div>
             <h1 className="dash__title">

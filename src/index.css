@@ -17116,7 +17116,6 @@ textarea:focus {
 .sp-card,
 .sp-progress-card,
 .lesson-card,
-.trivia-cat-tile,
 .trivia-results__card,
 .quiz-panel,
 .exam-cover__panel,
@@ -17138,7 +17137,6 @@ button.card:hover,
 .subject-tile:hover,
 .track-selector__card:hover,
 .lesson-card:hover,
-.trivia-cat-tile:hover,
 .profile-espace-tile:hover {
   transform: translate(-1px, -1px) !important;
   box-shadow: 4px 4px 0 0 var(--ed-border) !important;
