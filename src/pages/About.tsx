@@ -159,7 +159,7 @@ export default function About() {
           {cards.map((stat) => (
             <div key={stat.key} className="card text-center">
               <div className="about-stats__number">{stat.value}</div>
-              <div className="about-stats__label">{stat.label}</div>
+              <div className="about-stats__label">{isCreole && stat.labelHt ? stat.labelHt : stat.label}</div>
             </div>
           ))}
         </section>

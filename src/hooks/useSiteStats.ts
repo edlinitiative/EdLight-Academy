@@ -49,11 +49,14 @@ async function loadSiteStats() {
 function buildCards({ counts }) {
   const cards = [];
 
+  // Labels are French (default UI language) with a Creole variant; the app
+  // never renders English UI, so no English labels here.
   // Students: only show once >= 1000
   if (Number.isFinite(counts.activeStudentsThisTerm) && counts.activeStudentsThisTerm >= 1000) {
     cards.push({
       key: 'students',
-      label: 'Active Students',
+      label: 'Élèves actifs',
+      labelHt: 'Elèv aktif',
       value: `${formatCompact(counts.activeStudentsThisTerm)}+`,
       numeric: counts.activeStudentsThisTerm,
     });
@@ -61,25 +64,25 @@ function buildCards({ counts }) {
 
   // Content metrics with thresholds you approved
   if (Number.isFinite(counts.videos) && counts.videos >= 40) {
-    cards.push({ key: 'videos', label: 'Video Lessons', value: `${formatCompact(counts.videos)}+`, numeric: counts.videos });
+    cards.push({ key: 'videos', label: 'Leçons vidéo', labelHt: 'Leson videyo', value: `${formatCompact(counts.videos)}+`, numeric: counts.videos });
   }
 
   if (Number.isFinite(counts.quizzes) && counts.quizzes >= 200) {
-    cards.push({ key: 'quizzes', label: 'Micro-quizzes', value: `${formatCompact(counts.quizzes)}+`, numeric: counts.quizzes });
+    cards.push({ key: 'quizzes', label: 'Micro-quiz', labelHt: 'Micro-quiz', value: `${formatCompact(counts.quizzes)}+`, numeric: counts.quizzes });
   }
 
   // Always ok to show
   if (Number.isFinite(counts.courses)) {
-    cards.push({ key: 'courses', label: 'Courses', value: formatCompact(counts.courses), numeric: counts.courses });
+    cards.push({ key: 'courses', label: 'Cours', labelHt: 'Kou', value: formatCompact(counts.courses), numeric: counts.courses });
   }
 
   if (Number.isFinite(counts.tracks)) {
-    cards.push({ key: 'tracks', label: 'Tracks', value: formatCompact(counts.tracks), numeric: counts.tracks });
+    cards.push({ key: 'tracks', label: 'Filières', labelHt: 'Filyè', value: formatCompact(counts.tracks), numeric: counts.tracks });
   }
 
   // Exams can be huge; keep it controlled by siteStats doc
   if (Number.isFinite(counts.exams) && counts.exams >= 10) {
-    cards.push({ key: 'exams', label: 'Official Exams', value: `${formatCompact(counts.exams)}+`, numeric: counts.exams });
+    cards.push({ key: 'exams', label: 'Examens officiels', labelHt: 'Egzamen ofisyèl', value: `${formatCompact(counts.exams)}+`, numeric: counts.exams });
   }
 
   return cards;
