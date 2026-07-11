@@ -74,13 +74,20 @@ export async function resolveReport(reportId: string): Promise<void> {
   await deleteDoc(doc(db, 'commentReports', reportId));
 }
 
-/** Best-effort document count for a collection (server aggregate). */
+/** Best-effort document count for a collection. Tries the server aggregate
+ *  first, then falls back to counting a plain read (some rule/index setups
+ *  reject the aggregate query even when the collection is readable). */
 export async function countCollection(name: string): Promise<number | null> {
   try {
     const snap = await getCountFromServer(collection(db, name));
     return snap.data().count;
   } catch {
-    return null;
+    try {
+      const snap = await getDocs(collection(db, name));
+      return snap.size;
+    } catch {
+      return null;
+    }
   }
 }
 
