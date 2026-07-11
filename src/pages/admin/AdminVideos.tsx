@@ -32,6 +32,16 @@ function num(v: any): number {
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
 }
 
+/**
+ * Human title for a video row. The live `videos` collection is unevenly
+ * populated: many docs never got `video_title`/`subject_code` filled and carry
+ * the descriptive title in `unit_title` instead. Fall back through both so a
+ * title always shows (the original bug was a blank column). `id` is the floor.
+ */
+function videoTitle(r: VideoRow): string {
+  return str(r.video_title) || str(r.unit_title) || r.id;
+}
+
 export default function AdminVideos() {
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -98,7 +108,7 @@ export default function AdminVideos() {
   }, [filtered, isCreole]);
 
   async function handleDelete(row: VideoRow) {
-    const label = str(row.video_title) || row.id;
+    const label = videoTitle(row);
     const ok = window.confirm(
       t(`Supprimer la vidéo « ${label} » ? Cette action est irréversible.`,
         `Efase videyo « ${label} » ? Aksyon sa a pa ka defèt.`),
@@ -237,10 +247,16 @@ export default function AdminVideos() {
                               >
                                 {str(r.unit_no) || '—'}.{str(r.lesson_no) || '—'}
                               </td>
-                              <td style={{ fontWeight: 550 }}>
-                                {str(r.video_title) || '—'}
+                              <td style={{ fontWeight: 550 }}>{videoTitle(r)}</td>
+                              <td>
+                                {/* Avoid echoing the title when it already came
+                                    from unit_title (see videoTitle fallback). */}
+                                {str(r.unit_title) && str(r.unit_title) !== videoTitle(r)
+                                  ? str(r.unit_title)
+                                  : str(r.unit_no)
+                                    ? `${t('Unité', 'Inite')} ${str(r.unit_no)}`
+                                    : '—'}
                               </td>
-                              <td>{str(r.unit_title) || '—'}</td>
                               <td style={{ whiteSpace: 'nowrap' }}>
                                 {hasDur ? `${dur} min` : '—'}
                               </td>

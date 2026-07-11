@@ -75,6 +75,61 @@ function truncate(text: string, max = 90): string {
   return `${text.slice(0, max).trimEnd()}…`;
 }
 
+/**
+ * Extract option labels from a quiz row. The live `quizzes` collection stores
+ * `options` as a JSON STRING (e.g. '["7","3","1","14"]') — this is what the
+ * student-facing reader (quizBank.ts) JSON.parses. Handle that first, then a
+ * real array, then the legacy option_a..option_d columns. (Mirrors quizBank.)
+ */
+function parseOptions(row: Record<string, any>): string[] {
+  const raw = row?.options ?? row?.choices;
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return arr.map((v) => String(v ?? ''));
+    } catch {
+      /* not JSON — fall through */
+    }
+  }
+  if (Array.isArray(raw)) return raw.map((v) => String(v ?? ''));
+  const labels: string[] = [];
+  const groups = [
+    ['option_a', 'optionA', 'A', 'choice_a', 'option1'],
+    ['option_b', 'optionB', 'B', 'choice_b', 'option2'],
+    ['option_c', 'optionC', 'C', 'choice_c', 'option3'],
+    ['option_d', 'optionD', 'D', 'choice_d', 'option4'],
+  ];
+  for (const g of groups) {
+    const v = pick(row, g);
+    if (v !== '') labels.push(v);
+  }
+  return labels;
+}
+
+/**
+ * Resolve `correct_answer` to a positional index, matching how the student
+ * reader interprets it: an A–D letter, a 1-based number, or the option's text.
+ */
+function resolveCorrectIndex(ca: any, options: string[]): number {
+  const raw = String(ca ?? '').trim();
+  if (!raw) return 0;
+  if (/^[A-D]$/i.test(raw)) return raw.toUpperCase().charCodeAt(0) - 65;
+  const byText = options.findIndex((o) => o.trim().toLowerCase() === raw.toLowerCase());
+  if (byText >= 0) return byText;
+  if (/^\d+$/.test(raw)) {
+    const n = Number(raw);
+    // Data uses 1-based letters/numbers; also tolerate a stored 0-based index.
+    if (n >= 1 && n <= options.length) return n - 1;
+    if (n >= 0 && n < options.length) return n;
+  }
+  return 0;
+}
+
+/** Column letter (A, B, C, …) for a 0-based option index. */
+function letterFor(index: number): string {
+  return String.fromCharCode(65 + index);
+}
+
 const labelStyle: React.CSSProperties = {
   display: 'block',
   fontFamily: 'var(--asb-mono, monospace)',
@@ -107,26 +162,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function rowToForm(row: QuizRow | null): QuizForm {
   if (!row) return { ...EMPTY_FORM };
 
-  const rawOptions = Array.isArray(row.options)
-    ? row.options.map((o: any) => String(o ?? ''))
-    : [];
-  const options = rawOptions.length >= 2 ? rawOptions : [...rawOptions, '', ''].slice(0, 2);
+  const parsed = parseOptions(row);
+  const options = parsed.length >= 2 ? parsed : [...parsed, '', ''].slice(0, 2);
 
-  // Resolve correct_answer -> index. If it matches an option string, use that.
-  // Otherwise, if it's a number, treat it as an index. Fall back to 0.
-  let correctIndex = 0;
-  const ca = row.correct_answer;
-  if (ca != null) {
-    const asTextIdx = options.findIndex((o) => o === String(ca));
-    if (asTextIdx >= 0) {
-      correctIndex = asTextIdx;
-    } else if (typeof ca === 'number' && ca >= 0 && ca < options.length) {
-      correctIndex = ca;
-    } else if (!isNaN(Number(ca)) && String(ca).trim() !== '') {
-      const n = Number(ca);
-      if (n >= 0 && n < options.length) correctIndex = n;
-    }
-  }
+  // Resolve correct_answer -> index (letter / 1-based number / option text).
+  const correctIndex = resolveCorrectIndex(row.correct_answer, options);
 
   const tags = Array.isArray(row.tags)
     ? row.tags.join(', ')
@@ -285,10 +325,12 @@ export default function AdminQuizzes() {
       return;
     }
 
-    // correct_answer is saved as the option TEXT (the safer canonical form),
-    // not an index — clamp the chosen index to the trimmed options list.
-    const correctIndex = Math.min(editing.correctIndex, options.length - 1);
-    const correct_answer = options[correctIndex] ?? options[0];
+    // Save correct_answer as the column LETTER (A/B/C/D). The student reader
+    // checks the letter form first, so it's unambiguous even when an option's
+    // text is itself a digit (e.g. "7", which the reader would otherwise read
+    // as a 1-based index). Clamp the chosen index to the trimmed options list.
+    const correctIndex = Math.max(0, Math.min(editing.correctIndex, options.length - 1));
+    const correct_answer = letterFor(correctIndex);
 
     // tags: comma-separated string -> array (trimmed, empties dropped).
     const tags = editing.tags
@@ -299,7 +341,10 @@ export default function AdminQuizzes() {
     // Numbers stay as strings — Firestore tolerates it; don't over-coerce.
     const quizData: Record<string, any> = {
       question,
-      options,
+      // Stored as a JSON string to match how the student reader parses it
+      // (quizBank.ts JSON.parses the `options` field). Saving a raw array here
+      // would make the live quiz see no options and break the question.
+      options: JSON.stringify(options),
       correct_answer,
       hint: editing.hint.trim(),
       good_response: editing.good_response.trim(),
