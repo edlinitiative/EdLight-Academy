@@ -29,33 +29,40 @@ export default function BottomNav() {
   // top). A small threshold avoids jitter; it's always shown near the top.
   const [hidden, setHidden] = useState(false);
   useEffect(() => {
-    const scroller = () =>
-      window.scrollY || document.scrollingElement?.scrollTop || document.documentElement.scrollTop || 0;
-    let lastY = scroller();
+    // The scroll container varies (the app scrolls <body>, but some routes use
+    // an inner overflow container). Listen in the CAPTURE phase — scroll events
+    // don't bubble, but capture catches them from any scroller — and read the
+    // position from the event target, falling back to the document scrollers.
+    const readY = (target) => {
+      if (target && target !== document && typeof target.scrollTop === 'number') return target.scrollTop;
+      return window.scrollY || document.body.scrollTop || document.documentElement.scrollTop || 0;
+    };
+    let lastY = readY(document.body);
+    let curTarget = null;
     let ticking = false;
 
     const update = () => {
       ticking = false;
-      const y = scroller();
+      const y = readY(curTarget);
       const delta = y - lastY;
-      // Always visible near the top of the page.
       if (y < 72) {
-        setHidden(false);
+        setHidden(false); // always visible near the top
       } else if (Math.abs(delta) > 6) {
         setHidden(delta > 0); // scrolling down → hide; up → show
       }
       lastY = y;
     };
 
-    const onScroll = () => {
+    const onScroll = (e) => {
+      curTarget = e.target;
       if (!ticking) {
         ticking = true;
         window.requestAnimationFrame(update);
       }
     };
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => window.removeEventListener('scroll', onScroll, { capture: true });
   }, []);
 
   // A new route resets scroll to the top, so make sure the bar is shown.
