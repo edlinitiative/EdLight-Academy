@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -23,6 +23,16 @@ const DeleteAccount = lazyWithRetry(() => import('./pages/DeleteAccount'));
 const Terms = lazyWithRetry(() => import('./pages/Terms'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const CourseManager = lazyWithRetry(() => import('./pages/CourseManager'));
+// Admin console pages
+const AdminOverview = lazyWithRetry(() => import('./pages/admin/AdminOverview'));
+const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
+const AdminUserDetail = lazyWithRetry(() => import('./pages/admin/AdminUserDetail'));
+const AdminModeration = lazyWithRetry(() => import('./pages/admin/AdminModeration'));
+const AdminSiteStats = lazyWithRetry(() => import('./pages/admin/AdminSiteStats'));
+const AdminVideos = lazyWithRetry(() => import('./pages/admin/AdminVideos'));
+const AdminQuizzes = lazyWithRetry(() => import('./pages/admin/AdminQuizzes'));
+const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
+const AdminTrivia = lazyWithRetry(() => import('./pages/admin/AdminTrivia'));
 const ExamLanding = lazyWithRetry(() => import('./pages/ExamLanding'));
 const ExamBrowser = lazyWithRetry(() => import('./pages/ExamBrowser'));
 const ExamTake = lazyWithRetry(() => import('./pages/ExamTake'));
@@ -82,11 +92,26 @@ export default function App() {
               {/* Chrome-free figure embed for the mobile app's WebView */}
               <Route path="/figure-embed" element={<FigureEmbed />} />
 
-              {/* Admin routes — own layout with dedicated navbar */}
+              {/* Admin console — sidebar layout with grouped sections/subpages */}
               <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-                <Route index element={<Admin />} />
-                <Route path="courses" element={<CourseManager />} />
-                <Route path="verify" element={<AnswerVerification />} />
+                <Route index element={<AdminOverview />} />
+                {/* Content */}
+                <Route path="content/courses" element={<CourseManager />} />
+                <Route path="content/videos" element={<AdminVideos />} />
+                <Route path="content/quizzes" element={<AdminQuizzes />} />
+                <Route path="content/exams" element={<AdminExams />} />
+                <Route path="content/trivia" element={<AdminTrivia />} />
+                <Route path="content/verify" element={<AnswerVerification />} />
+                {/* Users */}
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="users/moderation" element={<AdminModeration />} />
+                <Route path="users/:uid" element={<AdminUserDetail />} />
+                {/* Data */}
+                <Route path="data/collections" element={<Admin />} />
+                <Route path="data/stats" element={<AdminSiteStats />} />
+                {/* Back-compat redirects from the old flat paths */}
+                <Route path="courses" element={<Navigate to="/admin/content/courses" replace />} />
+                <Route path="verify" element={<Navigate to="/admin/content/verify" replace />} />
               </Route>
             </Routes>
           </Suspense>
