@@ -341,6 +341,25 @@ export async function removeLessonFromCourse(courseId, unitId, lessonId) {
 }
 
 /**
+ * Create a new quiz document in Firestore with an auto-generated ID.
+ * @param {Object} quizData - The quiz data to save
+ * @returns {Promise<string>} the new document's auto-generated ID
+ */
+export async function addQuiz(quizData) {
+  try {
+    const ref = doc(collection(db, 'quizzes'));
+    await setDoc(ref, {
+      ...quizData,
+      created_at: serverTimestamp(),
+    });
+    return ref.id;
+  } catch (error) {
+    console.error('[Firebase] Error adding quiz:', error);
+    throw error;
+  }
+}
+
+/**
  * Update or create a quiz document in Firestore
  * @param {string} quizId - The quiz ID
  * @param {Object} quizData - The quiz data to save

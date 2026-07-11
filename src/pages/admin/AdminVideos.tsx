@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Video } from 'lucide-react';
+import { Video, ChevronDown } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db, deleteVideo } from '../../services/firebase';
 import useStore from '../../contexts/store';
@@ -9,6 +9,10 @@ import useStore from '../../contexts/store';
  * AdminVideos — browse / search / delete the Firestore `videos` collection.
  * Full document editing is out of scope; users are pointed at the raw
  * collection editor for that. Renders inside AdminLayout's <Outlet>.
+ *
+ * Live `videos` document fields:
+ *   id, subject_code, unit_no, unit_title, lesson_no, video_title,
+ *   learning_objectives, language, duration_min, video_url, thumbnail_url, tags
  */
 
 interface VideoRow {
@@ -16,13 +20,16 @@ interface VideoRow {
   [key: string]: any;
 }
 
-/** Return the first non-empty value among `keys` on `obj`. */
-function pick(obj: Record<string, any>, keys: string[]): string {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v != null && String(v).trim() !== '') return String(v);
-  }
-  return '';
+/** Coerce a Firestore value to a trimmed display string ('' when empty). */
+function str(v: any): string {
+  if (v == null) return '';
+  return String(v).trim();
+}
+
+/** Numeric sort key, pushing missing values to the end. */
+function num(v: any): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
 }
 
 export default function AdminVideos() {
@@ -33,6 +40,7 @@ export default function AdminVideos() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   async function load() {
     setLoading(true);
@@ -56,14 +64,41 @@ export default function AdminVideos() {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) => {
-      const title = pick(r, ['title', 'name']).toLowerCase();
-      const subject = pick(r, ['subject']).toLowerCase();
-      return title.includes(q) || subject.includes(q) || r.id.toLowerCase().includes(q);
+      const haystack = [
+        str(r.video_title),
+        str(r.subject_code),
+        str(r.unit_title),
+        r.id,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
     });
   }, [rows, search]);
 
+  /** Group filtered videos by subject_code, sorted by unit_no then lesson_no. */
+  const groups = useMemo(() => {
+    const map = new Map<string, VideoRow[]>();
+    for (const r of filtered) {
+      const key = str(r.subject_code) || t('(sans matière)', '(san matyè)');
+      const bucket = map.get(key);
+      if (bucket) bucket.push(r);
+      else map.set(key, [r]);
+    }
+    const out = Array.from(map.entries()).map(([subject, list]) => ({
+      subject,
+      list: [...list].sort((a, b) => {
+        const u = num(a.unit_no) - num(b.unit_no);
+        if (u !== 0) return u;
+        return num(a.lesson_no) - num(b.lesson_no);
+      }),
+    }));
+    out.sort((a, b) => a.subject.localeCompare(b.subject));
+    return out;
+  }, [filtered, isCreole]);
+
   async function handleDelete(row: VideoRow) {
-    const label = pick(row, ['title', 'name']) || row.id;
+    const label = str(row.video_title) || row.id;
     const ok = window.confirm(
       t(`Supprimer la vidéo « ${label} » ? Cette action est irréversible.`,
         `Efase videyo « ${label} » ? Aksyon sa a pa ka defèt.`),
@@ -109,66 +144,139 @@ export default function AdminVideos() {
         />
       </div>
 
-      <div className="admin-card">
-        {loading ? (
-          <div className="admin-empty">{t('Chargement des vidéos…', 'N ap chaje videyo yo…')}</div>
-        ) : filtered.length === 0 ? (
-          <div className="admin-empty">
-            {search
-              ? t('Aucune vidéo ne correspond.', 'Pa gen videyo ki koresponn.')
-              : t('Aucune vidéo.', 'Pa gen videyo.')}
-          </div>
-        ) : (
-          <div className="admin-table__scroll">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>{t('Titre', 'Tit')}</th>
-                  <th>{t('Matière', 'Matyè')}</th>
-                  <th>{t('Niveau', 'Nivo')}</th>
-                  <th>{t('Cours', 'Kou')}</th>
-                  <th>{t('Vidéo', 'Videyo')}</th>
-                  <th aria-label={t('Actions', 'Aksyon')} />
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => {
-                  const url = pick(r, ['video_url', 'youtube', 'youtube_url', 'url']);
-                  return (
-                    <tr key={r.id}>
-                      <td>{pick(r, ['title', 'name']) || '—'}</td>
-                      <td>{pick(r, ['subject']) || '—'}</td>
-                      <td>{pick(r, ['level']) || '—'}</td>
-                      <td>{pick(r, ['courseId', 'course_id', 'course']) || '—'}</td>
-                      <td>
-                        {url ? (
-                          <a href={url} target="_blank" rel="noreferrer">
-                            {t('Ouvrir', 'Louvri')}
-                          </a>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button
-                          type="button"
-                          className="admin-btn admin-btn--danger"
-                          onClick={() => handleDelete(r)}
-                          disabled={deletingId === r.id}
-                        >
-                          {deletingId === r.id
-                            ? t('Suppression…', 'N ap efase…')
-                            : t('Supprimer', 'Efase')}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {loading ? (
+        <div className="admin-card admin-empty">
+          {t('Chargement des vidéos…', 'N ap chaje videyo yo…')}
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="admin-card admin-empty">
+          {search
+            ? t('Aucune vidéo ne correspond.', 'Pa gen videyo ki koresponn.')
+            : t('Aucune vidéo.', 'Pa gen videyo.')}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {groups.map(({ subject, list }) => {
+            const isCollapsed = !!collapsed[subject];
+            return (
+              <div key={subject} className="admin-card" style={{ padding: 0 }}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCollapsed((c) => ({ ...c, [subject]: !c[subject] }))
+                  }
+                  aria-expanded={!isCollapsed}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    width: '100%',
+                    padding: '13px 16px',
+                    borderBottom: isCollapsed ? 'none' : '1px solid var(--asb-line)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: 'inherit',
+                    font: 'inherit',
+                  }}
+                >
+                  <ChevronDown
+                    size={16}
+                    style={{
+                      color: 'var(--asb-muted)',
+                      flex: 'none',
+                      transform: isCollapsed ? 'rotate(-90deg)' : 'none',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontFamily: 'var(--asb-mono, monospace)',
+                    }}
+                  >
+                    {subject}
+                  </span>
+                  <span
+                    className="admin-role-pill"
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    {list.length} {t('vidéo', 'videyo')}
+                    {list.length > 1 && !isCreole ? 's' : ''}
+                  </span>
+                </button>
+
+                {!isCollapsed && (
+                  <div className="admin-table__scroll">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: 56 }}>{t('Réf', 'Ref')}</th>
+                          <th>{t('Titre', 'Tit')}</th>
+                          <th>{t('Unité', 'Inite')}</th>
+                          <th>{t('Durée', 'Dire')}</th>
+                          <th>{t('Vidéo', 'Videyo')}</th>
+                          <th aria-label={t('Actions', 'Aksyon')} />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map((r) => {
+                          const url = str(r.video_url);
+                          const dur = num(r.duration_min);
+                          const hasDur = dur !== Number.MAX_SAFE_INTEGER;
+                          return (
+                            <tr key={r.id}>
+                              <td
+                                style={{
+                                  color: 'var(--asb-muted)',
+                                  fontFamily: 'var(--asb-mono, monospace)',
+                                  fontSize: 12,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {str(r.unit_no) || '—'}.{str(r.lesson_no) || '—'}
+                              </td>
+                              <td style={{ fontWeight: 550 }}>
+                                {str(r.video_title) || '—'}
+                              </td>
+                              <td>{str(r.unit_title) || '—'}</td>
+                              <td style={{ whiteSpace: 'nowrap' }}>
+                                {hasDur ? `${dur} min` : '—'}
+                              </td>
+                              <td>
+                                {url ? (
+                                  <a href={url} target="_blank" rel="noreferrer">
+                                    {t('Ouvrir', 'Louvri')}
+                                  </a>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <button
+                                  type="button"
+                                  className="admin-btn admin-btn--danger"
+                                  onClick={() => handleDelete(r)}
+                                  disabled={deletingId === r.id}
+                                >
+                                  {deletingId === r.id
+                                    ? t('Suppression…', 'N ap efase…')
+                                    : t('Supprimer', 'Efase')}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <p className="admin-page__subtitle" style={{ marginTop: 16 }}>
         {t(
