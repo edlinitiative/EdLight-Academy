@@ -4379,6 +4379,16 @@ textarea:focus-visible,
 }
 .subject-card:hover .subject-card__cta { gap: 0.55rem; }
 
+/* Dark mode: lift accent-derived colours toward white so muted subject
+   accents (e.g. Économie) keep enough contrast on the dark surface. */
+[data-theme="dark"] .subject-card__cta,
+[data-theme="dark"] .subject-card__pct {
+	color: color-mix(in srgb, var(--accent) 55%, #cfe0f5);
+}
+[data-theme="dark"] .subject-card__icon {
+	color: color-mix(in srgb, var(--accent) 60%, #e7eefb);
+}
+
 /* Coming soon — a friendly dashed placeholder, clearly not yet clickable. */
 .subject-card--soon {
 	cursor: default;
