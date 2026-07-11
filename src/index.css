@@ -17024,6 +17024,16 @@ textarea:focus {
 .exam-landing__title,
 .trivia-landing__title,
 .quiz-hero__title,
+.courses-header__title,
+.courses-resume__title,
+.exam-cover__title,
+.exam-take__title,
+.sp-hero__title,
+.sp-topbar__title,
+.profile-card__title,
+.course-overview__title,
+.track-selector__title,
+.section__title,
 .section > .container > h1:first-child {
   font-family: var(--ed-editorial) !important;
   letter-spacing: -0.03em !important;
@@ -17057,7 +17067,21 @@ textarea:focus {
 .readiness-card,
 .about-offering__item,
 .about-step,
-.about-values__item {
+.about-values__item,
+.subject-tile,
+.stat-card,
+.profile-card,
+.profile-espace-tile,
+.profile-guest__card,
+.track-selector__card,
+.sp-card,
+.sp-progress-card,
+.lesson-card,
+.trivia-cat-tile,
+.trivia-results__card,
+.quiz-panel,
+.exam-cover__panel,
+.av-card {
   border: 1px solid var(--ed-border) !important;
   border-radius: var(--ed-r) !important;
   box-shadow: var(--ed-shadow) !important;
@@ -17071,7 +17095,12 @@ button.card:hover,
 .exam-card:hover,
 .trivia-cat-card:hover,
 .lp-course:hover,
-.lp-pillar:hover {
+.lp-pillar:hover,
+.subject-tile:hover,
+.track-selector__card:hover,
+.lesson-card:hover,
+.trivia-cat-tile:hover,
+.profile-espace-tile:hover {
   transform: translate(-1px, -1px) !important;
   box-shadow: 4px 4px 0 0 var(--ed-border) !important;
 }
