@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import { getAdminOverview, listUsers } from '../../services/adminService';
 import type { AdminOverviewCounts, AdminUser } from '../../services/adminService';
-import { useSiteStats } from '../../hooks/useSiteStats';
 
 /**
  * AdminOverview — the admin console's dashboard.
@@ -29,9 +28,6 @@ export default function AdminOverview() {
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [usersLoading, setUsersLoading] = useState(true);
-
-  const stats = useSiteStats();
-  const counts = stats.data?.counts;
 
   useEffect(() => {
     let alive = true;
@@ -88,22 +84,22 @@ export default function AdminOverview() {
     {
       key: 'courses',
       label: t('Cours', 'Kou'),
-      value: fmt(counts?.courses, stats.isLoading),
+      value: fmt(overview?.courses, overviewLoading),
     },
     {
       key: 'videos',
       label: t('Vidéos', 'Videyo'),
-      value: fmt(counts?.videos, stats.isLoading),
+      value: fmt(overview?.videos, overviewLoading),
     },
     {
       key: 'quizzes',
       label: t('Quiz', 'Quiz'),
-      value: fmt(counts?.quizzes, stats.isLoading),
+      value: fmt(overview?.quizzes, overviewLoading),
     },
     {
       key: 'exams',
       label: t('Examens', 'Egzamen'),
-      value: fmt(counts?.exams, stats.isLoading),
+      value: fmt(overview?.exams, overviewLoading),
     },
     {
       key: 'reports',

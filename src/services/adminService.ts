@@ -93,18 +93,35 @@ export async function countCollection(name: string): Promise<number | null> {
 
 export interface AdminOverviewCounts {
   users: number | null;
+  courses: number | null;
   videos: number | null;
   quizzes: number | null;
+  exams: number | null;
   pendingReports: number | null;
 }
 
-/** Headline counts for the overview dashboard (server-side aggregates). */
+/** Count exams from the static catalog index (not Firestore). */
+async function countExams(): Promise<number | null> {
+  try {
+    const res = await fetch('/exam_catalog_index.json');
+    if (!res.ok) return null;
+    const arr = await res.json();
+    return Array.isArray(arr) ? arr.length : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Headline counts for the overview dashboard. Single source for all admin
+ *  tiles (count-aggregate with getDocs fallback) so nothing shows a blank. */
 export async function getAdminOverview(): Promise<AdminOverviewCounts> {
-  const [users, videos, quizzes, pendingReports] = await Promise.all([
+  const [users, courses, videos, quizzes, exams, pendingReports] = await Promise.all([
     countCollection('users'),
+    countCollection('courses'),
     countCollection('videos'),
     countCollection('quizzes'),
+    countExams(),
     countCollection('commentReports'),
   ]);
-  return { users, videos, quizzes, pendingReports };
+  return { users, courses, videos, quizzes, exams, pendingReports };
 }
