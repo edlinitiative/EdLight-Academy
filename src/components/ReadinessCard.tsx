@@ -6,9 +6,9 @@
  * breakdown (sorted by Bac weight), and a single "focus this week" tip.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Target, Lightbulb, TrendingUp, ClipboardList } from 'lucide-react';
+import { Target, Lightbulb, TrendingUp, ClipboardList, ChevronDown } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useReadiness } from '../hooks/useReadiness';
 import { localizeSubject } from '../utils/localizeSubject';
@@ -37,10 +37,11 @@ const BAND_TONE_VAR: Record<string, string> = {
 const subjectCode = (name: string) =>
   (name || '').replace(/[^\p{L}]/gu, '').slice(0, 4).toUpperCase() || '···';
 
-export default function ReadinessCard({ maxSubjects = 6 }) {
+export default function ReadinessCard({ collapsedCount = 4 }) {
   const navigate = useNavigate();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
+  const [expanded, setExpanded] = useState(false);
 
   const {
     overall,
@@ -92,7 +93,8 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
     );
   }
 
-  const shownSubjects = subjects.slice(0, maxSubjects);
+  const hiddenCount = Math.max(0, subjects.length - collapsedCount);
+  const shownSubjects = expanded ? subjects : subjects.slice(0, collapsedCount);
 
   // Segmented gauge: fill cells up to overall%, the leading edge takes a
   // semantic tone so the bar reads its own health at a glance.
@@ -203,6 +205,22 @@ export default function ReadinessCard({ maxSubjects = 6 }) {
               </div>
             );
           })}
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              className="readiness-subjects__toggle"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+            >
+              {expanded
+                ? t('Réduire', 'Rediksyon')
+                : t(`Voir les ${hiddenCount} autres matières`, `Wè ${hiddenCount} lòt matyè yo`)}
+              <ChevronDown
+                size={14}
+                style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+              />
+            </button>
+          )}
         </div>
       ) : (
         <button className="button button--primary readiness-card__cta" onClick={() => navigate('/exams')}>
