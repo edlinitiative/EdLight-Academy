@@ -358,6 +358,19 @@
     backdrop-filter: saturate(180%) blur(22px);
     border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
     box-shadow: 0 -8px 30px -16px rgba(15, 23, 42, 0.4);
+    /* Auto-hide on scroll: slide out of view to reclaim content space. */
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  /* Slid fully off-screen (incl. the safe-area inset) when scrolling down. */
+  .bottom-nav.is-hidden {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-nav { transition: none; }
   }
 
   .bottom-nav__inner {

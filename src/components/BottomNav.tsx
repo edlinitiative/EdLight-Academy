@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react';
 
@@ -23,6 +23,43 @@ const TABS = [
 
 export default function BottomNav() {
   const { pathname } = useLocation();
+
+  // Auto-hide the bar to give content more room: slide it away when the user
+  // scrolls DOWN into content, bring it back when they scroll UP (or reach the
+  // top). A small threshold avoids jitter; it's always shown near the top.
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const scroller = () =>
+      window.scrollY || document.scrollingElement?.scrollTop || document.documentElement.scrollTop || 0;
+    let lastY = scroller();
+    let ticking = false;
+
+    const update = () => {
+      ticking = false;
+      const y = scroller();
+      const delta = y - lastY;
+      // Always visible near the top of the page.
+      if (y < 72) {
+        setHidden(false);
+      } else if (Math.abs(delta) > 6) {
+        setHidden(delta > 0); // scrolling down → hide; up → show
+      }
+      lastY = y;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // A new route resets scroll to the top, so make sure the bar is shown.
+  useEffect(() => { setHidden(false); }, [pathname]);
 
   const isActive = (path, exact = false) => {
     if (path === '/' || exact) return pathname === path;
@@ -62,7 +99,7 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="bottom-nav" aria-label="Navigation principale">
+    <nav className={`bottom-nav ${hidden ? 'is-hidden' : ''}`} aria-label="Navigation principale">
       <div className="bottom-nav__inner">
         {TABS.map(({ to, label, icon: Icon, exact }) => {
           const active = isActive(to, exact);
