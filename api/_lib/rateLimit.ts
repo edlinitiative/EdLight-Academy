@@ -23,6 +23,7 @@ const LIMITS: Record<string, Limit> = {
   'grade-scaffold': { max: 30, windowSec: 3600 },
   'generate-plan':  { max: 5,  windowSec: 3600 },
   'generate-quiz':  { max: 10, windowSec: 3600 },
+  'chat':           { max: 30, windowSec: 3600 },
 };
 
 export interface RateLimitResult {

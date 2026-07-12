@@ -192,6 +192,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Sandra chat transcripts: written only by the API (admin SDK).
+    // Admins browse all conversations; a student may read their own.
+    match /chatConversations/{convId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
+    // Sandra knowledge base (vector embeddings) — server-side only
+    match /sandraKb/{chunkId} {
+      allow read, write: if false;
+    }
+
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;
