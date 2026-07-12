@@ -93,11 +93,11 @@ function buildExamChunks() {
       level: exam.level || '',
       courseId: '', // exams don't map cleanly to an NS course id
     };
-    for (const section of exam.sections || []) {
-      for (const q of section.questions || []) {
-        chunks.push(...chunkExamQuestion(q, meta));
-      }
-    }
+    (exam.sections || []).forEach((section, i) => {
+      (section.questions || []).forEach((q, j) => {
+        chunks.push(...chunkExamQuestion(q, { ...meta, sectionNo: i + 1, qIndex: j + 1 }));
+      });
+    });
   }
   return chunks;
 }

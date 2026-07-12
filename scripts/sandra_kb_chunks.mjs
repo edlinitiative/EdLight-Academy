@@ -177,12 +177,18 @@ export function chunkExamQuestion(q, meta = {}) {
     solution ? `Solution: ${solution}` : '',
   ].filter(Boolean);
 
+  // Question numbers restart per section AND sometimes mid-section (multi-part
+  // papers), so declared numbers can't make a unique id. Prefer the caller's
+  // positional index (unique by construction); fall back to declared numbers
+  // for callers that don't pass positions.
+  const section = meta.sectionNo != null ? `s${meta.sectionNo}:` : '';
+  const qKey = meta.qIndex != null ? `q${meta.qIndex}` : (q.number != null ? q.number : statement.slice(0, 40));
   return [{
     text: truncate(parts.join('\n')),
     courseId,
     level,
     subject,
     type: 'exam',
-    sourceId: `${examId || 'exam'}:${q.number != null ? q.number : statement.slice(0, 40)}`,
+    sourceId: `${examId || 'exam'}:${section}${qKey}`,
   }];
 }

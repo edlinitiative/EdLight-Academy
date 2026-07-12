@@ -135,6 +135,16 @@ describe('chunkExamQuestion', () => {
     expect(chunkExamQuestion({ number: '2', question: '' }, meta)).toEqual([]);
     expect(chunkExamQuestion(null, meta)).toEqual([]);
   });
+
+  it('disambiguates identical question numbers across sections via sectionNo', () => {
+    const q1 = { number: '1', question: 'Question section A' };
+    const q2 = { number: '1', question: 'Question section B' };
+    const [a] = chunkExamQuestion(q1, { ...meta, sectionNo: 1 });
+    const [b] = chunkExamQuestion(q2, { ...meta, sectionNo: 2 });
+    expect(a.sourceId).not.toBe(b.sourceId);
+    expect(a.sourceId).toContain('s1:');
+    expect(b.sourceId).toContain('s2:');
+  });
 });
 
 describe('chunk text truncation', () => {
