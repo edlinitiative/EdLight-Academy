@@ -190,6 +190,21 @@
   white-space: normal;
 }
 
+/* InstructionRenderer ships the exam page's look (tinted box, 340px
+   max-height + inner scrollbar). Inside a chat bubble the bubble IS the box
+   and the messages list is the only thing that scrolls — flatten all of it. */
+.sandra-msg--assistant .instruction-renderer {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  line-height: inherit;
+  color: inherit;
+  max-height: none;
+  overflow-y: visible;
+}
+
 /* Markdown inside Sandra's bubbles: compact, chat-sized rhythm. */
 .sandra-msg--assistant p {
   margin: 0 0 0.55em;
