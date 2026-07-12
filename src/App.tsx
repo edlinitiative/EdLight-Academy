@@ -29,6 +29,7 @@ const AdminCourseDetail = lazyWithRetry(() => import('./pages/admin/AdminCourseD
 const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminUserDetail = lazyWithRetry(() => import('./pages/admin/AdminUserDetail'));
 const AdminModeration = lazyWithRetry(() => import('./pages/admin/AdminModeration'));
+const AdminSandra = lazyWithRetry(() => import('./pages/admin/AdminSandra'));
 const AdminSiteStats = lazyWithRetry(() => import('./pages/admin/AdminSiteStats'));
 const AdminVideos = lazyWithRetry(() => import('./pages/admin/AdminVideos'));
 const AdminQuizzes = lazyWithRetry(() => import('./pages/admin/AdminQuizzes'));
@@ -107,6 +108,7 @@ export default function App() {
                 {/* Users */}
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="users/moderation" element={<AdminModeration />} />
+                <Route path="users/sandra" element={<AdminSandra />} />
                 <Route path="users/:uid" element={<AdminUserDetail />} />
                 {/* Data */}
                 <Route path="data/collections" element={<Admin />} />

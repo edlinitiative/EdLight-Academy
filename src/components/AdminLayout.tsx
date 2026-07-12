@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Video, Target, ClipboardList, CheckSquare, Gamepad2,
-  Users, ShieldAlert, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X,
+  Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { getFirstName } from '../utils/shared';
@@ -33,6 +33,7 @@ const NAV: Array<{ section?: string; items: Array<{ to: string; end?: boolean; I
     items: [
       { to: '/admin/users', end: true, Icon: Users, label: 'Tous les utilisateurs' },
       { to: '/admin/users/moderation', Icon: ShieldAlert, label: 'Modération' },
+      { to: '/admin/users/sandra', Icon: MessageCircle, label: 'Sandra' },
     ],
   },
   {
