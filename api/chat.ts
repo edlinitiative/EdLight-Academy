@@ -214,7 +214,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     let reply: string;
     try {
-      reply = await chatText({ system, messages: llmMessages, config: resolveLLMConfig() });
+      // 900-token default truncates detailed explanations mid-formula; give
+      // tutoring answers room to conclude properly.
+      reply = await chatText({ system, messages: llmMessages, maxTokens: 1800, config: resolveLLMConfig() });
     } catch (error) {
       const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
       console.error('chat: LLM failed:', detail, error instanceof Error ? error.message : error);
