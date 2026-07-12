@@ -1,7 +1,7 @@
 # Sandra v2 — Tool-Calling (Plans, Exams, Progress, Email/ICS): Design
 
 **Date:** 2026-07-12
-**Status:** Draft — pending Ted's review
+**Status:** Approved — email delivery DEFERRED (no Resend account yet); shipping tool loop + 3 tools + ICS download. `email_study_plan` and `planEmail.ts` move to a later phase.
 **Builds on:** `2026-07-12-sandra-chatbot-design.md` (Sandra v1, live in production)
 
 ## Goal
