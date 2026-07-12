@@ -40,10 +40,9 @@ export default function CoursesSection({ t }: { t: TFn }) {
                   alt={c.name}
                   width={760}
                   height={425}
-                  loading="lazy"
+                  loading="eager"
                   decoding="async"
                 />
-                <span className={`lp-course__badge lp-course__badge--${String(c.subject).toLowerCase()}`}>{c.level}</span>
               </div>
               <div className="lp-course__body">
                 <h3 className="lp-course__title">{c.name}</h3>

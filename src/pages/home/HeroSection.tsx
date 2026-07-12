@@ -10,7 +10,6 @@ export default function HeroSection({ t }: { t: TFn }) {
 
   return (
     <section className="lp-hero">
-      <div className="lp-hero__grid" aria-hidden="true" />
       <div className="lp-container">
         <div className="lp-hero__layout">
           <div className="lp-hero__copy">
