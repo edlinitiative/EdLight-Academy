@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RotateCcw, Send, Sparkles, X } from 'lucide-react';
 import { authedFetch } from '../../services/firebase';
 import useStore from '../../contexts/store';
+import InstructionRenderer from '../InstructionRenderer';
 
 /** sessionStorage key holding the active conversation id — a new browser
  *  session (or a full conversation) starts a fresh one. */
@@ -224,7 +225,10 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
               <span className="sandra-glyph sandra-glyph--bubble" aria-hidden="true">
                 <Sparkles size={13} strokeWidth={2.4} />
               </span>
-              <div className="sandra-msg sandra-msg--assistant">{m.text}</div>
+              {/* Sandra writes markdown + $math$; students' own text stays plain. */}
+              <div className="sandra-msg sandra-msg--assistant">
+                <InstructionRenderer text={m.text} />
+              </div>
             </div>
           ),
         )}
