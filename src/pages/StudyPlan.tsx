@@ -16,7 +16,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Lock, GraduationCap, ClipboardList, Sparkles, CalendarDays, CalendarRange,
   Timer, Lightbulb, Target, CheckCircle2, BarChart3, RefreshCw, Trash2,
-  FileText, Pencil, Video, ChevronRight, ChevronDown, Flame, Play,
+  FileText, Pencil, Video, ChevronRight, ChevronDown, Flame, Play, Download,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
@@ -25,6 +25,7 @@ import { useStreak } from '../hooks/useStreak';
 import { StreakWidget } from '../components/Streak';
 import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
+import { buildPlanIcs } from '../utils/planIcs';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
 import { auth, authedFetch } from '../services/firebase';
 import { Skeleton } from '../components/Skeleton';
@@ -196,6 +197,24 @@ export default function StudyPlan() {
     }
   }, [track, trackExams, coefficients, existingResults, allExams, generatePlan, quizBankIndex, courses]);
 
+  // ── ICS calendar download ─────────────────────────────────────────
+  // Tasks are dated via the SRS field `nextReviewMs` (studyPlanService).
+  const hasDatedTasks = !!plan?.tasks?.some((t) => t.nextReviewMs);
+
+  const handleDownloadIcs = useCallback(() => {
+    if (!plan) return;
+    const ics = buildPlanIcs(plan);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plan-etude-edlight.ics';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [plan]);
+
   // ── Not authenticated ─────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
@@ -334,6 +353,17 @@ export default function StudyPlan() {
           )}
         </div>
         <div className="sp-topbar__actions">
+          {hasDatedTasks && (
+            <button
+              className="sp-btn sp-btn--ghost"
+              style={{ gap: '0.35rem' }}
+              onClick={handleDownloadIcs}
+              title={isCreole ? 'Kalandriye (.ics)' : 'Calendrier (.ics)'}
+            >
+              <Download size={16} />
+              <span>{isCreole ? 'Kalandriye (.ics)' : 'Calendrier (.ics)'}</span>
+            </button>
+          )}
           <button className="sp-btn sp-btn--ghost" onClick={handleGenerate} title={isCreole ? 'Rejenere' : 'Régénérer'}>
             <RefreshCw size={16} />
           </button>
