@@ -29,8 +29,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMS_DIR = join(__dirname, '..', 'public', 'exams');
 
 // ---- Embedding config (mirrors api/_lib/llm.ts embed() — kept in sync by hand) ----
-const EMBED_MODEL = process.env.LLM_EMBED_MODEL || 'text-embedding-004';
+// gemini-embedding-001 replaces the retired text-embedding-004. Vectors are
+// requested at 768 dims (the Firestore index dimension) and re-normalized,
+// since sub-3072-dim outputs of this model are not unit length.
+const EMBED_MODEL = process.env.LLM_EMBED_MODEL || 'gemini-embedding-001';
+const EMBED_DIM = 768;
 const EMBED_BATCH_SIZE = 100; // Gemini batchEmbedContents hard limit.
+
+const normalizeVector = (v) => {
+  const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+  return norm > 0 ? v.map((x) => x / norm) : v;
+};
 
 /** Embed texts with Gemini batchEmbedContents; one vector per input, in order. */
 async function embed(texts) {
@@ -41,7 +50,11 @@ async function embed(texts) {
   for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
     const batch = texts.slice(i, i + EMBED_BATCH_SIZE);
     const payload = {
-      requests: batch.map((t) => ({ model: `models/${EMBED_MODEL}`, content: { parts: [{ text: t }] } })),
+      requests: batch.map((t) => ({
+        model: `models/${EMBED_MODEL}`,
+        content: { parts: [{ text: t }] },
+        outputDimensionality: EMBED_DIM,
+      })),
     };
     const res = await fetch(url, {
       method: 'POST',
@@ -54,7 +67,7 @@ async function embed(texts) {
     if (embeddings.length !== batch.length) {
       throw new Error(`Gemini embed returned ${embeddings.length} vectors for ${batch.length} texts`);
     }
-    for (const e of embeddings) vectors.push(e?.values || []);
+    for (const e of embeddings) vectors.push(normalizeVector(e?.values || []));
     console.log(`  embedded ${Math.min(i + batch.length, texts.length)}/${texts.length}`);
   }
   return vectors;

@@ -109,21 +109,23 @@ describe('embed', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('posts to models/text-embedding-004:batchEmbedContents and returns embeddings[].values', async () => {
+  it('posts to models/gemini-embedding-001:batchEmbedContents at EMBED_DIM and normalizes the vectors', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({
-      embeddings: [{ values: [0.1, 0.2] }, { values: [0.3, 0.4] }],
+      embeddings: [{ values: [3, 4] }, { values: [0, 2] }],
     }));
 
     const vectors = await embed(['un', 'deux'], { GEMINI_API_KEY: 'AIza-test' });
 
-    expect(vectors).toEqual([[0.1, 0.2], [0.3, 0.4]]);
+    // gemini-embedding-001 vectors below 3072 dims are not unit length — embed()
+    // must normalize them ([3,4] → [0.6,0.8]).
+    expect(vectors).toEqual([[0.6, 0.8], [0, 1]]);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toContain('models/text-embedding-004:batchEmbedContents');
+    expect(url).toContain('models/gemini-embedding-001:batchEmbedContents');
     expect(url).toContain('key=AIza-test');
     const payload = JSON.parse((init as RequestInit).body as string);
     expect(payload.requests).toEqual([
-      { model: 'models/text-embedding-004', content: { parts: [{ text: 'un' }] } },
-      { model: 'models/text-embedding-004', content: { parts: [{ text: 'deux' }] } },
+      { model: 'models/gemini-embedding-001', content: { parts: [{ text: 'un' }] }, outputDimensionality: 768 },
+      { model: 'models/gemini-embedding-001', content: { parts: [{ text: 'deux' }] }, outputDimensionality: 768 },
     ]);
   });
 
@@ -152,7 +154,7 @@ describe('embed', () => {
     expect(firstBatch.requests).toHaveLength(100);
     expect(secondBatch.requests).toHaveLength(50);
     expect(vectors).toHaveLength(150);
-    expect(vectors[0]).toEqual([0]);
-    expect(vectors[149]).toEqual([149]);
+    expect(vectors[0]).toEqual([0]); // zero vector passes through unnormalized
+    expect(vectors[149]).toEqual([1]); // [149] normalizes to a unit vector
   });
 });

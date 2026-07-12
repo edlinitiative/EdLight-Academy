@@ -270,28 +270,35 @@ export async function chatText(params: ChatTextParams): Promise<string> {
   return text;
 }
 
-/** Dimension of `text-embedding-004` vectors — must match the Firestore vector index. */
+/** Requested embedding dimension — must match the Firestore vector index. */
 export const EMBED_DIM = 768;
 
 const EMBED_BATCH_SIZE = 100; // Gemini batchEmbedContents hard limit.
 
 /**
- * Embed texts with Gemini (`text-embedding-004`, overridable via
- * LLM_EMBED_MODEL). Key comes from GEMINI_API_KEY or LLM_API_KEY. Batches of
- * ≤100 via batchEmbedContents; returns one vector per input text, in order.
- * Throws LLMError when no key is configured or on any request failure.
+ * Embed texts with Gemini (`gemini-embedding-001`, overridable via
+ * LLM_EMBED_MODEL; text-embedding-004 was retired by Google in 2026). Vectors
+ * are requested at EMBED_DIM dims and re-normalized to unit length, since
+ * gemini-embedding-001 outputs below 3072 dims are not normalized. Key comes
+ * from GEMINI_API_KEY or LLM_API_KEY. Batches of ≤100 via batchEmbedContents;
+ * returns one vector per input text, in order. Throws LLMError when no key is
+ * configured or on any request failure.
  */
 export async function embed(texts: string[], env: Env = process.env): Promise<number[][]> {
   const apiKey = firstNonEmpty(env.GEMINI_API_KEY, env.LLM_API_KEY);
   if (!apiKey) throw new LLMError('No Gemini API key configured for embeddings', 0, 'gemini');
-  const model = firstNonEmpty(env.LLM_EMBED_MODEL, 'text-embedding-004');
+  const model = firstNonEmpty(env.LLM_EMBED_MODEL, 'gemini-embedding-001');
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${apiKey}`;
   const vectors: number[][] = [];
   for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
     const batch = texts.slice(i, i + EMBED_BATCH_SIZE);
     const payload = {
-      requests: batch.map((t) => ({ model: `models/${model}`, content: { parts: [{ text: t }] } })),
+      requests: batch.map((t) => ({
+        model: `models/${model}`,
+        content: { parts: [{ text: t }] },
+        outputDimensionality: EMBED_DIM,
+      })),
     };
     const res = await fetchWithTimeout(url, {
       method: 'POST',
@@ -304,7 +311,15 @@ export async function embed(texts: string[], env: Env = process.env): Promise<nu
     if (embeddings.length !== batch.length) {
       throw new LLMError(`Gemini embed returned ${embeddings.length} vectors for ${batch.length} texts`, 0, 'gemini');
     }
-    for (const e of embeddings) vectors.push(e?.values || []);
+    for (const e of embeddings) vectors.push(normalizeVector(e?.values || []));
   }
   return vectors;
+}
+
+/** Scale a vector to unit length (no-op for zero vectors). */
+function normalizeVector(v: number[]): number[] {
+  let sum = 0;
+  for (const x of v) sum += x * x;
+  const norm = Math.sqrt(sum);
+  return norm > 0 ? v.map((x) => x / norm) : v;
 }

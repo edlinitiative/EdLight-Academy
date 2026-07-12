@@ -6,14 +6,14 @@
 
 **Architecture:** New `api/chat.ts` Vercel function reusing `requireAuth` + `rateLimit` + `llm.ts` (extended with `chatText` and `embed`). Knowledge base = `sandraKb` Firestore collection with vector embeddings, built by a script, queried with Firestore `findNearest`. Conversations written server-side only to `chatConversations`. Frontend: lazy `SandraWidget` in `Layout`; admin: `AdminSandra` page in the Users group.
 
-**Tech Stack:** Vercel functions (TS), firebase-admin (Firestore vector search), Gemini `text-embedding-004` embeddings, React + react-i18next, Limyè design system, jest.
+**Tech Stack:** Vercel functions (TS), firebase-admin (Firestore vector search), Gemini `gemini-embedding-001` embeddings, React + react-i18next, Limyè design system, jest.
 
 **Spec:** `docs/superpowers/specs/2026-07-12-sandra-chatbot-design.md` — read it before starting any task.
 
 ## Global Constraints
 
 - French UI copy by default; every student-visible string in `SandraWidget` goes through react-i18next (`src/utils/i18n.ts`). Admin pages are French-hardcoded like existing admin pages.
-- Embedding model everywhere: `text-embedding-004`, dimension 768, overridable via env `LLM_EMBED_MODEL` — the KB script and `embed()` MUST read the same env/default.
+- Embedding model everywhere: `gemini-embedding-001`, dimension 768, overridable via env `LLM_EMBED_MODEL` — the KB script and `embed()` MUST read the same env/default.
 - Rate limit for chat: 30 messages / 3600 s per user, endpoint key `'chat'`.
 - Conversation doc cap: 100 messages.
 - Retrieval: top 6 chunks, cosine distance; prefer same-course when `page.courseId` present (fallback to unfiltered when < 3 hits).
@@ -40,11 +40,11 @@
 - Consumes: existing `resolveLLMConfig`, `LLMConfig`, `LLMError`, `fetchWithTimeout` (module-private — reuse in-file).
 - Produces:
   - `chatText(params: ChatTextParams): Promise<string>` where `ChatTextParams = { system: string; messages: Array<{ role: 'user'|'assistant'; content: string }>; temperature?: number; maxTokens?: number; timeoutMs?: number; config?: LLMConfig | null }`. Returns the assistant reply as plain text (trimmed, non-empty) or throws `LLMError`.
-  - `embed(texts: string[], env?: Record<string, string|undefined>): Promise<number[][]>` — Gemini `text-embedding-004` (override with `LLM_EMBED_MODEL`), key from `GEMINI_API_KEY`/`LLM_API_KEY`; batches of ≤100 via `batchEmbedContents`; throws `LLMError` when no key. Exports `const EMBED_DIM = 768`.
+  - `embed(texts: string[], env?: Record<string, string|undefined>): Promise<number[][]>` — Gemini `gemini-embedding-001` (override with `LLM_EMBED_MODEL`), key from `GEMINI_API_KEY`/`LLM_API_KEY`; batches of ≤100 via `batchEmbedContents`; throws `LLMError` when no key. Exports `const EMBED_DIM = 768`.
 
-- [ ] **Step 1: Write failing tests** — in `llmChat.test.ts`: (a) `chatText` builds an openai-compatible payload with system + interleaved messages and returns `choices[0].message.content` (mock `global.fetch`); (b) `chatText` gemini transport maps assistant→`model` role in `contents`; (c) `chatText` throws `LLMError` on empty reply; (d) `embed` throws `LLMError` when no Gemini key; (e) `embed` posts to `models/text-embedding-004:batchEmbedContents` and returns `embeddings[].values` (mock fetch).
+- [ ] **Step 1: Write failing tests** — in `llmChat.test.ts`: (a) `chatText` builds an openai-compatible payload with system + interleaved messages and returns `choices[0].message.content` (mock `global.fetch`); (b) `chatText` gemini transport maps assistant→`model` role in `contents`; (c) `chatText` throws `LLMError` on empty reply; (d) `embed` throws `LLMError` when no Gemini key; (e) `embed` posts to `models/gemini-embedding-001:batchEmbedContents` and returns `embeddings[].values` (mock fetch).
 - [ ] **Step 2: Run** `npx jest llmChat -t ''` — expect FAIL (exports missing).
-- [ ] **Step 3: Implement.** `chatText`: mirror `chatJSON` transport code but messages array instead of single user turn, no `response_format`/`responseMimeType`, default `temperature 0.4`, `maxTokens 900`, `timeoutMs 30000`; gemini path: `contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))`, keep `thinkingConfig: { thinkingBudget: 0 }`. `embed`: `const model = firstNonEmpty(env.LLM_EMBED_MODEL, 'text-embedding-004')`; POST `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=…` with `{ requests: texts.map(t => ({ model: `models/${model}`, content: { parts: [{ text: t }] } })) }`.
+- [ ] **Step 3: Implement.** `chatText`: mirror `chatJSON` transport code but messages array instead of single user turn, no `response_format`/`responseMimeType`, default `temperature 0.4`, `maxTokens 900`, `timeoutMs 30000`; gemini path: `contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }))`, keep `thinkingConfig: { thinkingBudget: 0 }`. `embed`: `const model = firstNonEmpty(env.LLM_EMBED_MODEL, 'gemini-embedding-001')`; POST `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=…` with `{ requests: texts.map(t => ({ model: `models/${model}`, content: { parts: [{ text: t }] } })) }`.
 - [ ] **Step 4: Run** `npx jest llmChat` — expect PASS; also `npx jest llm.test` still PASS.
 - [ ] **Step 5: Commit** `feat(api): chatText + embed helpers in llm lib`
 

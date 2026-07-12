@@ -35,7 +35,7 @@ Reuses the existing Vercel `/api` + `_lib` stack end to end: `requireAuth` (Fire
   - **Exams:** one chunk per question (statement, démarche, solution) — `type: exam`, same guide-only handling.
 - Doc shape: `{ text, embedding (Firestore vector), courseId, level, subject, type: 'lesson'|'quiz'|'exam', sourceId, updatedAt }`.
 - Retrieval: Firestore native vector search (`findNearest`, cosine) via the admin SDK. Vector index added to `firestore.indexes.json`.
-- Embeddings: new `embed()` in `api/_lib/llm.ts` — Gemini `text-embedding-004` by default, provider-switchable via env like the chat client. The KB build script and the chat endpoint MUST use the same model.
+- Embeddings: new `embed()` in `api/_lib/llm.ts` — Gemini `gemini-embedding-001` by default, provider-switchable via env like the chat client. The KB build script and the chat endpoint MUST use the same model.
 
 ### Chat endpoint (`api/chat.ts`, POST)
 
