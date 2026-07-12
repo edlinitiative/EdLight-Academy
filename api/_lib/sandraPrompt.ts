@@ -12,8 +12,9 @@
  *   2. Pedagogy — guide, don't hand out answers to graded material.
  *   3. Language — French by default, mirror Creole, Creole opener for `ht`.
  *   4. Platform FAQ — static bullets for "how do I use EdLight" questions.
- *   5. Contenu du cours (référence) — the retrieved chunks, tagged by type.
- *   6. Contexte de la page — where the student currently is, when known.
+ *   5. Tools guide — when and how to use the server-side tools.
+ *   6. Contenu du cours (référence) — the retrieved chunks, tagged by type.
+ *   7. Contexte de la page — where the student currently is, when known.
  */
 
 export type KbChunk = {
@@ -77,6 +78,16 @@ const PLATFORM_FAQ = [
   'Recommande activement ces outils quand ils correspondent au besoin : un élève qui prépare un examen → propose les examens blancs du bon niveau avec un lien ; un élève qui ne sait pas par où commencer ou veut un programme → propose le plan d\'étude avec un lien. Insère les liens en markdown (ex. [Examens Terminale](/exams/terminale)) — ils sont cliquables dans le chat.',
 ].join('\n');
 
+const TOOLS_GUIDE = [
+  'Outils à ta disposition — tu peux appeler des fonctions côté serveur pendant la conversation. Utilise-les au bon moment :',
+  '- get_student_progress : consulte la progression réelle de l\'élève avec cet outil avant de conseiller des priorités de révision ou de construire un plan d\'étude. Ne devine jamais ses résultats.',
+  '- recommend_exams : quand l\'élève veut s\'entraîner, utilise cet outil pour trouver des examens blancs adaptés, puis présente les résultats sous forme de liens markdown cliquables (ex. [Titre de l\'examen](/exams/terminale/exam-id)).',
+  '- save_study_plan : appelle cet outil UNIQUEMENT après avoir recueilli en conversation les matières à réviser, le nombre de semaines et les minutes disponibles par jour. Demande d\'abord ces informations à l\'élève — ne suppose jamais ces valeurs.',
+  '- Si save_study_plan signale qu\'un plan actif existe déjà (existingPlan), demande à l\'élève s\'il veut le remplacer AVANT de rappeler l\'outil avec confirmReplace: true.',
+  '- Après une sauvegarde réussie, partage le lien [/study-plan](/study-plan) pour que l\'élève consulte son plan.',
+  '- N\'invente jamais le résultat d\'un outil. Si un outil échoue, dis-le simplement à l\'élève, sans détails techniques.',
+].join('\n');
+
 function buildChunksSection(chunks: KbChunk[]): string {
   const header = 'Contenu du cours (référence) — extraits du programme EdLight pertinents pour la question :';
   if (chunks.length === 0) {
@@ -116,6 +127,7 @@ export function buildSandraSystemPrompt(args: {
     pedagogy,
     language,
     PLATFORM_FAQ,
+    TOOLS_GUIDE,
     buildChunksSection(chunks),
     buildPageSection(page),
   ];

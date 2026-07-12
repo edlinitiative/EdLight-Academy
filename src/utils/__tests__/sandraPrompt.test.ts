@@ -128,4 +128,30 @@ describe('buildSandraSystemPrompt', () => {
     }
     expect(p).toContain('markdown');
   });
+
+  it('always teaches every Sandra tool by name', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    for (const tool of ['get_student_progress', 'recommend_exams', 'save_study_plan']) {
+      expect(p).toContain(tool);
+    }
+  });
+
+  it('requires consulting progress before advising and gathering plan inputs before saving', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toMatch(/get_student_progress[\s\S]*avant de conseiller/i);
+    expect(p).toMatch(/matières[\s\S]*semaines[\s\S]*minutes/i);
+    expect(p).toMatch(/ne suppose jamais/i);
+  });
+
+  it('states the ask-before-replace rule for confirmReplace', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toContain('confirmReplace');
+    expect(p).toMatch(/demande à l'élève s'il veut le remplacer avant/i);
+  });
+
+  it('shares the /study-plan link after saving and forbids inventing tool results', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toMatch(/sauvegarde réussie[\s\S]*\[\/study-plan\]\(\/study-plan\)/i);
+    expect(p).toMatch(/n'invente jamais le résultat d'un outil/i);
+  });
 });
