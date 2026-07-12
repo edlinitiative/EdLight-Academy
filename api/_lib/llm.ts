@@ -203,3 +203,108 @@ export async function chatJSON(params: ChatJSONParams): Promise<unknown> {
   const text = body?.choices?.[0]?.message?.content || '';
   return extractJSON(text);
 }
+
+export interface ChatTextParams {
+  system: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  temperature?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
+  config?: LLMConfig | null;
+}
+
+/**
+ * Send a system prompt plus a multi-turn conversation and return the assistant
+ * reply as plain text (trimmed, non-empty). Throws LLMError on
+ * misconfiguration, network/timeout, non-2xx, or an empty reply.
+ */
+export async function chatText(params: ChatTextParams): Promise<string> {
+  const { system, messages, temperature = 0.4, maxTokens = 900, timeoutMs = 30000 } = params;
+  const config = params.config ?? resolveLLMConfig();
+  if (!config) throw new LLMError('No LLM provider configured', 0, 'none');
+
+  if (config.provider === 'gemini') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+    const payload = {
+      systemInstruction: { parts: [{ text: system }] },
+      contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+        // gemini-2.5 reasons by default; disable for fast conversational replies.
+        thinkingConfig: { thinkingBudget: 0 },
+      },
+    };
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }, timeoutMs);
+    if (!res.ok) throw new LLMError(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`, res.status, 'gemini');
+    const body = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = (body?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+    if (!text) throw new LLMError('Empty model response', 0, 'gemini');
+    return text;
+  }
+
+  // openai-compatible (DeepSeek / OpenAI / Groq / OpenRouter / local …)
+  const url = `${config.baseUrl}/chat/completions`;
+  const payload = {
+    model: config.model,
+    temperature,
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: system },
+      ...messages.map((m) => ({ role: m.role, content: m.content })),
+    ],
+  };
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+    body: JSON.stringify(payload),
+  }, timeoutMs);
+  if (!res.ok) throw new LLMError(`${config.label} ${res.status}: ${(await res.text()).slice(0, 300)}`, res.status, config.provider);
+  const body = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
+  const text = (body?.choices?.[0]?.message?.content || '').trim();
+  if (!text) throw new LLMError('Empty model response', 0, config.provider);
+  return text;
+}
+
+/** Dimension of `text-embedding-004` vectors — must match the Firestore vector index. */
+export const EMBED_DIM = 768;
+
+const EMBED_BATCH_SIZE = 100; // Gemini batchEmbedContents hard limit.
+
+/**
+ * Embed texts with Gemini (`text-embedding-004`, overridable via
+ * LLM_EMBED_MODEL). Key comes from GEMINI_API_KEY or LLM_API_KEY. Batches of
+ * ≤100 via batchEmbedContents; returns one vector per input text, in order.
+ * Throws LLMError when no key is configured or on any request failure.
+ */
+export async function embed(texts: string[], env: Env = process.env): Promise<number[][]> {
+  const apiKey = firstNonEmpty(env.GEMINI_API_KEY, env.LLM_API_KEY);
+  if (!apiKey) throw new LLMError('No Gemini API key configured for embeddings', 0, 'gemini');
+  const model = firstNonEmpty(env.LLM_EMBED_MODEL, 'text-embedding-004');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:batchEmbedContents?key=${apiKey}`;
+  const vectors: number[][] = [];
+  for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
+    const batch = texts.slice(i, i + EMBED_BATCH_SIZE);
+    const payload = {
+      requests: batch.map((t) => ({ model: `models/${model}`, content: { parts: [{ text: t }] } })),
+    };
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }, 30000);
+    if (!res.ok) throw new LLMError(`Gemini embed ${res.status}: ${(await res.text()).slice(0, 300)}`, res.status, 'gemini');
+    const body = await res.json() as { embeddings?: Array<{ values?: number[] }> };
+    const embeddings = body?.embeddings || [];
+    if (embeddings.length !== batch.length) {
+      throw new LLMError(`Gemini embed returned ${embeddings.length} vectors for ${batch.length} texts`, 0, 'gemini');
+    }
+    for (const e of embeddings) vectors.push(e?.values || []);
+  }
+  return vectors;
+}
