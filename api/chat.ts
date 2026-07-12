@@ -2,13 +2,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue } from 'firebase-admin/firestore';
 import { requireAuth } from './_lib/requireAuth';
 import { checkRateLimit } from './_lib/rateLimit';
-import { chatText, embed, resolveLLMConfig, LLMError } from './_lib/llm';
+import { chatWithTools, embed, resolveLLMConfig, LLMError, type ToolCallRecord } from './_lib/llm';
 import {
   buildSandraSystemPrompt,
   SANDRA_LIMITS,
   type KbChunk,
   type PageContext,
 } from './_lib/sandraPrompt';
+import { SANDRA_TOOL_DEFS, createToolExecutor } from './_lib/sandraTools';
 import { getDb } from './_lib/firebaseAdmin';
 
 /**
@@ -42,6 +43,8 @@ interface StoredMessage {
   role: 'user' | 'assistant';
   text: string;
   ts: number;
+  /** Present only on assistant messages produced with tool executions. */
+  toolCalls?: ToolCallRecord[];
 }
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
@@ -213,10 +216,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     ];
 
     let reply: string;
+    let toolCalls: ToolCallRecord[];
     try {
       // 900-token default truncates detailed explanations mid-formula; give
-      // tutoring answers room to conclude properly.
-      reply = await chatText({ system, messages: llmMessages, maxTokens: 1800, config: resolveLLMConfig() });
+      // tutoring answers room to conclude properly. Tools are scoped to the
+      // authenticated uid — the model never chooses whose data it reads.
+      ({ reply, toolCalls } = await chatWithTools({
+        system,
+        messages: llmMessages,
+        tools: SANDRA_TOOL_DEFS,
+        executeTool: createToolExecutor({ uid, origin: `https://${req.headers.host}` }),
+        maxTokens: 1800,
+        config: resolveLLMConfig(),
+      }));
     } catch (error) {
       const detail = error instanceof LLMError ? `${error.provider} ${error.status}` : 'unknown';
       console.error('chat: LLM failed:', detail, error instanceof Error ? error.message : error);
@@ -231,6 +243,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const now = Date.now();
     const userMsg: StoredMessage = { role: 'user', text: message, ts: now };
     const assistantMsg: StoredMessage = { role: 'assistant', text: reply, ts: now + 1 };
+    // Firestore rejects undefined fields — only attach the key when tools ran.
+    if (toolCalls.length > 0) assistantMsg.toolCalls = toolCalls;
     await convRef.update({
       messages: FieldValue.arrayUnion(userMsg, assistantMsg),
       messageCount: FieldValue.increment(2),

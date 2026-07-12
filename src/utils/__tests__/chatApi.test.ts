@@ -29,6 +29,7 @@ jest.mock('../../../api/_lib/llm', () => {
   return {
     LLMError,
     chatText: jest.fn(),
+    chatWithTools: jest.fn(),
     embed: jest.fn(),
     resolveLLMConfig: jest.fn(() => ({
       provider: 'gemini',
@@ -39,6 +40,13 @@ jest.mock('../../../api/_lib/llm', () => {
     })),
   };
 });
+
+jest.mock('../../../api/_lib/sandraTools', () => ({
+  SANDRA_TOOL_DEFS: [
+    { name: 'recommend_exams', description: 'stub', parameters: { type: 'object' } },
+  ],
+  createToolExecutor: jest.fn(() => jest.fn()),
+}));
 
 jest.mock('../../../api/_lib/firebaseAdmin', () => ({
   getDb: jest.fn(),
@@ -56,13 +64,15 @@ jest.mock('firebase-admin/firestore', () => ({
 import handler from '../../../api/chat';
 import { requireAuth } from '../../../api/_lib/requireAuth';
 import { checkRateLimit } from '../../../api/_lib/rateLimit';
-import { chatText, embed } from '../../../api/_lib/llm';
+import { chatWithTools, embed } from '../../../api/_lib/llm';
+import { SANDRA_TOOL_DEFS, createToolExecutor } from '../../../api/_lib/sandraTools';
 import { getDb } from '../../../api/_lib/firebaseAdmin';
 import { SANDRA_LIMITS } from '../../../api/_lib/sandraPrompt';
 
 const requireAuthMock = requireAuth as jest.Mock;
 const checkRateLimitMock = checkRateLimit as jest.Mock;
-const chatTextMock = chatText as jest.Mock;
+const chatWithToolsMock = chatWithTools as jest.Mock;
+const createToolExecutorMock = createToolExecutor as jest.Mock;
 const embedMock = embed as jest.Mock;
 const getDbMock = getDb as jest.Mock;
 
@@ -170,7 +180,7 @@ beforeEach(() => {
   requireAuthMock.mockResolvedValue('uid-1');
   checkRateLimitMock.mockResolvedValue({ allowed: true, remaining: 29, resetAt: Date.now() + 3600_000 });
   embedMock.mockResolvedValue([[0.1, 0.2, 0.3]]);
-  chatTextMock.mockResolvedValue('Voici la démarche, étape par étape.');
+  chatWithToolsMock.mockResolvedValue({ reply: 'Voici la démarche, étape par étape.', toolCalls: [] });
   getDbMock.mockReturnValue(makeDb().db);
 });
 
@@ -198,7 +208,7 @@ describe('api/chat handler', () => {
     expect(checkRateLimitMock).not.toHaveBeenCalled();
     expect(setMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
-    expect(chatTextMock).not.toHaveBeenCalled();
+    expect(chatWithToolsMock).not.toHaveBeenCalled();
   });
 
   it('returns 429 with a Retry-After header when rate limited', async () => {
@@ -211,7 +221,7 @@ describe('api/chat handler', () => {
     expect(res.statusCode).toBe(429);
     expect(Number(res.headers['Retry-After'])).toBeGreaterThan(0);
     expect((res.body as any).error).toBe('rate_limit_exceeded');
-    expect(chatTextMock).not.toHaveBeenCalled();
+    expect(chatWithToolsMock).not.toHaveBeenCalled();
     expect(embedMock).not.toHaveBeenCalled();
   });
 
@@ -221,7 +231,7 @@ describe('api/chat handler', () => {
 
     expect(res.statusCode).toBe(400);
     expect(embedMock).not.toHaveBeenCalled();
-    expect(chatTextMock).not.toHaveBeenCalled();
+    expect(chatWithToolsMock).not.toHaveBeenCalled();
   });
 
   it('returns 400 on a message over the 2000-char limit', async () => {
@@ -231,7 +241,7 @@ describe('api/chat handler', () => {
 
     expect(res.statusCode).toBe(400);
     expect(embedMock).not.toHaveBeenCalled();
-    expect(chatTextMock).not.toHaveBeenCalled();
+    expect(chatWithToolsMock).not.toHaveBeenCalled();
   });
 
   it('happy path: embeds once, calls the LLM once, persists both messages in one update', async () => {
@@ -255,7 +265,7 @@ describe('api/chat handler', () => {
 
     expect(embedMock).toHaveBeenCalledTimes(1);
     expect(embedMock).toHaveBeenCalledWith(['Explique-moi les dérivées']);
-    expect(chatTextMock).toHaveBeenCalledTimes(1);
+    expect(chatWithToolsMock).toHaveBeenCalledTimes(1);
 
     // New conversation shell was created with student identity.
     expect(setMock).toHaveBeenCalledTimes(1);
@@ -286,7 +296,7 @@ describe('api/chat handler', () => {
     await handler(makeReq({ body: { message: 'Salut', lang: 'fr', conversationId: 'conv-9' } }), res as any);
 
     expect(res.statusCode).toBe(403);
-    expect(chatTextMock).not.toHaveBeenCalled();
+    expect(chatWithToolsMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
   });
 
@@ -305,7 +315,75 @@ describe('api/chat handler', () => {
     expect(res.statusCode).toBe(200);
     expect((res.body as any).conversationFull).toBe(true);
     expect(embedMock).not.toHaveBeenCalled();
-    expect(chatTextMock).not.toHaveBeenCalled();
+    expect(chatWithToolsMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('persists toolCalls metadata on the assistant message when tools ran', async () => {
+    const { db, updateMock } = makeDb();
+    getDbMock.mockReturnValue(db);
+    chatWithToolsMock.mockResolvedValue({
+      reply: 'Voici trois examens recommandés.',
+      toolCalls: [{ name: 'recommend_exams', ok: true }],
+    });
+
+    const res = makeRes();
+    await handler(makeReq(), res as any);
+
+    expect(res.statusCode).toBe(200);
+    expect((res.body as any).reply).toBe('Voici trois examens recommandés.');
+
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    const unioned = updateMock.mock.calls[0][0].messages.__arrayUnion;
+    expect(unioned).toHaveLength(2);
+    expect(unioned[0]).toMatchObject({ role: 'user' });
+    expect(unioned[0]).not.toHaveProperty('toolCalls');
+    expect(unioned[1]).toMatchObject({
+      role: 'assistant',
+      text: 'Voici trois examens recommandés.',
+      toolCalls: [{ name: 'recommend_exams', ok: true }],
+    });
+  });
+
+  it('omits the toolCalls key entirely on zero-tool conversations (message shape unchanged)', async () => {
+    const { db, updateMock } = makeDb();
+    getDbMock.mockReturnValue(db);
+    chatWithToolsMock.mockResolvedValue({ reply: 'Réponse simple.', toolCalls: [] });
+
+    const res = makeRes();
+    await handler(makeReq(), res as any);
+
+    expect(res.statusCode).toBe(200);
+    const unioned = updateMock.mock.calls[0][0].messages.__arrayUnion;
+    const assistantMsg = unioned[1];
+    // Firestore rejects undefined fields — the key must be absent, not undefined.
+    expect(assistantMsg).not.toHaveProperty('toolCalls');
+    expect(Object.keys(assistantMsg).sort()).toEqual(['role', 'text', 'ts']);
+  });
+
+  it('hands chatWithTools the Sandra tool defs and a per-request executor scoped to uid + origin', async () => {
+    const executor = jest.fn();
+    createToolExecutorMock.mockReturnValue(executor);
+
+    const res = makeRes();
+    await handler(makeReq({ headers: { host: 'academy.edlight.org' } }), res as any);
+
+    expect(res.statusCode).toBe(200);
+    expect(createToolExecutorMock).toHaveBeenCalledWith({
+      uid: 'uid-1',
+      origin: 'https://academy.edlight.org',
+    });
+
+    expect(chatWithToolsMock).toHaveBeenCalledTimes(1);
+    const params = chatWithToolsMock.mock.calls[0][0];
+    expect(params.tools).toBe(SANDRA_TOOL_DEFS);
+    expect(params.executeTool).toBe(executor);
+    expect(typeof params.executeTool).toBe('function');
+    expect(params.maxTokens).toBe(1800);
+    expect(typeof params.system).toBe('string');
+    expect(params.messages[params.messages.length - 1]).toEqual({
+      role: 'user',
+      content: 'Explique-moi les dérivées',
+    });
   });
 });
