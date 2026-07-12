@@ -270,6 +270,166 @@ export async function chatText(params: ChatTextParams): Promise<string> {
   return text;
 }
 
+/** A tool the model may call. `parameters` is a JSON Schema object. */
+export interface ToolDef {
+  name: string;
+  description: string;
+  parameters: object;
+}
+
+/** One tool execution attempted during a chatWithTools loop. */
+export interface ToolCallRecord {
+  name: string;
+  ok: boolean;
+}
+
+export interface ChatWithToolsParams {
+  system: string;
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  tools: ToolDef[];
+  /** Runs a tool and returns a JSON-serializable result. May throw — the error message is relayed to the model as `{ error }`. */
+  executeTool: (name: string, args: Record<string, unknown>) => Promise<unknown>;
+  maxRounds?: number; // default 3
+  temperature?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
+  config?: LLMConfig | null;
+}
+
+/** Returned to the student when the loop ends without any model text. */
+const TOOL_LOOP_FALLBACK =
+  "Désolée, je n'ai pas réussi à terminer cette action. Peux-tu réessayer ou reformuler ta demande ?";
+
+type GeminiPart = {
+  text?: string;
+  functionCall?: { name?: string; args?: Record<string, unknown> };
+  functionResponse?: { name?: string; response?: unknown };
+};
+
+type OpenAIToolCall = { id?: string; type?: string; function?: { name?: string; arguments?: string } };
+
+/**
+ * Multi-turn chat with server-side function calling. Each round sends the
+ * conversation plus tool declarations; when the model requests tool calls they
+ * are executed via `executeTool` and the results are fed back for the next
+ * round. `maxRounds` caps the number of model calls — tool calls returned on
+ * the final round are NOT executed (no silent side effects), and the reply
+ * falls back to the last text the model produced, or a safe French string.
+ * Executor failures never propagate: the model receives `{ error }` and the
+ * call is recorded with `ok: false`. Throws LLMError only on
+ * misconfiguration, network/timeout, or non-2xx responses.
+ */
+export async function chatWithTools(params: ChatWithToolsParams): Promise<{ reply: string; toolCalls: ToolCallRecord[] }> {
+  const { system, messages, tools, executeTool, maxRounds = 3, temperature = 0.4, maxTokens = 900, timeoutMs = 30000 } = params;
+  const config = params.config ?? resolveLLMConfig();
+  if (!config) throw new LLMError('No LLM provider configured', 0, 'none');
+
+  const toolCalls: ToolCallRecord[] = [];
+  /** Execute one tool; convert throws into an `{ error }` result for the model. */
+  const runTool = async (name: string, args: Record<string, unknown>): Promise<unknown> => {
+    try {
+      const result = await executeTool(name, args);
+      toolCalls.push({ name, ok: true });
+      return result;
+    } catch (err) {
+      toolCalls.push({ name, ok: false });
+      return { error: err instanceof Error ? err.message : String(err) };
+    }
+  };
+
+  if (config.provider === 'gemini') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${config.apiKey}`;
+    const contents: Array<{ role: string; parts: GeminiPart[] }> =
+      messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+    let lastText = '';
+
+    for (let round = 0; round < maxRounds; round++) {
+      const payload = {
+        systemInstruction: { parts: [{ text: system }] },
+        contents,
+        tools: [{ functionDeclarations: tools.map(({ name, description, parameters }) => ({ name, description, parameters })) }],
+        generationConfig: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          // gemini-2.5 reasons by default; disable for fast conversational replies.
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      };
+      const res = await fetchWithTimeout(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }, timeoutMs);
+      if (!res.ok) throw new LLMError(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`, res.status, 'gemini');
+      const body = await res.json() as { candidates?: Array<{ content?: { parts?: GeminiPart[] } }> };
+      const parts = body?.candidates?.[0]?.content?.parts || [];
+      const text = parts.map((p) => p.text || '').join('').trim();
+      if (text) lastText = text;
+
+      const calls = parts.filter((p) => p.functionCall?.name);
+      if (calls.length === 0) return { reply: text || TOOL_LOOP_FALLBACK, toolCalls };
+      if (round === maxRounds - 1) break; // cap reached — results could never be relayed
+
+      contents.push({ role: 'model', parts });
+      const responseParts: GeminiPart[] = [];
+      for (const p of calls) {
+        const fc = p.functionCall as { name: string; args?: Record<string, unknown> };
+        const result = await runTool(fc.name, fc.args || {});
+        // Gemini requires functionResponse.response to be an object.
+        const response = result && typeof result === 'object' && !Array.isArray(result) ? result : { result };
+        responseParts.push({ functionResponse: { name: fc.name, response } });
+      }
+      contents.push({ role: 'user', parts: responseParts });
+    }
+    return { reply: lastText || TOOL_LOOP_FALLBACK, toolCalls };
+  }
+
+  // openai-compatible (DeepSeek / OpenAI / Groq / OpenRouter / local …)
+  const url = `${config.baseUrl}/chat/completions`;
+  const convo: Array<Record<string, unknown>> = [
+    { role: 'system', content: system },
+    ...messages.map((m) => ({ role: m.role, content: m.content })),
+  ];
+  let lastText = '';
+
+  for (let round = 0; round < maxRounds; round++) {
+    const payload = {
+      model: config.model,
+      temperature,
+      max_tokens: maxTokens,
+      messages: convo,
+      tools: tools.map(({ name, description, parameters }) => ({ type: 'function', function: { name, description, parameters } })),
+    };
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+      body: JSON.stringify(payload),
+    }, timeoutMs);
+    if (!res.ok) throw new LLMError(`${config.label} ${res.status}: ${(await res.text()).slice(0, 300)}`, res.status, config.provider);
+    const body = await res.json() as { choices?: Array<{ message?: { content?: string | null; tool_calls?: OpenAIToolCall[] } }> };
+    const msg = body?.choices?.[0]?.message;
+    const text = (msg?.content || '').trim();
+    if (text) lastText = text;
+
+    const calls = (msg?.tool_calls || []).filter((c) => c?.function?.name);
+    if (calls.length === 0) return { reply: text || TOOL_LOOP_FALLBACK, toolCalls };
+    if (round === maxRounds - 1) break; // cap reached — results could never be relayed
+
+    convo.push({ role: 'assistant', content: msg?.content ?? null, tool_calls: msg?.tool_calls });
+    for (const c of calls) {
+      const fn = c.function as { name: string; arguments?: string };
+      let args: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(fn.arguments || '{}');
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) args = parsed as Record<string, unknown>;
+      } catch { /* malformed arguments → run with {} */ }
+      const result = await runTool(fn.name, args);
+      convo.push({ role: 'tool', tool_call_id: c.id, content: JSON.stringify(result ?? null) });
+    }
+  }
+  return { reply: lastText || TOOL_LOOP_FALLBACK, toolCalls };
+}
+
 /** Requested embedding dimension — must match the Firestore vector index. */
 export const EMBED_DIM = 768;
 
