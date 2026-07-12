@@ -311,6 +311,18 @@ const resources = {
       a11y: {
         skipToContent: 'Aller au contenu'
       },
+      sandra: {
+        subtitle: 'Assistante EdLight',
+        open: 'Ouvrir le chat avec Sandra',
+        placeholder: 'Posez votre question…',
+        send: 'Envoyer',
+        typing: 'Sandra écrit…',
+        retry: 'Réessayer',
+        newConversation: 'Nouvelle conversation',
+        signInPrompt: 'Connectez-vous pour discuter avec Sandra.',
+        reviewNotice: 'Les conversations peuvent être relues par l’équipe EdLight.',
+        error: 'Sandra n’a pas pu répondre. Vérifiez votre connexion, puis réessayez.'
+      },
       meta: {
         titleTemplate: '{{page}} · EdLight Academy',
         home: 'Accueil',
@@ -565,6 +577,18 @@ const resources = {
       },
       a11y: {
         skipToContent: 'Ale dirèk nan kontni an'
+      },
+      sandra: {
+        subtitle: 'Asistan EdLight',
+        open: 'Louvri chat ak Sandra',
+        placeholder: 'Poze kesyon ou…',
+        send: 'Voye',
+        typing: 'Sandra ap ekri…',
+        retry: 'Eseye ankò',
+        newConversation: 'Nouvo konvèsasyon',
+        signInPrompt: 'Konekte pou pale ak Sandra.',
+        reviewNotice: 'Ekip EdLight la ka li konvèsasyon yo pou amelyore Sandra.',
+        error: 'Sandra pa t ka reponn. Tcheke koneksyon ou, epi eseye ankò.'
       },
       meta: {
         titleTemplate: '{{page}} · EdLight Academy',

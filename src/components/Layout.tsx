@@ -13,6 +13,7 @@ import { WelcomeLanguageModal } from './WelcomeLanguageModal';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { useNotificationRuntime } from '../hooks/useNotificationRuntime';
 import useStore from '../contexts/store';
+import { SandraWidget } from './SandraWidget';
 
 // Notification panel is only shown on demand — keep it (and its Firebase use)
 // out of the initial shell bundle.
@@ -136,6 +137,7 @@ export function Layout() {
           </div>
         </Suspense>
       )}
+      <SandraWidget />
       <StreakMilestoneModal isCreole={isCreole} />
       <WelcomeLanguageModal />
     </div>
