@@ -25,6 +25,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { chunkCourse, chunkQuiz, chunkExamQuestion } from './sandra_kb_chunks.mjs';
 
 const DRY_RUN = process.argv.includes('--dry-run');
+const RESUME = process.argv.includes('--resume');
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMS_DIR = join(__dirname, '..', 'public', 'exams');
 
@@ -41,7 +42,13 @@ const normalizeVector = (v) => {
   return norm > 0 ? v.map((x) => x / norm) : v;
 };
 
-/** Embed texts with Gemini batchEmbedContents; one vector per input, in order. */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Embed texts with Gemini batchEmbedContents; one vector per input, in order.
+ * Retries 429/5xx with a growing wait — the free tier meters tokens per
+ * minute, so patience (not failure) is the right response to quota errors.
+ */
 async function embed(texts) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;
   if (!apiKey) throw new Error('No Gemini API key: set GEMINI_API_KEY (or LLM_API_KEY) for embeddings.');
@@ -56,19 +63,28 @@ async function embed(texts) {
         outputDimensionality: EMBED_DIM,
       })),
     };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`Gemini embed ${res.status}: ${(await res.text()).slice(0, 300)}`);
-    const body = await res.json();
+    let body = null;
+    for (let attempt = 1; ; attempt += 1) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) { body = await res.json(); break; }
+      const retryable = res.status === 429 || res.status >= 500;
+      if (!retryable || attempt >= 8) {
+        throw new Error(`Gemini embed ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      }
+      const waitSec = Math.min(15 * attempt, 70);
+      console.log(`  quota/server error ${res.status} — waiting ${waitSec}s (attempt ${attempt}/8)…`);
+      await res.text().catch(() => {});
+      await sleep(waitSec * 1000);
+    }
     const embeddings = body?.embeddings || [];
     if (embeddings.length !== batch.length) {
       throw new Error(`Gemini embed returned ${embeddings.length} vectors for ${batch.length} texts`);
     }
     for (const e of embeddings) vectors.push(normalizeVector(e?.values || []));
-    console.log(`  embedded ${Math.min(i + batch.length, texts.length)}/${texts.length}`);
   }
   return vectors;
 }
@@ -166,33 +182,43 @@ async function main() {
     return;
   }
 
-  // ---- Embed ----
-  console.log(`\nEmbedding ${unique.length} chunks with ${EMBED_MODEL}…`);
-  const vectors = await embed(unique.map((c) => c.text));
-
-  // ---- Write ----
-  console.log('Writing sandraKb docs…');
   const col = db.collection('sandraKb');
-  let batch = db.batch();
-  let ops = 0;
-  const keepIds = new Set();
-  for (let i = 0; i < unique.length; i += 1) {
-    const c = unique[i];
-    keepIds.add(c.sourceId);
-    batch.set(col.doc(c.sourceId), {
-      text: c.text,
-      embedding: FieldValue.vector(vectors[i]),
-      courseId: c.courseId,
-      level: c.level,
-      subject: c.subject,
-      type: c.type,
-      sourceId: c.sourceId,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    ops += 1;
-    if (ops >= 400) { await batch.commit(); batch = db.batch(); ops = 0; }
+  const keepIds = new Set(unique.map((c) => c.sourceId));
+
+  // ---- Resume support: skip chunks already written on a previous run ----
+  // (--resume trusts existing docs; a run without it re-embeds everything.)
+  let todo = unique;
+  if (RESUME) {
+    console.log('\n--resume: listing already-written docs…');
+    const refs = await col.listDocuments();
+    const done = new Set(refs.map((r) => r.id));
+    todo = unique.filter((c) => !done.has(c.sourceId));
+    console.log(`  ${unique.length - todo.length} already in sandraKb, ${todo.length} to embed.`);
   }
-  if (ops > 0) await batch.commit();
+
+  // ---- Embed + write interleaved, one API batch at a time ----
+  // A quota error or crash mid-run loses at most one batch; re-run with
+  // --resume to continue where it stopped.
+  console.log(`\nEmbedding ${todo.length} chunks with ${EMBED_MODEL}…`);
+  for (let i = 0; i < todo.length; i += EMBED_BATCH_SIZE) {
+    const slice = todo.slice(i, i + EMBED_BATCH_SIZE);
+    const vectors = await embed(slice.map((c) => c.text));
+    const batch = db.batch();
+    slice.forEach((c, j) => {
+      batch.set(col.doc(c.sourceId), {
+        text: c.text,
+        embedding: FieldValue.vector(vectors[j]),
+        courseId: c.courseId,
+        level: c.level,
+        subject: c.subject,
+        type: c.type,
+        sourceId: c.sourceId,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    });
+    await batch.commit();
+    console.log(`  embedded+written ${Math.min(i + slice.length, todo.length)}/${todo.length}`);
+  }
 
   // ---- Delete stale docs ----
   console.log('Removing stale docs…');

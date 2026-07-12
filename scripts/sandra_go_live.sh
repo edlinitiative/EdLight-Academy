@@ -56,8 +56,9 @@ else
 fi
 
 echo "→ [2/2] Building Sandra knowledge base…"
+# Extra flags (e.g. --resume) pass through; the KB script ignores --kb-only.
 FIREBASE_SERVICE_ACCOUNT_JSON="$(cat "$SA_FILE")" \
   GEMINI_API_KEY="$GEMINI_API_KEY" \
-  node scripts/build_sandra_kb.mjs
+  node scripts/build_sandra_kb.mjs "$@"
 
 echo "✓ Sandra infrastructure is live (temp credentials removed)."
