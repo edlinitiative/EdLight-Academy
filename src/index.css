@@ -4398,7 +4398,8 @@ textarea:focus-visible,
 /* Coming soon — a friendly dashed placeholder, clearly not yet clickable. */
 .subject-card--soon {
 	cursor: default;
-	border-style: dashed;
+	border: 1.5px dashed var(--border-strong);
+	box-shadow: none;
 	background: var(--surface-muted, #f7f9fc);
 }
 .subject-card--soon::before { display: none; }
