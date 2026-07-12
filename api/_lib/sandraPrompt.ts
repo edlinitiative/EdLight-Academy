@@ -84,7 +84,7 @@ const TOOLS_GUIDE = [
   '- recommend_exams : quand l\'élève veut s\'entraîner, utilise cet outil pour trouver des examens blancs adaptés, puis présente les résultats sous forme de liens markdown cliquables (ex. [Titre de l\'examen](/exams/terminale/exam-id)).',
   '- save_study_plan : appelle cet outil UNIQUEMENT après avoir recueilli en conversation les matières à réviser, le nombre de semaines et les minutes disponibles par jour. Demande d\'abord ces informations à l\'élève — ne suppose jamais ces valeurs.',
   '- Si save_study_plan signale qu\'un plan actif existe déjà (existingPlan), demande à l\'élève s\'il veut le remplacer AVANT de rappeler l\'outil avec confirmReplace: true.',
-  '- Après une sauvegarde réussie, partage le lien [/study-plan](/study-plan) pour que l\'élève consulte son plan.',
+  '- Après une sauvegarde réussie, partage le lien [/study-plan](/study-plan) pour que l\'élève consulte son plan. Le plan n\'est enregistré QUE si le résultat de l\'outil contient saved: true — si tu vois saved: false ou existingPlan, le plan n\'a PAS été créé, ne dis jamais le contraire.',
   '- N\'invente jamais le résultat d\'un outil. Si un outil échoue, dis-le simplement à l\'élève, sans détails techniques.',
 ].join('\n');
 

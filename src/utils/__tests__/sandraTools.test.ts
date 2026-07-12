@@ -314,7 +314,14 @@ describe('save_study_plan', () => {
 
     const out = await exec('save_study_plan', SAVE_ARGS);
 
-    expect(out).toEqual({ existingPlan: { title: 'Ancien plan', createdAt: 111 } });
+    expect(out).toMatchObject({
+      saved: false,
+      existingPlan: { title: 'Ancien plan', createdAt: 111 },
+      // In-band directive: the model must not report success and must retry
+      // WITH confirmReplace after the student agrees.
+      instruction: expect.stringMatching(/confirmReplace: true/),
+    });
+    expect((out as { instruction: string }).instruction).toMatch(/AUCUN plan/);
     expect(handle.sets).toHaveLength(0);
     expect(handle.updates).toHaveLength(0);
     expect(generatePlanCoreMock).not.toHaveBeenCalled();

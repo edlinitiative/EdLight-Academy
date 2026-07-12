@@ -416,7 +416,7 @@ async function recommendExams(ctx: ToolCtx, args: Record<string, unknown>): Prom
 const EXAMS_PER_SUBJECT = 6;
 
 async function saveStudyPlan(ctx: ToolCtx, args: Record<string, unknown>): Promise<
-  | { existingPlan: { title: string; createdAt: number | null } }
+  | { saved: false; existingPlan: { title: string; createdAt: number | null }; instruction: string }
   | { saved: true; title: string; taskCount: number; url: string }
 > {
   const subjects = Array.isArray(args.subjects)
@@ -446,11 +446,18 @@ async function saveStudyPlan(ctx: ToolCtx, args: Record<string, unknown>): Promi
   const active = activeSnap.empty ? null : activeSnap.docs[0];
   if (active && !confirmReplace) {
     const data = (active.data() || {}) as Record<string, any>;
+    // The model sometimes retries WITHOUT confirmReplace after the student
+    // confirms, then reports success on this guard response. Ship explicit
+    // saved:false + an in-band instruction — tool results ground the model
+    // far more reliably than system-prompt rules alone.
     return {
+      saved: false,
       existingPlan: {
         title: (data.title as string) || "Plan d'étude",
         createdAt: (data.created_at_ms as number) ?? null,
       },
+      instruction:
+        "AUCUN plan n'a été enregistré. Ne dis PAS que le plan a été créé. Si l'élève vient de confirmer le remplacement, rappelle save_study_plan avec les mêmes paramètres PLUS confirmReplace: true. Sinon, demande d'abord sa confirmation.",
     };
   }
 
