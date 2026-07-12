@@ -119,4 +119,13 @@ describe('buildSandraSystemPrompt', () => {
       expect(p).toContain(route);
     }
   });
+
+  it('teaches the study-plan and mock-exam features with markdown links', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toContain('[/study-plan](/study-plan)');
+    for (const level of ['/exams/9e', '/exams/terminale', '/exams/university']) {
+      expect(p).toContain(level);
+    }
+    expect(p).toContain('markdown');
+  });
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { RotateCcw, Send, Sparkles, X } from 'lucide-react';
+import { Maximize2, Minimize2, RotateCcw, Send, Sparkles, X } from 'lucide-react';
 import { authedFetch } from '../../services/firebase';
 import useStore from '../../contexts/store';
 import InstructionRenderer from '../InstructionRenderer';
@@ -174,10 +174,11 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
 
   const signedIn = !!user;
   const showAuthPrompt = !signedIn || error?.kind === 'auth';
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <section
-      className="sandra-panel"
+      className={`sandra-panel ${expanded ? 'sandra-panel--expanded' : ''}`}
       hidden={!open}
       role="dialog"
       aria-label={`Sandra · ${t('sandra.subtitle')}`}
@@ -194,6 +195,18 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
           <span className="sandra-panel__subtitle">{t('sandra.subtitle')}</span>
         </h2>
         <div className="sandra-panel__actions">
+          <button
+            type="button"
+            className="sandra-panel__icon-btn"
+            aria-label={expanded ? t('sandra.collapse') : t('sandra.expand')}
+            title={expanded ? t('sandra.collapse') : t('sandra.expand')}
+            aria-pressed={expanded}
+            onClick={() => setExpanded((e) => !e)}
+          >
+            {expanded
+              ? <Minimize2 size={16} strokeWidth={2.2} aria-hidden="true" />
+              : <Maximize2 size={16} strokeWidth={2.2} aria-hidden="true" />}
+          </button>
           <button
             type="button"
             className="sandra-panel__icon-btn"

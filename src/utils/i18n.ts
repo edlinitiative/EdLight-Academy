@@ -319,6 +319,8 @@ const resources = {
         typing: 'Sandra écrit…',
         retry: 'Réessayer',
         newConversation: 'Nouvelle conversation',
+        expand: 'Agrandir la fenêtre',
+        collapse: 'Réduire la fenêtre',
         signInPrompt: 'Connectez-vous pour discuter avec Sandra.',
         reviewNotice: 'Les conversations peuvent être relues par l’équipe EdLight.',
         error: 'Sandra n’a pas pu répondre. Vérifiez votre connexion, puis réessayez.'
@@ -586,6 +588,8 @@ const resources = {
         typing: 'Sandra ap ekri…',
         retry: 'Eseye ankò',
         newConversation: 'Nouvo konvèsasyon',
+        expand: 'Agrandi fenèt la',
+        collapse: 'Redui fenèt la',
         signInPrompt: 'Konekte pou pale ak Sandra.',
         reviewNotice: 'Ekip EdLight la ka li konvèsasyon yo pou amelyore Sandra.',
         error: 'Sandra pa t ka reponn. Tcheke koneksyon ou, epi eseye ankò.'

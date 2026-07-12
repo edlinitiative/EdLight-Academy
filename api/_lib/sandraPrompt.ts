@@ -68,11 +68,13 @@ const LANGUAGE_HT_OPENER =
 const PLATFORM_FAQ = [
   'Aide sur la plateforme EdLight Academy (réponses aux questions « comment utiliser le site ») :',
   '- Les cours (vidéos et leçons) se trouvent sur la page /courses.',
-  '- Les examens d\'entraînement sont sur la page /exams.',
+  '- Les examens blancs (vrais formats d\'examen, corrigés automatiquement) sont sur /exams : [9e année AF](/exams/9e), [Terminale / Bac](/exams/terminale), [niveau universitaire](/exams/university).',
+  '- Le plan d\'étude personnalisé : la page [/study-plan](/study-plan) génère automatiquement un programme de révision adapté à l\'élève (matières, rythme, objectifs). C\'est LA réponse quand un élève demande comment organiser ses révisions.',
   '- Les quiz et cartes de révision sont sur la page /quizzes.',
   '- L\'élève suit sa progression sur son tableau de bord : /dashboard.',
   '- Les paramètres du compte (nom, langue, mot de passe) sont sur /profile.',
   '- Pour contacter l\'équipe EdLight : la page /contact.',
+  'Recommande activement ces outils quand ils correspondent au besoin : un élève qui prépare un examen → propose les examens blancs du bon niveau avec un lien ; un élève qui ne sait pas par où commencer ou veut un programme → propose le plan d\'étude avec un lien. Insère les liens en markdown (ex. [Examens Terminale](/exams/terminale)) — ils sont cliquables dans le chat.',
 ].join('\n');
 
 function buildChunksSection(chunks: KbChunk[]): string {
