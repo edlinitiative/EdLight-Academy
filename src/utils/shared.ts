@@ -42,8 +42,8 @@ export function renderWithKatex(text: string, katexReady: boolean) {
 
 // ─── Subject colours / icons ─────────────────────────────────────────────────
 export const SUBJECT_COLORS = {
-  CHEM: '#0A66C2',
-  PHYS: '#0857A6',
+  CHEM: '#1B6FE0',
+  PHYS: '#1558B8',
   MATH: '#4A93DD',
   ECON: '#5D5B54',
 };

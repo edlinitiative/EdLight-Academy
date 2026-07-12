@@ -34,7 +34,7 @@
   text-transform: uppercase;
   color: var(--st-muted, #746a59);
 }
-.readiness-card__eyebrow svg { color: var(--st-accent, #0857a6); }
+.readiness-card__eyebrow svg { color: var(--st-accent, #1558B8); }
 
 .readiness-card__strong {
   display: inline-flex;
@@ -141,7 +141,7 @@
   background: none; border: none; cursor: pointer;
   font-family: var(--st-mono, ui-monospace, "Geist Mono", Menlo, monospace);
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--st-accent, #0857a6); font-weight: 500;
+  color: var(--st-accent, #1558B8); font-weight: 500;
 }
 .readiness-subjects__toggle:hover { text-decoration: underline; }
 
@@ -213,7 +213,7 @@
   width: 100%;
   text-align: left;
   background: var(--st-accent-tint, rgba(8, 87, 166, 0.08));
-  border: 1px solid color-mix(in srgb, var(--st-accent, #0857a6) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--st-accent, #1558B8) 22%, transparent);
   border-radius: 6px;
   padding: 0.7rem 0.85rem;
   cursor: pointer;
@@ -221,15 +221,15 @@
 }
 .readiness-focus:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--st-accent, #0857a6) 30%, transparent);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--st-accent, #1558B8) 30%, transparent);
 }
 .readiness-focus__icon {
   display: grid;
   place-items: center;
   width: 30px; height: 30px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--st-accent, #0857a6) 15%, transparent);
-  color: var(--st-accent, #0857a6);
+  background: color-mix(in srgb, var(--st-accent, #1558B8) 15%, transparent);
+  color: var(--st-accent, #1558B8);
   flex: 0 0 auto;
 }
 .readiness-focus__text {
@@ -238,7 +238,7 @@
   font-weight: 600;
   color: var(--st-ink, #1b2230);
 }
-.readiness-focus__cta { font-weight: 800; color: var(--st-accent, #0857a6); flex: 0 0 auto; }
+.readiness-focus__cta { font-weight: 800; color: var(--st-accent, #1558B8); flex: 0 0 auto; }
 
 .readiness-card__cta { align-self: flex-start; border-radius: 6px; }
 
@@ -249,7 +249,7 @@
   width: 56px; height: 56px;
   border-radius: 8px;
   background: var(--st-accent-tint, rgba(8, 87, 166, 0.08));
-  color: var(--st-accent, #0857a6);
+  color: var(--st-accent, #1558B8);
   flex: 0 0 auto;
 }
 .readiness-card__empty-body { display: flex; flex-direction: column; gap: 0.4rem; }

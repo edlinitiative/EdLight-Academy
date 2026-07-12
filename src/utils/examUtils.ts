@@ -559,16 +559,16 @@ export function examCardName({ topic, session, examType }) {
 // ─── Subject colors ─────────────────────────────────────────────────────────
 
 const SUBJECT_COLORS = {
-  Français: '#0857A6',
-  Anglais: '#0A66C2',
+  Français: '#1558B8',
+  Anglais: '#1B6FE0',
   Espagnol: '#2563EB',
   Mathématiques: '#1E40AF',
-  Physique: '#0A66C2',
+  Physique: '#1B6FE0',
   Chimie: '#4A93DD',
   SVT: '#2563EB',
   'Histoire-Géo': '#5D5B54',
   Philosophie: '#1E40AF',
-  Kreyòl: '#0857A6',
+  Kreyòl: '#1558B8',
   Économie: '#64748B',
   'Art & Musique': '#4A93DD',
   Informatique: '#2563EB',
@@ -578,7 +578,7 @@ const SUBJECT_COLORS = {
 };
 
 export function subjectColor(subject) {
-  return SUBJECT_COLORS[subject] || '#0A66C2';
+  return SUBJECT_COLORS[subject] || '#1B6FE0';
 }
 
 // ─── Question type metadata ─────────────────────────────────────────────────

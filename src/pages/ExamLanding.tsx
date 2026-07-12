@@ -9,7 +9,7 @@ import './ExamLanding.css';
 // Level cards are data-driven; the visible strings (heading/description/badge)
 // are resolved from i18n via `key` so the whole page localizes cleanly.
 const LEVELS = [
-  { to: '/exams/9e', glyph: 'book', key: 'grade9', color: '#0A66C2' },
+  { to: '/exams/9e', glyph: 'book', key: 'grade9', color: '#1B6FE0' },
   { to: '/exams/terminale', glyph: 'cap', key: 'terminale', color: '#7c3aed' },
   { to: '/exams/university', glyph: 'campus', key: 'university', color: '#0891b2' },
 ];

@@ -102,7 +102,7 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
   const leadColor = toneVar(overall);
 
   const statusColor = hasData
-    ? (BAND_TONE_VAR[band.tone] || 'var(--st-accent, #0857a6)')
+    ? (BAND_TONE_VAR[band.tone] || 'var(--st-accent, #1558B8)')
     : 'var(--st-muted, #746a59)';
   const statusLabel = hasData
     ? (isCreole ? band.labelHt : band.label)
@@ -147,7 +147,7 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
               <span
                 key={i}
                 className={`readiness-gauge__cell${on ? ' is-on' : ''}${isLead ? ' is-lead' : ''}`}
-                style={on ? { background: isLead ? leadColor : 'var(--st-accent, #0857a6)' } : undefined}
+                style={on ? { background: isLead ? leadColor : 'var(--st-accent, #1558B8)' } : undefined}
               />
             );
           })}

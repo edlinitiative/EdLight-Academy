@@ -83,7 +83,7 @@ export default function CourseOverview({
         <div className="course-overview__badges">
           <span
             className="course-card__badge"
-            style={{ background: (course.color || '#0A66C2') + '1f', color: course.color || 'var(--primary-600)' }}
+            style={{ background: (course.color || '#1B6FE0') + '1f', color: course.color || 'var(--primary-600)' }}
           >
             {subjectLabel}
           </span>

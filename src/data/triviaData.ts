@@ -53,7 +53,7 @@ export const TRIVIA_CATEGORIES = [
     nameHt: 'Kapital yo',
     icon: '🏛️',
     image: '/assets/trivia/capitals.svg',
-    color: '#0A66C2',
+    color: '#1B6FE0',
     description: 'Toutes les capitales du monde, 196 pays',
     descriptionHt: 'Tout kapital nan mond lan, 196 peyi',
   },

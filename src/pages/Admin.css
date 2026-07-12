@@ -48,8 +48,8 @@
 }
 
 .admin-tab.is-active {
-  color: var(--primary, #0a66c2);
-  border-bottom-color: var(--primary, #0a66c2);
+  color: var(--primary, #1B6FE0);
+  border-bottom-color: var(--primary, #1B6FE0);
 }
 
 /* ── Section toolbar ── */
@@ -104,7 +104,7 @@
 
 .admin-status--success { background: rgba(26, 174, 57, 0.1); color: #166534; }
 .admin-status--error   { background: rgba(224, 49, 49, 0.1); color: #9b1c1c; }
-.admin-status--info    { background: rgba(10, 102, 194, 0.08); color: #0857a6; }
+.admin-status--info    { background: rgba(27, 111, 224, 0.08); color: #1558B8; }
 .admin-status--warning { background: rgba(217, 119, 6, 0.1); color: #92400e; }
 
 /* ── Delete confirm banner ── */

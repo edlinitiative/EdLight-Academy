@@ -41,7 +41,7 @@ function CategoryPicker({ onSelect, isCreole, categories = TRIVIA_CATEGORIES as 
             <button
               key={cat.id}
               className="trivia-cat"
-              style={{ ['--cat' as any]: cat.color || '#0A66C2' }}
+              style={{ ['--cat' as any]: cat.color || '#1B6FE0' }}
               onClick={() => onSelect(cat.id)}
               aria-label={`${name} — ${count} ${isCreole ? 'kesyon' : 'questions'}`}
             >
@@ -78,7 +78,7 @@ function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_
       <div className="trivia-round-picker__header">
         <span
           className="trivia-round-picker__badge"
-          style={{ ['--cat' as any]: cat?.color || '#0A66C2' }}
+          style={{ ['--cat' as any]: cat?.color || '#1B6FE0' }}
           aria-hidden="true"
         >
           {cat?.icon}
@@ -113,7 +113,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
         : shuffle(questionsMap[category] || []).slice(0, count),
     [category, count, providedQuestions, questionsMap],
   );
-  const accent = accentColor || cat?.color || '#0A66C2';
+  const accent = accentColor || cat?.color || '#1B6FE0';
 
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -255,7 +255,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
 /* ─── Results Screen ─── */
 function TriviaResults({ category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[] }) {
   const cat = categories.find((c) => c.id === category);
-  const accent = accentColor || cat?.color || '#0A66C2';
+  const accent = accentColor || cat?.color || '#1B6FE0';
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
 
   let IconCmp, message, messageHt;

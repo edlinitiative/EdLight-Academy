@@ -51,8 +51,8 @@ const extractEnglishTitle = (title) => {
 
 // Subject color/icon mapping (moved from CSV to code)
 const SUBJECT_DEFAULTS = {
-  CHEM: { color: '#0A66C2', icon: 'beaker', name: 'Chemistry' },
-  PHYS: { color: '#0857A6', icon: 'atom', name: 'Physics' },
+  CHEM: { color: '#1B6FE0', icon: 'beaker', name: 'Chemistry' },
+  PHYS: { color: '#1558B8', icon: 'atom', name: 'Physics' },
   MATH: { color: '#4A93DD', icon: 'calculator', name: 'Mathematics' },
   ECON: { color: '#5D5B54', icon: 'chart', name: 'Economics' }
 };
@@ -147,7 +147,7 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
     const fullSubjectCode = `${subjectCode}-${levelCode}`;
     
     // Get subject defaults (color, icon, name)
-    const subjectInfo = SUBJECT_DEFAULTS[subjectCode] || { color: '#0A66C2', icon: 'book', name: 'Course' };
+    const subjectInfo = SUBJECT_DEFAULTS[subjectCode] || { color: '#1B6FE0', icon: 'book', name: 'Course' };
     
     // Transform units from Firestore to modules for the app
     // Firestore structure: { unitId, title, order, lessons: [{lessonId, title, type, order}] }

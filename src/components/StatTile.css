@@ -100,7 +100,7 @@
   font-size: 9px;
 }
 .stat-tile__delta--good { color: var(--st-good, #157f43); }
-.stat-tile__delta--accent { color: var(--st-accent, #0857a6); }
+.stat-tile__delta--accent { color: var(--st-accent, #1558B8); }
 .stat-tile__delta--warn { color: var(--st-warn, #bd6f0f); }
 .stat-tile__delta--muted { color: var(--st-muted, #746a59); }
 

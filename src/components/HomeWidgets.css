@@ -28,7 +28,7 @@
 }
 
 .home-widget:focus-visible {
-  outline: 2px solid var(--primary, #0a66c2);
+  outline: 2px solid var(--primary, #1B6FE0);
   outline-offset: 2px;
 }
 
@@ -76,9 +76,9 @@
 }
 
 /* Tonal accents (icon only — no top border bar) */
-.home-widget[data-tone='indigo'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
-.home-widget[data-tone='violet'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #0857a6; }
-.home-widget[data-tone='amber'] .home-widget__icon { background: rgba(8, 87, 166, 0.14); color: #0857a6; }
+.home-widget[data-tone='indigo'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #1558B8; }
+.home-widget[data-tone='violet'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #1558B8; }
+.home-widget[data-tone='amber'] .home-widget__icon { background: rgba(8, 87, 166, 0.14); color: #1558B8; }
 .home-widget[data-tone='emerald'] .home-widget__icon { background: rgba(16, 185, 129, 0.13); color: #059669; }
 
 /* Responsive: 2×2 on tablet, single column on small phones */

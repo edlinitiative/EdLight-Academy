@@ -7,13 +7,13 @@
 
 .lp {
   /* Brand accent system */
-  --lp-accent:        #0A66C2;
+  --lp-accent:        #1B6FE0;
   --lp-accent-light:  #2F86E0;
   --lp-accent-deep:   #084E96;
   --lp-violet:        #5B6CF0;
   --lp-cyan:          #18B8D0;
-  --lp-gradient:      linear-gradient(118deg, #0A66C2 0%, #2F86E0 52%, #2563EB 100%);
-  --lp-gradient-vivid:linear-gradient(118deg, #0A66C2 0%, #3B82F6 46%, #5B6CF0 100%);
+  --lp-gradient:      linear-gradient(118deg, #1B6FE0 0%, #2F86E0 52%, #2563EB 100%);
+  --lp-gradient-vivid:linear-gradient(118deg, #1B6FE0 0%, #3B82F6 46%, #5B6CF0 100%);
 
   /* Surfaces & ink (inherit platform tokens so theming stays in sync) */
   --lp-bg:        var(--background);
@@ -35,8 +35,8 @@
   /* Elevation */
   --lp-shadow-sm: 0 2px 10px -4px rgba(15, 23, 42, 0.12);
   --lp-shadow:    0 18px 44px -22px rgba(15, 23, 42, 0.30);
-  --lp-shadow-lg: 0 40px 80px -32px rgba(10, 102, 194, 0.34);
-  --lp-glow:      0 24px 70px -26px rgba(10, 102, 194, 0.55);
+  --lp-shadow-lg: 0 40px 80px -32px rgba(27, 111, 224, 0.34);
+  --lp-glow:      0 24px 70px -26px rgba(27, 111, 224, 0.55);
 
   /* Geometry */
   --lp-r-sm:   14px;
@@ -157,7 +157,7 @@
   opacity: .9;
   pointer-events: none;
 }
-.lp-btn--primary:hover { transform: translateY(-2px); box-shadow: 0 30px 80px -24px rgba(10,102,194,.7); }
+.lp-btn--primary:hover { transform: translateY(-2px); box-shadow: 0 30px 80px -24px rgba(27,111,224,.7); }
 .lp-btn--primary:hover svg { transform: translateX(3px); }
 .lp-btn--primary:active { transform: translateY(0); }
 

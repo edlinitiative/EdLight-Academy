@@ -9,7 +9,7 @@
   overflow: hidden;
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
   background:
-    radial-gradient(circle at 20% 15%, rgba(10, 102, 194, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 20% 15%, rgba(27, 111, 224, 0.08) 0%, transparent 45%),
     radial-gradient(circle at 80% 80%, rgba(139, 124, 232, 0.07) 0%, transparent 40%),
     var(--background);
 }
@@ -20,8 +20,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(10, 102, 194, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(10, 102, 194, 0.032) 1px, transparent 1px);
+    linear-gradient(rgba(27, 111, 224, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27, 111, 224, 0.032) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
   -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
@@ -47,7 +47,7 @@
   gap: 0.4rem;
   padding: 0.35rem 0.9rem;
   border-radius: 999px;
-  background: rgba(10, 102, 194, 0.1);
+  background: rgba(27, 111, 224, 0.1);
   color: var(--primary-600);
   font-weight: 700;
   font-size: 0.78rem;
@@ -163,8 +163,8 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.75rem 1.2rem;
-  border-top: 1px solid rgba(10, 102, 194, 0.07);
-  background: rgba(10, 102, 194, 0.025);
+  border-top: 1px solid rgba(27, 111, 224, 0.07);
+  background: rgba(27, 111, 224, 0.025);
 }
 
 .level-card__cta {

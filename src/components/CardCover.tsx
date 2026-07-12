@@ -117,7 +117,7 @@ export interface CardCoverProps {
   className?: string;
 }
 
-export default function CardCover({ glyph = 'book', color = '#0A66C2', className = '' }: CardCoverProps) {
+export default function CardCover({ glyph = 'book', color = '#1B6FE0', className = '' }: CardCoverProps) {
   const inner = GLYPHS[(glyph as GlyphKey)] ?? GLYPHS.book;
   // Gradient is built entirely from the single accent colour so callers only
   // pass one value. color-mix keeps the light/dark stops on-brand.
