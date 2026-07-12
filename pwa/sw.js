@@ -154,22 +154,45 @@ async function staleWhileRevalidate(request, cacheName) {
   return hit || (await network) || fetch(request);
 }
 
-/** Network-first for navigations: fresh HTML when online, cached shell offline. */
-async function navigationHandler(request) {
-  try {
-    const res = await fetch(request);
-    // Keep the latest shell for offline fallback.
-    const cache = await caches.open(SHELL_CACHE);
-    cache.put('/index.html', res.clone());
+/** Network-first for navigations — but only briefly. The shell is a stable
+ *  SPA entry (all real code lives in content-hashed bundles, and the update
+ *  flow in registerServiceWorker reloads when a new build takes over), so a
+ *  slightly stale cached shell is always safe to serve. Waiting on the network
+ *  indefinitely is not: on a slow or flaky connection an installed-PWA launch
+ *  would sit on the splash screen for tens of seconds while a perfectly good
+ *  shell sat in the cache. Race the network against a short timeout and fall
+ *  back to the cached shell; the network fetch keeps running in the background
+ *  to refresh the cache for next launch. */
+const NAV_NETWORK_TIMEOUT_MS = 2500;
+
+async function navigationHandler(event, request) {
+  const cache = await caches.open(SHELL_CACHE);
+  const network = fetch(request).then((res) => {
+    if (res && res.ok) cache.put('/index.html', res.clone());
     return res;
+  });
+
+  try {
+    return await Promise.race([
+      network,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('nav-timeout')), NAV_NETWORK_TIMEOUT_MS)
+      ),
+    ]);
   } catch {
-    const cache = await caches.open(SHELL_CACHE);
-    return (
+    const hit =
       (await cache.match('/index.html')) ||
       (await cache.match('/')) ||
-      (await cache.match('/offline.html')) ||
-      Response.error()
-    );
+      (await cache.match('/offline.html'));
+    if (hit) {
+      // Let the slow fetch finish so the cached shell stays fresh; swallow its
+      // eventual failure so it never surfaces as an unhandled rejection.
+      event.waitUntil(network.catch(() => {}));
+      return hit;
+    }
+    // Nothing cached (first-ever visit on a slow line) — the network response,
+    // however slow, is the only option left.
+    return network.catch(() => Response.error());
   }
 }
 
@@ -184,9 +207,9 @@ self.addEventListener('fetch', (event) => {
   // Never cache API routes.
   if (url.pathname.startsWith('/api/')) return;
 
-  // SPA navigations -> network-first with offline shell fallback.
+  // SPA navigations -> network-first with a short timeout, cached shell fallback.
   if (request.mode === 'navigate') {
-    event.respondWith(navigationHandler(request));
+    event.respondWith(navigationHandler(event, request));
     return;
   }
 

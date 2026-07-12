@@ -11,13 +11,28 @@ import { getAuth,
   updateProfile,
   getAdditionalUserInfo,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, arrayRemove, increment, writeBatch } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, getDoc, deleteDoc, serverTimestamp, collection, addDoc, query, where, orderBy, onSnapshot, getDocs, updateDoc, arrayUnion, arrayRemove, increment, writeBatch } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Firestore with IndexedDB persistence: repeat sessions read collections from
+// disk instead of re-downloading them over slow mobile networks, and reads
+// keep working offline. Multi-tab manager keeps several open tabs consistent.
+// Falls back to the default in-memory cache where IndexedDB is unavailable
+// (e.g. some private-browsing modes).
+function createDb() {
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch {
+    return getFirestore(app);
+  }
+}
+export const db = createDb();
 
 // Google OAuth Provider
 export const googleProvider = new GoogleAuthProvider();

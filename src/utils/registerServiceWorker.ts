@@ -49,9 +49,19 @@ export function registerServiceWorker() {
   // an updated worker activates but the open tab keeps running the old bundle —
   // exactly the "pages won't load after a deploy" symptom. A flag plus a short
   // sessionStorage stamp guard against any reload loop.
+  //
+  // `controllerchange` ALSO fires on the very first visit, when the brand-new
+  // worker claims the page (clients.claim in sw.js). The page is already
+  // running the current build then, so reloading would just repeat the entire
+  // cold load. Skip exactly that first claim of an uncontrolled page; any
+  // LATER controllerchange (even in the same session) is a genuine update
+  // taking over and must still reload.
+  let wasControlled = !!navigator.serviceWorker.controller;
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
+    const firstClaim = !wasControlled;
+    wasControlled = true;
+    if (refreshing || firstClaim) return;
     try {
       const KEY = 'edlight:sw-reload-ts';
       const last = Number(sessionStorage.getItem(KEY) || 0);
