@@ -130,10 +130,15 @@
 /* ── Data table card ── */
 .admin-data-card {
   background: var(--surface, #fff);
-  border: 1px solid var(--border, #e5e3df);
-  border-radius: var(--radius-md, 12px);
+  border: 1px solid transparent;
+  border-radius: var(--r-card, 20px);
+  box-shadow: var(--shadow-md);
   padding: 1rem;
   overflow: hidden;
+}
+
+[data-theme="dark"] .admin-data-card {
+  border-color: var(--border, rgba(255, 255, 255, 0.08));
 }
 
 .admin-data-card--empty {

@@ -11,7 +11,7 @@ import './AdminLayout.css';
 /**
  * Admin console shell — a left sidebar grouping pages under sections, with the
  * page content in an <Outlet>. Collapses to a slide-over on mobile. Styled in
- * the editorial system (Space Grotesk, ink borders, mono labels).
+ * the Limyè system (soft shadows, pill nav, Plus Jakarta Sans display).
  */
 const NAV: Array<{ section?: string; items: Array<{ to: string; end?: boolean; Icon: any; label: string }> }> = [
   {
