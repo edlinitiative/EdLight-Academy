@@ -25,7 +25,7 @@ import { useStreak } from '../hooks/useStreak';
 import { StreakWidget } from '../components/Streak';
 import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { buildPlanIcs } from '../utils/planIcs';
+import { buildPlanIcs, taskTitle } from '../utils/planIcs';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
 import { auth, authedFetch } from '../services/firebase';
 import { Skeleton } from '../components/Skeleton';
@@ -393,7 +393,7 @@ export default function StudyPlan() {
                   <Flame size={14} /> {isCreole ? 'Pwochen travay' : 'Prochaine tâche'}
                 </span>
                 <h2 className="sp-hero__title">
-                  {heroTask.examTitle || heroTask.unitTitle || heroTask.videoTitle || heroTask.examId}
+                  {taskTitle(heroTask)}
                 </h2>
                 <div className="sp-hero__meta">
                   <HeroTypeBadge task={heroTask} isCreole={isCreole} />
@@ -660,7 +660,7 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
   } else if (taskType === 'video') {
     displayTitle = task.videoTitle || task.courseTitle || (isCreole ? 'Videyo' : 'Vidéo');
   } else {
-    displayTitle = task.examTitle || task.examId;
+    displayTitle = taskTitle(task);
   }
 
   // Secondary info line

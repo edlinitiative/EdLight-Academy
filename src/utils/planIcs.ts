@@ -94,8 +94,9 @@ function uidSafe(id: string): string {
 }
 
 /** Best display title for a task, mirroring StudyPlan.tsx fallbacks. Prefers
- *  a short "Examen {subject} {year}" over ministry-length official titles. */
-function taskTitle(task: PlanIcsTask): string {
+ *  a short "Examen {subject} {year}" over ministry-length official titles.
+ *  Shared by the ICS builder, the plan email, and the /study-plan page. */
+export function taskTitle(task: PlanIcsTask): string {
   if (task.examTitle && task.subject && task.year) return `Examen ${task.subject} ${task.year}`;
   const raw = task.examTitle || task.unitTitle || task.videoTitle || task.examId || task.taskId || 'Révision';
   return raw.length > 60 ? `${raw.slice(0, 57)}…` : raw;
