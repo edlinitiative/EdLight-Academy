@@ -89,9 +89,13 @@ function formatDate(ms: number): string {
   return `${day}/${month}/${d.getFullYear()}`;
 }
 
-/** Best display title for a task — same fallback chain as planIcs.taskTitle. */
+/** Best display title for a task — same fallback chain as planIcs.taskTitle.
+ *  Official exam titles are ministry-length ("BACCALAURÉAT … RÉPUBLIQUE …");
+ *  when we know the subject + year, a short human label reads far better. */
 function taskTitle(task: PlanIcsTask, fallback: string): string {
-  return task.examTitle || task.unitTitle || task.videoTitle || task.examId || task.taskId || fallback;
+  if (task.examTitle && task.subject && task.year) return `Examen ${task.subject} ${task.year}`;
+  const raw = task.examTitle || task.unitTitle || task.videoTitle || task.examId || task.taskId || fallback;
+  return raw.length > 60 ? `${raw.slice(0, 57)}…` : raw;
 }
 
 /**

@@ -15,6 +15,7 @@ export interface PlanIcsTask {
   examId?: string;
   taskId?: string;
   subject?: string;
+  year?: string;
   examTitle?: string;
   unitTitle?: string;
   videoTitle?: string;
@@ -92,9 +93,12 @@ function uidSafe(id: string): string {
   return id.replace(/[^A-Za-z0-9._-]/g, '-');
 }
 
-/** Best display title for a task, mirroring StudyPlan.tsx fallbacks. */
+/** Best display title for a task, mirroring StudyPlan.tsx fallbacks. Prefers
+ *  a short "Examen {subject} {year}" over ministry-length official titles. */
 function taskTitle(task: PlanIcsTask): string {
-  return task.examTitle || task.unitTitle || task.videoTitle || task.examId || task.taskId || 'Révision';
+  if (task.examTitle && task.subject && task.year) return `Examen ${task.subject} ${task.year}`;
+  const raw = task.examTitle || task.unitTitle || task.videoTitle || task.examId || task.taskId || 'Révision';
+  return raw.length > 60 ? `${raw.slice(0, 57)}…` : raw;
 }
 
 /**
