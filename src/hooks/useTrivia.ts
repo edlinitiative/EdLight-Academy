@@ -17,6 +17,8 @@ import {
   getDailyChallengeState,
   computeXpEarned,
   setLeaderboardOptIn as svcSetLeaderboardOptIn,
+  recordGameResult as svcRecordGameResult,
+  computeGameXp,
 } from '../services/triviaService';
 
 const triviaKey = (uid) => ['trivia-profile', uid];
@@ -60,6 +62,28 @@ export function useTrivia() {
     [uid, qc],
   );
 
+  // Arcade (non-trivia) games — same reward contract as recordResult.
+  const recordGameResult = useCallback(
+    async ({ gameId, score, maxScore }) => {
+      if (!uid) {
+        const reward = {
+          xpEarned: computeGameXp({ score, maxScore }),
+          leveledUp: false,
+          prevLevel: 1,
+          newLevel: 1,
+          guest: true,
+        };
+        setLastReward(reward);
+        return reward;
+      }
+      const res = await svcRecordGameResult(uid, { gameId, score, maxScore });
+      qc.setQueryData(triviaKey(uid), res.profile);
+      setLastReward(res);
+      return res;
+    },
+    [uid, qc],
+  );
+
   const setLeaderboardOptIn = useCallback(
     async (opts) => {
       if (!uid) return;
@@ -77,6 +101,7 @@ export function useTrivia() {
     daily,
     isAuthed: !!uid,
     recordResult,
+    recordGameResult,
     lastReward,
     clearReward: () => setLastReward(null),
     setLeaderboardOptIn,

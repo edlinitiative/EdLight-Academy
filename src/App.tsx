@@ -87,6 +87,7 @@ export default function App() {
                 <Route path="exams/:level/:examId/results" element={<ExamResults />} />
                 <Route path="study-plan" element={<StudyPlan />} />
                 <Route path="trivia" element={<TriviaGames />} />
+                <Route path="trivia/:gameId" element={<TriviaGames />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="*" element={<NotFound />} />
               </Route>

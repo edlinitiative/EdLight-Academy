@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck } from 'lucide-react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, Gamepad2 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -9,6 +9,13 @@ import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { useTriviaContent } from '../hooks/useTriviaContent';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
 import { todayStr } from '../services/streakService';
+import { GAMES, GAME_ICONS, getGameById } from '../data/games';
+import Leaderboard from '../components/Leaderboard';
+import VraiFauxGame from '../components/games/VraiFauxGame';
+import MemoireGame from '../components/games/MemoireGame';
+import MoKacheGame from '../components/games/MoKacheGame';
+import CalculGame from '../components/games/CalculGame';
+import SuitesGame from '../components/games/SuitesGame';
 import './TriviaGames.css';
 
 /* ─── Utility: shuffle an array (Fisher-Yates) ─── */
@@ -377,10 +384,8 @@ function DailyChallengeBanner({ daily, isCreole, onStart }) {
   );
 }
 
-/* ─── Main Trivia Page ─── */
-export default function TriviaGames() {
-  const { language } = useStore();
-  const isCreole = language === 'ht';
+/* ─── Classic Trivia (the original flow, now one game among six) ─── */
+function TriviaClassic({ isCreole, onExitHub }) {
   const location = useLocation();
   const { recordResult, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
@@ -482,6 +487,9 @@ export default function TriviaGames() {
     <div className="trivia-page">
       {screen === 'pick' && (
         <>
+          <button className="trivia-back-btn" onClick={onExitHub}>
+            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+          </button>
           {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
           <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
           <CategoryPicker
@@ -529,6 +537,144 @@ export default function TriviaGames() {
           categories={categories}
         />
       )}
+    </div>
+  );
+}
+
+/* ─── Games hub (landing) ─── */
+function GamesHub({ isCreole }) {
+  const navigate = useNavigate();
+  const { profile, level, daily, isAuthed } = useTrivia();
+  const { streak } = useStreak();
+
+  const highScores = profile?.games?.highScores || {};
+  const gamesPlayed = profile?.games?.gamesPlayed || 0;
+
+  return (
+    <div className="games-hub">
+      <div className="games-hub__hero">
+        <div className="games-hub__hero-text">
+          <span className="games-hub__eyebrow"><Gamepad2 size={15} /> {isCreole ? 'Jwèt' : 'Jeux'}</span>
+          <h1 className="games-hub__title">
+            {isCreole ? 'Aprann pandan w ap jwe' : 'Apprenez en jouant'}
+          </h1>
+          <p className="games-hub__subtitle">
+            {isCreole
+              ? 'Chak pati fè ou ranmase XP epi monte nan klasman an.'
+              : 'Chaque partie vous fait gagner des XP et grimper au classement.'}
+          </p>
+        </div>
+        {isAuthed && (
+          <div className="games-hub__stats">
+            <div className="games-hub__stat">
+              <Zap size={16} />
+              <strong>{level.xp}</strong>
+              <span>XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}</span>
+            </div>
+            <div className="games-hub__stat">
+              <Flame size={16} />
+              <strong>{streak?.currentStreak || 0}</strong>
+              <span>{isCreole ? 'Seri' : 'Série'}</span>
+            </div>
+            <div className="games-hub__stat">
+              <Trophy size={16} />
+              <strong>{gamesPlayed}</strong>
+              <span>{isCreole ? 'Pati' : 'Parties'}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <DailyChallengeBanner
+        daily={daily}
+        isCreole={isCreole}
+        onStart={() => navigate('/trivia/trivia', { state: { startDaily: true } })}
+      />
+
+      <div className="games-hub__layout">
+        <div className="games-hub__main">
+          <div className="games-hub__grid">
+            {GAMES.map((g) => {
+              const Icon = GAME_ICONS[g.id];
+              const hs = highScores[g.id];
+              return (
+                <button
+                  key={g.id}
+                  className="game-card"
+                  style={{ ['--game-color' as any]: g.color }}
+                  onClick={() => navigate(`/trivia/${g.id}`)}
+                >
+                  <span className="game-card__band" aria-hidden="true">
+                    <Icon size={26} />
+                    {hs != null && (
+                      <span className="game-card__hs"><Trophy size={11} /> {hs}</span>
+                    )}
+                  </span>
+                  <span className="game-card__body">
+                    <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
+                    <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
+                    <span className="game-card__meta">
+                      <Clock size={12} /> ~{g.minutes} min
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <aside className="games-hub__side">
+          <Leaderboard variant="full" max={25} periodToggle />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main page: hub or one of the games, from the /trivia/:gameId route ─── */
+export default function TriviaGames() {
+  const { language } = useStore();
+  const isCreole = language === 'ht';
+  const navigate = useNavigate();
+  const { gameId } = useParams();
+  const { profile, recordGameResult } = useTrivia();
+
+  const game = gameId ? getGameById(gameId) : null;
+  // Arcade rounds own the screen just like a trivia round does.
+  useFocusMode(!!game && game.id !== 'trivia');
+
+  // Unknown game id → back to the hub.
+  useEffect(() => {
+    if (gameId && !game) navigate('/trivia', { replace: true });
+  }, [gameId, game, navigate]);
+
+  const exit = useCallback(() => navigate('/trivia'), [navigate]);
+  const highScores = profile?.games?.highScores || {};
+
+  if (!game) return <GamesHub isCreole={isCreole} />;
+  if (game.id === 'trivia') return <TriviaClassic isCreole={isCreole} onExitHub={exit} />;
+
+  const shared = {
+    isCreole,
+    onExit: exit,
+    onRecord: recordGameResult,
+    highScore: highScores[game.id] ?? null,
+  };
+
+  return (
+    <div className="trivia-page trivia-page--arcade">
+      <div className="arcade__header">
+        <button className="trivia-back-btn trivia-back-btn--sm" onClick={exit} aria-label={isCreole ? 'Kite' : 'Quitter'}>
+          <X size={18} />
+        </button>
+        <h1 className="arcade__title" style={{ color: game.color }}>
+          {isCreole ? game.nameHt : game.name}
+        </h1>
+      </div>
+      {game.id === 'vrai-faux' && <VraiFauxGame questionsMap={TRIVIA_QUESTIONS} {...shared} />}
+      {game.id === 'memoire' && <MemoireGame {...shared} />}
+      {game.id === 'mo-kache' && <MoKacheGame {...shared} />}
+      {game.id === 'calcul' && <CalculGame {...shared} />}
+      {game.id === 'suites' && <SuitesGame {...shared} />}
     </div>
   );
 }

@@ -131,6 +131,39 @@ export async function updateEntryProfile(uid, meta: any = {}) {
   }
 }
 
+// ─── All-time board ─────────────────────────────────────────────────────────
+// Same entries shape under a fixed period id. Unlike weekly entries (XP
+// increments), all-time mirrors the profile's lifetime XP as an absolute
+// value on every award — so it self-backfills the first time someone plays.
+
+const ALL_TIME_ID = 'all-time';
+
+export async function upsertAllTimeEntry(uid, meta: any = {}) {
+  if (!uid || meta.xp == null) return;
+  try {
+    await setDoc(
+      entryRef(ALL_TIME_ID, uid),
+      {
+        uid,
+        xp: meta.xp,
+        displayName: isValidAlias(meta.displayName) ? meta.displayName : null,
+        level: meta.level || 1,
+        school: meta.school || null,
+        city: meta.city || null,
+        department: meta.department || null,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    console.error('[Leaderboard] upsertAllTimeEntry error:', err);
+  }
+}
+
+export async function getAllTimeTop(max = 50) {
+  return getWeeklyTop(max, ALL_TIME_ID);
+}
+
 // ─── Reads ──────────────────────────────────────────────────────────────────
 
 /**

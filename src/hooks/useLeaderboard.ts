@@ -7,16 +7,16 @@
 
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { getWeeklyTop, weekId, isValidAlias } from '../services/leaderboardService';
+import { getWeeklyTop, getAllTimeTop, weekId, isValidAlias } from '../services/leaderboardService';
 
-export function useLeaderboard(max = 25) {
+export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const user = useStore((s) => s.user);
   const uid = user?.uid ?? null;
   const id = weekId();
 
   const { data: entries, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['leaderboard-weekly', id, max],
-    queryFn: () => getWeeklyTop(max, id),
+    queryKey: ['leaderboard-weekly', period === 'all' ? 'all-time' : id, max],
+    queryFn: () => (period === 'all' ? getAllTimeTop(max) : getWeeklyTop(max, id)),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: true,
   });

@@ -44,7 +44,8 @@
 }
 
 /* Scope tabs */
-.leaderboard__scopes {
+.leaderboard__scopes,
+.leaderboard__periods {
   display: inline-flex;
   gap: 0.3rem;
   background: var(--surface-alt, #f2f4f7);

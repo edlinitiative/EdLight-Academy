@@ -47,13 +47,17 @@ function RankBadge({ rank }) {
   return <span className="lb-rank">{rank}</span>;
 }
 
-export default function Leaderboard({ variant = 'full', max = 25 }) {
+export default function Leaderboard({ variant = 'full', max = 25, periodToggle = false }) {
   const navigate = useNavigate();
   const { user, language } = useStore();
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
 
-  const { entries, myEntry, myRank, isLoading, refetch } = useLeaderboard(variant === 'compact' ? 5 : max);
+  const [period, setPeriod] = useState('week'); // 'week' | 'all'
+  const { entries, myEntry, myRank, isLoading, refetch } = useLeaderboard(
+    variant === 'compact' ? 5 : max,
+    periodToggle ? (period as any) : 'week',
+  );
   const { profile, level, setLeaderboardOptIn, isAuthed } = useTrivia();
 
   const optedIn = !!profile?.leaderboard?.optedIn;
@@ -142,7 +146,10 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
     <div className={`leaderboard ${compact ? 'leaderboard--compact' : ''}`}>
       <div className="leaderboard__header">
         <h3 className="leaderboard__title">
-          <Trophy size={17} /> {t('Classement de la semaine', 'Klasman semèn nan')}
+          <Trophy size={17} />{' '}
+          {periodToggle && period === 'all'
+            ? t('Classement général', 'Klasman jeneral')
+            : t('Classement de la semaine', 'Klasman semèn nan')}
         </h3>
         {compact && (
           <button className="leaderboard__more" onClick={() => navigate('/profile')}>
@@ -150,6 +157,27 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
           </button>
         )}
       </div>
+
+      {periodToggle && (
+        <div className="leaderboard__periods" role="tablist">
+          <button
+            role="tab"
+            aria-selected={period === 'week'}
+            className={`leaderboard__scope ${period === 'week' ? 'is-active' : ''}`}
+            onClick={() => setPeriod('week')}
+          >
+            {t('Cette semaine', 'Semèn sa a')}
+          </button>
+          <button
+            role="tab"
+            aria-selected={period === 'all'}
+            className={`leaderboard__scope ${period === 'all' ? 'is-active' : ''}`}
+            onClick={() => setPeriod('all')}
+          >
+            {t('Tous les temps', 'Tout tan')}
+          </button>
+        </div>
+      )}
 
       {!compact && (
         <div className="leaderboard__scopes" role="tablist">
