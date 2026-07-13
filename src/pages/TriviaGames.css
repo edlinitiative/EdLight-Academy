@@ -178,6 +178,13 @@
 }
 
 /* ─── Back Button ─── */
+/* On the category screen the button is a direct child of .trivia-page, which
+   has no horizontal padding — give it its own gutter so it doesn't hug the
+   viewport edge. */
+.trivia-page > .trivia-back-btn {
+  margin-left: 1rem;
+}
+
 .trivia-back-btn {
   display: inline-flex;
   align-items: center;
