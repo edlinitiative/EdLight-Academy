@@ -97,6 +97,8 @@
   .trivia-landing__grid { grid-template-columns: repeat(4, 1fr); max-width: 1080px; }
 }
 
+/* Category tiles share the Limyè Arcade language of the /jeux hub cards:
+   dot texture, frosted icon chip, tilted count sticker, colored glow. */
 .trivia-cat {
   --cat: #1B6FE0;
   position: relative;
@@ -106,26 +108,27 @@
   gap: 0.35rem;
   min-height: 132px;
   padding: 0.95rem 1rem 0.9rem;
-  border-radius: 20px;
+  border-radius: 18px;
   border: none;
-  box-shadow: var(--ed-shadow, 0 8px 24px -12px rgba(15, 30, 56, 0.2));
+  box-shadow: 0 12px 22px -12px color-mix(in srgb, var(--cat) 65%, transparent);
   cursor: pointer;
   text-align: left;
   color: #fff;
   font: inherit;
   background:
-    radial-gradient(circle at 84% 14%, rgba(255, 255, 255, 0.26), transparent 55%),
-    linear-gradient(150deg, var(--cat), color-mix(in srgb, var(--cat) 60%, #000));
+    radial-gradient(circle at 8px 8px, rgba(255, 255, 255, 0.16) 1.5px, transparent 1.5px),
+    linear-gradient(135deg, var(--cat), color-mix(in srgb, var(--cat) 62%, #0b122a));
+  background-size: 24px 24px, cover;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .trivia-cat:hover {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-lg, 0 24px 56px -24px rgba(15, 30, 56, 0.3));
+  box-shadow: 0 18px 28px -12px color-mix(in srgb, var(--cat) 75%, transparent);
 }
 .trivia-cat:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.99);
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 30, 56, 0.1));
 }
 .trivia-cat:focus-visible {
@@ -134,9 +137,13 @@
 }
 
 .trivia-cat__icon {
-  font-size: clamp(2rem, 6vw, 2.55rem);
+  align-self: flex-start;
+  display: inline-flex;
+  padding: 0.4rem 0.5rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: clamp(1.45rem, 4.5vw, 1.75rem);
   line-height: 1;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.28));
 }
 
 .trivia-cat__name {
@@ -149,12 +156,19 @@
 }
 
 .trivia-cat__count {
-  font-family: var(--font-mono, ui-monospace, "Geist Mono", monospace);
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #16233c;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  opacity: 0.82;
+  transform: rotate(4deg);
+  box-shadow: 0 2px 6px rgba(10, 20, 40, 0.25);
   font-variant-numeric: tabular-nums;
 }
 
@@ -218,11 +232,12 @@
   font-size: 2.6rem;
   line-height: 1;
   color: #fff;
-  border: 1.5px solid var(--ed-border, #1b2230);
-  box-shadow: var(--ed-shadow, 3px 3px 0 0 #1b2230);
+  border: none;
+  box-shadow: 0 14px 24px -12px color-mix(in srgb, var(--cat) 70%, transparent);
   background:
-    radial-gradient(circle at 82% 14%, rgba(255, 255, 255, 0.26), transparent 55%),
-    linear-gradient(150deg, var(--cat), color-mix(in srgb, var(--cat) 60%, #000));
+    radial-gradient(circle at 8px 8px, rgba(255, 255, 255, 0.16) 1.5px, transparent 1.5px),
+    linear-gradient(135deg, var(--cat), color-mix(in srgb, var(--cat) 62%, #0b122a));
+  background-size: 24px 24px, cover;
 }
 .trivia-round-picker__badge > * {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.28));
@@ -254,19 +269,24 @@
   gap: 0.75rem;
   padding: 1rem 1.25rem;
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 18px;
   background: var(--surface);
   color: var(--text-800);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 0 var(--border);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .trivia-round-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(27, 111, 224, 0.12);
   border-color: var(--cat-color, var(--primary-500));
   color: var(--cat-color, var(--primary-500));
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--cat-color, var(--primary-500)) 40%, var(--border));
+}
+
+.trivia-round-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--border);
 }
 
 .trivia-round-btn__icon {
@@ -411,20 +431,26 @@
   gap: 0.75rem;
   padding: 0.9rem 1rem;
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 18px;
   background: var(--surface);
   font: inherit;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-800);
   cursor: pointer;
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 0 var(--border);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.2s ease, background 0.2s ease;
   text-align: left;
 }
 
 .trivia-option:hover:not(:disabled) {
   border-color: var(--cat-color, var(--primary-500));
-  background: color-mix(in srgb, var(--cat-color, var(--primary-500)) 5%, white);
-  transform: translateX(4px);
+  background: color-mix(in srgb, var(--cat-color, var(--primary-500)) 5%, var(--surface));
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--cat-color, var(--primary-500)) 40%, var(--border));
+}
+
+.trivia-option:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--border);
 }
 
 .trivia-option--correct {
