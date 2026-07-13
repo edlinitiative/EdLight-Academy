@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, GraduationCap, Eye, EyeOff, User } from 'lucide-react';
+import { RefreshCw, GraduationCap, Eye, EyeOff, User, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset } from '../services/authService';
@@ -423,7 +423,7 @@ export function UserDropdown({ user, onLogout }) {
         </button>
         <div className="dropdown__divider" />
         <button className="dropdown__item" onClick={onLogout}>
-          Sign Out
+          <LogOut size={14} /> Déconnexion
         </button>
       </div>
       {showTrackSelector && (

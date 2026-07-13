@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Crown, Medal, Flame, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Trophy, Crown, Medal, Flame, ChevronRight, ShieldCheck, Pencil } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
@@ -50,7 +50,7 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
 
-  const { entries, myEntry, myRank, isLoading } = useLeaderboard(variant === 'compact' ? 5 : max);
+  const { entries, myEntry, myRank, isLoading, refetch } = useLeaderboard(variant === 'compact' ? 5 : max);
   const { profile, level, setLeaderboardOptIn, isAuthed } = useTrivia();
 
   const optedIn = !!profile?.leaderboard?.optedIn;
@@ -58,11 +58,20 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
   const myCity = profile?.leaderboard?.city || null;
 
   const [scope, setScope] = useState('national'); // 'school' | 'city' | 'national'
-  const [showJoin, setShowJoin] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [alias, setAlias] = useState(defaultAlias(user));
   const [school, setSchool] = useState(mySchool || '');
   const [city, setCity] = useState(myCity || '');
   const [saving, setSaving] = useState(false);
+
+  // Seed the form from the (async-loaded) profile every time it opens, so
+  // editing always starts from what's currently saved.
+  const openForm = () => {
+    setAlias(profile?.leaderboard?.displayName || defaultAlias(user));
+    setSchool(mySchool || '');
+    setCity(myCity || '');
+    setShowForm(true);
+  };
 
   const visible = useMemo(() => {
     if (scope === 'school' && mySchool) {
@@ -74,7 +83,7 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
     return entries;
   }, [entries, scope, mySchool, myCity]);
 
-  const join = async () => {
+  const save = async () => {
     setSaving(true);
     try {
       await setLeaderboardOptIn({
@@ -83,7 +92,8 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
         school: school.trim() || null,
         city: city.trim() || null,
       });
-      setShowJoin(false);
+      setShowForm(false);
+      refetch(); // so the École/Ville tabs reflect the new info right away
     } finally {
       setSaving(false);
     }
@@ -165,12 +175,22 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
           <p className="text-muted">
             {t('Ajoutez votre école pour voir son classement.', 'Ajoute lekòl ou pou wè klasman li.')}
           </p>
+          {isAuthed && !showForm && (
+            <button className="button button--primary leaderboard__empty-cta" onClick={openForm}>
+              {t('Ajouter mon école', 'Ajoute lekòl mwen')}
+            </button>
+          )}
         </div>
       ) : (scope === 'city' && !myCity) ? (
         <div className="leaderboard__empty">
           <p className="text-muted">
             {t('Ajoutez votre ville pour voir son classement.', 'Ajoute vil ou pou wè klasman li.')}
           </p>
+          {isAuthed && !showForm && (
+            <button className="button button--primary leaderboard__empty-cta" onClick={openForm}>
+              {t('Ajouter ma ville', 'Ajoute vil mwen')}
+            </button>
+          )}
         </div>
       ) : (
         <div className="leaderboard__empty leaderboard__empty--sample">
@@ -201,23 +221,10 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
         </div>
       )}
 
-      {/* Opt-in management */}
-      {isAuthed && !optedIn && !compact && (
+      {/* Opt-in + profile (alias / school / city) management */}
+      {isAuthed && !compact && (
         <div className="leaderboard__join">
-          {!showJoin ? (
-            <>
-              <p className="leaderboard__join-pitch">
-                <ShieldCheck size={15} />
-                {t(
-                  'Rejoignez le classement avec un pseudo — vous restez anonyme.',
-                  'Antre nan klasman an ak yon ti non — ou rete anonim.',
-                )}
-              </p>
-              <button className="button button--primary" onClick={() => setShowJoin(true)}>
-                {t('Rejoindre le classement', 'Antre nan klasman')}
-              </button>
-            </>
-          ) : (
+          {showForm ? (
             <div className="leaderboard__form">
               <label className="leaderboard__field">
                 <span>{t('Pseudo affiché', 'Ti non pou afiche')}</span>
@@ -250,14 +257,32 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                 />
               </label>
               <div className="leaderboard__form-actions">
-                <button className="button button--ghost" onClick={() => setShowJoin(false)} disabled={saving}>
+                <button className="button button--ghost" onClick={() => setShowForm(false)} disabled={saving}>
                   {t('Annuler', 'Anile')}
                 </button>
-                <button className="button button--primary" onClick={join} disabled={saving}>
+                <button className="button button--primary" onClick={save} disabled={saving}>
                   {saving ? t('…', '…') : t('Confirmer', 'Konfime')}
                 </button>
               </div>
             </div>
+          ) : !optedIn ? (
+            <>
+              <p className="leaderboard__join-pitch">
+                <ShieldCheck size={15} />
+                {t(
+                  'Rejoignez le classement avec un pseudo — vous restez anonyme.',
+                  'Antre nan klasman an ak yon ti non — ou rete anonim.',
+                )}
+              </p>
+              <button className="button button--primary" onClick={openForm}>
+                {t('Rejoindre le classement', 'Antre nan klasman')}
+              </button>
+            </>
+          ) : (
+            <button className="leaderboard__edit" onClick={openForm}>
+              <Pencil size={13} />
+              {t('Modifier mon pseudo, mon école ou ma ville', 'Chanje ti non mwen, lekòl mwen oswa vil mwen')}
+            </button>
           )}
         </div>
       )}

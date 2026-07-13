@@ -2929,6 +2929,27 @@ textarea.input-field {
 	cursor: pointer;
 }
 
+/* Pixel-art face variant — the SVG paints the whole circle */
+.avatar--pixel {
+	padding: 0;
+	overflow: hidden;
+	background: none;
+	border: 1px solid var(--border, rgba(27, 111, 224, 0.18));
+}
+
+.avatar--pixel svg,
+.nav-drawer__avatar--pixel svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.nav-drawer__avatar.nav-drawer__avatar--pixel {
+	overflow: hidden;
+	background: none;
+	padding: 0;
+}
+
 .dropdown {
 	position: relative;
 }
@@ -2951,9 +2972,9 @@ textarea.input-field {
 
 .dropdown__item {
 	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0.2rem;
+	align-items: center;
+	gap: 0.55rem;
+	width: 100%;
 	padding: 0.55rem 0.7rem;
 	border-radius: 12px;
 	background: transparent;
@@ -2961,12 +2982,42 @@ textarea.input-field {
 	color: var(--text-700);
 	text-decoration: none;
 	cursor: pointer;
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 600;
+	text-align: left;
+	white-space: nowrap;
 	transition: background 0.2s ease;
 }
 
+.dropdown__item svg {
+	flex: 0 0 auto;
+	color: var(--text-500);
+}
+
+/* Identity header (name + email) — the only stacked, non-interactive item */
 .dropdown__item--muted {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.15rem;
 	pointer-events: none;
 	color: var(--text-500);
+	white-space: normal;
+}
+
+.dropdown__item--muted strong {
+	color: var(--text-900);
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dropdown__item--muted .text-muted {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .dropdown__item:hover {
@@ -2977,6 +3028,19 @@ textarea.input-field {
 	height: 1px;
 	background: rgba(27, 111, 224, 0.12);
 	margin: 0.2rem 0;
+}
+
+[data-theme="dark"] .dropdown__menu {
+	background: rgba(19, 31, 56, 0.97);
+	border-color: var(--border-strong);
+}
+
+[data-theme="dark"] .dropdown__item:hover {
+	background: rgba(77, 143, 240, 0.16);
+}
+
+[data-theme="dark"] .dropdown__divider {
+	background: rgba(255, 255, 255, 0.08);
 }
 
 .auth-modal {
@@ -14079,6 +14143,7 @@ textarea:focus-visible,
 .dropdown__track {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: 0.4rem;
 	font-size: 0.85rem;
 }
@@ -14089,6 +14154,10 @@ textarea:focus-visible,
 	padding: 0.1rem 0.4rem;
 	border-radius: 4px;
 	background: var(--bg-muted, #f1f5f9);
+}
+
+[data-theme="dark"] .dropdown__track-badge {
+	background: rgba(148, 163, 184, 0.14);
 }
 
 @media (max-width: 480px) {

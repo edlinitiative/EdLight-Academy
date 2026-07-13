@@ -175,6 +175,29 @@
   font-size: 0.85rem;
 }
 
+.leaderboard__empty-cta {
+  margin-top: 0.7rem;
+}
+
+/* Small inline "edit my info" affordance shown once the learner has opted in */
+.leaderboard__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary, #1B6FE0);
+}
+
+.leaderboard__edit:hover {
+  text-decoration: underline;
+}
+
 /* Sample/example ranking shown when the real board is empty */
 .leaderboard__empty--sample {
   padding-top: 0;

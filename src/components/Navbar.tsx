@@ -19,6 +19,7 @@ import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
 import { LevelBadge } from './LevelBadge';
 import NotificationBell from './NotificationBell';
+import PixelAvatar from './PixelAvatar';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /** Primary destinations shown in the desktop inline nav and the mobile drawer.
@@ -130,10 +131,6 @@ export function Navbar() {
     return pathname.startsWith(path);
   };
 
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'EL';
-
   return (
     <header className="navbar">
       <div className="container navbar__inner">
@@ -166,7 +163,9 @@ export function Navbar() {
           {/* Profile card (mobile, authenticated) */}
           {isAuthenticated && user && (
             <Link to="/dashboard" className="nav-drawer__profile" onClick={closeMenu}>
-              <span className="nav-drawer__avatar">{initials}</span>
+              <span className="nav-drawer__avatar nav-drawer__avatar--pixel">
+                <PixelAvatar seed={user.uid || user.email || user.name} size={40} />
+              </span>
               <span className="nav-drawer__profile-info">
                 <span className="nav-drawer__profile-name">{user.name}</span>
                 <span className="nav-drawer__profile-email">{user.email || 'Voir le tableau de bord'}</span>
@@ -265,12 +264,13 @@ export function Navbar() {
 
               <div className="dropdown" ref={dropdownRef}>
                 <button
-                  className="avatar"
+                  className="avatar avatar--pixel"
                   onClick={() => toggleUserDropdown()}
                   aria-haspopup="true"
                   aria-expanded={showUserDropdown}
+                  aria-label="Menu du profil"
                 >
-                  {initials}
+                  <PixelAvatar seed={user?.uid || user?.email || user?.name} size={32} />
                 </button>
                 {showUserDropdown && (
                   <UserDropdown user={user} onLogout={handleLogout} />
