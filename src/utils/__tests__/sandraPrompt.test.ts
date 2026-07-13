@@ -131,9 +131,18 @@ describe('buildSandraSystemPrompt', () => {
 
   it('always teaches every Sandra tool by name', () => {
     const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
-    for (const tool of ['get_student_progress', 'recommend_exams', 'save_study_plan']) {
+    for (const tool of ['get_student_progress', 'recommend_exams', 'save_study_plan', 'email_study_plan']) {
       expect(p).toContain(tool);
     }
+  });
+
+  it('teaches email_study_plan: explicit request only, needs a plan, check inbox+spam, ics attachment', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toMatch(/email_study_plan[\s\S]*explicitement/i);
+    expect(p).toMatch(/email_study_plan[\s\S]*plan existe déjà/i);
+    expect(p).toMatch(/\(\.ics\)/);
+    expect(p).toMatch(/boîte de réception/i);
+    expect(p).toMatch(/spam/i);
   });
 
   it('requires consulting progress before advising and gathering plan inputs before saving', () => {

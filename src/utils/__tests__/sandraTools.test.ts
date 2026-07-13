@@ -27,6 +27,10 @@ jest.mock(
   { virtual: true },
 );
 
+// email_study_plan collaborators — both have I/O, both mocked.
+jest.mock('../../../api/_lib/rateLimit', () => ({ checkRateLimit: jest.fn() }));
+jest.mock('../../../api/_lib/planEmail', () => ({ sendPlanEmail: jest.fn() }));
+
 // Client-side deps of studyPlanService (imported only for the parity test).
 jest.mock('../../services/firebase', () => ({ db: {}, auth: {} }));
 jest.mock('../../services/streakService', () => ({ recordActivity: jest.fn() }));
@@ -44,10 +48,14 @@ import {
 } from '../../../api/_lib/sandraTools';
 import { getDb } from '../../../api/_lib/firebaseAdmin';
 import { generatePlanCore } from '../../../api/_lib/planGeneration';
+import { checkRateLimit } from '../../../api/_lib/rateLimit';
+import { sendPlanEmail } from '../../../api/_lib/planEmail';
 import { buildTasksFromExams } from '../../services/studyPlanService';
 
 const getDbMock = getDb as jest.Mock;
 const generatePlanCoreMock = generatePlanCore as jest.Mock;
+const checkRateLimitMock = checkRateLimit as jest.Mock;
+const sendPlanEmailMock = sendPlanEmail as jest.Mock;
 
 // ─── Fake admin Firestore ────────────────────────────────────────────────────
 // Docs seeded as { 'users/u1/examResults/ex-a': {...} }. Records every
@@ -180,16 +188,19 @@ beforeEach(() => {
     },
     source: 'ai',
   });
+  checkRateLimitMock.mockResolvedValue({ allowed: true, remaining: 2, resetAt: 0 });
+  sendPlanEmailMock.mockResolvedValue({ sent: true });
 });
 
 // ─── Tool schemas ────────────────────────────────────────────────────────────
 
 describe('SANDRA_TOOL_DEFS', () => {
-  it('declares exactly the three tools named by the prompt TOOLS_GUIDE', () => {
+  it('declares exactly the four tools named by the prompt TOOLS_GUIDE', () => {
     expect(SANDRA_TOOL_DEFS.map((t) => t.name)).toEqual([
       'get_student_progress',
       'recommend_exams',
       'save_study_plan',
+      'email_study_plan',
     ]);
     for (const def of SANDRA_TOOL_DEFS) {
       expect(typeof def.description).toBe('string');
@@ -211,6 +222,9 @@ describe('SANDRA_TOOL_DEFS', () => {
     expect(Object.keys(byName.save_study_plan.properties)).toEqual(
       expect.arrayContaining(['subjects', 'weeks', 'dailyMinutes', 'confirmReplace']),
     );
+    // email_study_plan takes no arguments — the account email is server-side.
+    expect(byName.email_study_plan.required || []).toEqual([]);
+    expect(Object.keys(byName.email_study_plan.properties)).toEqual([]);
   });
 });
 
@@ -432,12 +446,115 @@ describe('save_study_plan', () => {
   });
 });
 
+// ─── email_study_plan ────────────────────────────────────────────────────────
+
+const ACTIVE_PLAN_DOC = {
+  title: 'Plan Chimie 4 semaines',
+  status: 'active',
+  created_at_ms: 111,
+  dailyTargetMinutes: 60,
+  tasks: [
+    { type: 'exam', examId: 'ex-chim-1', subject: 'Chimie', examTitle: 'Chimie Bac I', nextReviewMs: 1_800_000_000_000 },
+  ],
+};
+
+describe('email_study_plan', () => {
+  it('returns a French error (and consumes no quota, sends nothing) when there is no active plan', async () => {
+    setup({
+      [`users/${UID}`]: { email: 'jean@gmail.com' },
+      [`users/${UID}/studyPlans/old`]: { ...ACTIVE_PLAN_DOC, status: 'archived' },
+    });
+    const exec = createToolExecutor({ uid: UID, origin: ORIGIN });
+
+    const out = await exec('email_study_plan', {});
+
+    expect(out).toEqual({ error: expect.stringMatching(/aucun plan/i) });
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(sendPlanEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('refuses in French when the email-plan rate limit is exhausted', async () => {
+    setup({
+      [`users/${UID}`]: { email: 'jean@gmail.com' },
+      [`users/${UID}/studyPlans/p1`]: ACTIVE_PLAN_DOC,
+    });
+    checkRateLimitMock.mockResolvedValue({ allowed: false, remaining: 0, resetAt: 123 });
+    const exec = createToolExecutor({ uid: UID, origin: ORIGIN });
+
+    const out = await exec('email_study_plan', {});
+
+    expect(checkRateLimitMock).toHaveBeenCalledWith(UID, 'email-plan');
+    expect(out).toEqual({ error: expect.stringMatching(/limite/i) });
+    expect(sendPlanEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('errors in French when the account has no email address', async () => {
+    setup({
+      [`users/${UID}`]: { track: 'SVT' }, // no email field
+      [`users/${UID}/studyPlans/p1`]: ACTIVE_PLAN_DOC,
+    });
+    const exec = createToolExecutor({ uid: UID, origin: ORIGIN });
+
+    const out = await exec('email_study_plan', {});
+
+    expect(out).toEqual({ error: expect.stringMatching(/email/i) });
+    expect(sendPlanEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the ACTIVE plan to the account email and returns only a masked address', async () => {
+    setup({
+      [`users/${UID}`]: { email: 'jean@gmail.com' },
+      [`users/${UID}/studyPlans/p1`]: ACTIVE_PLAN_DOC,
+      [`users/${UID}/studyPlans/p0`]: { ...ACTIVE_PLAN_DOC, title: 'Vieux plan', status: 'archived', created_at_ms: 5 },
+    });
+    const exec = createToolExecutor({ uid: UID, origin: ORIGIN });
+
+    const out = await exec('email_study_plan', {});
+
+    expect(sendPlanEmailMock).toHaveBeenCalledWith({
+      to: 'jean@gmail.com',
+      plan: {
+        title: 'Plan Chimie 4 semaines',
+        tasks: ACTIVE_PLAN_DOC.tasks,
+        dailyTargetMinutes: 60,
+      },
+      lang: 'fr',
+    });
+    expect(out).toEqual({ sent: true, to: 'j***@gmail.com' });
+  });
+
+  it("passes the executor context's lang through to the email", async () => {
+    setup({
+      [`users/${UID}`]: { email: 'jean@gmail.com' },
+      [`users/${UID}/studyPlans/p1`]: ACTIVE_PLAN_DOC,
+    });
+    const exec = createToolExecutor({ uid: UID, origin: ORIGIN, lang: 'ht' });
+
+    await exec('email_study_plan', {});
+
+    expect(sendPlanEmailMock).toHaveBeenCalledWith(expect.objectContaining({ lang: 'ht' }));
+  });
+
+  it('relays sendPlanEmail errors verbatim (e.g. Resend not configured)', async () => {
+    setup({
+      [`users/${UID}`]: { email: 'jean@gmail.com' },
+      [`users/${UID}/studyPlans/p1`]: ACTIVE_PLAN_DOC,
+    });
+    sendPlanEmailMock.mockResolvedValue({ error: "l'envoi d'email n'est pas encore configuré" });
+    const exec = createToolExecutor({ uid: UID, origin: ORIGIN });
+
+    const out = await exec('email_study_plan', {});
+
+    expect(out).toEqual({ error: "l'envoi d'email n'est pas encore configuré" });
+  });
+});
+
 // ─── uid scoping ─────────────────────────────────────────────────────────────
 
 describe('uid scoping', () => {
-  it('never touches a Firestore path outside users/{ctx.uid} across all three tools', async () => {
+  it('never touches a Firestore path outside users/{ctx.uid} across all four tools', async () => {
     const store = {
-      [`users/${UID}`]: { track: 'SVT' },
+      [`users/${UID}`]: { track: 'SVT', email: 'sam@edlight.ht' },
       ...seedExamResults(),
       'users/intruder/studyPlans/p': { title: 'x', status: 'active', created_at_ms: 5 },
     };
@@ -447,6 +564,7 @@ describe('uid scoping', () => {
     await exec('get_student_progress', {});
     await exec('recommend_exams', { level: 'baccalaureat', subject: 'Chimie' });
     await exec('save_study_plan', SAVE_ARGS);
+    await exec('email_study_plan', {}); // emails the plan just saved above
 
     expect(handle.paths.length).toBeGreaterThan(0);
     const offenders = handle.paths.filter(

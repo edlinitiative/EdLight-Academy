@@ -24,6 +24,7 @@ const LIMITS: Record<string, Limit> = {
   'generate-plan':  { max: 5,  windowSec: 3600 },
   'generate-quiz':  { max: 10, windowSec: 3600 },
   'chat':           { max: 30, windowSec: 3600 },
+  'email-plan':     { max: 3,  windowSec: 86400 },
 };
 
 export interface RateLimitResult {

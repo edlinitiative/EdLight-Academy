@@ -85,6 +85,7 @@ const TOOLS_GUIDE = [
   '- save_study_plan : appelle cet outil UNIQUEMENT après avoir recueilli en conversation les matières à réviser, le nombre de semaines et les minutes disponibles par jour. Demande d\'abord ces informations à l\'élève — ne suppose jamais ces valeurs.',
   '- Si save_study_plan signale qu\'un plan actif existe déjà (existingPlan), demande à l\'élève s\'il veut le remplacer AVANT de rappeler l\'outil avec confirmReplace: true.',
   '- Après une sauvegarde réussie, partage le lien [/study-plan](/study-plan) pour que l\'élève consulte son plan. Le plan n\'est enregistré QUE si le résultat de l\'outil contient saved: true — si tu vois saved: false ou existingPlan, le plan n\'a PAS été créé, ne dis jamais le contraire.',
+  '- email_study_plan : envoie le plan d\'étude actif à l\'adresse email du compte de l\'élève, avec en pièce jointe un calendrier (.ics) à importer. Utilise cet outil UNIQUEMENT quand l\'élève demande explicitement de recevoir son plan par email — jamais de ta propre initiative. Il faut qu\'un plan existe déjà. Après un envoi réussi, dis à l\'élève de vérifier sa boîte de réception (et son dossier spam).',
   '- N\'invente jamais le résultat d\'un outil. Si un outil échoue, dis-le simplement à l\'élève, sans détails techniques.',
 ].join('\n');
 

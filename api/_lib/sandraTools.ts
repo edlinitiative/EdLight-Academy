@@ -1,7 +1,7 @@
 /**
  * api/_lib/sandraTools.ts — Sandra's server-side tools.
  * ---------------------------------------------------------------------------
- * Declares the three function-calling tool schemas the chat endpoint hands to
+ * Declares the four function-calling tool schemas the chat endpoint hands to
  * `chatWithTools()` and builds their executors:
  *
  *   • get_student_progress — aggregate the student's exam results.
@@ -9,6 +9,8 @@
  *                            ones already completed.
  *   • save_study_plan      — generate + persist a real study plan doc under
  *                            users/{uid}/studyPlans (with an overwrite guard).
+ *   • email_study_plan     — send the ACTIVE plan (+ .ics attachment) to the
+ *                            account email via Resend (rate-limited 3/day).
  *
  * Every executor is scoped to the AUTHENTICATED uid passed by the endpoint —
  * the model never chooses whose data is touched. Plan docs mirror the shape
@@ -20,10 +22,12 @@
  * because public/ is not bundled into serverless functions.
  */
 
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, type CollectionReference } from 'firebase-admin/firestore';
 import { getDb } from './firebaseAdmin';
 import type { ToolDef } from './llm';
 import { generatePlanCore } from './planGeneration';
+import { checkRateLimit } from './rateLimit';
+import { sendPlanEmail } from './planEmail';
 
 // ─── Tool schemas ────────────────────────────────────────────────────────────
 
@@ -81,6 +85,12 @@ export const SANDRA_TOOL_DEFS: ToolDef[] = [
       required: ['subjects', 'weeks', 'dailyMinutes'],
     },
   },
+  {
+    name: 'email_study_plan',
+    description:
+      "Envoie le plan d'étude actif de l'élève à l'adresse email de son compte, avec en pièce jointe un calendrier (.ics) à importer. À n'appeler QUE si l'élève demande explicitement de recevoir son plan par email. Nécessite un plan d'étude existant.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
 ];
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -88,6 +98,8 @@ export const SANDRA_TOOL_DEFS: ToolDef[] = [
 interface ToolCtx {
   uid: string;
   origin: string; // e.g. https://edlightacademy.com — catalog is fetched from here
+  /** Interface language of the student — plan emails default to French. */
+  lang?: 'fr' | 'ht';
 }
 
 export interface CatalogExam {
@@ -160,6 +172,20 @@ async function loadExamResults(uid: string): Promise<ExamResultRow[]> {
       when: (data.submitted_at_ms as number) ?? (data.created_at_ms as number) ?? null,
     };
   });
+}
+
+/**
+ * Most recent ACTIVE plan in users/{uid}/studyPlans — the same semantics as
+ * studyPlanService.loadActiveStudyPlan. Shared by save_study_plan's overwrite
+ * guard and email_study_plan's plan lookup.
+ */
+async function loadActivePlan(plansCol: CollectionReference) {
+  const snap = await plansCol
+    .where('status', '==', 'active')
+    .orderBy('created_at_ms', 'desc')
+    .limit(1)
+    .get();
+  return snap.empty ? null : snap.docs[0];
 }
 
 function cleanUndefined<T extends Record<string, unknown>>(obj: T): T {
@@ -438,12 +464,7 @@ async function saveStudyPlan(ctx: ToolCtx, args: Record<string, unknown>): Promi
 
   // Overwrite guard — same "most recent active plan" semantics as
   // studyPlanService.loadActiveStudyPlan.
-  const activeSnap = await plansCol
-    .where('status', '==', 'active')
-    .orderBy('created_at_ms', 'desc')
-    .limit(1)
-    .get();
-  const active = activeSnap.empty ? null : activeSnap.docs[0];
+  const active = await loadActivePlan(plansCol);
   if (active && !confirmReplace) {
     const data = (active.data() || {}) as Record<string, any>;
     // The model sometimes retries WITHOUT confirmReplace after the student
@@ -556,6 +577,63 @@ async function saveStudyPlan(ctx: ToolCtx, args: Record<string, unknown>): Promi
   return { saved: true, title, taskCount: tasks.length, url: '/study-plan' };
 }
 
+// ─── email_study_plan ────────────────────────────────────────────────────────
+
+/** j***@gmail.com — never echo the full address back through the model. */
+function maskEmail(email: string): string {
+  const at = email.indexOf('@');
+  if (at <= 0) return '***';
+  return `${email[0]}***${email.slice(at)}`;
+}
+
+async function emailStudyPlan(ctx: ToolCtx): Promise<{ sent: true; to: string } | { error: string }> {
+  const userRef = getDb().collection('users').doc(ctx.uid);
+
+  // 1. An ACTIVE plan must exist (checked before the rate limit so a missing
+  //    plan never consumes email quota).
+  const active = await loadActivePlan(userRef.collection('studyPlans'));
+  if (!active) {
+    return {
+      error:
+        "Aucun plan d'étude actif — crée d'abord un plan (save_study_plan ou /study-plan) avant de l'envoyer par email.",
+    };
+  }
+
+  // 2. At most 3 plan emails per student per day.
+  const rl = await checkRateLimit(ctx.uid, 'email-plan');
+  if (!rl.allowed) {
+    return {
+      error:
+        "Limite d'envoi atteinte : le plan a déjà été envoyé 3 fois ces dernières 24 heures. Réessaie demain.",
+    };
+  }
+
+  // 3. The destination is ALWAYS the account email — never a model-chosen one.
+  const userSnap = await userRef.get();
+  const userData = (userSnap.exists ? userSnap.data() : null) as Record<string, any> | null;
+  const email = String(userData?.email || '').trim();
+  if (!email) {
+    return {
+      error:
+        "Aucune adresse email n'est associée à ce compte — l'élève peut la vérifier sur la page /profile.",
+    };
+  }
+
+  const planData = (active.data() || {}) as Record<string, any>;
+  const result = await sendPlanEmail({
+    to: email,
+    plan: {
+      title: planData.title,
+      tasks: planData.tasks,
+      dailyTargetMinutes: planData.dailyTargetMinutes,
+    },
+    lang: ctx.lang === 'ht' ? 'ht' : 'fr',
+  });
+  if ('error' in result) return result;
+
+  return { sent: true, to: maskEmail(email) };
+}
+
 // ─── Executor factory ────────────────────────────────────────────────────────
 
 /**
@@ -567,6 +645,7 @@ async function saveStudyPlan(ctx: ToolCtx, args: Record<string, unknown>): Promi
 export function createToolExecutor(ctx: {
   uid: string;
   origin: string;
+  lang?: 'fr' | 'ht';
 }): (name: string, args: Record<string, unknown>) => Promise<unknown> {
   let planSaved = false;
 
@@ -584,6 +663,8 @@ export function createToolExecutor(ctx: {
         if ('saved' in out && out.saved) planSaved = true;
         return out;
       }
+      case 'email_study_plan':
+        return emailStudyPlan(ctx);
       default:
         throw new Error(`Outil inconnu : ${name}`);
     }
