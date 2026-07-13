@@ -95,7 +95,16 @@ export default function AdminSandra() {
           query(ref, ...(after ? [startAfter(after)] : []), fbLimit(PAGE_SIZE)),
         );
       }
-      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatConversation));
+      const rows = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as ChatConversation))
+        // Belt-and-braces: hide legacy empty shells (a failed first LLM call
+        // used to leave a 0-message conversation doc behind). A row survives
+        // only if its effective message count — messageCount, falling back to
+        // messages.length when the field is missing — is > 0.
+        .filter((c) => {
+          const count = typeof c.messageCount === 'number' ? c.messageCount : (c.messages?.length ?? 0);
+          return count > 0;
+        });
       setConversations((prev) => (after ? [...prev, ...rows] : rows));
       setCursor(snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null);
       setHasMore(snap.docs.length === PAGE_SIZE);

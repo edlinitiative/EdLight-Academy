@@ -176,35 +176,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    if (!convRef) {
-      // First message: create the shell doc, denormalizing the student's
-      // identity for the admin transcript browser (tolerate a missing doc).
-      let studentName = '';
-      let studentEmail = '';
-      try {
-        const userSnap = await db.collection('users').doc(uid).get();
-        const userData = userSnap.exists ? userSnap.data() || {} : {};
-        studentName = typeof userData.full_name === 'string' ? userData.full_name : '';
-        studentEmail = typeof userData.email === 'string' ? userData.email : '';
-      } catch (error) {
-        console.warn('chat: could not read users doc for', uid, error instanceof Error ? error.message : error);
-      }
-
-      convRef = conversations.doc();
-      await convRef.set({
-        uid,
-        studentName,
-        studentEmail,
-        startedAt: FieldValue.serverTimestamp(),
-        lastMessageAt: FieldValue.serverTimestamp(),
-        messageCount: 0,
-        lang,
-        firstPage: page?.path || '',
-        messages: [],
-      });
-    }
-
     // ── Retrieval + generation ──────────────────────────────────────────────
+    // NOTE: for a first message, the conversation doc is deliberately NOT
+    // created yet — if the LLM call below fails, nothing is persisted, so no
+    // empty 0-message shells pollute the admin transcript browser.
     const chunks = await retrieveChunks(db, message, page);
     const system = buildSandraSystemPrompt({ lang, page, chunks });
     const llmMessages = [
@@ -237,6 +212,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         message: 'Sandra est momentanément indisponible. Réessayez dans un instant.',
       });
       return;
+    }
+
+    if (!convRef) {
+      // First message and the LLM succeeded: create the shell doc now,
+      // denormalizing the student's identity for the admin transcript
+      // browser (tolerate a missing users doc).
+      let studentName = '';
+      let studentEmail = '';
+      try {
+        const userSnap = await db.collection('users').doc(uid).get();
+        const userData = userSnap.exists ? userSnap.data() || {} : {};
+        studentName = typeof userData.full_name === 'string' ? userData.full_name : '';
+        studentEmail = typeof userData.email === 'string' ? userData.email : '';
+      } catch (error) {
+        console.warn('chat: could not read users doc for', uid, error instanceof Error ? error.message : error);
+      }
+
+      convRef = conversations.doc();
+      await convRef.set({
+        uid,
+        studentName,
+        studentEmail,
+        startedAt: FieldValue.serverTimestamp(),
+        lastMessageAt: FieldValue.serverTimestamp(),
+        messageCount: 0,
+        lang,
+        firstPage: page?.path || '',
+        messages: [],
+      });
     }
 
     // ── Persist both turns atomically (one update) ──────────────────────────

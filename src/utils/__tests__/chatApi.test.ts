@@ -64,7 +64,7 @@ jest.mock('firebase-admin/firestore', () => ({
 import handler from '../../../api/chat';
 import { requireAuth } from '../../../api/_lib/requireAuth';
 import { checkRateLimit } from '../../../api/_lib/rateLimit';
-import { chatWithTools, embed } from '../../../api/_lib/llm';
+import { chatWithTools, embed, LLMError } from '../../../api/_lib/llm';
 import { SANDRA_TOOL_DEFS, createToolExecutor } from '../../../api/_lib/sandraTools';
 import { getDb } from '../../../api/_lib/firebaseAdmin';
 import { SANDRA_LIMITS } from '../../../api/_lib/sandraPrompt';
@@ -316,6 +316,41 @@ describe('api/chat handler', () => {
     expect((res.body as any).conversationFull).toBe(true);
     expect(embedMock).not.toHaveBeenCalled();
     expect(chatWithToolsMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('creates NO conversation doc when the LLM fails on a new conversation (502)', async () => {
+    // Regression: the shell doc used to be written before the LLM call, so a
+    // failed first message left an empty 0-message conversation behind that
+    // polluted the admin transcript browser.
+    const { db, setMock, updateMock } = makeDb({
+      userDoc: { full_name: 'Ti Jak', email: 'tijak@example.com' },
+    });
+    getDbMock.mockReturnValue(db);
+    chatWithToolsMock.mockRejectedValue(new LLMError('upstream exploded', 500, 'gemini'));
+
+    const res = makeRes();
+    await handler(makeReq(), res as any);
+
+    expect(res.statusCode).toBe(502);
+    expect((res.body as any).error).toBe('llm_failed');
+    expect(setMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it('leaves an existing conversation untouched when the LLM fails (502)', async () => {
+    const { db, setMock, updateMock } = makeDb({
+      existingConversation: { id: 'conv-9', data: { uid: 'uid-1', messageCount: 4, messages: [] } },
+    });
+    getDbMock.mockReturnValue(db);
+    chatWithToolsMock.mockRejectedValue(new LLMError('upstream exploded', 500, 'gemini'));
+
+    const res = makeRes();
+    await handler(makeReq({ body: { message: 'Salut', lang: 'fr', conversationId: 'conv-9' } }), res as any);
+
+    expect(res.statusCode).toBe(502);
+    expect((res.body as any).error).toBe('llm_failed');
+    expect(setMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
   });
 
