@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, Gamepad2 } from 'lucide-react';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -554,7 +554,6 @@ function GamesHub({ isCreole }) {
     <div className="games-hub">
       <div className="games-hub__hero">
         <div className="games-hub__hero-text">
-          <span className="games-hub__eyebrow"><Gamepad2 size={15} /> {isCreole ? 'Jwèt' : 'Jeux'}</span>
           <h1 className="games-hub__title">
             {isCreole ? 'Aprann pandan w ap jwe' : 'Apprenez en jouant'}
           </h1>
