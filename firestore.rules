@@ -100,6 +100,17 @@ service cloud.firestore {
                             && request.resource.data.uid == entryId;
       allow delete: if false;
     }
+
+    // Per-game record holders — one public doc with the best score per arcade
+    // game ({ games: { gameId: { score, displayName, uid } }, updatedAt }).
+    // Written by signed-in players when they beat a record; same client-trust
+    // MVP model as entries above.
+    match /leaderboards/records {
+      allow read: if true;
+      allow create, update: if request.auth != null
+                            && request.resource.data.keys().hasOnly(['games', 'updatedAt']);
+      allow delete: if false;
+    }
     
     // Courses collection: Public read access, admin write
     match /courses/{courseId} {

@@ -21,7 +21,7 @@
 import { db } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp, getWeeklyTop, isValidAlias, upsertAllTimeEntry } from './leaderboardService';
+import { addWeeklyXp, getWeeklyTop, isValidAlias, upsertAllTimeEntry, maybeSetGameRecord } from './leaderboardService';
 import { notifyLeaderboardRank } from './notificationService';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
@@ -288,6 +288,8 @@ export async function recordGameResult(uid, { gameId, score = 0, maxScore = 0 })
         city: updated.leaderboard.city || null,
         department: updated.leaderboard.department || null,
       }).catch(() => {});
+      // Hub "Records" strip — best-ever score per game. Fire and forget.
+      maybeSetGameRecord(uid, gameId, score, updated.leaderboard.displayName).catch(() => {});
     }
 
     return {

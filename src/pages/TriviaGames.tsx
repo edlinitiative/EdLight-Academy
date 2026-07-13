@@ -541,6 +541,49 @@ function TriviaClassic({ isCreole, onExitHub }) {
   );
 }
 
+/* ─── Records strip: best-ever score per game + holder ─── */
+function GameRecords({ isCreole }) {
+  const [records, setRecords] = useState({});
+  useEffect(() => {
+    let alive = true;
+    import('../services/leaderboardService').then(({ getGameRecords }) =>
+      getGameRecords().then((r) => { if (alive) setRecords(r); }),
+    );
+    return () => { alive = false; };
+  }, []);
+
+  const arcade = GAMES.filter((g) => g.id !== 'trivia');
+  if (!arcade.some((g) => records[g.id])) return null; // nothing set yet
+
+  return (
+    <div className="game-records">
+      <h3 className="game-records__title">
+        <Crown size={15} /> {isCreole ? 'Rekò yo' : 'Records'}
+      </h3>
+      <ul className="game-records__list">
+        {arcade.map((g) => {
+          const rec = records[g.id];
+          const Icon = GAME_ICONS[g.id];
+          return (
+            <li key={g.id} className="game-records__row">
+              <span className="game-records__game" style={{ color: g.color }}>
+                <Icon size={14} /> {isCreole ? g.nameHt : g.name}
+              </span>
+              {rec ? (
+                <span className="game-records__holder">
+                  {rec.displayName} · <strong>{rec.score}</strong>
+                </span>
+              ) : (
+                <span className="game-records__open">{isCreole ? 'Poko gen rekò !' : 'À prendre !'}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /* ─── Games hub (landing) ─── */
 function GamesHub({ isCreole }) {
   const navigate = useNavigate();
@@ -619,6 +662,7 @@ function GamesHub({ isCreole }) {
         </div>
         <aside className="games-hub__side">
           <Leaderboard variant="full" max={25} periodToggle />
+          <GameRecords isCreole={isCreole} />
         </aside>
       </div>
     </div>

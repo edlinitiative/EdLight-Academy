@@ -1073,6 +1073,59 @@
 .games-hub .trivia-daily--done .trivia-daily__sub { color: inherit; }
 .games-hub .trivia-daily--done .trivia-daily__icon { background: rgba(16, 185, 129, 0.14); color: #059669; }
 
+/* ─── Records strip (hub sidebar) ─── */
+.game-records {
+  margin-top: 1rem;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-color, #e6e8eb);
+  border-radius: 18px;
+  padding: 0.85rem 1rem;
+}
+
+.game-records__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.game-records__title svg { color: #d97706; }
+
+.game-records__list { list-style: none; margin: 0; padding: 0; }
+
+.game-records__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--border-color, #edf0f4);
+  font-size: 0.8rem;
+}
+
+.game-records__row:last-child { border-bottom: 0; }
+
+.game-records__game {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.game-records__holder { color: var(--text-muted, #667085); }
+.game-records__holder strong { color: inherit; font-weight: 800; }
+
+.game-records__open {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #d97706;
+  background: rgba(217, 119, 6, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
 /* ─── Arcade shell (per-game page) ─── */
 .trivia-page--arcade {
   max-width: 560px;

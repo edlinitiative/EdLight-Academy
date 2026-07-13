@@ -164,6 +164,47 @@ export async function getAllTimeTop(max = 50) {
   return getWeeklyTop(max, ALL_TIME_ID);
 }
 
+// ─── Per-game records ───────────────────────────────────────────────────────
+// One public doc holding the best-ever score per arcade game and who set it.
+// Only opted-in players (public alias) can hold a record. Client-maintained,
+// same MVP trust model as the weekly entries.
+
+function recordsRef() {
+  return doc(db, 'leaderboards', 'records');
+}
+
+/** { games: { [gameId]: { score, displayName, uid } } } — {} on error. */
+export async function getGameRecords() {
+  try {
+    const snap = await getDoc(recordsRef());
+    return snap.exists() ? (snap.data() as any).games || {} : {};
+  } catch (err) {
+    console.error('[Leaderboard] getGameRecords error:', err);
+    return {};
+  }
+}
+
+/** Claim the record for a game if `score` beats the current one. */
+export async function maybeSetGameRecord(uid, gameId, score, displayName) {
+  if (!uid || !gameId || !score || !isValidAlias(displayName)) return;
+  try {
+    const games = await getGameRecords();
+    const current = games[gameId];
+    if (current && current.score >= score && current.uid !== uid) return;
+    if (current && current.uid === uid && current.score >= score) return;
+    await setDoc(
+      recordsRef(),
+      {
+        games: { ...games, [gameId]: { score, displayName, uid } },
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    console.error('[Leaderboard] maybeSetGameRecord error:', err);
+  }
+}
+
 // ─── Reads ──────────────────────────────────────────────────────────────────
 
 /**
