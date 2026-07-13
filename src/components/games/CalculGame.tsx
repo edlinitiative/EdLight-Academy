@@ -123,6 +123,9 @@ export default function CalculGame({ isCreole, onExit, onRecord, highScore = nul
           <Flame size={15} /> {streak}
         </span>
       </div>
+      <div className="vf-game__timebar" aria-hidden="true">
+        <i style={{ width: `${(timeLeft / ROUND_SECONDS) * 100}%` }} />
+      </div>
 
       <div className={`calc-game__problem ${flash ? `calc-game__problem--${flash}` : ''}`}>
         <span className="calc-game__expr" translate="no">{problem.text} =</span>

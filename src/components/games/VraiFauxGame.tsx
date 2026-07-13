@@ -110,6 +110,9 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
           <Flame size={15} /> {streak}
         </span>
       </div>
+      <div className="vf-game__timebar" aria-hidden="true">
+        <i style={{ width: `${(timeLeft / ROUND_SECONDS) * 100}%` }} />
+      </div>
 
       <div className={`vf-game__card ${feedback ? `vf-game__card--${feedback}` : ''}`}>
         {item.flag && (

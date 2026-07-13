@@ -604,18 +604,14 @@ function GamesHub({ isCreole }) {
                   style={{ ['--game-color' as any]: g.color }}
                   onClick={() => navigate(`/jeux/${g.id}`)}
                 >
-                  <span className="game-card__band" aria-hidden="true">
-                    <Icon size={26} />
-                    {hs != null && (
-                      <span className="game-card__hs"><Trophy size={11} /> {hs}</span>
-                    )}
-                  </span>
-                  <span className="game-card__body">
-                    <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
-                    <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
-                    <span className="game-card__meta">
-                      <Clock size={12} /> ~{g.minutes} min
-                    </span>
+                  <span className="game-card__icon" aria-hidden="true"><Icon size={26} /></span>
+                  {hs != null && (
+                    <span className="game-card__hs"><Trophy size={11} /> {hs}</span>
+                  )}
+                  <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
+                  <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
+                  <span className="game-card__meta">
+                    <Clock size={12} /> ~{g.minutes} min
                   </span>
                 </button>
               );
