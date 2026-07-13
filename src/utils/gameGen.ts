@@ -33,6 +33,10 @@ export function buildVraiFauxItems(questionsMap, count = 60) {
       proposed,
       truth,
       correctAnswer: q.options[q.answer],
+      // Flag questions ("De quel pays est ce drapeau ?") are meaningless
+      // without their flag — carry it through so the game can render it.
+      flag: q.flag || null,
+      flagIso: q.flagIso || null,
     };
   });
 }

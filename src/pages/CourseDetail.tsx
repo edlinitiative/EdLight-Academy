@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Target, Flame, Check, X, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
-import { useAppData } from '../hooks/useData';
+import { useAppData, useCourses } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
 import UnitQuiz from '../components/UnitQuiz';
@@ -63,6 +63,11 @@ export default function CourseDetail() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, isError, isFetching, refetch } = useAppData();
+  // The lightweight catalog hydrates instantly from localStorage and already
+  // carries the full unit/lesson structure — enough to paint this page while
+  // the heavy appData query (video URLs, quiz payloads) loads in the
+  // background. Clicking a course card should never show a full-page skeleton.
+  const { data: catalog } = useCourses();
   const [view, setView] = useState('overview'); // 'overview' | 'lesson'
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
@@ -75,7 +80,11 @@ export default function CourseDetail() {
   const recordActivity = useStore((s) => s.recordActivity);
   const { progress } = useCourseProgress(courseId);
 
-  const course = data?.courses?.find((c) => c.id === courseId);
+  const enrichedCourse = data?.courses?.find((c) => c.id === courseId);
+  const course = enrichedCourse ?? catalog?.find((c) => c.id === courseId);
+  // True while we're showing the catalog version and the enriched one
+  // (real video URLs) is still on its way.
+  const enriching = !enrichedCourse && (isLoading || isFetching);
   const isEnrolled = enrolledCourses.some((c) => c.id === courseId);
   const modules = course?.modules ?? [];
   const activeModuleData = modules[activeModule] ?? null;
@@ -88,12 +97,17 @@ export default function CourseDetail() {
     ?? activeModuleData?.objective
     ?? course?.description
     ?? '';
-  const primaryVideoRaw =
+  const primaryVideoRawCandidate =
     activeLessonData?.videoUrl
     || activeModuleData?.videoUrl
     || lessonBreakdown?.[0]?.videoUrl
     || course?.trailerUrl
     || '';
+  // The catalog-only course carries a literal ".../embed/placeholder" URL for
+  // video lessons — never feed that to the player; wait for enrichment.
+  const primaryVideoRaw = primaryVideoRawCandidate.endsWith('/placeholder')
+    ? ''
+    : primaryVideoRawCandidate;
   
   // Check if it's a YouTube URL and extract video ID
   const isYouTubeVideo = primaryVideoRaw && (
@@ -316,7 +330,7 @@ export default function CourseDetail() {
     }
   }, [activeLessonData, user, isEnrolled, youtubeVideoId]);
 
-  if (isLoading) {
+  if (isLoading && !course) {
     return (
       <div className="section course-detail">
         <div className="container course-detail__container">
@@ -350,7 +364,7 @@ export default function CourseDetail() {
     );
   }
 
-  if (isError && !data) {
+  if (isError && !data && !course) {
     return (
       <div className="section">
         <div className="container">
@@ -358,6 +372,12 @@ export default function CourseDetail() {
         </div>
       </div>
     );
+  }
+
+  if (!course && (isLoading || isFetching)) {
+    // Neither the catalog nor appData knows this course yet, but a fetch is
+    // still in flight — don't flash "course not found".
+    return null;
   }
 
   if (!course) {
@@ -487,6 +507,9 @@ export default function CourseDetail() {
                       allowFullScreen
                     />
                   )
+                ) : enriching ? (
+                  // Video URL is still loading (catalog paint, appData in flight).
+                  <Skeleton width="100%" height="100%" radius={0} />
                 ) : (
                   <div className="lesson-card__placeholder">
                     {t('courses.videoPlaceholder', 'Le contenu vidéo apparaîtra ici dès qu\'il sera disponible.')}

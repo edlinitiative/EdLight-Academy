@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Target, Layers, Check, Sigma, Atom, FlaskConical, LineChart, BookOpen } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCourses } from '../hooks/useData';
+import { loadAppData } from '../services/dataService';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { CourseCard } from '../components/Course';
 import { EmptyState, ErrorState } from '../components/StateViews';
@@ -100,6 +102,27 @@ function LevelFilter({ value, onChange, levels, hasEnrolled, t }) {
 export default function Courses() {
   const navigate = useNavigate();
   const { data: courses = [], isLoading, isError, isFetching, refetch } = useCourses();
+  const queryClient = useQueryClient();
+
+  // Warm what a course-card click needs — the heavy appData query (video
+  // URLs, quizzes) and the CourseDetail chunk — while the learner is still
+  // browsing, so the detail page opens instantly even on slow networks.
+  useEffect(() => {
+    const warm = () => {
+      queryClient.prefetchQuery({
+        queryKey: ['appData'],
+        queryFn: loadAppData,
+        staleTime: 5 * 60 * 1000,
+      });
+      import('./CourseDetail').catch(() => {});
+    };
+    const idle = (window as any).requestIdleCallback || ((fn) => setTimeout(fn, 300));
+    const handle = idle(warm);
+    return () => {
+      const cancel = (window as any).cancelIdleCallback || clearTimeout;
+      cancel(handle);
+    };
+  }, [queryClient]);
   const [filter, setFilter] = useState('all');
   const [subject, setSubject] = useState('all');
   const { enrolledCourses, progress: storeProgress } = useStore();

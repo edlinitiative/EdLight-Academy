@@ -88,7 +88,7 @@ function metaKeyForPath(pathname: string): string | null {
     [/^\/quizzes(\/|$)/, 'quizzes'],
     [/^\/exams(\/|$)/, 'exams'],
     [/^\/study-plan(\/|$)/, 'studyPlan'],
-    [/^\/trivia(\/|$)/, 'trivia'],
+    [/^\/(jeux|trivia)(\/|$)/, 'trivia'],
     [/^\/about(\/|$)/, 'about'],
     [/^\/contact(\/|$)/, 'contact'],
     [/^\/faq(\/|$)/, 'faq'],

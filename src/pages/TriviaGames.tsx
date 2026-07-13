@@ -588,7 +588,7 @@ function GamesHub({ isCreole }) {
       <DailyChallengeBanner
         daily={daily}
         isCreole={isCreole}
-        onStart={() => navigate('/trivia/trivia', { state: { startDaily: true } })}
+        onStart={() => navigate('/jeux/trivia', { state: { startDaily: true } })}
       />
 
       <div className="games-hub__layout">
@@ -602,7 +602,7 @@ function GamesHub({ isCreole }) {
                   key={g.id}
                   className="game-card"
                   style={{ ['--game-color' as any]: g.color }}
-                  onClick={() => navigate(`/trivia/${g.id}`)}
+                  onClick={() => navigate(`/jeux/${g.id}`)}
                 >
                   <span className="game-card__band" aria-hidden="true">
                     <Icon size={26} />
@@ -644,10 +644,10 @@ export default function TriviaGames() {
 
   // Unknown game id → back to the hub.
   useEffect(() => {
-    if (gameId && !game) navigate('/trivia', { replace: true });
+    if (gameId && !game) navigate('/jeux', { replace: true });
   }, [gameId, game, navigate]);
 
-  const exit = useCallback(() => navigate('/trivia'), [navigate]);
+  const exit = useCallback(() => navigate('/jeux'), [navigate]);
   const highScores = profile?.games?.highScores || {};
 
   if (!game) return <GamesHub isCreole={isCreole} />;

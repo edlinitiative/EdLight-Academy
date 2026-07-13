@@ -79,7 +79,7 @@ function DailyChallengeWidget({ t }) {
           ? t('Terminé — revenez demain', 'Fini — retounen demen')
           : t('10 questions · gagnez des XP', '10 kesyon · ranmase XP')
       }
-      onClick={() => navigate('/trivia', { state: { startDaily: !done } })}
+      onClick={() => navigate('/jeux/trivia', { state: { startDaily: !done } })}
       ariaLabel={t('Défi quotidien', 'Defi chak jou')}
     />
   );

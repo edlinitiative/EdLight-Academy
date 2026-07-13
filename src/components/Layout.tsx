@@ -44,7 +44,7 @@ export function Layout() {
   // quiz -> results). It keeps the bottom tab bar for navigation, but the
   // marketing footer (Contact/Confidentialité/Conditions) is out of place in a
   // game screen, so we drop it here.
-  const isTrivia = pathname === '/trivia';
+  const isTrivia = pathname === '/jeux' || pathname.startsWith('/jeux/') || pathname === '/trivia';
   const isImmersive = isExamTaking;
   // `focusMode` is a transient store flag set by phase-based flows (via the
   // useFocusMode hook) that can't be detected from the URL alone — e.g. an

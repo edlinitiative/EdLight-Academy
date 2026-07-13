@@ -315,7 +315,7 @@ export async function notifyLeaderboardRank(userId: string, rank: number): Promi
   const icon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏆';
   const title = `${icon} Tu es #${rank} du classement !`;
   const body = `Continue ainsi pour rester dans le top ${rank <= 3 ? '3' : '10'} cette semaine.`;
-  const opts = { body, tag: 'leaderboard-rank', url: '/trivia' };
+  const opts = { body, tag: 'leaderboard-rank', url: '/jeux' };
   try {
     await maybeShowOsNotification(userId, 'achievementNotifications', title, opts);
     await sendServerPush(title, opts);

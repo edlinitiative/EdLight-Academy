@@ -112,6 +112,21 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
       </div>
 
       <div className={`vf-game__card ${feedback ? `vf-game__card--${feedback}` : ''}`}>
+        {item.flag && (
+          <div className="vf-game__flag">
+            {item.flagIso ? (
+              <img
+                src={`https://flagcdn.com/w320/${item.flagIso}.png`}
+                srcSet={`https://flagcdn.com/w640/${item.flagIso}.png 2x`}
+                alt=""
+                className="vf-game__flag-img"
+                loading="eager"
+              />
+            ) : (
+              <span className="vf-game__flag-emoji" aria-hidden>{item.flag}</span>
+            )}
+          </div>
+        )}
         <p className="vf-game__question">{isCreole ? item.qHt : item.q}</p>
         <p className="vf-game__proposed">{item.proposed}</p>
         {feedback === 'wrong' && (

@@ -32,7 +32,7 @@ export default function ExperienceSection({ t }: { t: TFn }) {
               <button className="lp-btn lp-btn--primary" onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}>
                 {t('Créer mon espace', 'Kreye espas mwen')}
               </button>
-              <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/trivia')}>{t('Essayer la trivia', 'Eseye trivia')}</button>
+              <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/jeux')}>{t('Essayer la trivia', 'Eseye trivia')}</button>
             </div>
           </div>
 

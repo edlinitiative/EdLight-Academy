@@ -17,7 +17,7 @@ const TABS = [
   { to: '/', label: 'Accueil', icon: Home, exact: true },
   { to: '/courses', label: 'Cours', icon: BookOpen },
   { to: '/exams', label: 'Examens', icon: ClipboardList },
-  { to: '/trivia', label: 'Trivia', icon: Gamepad2 },
+  { to: '/jeux', label: 'Jeux', icon: Gamepad2 },
   { to: '/profile', label: 'Profil', icon: User },
 ];
 

@@ -1082,6 +1082,16 @@
 .vf-game__card--right { border-color: #10b981; background: rgba(16, 185, 129, 0.07); }
 .vf-game__card--wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.07); }
 
+.vf-game__flag { display: flex; justify-content: center; }
+
+.vf-game__flag-img {
+  width: 120px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+
+.vf-game__flag-emoji { font-size: 3rem; line-height: 1; }
+
 .vf-game__question { margin: 0; font-size: 0.95rem; color: var(--text-600, #475467); }
 
 .vf-game__proposed {

@@ -118,7 +118,7 @@ export function buildRetentionNotification(
           ? '10 kesyon, jiska 50 XP an plis. Ann ale!'
           : '10 questions, jusqu’à 50 XP bonus. C’est parti !',
         tag: 'daily-challenge-nudge',
-        url: '/trivia',
+        url: '/jeux',
       };
     case 'study':
     default:
