@@ -240,6 +240,14 @@
 
 .leaderboard__join-pitch svg { color: #10b981; flex: 0 0 auto; }
 
+.leaderboard__join-pitch--warn svg { color: #f59e0b; }
+
+.leaderboard__field-error {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #b45309;
+}
+
 .leaderboard__form {
   display: flex;
   flex-direction: column;
@@ -253,6 +261,14 @@
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted, #667085);
+}
+
+/* Département/ville selects reuse .input-field but need native-select resets */
+.leaderboard__field select.input-field {
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: 100%;
+  cursor: pointer;
 }
 
 .leaderboard__form-actions {

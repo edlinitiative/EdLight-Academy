@@ -7,7 +7,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { getWeeklyTop, weekId } from '../services/leaderboardService';
+import { getWeeklyTop, weekId, isValidAlias } from '../services/leaderboardService';
 
 export function useLeaderboard(max = 25) {
   const user = useStore((s) => s.user);
@@ -21,7 +21,13 @@ export function useLeaderboard(max = 25) {
     refetchOnWindowFocus: true,
   });
 
-  const list = entries || [];
+  // Entries without a usable pseudo (legacy "." etc.) keep their XP in
+  // Firestore but never render publicly — re-rank over the named ones so the
+  // board shows no gaps. A nameless viewer gets myRank=null and is prompted
+  // to pick a pseudo by the Leaderboard UI.
+  const list = (entries || [])
+    .filter((e) => isValidAlias(e.displayName))
+    .map((e, i) => ({ ...e, rank: i + 1 }));
   const myEntry = uid ? list.find((e) => e.id === uid) || null : null;
 
   return {

@@ -6,7 +6,7 @@
  * week id — no scheduled cleanup required.
  *
  * Firestore path: leaderboards/{weekId}/entries/{uid}
- *   { uid, displayName, level, xp, school, city, weekId, updatedAt }
+ *   { uid, displayName, level, xp, school, city, department, weekId, updatedAt }
  *
  * Privacy: entries are written ONLY for learners who opt in (see triviaService
  * `setLeaderboardOptIn`). Display names default to a first-name + initial alias,
@@ -29,6 +29,15 @@ import {
   orderBy,
   limit as fbLimit,
 } from 'firebase/firestore';
+
+/**
+ * A public alias must contain at least one letter. Entries that fail this
+ * (legacy ".", empty, digits-only) are never rendered on the board — the owner
+ * is prompted to pick a pseudo instead of us inventing one for them.
+ */
+export function isValidAlias(name) {
+  return /\p{L}/u.test(String(name || ''));
+}
 
 // ─── Week id ────────────────────────────────────────────────────────────────
 
@@ -73,10 +82,13 @@ export async function addWeeklyXp(uid, xp, meta: any = {}) {
       entryRef(id, uid),
       {
         uid,
-        displayName: meta.displayName || 'Élève',
+        // No fabricated fallback name — a null alias keeps accumulating XP but
+        // stays hidden from the board until the learner picks a pseudo.
+        displayName: isValidAlias(meta.displayName) ? meta.displayName : null,
         level: meta.level || 1,
         school: meta.school || null,
         city: meta.city || null,
+        department: meta.department || null,
         weekId: id,
         xp: increment(xp),
         updatedAt: serverTimestamp(),
@@ -109,6 +121,7 @@ export async function updateEntryProfile(uid, meta: any = {}) {
         ...(meta.level != null ? { level: meta.level } : {}),
         ...(meta.school !== undefined ? { school: meta.school } : {}),
         ...(meta.city !== undefined ? { city: meta.city } : {}),
+        ...(meta.department !== undefined ? { department: meta.department } : {}),
         updatedAt: serverTimestamp(),
       },
       { merge: true },

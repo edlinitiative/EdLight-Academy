@@ -21,7 +21,7 @@
 import { db } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp, getWeeklyTop } from './leaderboardService';
+import { addWeeklyXp, getWeeklyTop, isValidAlias } from './leaderboardService';
 import { notifyLeaderboardRank } from './notificationService';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ export function defaultTriviaProfile() {
     byCategory: {},
     dailyChallenge: { date: null, completed: false, score: 0, total: 0, xpEarned: 0 },
     lastPlayedDate: null,
-    leaderboard: { optedIn: false, displayName: '', school: null, city: null },
+    leaderboard: { optedIn: false, displayName: '', school: null, city: null, department: null },
   };
 }
 
@@ -188,10 +188,11 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
     // Opt-in weekly leaderboard submission + rank notification.
     if (updated.leaderboard?.optedIn && xpEarned > 0) {
       await addWeeklyXp(uid, xpEarned, {
-        displayName: updated.leaderboard.displayName || 'Élève',
+        displayName: updated.leaderboard.displayName || null,
         level: newLevelInfo.level,
         school: updated.leaderboard.school || null,
         city: updated.leaderboard.city || null,
+        department: updated.leaderboard.department || null,
       });
       // Best-effort rank notification — fire and forget.
       getWeeklyTop(50).then((top) => {
@@ -218,15 +219,19 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
  * Opt in/out of the leaderboard and set the public alias / school. When opting
  * in we also seed/refresh this week's entry so the learner shows up immediately.
  */
-export async function setLeaderboardOptIn(uid, { optedIn, displayName, school, city }) {
+export async function setLeaderboardOptIn(uid, { optedIn, displayName, school, city, department }: any) {
   if (!uid) return null;
   try {
     const current = await loadTriviaProfile(uid);
+    const alias = displayName ?? current.leaderboard?.displayName;
     const leaderboard = {
       optedIn: !!optedIn,
-      displayName: displayName ?? current.leaderboard?.displayName ?? 'Élève',
+      // Letter-less pseudos (".") are stored as null — the board hides them
+      // and the owner gets a "choose a pseudo" prompt instead.
+      displayName: isValidAlias(alias) ? alias : null,
       school: school !== undefined ? school : current.leaderboard?.school ?? null,
       city: city !== undefined ? city : current.leaderboard?.city ?? null,
+      department: department !== undefined ? department : current.leaderboard?.department ?? null,
     };
     await setDoc(profileRef(uid), { leaderboard, updatedAt: serverTimestamp() }, { merge: true });
 
@@ -237,6 +242,7 @@ export async function setLeaderboardOptIn(uid, { optedIn, displayName, school, c
         level: levelInfo(current.xp).level,
         school: leaderboard.school,
         city: leaderboard.city,
+        department: leaderboard.department,
       });
     }
     return { ...current, leaderboard };

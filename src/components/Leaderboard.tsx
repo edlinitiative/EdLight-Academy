@@ -16,14 +16,17 @@ import { Trophy, Crown, Medal, Flame, ChevronRight, ShieldCheck, Pencil } from '
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
+import { isValidAlias } from '../services/leaderboardService';
+import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity, cityKey } from '../data/haitiGeo';
 import './Leaderboard.css';
 
 // First name only — the board is publicly readable, so never expose any part
-// of the last name (not even an initial).
+// of the last name (not even an initial). Empty when the account has no name:
+// we never invent a pseudo, the learner is asked to pick one.
 function defaultAlias(user) {
   const name = user?.name || user?.displayName || '';
   const parts = String(name).trim().split(/\s+/).filter(Boolean);
-  return parts[0] || 'Élève';
+  return parts[0] || '';
 }
 
 // Anonymized example ranking shown when the board is still empty so the feature
@@ -56,21 +59,48 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
   const optedIn = !!profile?.leaderboard?.optedIn;
   const mySchool = profile?.leaderboard?.school || null;
   const myCity = profile?.leaderboard?.city || null;
+  // Opted in but no usable pseudo (legacy "." etc.) → hidden from the board
+  // until they pick one; we surface a prompt instead.
+  const needsAlias = optedIn && !isValidAlias(profile?.leaderboard?.displayName);
 
   const [scope, setScope] = useState('national'); // 'school' | 'city' | 'national'
   const [showForm, setShowForm] = useState(false);
   const [alias, setAlias] = useState(defaultAlias(user));
   const [school, setSchool] = useState(mySchool || '');
-  const [city, setCity] = useState(myCity || '');
+  // Ville is picked département → ville so everyone spells it the same way and
+  // the Ville ranking actually groups classmates. OTHER_CITY unlocks free text.
+  const [department, setDepartment] = useState('');
+  const [cityChoice, setCityChoice] = useState('');
+  const [customCity, setCustomCity] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const deptCities = citiesOf(department);
+
   // Seed the form from the (async-loaded) profile every time it opens, so
-  // editing always starts from what's currently saved.
+  // editing always starts from what's currently saved. Legacy free-typed
+  // cities are remapped onto the canonical commune when they match one.
   const openForm = () => {
     setAlias(profile?.leaderboard?.displayName || defaultAlias(user));
     setSchool(mySchool || '');
-    setCity(myCity || '');
+    const savedDept = profile?.leaderboard?.department || '';
+    const known = myCity ? findCity(myCity) : null;
+    if (known) {
+      setDepartment(known.department);
+      setCityChoice(known.city);
+      setCustomCity('');
+    } else {
+      setDepartment(savedDept);
+      setCityChoice(myCity ? OTHER_CITY : '');
+      setCustomCity(myCity || '');
+    }
     setShowForm(true);
+  };
+
+  const pickDepartment = (name) => {
+    setDepartment(name);
+    // Diaspora has no commune list → jump straight to the free-text field.
+    setCityChoice(name && citiesOf(name).length === 0 ? OTHER_CITY : '');
+    setCustomCity('');
   };
 
   const visible = useMemo(() => {
@@ -78,19 +108,26 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
       return entries.filter((e) => e.school && e.school === mySchool);
     }
     if (scope === 'city' && myCity) {
-      return entries.filter((e) => e.city && e.city === myCity);
+      // Normalized match so legacy free-typed spellings ("Port-au-prince",
+      // "Port au Prince") still land in the same ville board.
+      return entries.filter((e) => e.city && cityKey(e.city) === cityKey(myCity));
     }
     return entries;
   }, [entries, scope, mySchool, myCity]);
 
+  const aliasOk = isValidAlias(alias.trim());
+
   const save = async () => {
+    if (!aliasOk) return; // Confirmer is disabled, but belt-and-braces
     setSaving(true);
     try {
+      const city = cityChoice === OTHER_CITY ? customCity.trim() : cityChoice;
       await setLeaderboardOptIn({
         optedIn: true,
-        displayName: (alias || defaultAlias(user)).slice(0, 24),
+        displayName: alias.trim().slice(0, 24),
         school: school.trim() || null,
-        city: city.trim() || null,
+        city: city || null,
+        department: department || null,
       });
       setShowForm(false);
       refetch(); // so the École/Ville tabs reflect the new info right away
@@ -233,8 +270,16 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                   value={alias}
                   maxLength={24}
                   onChange={(e) => setAlias(e.target.value)}
-                  placeholder={defaultAlias(user)}
+                  placeholder={defaultAlias(user) || t('Votre pseudo', 'Ti non ou')}
                 />
+                {!aliasOk && (
+                  <span className="leaderboard__field-error">
+                    {t(
+                      'Choisissez un pseudo (au moins une lettre) pour apparaître dans le classement.',
+                      'Chwazi yon ti non (omwen yon lèt) pou parèt nan klasman an.',
+                    )}
+                  </span>
+                )}
               </label>
               <label className="leaderboard__field">
                 <span>{t('École (optionnel)', 'Lekòl (opsyonèl)')}</span>
@@ -247,20 +292,50 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                 />
               </label>
               <label className="leaderboard__field">
-                <span>{t('Ville (optionnel)', 'Vil (opsyonèl)')}</span>
-                <input
+                <span>{t('Département (optionnel)', 'Depatman (opsyonèl)')}</span>
+                <select
                   className="input-field"
-                  value={city}
-                  maxLength={60}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder={t('Votre ville', 'Vil ou')}
-                />
+                  value={department}
+                  onChange={(e) => pickDepartment(e.target.value)}
+                >
+                  <option value="">{t('— Choisir —', '— Chwazi —')}</option>
+                  {HAITI_DEPARTMENTS.map((d) => (
+                    <option key={d.name} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
               </label>
+              {department && (
+                <label className="leaderboard__field">
+                  <span>{t('Ville (optionnel)', 'Vil (opsyonèl)')}</span>
+                  {deptCities.length > 0 && (
+                    <select
+                      className="input-field"
+                      value={cityChoice}
+                      onChange={(e) => { setCityChoice(e.target.value); setCustomCity(''); }}
+                    >
+                      <option value="">{t('— Choisir —', '— Chwazi —')}</option>
+                      {deptCities.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value={OTHER_CITY}>{t('Autre ville…', 'Lòt vil…')}</option>
+                    </select>
+                  )}
+                  {cityChoice === OTHER_CITY && (
+                    <input
+                      className="input-field"
+                      value={customCity}
+                      maxLength={60}
+                      onChange={(e) => setCustomCity(e.target.value)}
+                      placeholder={t('Nom de votre ville', 'Non vil ou')}
+                    />
+                  )}
+                </label>
+              )}
               <div className="leaderboard__form-actions">
                 <button className="button button--ghost" onClick={() => setShowForm(false)} disabled={saving}>
                   {t('Annuler', 'Anile')}
                 </button>
-                <button className="button button--primary" onClick={save} disabled={saving}>
+                <button className="button button--primary" onClick={save} disabled={saving || !aliasOk}>
                   {saving ? t('…', '…') : t('Confirmer', 'Konfime')}
                 </button>
               </div>
@@ -278,6 +353,19 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
                 {t('Rejoindre le classement', 'Antre nan klasman')}
               </button>
             </>
+          ) : needsAlias ? (
+            <>
+              <p className="leaderboard__join-pitch leaderboard__join-pitch--warn">
+                <Pencil size={15} />
+                {t(
+                  'Il vous manque un pseudo — choisissez-en un pour apparaître dans le classement.',
+                  'Ou manke yon ti non — chwazi youn pou parèt nan klasman an.',
+                )}
+              </p>
+              <button className="button button--primary" onClick={openForm}>
+                {t('Choisir un pseudo', 'Chwazi yon ti non')}
+              </button>
+            </>
           ) : (
             <button className="leaderboard__edit" onClick={openForm}>
               <Pencil size={13} />
@@ -289,7 +377,11 @@ export default function Leaderboard({ variant = 'full', max = 25 }) {
 
       {compact && isAuthed && (
         <div className="leaderboard__compact-foot">
-          {optedIn ? (
+          {needsAlias ? (
+            <button className="leaderboard__more" onClick={() => navigate('/profile')}>
+              {t('Choisir un pseudo →', 'Chwazi yon ti non →')}
+            </button>
+          ) : optedIn ? (
             <span className="text-muted">
               {myRank
                 ? t(`Vous êtes #${myRank} cette semaine`, `Ou nan #${myRank} semèn sa a`)
