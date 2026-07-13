@@ -182,19 +182,20 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
   return (
     <div className="trivia-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
       <div className="trivia-quiz__top-bar">
-        <button className="trivia-back-btn trivia-back-btn--sm" onClick={onBack}>
-          <X size={18} />
+        <button className="trivia-quiz__close" onClick={onBack} aria-label={isCreole ? 'Kite' : 'Quitter'}>
+          <X size={16} />
         </button>
-        <div className="trivia-quiz__progress-wrap">
-          <div className="trivia-quiz__progress-bar">
-            <div className="trivia-quiz__progress-fill" style={{ width: `${progress}%` }} />
-          </div>
-          <span className="trivia-quiz__counter">
-            {current + 1} / {questions.length}
+        <div className="trivia-quiz__progress-bar">
+          <div
+            className="trivia-quiz__progress-fill"
+            style={{ width: `${((current + (answered ? 1 : 0)) / questions.length) * 100}%` }}
+          />
+          <span className="trivia-quiz__counter" translate="no">
+            {current + 1}/{questions.length}
           </span>
         </div>
         <div className="trivia-quiz__score-badge">
-          <Star size={16} /> {score}
+          <Star size={13} /> {score}
         </div>
       </div>
 

@@ -319,42 +319,80 @@
   width: 100%;
 }
 
-.trivia-quiz__progress-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+/* Quiet round close button — present but not competing with the question. */
+.trivia-quiz__close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-alt, #eef1f6);
+  color: var(--text-500, #667085);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
+.trivia-quiz__close:hover {
+  background: var(--border-color, #e2e7ef);
+  color: var(--text-800, #1d2939);
+}
+
+/* Chunky arcade track with the counter riding inside it. */
 .trivia-quiz__progress-bar {
-  height: 6px;
+  position: relative;
+  flex: 1;
+  height: 18px;
   border-radius: 999px;
-  background: rgba(27, 111, 224, 0.1);
+  background: var(--surface-alt, #e9edf4);
   overflow: hidden;
 }
 
 .trivia-quiz__progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--cat-color, var(--primary-500));
-  transition: width 0.35s ease;
+  background: linear-gradient(90deg, var(--cat-color, #1B6FE0), color-mix(in srgb, var(--cat-color, #1B6FE0) 65%, #fff));
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .trivia-quiz__counter {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-400);
-  text-align: right;
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface, #fff) 85%, transparent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--text-600, #475467);
+  font-variant-numeric: tabular-nums;
 }
 
+/* Score as a tilted arcade sticker, star in the category colour. */
 .trivia-quiz__score-badge {
-  padding: 0.35rem 0.65rem;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  background: rgba(8, 87, 166, 0.15);
-  color: #1558B8;
-  font-size: 0.78rem;
-  font-weight: 700;
+  background: var(--surface, #fff);
+  color: var(--text-800, #1d2939);
+  font-size: 0.85rem;
+  font-weight: 800;
   white-space: nowrap;
+  transform: rotate(3deg);
+  box-shadow: 0 2px 8px rgba(10, 20, 40, 0.16);
+  font-variant-numeric: tabular-nums;
+}
+
+.trivia-quiz__score-badge svg {
+  color: var(--cat-color, #1B6FE0);
+  fill: var(--cat-color, #1B6FE0);
 }
 
 /* Timer ring */
