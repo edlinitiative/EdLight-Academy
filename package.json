@@ -62,6 +62,7 @@
     "start": "webpack serve --mode development",
     "prebuild": "node scripts/split_exam_catalog.mjs",
     "build": "webpack --mode production",
+    "postbuild": "node scripts/prerender_routes.mjs",
     "split:exams": "node scripts/split_exam_catalog.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
