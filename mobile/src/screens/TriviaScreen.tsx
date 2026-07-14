@@ -7,17 +7,24 @@ import Svg, { Circle, SvgUri } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
-import { addWeeklyXp, getWeeklyTop } from '../services/leaderboardService';
+import { getWeeklyTop } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
-import { getFirstName } from '../utils/shared';
 import MathText from '../components/MathText';
 import { scheduleTriviaReminder, notifyLeaderboardRank } from '../services/notificationService';
+import JeuxHub from '../components/games/JeuxHub';
+import VraiFauxGame from '../components/games/VraiFauxGame';
+import MemoireGame from '../components/games/MemoireGame';
+import MoKacheGame from '../components/games/MoKacheGame';
+import CalculGame from '../components/games/CalculGame';
+import SuitesGame from '../components/games/SuitesGame';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type TriviaPhase = 'categories' | 'roundPicker' | 'playing' | 'results';
+// 'hub' = the Jeux arcade landing; 'arcade' = one of the non-trivia games;
+// the remaining phases are the classic trivia flow.
+type TriviaPhase = 'hub' | 'arcade' | 'categories' | 'roundPicker' | 'playing' | 'results';
 
 interface PreparedQuestion {
   q: string;
@@ -816,10 +823,11 @@ export default function TriviaScreen() {
   const { user, language, incrementGuestInteraction, setFocusMode } = useStore();
   const isCreole = language === 'ht';
 
-  const { level } = useTrivia();
+  const { profile, recordResult, recordGameResult } = useTrivia();
   const { recordActivity } = useStreak();
 
-  const [phase, setPhase] = useState<TriviaPhase>('categories');
+  const [phase, setPhase] = useState<TriviaPhase>('hub');
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [roundSize, setRoundSize] = useState(10);
   const [questions, setQuestions] = useState<PreparedQuestion[]>([]);
@@ -829,10 +837,12 @@ export default function TriviaScreen() {
   // covers the answer & confirm buttons. Reset when leaving the Trivia tab.
   useFocusEffect(
     useCallback(() => {
-      setFocusMode(phase === 'playing' || phase === 'results');
+      setFocusMode(phase === 'playing' || phase === 'results' || phase === 'arcade');
       return () => setFocusMode(false);
     }, [phase, setFocusMode]),
   );
+
+  const highScores: Record<string, number> = (profile as any)?.games?.highScores || {};
 
   // Start from category selection
   const handleSelectCategory = useCallback((categoryId: string) => {
@@ -866,23 +876,35 @@ export default function TriviaScreen() {
       // Schedule a trivia reminder for tomorrow (best-effort)
       scheduleTriviaReminder().catch(() => {});
 
-      // Add XP to weekly leaderboard, then notify rank if top 10
-      const xp = score * 10;
-      if (user?.uid && xp > 0) {
-        addWeeklyXp(user.uid, xp, {
-          displayName: getFirstName(user),
-          level: level?.level,
-        })
-          .then(() => getWeeklyTop(50))
-          .then((top) => {
+      // Persist XP/profile via the shared gamification service. Leaderboard
+      // submission happens inside recordResult and ONLY for opted-in players
+      // with their chosen pseudo — never the raw account name (the previous
+      // direct addWeeklyXp call here published first names without opt-in).
+      recordResult({ category: selectedCategory?.id, score, total })
+        .then(() => {
+          if (!user?.uid) return null;
+          return getWeeklyTop(50).then((top) => {
             const entry = top.find((e: any) => e.id === user.uid);
             if (entry && entry.rank <= 10) notifyLeaderboardRank(entry.rank).catch(() => {});
-          })
-          .catch(console.warn);
-      }
+          });
+        })
+        .catch(console.warn);
     },
-    [recordActivity, user, level, incrementGuestInteraction],
+    [recordActivity, user, incrementGuestInteraction, recordResult, selectedCategory],
   );
+
+  // Arcade wiring — shared reward contract with the classic flow.
+  const exitToHub = useCallback(() => {
+    setPhase('hub');
+    setSelectedGame(null);
+    setSelectedCategory(null);
+  }, []);
+
+  const arcadeProps = {
+    isCreole,
+    onExit: exitToHub,
+    onRecord: recordGameResult,
+  };
 
   // "Rejouer" — replay with same category + round size
   const handleRetry = useCallback(() => {
@@ -902,12 +924,51 @@ export default function TriviaScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top']}>
-      {/* Persistent XP + streak header */}
-      <TriviaHeader />
-
       {/* Phase router */}
+      {phase === 'hub' && (
+        <JeuxHub
+          onSelectGame={(id) => { setSelectedGame(id); setPhase('arcade'); }}
+          onStartTrivia={() => setPhase('categories')}
+        />
+      )}
+
+      {phase === 'arcade' && selectedGame && (
+        <View className="flex-1">
+          <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+            <TouchableOpacity onPress={exitToHub} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X color="#374151" size={20} />
+            </TouchableOpacity>
+            <Text className="font-bold text-gray-900">
+              {isCreole ? 'Jwèt yo' : 'Les jeux'}
+            </Text>
+          </View>
+          {selectedGame === 'vrai-faux' && (
+            <VraiFauxGame questionsMap={TRIVIA_QUESTIONS as any} highScore={highScores['vrai-faux'] ?? null} {...arcadeProps} />
+          )}
+          {selectedGame === 'memoire' && <MemoireGame highScore={highScores['memoire'] ?? null} {...arcadeProps} />}
+          {selectedGame === 'mo-kache' && <MoKacheGame highScore={highScores['mo-kache'] ?? null} {...arcadeProps} />}
+          {selectedGame === 'calcul' && <CalculGame highScore={highScores['calcul'] ?? null} {...arcadeProps} />}
+          {selectedGame === 'suites' && <SuitesGame highScore={highScores['suites'] ?? null} {...arcadeProps} />}
+        </View>
+      )}
+
+      {/* Persistent XP + streak header (classic trivia flow only) */}
+      {phase !== 'hub' && phase !== 'arcade' && <TriviaHeader />}
+
       {phase === 'categories' && (
-        <CategoryPicker onSelect={handleSelectCategory} isCreole={isCreole} />
+        <>
+          <TouchableOpacity
+            onPress={exitToHub}
+            className="flex-row items-center px-4 pt-1 pb-2"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ChevronRight color="#0857A6" size={16} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Text style={{ color: '#0857A6', fontWeight: '700', fontSize: 13 }}>
+              {isCreole ? 'Jwèt yo' : 'Les jeux'}
+            </Text>
+          </TouchableOpacity>
+          <CategoryPicker onSelect={handleSelectCategory} isCreole={isCreole} />
+        </>
       )}
 
       {phase === 'roundPicker' && selectedCategory && (

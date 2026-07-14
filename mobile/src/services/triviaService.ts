@@ -21,7 +21,7 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp } from './leaderboardService';
+import { addWeeklyXp, isValidAlias, upsertAllTimeEntry, maybeSetGameRecord } from './leaderboardService';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
 
@@ -76,7 +76,8 @@ export function defaultTriviaProfile() {
     byCategory: {},
     dailyChallenge: { date: null, completed: false, score: 0, total: 0, xpEarned: 0 },
     lastPlayedDate: null,
-    leaderboard: { optedIn: false, displayName: '', school: null, city: null },
+    games: { gamesPlayed: 0, highScores: {} },
+    leaderboard: { optedIn: false, displayName: '', school: null, city: null, department: null },
   };
 }
 
@@ -97,6 +98,7 @@ export async function loadTriviaProfile(uid: string) {
       ...data,
       byCategory: { ...base.byCategory, ...(data.byCategory || {}) },
       dailyChallenge: { ...base.dailyChallenge, ...(data.dailyChallenge || {}) },
+      games: { ...base.games, ...((data as any).games || {}) },
       leaderboard: { ...base.leaderboard, ...(data.leaderboard || {}) },
     };
   } catch (err) {
@@ -184,14 +186,23 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
     // Trivia is platform activity → keep the streak alive.
     try { await recordStreakActivity(uid); } catch {}
 
-    // Opt-in weekly leaderboard submission.
+    // Opt-in weekly + all-time leaderboard submission.
     if (updated.leaderboard?.optedIn && xpEarned > 0) {
       await addWeeklyXp(uid, xpEarned, {
-        displayName: updated.leaderboard.displayName || 'Élève',
+        displayName: updated.leaderboard.displayName || null,
         level: newLevelInfo.level,
         school: updated.leaderboard.school || null,
         city: updated.leaderboard.city || null,
+        department: (updated.leaderboard as any).department || null,
       });
+      upsertAllTimeEntry(uid, {
+        xp: updated.xp,
+        displayName: updated.leaderboard.displayName || null,
+        level: newLevelInfo.level,
+        school: updated.leaderboard.school || null,
+        city: updated.leaderboard.city || null,
+        department: (updated.leaderboard as any).department || null,
+      }).catch(() => {});
     }
 
     return {
@@ -212,15 +223,22 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
  * Opt in/out of the leaderboard and set the public alias / school. When opting
  * in we also seed/refresh this week's entry so the learner shows up immediately.
  */
-export async function setLeaderboardOptIn(uid: string, { optedIn, displayName, school, city }: { optedIn?: boolean; displayName?: string; school?: string; city?: string }) {
+export async function setLeaderboardOptIn(
+  uid: string,
+  { optedIn, displayName, school, city, department }: { optedIn?: boolean; displayName?: string; school?: string | null; city?: string | null; department?: string | null },
+) {
   if (!uid) return null;
   try {
     const current = await loadTriviaProfile(uid);
+    const alias = displayName ?? current.leaderboard?.displayName;
     const leaderboard = {
       optedIn: !!optedIn,
-      displayName: displayName ?? current.leaderboard?.displayName ?? 'Élève',
+      // Letter-less pseudos (".") are stored as null — the board hides them
+      // and the owner gets a "choose a pseudo" prompt instead.
+      displayName: isValidAlias(alias) ? alias : null,
       school: school !== undefined ? school : current.leaderboard?.school ?? null,
       city: city !== undefined ? city : current.leaderboard?.city ?? null,
+      department: department !== undefined ? department : (current.leaderboard as any)?.department ?? null,
     };
     await setDoc(profileRef(uid), { leaderboard, updatedAt: serverTimestamp() }, { merge: true });
 
@@ -231,11 +249,84 @@ export async function setLeaderboardOptIn(uid: string, { optedIn, displayName, s
         level: levelInfo(current.xp).level,
         school: leaderboard.school,
         city: leaderboard.city,
+        department: leaderboard.department,
       });
     }
     return { ...current, leaderboard };
   } catch (err) {
     console.error('[Trivia] setLeaderboardOptIn error:', err);
     return null;
+  }
+}
+
+// ─── Arcade games (non-trivia) XP ────────────────────────────────────────────
+
+/**
+ * XP for an arcade game round: accuracy-scaled up to 40, +10 for a perfect
+ * run. Deliberately below the trivia rate (10/correct) since arcade rounds
+ * are shorter and infinitely repeatable.
+ */
+export function computeGameXp({ score = 0, maxScore = 0 }) {
+  if (!maxScore || score <= 0) return 0;
+  const pct = Math.max(0, Math.min(1, score / maxScore));
+  return Math.round(pct * 40) + (pct >= 1 ? 10 : 0);
+}
+
+/**
+ * Persist a finished arcade round: XP, games-played counter, per-game high
+ * score, streak, and (for opted-in players) the boards + record claims.
+ */
+export async function recordGameResult(uid: string, { gameId, score = 0, maxScore = 0 }: { gameId: string; score: number; maxScore: number }) {
+  const xpEarned = computeGameXp({ score, maxScore });
+  if (!uid) {
+    return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1, guest: true };
+  }
+  try {
+    const current = await loadTriviaProfile(uid);
+    const prevLevel = levelInfo(current.xp).level;
+    const games = (current as any).games || { gamesPlayed: 0, highScores: {} };
+    const updated = {
+      ...current,
+      xp: (current.xp || 0) + xpEarned,
+      games: {
+        gamesPlayed: (games.gamesPlayed || 0) + 1,
+        highScores: {
+          ...(games.highScores || {}),
+          [gameId]: Math.max(games.highScores?.[gameId] || 0, score),
+        },
+      },
+    };
+    await setDoc(
+      profileRef(uid),
+      { xp: updated.xp, games: updated.games, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+
+    const newLevelInfo = levelInfo(updated.xp);
+    try { await recordStreakActivity(uid); } catch {}
+
+    if (updated.leaderboard?.optedIn) {
+      const meta = {
+        displayName: updated.leaderboard.displayName || null,
+        level: newLevelInfo.level,
+        school: updated.leaderboard.school || null,
+        city: updated.leaderboard.city || null,
+        department: (updated.leaderboard as any).department || null,
+      };
+      if (xpEarned > 0) await addWeeklyXp(uid, xpEarned, meta);
+      upsertAllTimeEntry(uid, { ...meta, xp: updated.xp }).catch(() => {});
+      maybeSetGameRecord(uid, gameId, score, updated.leaderboard.displayName).catch(() => {});
+    }
+
+    return {
+      profile: updated,
+      xpEarned,
+      leveledUp: newLevelInfo.level > prevLevel,
+      prevLevel,
+      newLevel: newLevelInfo.level,
+    };
+  } catch (err) {
+    console.error('[Trivia] recordGameResult error:', err);
+    return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1 };
   }
 }

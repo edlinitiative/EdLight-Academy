@@ -3,7 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Flame, Target, BookOpen, BarChart3, ChevronRight, Award } from 'lucide-react-native';
+import { Flame, Target, BookOpen, BarChart3, ChevronRight, Award, CalendarCheck } from 'lucide-react-native';
+import SandraFab from '../components/SandraFab';
 import useStore from '../contexts/store';
 import { useCourses } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
@@ -354,7 +355,31 @@ export default function DashboardScreen() {
           <Leaderboard compact maxRows={5} />
         </View>
 
+        {/* Study plan — Sandra builds a personalized révision schedule */}
+        <TouchableOpacity
+          onPress={() => (navigation as any).navigate('StudyPlan')}
+          activeOpacity={0.85}
+          className="mx-4 mb-6"
+          style={{ backgroundColor: '#0857A6', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+        >
+          <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+            <CalendarCheck color="#fff" size={22} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
+              {t("Mon plan d'étude", 'Plan etid mwen')}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12.5 }}>
+              {t('Un programme de révision fait pour vous', 'Yon pwogram revizyon fèt pou ou')}
+            </Text>
+          </View>
+          <ChevronRight color="#fff" size={18} />
+        </TouchableOpacity>
+
       </ScrollView>
+
+      {/* Sandra — AI tutor, always within thumb's reach */}
+      <SandraFab onPress={() => (navigation as any).navigate('Sandra')} />
     </SafeAreaView>
   );
 }

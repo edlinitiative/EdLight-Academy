@@ -8,13 +8,26 @@ import AuthModal from '../components/AuthModal';
 import WelcomeLanguageModal from '../components/WelcomeLanguageModal';
 import NavTour from '../components/NavTour';
 import NetworkStatus from '../components/NetworkStatus';
+import SandraScreen from '../screens/SandraScreen';
+import StudyPlanScreen from '../screens/StudyPlanScreen';
 
 export type RootParamList = {
   Loading: undefined;
   Main: undefined;
+  Sandra: undefined;
+  StudyPlan: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
+
+// Modal wrappers: give the screens a working X button (goBack) — they're
+// otherwise presentation-agnostic components.
+function SandraModal({ navigation }: any) {
+  return <SandraScreen onClose={() => navigation.goBack()} />;
+}
+function StudyPlanModal({ navigation }: any) {
+  return <StudyPlanScreen onClose={() => navigation.goBack()} />;
+}
 
 function LoadingScreen() {
   const opacity = useRef(new Animated.Value(0.4)).current;
@@ -50,7 +63,19 @@ export default function AppNavigator() {
           {!authConfirmed ? (
             <Stack.Screen name="Loading" component={LoadingScreen} />
           ) : (
-            <Stack.Screen name="Main" component={TabNavigator} />
+            <>
+              <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen
+                name="Sandra"
+                component={SandraModal}
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen
+                name="StudyPlan"
+                component={StudyPlanModal}
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+            </>
           )}
         </Stack.Navigator>
         <AuthModal />

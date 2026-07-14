@@ -4,7 +4,7 @@ import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { LayoutDashboard, BookOpen, ClipboardList, Zap, User } from 'lucide-react-native';
+import { LayoutDashboard, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react-native';
 import useStore from '../contexts/store';
 
 import DashboardScreen from '../screens/DashboardScreen';
@@ -181,9 +181,9 @@ export default function TabNavigator() {
         name="Trivia"
         component={TriviaScreen}
         options={{
-          tabBarLabel: 'Trivia',
+          tabBarLabel: 'Jeux',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={Zap} color={color} size={size} focused={focused} dark={dark} />
+            <TabIcon Icon={Gamepad2} color={color} size={size} focused={focused} dark={dark} />
           ),
         }}
       />

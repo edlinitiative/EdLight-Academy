@@ -853,7 +853,7 @@ const HAITI_PEOPLE = [
   { q: "Quel musicien fonda le groupe « Septentrional » au Cap-Haïtien ?", qHt: "Ki vil ki bay gwoup mizik selèb « Septentrional » ?", options: ["Cap-Haïtien", "Port-au-Prince", "Jacmel", "Les Cayes"], answer: 0 },
   { q: "Quelle militante des droits humains s'illustra sous la dictature ?", qHt: "Ki militan dwa moun ki te make tèt li anba diktati a ?", options: ["Yvonne Hakim-Rimpel", "Catherine Flon", "Sanite Bélair", "Cécile Fatiman"], answer: 0 },
   { q: "Quel chanteur engagé est surnommé « Ti-Manno » ?", qHt: "Ki chantè angaje yo rele « Ti-Manno » ?", options: ["Emmanuel Jean-Baptiste", "Manno Charlemagne", "BelO", "Wyclef Jean"], answer: 0 },
-  { q: "Quel chanteur-militant « Manno Charlemagne » devint maire de Port-au-Prince ?", qHt: "Ki chantè-militan « Manno Charlemagne » ki te vin mè Pòtoprens ?", options: ["Manno Charlemagne", "Sweet Micky", "BelO", "Wyclef Jean"], answer: 0 },
+  { q: "Quel chanteur-militant devint maire de Port-au-Prince ?", qHt: "Ki chantè-militan ki te vin mè Pòtoprens ?", options: ["Manno Charlemagne", "Sweet Micky", "BelO", "Wyclef Jean"], answer: 0 },
   { q: "Qui a écrit « Pays sans chapeau » ?", qHt: "Ki moun ki te ekri « Pays sans chapeau » ?", options: ["Dany Laferrière", "Lyonel Trouillot", "Gary Victor", "Frankétienne"], answer: 0 },
   { q: "Quel auteur reçut le prix Médicis 2009 pour « L'énigme du retour » ?", qHt: "Ki otè ki te resevwa pri Médicis 2009 pou « L'énigme du retour » ?", options: ["Dany Laferrière", "René Depestre", "Yanick Lahens", "Lyonel Trouillot"], answer: 0 },
   { q: "Quelle écrivaine reçut le prix Femina 2014 pour « Bain de lune » ?", qHt: "Ki ekriven ki te resevwa pri Femina 2014 pou « Bain de lune » ?", options: ["Yanick Lahens", "Marie Vieux-Chauvet", "Edwidge Danticat", "Kettly Mars"], answer: 0 },
@@ -1464,6 +1464,15 @@ const ANGLAIS_VOCAB = [
   { q: "Quel est le contraire de « hot » ?", qHt: "Ki kontrè « hot » ?", options: ["Cold", "Warm", "Heat", "Sun"], answer: 0 },
   { q: "« Aujourd'hui » se dit en anglais…", qHt: "« Jodi a » an angle se…", options: ["Today", "Tomorrow", "Yesterday", "Tonight"], answer: 0 },
 ];
+
+/* ─── Short label pairs for the Mémoire game (country ↔ capital) ────────── */
+
+export const CAPITAL_PAIRS = COUNTRIES.map((c) => ({
+  a: c.name,
+  aHt: c.ht,
+  b: c.cap,
+  flag: c.flag,
+}));
 
 /* ─── Exported questions (generated once per page load) ─────────────────── */
 
