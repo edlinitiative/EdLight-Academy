@@ -10,6 +10,14 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/proxy", "destination": "/api/proxy" },
+    { "source": "/about", "destination": "/about/index.html" },
+    { "source": "/faq", "destination": "/faq/index.html" },
+    { "source": "/contact", "destination": "/contact/index.html" },
+    { "source": "/privacy", "destination": "/privacy/index.html" },
+    { "source": "/terms", "destination": "/terms/index.html" },
+    { "source": "/courses", "destination": "/courses/index.html" },
+    { "source": "/quizzes", "destination": "/quizzes/index.html" },
+    { "source": "/exams", "destination": "/exams/index.html" },
     {
       "source": "/(.*)",
       "destination": "/index.html"
