@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
@@ -345,6 +345,7 @@ function QuizPlayer({
   isCreole: boolean;
   onFinish: (score: number, total: number) => void;
 }) {
+  const insets = useSafeAreaInsets();
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -658,8 +659,12 @@ function QuizPlayer({
         )}
       </ScrollView>
 
-      {/* Action button */}
-      <View className="px-4 pb-5 pt-3 bg-white border-t border-gray-100">
+      {/* Action button — safe-area aware so it clears the home indicator /
+          Android gesture bar (the floating tab bar is hidden here via focus mode). */}
+      <View
+        className="px-4 pt-3 bg-white border-t border-gray-100"
+        style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+      >
         {!confirmed ? (
           <TouchableOpacity
             onPress={handleConfirm}
