@@ -5,8 +5,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
-import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
+import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, CalendarCheck } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
+import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
+import { todayStr } from '../services/streakService';
 import { getWeeklyTop } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
@@ -57,6 +59,27 @@ function prepareQuestions(categoryId: string, count: number): PreparedQuestion[]
   return pool.map((q: any) => {
     const correctAnswer: string = q.options[q.answer];
     // Re-shuffle options so the correct answer appears at a random position
+    const options = shuffle([...q.options]);
+    return {
+      q: q.q,
+      qHt: q.qHt ?? q.q,
+      options,
+      correctAnswer,
+      flag: q.flag ?? null,
+      explanation: q.explanation ?? null,
+    };
+  });
+}
+
+/**
+ * Prepare today's Daily Challenge: the same 10 questions for everyone,
+ * deterministically drawn across ALL categories (seeded by today's date).
+ * Option order is still shuffled per-play — only the question *set* is shared.
+ */
+function prepareDailyQuestions(count = 10): PreparedQuestion[] {
+  const pool = getDailyChallengeQuestions(TRIVIA_QUESTIONS as Record<string, any[]>, todayStr(), count);
+  return pool.map((q: any) => {
+    const correctAnswer: string = q.options[q.answer];
     const options = shuffle([...q.options]);
     return {
       q: q.q,
@@ -822,13 +845,88 @@ function TriviaResults({
   );
 }
 
+// ─── Daily Challenge banner ───────────────────────────────────────────────────
+// Mirrors the web PWA: a shared once-a-day round (same 10 questions for
+// everyone) worth a +50 XP bonus. Collapses to a "done" state after playing.
+function DailyChallengeBanner({
+  daily,
+  isCreole,
+  onStart,
+}: {
+  daily: { completedToday?: boolean; score?: number | null; total?: number | null } | null;
+  isCreole: boolean;
+  onStart: () => void;
+}) {
+  const done = !!daily?.completedToday;
+  return (
+    <TouchableOpacity
+      activeOpacity={done ? 1 : 0.85}
+      disabled={done}
+      onPress={() => { if (!done) onStart(); }}
+      style={{
+        marginHorizontal: 16,
+        marginBottom: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 16,
+        borderRadius: 16,
+        backgroundColor: done ? '#eef2f7' : '#0857A6',
+        borderWidth: done ? 1 : 0,
+        borderColor: '#e8edf5',
+        ...(done
+          ? {}
+          : {
+              shadowColor: '#0857A6',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 12,
+              elevation: 4,
+            }),
+      }}
+    >
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: done ? '#dbe3ee' : 'rgba(255,255,255,0.18)',
+        }}
+      >
+        {done ? <Check color="#0857A6" size={22} /> : <CalendarCheck color="#ffffff" size={22} />}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: done ? '#0f172a' : '#ffffff' }}>
+          {isCreole ? 'Defi jodi a' : 'Défi du jour'}
+        </Text>
+        <Text style={{ fontSize: 12.5, marginTop: 2, color: done ? '#64748b' : 'rgba(255,255,255,0.88)' }}>
+          {done
+            ? isCreole
+              ? `Fini — ${daily?.score}/${daily?.total}. Retounen demen !`
+              : `Terminé — ${daily?.score}/${daily?.total}. Revenez demain !`
+            : isCreole
+            ? '10 kesyon · +50 XP bonis'
+            : '10 questions · +50 XP bonus'}
+        </Text>
+      </View>
+      {!done && (
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#ffffff' }}>
+          {isCreole ? 'Jwe →' : 'Jouer →'}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 // ─── Main TriviaScreen ────────────────────────────────────────────────────────
 
 export default function TriviaScreen() {
-  const { user, language, incrementGuestInteraction, setFocusMode } = useStore();
+  const { user, language, incrementGuestInteraction, setFocusMode, pendingDailyChallenge, setPendingDailyChallenge } = useStore();
   const isCreole = language === 'ht';
 
-  const { profile, recordResult, recordGameResult } = useTrivia();
+  const { profile, recordResult, recordGameResult, daily } = useTrivia();
   const { recordActivity } = useStreak();
 
   const [phase, setPhase] = useState<TriviaPhase>('hub');
@@ -837,6 +935,9 @@ export default function TriviaScreen() {
   const [roundSize, setRoundSize] = useState(10);
   const [questions, setQuestions] = useState<PreparedQuestion[]>([]);
   const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+  // True while the active round is today's Daily Challenge (drives the +50 XP
+  // bonus + completedToday tracking, via recordResult({ isDaily: true })).
+  const [isDailyRound, setIsDailyRound] = useState(false);
 
   // Hide the floating tab bar during an active game / results so it never
   // covers the answer & confirm buttons. Reset when leaving the Trivia tab.
@@ -849,10 +950,41 @@ export default function TriviaScreen() {
 
   const highScores: Record<string, number> = (profile as any)?.games?.highScores || {};
 
+  // Launch today's Daily Challenge: a fixed, shared 10-question round drawn
+  // across all categories. Uses a synthetic 'daily' category so the existing
+  // play/results UI (header icon + name) works unchanged.
+  const startDaily = useCallback(() => {
+    const qs = prepareDailyQuestions(10);
+    if (!qs.length) return;
+    setSelectedCategory({
+      id: 'daily',
+      name: isCreole ? 'Defi jodi a' : 'Défi du jour',
+      nameHt: 'Defi jodi a',
+      icon: '🎯',
+    });
+    setQuestions(qs);
+    setRoundSize(qs.length);
+    setIsDailyRound(true);
+    setPhase('playing');
+  }, [isCreole]);
+
+  // Deep-link from the home "Défi du jour" widget: it sets a transient store
+  // flag, then navigates to this tab. Consume it on focus (once), skipping if
+  // today's challenge is already done.
+  useFocusEffect(
+    useCallback(() => {
+      if (pendingDailyChallenge) {
+        setPendingDailyChallenge(false);
+        if (!daily?.completedToday) startDaily();
+      }
+    }, [pendingDailyChallenge, setPendingDailyChallenge, daily, startDaily]),
+  );
+
   // Start from category selection
   const handleSelectCategory = useCallback((categoryId: string) => {
     const cat = TRIVIA_CATEGORIES.find((c: any) => c.id === categoryId);
     setSelectedCategory(cat ?? null);
+    setIsDailyRound(false);
     setPhase('roundPicker');
   }, []);
 
@@ -885,7 +1017,7 @@ export default function TriviaScreen() {
       // submission happens inside recordResult and ONLY for opted-in players
       // with their chosen pseudo — never the raw account name (the previous
       // direct addWeeklyXp call here published first names without opt-in).
-      recordResult({ category: selectedCategory?.id, score, total })
+      recordResult({ category: selectedCategory?.id, score, total, isDaily: isDailyRound })
         .then(() => {
           if (!user?.uid) return null;
           return getWeeklyTop(50).then((top) => {
@@ -895,7 +1027,7 @@ export default function TriviaScreen() {
         })
         .catch(console.warn);
     },
-    [recordActivity, user, incrementGuestInteraction, recordResult, selectedCategory],
+    [recordActivity, user, incrementGuestInteraction, recordResult, selectedCategory, isDailyRound],
   );
 
   // Arcade wiring — shared reward contract with the classic flow.
@@ -903,6 +1035,7 @@ export default function TriviaScreen() {
     setPhase('hub');
     setSelectedGame(null);
     setSelectedCategory(null);
+    setIsDailyRound(false);
   }, []);
 
   const arcadeProps = {
@@ -911,8 +1044,18 @@ export default function TriviaScreen() {
     onRecord: recordGameResult,
   };
 
-  // "Rejouer" — replay with same category + round size
+  // "Rejouer" — replay with same category + round size. For the Daily
+  // Challenge this replays today's fixed set (the +50 XP bonus is only
+  // awarded once/day; the service dedupes further attempts).
   const handleRetry = useCallback(() => {
+    if (isDailyRound) {
+      const qs = prepareDailyQuestions(roundSize || 10);
+      if (qs.length) {
+        setQuestions(qs);
+        setPhase('playing');
+      }
+      return;
+    }
     if (!selectedCategory) {
       setPhase('categories');
       return;
@@ -920,11 +1063,12 @@ export default function TriviaScreen() {
     const qs = prepareQuestions(selectedCategory.id, roundSize);
     setQuestions(qs);
     setPhase('playing');
-  }, [selectedCategory, roundSize]);
+  }, [isDailyRound, selectedCategory, roundSize]);
 
   const handleChooseCategory = useCallback(() => {
     setPhase('categories');
     setSelectedCategory(null);
+    setIsDailyRound(false);
   }, []);
 
   return (
@@ -972,6 +1116,7 @@ export default function TriviaScreen() {
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </TouchableOpacity>
+          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
           <CategoryPicker onSelect={handleSelectCategory} isCreole={isCreole} />
         </>
       )}
