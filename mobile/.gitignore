@@ -2,3 +2,6 @@
 # Google Play service account key (never commit)
 google-play-service-account.json
 *-service-account.json
+
+# App Store Connect API key (never commit)
+*.p8
