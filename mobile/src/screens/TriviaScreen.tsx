@@ -5,7 +5,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
-import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, CalendarCheck } from 'lucide-react-native';
+import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
 import { todayStr } from '../services/streakService';
@@ -16,6 +16,7 @@ import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
 import { scheduleTriviaReminder, notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
+import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -845,81 +846,6 @@ function TriviaResults({
   );
 }
 
-// ─── Daily Challenge banner ───────────────────────────────────────────────────
-// Mirrors the web PWA: a shared once-a-day round (same 10 questions for
-// everyone) worth a +50 XP bonus. Collapses to a "done" state after playing.
-function DailyChallengeBanner({
-  daily,
-  isCreole,
-  onStart,
-}: {
-  daily: { completedToday?: boolean; score?: number | null; total?: number | null } | null;
-  isCreole: boolean;
-  onStart: () => void;
-}) {
-  const done = !!daily?.completedToday;
-  return (
-    <TouchableOpacity
-      activeOpacity={done ? 1 : 0.85}
-      disabled={done}
-      onPress={() => { if (!done) onStart(); }}
-      style={{
-        marginHorizontal: 16,
-        marginBottom: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        padding: 16,
-        borderRadius: 16,
-        backgroundColor: done ? '#eef2f7' : '#0857A6',
-        borderWidth: done ? 1 : 0,
-        borderColor: '#e8edf5',
-        ...(done
-          ? {}
-          : {
-              shadowColor: '#0857A6',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.25,
-              shadowRadius: 12,
-              elevation: 4,
-            }),
-      }}
-    >
-      <View
-        style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: done ? '#dbe3ee' : 'rgba(255,255,255,0.18)',
-        }}
-      >
-        {done ? <Check color="#0857A6" size={22} /> : <CalendarCheck color="#ffffff" size={22} />}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '800', color: done ? '#0f172a' : '#ffffff' }}>
-          {isCreole ? 'Defi jodi a' : 'Défi du jour'}
-        </Text>
-        <Text style={{ fontSize: 12.5, marginTop: 2, color: done ? '#64748b' : 'rgba(255,255,255,0.88)' }}>
-          {done
-            ? isCreole
-              ? `Fini — ${daily?.score}/${daily?.total}. Retounen demen !`
-              : `Terminé — ${daily?.score}/${daily?.total}. Revenez demain !`
-            : isCreole
-            ? '10 kesyon · +50 XP bonis'
-            : '10 questions · +50 XP bonus'}
-        </Text>
-      </View>
-      {!done && (
-        <Text style={{ fontSize: 14, fontWeight: '800', color: '#ffffff' }}>
-          {isCreole ? 'Jwe →' : 'Jouer →'}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
-}
-
 // ─── Main TriviaScreen ────────────────────────────────────────────────────────
 
 export default function TriviaScreen() {
@@ -1078,6 +1004,7 @@ export default function TriviaScreen() {
         <JeuxHub
           onSelectGame={(id) => { setSelectedGame(id); setPhase('arcade'); }}
           onStartTrivia={() => setPhase('categories')}
+          onStartDaily={startDaily}
         />
       )}
 
@@ -1116,7 +1043,7 @@ export default function TriviaScreen() {
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </TouchableOpacity>
-          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
+          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} style={{ marginHorizontal: 16, marginBottom: 14 }} />
           <CategoryPicker onSelect={handleSelectCategory} isCreole={isCreole} />
         </>
       )}

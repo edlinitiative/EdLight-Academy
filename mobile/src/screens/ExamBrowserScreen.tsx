@@ -12,7 +12,7 @@ import { fetchFullCatalog } from '../utils/examCatalog';
 import { normalizeSubject, normalizeExamTitle, subjectColor } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
-import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
+import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Route = RouteProp<ExamsParamList, 'ExamBrowser'>;
@@ -207,7 +207,38 @@ export default function ExamBrowserScreen() {
   const doneCount = useMemo(() => exams.filter((e) => !!results[String(e.exam_id ?? e.id ?? '')]).length, [exams, results]);
   const activeFilterCount = [subject !== 'Tout', yearFilter !== 'Tout', statusFilter !== 'all'].filter(Boolean).length;
 
-  if (loading) return <LoadingState message={t('Chargement des examens…', 'Ap chaje egzamen yo…')} />;
+  if (loading)
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+        {/* Header (matches the loaded layout so nothing shifts) */}
+        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+          <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 p-1">
+            <ArrowLeft color="#374151" size={22} />
+          </TouchableOpacity>
+          <Text className="font-bold text-gray-900 text-base">{LEVEL_LABEL[level] ?? level}</Text>
+        </View>
+        {/* Search bar placeholder */}
+        <View className="px-4 pt-3 pb-1">
+          <Skeleton height={44} radius={12} />
+        </View>
+        {/* Exam card skeletons */}
+        <View className="px-4 pt-3" style={{ gap: 12 }}>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <View
+              key={i}
+              className="bg-white rounded-2xl p-4 border border-gray-100 flex-row items-center"
+              style={{ gap: 12 }}
+            >
+              <Skeleton width={44} height={44} radius={12} />
+              <View className="flex-1" style={{ gap: 8 }}>
+                <Skeleton width="80%" height={13} />
+                <Skeleton width="45%" height={11} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </SafeAreaView>
+    );
   if (error) return <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />;
 
   return (

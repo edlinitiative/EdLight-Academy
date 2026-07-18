@@ -13,6 +13,7 @@ import { getGameRecords } from '../../services/leaderboardService';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
+import DailyChallengeBanner from './DailyChallengeBanner';
 
 const GRID_PAD = 16;
 const TILE_GAP = 12;
@@ -27,6 +28,7 @@ interface GameRecord {
 interface JeuxHubProps {
   onSelectGame: (id: string) => void;
   onStartTrivia: () => void;
+  onStartDaily: () => void;
 }
 
 /* ─── Records strip: best-ever score per arcade game + holder ─── */
@@ -96,8 +98,8 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
 }
 
 /* ─── Hub ─── */
-export default function JeuxHub({ onSelectGame, onStartTrivia }: JeuxHubProps) {
-  const { profile, level, isAuthed } = useTrivia();
+export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: JeuxHubProps) {
+  const { profile, level, isAuthed, daily } = useTrivia();
   const { streak } = useStreak();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
@@ -111,16 +113,10 @@ export default function JeuxHub({ onSelectGame, onStartTrivia }: JeuxHubProps) {
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Hero */}
-      <View className="px-4 pt-4 pb-3">
-        <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
-          {isCreole ? 'Aprann pandan w ap jwe' : 'Apprenez en jouant'}
-        </Text>
-        <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
-          {isCreole
-            ? 'Chak pati fè ou ranmase XP epi monte nan klasman an.'
-            : 'Chaque partie vous fait gagner des XP et grimper au classement.'}
-        </Text>
+      {/* Défi du jour — surfaced on the hub so it's visible without opening the
+          Trivia card. */}
+      <View className="px-4 pt-2 pb-3">
+        <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
       </View>
 
       {/* Stats row */}

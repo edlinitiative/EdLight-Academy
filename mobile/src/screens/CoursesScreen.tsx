@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Search, BookOpen, BookMarked, ChevronRight, ChevronLeft,
@@ -155,6 +155,9 @@ function DrillCard({
 
 export default function CoursesScreen() {
   const navigation = useNavigation<Nav>();
+  // Tapping the active tab scrolls this screen back to the top.
+  const scrollRef = React.useRef<any>(null);
+  useScrollToTop(scrollRef);
   const { language, progress } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -290,6 +293,7 @@ export default function CoursesScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         className="flex-1 px-5 pt-4"
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#0857A6" />}
         contentContainerStyle={{ paddingBottom: 100 }}

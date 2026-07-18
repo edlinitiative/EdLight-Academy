@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Flame, Target, BookOpen, BarChart3, ChevronRight, Award, CalendarCheck } from 'lucide-react-native';
 import SandraFab from '../components/SandraFab';
@@ -73,6 +73,9 @@ function KpiCard({
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, setPendingDailyChallenge } = useStore();
+  // Tapping the active tab scrolls this screen back to the top.
+  const scrollRef = React.useRef<any>(null);
+  useScrollToTop(scrollRef);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -127,6 +130,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -144,28 +148,22 @@ export default function DashboardScreen() {
         {/* ------------------------------------------------------------------ */}
         <View
           style={{ backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#eef1f6' }}
-          className="px-5 pt-5 pb-5"
+          className="px-5 pt-4 pb-3.5"
         >
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1 pr-4">
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748b' }}>
-                {t('Tableau de bord', 'Tablodbò')}
+          <View className="flex-row items-center justify-between">
+            {/* Pixel-art avatar (seeded by uid). We intentionally don't use the
+                Google `picture` — for no-photo accounts it's a generic initials
+                image ("TO"), which we'd rather replace with the fun character. */}
+            <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={44} />
+
+            <View className="flex-1 pl-3">
+              <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }} numberOfLines={1}>
+                {greeting}, {firstName || t('Étudiant', 'Elèv')} 👋
               </Text>
-              <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', marginTop: 2 }} numberOfLines={1}>
-                {greeting}, {firstName || t('Étudiant', 'Elèv')}
-              </Text>
-              <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+              <Text style={{ fontSize: 13, color: '#64748b', marginTop: 1 }}>
                 {t('Prêt à apprendre aujourd\'hui ?', 'Ou pare pou aprann jodi a ?')}
               </Text>
             </View>
-
-            {/* Avatar photo (falls back to a pixel-art character) */}
-            <Avatar
-              name={user?.name || user?.displayName || ''}
-              uri={user?.picture || user?.profile_picture || ''}
-              seed={user?.uid || ''}
-              size={48}
-            />
           </View>
         </View>
 

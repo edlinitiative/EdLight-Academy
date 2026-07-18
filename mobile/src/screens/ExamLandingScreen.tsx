@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   GraduationCap, ChevronRight, BookOpen, Landmark, Check,
@@ -55,6 +55,9 @@ const SUBJECTS = [
 
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
+  // Tapping the active tab scrolls this screen back to the top.
+  const scrollRef = React.useRef<any>(null);
+  useScrollToTop(scrollRef);
   const { language, track, setTrack, setOnboardingCompleted } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -67,7 +70,7 @@ export default function ExamLandingScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View className="px-5 pt-6 pb-5">

@@ -1,8 +1,41 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { AlertCircle, Inbox } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import LoadingSpinner from './ui/LoadingSpinner';
+
+/** A single pulsing gray placeholder block for skeleton screens. */
+export function Skeleton({
+  width,
+  height = 14,
+  radius = 8,
+  style,
+}: {
+  width?: number | string;
+  height?: number;
+  radius?: number;
+  style?: object;
+}) {
+  const pulse = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <Animated.View
+      style={[
+        { width: (width as any) ?? '100%', height, borderRadius: radius, backgroundColor: '#e5e9f0', opacity: pulse },
+        style,
+      ]}
+    />
+  );
+}
 
 export function LoadingState({ message }: { message?: string }) {
   const language = useStore((s) => s.language);

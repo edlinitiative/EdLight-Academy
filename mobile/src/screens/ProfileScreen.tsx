@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useScrollToTop } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -116,6 +117,9 @@ export default function ProfileScreen() {
 
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  // Tapping the active tab scrolls this screen back to the top.
+  const scrollRef = React.useRef<any>(null);
+  useScrollToTop(scrollRef);
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
@@ -284,7 +288,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* ── 1. Header ─────────────────────────────────────────────────────── */}
         <View
