@@ -8,7 +8,7 @@ import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle } from '../utils/examUtils';
+import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
@@ -396,14 +396,18 @@ export default function ExamTakeScreen() {
         // Show the overview NOW — the draft (a Firestore read, slow on cold
         // start) loads in the background and must not hold the spinner.
         setLoading(false);
-        // Record activity so the dashboard can show "Resume where you left off"
+        // Record activity so the dashboard can show "Resume where you left off".
+        // Use subject + session/year (not the raw ministry header) — the year is
+        // more useful and matches how the exam browser labels exams.
         const subject = e?.subject ? normalizeSubject(e.subject) : undefined;
         const lvl: string | undefined = level ?? undefined;
+        const { session, year } = normalizeYear(e?.year);
+        const when = session || (year ? String(year) : '');
         recordActivity({
           type: 'exam',
           path: examId,
-          title: e?.exam_title ?? e?.title ?? e?.name ?? 'Examen',
-          subtitle: subject ?? lvl ?? undefined,
+          title: subject || normalizeExamTitle(e) || 'Examen',
+          subtitle: when || lvl || undefined,
           ts: Date.now(),
         });
         // Load draft (in-progress attempts only)
