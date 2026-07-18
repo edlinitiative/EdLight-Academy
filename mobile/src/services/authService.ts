@@ -85,6 +85,34 @@ export async function sendPasswordReset(email: string) {
   await resetPassword(email);
 }
 
+/**
+ * Permanently delete the signed-in user's account + all their data.
+ * Calls the server-side endpoint (Firebase Admin) which removes the Auth user
+ * and every Firestore record they own, then signs out locally. Irreversible.
+ */
+const DELETE_ACCOUNT_URL = 'https://academy.edlight.org/api/users/delete';
+export async function deleteAccount(): Promise<void> {
+  const fb = await loadFirebase();
+  const user = fb.auth.currentUser;
+  if (!user) throw new Error('not-signed-in');
+  const token = await user.getIdToken();
+
+  const res = await fetch(DELETE_ACCOUNT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    let msg = '';
+    try {
+      const d = await res.json();
+      if (typeof d?.message === 'string') msg = d.message;
+    } catch { /* non-JSON error body */ }
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  // Account is gone server-side — clear the local session too (best-effort).
+  try { await logoutUser(); } catch { /* session already invalid */ }
+}
+
 export function getAuthUser() {
   const user = useStore.getState().user;
   if (!user) return null;

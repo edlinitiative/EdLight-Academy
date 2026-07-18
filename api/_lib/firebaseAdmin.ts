@@ -21,7 +21,7 @@ import {
   type App,
 } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
+import { getAuth, type Auth, type DecodedIdToken } from 'firebase-admin/auth';
 
 let cachedApp: App | null = null;
 
@@ -76,4 +76,9 @@ export function getDb(): Firestore {
 /** Verify a Firebase ID token; returns the decoded token (throws if invalid). */
 export function verifyIdToken(idToken: string): Promise<DecodedIdToken> {
   return getAuth(init()).verifyIdToken(idToken);
+}
+
+/** Firebase Auth Admin instance (user management — e.g. deleteUser). */
+export function getAuthAdmin(): Auth {
+  return getAuth(init());
 }

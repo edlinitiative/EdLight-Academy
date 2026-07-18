@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Flame, Trophy, Zap, LogOut, Moon, Sun, Languages,
+  Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, CheckCircle2, Target, BookOpen, Bell,
   Sprout, Brain,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import useStore from '../contexts/store';
-import { logoutUser } from '../services/authService';
+import { logoutUser, deleteAccount } from '../services/authService';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
@@ -182,6 +182,48 @@ export default function ProfileScreen() {
             try { await logoutUser(); } catch { /* ignore */ }
             logout();
           },
+        },
+      ],
+    );
+  }
+
+  // Two-step confirmation for an irreversible action. Deletes the account +
+  // all data server-side, then resets local state.
+  function handleDeleteAccount() {
+    Alert.alert(
+      t('Supprimer le compte', 'Efase kont lan'),
+      t(
+        'Cette action est définitive. Ton compte et toutes tes données (progression, XP, résultats) seront supprimés. Impossible de revenir en arrière.',
+        'Aksyon sa a definitif. Kont ou ak tout done ou yo (pwogrè, XP, rezilta) ap efase. Ou pa ka defè sa.',
+      ),
+      [
+        { text: t('Annuler', 'Anile'), style: 'cancel' },
+        {
+          text: t('Supprimer', 'Efase'),
+          style: 'destructive',
+          onPress: () =>
+            Alert.alert(
+              t('Confirmer la suppression', 'Konfime efasman an'),
+              t('Dernière étape — supprimer ton compte pour de bon ?', 'Dènye etap — efase kont ou nèt?'),
+              [
+                { text: t('Annuler', 'Anile'), style: 'cancel' },
+                {
+                  text: t('Supprimer définitivement', 'Efase nèt'),
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteAccount();
+                      logout();
+                    } catch (e: any) {
+                      Alert.alert(
+                        t('Erreur', 'Erè'),
+                        e?.message || t('Suppression impossible. Réessaie.', 'Efasman echwe. Eseye ankò.'),
+                      );
+                    }
+                  },
+                },
+              ],
+            ),
         },
       ],
     );
@@ -473,6 +515,18 @@ export default function ProfileScreen() {
           <View className="flex-row items-center gap-2">
             <LogOut color="#dc2626" size={16} />
             <Text className="text-red-600 font-semibold text-sm">{t('Se déconnecter', 'Dekonekte')}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* ── 9. Delete account (irreversible; required for App Store) ───────── */}
+        <TouchableOpacity
+          onPress={handleDeleteAccount}
+          activeOpacity={0.7}
+          className="mx-4 items-center py-2 mb-2"
+        >
+          <View className="flex-row items-center gap-1.5">
+            <Trash2 color="#94a3b8" size={13} />
+            <Text className="text-gray-400 text-xs">{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
           </View>
         </TouchableOpacity>
 
