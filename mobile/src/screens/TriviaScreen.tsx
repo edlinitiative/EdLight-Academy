@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
@@ -854,6 +854,7 @@ export default function TriviaScreen() {
 
   const { profile, recordResult, recordGameResult, daily } = useTrivia();
   const { recordActivity } = useStreak();
+  const navigation = useNavigation<any>();
 
   const [phase, setPhase] = useState<TriviaPhase>('hub');
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
@@ -873,6 +874,19 @@ export default function TriviaScreen() {
       return () => setFocusMode(false);
     }, [phase, setFocusMode]),
   );
+
+  // Tapping the "Jeux" tab returns to the hub. This screen is phase-based (not
+  // a navigation stack), so there's nothing for the default pop-to-top to reset
+  // — we reset the local phase ourselves.
+  useEffect(() => {
+    const unsub = navigation.addListener('tabPress', () => {
+      setPhase('hub');
+      setSelectedGame(null);
+      setSelectedCategory(null);
+      setIsDailyRound(false);
+    });
+    return unsub;
+  }, [navigation]);
 
   const highScores: Record<string, number> = (profile as any)?.games?.highScores || {};
 

@@ -186,23 +186,24 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
     // Trivia is platform activity → keep the streak alive.
     try { await recordStreakActivity(uid); } catch {}
 
-    // Opt-in weekly + all-time leaderboard submission.
-    if (updated.leaderboard?.optedIn && xpEarned > 0) {
-      await addWeeklyXp(uid, xpEarned, {
-        displayName: updated.leaderboard.displayName || null,
+    // Accrue weekly + all-time XP on EVERY game. A learner who hasn't opted in
+    // (or hasn't picked a pseudo) still accumulates XP — the entry is stored
+    // with a null alias, which the board hides. As soon as they join + choose a
+    // pseudo, updateEntryProfile stamps the name and their already-earned XP
+    // shows up. (Previously this only ran for opted-in users, so completing the
+    // daily before joining never registered on the classement.)
+    if (xpEarned > 0) {
+      const lb = updated.leaderboard || {};
+      const alias = lb.optedIn ? lb.displayName || null : null; // null → hidden
+      const meta = {
+        displayName: alias,
         level: newLevelInfo.level,
-        school: updated.leaderboard.school || null,
-        city: updated.leaderboard.city || null,
-        department: (updated.leaderboard as any).department || null,
-      });
-      upsertAllTimeEntry(uid, {
-        xp: updated.xp,
-        displayName: updated.leaderboard.displayName || null,
-        level: newLevelInfo.level,
-        school: updated.leaderboard.school || null,
-        city: updated.leaderboard.city || null,
-        department: (updated.leaderboard as any).department || null,
-      }).catch(() => {});
+        school: lb.school || null,
+        city: lb.city || null,
+        department: (lb as any).department || null,
+      };
+      await addWeeklyXp(uid, xpEarned, meta);
+      upsertAllTimeEntry(uid, { xp: updated.xp, ...meta }).catch(() => {});
     }
 
     return {

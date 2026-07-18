@@ -59,32 +59,26 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
   );
 }
 
-export default function Avatar({ name = '', uri, seed, size = 48 }: AvatarProps) {
-  const [photoFailed, setPhotoFailed] = React.useState(false);
+// DiceBear style used for everyone's avatar. Swap this one string to restyle
+// the whole app (options: adventurer, avataaars, big-smile, bottts, fun-emoji,
+// thumbs, notionists, ...). We intentionally ignore any provider photo (e.g.
+// Google's initials image) so every user gets a consistent generated character.
+const DICEBEAR_STYLE = 'adventurer';
+
+export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: AvatarProps) {
   const [characterFailed, setCharacterFailed] = React.useState(false);
 
   const charSeed = seed || name || 'edlight';
-
-  // Retry images if the source changes (e.g. user re-signs in with Google)
-  React.useEffect(() => setPhotoFailed(false), [uri]);
   React.useEffect(() => setCharacterFailed(false), [charSeed]);
 
-  const showPhoto = !!uri && !photoFailed;
-  const characterUri = `https://api.dicebear.com/9.x/pixel-art/png?seed=${encodeURIComponent(charSeed)}&size=96`;
+  const characterUri = `https://api.dicebear.com/9.x/${DICEBEAR_STYLE}/png?seed=${encodeURIComponent(charSeed)}&size=128`;
 
   return (
     <View
       className="rounded-full items-center justify-center overflow-hidden"
       style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#eaf2fb' }}
     >
-      {showPhoto ? (
-        <Image
-          source={{ uri: uri as string }}
-          style={{ width: size, height: size, borderRadius: size / 2 }}
-          onError={() => setPhotoFailed(true)}
-          accessibilityLabel={name || 'Avatar'}
-        />
-      ) : characterFailed ? (
+      {characterFailed ? (
         <PixelIdenticon seed={charSeed} size={size} />
       ) : (
         <Image

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
+import Avatar from '../components/ui/Avatar';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -302,20 +303,8 @@ export default function ProfileScreen() {
           }}
         >
           {/* Initials avatar */}
-          <View
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: 36,
-              backgroundColor: '#eaf2fb',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 12,
-            }}
-          >
-            <Text style={{ color: '#0857A6', fontSize: 26, fontWeight: '800' }}>
-              {initialsOf(user)}
-            </Text>
+          <View style={{ marginBottom: 12 }}>
+            <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={72} />
           </View>
 
           {/* Name */}
