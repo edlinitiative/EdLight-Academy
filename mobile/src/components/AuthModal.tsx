@@ -9,6 +9,8 @@ export default function AuthModal() {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const guestInteractionCount = useStore((s) => s.guestInteractionCount);
   const setShowAuthModal = useStore((s) => s.setShowAuthModal);
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
   const visible = showAuthModal && !isAuthenticated;
   const dismissable = guestInteractionCount < 5;
@@ -23,10 +25,13 @@ export default function AuthModal() {
         {!dismissable && (
           <View style={{ backgroundColor: '#0857A6', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
-              Créez un compte gratuit pour continuer
+              {t('Crée un compte gratuit pour continuer', 'Kreye yon kont gratis pou kontinye')}
             </Text>
             <Text style={{ color: '#93c5fd', fontSize: 13, marginTop: 3 }}>
-              {"Vous avez atteint la limite d'exploration — inscrivez-vous pour garder votre progression."}
+              {t(
+                "Tu as atteint la limite d'exploration — inscris-toi pour garder ta progression.",
+                'Ou rive nan limit eksplorasyon an — enskri pou konsève pwogrè ou.',
+              )}
             </Text>
           </View>
         )}
