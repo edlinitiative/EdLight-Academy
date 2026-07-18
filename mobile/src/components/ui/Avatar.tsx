@@ -59,11 +59,11 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
   );
 }
 
-// DiceBear style used for everyone's avatar. Swap this one string to restyle
-// the whole app (options: adventurer, avataaars, big-smile, bottts, fun-emoji,
-// thumbs, notionists, ...). We intentionally ignore any provider photo (e.g.
-// Google's initials image) so every user gets a consistent generated character.
-const DICEBEAR_STYLE = 'adventurer';
+// Every user gets a deterministic pixel robot from RoboHash (set1 = robots).
+// We ignore any provider photo (e.g. Google's initials image) so the look is
+// consistent for everyone. Swap `set1` for set2 (monsters), set3 (robot heads),
+// set4 (cats), or set5 (humans) to restyle the whole app.
+const ROBOHASH_SET = 'set1';
 
 export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: AvatarProps) {
   const [characterFailed, setCharacterFailed] = React.useState(false);
@@ -71,7 +71,7 @@ export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: Avatar
   const charSeed = seed || name || 'edlight';
   React.useEffect(() => setCharacterFailed(false), [charSeed]);
 
-  const characterUri = `https://api.dicebear.com/9.x/${DICEBEAR_STYLE}/png?seed=${encodeURIComponent(charSeed)}&size=128`;
+  const characterUri = `https://robohash.org/${encodeURIComponent(charSeed)}.png?set=${ROBOHASH_SET}&size=128x128`;
 
   return (
     <View
