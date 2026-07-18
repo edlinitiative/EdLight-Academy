@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, Award, ListChecks, Layers, Play } from 'lucide-react-native';
 import { normalizeSubject, normalizeExamTitle, normalizeYear } from '../utils/examUtils';
+import useStore from '../contexts/store';
 
 const PRIMARY = '#0857A6';
 const TEXT = '#0f172a';
@@ -54,6 +55,9 @@ export default function ExamOverview({
   onBack: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const title = normalizeExamTitle(exam);
   const subject = normalizeSubject(exam?.subject ?? '');
   const { year } = normalizeYear(exam?.year);
@@ -67,7 +71,7 @@ export default function ExamOverview({
         <TouchableOpacity onPress={onBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <ArrowLeft color={TEXT} size={22} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: TEXT }}>Aperçu de l'examen</Text>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: TEXT }}>{t("Aperçu de l'examen", 'Apèsi egzamen an')}</Text>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}>
@@ -92,20 +96,20 @@ export default function ExamOverview({
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {durationMin > 0 ? (
-              <StatItem icon={<Clock color={PRIMARY} size={17} />} value={`${durationMin} min`} label="Durée" />
+              <StatItem icon={<Clock color={PRIMARY} size={17} />} value={`${durationMin} min`} label={t('Durée', 'Dire')} />
             ) : null}
             {totalPoints > 0 ? (
-              <StatItem icon={<Award color={PRIMARY} size={17} />} value={`${totalPoints} pts`} label="Total des points" />
+              <StatItem icon={<Award color={PRIMARY} size={17} />} value={`${totalPoints} pts`} label={t('Total des points', 'Total pwen')} />
             ) : null}
             <StatItem
               icon={<ListChecks color={PRIMARY} size={17} />}
               value={String(questionCount)}
-              label={questionCount > 1 ? 'Questions' : 'Question'}
+              label={t(questionCount > 1 ? 'Questions' : 'Question', 'Kesyon')}
             />
             <StatItem
               icon={<Layers color={PRIMARY} size={17} />}
               value={String(sections.length)}
-              label={sections.length > 1 ? 'Sections' : 'Section'}
+              label={t(sections.length > 1 ? 'Sections' : 'Section', 'Seksyon')}
             />
           </View>
         </View>
@@ -114,7 +118,7 @@ export default function ExamOverview({
         {sections.length > 0 ? (
           <View style={[cardStyle, { padding: 18 }]}>
             <Text style={{ fontSize: 12, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
-              Aperçu des sections
+              {t('Aperçu des sections', 'Apèsi seksyon yo')}
             </Text>
             {sections.map((sec, i) => (
               <View
@@ -135,7 +139,7 @@ export default function ExamOverview({
                   {sec.title}
                 </Text>
                 <Text style={{ fontSize: 12, color: MUTED }}>
-                  {sec.count} question{sec.count > 1 ? 's' : ''}
+                  {sec.count} {t(sec.count > 1 ? 'questions' : 'question', 'kesyon')}
                 </Text>
               </View>
             ))}
@@ -147,7 +151,10 @@ export default function ExamOverview({
           <View style={[cardStyle, { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
             <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: PRIMARY }} />
             <Text style={{ flex: 1, fontSize: 13, color: MUTED }}>
-              Progression sauvegardée — {answeredCount} réponse{answeredCount > 1 ? 's' : ''} enregistrée{answeredCount > 1 ? 's' : ''} sur {questionCount}.
+              {t(
+                `Progression sauvegardée — ${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''} sur ${questionCount}.`,
+                `Pwogrè konsève — ${answeredCount} repons anrejistre sou ${questionCount}.`,
+              )}
             </Text>
           </View>
         ) : null}
@@ -170,13 +177,13 @@ export default function ExamOverview({
         >
           <Play color="#ffffff" size={17} fill="#ffffff" />
           <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
-            {hasProgress ? "Continuer l'examen" : "Commencer l'examen"}
+            {hasProgress ? t("Continuer l'examen", 'Kontinye egzamen an') : t("Commencer l'examen", 'Kòmanse egzamen an')}
           </Text>
         </TouchableOpacity>
         <Text style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginTop: 8 }}>
           {hasProgress
-            ? 'Vous reprendrez là où vous vous étiez arrêté.'
-            : 'Votre progression sera sauvegardée automatiquement.'}
+            ? t('Vous reprendrez là où vous vous étiez arrêté.', 'W ap kontinye kote ou te rete a.')
+            : t('Votre progression sera sauvegardée automatiquement.', 'Pwogrè ou ap konsève otomatikman.')}
         </Text>
       </View>
     </SafeAreaView>

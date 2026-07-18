@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
+import useStore from '../contexts/store';
 import {
   MathChips,
   MathPreview,
@@ -176,6 +177,9 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
   onChange: (v: string) => void;
   mathMode?: boolean;
 }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const blanks: any[] = Array.isArray(question?.scaffold_blanks) ? question.scaffold_blanks : [];
   const parts: any[] = Array.isArray(question?.answer_parts) ? question.answer_parts : [];
 
@@ -230,7 +234,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
               marginBottom: 8,
             }}
           >
-            Complète la démarche
+            {t('Complète la démarche', 'Konplete demach la')}
           </Text>
           <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: TEXT }} />
         </View>
@@ -244,7 +248,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
           : Array.isArray(blank?.options) && blank.options.length > 0
             ? blank.options
             : null;
-        const label = String(blank?.label ?? part?.label ?? '').trim() || `Étape ${i + 1}`;
+        const label = String(blank?.label ?? part?.label ?? '').trim() || t(`Étape ${i + 1}`, `Etap ${i + 1}`);
         const mathy = mathMode || looksMathy(
           typeof part?.answer === 'string' ? part.answer : undefined,
           typeof blank?.answer === 'string' ? blank.answer : undefined,
@@ -311,7 +315,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                   }}
                   value={current}
                   onChangeText={(v) => setBlank(i, v)}
-                  placeholder="Votre réponse…"
+                  placeholder={t('Votre réponse…', 'Repons ou…')}
                   placeholderTextColor="#94a3b8"
                   autoCapitalize="none"
                   autoCorrect={false}

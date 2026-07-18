@@ -163,19 +163,21 @@ function normalizeOptions(raw: any): { key: string; label: string; value: string
   return [];
 }
 
-function MCQQuestion({ question, answer, onAnswer }: {
+function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   question: any;
   answer: Answer;
   onAnswer: (a: Answer) => void;
+  isCreole: boolean;
 }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const entries = normalizeOptions(question?.options ?? question?.choices);
 
   // No usable options → let the student type the answer instead of crashing.
   if (entries.length === 0) {
     return (
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 12, color: MUTED }}>Options non disponibles — écris ta réponse :</Text>
-        <OpenQuestion answer={answer} onAnswer={onAnswer} />
+        <Text style={{ fontSize: 12, color: MUTED }}>{t('Options non disponibles — écris ta réponse :', 'Opsyon pa disponib — ekri repons ou :')}</Text>
+        <OpenQuestion answer={answer} onAnswer={onAnswer} isCreole={isCreole} />
       </View>
     );
   }
@@ -226,12 +228,15 @@ function MCQQuestion({ question, answer, onAnswer }: {
   );
 }
 
-function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…', minHeight = 120 }: {
+function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole = false }: {
   answer: Answer;
   onAnswer: (a: Answer) => void;
   placeholder?: string;
   minHeight?: number;
+  isCreole?: boolean;
 }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const resolvedPlaceholder = placeholder ?? t('Votre réponse…', 'Repons ou…');
   const value = Array.isArray(answer) ? answer.join(', ') : String(answer ?? '');
   return (
     <TextInput
@@ -253,22 +258,28 @@ function OpenQuestion({ answer, onAnswer, placeholder = 'Votre réponse…', min
       onChangeText={onAnswer}
       multiline
       textAlignVertical="top"
-      placeholder={placeholder}
+      placeholder={resolvedPlaceholder}
       placeholderTextColor="#94a3b8"
     />
   );
 }
 
-function TrueFalseQuestion({ answer, onAnswer }: { answer: Answer; onAnswer: (a: Answer) => void }) {
-  const opts = ['Vrai', 'Faux'];
+function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onAnswer: (a: Answer) => void; isCreole: boolean }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  // `value` is the stored/graded answer (kept in French so grading is unaffected);
+  // `label` is display-only.
+  const opts = [
+    { value: 'Vrai', label: t('Vrai', 'Vre') },
+    { value: 'Faux', label: t('Faux', 'Fo') },
+  ];
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
-      {opts.map((opt) => {
-        const selected = answer === opt;
+      {opts.map(({ value, label }) => {
+        const selected = answer === value;
         return (
           <TouchableOpacity
-            key={opt}
-            onPress={() => onAnswer(opt)}
+            key={value}
+            onPress={() => onAnswer(value)}
             style={[
               {
                 flex: 1,
@@ -282,7 +293,7 @@ function TrueFalseQuestion({ answer, onAnswer }: { answer: Answer; onAnswer: (a:
               selected ? undefined : cardShadow,
             ]}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: selected ? PRIMARY : MUTED }}>{opt}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: selected ? PRIMARY : MUTED }}>{label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -304,7 +315,8 @@ function cleanHint(raw: unknown): string {
  * question (the "démarche"), shown on demand so students try first — one hint
  * at a time. Reset per question via a `key` on the caller side.
  */
-function ExamHint({ hints }: { hints?: any }) {
+function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const clean = (Array.isArray(hints) ? hints : []).map(cleanHint).filter(Boolean);
   const [shown, setShown] = useState(0);
   if (clean.length === 0) return null;
@@ -316,7 +328,7 @@ function ExamHint({ hints }: { hints?: any }) {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BORDER, backgroundColor: '#ffffff' }}
       >
         <Lightbulb color={PRIMARY} size={16} />
-        <Text style={{ fontSize: 13, fontWeight: '600', color: PRIMARY }}>Besoin d'un indice ?</Text>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: PRIMARY }}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
       </TouchableOpacity>
     );
   }
@@ -326,7 +338,7 @@ function ExamHint({ hints }: { hints?: any }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Lightbulb color="#b7791f" size={15} />
         <Text style={{ fontSize: 12, fontWeight: '700', color: '#b7791f', textTransform: 'uppercase', letterSpacing: 0.6 }}>
-          {clean.length > 1 ? `Indice ${shown} / ${clean.length}` : 'Indice'}
+          {clean.length > 1 ? `${t('Indice', 'Endis')} ${shown} / ${clean.length}` : t('Indice', 'Endis')}
         </Text>
       </View>
       {clean.slice(0, shown).map((h, i) => (
@@ -334,7 +346,7 @@ function ExamHint({ hints }: { hints?: any }) {
       ))}
       {shown < clean.length ? (
         <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', marginTop: 4 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: PRIMARY }}>Indice suivant →</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: PRIMARY }}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -345,7 +357,9 @@ export default function ExamTakeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, recordActivity, setFocusMode } = useStore();
+  const { user, recordActivity, setFocusMode, language } = useStore();
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   // Hide the floating tab bar while taking an exam so it never covers the
   // question navigation / submit controls. Restored when leaving the screen.
@@ -438,11 +452,11 @@ export default function ExamTakeScreen() {
 
   function handleBack() {
     Alert.alert(
-      'Quitter l\'examen ?',
-      'Votre progression est sauvegardée automatiquement.',
+      t('Quitter l\'examen ?', 'Kite egzamen an?'),
+      t('Votre progression est sauvegardée automatiquement.', 'Pwogrè ou konsève otomatikman.'),
       [
-        { text: 'Continuer', style: 'cancel' },
-        { text: 'Quitter', style: 'destructive', onPress: () => navigation.goBack() },
+        { text: t('Continuer', 'Kontinye'), style: 'cancel' },
+        { text: t('Quitter', 'Kite'), style: 'destructive', onPress: () => navigation.goBack() },
       ],
     );
   }
@@ -465,11 +479,14 @@ export default function ExamTakeScreen() {
 
     if (unanswered > 0) {
       Alert.alert(
-        `${unanswered} question${unanswered > 1 ? 's' : ''} sans réponse`,
-        'Voulez-vous quand même soumettre ?',
+        t(
+          `${unanswered} question${unanswered > 1 ? 's' : ''} sans réponse`,
+          `${unanswered} kesyon san repons`,
+        ),
+        t('Voulez-vous quand même soumettre ?', 'Èske ou vle soumèt kanmèm?'),
         [
-          { text: 'Continuer à répondre', style: 'cancel' },
-          { text: 'Soumettre', onPress: doSubmit },
+          { text: t('Continuer à répondre', 'Kontinye reponn'), style: 'cancel' },
+          { text: t('Soumettre', 'Soumèt'), onPress: doSubmit },
         ],
       );
     } else {
@@ -499,7 +516,7 @@ export default function ExamTakeScreen() {
 
       navigation.replace('ExamResults', { level, examId });
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de soumettre. Réessayez.');
+      Alert.alert(t('Erreur', 'Erè'), t('Impossible de soumettre. Réessayez.', 'Nou pa ka soumèt. Eseye ankò.'));
     } finally {
       setSubmitting(false);
     }
@@ -538,9 +555,9 @@ export default function ExamTakeScreen() {
     return metas;
   }, [exam]);
 
-  if (loading) return <LoadingState message="Chargement de l'examen…" />;
+  if (loading) return <LoadingState message={t("Chargement de l'examen…", 'Egzamen an ap chaje…')} />;
   if (error || !exam) return <ErrorState />;
-  if (questions.length === 0) return <ErrorState message="Cet examen n'a pas de questions." />;
+  if (questions.length === 0) return <ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} />;
 
   const answeredCount = Object.keys(answers).length;
 
@@ -590,7 +607,7 @@ export default function ExamTakeScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: TEXT }} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
-          <Text style={{ fontSize: 12, color: MUTED }}>{answeredCount}/{questions.length} réponses</Text>
+          <Text style={{ fontSize: 12, color: MUTED }}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
         </View>
         <TouchableOpacity
           onPress={handleSubmit}
@@ -598,7 +615,7 @@ export default function ExamTakeScreen() {
           style={{ backgroundColor: PRIMARY, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: submitting ? 0.6 : 1 }}
         >
           <Send color="#fff" size={14} />
-          <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>{submitting ? '…' : 'Soumettre'}</Text>
+          <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>{submitting ? '…' : t('Soumettre', 'Soumèt')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -637,7 +654,7 @@ export default function ExamTakeScreen() {
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
               <Text style={{ fontSize: 11, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                Question {safeIdx + 1} / {questions.length}
+                {t('Question', 'Kesyon')} {safeIdx + 1} / {questions.length}
               </Text>
               {points > 0 ? (
                 <Text style={{ fontSize: 11, color: MUTED }}>{points} pt{points > 1 ? 's' : ''}</Text>
@@ -665,11 +682,13 @@ export default function ExamTakeScreen() {
               question={q}
               answer={answers[safeIdx] ?? null}
               onAnswer={(a) => setAnswer(safeIdx, a)}
+              isCreole={isCreole}
             />
           ) : qType === 'true_false' ? (
             <TrueFalseQuestion
               answer={answers[safeIdx] ?? null}
               onAnswer={(a) => setAnswer(safeIdx, a)}
+              isCreole={isCreole}
             />
           ) : usesScaffold(q, subject) ? (
             // Step-by-step scaffold (PWA parity): authored solution text with
@@ -683,7 +702,7 @@ export default function ExamTakeScreen() {
             />
           ) : qType === 'essay' || qType === 'short_answer' ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>Rédige ta réponse</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>{t('Rédige ta réponse', 'Ekri repons ou an')}</Text>
               <WordCountAnswer
                 value={answerText}
                 onChangeText={(v) => setAnswer(safeIdx, v)}
@@ -696,10 +715,10 @@ export default function ExamTakeScreen() {
               onChangeText={(v) => setAnswer(safeIdx, v)}
               placeholder={
                 qType === 'fill_blank'
-                  ? 'Complétez le blanc…'
+                  ? t('Complétez le blanc…', 'Ranpli espas vid la…')
                   : qType === 'calculation'
-                    ? 'Entrez votre résultat…'
-                    : 'Votre réponse…'
+                    ? t('Entrez votre résultat…', 'Antre rezilta ou…')
+                    : t('Votre réponse…', 'Repons ou…')
               }
               mathy={
                 MATH_SUBJECTS.has(subject) &&
@@ -711,7 +730,7 @@ export default function ExamTakeScreen() {
           {/* Progressive hints (the authored "démarche" as on-demand help).
               Keyed distinctly from ExamSectionContext (same parent) + per
               question so the reveal state resets when navigating. */}
-          <ExamHint key={`hint-${safeIdx}`} hints={q?.hints} />
+          <ExamHint key={`hint-${safeIdx}`} hints={q?.hints} isCreole={isCreole} />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -723,7 +742,7 @@ export default function ExamTakeScreen() {
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: BORDER, opacity: isFirst ? 0.4 : 1 }}
         >
           <ChevronLeft color={TEXT} size={18} />
-          <Text style={{ color: TEXT, fontWeight: '500', fontSize: 13 }}>Préc.</Text>
+          <Text style={{ color: TEXT, fontWeight: '500', fontSize: 13 }}>{t('Préc.', 'Anvan')}</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         {isLast ? (
@@ -732,14 +751,14 @@ export default function ExamTakeScreen() {
             disabled={submitting}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, opacity: submitting ? 0.6 : 1 }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>Terminer</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>{t('Terminer', 'Fini')}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => setCurrentIdx(Math.min(questions.length - 1, safeIdx + 1))}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: PRIMARY, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>Suiv.</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>{t('Suiv.', 'Pwochen')}</Text>
             <ChevronRight color="#fff" size={18} />
           </TouchableOpacity>
         )}

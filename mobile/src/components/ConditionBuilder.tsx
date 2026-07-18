@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
+import useStore from '../contexts/store';
 
 /**
  * Guided condition builder for domain / sign / inequality answers (PWA parity).
@@ -29,6 +30,9 @@ export default function ConditionBuilder({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const conditions: any[] = question?.conditions || [];
 
   const rows: Row[] = useMemo(() => {
@@ -52,7 +56,7 @@ export default function ConditionBuilder({
   return (
     <View style={{ gap: 12 }}>
       <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>
-        Complétez chaque condition :
+        {t('Complétez chaque condition :', 'Konplete chak kondisyon :')}
       </Text>
       {conditions.map((cond, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -89,7 +93,7 @@ export default function ConditionBuilder({
           <TextInput
             value={rows[i].value}
             onChangeText={(v) => update(i, { value: v })}
-            placeholder="valeur"
+            placeholder={t('valeur', 'valè')}
             placeholderTextColor={MUTED}
             autoCapitalize="none"
             autoCorrect={false}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react-native';
+import useStore from '../contexts/store';
 
 const PRIMARY = '#0857A6';
 const TEXT = '#0f172a';
@@ -96,6 +97,9 @@ export default function ExamSectionContext({
   isSectionStart: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const safeTitle = cleanExamText(title);
   const safeInstructions = cleanExamText(instructions);
@@ -105,7 +109,7 @@ export default function ExamSectionContext({
   if (!safeTitle && !safeInstructions && !safePassage) return null;
 
   const { numeral, name } = parseSectionTitle(safeTitle);
-  const displayTitle = numeral ? `Section ${numeral} — ${name}` : safeTitle;
+  const displayTitle = numeral ? t(`Section ${numeral} — ${name}`, `Seksyon ${numeral} — ${name}`) : safeTitle;
 
   // ── Section intro (first question of the section) ──────────────────────────
   // Title stays prominent; the consignes (often long, generic exam-wide rules)
@@ -127,7 +131,7 @@ export default function ExamSectionContext({
           ]}
         >
           <Text style={{ fontSize: 11, fontWeight: '700', color: PRIMARY, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
-            Nouvelle section
+            {t('Nouvelle section', 'Nouvo seksyon')}
           </Text>
           {safeTitle ? (
             <Text style={{ fontSize: 17, fontWeight: '800', color: TEXT, lineHeight: 23 }}>
@@ -153,7 +157,7 @@ export default function ExamSectionContext({
               }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>Consignes</Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>{t('Consignes', 'Konsiy')}</Text>
               {expanded ? <ChevronUp color={PRIMARY} size={14} /> : <ChevronDown color={PRIMARY} size={14} />}
             </TouchableOpacity>
           ) : null}
@@ -166,9 +170,9 @@ export default function ExamSectionContext({
         </View>
 
         {expanded && safeInstructions && longInstructions ? (
-          <PassageCard passage={safeInstructions} label="Consignes et texte" />
+          <PassageCard passage={safeInstructions} label={t('Consignes et texte', 'Konsiy ak tèks')} />
         ) : null}
-        {safePassage ? <PassageCard passage={safePassage} /> : null}
+        {safePassage ? <PassageCard passage={safePassage} label={t('Texte à lire', 'Tèks pou li')} /> : null}
       </View>
     );
   }
@@ -198,7 +202,7 @@ export default function ExamSectionContext({
             }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: MUTED }}>Consignes</Text>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: MUTED }}>{t('Consignes', 'Konsiy')}</Text>
             {expanded ? <ChevronUp color={MUTED} size={13} /> : <ChevronDown color={MUTED} size={13} />}
           </TouchableOpacity>
         ) : null}
@@ -207,7 +211,7 @@ export default function ExamSectionContext({
       {expanded ? (
         <View style={{ marginTop: 10, gap: 10 }}>
           {safeInstructions && longInstructions ? (
-            <PassageCard passage={safeInstructions} label="Consignes et texte" />
+            <PassageCard passage={safeInstructions} label={t('Consignes et texte', 'Konsiy ak tèks')} />
           ) : safeInstructions ? (
             <View
               style={[
@@ -224,7 +228,7 @@ export default function ExamSectionContext({
               <Text style={{ fontSize: 14, lineHeight: 21, color: '#334155' }}>{safeInstructions}</Text>
             </View>
           ) : null}
-          {safePassage ? <PassageCard passage={safePassage} /> : null}
+          {safePassage ? <PassageCard passage={safePassage} label={t('Texte à lire', 'Tèks pou li')} /> : null}
         </View>
       ) : null}
     </View>

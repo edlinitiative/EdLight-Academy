@@ -46,6 +46,9 @@ function ExamCard({
   attemptInfo?: { percentage: number | null; attempted: boolean } | null;
   onPress: () => void;
 }) {
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const title = normalizeExamTitle(exam);
   const subject = normalizeSubject(exam.subject ?? '');
   const color = subjectColor(subject);
@@ -84,7 +87,7 @@ function ExamCard({
                 <Text className="text-xs text-gray-400 font-medium">{year}</Text>
               ) : null}
               {qCount > 0 ? (
-                <Text className="text-xs text-gray-400">{qCount} question{qCount > 1 ? 's' : ''}</Text>
+                <Text className="text-xs text-gray-400">{qCount} {t('question', 'kesyon')}{qCount > 1 ? t('s', '') : ''}</Text>
               ) : null}
               {done && pct !== null ? (
                 <View className="flex-row items-center gap-1">
@@ -94,7 +97,7 @@ function ExamCard({
               ) : done ? (
                 <View className="flex-row items-center gap-1">
                   <CheckCircle2 color="#10b981" size={12} />
-                  <Text className="text-xs text-emerald-600 font-medium">Terminé</Text>
+                  <Text className="text-xs text-emerald-600 font-medium">{t('Terminé', 'Fini')}</Text>
                 </View>
               ) : null}
             </View>
@@ -110,7 +113,9 @@ export default function ExamBrowserScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, subject: initialSubject } = route.params;
-  const { user } = useStore();
+  const { user, language } = useStore();
+  const isCreole = language === 'ht';
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [exams, setExams] = useState<any[]>([]);
   const [results, setResults] = useState<Record<string, any>>({});
@@ -202,7 +207,7 @@ export default function ExamBrowserScreen() {
   const doneCount = useMemo(() => exams.filter((e) => !!results[String(e.exam_id ?? e.id ?? '')]).length, [exams, results]);
   const activeFilterCount = [subject !== 'Tout', yearFilter !== 'Tout', statusFilter !== 'all'].filter(Boolean).length;
 
-  if (loading) return <LoadingState message="Chargement des examens…" />;
+  if (loading) return <LoadingState message={t('Chargement des examens…', 'Ap chaje egzamen yo…')} />;
   if (error) return <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />;
 
   return (
@@ -216,7 +221,7 @@ export default function ExamBrowserScreen() {
           <Text className="font-bold text-gray-900 text-base">{LEVEL_LABEL[level] ?? level}</Text>
           {exams.length > 0 && (
             <Text className="text-xs text-gray-400">
-              {exams.length} examens · {doneCount} terminé{doneCount > 1 ? 's' : ''}
+              {exams.length} {t('examens', 'egzamen')} · {doneCount} {t('terminé', 'fini')}{doneCount > 1 ? t('s', '') : ''}
             </Text>
           )}
         </View>
@@ -237,7 +242,7 @@ export default function ExamBrowserScreen() {
           <Search color="#9ca3af" size={16} />
           <TextInput
             className="flex-1 py-3 ml-2 text-sm text-gray-900"
-            placeholder="Rechercher un examen…"
+            placeholder={t('Rechercher un examen…', 'Chèche yon egzamen…')}
             value={search}
             onChangeText={setSearch}
             placeholderTextColor="#9ca3af"
@@ -251,7 +256,7 @@ export default function ExamBrowserScreen() {
               onPress={() => setSubject(s)}
               className={`px-3 py-1.5 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-gray-100'}`}
             >
-              <Text className={`text-xs font-semibold ${subject === s ? 'text-white' : 'text-gray-600'}`}>{s}</Text>
+              <Text className={`text-xs font-semibold ${subject === s ? 'text-white' : 'text-gray-600'}`}>{s === 'Tout' ? t('Toutes', 'Tout') : s}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -274,12 +279,12 @@ export default function ExamBrowserScreen() {
               onPress={() => setStatusFilter('all')}
               className="flex-row items-center gap-1 bg-primary-600 px-3 py-1 rounded-full"
             >
-              <Text className="text-white text-xs font-semibold">{statusFilter === 'done' ? 'Terminés' : 'À faire'}</Text>
+              <Text className="text-white text-xs font-semibold">{statusFilter === 'done' ? t('Terminés', 'Fini') : t('À faire', 'Pou fè')}</Text>
               <X color="#fff" size={12} />
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => { setYearFilter('Tout'); setStatusFilter('all'); }}>
-            <Text className="text-primary-600 text-xs font-medium">Effacer tout</Text>
+            <Text className="text-primary-600 text-xs font-medium">{t('Effacer tout', 'Efase tout')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -290,10 +295,10 @@ export default function ExamBrowserScreen() {
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
       >
         {filtered.length === 0 ? (
-          <EmptyState message="Aucun examen trouvé." />
+          <EmptyState message={t('Aucun examen trouvé.', 'Nou pa jwenn okenn egzamen.')} />
         ) : (
           <>
-            <Text className="text-xs text-gray-400 mb-3">{filtered.length} résultat{filtered.length > 1 ? 's' : ''}</Text>
+            <Text className="text-xs text-gray-400 mb-3">{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
             {filtered.map((exam, i) => {
               const examId = String(exam.exam_id ?? exam.id ?? i);
               return (
@@ -318,14 +323,14 @@ export default function ExamBrowserScreen() {
         />
         <View className="bg-white rounded-t-3xl px-5 pt-5 pb-10">
           <View className="flex-row items-center justify-between mb-5">
-            <Text className="text-lg font-bold text-gray-900">Filtres</Text>
+            <Text className="text-lg font-bold text-gray-900">{t('Filtres', 'Filt')}</Text>
             <TouchableOpacity onPress={() => setShowFilters(false)}>
               <X color="#6b7280" size={22} />
             </TouchableOpacity>
           </View>
 
           {/* Year filter */}
-          <Text className="text-sm font-semibold text-gray-700 mb-2">Année</Text>
+          <Text className="text-sm font-semibold text-gray-700 mb-2">{t('Année', 'Ane')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-5">
             {years.map((y) => (
               <TouchableOpacity
@@ -333,15 +338,15 @@ export default function ExamBrowserScreen() {
                 onPress={() => setYearFilter(y)}
                 className={`px-4 py-2 rounded-full ${yearFilter === y ? 'bg-primary-600' : 'bg-gray-100'}`}
               >
-                <Text className={`text-sm font-semibold ${yearFilter === y ? 'text-white' : 'text-gray-600'}`}>{y}</Text>
+                <Text className={`text-sm font-semibold ${yearFilter === y ? 'text-white' : 'text-gray-600'}`}>{y === 'Tout' ? t('Toutes', 'Tout') : y}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           {/* Status filter */}
-          <Text className="text-sm font-semibold text-gray-700 mb-2">Statut</Text>
+          <Text className="text-sm font-semibold text-gray-700 mb-2">{t('Statut', 'Eta')}</Text>
           <View className="flex-row gap-3 mb-6">
-            {([['all', 'Tous'], ['todo', 'À faire'], ['done', 'Terminés']] as const).map(([val, label]) => (
+            {([['all', t('Tous', 'Tout')], ['todo', t('À faire', 'Pou fè')], ['done', t('Terminés', 'Fini')]] as const).map(([val, label]) => (
               <TouchableOpacity
                 key={val}
                 onPress={() => setStatusFilter(val)}
@@ -356,7 +361,7 @@ export default function ExamBrowserScreen() {
             onPress={() => setShowFilters(false)}
             className="bg-primary-600 py-4 rounded-2xl items-center"
           >
-            <Text className="text-white font-bold text-base">Appliquer</Text>
+            <Text className="text-white font-bold text-base">{t('Appliquer', 'Aplike')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
