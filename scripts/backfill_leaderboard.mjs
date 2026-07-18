@@ -58,6 +58,8 @@ let visible = 0, hidden = 0, skipped = 0;
 let batch = db.batch(), ops = 0, batches = 0;
 const flush = async () => { if (ops) { if (COMMIT) await batch.commit(); batch = db.batch(); ops = 0; batches++; } };
 
+const firstNameOf = (s) => String(s || '').trim().split(/\s+/)[0] || '';
+
 for (const p of profiles) {
   const data = p.data() || {};
   const uid = p.ref.parent.parent?.id;
@@ -65,7 +67,13 @@ for (const p of profiles) {
   if (!uid || xp <= 0) { skipped++; continue; }
 
   const lb = data.leaderboard || {};
-  const alias = lb.optedIn && isValidAlias(lb.displayName) ? lb.displayName : null;
+  // Auto-enroll everyone: chosen pseudo → account first name → null (hidden).
+  let alias = isValidAlias(lb.displayName) ? lb.displayName : null;
+  if (!alias) {
+    const u = (await db.doc(`users/${uid}`).get()).data() || {};
+    const first = firstNameOf(u.full_name || u.name || u.displayName || '');
+    if (isValidAlias(first)) alias = first;
+  }
   if (alias) visible++; else hidden++;
 
   const meta = {
@@ -80,8 +88,11 @@ for (const p of profiles) {
   };
   batch.set(db.doc(`leaderboards/${WEEK}/entries/${uid}`), { ...meta, weekId: WEEK }, { merge: true });
   batch.set(db.doc(`leaderboards/all-time/entries/${uid}`), meta, { merge: true });
-  ops += 2;
-  if (ops >= 400) await flush();
+  // Persist enrollment on the profile so future games keep them on the board
+  // and the "Rejoindre le classement" button no longer shows.
+  batch.set(p.ref, { leaderboard: { ...lb, optedIn: true, displayName: alias } }, { merge: true });
+  ops += 3;
+  if (ops >= 399) await flush();
 }
 await flush();
 

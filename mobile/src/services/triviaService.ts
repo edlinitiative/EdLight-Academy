@@ -77,7 +77,10 @@ export function defaultTriviaProfile() {
     dailyChallenge: { date: null, completed: false, score: 0, total: 0, xpEarned: 0 },
     lastPlayedDate: null,
     games: { gamesPlayed: 0, highScores: {} },
-    leaderboard: { optedIn: false, displayName: '', school: null, city: null, department: null },
+    // Everyone is on the leaderboard by default (auto-enrolled). The board only
+    // shows an entry once it has a valid alias — we fall back to the player's
+    // first name when they haven't set a custom pseudo.
+    leaderboard: { optedIn: true, displayName: '', school: null, city: null, department: null },
   };
 }
 
@@ -127,7 +130,7 @@ export function getDailyChallengeState(profile: any, today = todayStr()) {
  *
  * @returns {{ profile, xpEarned, leveledUp, prevLevel, newLevel }}
  */
-export async function recordTriviaResult(uid: string, { category, score = 0, total = 0, isDaily = false }: { category: any; score: number; total: number; isDaily?: boolean }) {
+export async function recordTriviaResult(uid: string, { category, score = 0, total = 0, isDaily = false, defaultName }: { category: any; score: number; total: number; isDaily?: boolean; defaultName?: string }) {
   if (!uid) {
     const xpEarned = computeXpEarned({ score, total, isDaily });
     return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1 };
@@ -194,7 +197,15 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
     // daily before joining never registered on the classement.)
     if (xpEarned > 0) {
       const lb = updated.leaderboard || {};
-      const alias = lb.optedIn ? lb.displayName || null : null; // null → hidden
+      // Alias priority: the player's chosen pseudo → their account first name →
+      // null (hidden). optedIn defaults true, so everyone with a name shows.
+      const alias = lb.optedIn === false
+        ? null
+        : isValidAlias(lb.displayName)
+        ? lb.displayName
+        : isValidAlias(defaultName)
+        ? defaultName
+        : null;
       const meta = {
         displayName: alias,
         level: newLevelInfo.level,

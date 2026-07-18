@@ -9,6 +9,7 @@
 import { useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import useStore from '../contexts/store';
+import { getFirstName } from '../utils/shared';
 import {
   loadTriviaProfile,
   recordTriviaResult,
@@ -54,7 +55,7 @@ export function useTrivia() {
         setLastReward(reward);
         return reward;
       }
-      const res = await recordTriviaResult(uid, { category, score, total, isDaily });
+      const res = await recordTriviaResult(uid, { category, score, total, isDaily, defaultName: getFirstName(user) });
       qc.setQueryData(triviaKey(uid), res.profile);
       setLastReward(res);
       return res;
