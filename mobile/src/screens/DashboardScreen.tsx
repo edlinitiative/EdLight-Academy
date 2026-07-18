@@ -72,7 +72,7 @@ function KpiCard({
 
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, language, enrolledCourses, quizAttempts, lastActivity } = useStore();
+  const { user, language, enrolledCourses, quizAttempts, lastActivity, setPendingDailyChallenge } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -215,6 +215,7 @@ export default function DashboardScreen() {
           <HomeWidgets
             onNavigateExams={() => navigation.navigate('Exams')}
             onNavigateTrivia={() => navigation.navigate('Trivia')}
+            onNavigateDaily={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }}
             onNavigateCourses={() => navigation.navigate('Courses')}
             enrolledCount={enrolledCourses.length}
           />

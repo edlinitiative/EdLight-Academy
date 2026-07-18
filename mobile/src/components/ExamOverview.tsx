@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, Award, ListChecks, Layers, Play } from 'lucide-react-native';
 import { normalizeSubject, normalizeExamTitle, normalizeYear } from '../utils/examUtils';
 
@@ -53,6 +53,7 @@ export default function ExamOverview({
   onStart: () => void;
   onBack: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const title = normalizeExamTitle(exam);
   const subject = normalizeSubject(exam?.subject ?? '');
   const { year } = normalizeYear(exam?.year);
@@ -152,8 +153,9 @@ export default function ExamOverview({
         ) : null}
       </ScrollView>
 
-      {/* Start CTA */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#e8edf5' }}>
+      {/* Start CTA — safe-area aware so it always clears the home indicator /
+          Android gesture bar (the floating tab bar is hidden here via focus mode). */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#e8edf5' }}>
         <TouchableOpacity
           onPress={onStart}
           style={{

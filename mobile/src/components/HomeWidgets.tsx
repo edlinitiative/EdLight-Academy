@@ -61,6 +61,7 @@ function Widget({ icon, title, value, sub, onPress }: WidgetProps) {
 interface HomeWidgetsProps {
   onNavigateExams?: () => void;
   onNavigateTrivia?: () => void;
+  onNavigateDaily?: () => void;
   onNavigateCourses?: () => void;
   enrolledCount?: number;
   recommendedCourse?: any;
@@ -69,6 +70,7 @@ interface HomeWidgetsProps {
 export default function HomeWidgets({
   onNavigateExams,
   onNavigateTrivia,
+  onNavigateDaily,
   onNavigateCourses,
   enrolledCount = 0,
   recommendedCourse,
@@ -87,10 +89,10 @@ export default function HomeWidgets({
         />
         <Widget
           icon={<Zap color="#0857A6" size={18} />}
-          title="Défi Trivia"
+          title="Défi du jour"
           value="Jouer"
-          sub="Gagne des XP"
-          onPress={onNavigateTrivia}
+          sub="+50 XP bonus"
+          onPress={onNavigateDaily ?? onNavigateTrivia}
         />
       </View>
       <View style={{ flex: 1, gap: 10 }}>

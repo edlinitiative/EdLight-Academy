@@ -34,6 +34,9 @@ export interface AppState {
   guestInteractionCount: number;
   activeTab: string;
   focusMode: boolean;
+  // Transient (not persisted): set by the home "Défi du jour" widget so the
+  // Trivia tab auto-starts today's daily challenge on focus.
+  pendingDailyChallenge: boolean;
 
   setUser: (user: any) => void;
   setAuthConfirmed: () => void;
@@ -57,6 +60,7 @@ export interface AppState {
   incrementGuestInteraction: () => void;
   setActiveTab: (tab: string) => void;
   setFocusMode: (focus: boolean) => void;
+  setPendingDailyChallenge: (pending: boolean) => void;
   logout: () => void;
 }
 
@@ -84,6 +88,7 @@ const useStore = create<AppState>()(
       guestInteractionCount: 0,
       activeTab: 'signin',
       focusMode: false,
+      pendingDailyChallenge: false,
 
       setUser: (user) => set({ user, isAuthenticated: !!user, ...(user ? { showAuthModal: false } : {}) }),
       setAuthConfirmed: () => set({ authConfirmed: true }),
@@ -141,6 +146,7 @@ const useStore = create<AppState>()(
         }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setFocusMode: (focus) => set({ focusMode: !!focus }),
+      setPendingDailyChallenge: (pending) => set({ pendingDailyChallenge: !!pending }),
 
       logout: () =>
         set({

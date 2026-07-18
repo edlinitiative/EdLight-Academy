@@ -28,8 +28,12 @@ const INACTIVE = '#111827';
 
 // Floating pill bar (Instagram-style): detached from the screen edge, rounded,
 // elevated. Sized explicitly so labels never clip, whatever the device width.
-const BAR_HEIGHT = 62;
+// Height trimmed ~20% (was 62) so the bar takes less of the screen and sits
+// further clear of any screen's own bottom actions.
+const BAR_HEIGHT = 50;
 const BAR_MARGIN = 16;
+// Icons scaled to match the shorter bar so icon + label never clip.
+const ICON_SIZE = 20;
 
 // Two taps on the SAME tab within this window trigger a data refresh.
 const DOUBLE_TAP_MS = 350;
@@ -58,7 +62,7 @@ function TabIcon({
         },
       ]}
     >
-      <Icon color={color} size={size} />
+      <Icon color={color} size={ICON_SIZE} />
     </View>
   );
 }
@@ -135,8 +139,8 @@ export default function TabNavigator() {
               borderWidth: 1,
               borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.6)',
               overflow: 'hidden',
-              paddingTop: 8,
-              paddingBottom: 10,
+              paddingTop: 6,
+              paddingBottom: 6,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 8 },
               shadowOpacity: dark ? 0.5 : 0.14,
@@ -203,8 +207,8 @@ export default function TabNavigator() {
 
 const styles = StyleSheet.create({
   iconPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 3,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
 });
