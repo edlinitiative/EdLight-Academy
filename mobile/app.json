@@ -19,7 +19,14 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.edlightacademy",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.618990331083-7snnbt287h2k9b82mkoufloj6um0epl4"
+            ]
+          }
+        ]
       }
     },
     "android": {

@@ -37,12 +37,13 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState<'name' | 'email' | 'password' | null>(null);
 
+  // Google OAuth client IDs from the edlight-academy Firebase project.
+  // webClientId is the audience Firebase expects for the returned idToken.
+  // androidClientId is pending the Play App Signing SHA-1 (Google sign-in on
+  // Android stays disabled until that client exists — iOS works now).
   const [, response, promptAsync] = Google.useAuthRequest({
-    // Fill these from app.json / EAS environment
-    clientId: '',
-    iosClientId: '',
-    androidClientId: '',
-    webClientId: '',
+    iosClientId: '618990331083-7snnbt287h2k9b82mkoufloj6um0epl4.apps.googleusercontent.com',
+    webClientId: '618990331083-lq461c7uqjr6sk389qi1tarcdrgfcobj.apps.googleusercontent.com',
   });
 
   React.useEffect(() => {
