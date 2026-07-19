@@ -45,6 +45,7 @@ const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
 const Profile = lazyWithRetry(() => import('./pages/Profile'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 const FigureEmbed = lazyWithRetry(() => import('./pages/FigureEmbed'));
+const Download = lazyWithRetry(() => import('./pages/Download'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -97,6 +98,9 @@ export default function App() {
 
               {/* Chrome-free figure embed for the mobile app's WebView */}
               <Route path="/figure-embed" element={<FigureEmbed />} />
+
+              {/* Device-detecting "get the app" smart link (QR-code target) */}
+              <Route path="/download" element={<Download />} />
 
               {/* Admin console — sidebar layout with grouped sections/subpages */}
               <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>

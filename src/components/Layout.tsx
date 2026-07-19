@@ -14,6 +14,7 @@ import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { useNotificationRuntime } from '../hooks/useNotificationRuntime';
 import useStore from '../contexts/store';
 import { SandraWidget } from './SandraWidget';
+import DownloadAppBanner from './DownloadAppBanner';
 
 // Notification panel is only shown on demand — keep it (and its Firebase use)
 // out of the initial shell bundle.
@@ -113,6 +114,7 @@ export function Layout() {
   return (
     <div className={shellClassName}>
       <RouteMeta />
+      <DownloadAppBanner />
       <a href="#main-content" className="skip-to-content">
         {t('a11y.skipToContent', 'Aller au contenu')}
       </a>
