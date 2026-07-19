@@ -41,7 +41,7 @@ import { fetchCatalogIndex } from '../utils/examCatalog';
 import { normalizeSubject } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from './examResults';
 import { loadAppData } from './dataService';
-import { TRACK_COEFFICIENTS } from '../config/trackConfig';
+import { TRACK_COEFFICIENTS, TRACKS } from '../config/trackConfig';
 
 const PLAN_URL = 'https://academy.edlight.org/api/generate-plan';
 
@@ -770,9 +770,12 @@ export async function generateStudyPlan(opts: {
   annotateWithAiSchedule(tasks, aiPlan);
   tasks = sortTasksByPriority(tasks).map((t) => cleanUndefined(t));
 
+  // Use the full filière label so the title never reads as a bare code like
+  // "SVT" (which doubles as a subject name and confuses students).
+  const trackLabel = TRACKS.find((tk) => tk.code === track)?.label ?? track;
   const planData = {
     track,
-    title: aiPlan?.title || `Plan d'étude, ${track}`,
+    title: aiPlan?.title || `Plan d'étude — Filière ${trackLabel}`,
     description: aiPlan?.description || '',
     tips: aiPlan?.tips || [],
     dailyTargetMinutes: aiPlan?.dailyTargetMinutes || dailyMinutes,

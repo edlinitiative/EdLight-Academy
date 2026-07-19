@@ -90,7 +90,7 @@ export default function HomeWidgets({
           icon={<ClipboardList color={colors.azure} size={19} />}
           tint={colors.azureSoft}
           title={t('Examens Bac', 'Egzamen Bak')}
-          value={t('≥ 5 ans', '≥ 5 an')}
+          value={t("S'entraîner", 'Antrene')}
           sub={t('Sujets officiels', 'Sijè ofisyèl')}
           accessibilityLabel={t('Examens Bac', 'Egzamen Bak')}
           onPress={onNavigateExams}

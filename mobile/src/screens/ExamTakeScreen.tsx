@@ -511,7 +511,8 @@ export default function ExamTakeScreen() {
         await saveExamResult(user.uid, examId, {
           exam_id: examId,
           level,
-          title: exam?.exam_title ?? exam?.title ?? '',
+          // Save the cleaned short title, not the raw ministry boilerplate.
+          title: normalizeExamTitle(exam),
           subject: normalizeSubject(exam?.subject ?? ''),
           summary: graded.summary,
           answers,

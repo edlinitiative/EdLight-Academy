@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useScrollToTop } from '@react-navigation/native';
-import Avatar from '../components/ui/Avatar';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
-  Award, CheckCircle2, Target, BookOpen, Bell,
+  Award, CheckCircle2, Target, BookOpen, Bell, ChevronRight,
   Sprout, Brain,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
+import Avatar from '../components/ui/Avatar';
+import PressableScale from '../components/ui/PressableScale';
 import useStore from '../contexts/store';
 import { logoutUser, deleteAccount } from '../services/authService';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
-import ProgressBar from '../components/ProgressBar';
 import ReadinessCard from '../components/ReadinessCard';
 import Leaderboard from '../components/Leaderboard';
+import { colors, radius, shadow, cardSurface } from '../theme/theme';
 import {
   areNotificationsEnabled,
   setNotificationsEnabled as persistNotificationsEnabled,
@@ -25,59 +27,12 @@ import {
 } from '../services/notificationService';
 import { registerForPushNotifications } from '../services/pushService';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-function initialsOf(user: any): string {
-  const name = user?.name || user?.displayName || '';
-  return String(name).trim().split(/\s+/).filter(Boolean).map((p: string) => p[0]).join('').slice(0, 2).toUpperCase() || 'EL';
-}
+const GUTTER = 20;
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-function StatRow({
-  label,
-  value,
-  icon,
-  last = false,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  last?: boolean;
-}) {
-  return (
-    <View className={`flex-row items-center justify-between py-3 ${!last ? 'border-b border-gray-100' : ''}`}>
-      <View className="flex-row items-center gap-3">
-        {icon}
-        <Text className="text-gray-700 text-sm">{label}</Text>
-      </View>
-      <Text className="font-bold text-gray-900">{value}</Text>
-    </View>
-  );
-}
-
-function SettingsTile({
-  label,
-  icon,
-  onPress,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.75}
-      className="flex-1 bg-white border border-gray-200 rounded-xl items-center justify-center py-5 gap-2"
-    >
-      {icon}
-      <Text className="text-xs font-semibold text-gray-700 text-center">{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function KpiCard({
+/** One stat tile in the 2×2 progress grid. */
+function StatTile({
   icon,
   value,
   label,
@@ -89,13 +44,71 @@ function KpiCard({
   iconBg: string;
 }) {
   return (
-    <View style={{ flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', gap: 6, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: iconBg }}>
+    <View style={{ flex: 1, ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: iconBg }}>
         {icon}
       </View>
-      <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>{value}</Text>
-      <Text style={{ fontSize: 10, color: '#64748b', textAlign: 'center' }}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 }}>{value}</Text>
+        <Text style={{ fontSize: 11, color: colors.muted, marginTop: 1 }} numberOfLines={1}>{label}</Text>
+      </View>
     </View>
+  );
+}
+
+/** A settings row inside the settings card: icon tile + label/sublabel + accessory. */
+function SettingRow({
+  icon,
+  iconBg,
+  label,
+  sublabel,
+  accessory,
+  onPress,
+  last,
+}: {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  sublabel?: string;
+  accessory?: React.ReactNode;
+  onPress?: () => void;
+  last?: boolean;
+}) {
+  const Body = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        gap: 12,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: colors.border,
+      }}
+    >
+      <View style={{ width: 36, height: 36, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: iconBg }}>
+        {icon}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.ink }}>{label}</Text>
+        {sublabel ? <Text style={{ fontSize: 12, color: colors.muted, marginTop: 1 }}>{sublabel}</Text> : null}
+      </View>
+      {accessory}
+    </View>
+  );
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={label}>
+        {Body}
+      </TouchableOpacity>
+    );
+  }
+  return Body;
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink, marginBottom: 12 }}>{children}</Text>
   );
 }
 
@@ -118,7 +131,6 @@ export default function ProfileScreen() {
 
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
 
@@ -129,15 +141,12 @@ export default function ProfileScreen() {
   const totalQuizzes = allAttempts.length;
   const firstName = getFirstName(user);
 
-  // Average score calculation
   const avgScore: string = (() => {
     if (allAttempts.length === 0) return '—';
     const avg = allAttempts.reduce((sum, a) => sum + (a.total > 0 ? a.score / a.total : 0), 0) / allAttempts.length;
     return `${Math.round(avg * 100)}%`;
   })();
 
-  // Notifications toggle state — reflects reality: enabled by default when the
-  // OS permission is granted, unless the user explicitly opted out.
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
@@ -150,7 +159,6 @@ export default function ProfileScreen() {
     if (value) {
       const granted = await requestPermissions();
       if (!granted) {
-        // OS permission denied — the toggle can't actually enable anything.
         setNotificationsEnabled(false);
         await persistNotificationsEnabled(false);
         return;
@@ -164,14 +172,11 @@ export default function ProfileScreen() {
 
   function handleLanguageChange(next: string) {
     setLanguage(next);
-    // The daily reminder text is baked in at schedule time — re-schedule it so
-    // it matches the new language (no-op when notifications are off).
     areNotificationsEnabled()
       .then((enabled) => { if (enabled) return scheduleDailyStudyReminder(); })
       .catch(() => {});
   }
 
-  // Progress value: level.progress is a 0–1 fraction; ProgressBar expects 0–100
   const progressPct = level?.progressPct ?? 0;
 
   async function handleLogout() {
@@ -192,8 +197,6 @@ export default function ProfileScreen() {
     );
   }
 
-  // Two-step confirmation for an irreversible action. Deletes the account +
-  // all data server-side, then resets local state.
   function handleDeleteAccount() {
     Alert.alert(
       t('Supprimer le compte', 'Efase kont lan'),
@@ -237,45 +240,35 @@ export default function ProfileScreen() {
   // ── Guest state ─────────────────────────────────────────────────────────────
   if (!isAuthenticated || !user) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
-        <View className="flex-1 items-center justify-center px-8 gap-5">
-          <Image
-            source={require('../../assets/logo.png')}
-            style={{ width: 96, height: 96 }}
-            resizeMode="contain"
-          />
-          <Text className="text-xl font-bold text-gray-900 text-center">
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <View className="flex-1 items-center justify-center px-8" style={{ gap: 20 }}>
+          <Image source={require('../../assets/logo.png')} style={{ width: 96, height: 96 }} resizeMode="contain" />
+          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
             {t('Votre profil EdLight', 'Pwofil EdLight ou')}
           </Text>
-          <Text className="text-gray-500 text-center text-sm leading-5">
+          <Text style={{ color: colors.muted, textAlign: 'center', fontSize: 14, lineHeight: 20 }}>
             {t(
               'Connectez-vous pour suivre votre progression, vos XP et votre série.',
               'Konekte pou swiv pwogrè ou, XP ou ak seri ou.',
             )}
           </Text>
-          <TouchableOpacity
+          <PressableScale
             onPress={toggleAuthModal}
-            className="rounded-2xl py-4 px-10 mt-1"
-            style={{ backgroundColor: '#1B6FE0' }}
-            activeOpacity={0.85}
+            style={{ backgroundColor: colors.azure, borderRadius: radius.chip, paddingVertical: 15, paddingHorizontal: 40, marginTop: 4, ...shadow.sm }}
           >
-            <Text className="text-white font-bold text-base">{t('Créer un compte', 'Kreye yon kont')}</Text>
-          </TouchableOpacity>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{t('Créer un compte', 'Kreye yon kont')}</Text>
+          </PressableScale>
           <TouchableOpacity onPress={toggleAuthModal} activeOpacity={0.85}>
-            <Text className="font-semibold text-base" style={{ color: '#1B6FE0' }}>
-              {t('Se connecter', 'Konekte')}
-            </Text>
+            <Text style={{ fontWeight: '700', fontSize: 15, color: colors.azure }}>{t('Se connecter', 'Konekte')}</Text>
           </TouchableOpacity>
-
-          {/* Language toggle — guests can switch too (PWA parity) */}
           <TouchableOpacity
             onPress={() => handleLanguageChange(isCreole ? 'fr' : 'ht')}
-            className="flex-row items-center gap-2 mt-4 px-4 py-2 rounded-full"
-            style={{ backgroundColor: '#1B6FE014' }}
+            className="flex-row items-center"
+            style={{ gap: 8, marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.chip, backgroundColor: colors.azureSoft }}
             activeOpacity={0.85}
           >
-            <Languages color="#1B6FE0" size={16} />
-            <Text className="text-sm font-medium" style={{ color: '#1B6FE0' }}>
+            <Languages color={colors.azure} size={16} />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.azure }}>
               {isCreole ? 'Français' : 'Kreyòl Ayisyen'}
             </Text>
           </TouchableOpacity>
@@ -288,238 +281,187 @@ export default function ProfileScreen() {
   const displayName = user.name || user.displayName || firstName || 'Étudiant';
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
-        {/* ── 1. Header ─────────────────────────────────────────────────────── */}
+        {/* Header — identity */}
         <View
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.surface,
             borderBottomWidth: 1,
-            borderBottomColor: '#eef1f6',
-            paddingHorizontal: 20,
-            paddingTop: 24,
+            borderBottomColor: colors.hairline,
+            paddingHorizontal: GUTTER,
+            paddingTop: 20,
             paddingBottom: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
           }}
         >
-          {/* Initials avatar */}
-          <View style={{ marginBottom: 12 }}>
-            <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={72} />
-          </View>
-
-          {/* Name */}
-          <Text style={{ color: '#0f172a', fontSize: 26, fontWeight: '800', lineHeight: 32 }}>
-            {displayName}
-          </Text>
-
-          {/* Email */}
-          <Text style={{ color: '#64748b', fontSize: 13, marginTop: 2 }}>
-            {user.email}
-          </Text>
-
-          {/* Track badge + level chip row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-            {track && (
-              <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
-                <Text style={{ color: '#1B6FE0', fontSize: 12, fontWeight: '700' }}>Série {track}</Text>
+          <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={64} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.ink, fontSize: 22, fontWeight: '800' }} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+              {user.email}
+            </Text>
+            {track ? (
+              <View style={{ alignSelf: 'flex-start', marginTop: 8, backgroundColor: colors.azureSoft, borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 3 }}>
+                <Text style={{ color: colors.azure, fontSize: 12, fontWeight: '700' }}>{t('Série', 'Seri')} {track}</Text>
               </View>
-            )}
-            {level && (
-              <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Zap color="#1B6FE0" size={12} />
-                <Text style={{ color: '#1B6FE0', fontSize: 12, fontWeight: '600' }}>
-                  Niveau {level.level}
-                </Text>
-              </View>
-            )}
-            {profile && (
-              <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
-                <Text style={{ color: '#1B6FE0', fontSize: 12, fontWeight: '600' }}>{profile.xp ?? 0} XP</Text>
-              </View>
-            )}
+            ) : null}
           </View>
         </View>
 
-        {/* ── 2. XP progress bar card ───────────────────────────────────────── */}
-        {profile && level && (
-          <View
-            style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', marginHorizontal: 16, marginTop: 16, marginBottom: 12, padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center gap-2">
-                <Zap color="#1B6FE0" size={16} />
-                <Text className="font-bold text-gray-900 text-sm">
-                  Niveau {level.level}
+        {/* Level / XP hero — the single home for level + XP (no more duplicate chips + card) */}
+        {profile && level ? (
+          <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
+            <PressableScale
+              haptic={false}
+              pressedScale={1}
+              style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+            >
+              <LinearGradient
+                colors={['#2E86F0', '#1B6FE0', '#0857A6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ padding: 18 }}
+              >
+                <View className="flex-row items-center justify-between" style={{ marginBottom: 12 }}>
+                  <View className="flex-row items-center" style={{ gap: 8 }}>
+                    <View style={{ width: 34, height: 34, borderRadius: radius.tile, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Zap color="#fff" size={18} />
+                    </View>
+                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '800' }}>
+                      {t('Niveau', 'Nivo')} {level.level}
+                    </Text>
+                  </View>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
+                </View>
+                <View style={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
+                  <View style={{ width: `${Math.min(100, Math.max(0, progressPct))}%`, height: 8, borderRadius: 4, backgroundColor: '#fff' }} />
+                </View>
+                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 8 }}>
+                  {t('Progression vers le niveau', 'Pwogrè vè nivo')} {level.level + 1}
                 </Text>
-              </View>
-              <Text className="text-sm font-semibold" style={{ color: '#1B6FE0' }}>{profile.xp ?? 0} XP</Text>
+              </LinearGradient>
+            </PressableScale>
+          </View>
+        ) : null}
+
+        {/* Progress stats — 2×2 grid */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+          <SectionTitle>{t('Votre progression', 'Pwogrè ou')}</SectionTitle>
+          <View style={{ gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <StatTile icon={<Target color={colors.azure} size={20} />} value={totalQuizzes} label={t('Quiz complétés', 'Quiz fini')} iconBg={colors.azureSoft} />
+              <StatTile icon={<Award color={colors.azure} size={20} />} value={avgScore} label={t('Score moyen', 'Mwayèn')} iconBg={colors.azureSoft} />
             </View>
-            <ProgressBar
-              value={progressPct}
-              color="#1B6FE0"
-              height={8}
-              showLabel
-              label={`Progression niveau ${level.level}`}
-            />
-          </View>
-        )}
-
-        {/* ── 3. Progress Dashboard ("Votre progression") ───────────────────── */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <Text style={{ fontWeight: '800', fontSize: 16, color: '#0f172a', marginBottom: 12 }}>
-            {t('Votre progression', 'Pwogrè ou')}
-          </Text>
-
-          {/* KPI stats row */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-            <KpiCard
-              icon={<Target color="#1B6FE0" size={18} />}
-              value={totalQuizzes}
-              label={t('Quiz complétés', 'Quiz fini')}
-              iconBg="#eaf2fb"
-            />
-            <KpiCard
-              icon={<Award color="#1B6FE0" size={18} />}
-              value={avgScore}
-              label={t('Score moyen', 'Mwayèn')}
-              iconBg="#eaf2fb"
-            />
-            <KpiCard
-              icon={<BookOpen color="#1B6FE0" size={18} />}
-              value={enrolledCourses.length}
-              label={t('Cours suivis', 'Kou swivi')}
-              iconBg="#eaf2fb"
-            />
-            <KpiCard
-              icon={<Flame color="#ef4444" size={18} />}
-              value={streak?.currentStreak ?? 0}
-              label={t('Jours série', 'Jou seri')}
-              iconBg="#fef2f2"
-            />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <StatTile icon={<BookOpen color={colors.azure} size={20} />} value={enrolledCourses.length} label={t('Cours suivis', 'Kou swivi')} iconBg={colors.azureSoft} />
+              <StatTile icon={<Flame color={colors.danger} size={20} />} value={streak?.currentStreak ?? 0} label={t('Jours de série', 'Jou seri')} iconBg={colors.dangerSoft} />
+            </View>
           </View>
         </View>
 
-        {/* ── 3b. Readiness card ────────────────────────────────────────────── */}
-        <View className="mx-4 mb-4">
+        {/* Readiness */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
           <ReadinessCard />
         </View>
 
-        {/* ── 4. Stats card ─────────────────────────────────────────────────── */}
-        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', marginHorizontal: 16, marginBottom: 16, padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
-          <Text className="mb-1" style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{t('Statistiques', 'Estatistik')}</Text>
-          <StatRow
-            label={t('Meilleure série', 'Pi bon seri')}
-            value={`${streak?.longestStreak ?? 0} jours`}
-            icon={<Trophy color="#1B6FE0" size={18} />}
-            last
-          />
-        </View>
-
-        {/* ── 4b. Achievements / streak milestones ──────────────────────────── */}
-        <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', marginHorizontal: 16, marginBottom: 16, padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
-          <Text className="mb-3" style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{t('Succès', 'Siksè')}</Text>
-          <View className="flex-row flex-wrap gap-3">
-            {[
-              { label: t('1er jour', '1ye jou'), target: 1, Icon: Sprout },
-              { label: t('7 jours', '7 jou'), target: 7, Icon: Flame },
-              { label: t('30 jours', '30 jou'), target: 30, Icon: Zap },
-              { label: t('100 jours', '100 jou'), target: 100, Icon: Trophy },
-              { label: t('10 quiz', '10 quiz'), target: 10, isQuiz: true, Icon: Target },
-              { label: t('50 quiz', '50 quiz'), target: 50, isQuiz: true, Icon: Brain },
-            ].map((a) => {
-              const current = a.isQuiz ? totalQuizzes : (streak?.longestStreak ?? 0);
-              const unlocked = current >= a.target;
-              return (
-                <View
-                  key={a.label}
-                  className="items-center gap-1"
-                  style={{ width: '30%' }}
-                >
-                  <View
-                    className="w-14 h-14 rounded-2xl items-center justify-center"
-                    style={{ backgroundColor: unlocked ? '#eaf2fb' : '#f3f4f6', borderWidth: 1, borderColor: '#e8edf5' }}
-                  >
-                    <a.Icon color={unlocked ? '#1B6FE0' : '#9ca3af'} size={24} />
+        {/* Achievements */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+          <View style={{ ...cardSurface, padding: 16 }}>
+            <SectionTitle>{t('Succès', 'Siksè')}</SectionTitle>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 }}>
+              {[
+                { label: t('1er jour', '1ye jou'), target: 1, Icon: Sprout },
+                { label: t('7 jours', '7 jou'), target: 7, Icon: Flame },
+                { label: t('30 jours', '30 jou'), target: 30, Icon: Zap },
+                { label: t('100 jours', '100 jou'), target: 100, Icon: Trophy },
+                { label: t('10 quiz', '10 quiz'), target: 10, isQuiz: true, Icon: Target },
+                { label: t('50 quiz', '50 quiz'), target: 50, isQuiz: true, Icon: Brain },
+              ].map((a) => {
+                const current = a.isQuiz ? totalQuizzes : (streak?.longestStreak ?? 0);
+                const unlocked = current >= a.target;
+                return (
+                  <View key={a.label} className="items-center" style={{ width: '33.33%', gap: 6 }}>
+                    <View
+                      style={{ width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: unlocked ? colors.azureSoft : '#f3f4f6', borderWidth: 1, borderColor: colors.border }}
+                    >
+                      <a.Icon color={unlocked ? colors.azure : '#9ca3af'} size={24} />
+                    </View>
+                    <Text style={{ fontSize: 11, textAlign: 'center', fontWeight: '600', color: unlocked ? colors.ink : '#9ca3af' }}>{a.label}</Text>
                   </View>
-                  <Text className="text-xs text-center font-medium" style={{ color: unlocked ? '#0f172a' : '#9ca3af' }}>{a.label}</Text>
-                  {unlocked && <CheckCircle2 color="#1B6FE0" size={12} />}
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* ── 5. Leaderboard section ────────────────────────────────────────── */}
-        <View className="mx-4 mb-4">
-          <Leaderboard compact={false} maxRows={10} />
-        </View>
-
-        {/* ── 6. Settings tile grid ─────────────────────────────────────────── */}
-        <View className="mx-4 mb-2">
-          <Text className="mb-3" style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{t('Paramètres', 'Paramèt')}</Text>
-          <View className="flex-row gap-3">
-            <SettingsTile
-              label={language === 'fr' ? 'Langue : Français' : 'Lang : Kreyòl'}
-              icon={<Languages color="#1B6FE0" size={22} />}
-              onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
-            />
-            <SettingsTile
-              label={theme === 'light' ? t('Mode nuit', 'Mòd nwit') : t('Mode jour', 'Mòd jou')}
-              icon={theme === 'light'
-                ? <Moon color="#6b7280" size={22} />
-                : <Sun color="#f59e0b" size={22} />}
-              onPress={toggleTheme}
-            />
-          </View>
-        </View>
-
-        {/* ── 7. Notifications settings card ───────────────────────────────── */}
-        <View style={{ marginHorizontal: 16, marginBottom: 4 }}>
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eaf2fb', marginRight: 12 }}>
-                <Bell color="#1B6FE0" size={18} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '600', fontSize: 14, color: '#0f172a' }}>
-                  {t('Notifications', 'Notifikasyon')}
-                </Text>
-                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>
-                  {t("Rappels d'étude quotidiens", 'Rapèl etid chak jou')}
-                </Text>
-              </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={handleNotificationToggle}
-                trackColor={{ false: '#e2e8f0', true: '#bfdbfe' }}
-                thumbColor={notificationsEnabled ? '#1B6FE0' : '#94a3b8'}
-                ios_backgroundColor="#e2e8f0"
-              />
+                );
+              })}
             </View>
           </View>
         </View>
 
-        {/* ── 8. Logout button ─────────────────────────────────────────────── */}
-        <TouchableOpacity
-          onPress={handleLogout}
-          activeOpacity={0.75}
-          className="mx-4 mt-4 items-center py-3"
-        >
-          <View className="flex-row items-center gap-2">
-            <LogOut color="#dc2626" size={16} />
-            <Text className="text-red-600 font-semibold text-sm">{t('Se déconnecter', 'Dekonekte')}</Text>
-          </View>
-        </TouchableOpacity>
+        {/* Leaderboard */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+          <Leaderboard compact={false} maxRows={10} />
+        </View>
 
-        {/* ── 9. Delete account (irreversible; required for App Store) ───────── */}
-        <TouchableOpacity
-          onPress={handleDeleteAccount}
-          activeOpacity={0.7}
-          className="mx-4 items-center py-2 mb-2"
-        >
-          <View className="flex-row items-center gap-1.5">
-            <Trash2 color="#94a3b8" size={13} />
-            <Text className="text-gray-400 text-xs">{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
+        {/* Settings — one grouped card */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+          <SectionTitle>{t('Paramètres', 'Paramèt')}</SectionTitle>
+          <View style={{ ...cardSurface }}>
+            <SettingRow
+              icon={<Languages color={colors.azure} size={18} />}
+              iconBg={colors.azureSoft}
+              label={t('Langue', 'Lang')}
+              sublabel={language === 'fr' ? 'Français' : 'Kreyòl Ayisyen'}
+              accessory={<ChevronRight color="#cbd5e1" size={18} />}
+              onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
+            />
+            <SettingRow
+              icon={theme === 'light' ? <Moon color="#6b7280" size={18} /> : <Sun color={colors.warn} size={18} />}
+              iconBg="#f3f4f6"
+              label={t('Thème', 'Tèm')}
+              sublabel={theme === 'light' ? t('Mode jour', 'Mòd jou') : t('Mode nuit', 'Mòd nwit')}
+              accessory={<ChevronRight color="#cbd5e1" size={18} />}
+              onPress={toggleTheme}
+            />
+            <SettingRow
+              icon={<Bell color={colors.azure} size={18} />}
+              iconBg={colors.azureSoft}
+              label={t('Notifications', 'Notifikasyon')}
+              sublabel={t("Rappels d'étude quotidiens", 'Rapèl etid chak jou')}
+              last
+              accessory={
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleNotificationToggle}
+                  trackColor={{ false: '#e2e8f0', true: '#bfdbfe' }}
+                  thumbColor={notificationsEnabled ? colors.azure : '#94a3b8'}
+                  ios_backgroundColor="#e2e8f0"
+                />
+              }
+            />
+          </View>
+        </View>
+
+        {/* Logout */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 24 }}>
+          <TouchableOpacity
+            onPress={handleLogout}
+            activeOpacity={0.75}
+            className="flex-row items-center justify-center"
+            style={{ gap: 8, paddingVertical: 14, borderRadius: radius.chip, borderWidth: 1.5, borderColor: '#fecaca', backgroundColor: colors.surface }}
+          >
+            <LogOut color="#dc2626" size={16} />
+            <Text style={{ color: '#dc2626', fontWeight: '800', fontSize: 14 }}>{t('Se déconnecter', 'Dekonekte')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Delete account (irreversible; required for App Store) */}
+        <TouchableOpacity onPress={handleDeleteAccount} activeOpacity={0.7} className="items-center" style={{ paddingVertical: 16, marginTop: 4 }}>
+          <View className="flex-row items-center" style={{ gap: 6 }}>
+            <Trash2 color={colors.faint} size={13} />
+            <Text style={{ color: colors.faint, fontSize: 12 }}>{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
           </View>
         </TouchableOpacity>
 

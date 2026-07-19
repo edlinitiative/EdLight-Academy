@@ -230,7 +230,7 @@ export default function ExamResultsScreen() {
         {/* Exam info */}
         {result && (
           <View style={{ backgroundColor: '#ffffff', marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
-            <Text className="font-semibold text-gray-900 mb-1">{result.title ?? t('Examen', 'Egzamen')}</Text>
+            <Text className="font-semibold text-gray-900 mb-1" numberOfLines={2}>{result.title ?? t('Examen', 'Egzamen')}</Text>
             {result.subject && <Text className="text-sm text-gray-500">{t('Matière', 'Matyè')} : {result.subject}</Text>}
             {result.level && <Text className="text-sm text-gray-500">{t('Niveau', 'Nivo')} : {result.level}</Text>}
           </View>

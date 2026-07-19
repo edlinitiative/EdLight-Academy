@@ -22,6 +22,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import {
   X,
   Lock,
@@ -40,6 +41,7 @@ import {
   WifiOff,
   Clock,
   BarChart3,
+  ChevronRight,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
@@ -194,7 +196,17 @@ function StatPill({ icon, value, label }: { icon: React.ReactNode; value: string
   );
 }
 
-function TaskRow({ task, isCreole, last }: { task: PlanTask; isCreole: boolean; last: boolean }) {
+function TaskRow({
+  task,
+  isCreole,
+  last,
+  onPress,
+}: {
+  task: PlanTask;
+  isCreole: boolean;
+  last: boolean;
+  onPress?: () => void;
+}) {
   const meta = TASK_TYPE_META[task.type || 'exam'] || TASK_TYPE_META.exam;
   const TypeIcon = meta.Icon;
   const mastered = task.status === 'mastered';
@@ -211,7 +223,12 @@ function TaskRow({ task, isCreole, last }: { task: PlanTask; isCreole: boolean; 
   if (task.aiFocusArea) secondary = task.aiFocusArea;
 
   return (
-    <View
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={!onPress}
+      activeOpacity={0.6}
+      accessibilityRole="button"
+      accessibilityLabel={taskDisplayTitle(task, isCreole)}
       className={`flex-row items-center py-3 ${!last ? 'border-b border-gray-100' : ''}`}
       style={{ gap: 10, opacity: mastered ? 0.6 : 1 }}
     >
@@ -274,7 +291,9 @@ function TaskRow({ task, isCreole, last }: { task: PlanTask; isCreole: boolean; 
         )}
         <Text style={{ fontSize: 10, color: '#94a3b8' }}>{formatDate(task.nextReviewMs, isCreole)}</Text>
       </View>
-    </View>
+
+      {onPress && !mastered && <ChevronRight size={16} color="#cbd5e1" />}
+    </TouchableOpacity>
   );
 }
 
@@ -296,6 +315,7 @@ function MasteryRow({ subject, pct }: { subject: string; pct: number }) {
 
 export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   const { user, isAuthenticated, language, track, setTrack, toggleAuthModal } = useStore();
+  const navigation = useNavigation<any>();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -393,6 +413,28 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, track, runGenerate, isCreole]);
+
+  // ── Open a task ─────────────────────────────────────────────────────
+  // Tapping a task dismisses this modal and routes to where the work happens
+  // (the plan itself only tracks progress — practice/exams live elsewhere).
+  const openTask = useCallback(
+    (task: PlanTask) => {
+      const go = (screen: string, params?: object) => {
+        onClose?.();
+        navigation.navigate('Main', { screen, params });
+      };
+      if (task.type === 'exam' && task.examId && task.level) {
+        go('Exams', { screen: 'ExamTake', params: { level: task.level, examId: task.examId } });
+      } else if (task.type === 'exam') {
+        go('Exams');
+      } else if (task.type === 'practice') {
+        go('Courses', { screen: 'Quizzes' });
+      } else {
+        go('Courses');
+      }
+    },
+    [navigation, onClose],
+  );
 
   // ── Derived plan data ───────────────────────────────────────────────
   const todayTasks = useMemo(() => getTodayTasks(plan), [plan]);
@@ -756,6 +798,20 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           )}
         </Card>
 
+        {/* Purpose hint */}
+        <View
+          className="flex-row items-center mb-4"
+          style={{ gap: 8, backgroundColor: '#eef4fb', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
+        >
+          <Sparkles size={15} color={PRIMARY} />
+          <Text style={{ flex: 1, fontSize: 12, color: '#475569', lineHeight: 17 }}>
+            {t(
+              'Touchez une tâche pour la commencer. Votre progression se met à jour automatiquement.',
+              'Peze yon travay pou kòmanse l. Pwogrè ou ap mete ajou otomatikman.',
+            )}
+          </Text>
+        </View>
+
         {/* Quick stats */}
         <View className="flex-row mb-4" style={{ gap: 10 }}>
           <StatPill
@@ -788,6 +844,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                 task={task}
                 isCreole={isCreole}
                 last={i === todayTasks.length - 1}
+                onPress={() => openTask(task)}
               />
             ))
           ) : (
@@ -816,6 +873,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                 task={task}
                 isCreole={isCreole}
                 last={i === upcomingTasks.length - 1}
+                onPress={() => openTask(task)}
               />
             ))
           ) : (

@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { CheckCircle2, Trophy, ChevronRight, BookOpen } from 'lucide-react-native';
 import { usePracticeQuizzes } from '../hooks/useData';
 import useStore from '../contexts/store';
@@ -126,11 +127,20 @@ function QuizResultScreen({ score, total, onRetry, onBack }: {
 
 export default function QuizzesScreen() {
   const { data, isLoading, isError, refetch, isFetching } = usePracticeQuizzes();
-  const { language, recordQuizAttempt } = useStore();
+  const { language, recordQuizAttempt, setFocusMode } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [state, setState] = useState<QuizState>('list');
+
+  // Hide the floating tab bar while taking a quiz or viewing results so its
+  // bottom action button ("Suivant"/"Terminer"/"Recommencer") isn't overlapped.
+  useFocusEffect(
+    useCallback(() => {
+      setFocusMode(state === 'taking' || state === 'results');
+      return () => setFocusMode(false);
+    }, [state, setFocusMode]),
+  );
   const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
   const [lastResult, setLastResult] = useState<{ score: number; total: number } | null>(null);
 

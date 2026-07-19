@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { NavigationContainer } from '@react-navigation/native';
+import { Animated, View } from 'react-native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
 import TabNavigator from './TabNavigator';
@@ -20,6 +19,23 @@ export type RootParamList = {
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
+
+// Ref so out-of-tree callers (e.g. the notification-tap handler in App.tsx) can
+// drive navigation without a component's `navigation` prop.
+export const navigationRef = createNavigationContainerRef<RootParamList>();
+
+/**
+ * Navigate from a tapped notification. Safe to call before the tree mounts —
+ * no-ops until the container is ready (a cold-start tap can fire that early).
+ * `daily` also arms the daily-challenge auto-start on the Trivia tab.
+ */
+export function navigateToTab(tab: string, opts?: { daily?: boolean }) {
+  if (!navigationRef.isReady()) return;
+  if (opts?.daily) {
+    useStore.getState().setPendingDailyChallenge(true);
+  }
+  (navigationRef.navigate as any)('Main', { screen: tab });
+}
 
 // Modal wrappers: give the screens a working X button (goBack) — they're
 // otherwise presentation-agnostic components.
@@ -80,22 +96,18 @@ function LoadingScreen() {
   }, []);
 
   // Gentle "breathing" — opacity + a subtle scale so the splash feels alive
-  // rather than a flat pulsing logo.
+  // rather than a flat pulsing logo. White background so the dark-blue logo
+  // reads clearly (matches the native splash background).
   const scale = opacity.interpolate({ inputRange: [0.4, 1], outputRange: [0.96, 1.04] });
 
   return (
-    <LinearGradient
-      colors={['#2E86F0', '#1B6FE0', '#0857A6']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
-    >
+    <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
       <Animated.Image
         source={require('../../assets/logo.png')}
         style={{ width: 120, height: 120, opacity, transform: [{ scale }] }}
         resizeMode="contain"
       />
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -105,7 +117,7 @@ export default function AppNavigator() {
   return (
     <>
       <NetworkStatus />
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
           {!authConfirmed ? (
             <Stack.Screen name="Loading" component={LoadingScreen} />
