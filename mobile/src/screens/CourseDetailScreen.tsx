@@ -122,11 +122,11 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress }: {
                 className={`flex-row items-center rounded-xl px-4 py-3 mb-1 gap-3 ${active ? 'bg-blue-50 border border-blue-200' : 'bg-white'}`}
               >
                 {lesson.type === 'video'
-                  ? <PlayCircle color={done ? '#10b981' : active ? '#0857A6' : '#9ca3af'} size={20} />
+                  ? <PlayCircle color={done ? '#10b981' : active ? '#1B6FE0' : '#9ca3af'} size={20} />
                   : <ClipboardList color={done ? '#10b981' : active ? '#f59e0b' : '#9ca3af'} size={20} />}
                 <Text
                   className="flex-1 text-sm"
-                  style={{ color: active ? '#0857A6' : '#1f2937', fontWeight: active ? '600' : '400' }}
+                  style={{ color: active ? '#1B6FE0' : '#1f2937', fontWeight: active ? '600' : '400' }}
                   numberOfLines={2}
                 >
                   {lesson.title}
@@ -234,7 +234,7 @@ export default function CourseDetailScreen() {
       {/* Course progress bar */}
       {allLessons.length > 0 && (
         <View className="bg-white px-4 pb-3">
-          <ProgressBar value={pct} color={course.color ?? '#0857A6'} height={4} />
+          <ProgressBar value={pct} color={course.color ?? '#1B6FE0'} height={4} />
         </View>
       )}
 
@@ -244,7 +244,7 @@ export default function CourseDetailScreen() {
       ) : activeLesson ? (
         <View
           className="w-full items-center justify-center"
-          style={{ height: 80, backgroundColor: (course.color ?? '#0857A6') + '15' }}
+          style={{ height: 80, backgroundColor: (course.color ?? '#1B6FE0') + '15' }}
         >
           <Text className="text-gray-500 text-sm">{activeLesson.type === 'video' ? 'Vidéo non disponible' : 'Quiz / Exercice'}</Text>
         </View>
@@ -267,7 +267,7 @@ export default function CourseDetailScreen() {
               <TouchableOpacity
                 onPress={markComplete}
                 className="flex-row items-center gap-2 px-4 py-2.5 rounded-xl"
-                style={{ backgroundColor: course.color ?? '#0857A6' }}
+                style={{ backgroundColor: course.color ?? '#1B6FE0' }}
               >
                 <CheckCircle2 color="#fff" size={16} />
                 <Text className="text-white text-sm font-bold">Marquer terminé</Text>
@@ -281,13 +281,13 @@ export default function CourseDetailScreen() {
               onPress={() => setPracticeMode('flashcards')}
               className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white"
             >
-              <Sparkles color="#0857A6" size={16} />
+              <Sparkles color="#1B6FE0" size={16} />
               <Text className="text-gray-800 text-sm font-semibold">Flashcards</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setPracticeMode('exercices')}
               className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl"
-              style={{ backgroundColor: course.color ?? '#0857A6' }}
+              style={{ backgroundColor: course.color ?? '#1B6FE0' }}
             >
               <ClipboardList color="#fff" size={16} />
               <Text className="text-white text-sm font-bold">{isCreole ? 'Egzèsis' : 'Exercices'}</Text>
@@ -314,7 +314,7 @@ export default function CourseDetailScreen() {
               <TouchableOpacity
                 onPress={() => setActiveLesson(allLessons[activeIndex + 1])}
                 className="flex-row items-center gap-1 px-3 py-2 rounded-xl"
-                style={{ backgroundColor: course.color ?? '#0857A6' }}
+                style={{ backgroundColor: course.color ?? '#1B6FE0' }}
               >
                 <Text className="text-white text-xs font-medium">Suiv.</Text>
                 <ChevronRight color="#fff" size={16} />
@@ -331,7 +331,7 @@ export default function CourseDetailScreen() {
           <LessonComments threadKey={`comments:${course.id}:${activeLesson.id}`} isCreole={isCreole} />
         )}
         {!activeLesson && (
-          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+          <View style={{ backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
             <Text className="font-semibold text-gray-900 mb-1">{course.name}</Text>
             {course.description ? (
               <Text className="text-sm text-gray-500 leading-relaxed">{course.description}</Text>

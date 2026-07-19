@@ -123,7 +123,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
       {isAuthed && (
         <View className="flex-row px-4 gap-2 mb-4">
           <View className="flex-1 flex-row items-center justify-center gap-1.5 bg-white rounded-2xl py-3 border border-gray-100">
-            <Zap color="#0857A6" size={16} />
+            <Zap color="#1B6FE0" size={16} />
             <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>{level.xp}</Text>
             <Text style={{ fontSize: 12, color: '#64748b' }}>
               XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}

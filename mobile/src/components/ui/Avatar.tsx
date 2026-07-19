@@ -50,7 +50,7 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
           {row.map((on, c) => (
             <View
               key={c}
-              style={{ width: cell, height: cell, backgroundColor: on ? '#0857A6' : 'transparent' }}
+              style={{ width: cell, height: cell, backgroundColor: on ? '#1B6FE0' : 'transparent' }}
             />
           ))}
         </View>

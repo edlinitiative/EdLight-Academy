@@ -24,7 +24,7 @@ export default function FigureRenderer({ description }: FigureRendererProps) {
           borderRadius: 12,
           padding: 12,
           borderLeftWidth: 3,
-          borderLeftColor: '#0857A6',
+          borderLeftColor: '#1B6FE0',
         }}
       >
         <Text style={{ fontSize: 13, color: '#1e40af', lineHeight: 20 }}>

@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   optionSelected: {
-    borderColor: '#0857A6',
+    borderColor: '#1B6FE0',
   },
   flagEmoji: {
     fontSize: 24,
@@ -139,11 +139,11 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   optionTextSelected: {
-    color: '#0857A6',
+    color: '#1B6FE0',
     fontWeight: '600',
   },
   confirmButton: {
-    backgroundColor: '#0857A6',
+    backgroundColor: '#1B6FE0',
     borderRadius: 14,
     width: '100%',
     paddingVertical: 14,

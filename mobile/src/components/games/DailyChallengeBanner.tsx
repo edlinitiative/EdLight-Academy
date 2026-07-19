@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { CalendarCheck, Check } from 'lucide-react-native';
 
-const AZURE = '#0857A6';
+const AZURE = '#1B6FE0';
 
 /**
  * "Défi du jour" banner — a shared once-a-day round (same 10 questions for

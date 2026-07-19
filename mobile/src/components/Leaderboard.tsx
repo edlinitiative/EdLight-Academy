@@ -28,7 +28,7 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
     <View
       className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
       style={isMe
-        ? { backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#0857A6' }
+        ? { backgroundColor: '#eaf2fb', borderWidth: 1, borderColor: '#1B6FE0' }
         : { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5' }}
     >
       {/* Rank badge */}
@@ -59,7 +59,7 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
 
       {/* XP */}
       <View className="items-end">
-        <Text className="text-sm font-bold" style={{ color: '#0857A6' }}>{entry.xp ?? 0}</Text>
+        <Text className="text-sm font-bold" style={{ color: '#1B6FE0' }}>{entry.xp ?? 0}</Text>
         <Text className="text-xs text-gray-400">XP</Text>
       </View>
     </View>
@@ -88,7 +88,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
 
   const displayList = entries.slice(0, maxRows);
 
-  const cardStyle = { backgroundColor: '#ffffff' as const, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 };
+  const cardStyle = { backgroundColor: '#ffffff' as const, borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 };
 
   const joinFooter = isAuthed && !compact && (
     <>
@@ -121,7 +121,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
         <TouchableOpacity
           onPress={() => setShowJoin(true)}
           activeOpacity={0.85}
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingVertical: 11, borderRadius: 999, backgroundColor: '#0857A6' }}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingVertical: 11, borderRadius: 999, backgroundColor: '#1B6FE0' }}
         >
           <ShieldCheck size={15} color="#fff" />
           <Text style={{ color: '#fff', fontSize: 13.5, fontWeight: '800' }}>
@@ -136,13 +136,13 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   const header = !compact && (
     <>
       <View className="flex-row items-center gap-2 mb-3">
-        <Trophy color="#0857A6" size={18} />
+        <Trophy color="#1B6FE0" size={18} />
         <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
           {period === 'all' ? t('Classement général', 'Klasman jeneral') : t('Classement de la semaine', 'Klasman semèn nan')}
         </Text>
         {myRank && (
           <View className="ml-auto px-2 py-0.5 rounded-full" style={{ backgroundColor: '#eaf2fb' }}>
-            <Text className="text-xs font-bold" style={{ color: '#0857A6' }}>#{myRank}</Text>
+            <Text className="text-xs font-bold" style={{ color: '#1B6FE0' }}>#{myRank}</Text>
           </View>
         )}
       </View>
@@ -154,7 +154,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
             activeOpacity={0.8}
             style={{ flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8, backgroundColor: period === p ? '#ffffff' : 'transparent' }}
           >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: period === p ? '#0857A6' : '#64748b' }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: period === p ? '#1B6FE0' : '#64748b' }}>
               {p === 'week' ? t('Cette semaine', 'Semèn sa a') : t('Tous les temps', 'Tout tan')}
             </Text>
           </TouchableOpacity>

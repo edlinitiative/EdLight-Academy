@@ -1,61 +1,63 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { ClipboardList, Zap, Trophy, BookOpen, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import PressableScale from './ui/PressableScale';
+import { colors, radius, cardSurface } from '../theme/theme';
 
 interface WidgetProps {
   icon: React.ReactNode;
   title: string;
   value: string | number;
   sub: string;
+  tint: string; // icon-tile background
+  accessibilityLabel: string;
   onPress?: () => void;
 }
 
-function Widget({ icon, title, value, sub, onPress }: WidgetProps) {
+function Widget({ icon, title, value, sub, tint, accessibilityLabel, onPress }: WidgetProps) {
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={onPress}
-      activeOpacity={0.82}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={{
         flex: 1,
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
+        ...cardSurface,
         padding: 14,
-        minHeight: 110,
+        minHeight: 112,
         justifyContent: 'space-between',
-        borderWidth: 1,
-        borderColor: '#e8edf5',
-        shadowColor: '#0857A6',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            backgroundColor: '#eaf2fb',
+            width: 40,
+            height: 40,
+            borderRadius: radius.tile,
+            backgroundColor: tint,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
           {icon}
         </View>
-        <ChevronRight color="#cbd5e1" size={14} />
+        <ChevronRight color="#cbd5e1" size={16} />
       </View>
       <View style={{ marginTop: 10 }}>
-        <Text style={{ color: '#0f172a', fontSize: 20, fontWeight: '800', letterSpacing: -0.5, lineHeight: 24 }} numberOfLines={1}>
+        <Text
+          style={{ color: colors.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.4, lineHeight: 23 }}
+          numberOfLines={1}
+        >
           {value}
         </Text>
-        <Text style={{ color: '#0f172a', fontSize: 12, fontWeight: '600', marginTop: 2 }}>{title}</Text>
-        <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 1 }} numberOfLines={1}>{sub}</Text>
+        <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '600', marginTop: 2 }}>{title}</Text>
+        <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
+          {sub}
+        </Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -82,36 +84,50 @@ export default function HomeWidgets({
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   return (
-    <View style={{ flexDirection: 'row', gap: 10 }}>
-      <View style={{ flex: 1, gap: 10 }}>
+    <View style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, gap: 12 }}>
         <Widget
-          icon={<ClipboardList color="#0857A6" size={18} />}
+          icon={<ClipboardList color={colors.azure} size={19} />}
+          tint={colors.azureSoft}
           title={t('Examens Bac', 'Egzamen Bak')}
           value={t('≥ 5 ans', '≥ 5 an')}
           sub={t('Sujets officiels', 'Sijè ofisyèl')}
+          accessibilityLabel={t('Examens Bac', 'Egzamen Bak')}
           onPress={onNavigateExams}
         />
         <Widget
-          icon={<Zap color="#0857A6" size={18} />}
+          icon={<Zap color={colors.coral} size={19} />}
+          tint={colors.coralSoft}
           title={t('Défi du jour', 'Defi jodi a')}
           value={t('Jouer', 'Jwe')}
           sub={t('+50 XP bonus', '+50 XP boni')}
+          accessibilityLabel={t('Défi du jour', 'Defi jodi a')}
           onPress={onNavigateDaily ?? onNavigateTrivia}
         />
       </View>
-      <View style={{ flex: 1, gap: 10 }}>
+      <View style={{ flex: 1, gap: 12 }}>
         <Widget
-          icon={<Trophy color="#0857A6" size={18} />}
+          icon={<Trophy color={colors.azure} size={19} />}
+          tint={colors.azureSoft}
           title={t('Classement', 'Klasman')}
           value={myRank ? `#${myRank}` : '—'}
           sub={t('Cette semaine', 'Semèn sa a')}
+          accessibilityLabel={t('Classement', 'Klasman')}
           onPress={onNavigateTrivia}
         />
         <Widget
-          icon={<BookOpen color="#0857A6" size={18} />}
+          icon={<BookOpen color={colors.azure} size={19} />}
+          tint={colors.azureSoft}
           title={recommendedCourse ? t('Continuer', 'Kontinye') : t('Mes cours', 'Kou mwen yo')}
-          value={recommendedCourse ? (recommendedCourse.name?.slice(0, 14) ?? t('Cours', 'Kou')) : enrolledCount > 0 ? `${enrolledCount}` : t('Explorer', 'Eksplore')}
+          value={
+            recommendedCourse
+              ? (recommendedCourse.name?.slice(0, 14) ?? t('Cours', 'Kou'))
+              : enrolledCount > 0
+                ? `${enrolledCount}`
+                : t('Explorer', 'Eksplore')
+          }
           sub={recommendedCourse ? (recommendedCourse.level ?? t('cours', 'kou')) : t('Catalogue', 'Katalòg')}
+          accessibilityLabel={recommendedCourse ? t('Continuer le cours', 'Kontinye kou a') : t('Mes cours', 'Kou mwen yo')}
           onPress={onNavigateCourses}
         />
       </View>

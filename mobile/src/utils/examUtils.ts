@@ -559,7 +559,7 @@ export function examCardName({ topic, session, examType }: { topic: any; session
 // ─── Subject colors ─────────────────────────────────────────────────────────
 
 const SUBJECT_COLORS = {
-  Français: '#0857A6',
+  Français: '#1B6FE0',
   Anglais: '#0A66C2',
   Espagnol: '#2563EB',
   Mathématiques: '#1E40AF',
@@ -568,7 +568,7 @@ const SUBJECT_COLORS = {
   SVT: '#2563EB',
   'Histoire-Géo': '#5D5B54',
   Philosophie: '#1E40AF',
-  Kreyòl: '#0857A6',
+  Kreyòl: '#1B6FE0',
   Économie: '#64748B',
   'Art & Musique': '#4A93DD',
   Informatique: '#2563EB',

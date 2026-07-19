@@ -23,7 +23,7 @@ export default function AuthModal() {
     >
       <View style={{ flex: 1 }}>
         {!dismissable && (
-          <View style={{ backgroundColor: '#0857A6', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
+          <View style={{ backgroundColor: '#1B6FE0', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
               {t('Crée un compte gratuit pour continuer', 'Kreye yon kont gratis pou kontinye')}
             </Text>

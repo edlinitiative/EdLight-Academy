@@ -4,7 +4,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check, RotateCcw, Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
 
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 
 type Card = {
   id: string;

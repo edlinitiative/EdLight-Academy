@@ -10,7 +10,7 @@ import { WebView } from 'react-native-webview';
  * plain-text description in a neutral card.
  */
 
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 const TEXT = '#0f172a';
 const MUTED = '#64748b';
 const BORDER = '#e8edf5';

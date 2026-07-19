@@ -62,7 +62,7 @@ function ExamCard({
       onPress={onPress}
       activeOpacity={0.82}
       className="bg-white rounded-2xl mb-3"
-      style={{ shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: '#e8edf5' }}
+      style={{ shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: '#e8edf5' }}
     >
       <View className="p-4">
         <View className="flex-row items-start gap-3">

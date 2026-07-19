@@ -4,7 +4,7 @@ import { MessageCircle, ChevronDown, ChevronUp, Send, Flag, Ban, Trash2 } from '
 import { addComment, subscribeToComments, reportComment, blockUser, deleteComment, getUserProfile } from '../services/firebase';
 import useStore from '../contexts/store';
 
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 
 function toMillis(ts: any): number {
   if (!ts) return 0;

@@ -1,5 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
 interface ProgressBarProps {
   value: number; // 0–100
@@ -9,8 +15,23 @@ interface ProgressBarProps {
   label?: string;
 }
 
-export default function ProgressBar({ value, color = '#0857A6', height = 6, showLabel = false, label }: ProgressBarProps) {
+export default function ProgressBar({
+  value,
+  color = '#1B6FE0',
+  height = 6,
+  showLabel = false,
+  label,
+}: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, value));
+  const width = useSharedValue(0);
+
+  useEffect(() => {
+    // Ease the fill toward its value so progress feels earned, not snapped.
+    width.value = withTiming(clamped, { duration: 650, easing: Easing.out(Easing.cubic) });
+  }, [clamped, width]);
+
+  const fillStyle = useAnimatedStyle(() => ({ width: `${width.value}%` }));
+
   return (
     <View>
       {(showLabel || label) && (
@@ -20,9 +41,9 @@ export default function ProgressBar({ value, color = '#0857A6', height = 6, show
         </View>
       )}
       <View className="bg-gray-200 rounded-full overflow-hidden" style={{ height }}>
-        <View
+        <Animated.View
           className="rounded-full"
-          style={{ width: `${clamped}%`, height, backgroundColor: color }}
+          style={[{ height, backgroundColor: color }, fillStyle]}
         />
       </View>
     </View>

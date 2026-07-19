@@ -1,33 +1,34 @@
 /**
  * SandraFab — floating action button that opens the Sandra AI-tutor chat.
- * Coral circle with a MessageCircle icon and a "Sandra" label, pinned
- * bottom-right above the tab bar.
+ * Coral gradient circle with a MessageCircle icon and a "Sandra" label, pinned
+ * bottom-right above the tab bar. Springs on press with a medium haptic.
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MessageCircle } from 'lucide-react-native';
+import PressableScale from './ui/PressableScale';
+import { tapMedium } from '../utils/haptics';
 
 export default function SandraFab({ onPress }: { onPress: () => void }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
+    <PressableScale
+      onPress={() => { tapMedium(); onPress(); }}
+      haptic={false}
+      pressedScale={0.92}
       accessibilityRole="button"
       accessibilityLabel="Sandra"
-      style={{
-        position: 'absolute',
-        right: 16,
-        bottom: 96,
-        alignItems: 'center',
-      }}
+      style={{ position: 'absolute', right: 16, bottom: 96, alignItems: 'center' }}
     >
-      <View
+      <LinearGradient
+        colors={['#F0693F', '#E0532F', '#C63F1F']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={{
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: '#E0532F',
           alignItems: 'center',
           justifyContent: 'center',
           shadowColor: '#E0532F',
@@ -38,7 +39,7 @@ export default function SandraFab({ onPress }: { onPress: () => void }) {
         }}
       >
         <MessageCircle size={26} color="#ffffff" />
-      </View>
+      </LinearGradient>
       <View
         style={{
           marginTop: 4,
@@ -48,7 +49,7 @@ export default function SandraFab({ onPress }: { onPress: () => void }) {
           borderRadius: 999,
           paddingHorizontal: 8,
           paddingVertical: 2,
-          shadowColor: '#0857A6',
+          shadowColor: '#1B6FE0',
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.08,
           shadowRadius: 4,
@@ -57,6 +58,6 @@ export default function SandraFab({ onPress }: { onPress: () => void }) {
       >
         <Text style={{ fontSize: 10, fontWeight: '700', color: '#E0532F' }}>Sandra</Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }

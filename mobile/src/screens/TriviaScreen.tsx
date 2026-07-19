@@ -105,16 +105,16 @@ function TriviaHeader() {
   return (
     <View className="flex-row items-center bg-white border-b border-gray-100 px-4 gap-3" style={{ paddingVertical: 10 }}>
       {/* XP section */}
-      <Zap color="#0857A6" size={16} />
+      <Zap color="#1B6FE0" size={16} />
       <View className="flex-1 flex-row items-center gap-2">
-        <Text className="text-xs font-bold w-10" style={{ color: '#0857A6' }}>
+        <Text className="text-xs font-bold w-10" style={{ color: '#1B6FE0' }}>
           {profile?.xp ?? 0} XP
         </Text>
         {/* Level progress bar */}
         <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
           <View
             className="h-2 rounded-full"
-            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: '#0857A6' }}
+            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: '#1B6FE0' }}
           />
         </View>
         <Text className="text-xs text-gray-400 font-semibold">
@@ -296,7 +296,7 @@ function RoundPicker({
               style={{
                 borderWidth: 1,
                 borderColor: '#e8edf5',
-                shadowColor: '#0857A6',
+                shadowColor: '#1B6FE0',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.06,
                 shadowRadius: 6,
@@ -311,7 +311,7 @@ function RoundPicker({
                 <Text className="text-sm text-gray-500 mt-0.5">{opt.desc}</Text>
               </View>
               <View className="items-end">
-                <Text className="text-sm font-semibold" style={{ color: '#0857A6' }}>{opt.time}</Text>
+                <Text className="text-sm font-semibold" style={{ color: '#1B6FE0' }}>{opt.time}</Text>
                 <ChevronRight color="#d1d5db" size={16} />
               </View>
             </TouchableOpacity>
@@ -480,7 +480,7 @@ function QuizPlayer({
                   className="w-6 h-6 rounded-full items-center justify-center"
                   style={{
                     backgroundColor: isCurrent
-                      ? '#0857A6'
+                      ? '#1B6FE0'
                       : isAnswered
                       ? '#10b981'
                       : '#e5e7eb',
@@ -502,8 +502,8 @@ function QuizPlayer({
 
           {/* Score badge */}
           <View className="flex-row items-center rounded-full px-2.5 py-1 gap-1" style={{ backgroundColor: '#eaf2fb' }}>
-            <Trophy color="#0857A6" size={13} />
-            <Text className="font-bold text-sm" style={{ color: '#0857A6' }}>{score}</Text>
+            <Trophy color="#1B6FE0" size={13} />
+            <Text className="font-bold text-sm" style={{ color: '#1B6FE0' }}>{score}</Text>
           </View>
         </View>
 
@@ -513,7 +513,7 @@ function QuizPlayer({
             className="h-1 rounded-full"
             style={{
               width: `${((idx + 1) / questions.length) * 100}%`,
-              backgroundColor: '#0857A6',
+              backgroundColor: '#1B6FE0',
             }}
           />
         </View>
@@ -561,7 +561,7 @@ function QuizPlayer({
           style={{
             borderWidth: 1,
             borderColor: '#e8edf5',
-            shadowColor: '#0857A6',
+            shadowColor: '#1B6FE0',
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.06,
             shadowRadius: 6,
@@ -595,9 +595,9 @@ function QuizPlayer({
                 labelText = '#dc2626';
               }
             } else if (isSelected) {
-              borderColor = '#0857A6';
+              borderColor = '#1B6FE0';
               bgColor = '#eaf2fb';
-              labelBg = '#0857A6';
+              labelBg = '#1B6FE0';
               labelText = '#fff';
             }
 
@@ -612,7 +612,7 @@ function QuizPlayer({
                   borderWidth: 1,
                   borderColor,
                   backgroundColor: bgColor,
-                  shadowColor: '#0857A6',
+                  shadowColor: '#1B6FE0',
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.06,
                   shadowRadius: 6,
@@ -695,7 +695,7 @@ function QuizPlayer({
             disabled={!selected}
             activeOpacity={0.85}
             className="py-4 rounded-2xl items-center"
-            style={{ backgroundColor: selected ? '#0857A6' : '#e5e7eb' }}
+            style={{ backgroundColor: selected ? '#1B6FE0' : '#e5e7eb' }}
           >
             <Text
               className="font-bold text-base"
@@ -709,7 +709,7 @@ function QuizPlayer({
             onPress={handleNext}
             activeOpacity={0.85}
             className="flex-row py-4 rounded-2xl items-center justify-center gap-1"
-            style={{ backgroundColor: '#0857A6' }}
+            style={{ backgroundColor: '#1B6FE0' }}
           >
             <Text className="text-white font-bold text-base">
               {idx + 1 >= questions.length
@@ -788,7 +788,7 @@ function TriviaResults({
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 40, paddingBottom: 48 }}
     >
       <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <Trophy color="#0857A6" size={32} />
+        <Trophy color="#1B6FE0" size={32} />
       </View>
 
       <ScoreRing score={score} total={total} />
@@ -803,8 +803,8 @@ function TriviaResults({
 
       {/* XP earned badge */}
       <View className="flex-row items-center gap-2 rounded-full px-4 py-2 mt-3 mb-8" style={{ backgroundColor: '#eaf2fb' }}>
-        <Zap color="#0857A6" size={16} />
-        <Text className="font-bold text-sm" style={{ color: '#0857A6' }}>
+        <Zap color="#1B6FE0" size={16} />
+        <Text className="font-bold text-sm" style={{ color: '#1B6FE0' }}>
           +{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}
         </Text>
       </View>
@@ -815,7 +815,7 @@ function TriviaResults({
         style={{ backgroundColor: '#eaf2fb' }}
       >
         <Text style={{ fontSize: 18 }}>{category.icon}</Text>
-        <Text className="font-semibold text-sm" style={{ color: '#0857A6' }}>
+        <Text className="font-semibold text-sm" style={{ color: '#1B6FE0' }}>
           {isCreole ? (category.nameHt ?? category.name) : category.name}
         </Text>
       </View>
@@ -825,7 +825,7 @@ function TriviaResults({
         onPress={onRetry}
         activeOpacity={0.85}
         className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
-        style={{ backgroundColor: '#0857A6' }}
+        style={{ backgroundColor: '#1B6FE0' }}
       >
         <RefreshCw color="#fff" size={18} />
         <Text className="text-white font-bold text-base">
@@ -1052,8 +1052,8 @@ export default function TriviaScreen() {
             className="flex-row items-center px-4 pt-1 pb-2"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ChevronRight color="#0857A6" size={16} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={{ color: '#0857A6', fontWeight: '700', fontSize: 13 }}>
+            <ChevronRight color="#1B6FE0" size={16} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Text style={{ color: '#1B6FE0', fontWeight: '700', fontSize: 13 }}>
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </TouchableOpacity>
@@ -1093,7 +1093,7 @@ export default function TriviaScreen() {
                 ? (selectedCategory.nameHt ?? selectedCategory.name)
                 : selectedCategory.name}
             </Text>
-            <Trophy color="#0857A6" size={18} />
+            <Trophy color="#1B6FE0" size={18} />
           </View>
 
           <QuizPlayer
@@ -1109,7 +1109,7 @@ export default function TriviaScreen() {
         <View className="flex-1">
           {/* Results nav bar */}
           <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
-            <Trophy color="#0857A6" size={18} />
+            <Trophy color="#1B6FE0" size={18} />
             <Text className="font-bold text-gray-900 ml-2">
               {isCreole ? 'Rezilta' : 'Résultats'}
             </Text>

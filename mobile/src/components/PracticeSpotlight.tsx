@@ -3,7 +3,7 @@ import {
   Modal, View, Text, TouchableOpacity, Dimensions, StyleSheet, findNodeHandle, UIManager,
 } from 'react-native';
 
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 const DIM = 'rgba(15,23,42,0.72)';
 const { height: SCREEN_H } = Dimensions.get('window');
 const PAD = 8;

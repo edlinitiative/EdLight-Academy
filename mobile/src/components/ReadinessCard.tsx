@@ -40,7 +40,7 @@ export default function ReadinessCard() {
 
   if (isLoading) {
     return (
-      <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+      <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
         <LoadingState message="" />
       </View>
     );
@@ -56,12 +56,12 @@ export default function ReadinessCard() {
 
   // Weakest subject for focus
   const focusSubject = focus?.subject ?? (topSubjects.length ? topSubjects[topSubjects.length - 1]?.subject : null);
-  const focusColor = focusSubject ? subjectColor(focusSubject) : '#0857A6';
+  const focusColor = focusSubject ? subjectColor(focusSubject) : '#1B6FE0';
 
   return (
-    <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+    <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Target color="#0857A6" size={18} />
+        <Target color="#1B6FE0" size={18} />
         <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16 }}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
       </View>
 

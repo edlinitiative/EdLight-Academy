@@ -13,7 +13,7 @@ import useStore from '../contexts/store';
 const BAR_HEIGHT = 62;
 const BAR_MARGIN = 16;
 const TAB_COUNT = 5;
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 

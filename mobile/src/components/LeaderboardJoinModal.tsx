@@ -13,7 +13,7 @@ import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 
 function defaultAlias(name?: string | null) {
   const first = String(name || '').trim().split(/\s+/)[0] || '';

@@ -17,12 +17,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Animated,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
 import useStore from '../contexts/store';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
+import { tapLight, tapMedium } from '../utils/haptics';
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -54,7 +56,7 @@ const markdownStyles = {
   list_item: { marginBottom: 2 },
   code_inline: {
     backgroundColor: '#eef2f9',
-    color: '#0857A6',
+    color: '#1B6FE0',
     borderRadius: 4,
     paddingHorizontal: 4,
     fontSize: 13,
@@ -75,12 +77,12 @@ const markdownStyles = {
   },
   blockquote: {
     backgroundColor: '#f4f7fb',
-    borderLeftColor: '#0857A6',
+    borderLeftColor: '#1B6FE0',
     borderLeftWidth: 3,
     paddingHorizontal: 10,
     marginBottom: 8,
   },
-  link: { color: '#0857A6' },
+  link: { color: '#1B6FE0' },
 };
 
 // ── sub-components ────────────────────────────────────────────────────────────
@@ -109,7 +111,7 @@ function TypingDots({ label }: { label: string }) {
         {dots.map((v, i) => (
           <Animated.View
             key={i}
-            style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#0857A6', opacity: v }}
+            style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#1B6FE0', opacity: v }}
           />
         ))}
       </View>
@@ -118,10 +120,18 @@ function TypingDots({ label }: { label: string }) {
   );
 }
 
-function SandraBubble({ text }: { text: string }) {
+function SandraBubble({
+  text,
+  onLinkPress,
+}: {
+  text: string;
+  onLinkPress?: (url: string) => boolean;
+}) {
   return (
     <View className="self-start max-w-[85%]" style={bubbleStyles.sandra}>
-      <Markdown style={markdownStyles}>{text}</Markdown>
+      <Markdown style={markdownStyles} onLinkPress={onLinkPress}>
+        {text}
+      </Markdown>
     </View>
   );
 }
@@ -144,14 +154,14 @@ const bubbleStyles = {
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 10,
-    shadowColor: '#0857A6',
+    shadowColor: '#1B6FE0',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 1,
   },
   user: {
-    backgroundColor: '#0857A6',
+    backgroundColor: '#1B6FE0',
     borderRadius: 16,
     borderBottomRightRadius: 4,
     paddingHorizontal: 14,
@@ -162,7 +172,14 @@ const bubbleStyles = {
 
 // ── main screen ───────────────────────────────────────────────────────────────
 
-export default function SandraScreen({ onClose }: { onClose?: () => void }) {
+export default function SandraScreen({
+  onClose,
+  onNavigate,
+}: {
+  onClose?: () => void;
+  /** Called with an in-app path (e.g. "/study-plan") when a chat link is tapped. */
+  onNavigate?: (path: string) => void;
+}) {
   const { user, language, toggleAuthModal } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -183,6 +200,46 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
     t('Comment réviser pour le bac ?', 'Kijan pou m revize pou bak la ?'),
     t('Aide-moi en économie', 'Ede m nan ekonomi'),
   ];
+
+  /**
+   * Sandra's replies embed markdown links to in-app tools (e.g.
+   * "[/study-plan](/study-plan)", "[Examens Terminale](/exams/terminale)").
+   * Route in-app paths through onNavigate; open genuine external URLs in the
+   * browser. Returning false always suppresses the library's default openURL,
+   * which can't resolve a relative in-app path (the old silent no-op bug).
+   */
+  const handleLinkPress = useCallback(
+    (url: string): boolean => {
+      const raw = (url || '').trim();
+      if (!raw) return false;
+
+      // Absolute URL: our own domain → treat its path as in-app; anything else
+      // opens externally.
+      const abs = raw.match(/^https?:\/\/([^/]+)(\/[^\s]*)?$/i);
+      if (abs) {
+        const host = abs[1].toLowerCase();
+        if (host.endsWith('edlight.org')) {
+          tapLight();
+          onNavigate?.(abs[2] || '/');
+        } else {
+          Linking.openURL(raw).catch(() => {});
+        }
+        return false;
+      }
+
+      // Relative in-app path (the common case from Sandra's prompt).
+      if (raw.startsWith('/')) {
+        tapLight();
+        onNavigate?.(raw);
+        return false;
+      }
+
+      // mailto:, tel:, custom schemes — let the OS try.
+      Linking.openURL(raw).catch(() => {});
+      return false;
+    },
+    [onNavigate],
+  );
 
   /** Core send. `appendUser` is false when retrying a turn whose bubble is already shown. */
   const deliver = useCallback(
@@ -224,6 +281,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
   const handleSend = () => {
     const text = input.trim();
     if (!text) return;
+    tapMedium();
     setInput('');
     deliver(text, true);
   };
@@ -264,7 +322,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
               backgroundColor: '#ffffff',
               borderWidth: 1,
               borderColor: '#e8edf5',
-              shadowColor: '#0857A6',
+              shadowColor: '#1B6FE0',
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.06,
               shadowRadius: 6,
@@ -290,7 +348,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
               onPress={toggleAuthModal}
               activeOpacity={0.8}
               className="rounded-full px-6 py-3"
-              style={{ backgroundColor: '#0857A6' }}
+              style={{ backgroundColor: '#1B6FE0' }}
             >
               <Text className="text-white font-bold text-sm">
                 {t('Se connecter', 'Konekte')}
@@ -337,7 +395,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
               style={{ backgroundColor: '#f4f7fb', borderWidth: 1, borderColor: '#e8edf5' }}
               accessibilityLabel={t('Nouvelle conversation', 'Nouvo konvèsasyon')}
             >
-              <RotateCcw size={16} color="#0857A6" />
+              <RotateCcw size={16} color="#1B6FE0" />
             </TouchableOpacity>
             {onClose ? (
               <TouchableOpacity
@@ -364,6 +422,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
           {messages.length === 0 ? (
             <View>
               <SandraBubble
+                onLinkPress={handleLinkPress}
                 text={t(
                   'Bonjour ! Je suis Sandra, votre tutrice. Posez-moi vos questions sur vos cours !',
                   'Bonjou ! Mwen se Sandra, titris ou. Poze m kesyon ou yo sou kou ou yo !',
@@ -373,7 +432,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
                 {suggestions.map((s) => (
                   <TouchableOpacity
                     key={s}
-                    onPress={() => deliver(s, true)}
+                    onPress={() => { tapLight(); deliver(s, true); }}
                     disabled={sending}
                     activeOpacity={0.75}
                     className="rounded-full px-4 py-2"
@@ -384,7 +443,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
                       opacity: sending ? 0.5 : 1,
                     }}
                   >
-                    <Text className="text-xs font-semibold" style={{ color: '#0857A6' }}>
+                    <Text className="text-xs font-semibold" style={{ color: '#1B6FE0' }}>
                       {s}
                     </Text>
                   </TouchableOpacity>
@@ -396,7 +455,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
               m.role === 'user' ? (
                 <UserBubble key={m.id} text={m.text} />
               ) : (
-                <SandraBubble key={m.id} text={m.text} />
+                <SandraBubble key={m.id} text={m.text} onLinkPress={handleLinkPress} />
               ),
             )
           )}
@@ -421,8 +480,8 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
               className="flex-row items-start gap-2 rounded-xl p-3 mt-1"
               style={{ backgroundColor: '#eef4fb', borderWidth: 1, borderColor: '#cfdff2' }}
             >
-              <Lock size={16} color="#0857A6" style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs leading-4" style={{ color: '#0857A6' }}>
+              <Lock size={16} color="#1B6FE0" style={{ marginTop: 1 }} />
+              <Text className="flex-1 text-xs leading-4" style={{ color: '#1B6FE0' }}>
                 {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
               </Text>
             </View>
@@ -484,7 +543,7 @@ export default function SandraScreen({ onClose }: { onClose?: () => void }) {
             activeOpacity={0.8}
             className="w-11 h-11 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#0857A6',
+              backgroundColor: '#1B6FE0',
               opacity: sending || !input.trim() ? 0.4 : 1,
             }}
             accessibilityLabel={t('Envoyer', 'Voye')}

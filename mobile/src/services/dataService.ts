@@ -5,7 +5,7 @@ import { loadQuizBankSafe, normalizeAndIndexQuizBank } from './quizBank';
 
 const SUBJECT_DEFAULTS: Record<string, { color: string; icon: string; name: string }> = {
   CHEM: { color: '#0A66C2', icon: 'beaker', name: 'Chemistry' },
-  PHYS: { color: '#0857A6', icon: 'atom', name: 'Physics' },
+  PHYS: { color: '#1B6FE0', icon: 'atom', name: 'Physics' },
   MATH: { color: '#4A93DD', icon: 'calculator', name: 'Mathematics' },
   ECON: { color: '#5D5B54', icon: 'chart', name: 'Economics' },
 };

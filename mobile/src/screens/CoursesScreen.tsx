@@ -48,7 +48,7 @@ function countLessons(course: any): number {
 }
 
 const cardShadow = {
-  shadowColor: '#0857A6',
+  shadowColor: '#1B6FE0',
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.06,
   shadowRadius: 6,
@@ -68,7 +68,7 @@ function CourseCard({
 }) {
   const totalLessons = countLessons(course);
   const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
-  const color = course.color ?? '#0857A6';
+  const color = course.color ?? '#1B6FE0';
   const soon = !!course.comingSoon;
 
   return (
@@ -93,7 +93,7 @@ function CourseCard({
           </View>
           {soon ? (
             <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-              <Text style={{ color: '#0857A6', fontSize: 11, fontWeight: '700' }}>Bientôt</Text>
+              <Text style={{ color: '#1B6FE0', fontSize: 11, fontWeight: '700' }}>Bientôt</Text>
             </View>
           ) : (
             <View className="items-end flex-shrink-0">
@@ -140,7 +140,7 @@ function DrillCard({
         </View>
         {comingSoon ? (
           <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-            <Text style={{ color: '#0857A6', fontSize: 11, fontWeight: '700' }}>{badge}</Text>
+            <Text style={{ color: '#1B6FE0', fontSize: 11, fontWeight: '700' }}>{badge}</Text>
           </View>
         ) : (
           <View className="items-end flex-shrink-0 flex-row items-center gap-2">
@@ -295,7 +295,7 @@ export default function CoursesScreen() {
       <ScrollView
         ref={scrollRef}
         className="flex-1 px-5 pt-4"
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#0857A6" />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#1B6FE0" />}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
@@ -329,7 +329,7 @@ export default function CoursesScreen() {
                   className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: '#eaf2fb' }}
                 >
-                  <BookMarked color="#0857A6" size={20} />
+                  <BookMarked color="#1B6FE0" size={20} />
                 </View>
                 <View className="flex-1">
                   <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
@@ -339,7 +339,7 @@ export default function CoursesScreen() {
                     {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
                   </Text>
                 </View>
-                <ChevronRight color="#0857A6" size={20} />
+                <ChevronRight color="#1B6FE0" size={20} />
               </View>
             </TouchableOpacity>
 
@@ -349,7 +349,7 @@ export default function CoursesScreen() {
                 title={l.label}
                 subtitle={isCreole ? l.sublabelHt : l.sublabel}
                 badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
-                color="#0857A6"
+                color="#1B6FE0"
                 Icon={GraduationCap}
                 onPress={() => setLevel(l.code)}
               />

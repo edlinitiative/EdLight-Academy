@@ -3,7 +3,7 @@
 
 export const SUBJECT_COLORS: Record<string, string> = {
   CHEM: '#0A66C2',
-  PHYS: '#0857A6',
+  PHYS: '#1B6FE0',
   MATH: '#4A93DD',
   ECON: '#5D5B54',
 };
@@ -17,7 +17,7 @@ export const SUBJECT_ICONS: Record<string, string> = {
 
 export function getSubjectColor(subject: string): string {
   const code = String(subject || '').toUpperCase();
-  return SUBJECT_COLORS[code] ?? '#0857A6';
+  return SUBJECT_COLORS[code] ?? '#1B6FE0';
 }
 
 export function getFirstName(user: any): string {

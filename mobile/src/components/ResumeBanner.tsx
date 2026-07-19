@@ -9,9 +9,9 @@ import { TabParamList } from '../navigation/TabNavigator';
 type Nav = BottomTabNavigationProp<TabParamList>;
 
 const ACCENT: Record<string, string> = {
-  lesson: '#0857A6',
-  exam: '#0857A6',
-  quiz: '#0857A6',
+  lesson: '#1B6FE0',
+  exam: '#1B6FE0',
+  quiz: '#1B6FE0',
 };
 
 const EYEBROW: Record<string, string> = {
@@ -36,7 +36,7 @@ export default function ResumeBanner() {
 
   if (!lastActivity) return null;
 
-  const accent = ACCENT[lastActivity.type] ?? '#0857A6';
+  const accent = ACCENT[lastActivity.type] ?? '#1B6FE0';
   const eyebrow = t(EYEBROW[lastActivity.type] ?? 'Activité', EYEBROW_HT[lastActivity.type] ?? 'Aktivite');
 
   function handleResume() {
@@ -54,7 +54,7 @@ export default function ResumeBanner() {
         borderRadius: 16,
         borderWidth: 1,
         borderColor: '#e8edf5',
-        shadowColor: '#0857A6',
+        shadowColor: '#1B6FE0',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 6,

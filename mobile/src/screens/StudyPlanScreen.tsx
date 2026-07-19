@@ -57,7 +57,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PRIMARY = '#0857A6';
+const PRIMARY = '#1B6FE0';
 const CARD_BORDER = '#e8edf5';
 
 const WEEK_OPTIONS = [4, 6, 8, 12];

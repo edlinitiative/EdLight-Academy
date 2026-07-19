@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, View } from 'react-native';
+import { tapLight } from '../../utils/haptics';
 
 interface ButtonProps {
   onPress: () => void;
@@ -21,7 +22,7 @@ export default function Button({
   loading = false,
   fullWidth = false,
 }: ButtonProps) {
-  const baseStyle = 'rounded-xl items-center justify-center flex-row';
+  const baseStyle = 'rounded-full items-center justify-center flex-row';
 
   const variantStyle = {
     primary: 'bg-primary-600',
@@ -49,12 +50,12 @@ export default function Button({
 
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={() => { if (!disabled && !loading) { tapLight(); onPress(); } }}
       disabled={disabled || loading}
       className={`${baseStyle} ${variantStyle} ${sizeStyle} ${fullWidth ? 'w-full' : ''} ${disabled || loading ? 'opacity-50' : ''}`}
       activeOpacity={0.8}
     >
-      {loading && <ActivityIndicator size="small" color={variant === 'outline' || variant === 'ghost' ? '#0857A6' : '#fff'} className="mr-2" />}
+      {loading && <ActivityIndicator size="small" color={variant === 'outline' || variant === 'ghost' ? '#1B6FE0' : '#fff'} className="mr-2" />}
       {typeof children === 'string' ? (
         <Text className={`font-semibold ${textColor} ${textSize}`}>{children}</Text>
       ) : (

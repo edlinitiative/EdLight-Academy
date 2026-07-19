@@ -8,7 +8,7 @@ interface BadgeProps {
   size?: 'sm' | 'md';
 }
 
-export default function Badge({ label, color = '#e0eaff', textColor = '#0857A6', size = 'md' }: BadgeProps) {
+export default function Badge({ label, color = '#e0eaff', textColor = '#1B6FE0', size = 'md' }: BadgeProps) {
   const pad = size === 'sm' ? 'px-2 py-0.5' : 'px-3 py-1';
   const fs = size === 'sm' ? 'text-xs' : 'text-sm';
   return (

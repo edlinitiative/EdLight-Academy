@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { LayoutDashboard, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { tapLight } from '../utils/haptics';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import CoursesNavigator from './CoursesNavigator';
@@ -23,7 +24,7 @@ export type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const ACTIVE = '#0857A6';
+const ACTIVE = '#1B6FE0';
 const INACTIVE = '#111827';
 
 // Floating pill bar (Instagram-style): detached from the screen edge, rounded,
@@ -58,7 +59,7 @@ function TabIcon({
       style={[
         styles.iconPill,
         focused && {
-          backgroundColor: dark ? 'rgba(56,132,214,0.24)' : 'rgba(8,87,166,0.12)',
+          backgroundColor: dark ? 'rgba(56,132,214,0.24)' : 'rgba(27,111,224,0.12)',
         },
       ]}
     >
@@ -91,6 +92,7 @@ export default function TabNavigator() {
         // Single tap keeps default behavior (navigate / pop-to-top of the stack).
         // A second tap on the same tab within DOUBLE_TAP_MS refreshes all data.
         tabPress: () => {
+          tapLight();
           const now = Date.now();
           const prev = lastPress.current;
           if (prev.name === route.name && now - prev.time < DOUBLE_TAP_MS) {

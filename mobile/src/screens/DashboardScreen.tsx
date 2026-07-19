@@ -1,23 +1,28 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Flame, Target, BookOpen, BarChart3, ChevronRight, Award, CalendarCheck } from 'lucide-react-native';
+import { Flame, Zap, ChevronRight, CalendarCheck, BookOpen } from 'lucide-react-native';
 import SandraFab from '../components/SandraFab';
 import useStore from '../contexts/store';
 import { useCourses } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
-import { LoadingState, ErrorState } from '../components/StateViews';
+import { Skeleton, ErrorState } from '../components/StateViews';
 import Avatar from '../components/ui/Avatar';
+import PressableScale from '../components/ui/PressableScale';
 import ProgressBar from '../components/ProgressBar';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
+import { colors, radius, shadow, cardSurface, courseTint } from '../theme/theme';
+import { tapLight } from '../utils/haptics';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
 
@@ -37,32 +42,97 @@ function calculateCompletionPercentage(progress: any, totalLessons: number): num
   return Math.min(100, Math.round((completed / totalLessons) * 100));
 }
 
+/** Compact XP formatting: 1450 → "1.4k". */
+function formatXp(n: number): string {
+  if (n >= 10000) return `${Math.round(n / 1000)}k`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return `${n}`;
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function KpiCard({
-  icon,
-  value,
-  label,
-  iconBg,
+/** A small pill in the header showing a single momentum stat (streak, XP). */
+function StatChip({ icon, value, tint }: { icon: React.ReactNode; value: string | number; tint: string }) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: tint,
+        borderRadius: radius.chip,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+      }}
+    >
+      {icon}
+      <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink }}>{value}</Text>
+    </View>
+  );
+}
+
+/** One column of the at-a-glance stats card. */
+function StatCol({ value, label }: { value: string | number; label: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 }}>{value}</Text>
+      <Text style={{ fontSize: 11, color: colors.muted, marginTop: 2 }}>{label}</Text>
+    </View>
+  );
+}
+
+function SectionHeader({
+  title,
+  actionLabel,
+  onAction,
 }: {
-  icon: React.ReactNode;
-  value: string | number;
-  label: string;
-  iconBg: string;
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }) {
   return (
-    <View className="flex-1 rounded-2xl p-3 items-center gap-1.5" style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5', shadowColor: '#0857A6', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
-      <View
-        className="w-9 h-9 rounded-xl items-center justify-center"
-        style={{ backgroundColor: iconBg }}
-      >
-        {icon}
-      </View>
-      <Text className="text-xl font-bold text-gray-900">{value}</Text>
-      <Text className="text-xs text-gray-500 text-center leading-tight">{label}</Text>
+    <View className="flex-row items-center justify-between mb-3">
+      <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{title}</Text>
+      {actionLabel && onAction ? (
+        <TouchableOpacity
+          onPress={() => { tapLight(); onAction(); }}
+          className="flex-row items-center gap-1"
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+        >
+          <Text style={{ color: colors.azure, fontSize: 14, fontWeight: '600' }}>{actionLabel}</Text>
+          <ChevronRight color={colors.azure} size={14} />
+        </TouchableOpacity>
+      ) : null}
     </View>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+      <View className="px-5 pt-4">
+        <View className="flex-row items-center">
+          <Skeleton width={46} height={46} radius={23} />
+          <View className="flex-1 pl-3 gap-2">
+            <Skeleton width={180} height={18} />
+            <Skeleton width={130} height={12} />
+          </View>
+        </View>
+        <View className="mt-6"><Skeleton height={64} radius={radius.card} /></View>
+        <View className="flex-row gap-3 mt-4">
+          <View className="flex-1"><Skeleton height={112} radius={radius.card} /></View>
+          <View className="flex-1"><Skeleton height={112} radius={radius.card} /></View>
+        </View>
+        <View className="mt-4 gap-3">
+          <Skeleton height={72} radius={radius.card} />
+          <Skeleton height={72} radius={radius.card} />
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -73,7 +143,6 @@ function KpiCard({
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, setPendingDailyChallenge } = useStore();
-  // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const isCreole = language === 'ht';
@@ -82,16 +151,17 @@ export default function DashboardScreen() {
   const { data: courses, isLoading, isError, refetch, isFetching } = useCourses();
   const { streak } = useStreak();
   const { progress: allProgress } = useAllProgress();
+  const { myEntry } = useLeaderboard(25);
 
   const firstName = getFirstName(user);
   const greeting = isCreole ? 'Bonjou' : 'Bonjour';
+  const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
   const totalQuizzes = allAttemptsList.length;
   const avgScore = totalQuizzes > 0
     ? Math.round(allAttemptsList.reduce((sum: number, a: any) => sum + (typeof a.score === 'number' ? a.score * 100 : typeof a.percentage === 'number' ? a.percentage : 0), 0) / totalQuizzes)
     : 0;
 
-  // Build a courseId → progress map
   const progressByCourseId = React.useMemo(() => {
     const m = new Map<string, any>();
     for (const p of allProgress || []) {
@@ -100,7 +170,6 @@ export default function DashboardScreen() {
     return m;
   }, [allProgress]);
 
-  // Up to 4 enrolled (or first 4 catalog) courses
   const displayCourses = React.useMemo(() => {
     if (!courses) return [];
     if (enrolledCourses.length > 0) {
@@ -115,20 +184,21 @@ export default function DashboardScreen() {
   // Guards
   // ---------------------------------------------------------------------------
 
-  if (isLoading) {
-    return <LoadingState message={t('Chargement du tableau de bord…', 'Ap chaje tablodbò a…')} />;
-  }
+  if (isLoading) return <DashboardSkeleton />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
 
-  if (isError) {
-    return <ErrorState onRetry={() => refetch()} />;
-  }
+  const goCourse = (course: any) =>
+    (navigation as any).navigate('Courses', {
+      screen: 'CourseDetail',
+      params: { courseId: course.id, courseName: course.name },
+    });
 
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         className="flex-1"
@@ -138,78 +208,61 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={isFetching}
             onRefresh={refetch}
-            tintColor="#0857A6"
-            colors={['#0857A6']}
+            tintColor={colors.azure}
+            colors={[colors.azure]}
           />
         }
       >
-        {/* ------------------------------------------------------------------ */}
-        {/* Header banner                                                        */}
-        {/* ------------------------------------------------------------------ */}
+        {/* Header — identity + momentum */}
         <View
-          style={{ backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#eef1f6' }}
-          className="px-5 pt-4 pb-3.5"
+          style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.hairline }}
+          className="px-5 pt-4 pb-4"
         >
-          <View className="flex-row items-center justify-between">
-            {/* Pixel-art avatar (seeded by uid). We intentionally don't use the
-                Google `picture` — for no-photo accounts it's a generic initials
-                image ("TO"), which we'd rather replace with the fun character. */}
-            <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={44} />
+          <View className="flex-row items-center">
+            {/* Pixel-art avatar (seeded by uid) — tap to open the profile. */}
+            <TouchableOpacity
+              onPress={() => { tapLight(); navigation.navigate('Profile'); }}
+              activeOpacity={0.8}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('Ouvrir le profil', 'Louvri pwofil la')}
+            >
+              <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={46} />
+            </TouchableOpacity>
 
-            <View className="flex-1 pl-3">
-              <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }} numberOfLines={1}>
+            <View className="flex-1 px-3">
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink }} numberOfLines={1}>
                 {greeting}, {firstName || t('Étudiant', 'Elèv')} 👋
               </Text>
-              <Text style={{ fontSize: 13, color: '#64748b', marginTop: 1 }}>
+              <Text style={{ fontSize: 13, color: colors.muted, marginTop: 1 }} numberOfLines={1}>
                 {t('Prêt à apprendre aujourd\'hui ?', 'Ou pare pou aprann jodi a ?')}
               </Text>
+            </View>
+
+            <View className="flex-row items-center gap-2">
+              <StatChip
+                icon={<Flame color={colors.danger} size={15} />}
+                value={streak?.currentStreak ?? 0}
+                tint={colors.dangerSoft}
+              />
+              <StatChip
+                icon={<Zap color={colors.azure} size={15} />}
+                value={formatXp(weeklyXp)}
+                tint={colors.azureSoft}
+              />
             </View>
           </View>
         </View>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Resume banner — below header, above KPI strip                        */}
-        {/* ------------------------------------------------------------------ */}
+        {/* Resume banner — the top action when there's an activity to continue */}
         {lastActivity ? (
-          <View className="px-5 mt-4 mb-3">
+          <View className="px-5 mt-4">
             <ResumeBanner />
           </View>
         ) : null}
 
-        {/* ------------------------------------------------------------------ */}
-        {/* KPI strip                                                            */}
-        {/* ------------------------------------------------------------------ */}
-        <View className="flex-row gap-2 px-5 mb-5" style={lastActivity ? undefined : { marginTop: 16 }}>
-          <KpiCard
-            icon={<Flame color="#ef4444" size={18} />}
-            value={streak?.currentStreak ?? 0}
-            label={t('Série', 'Seri')}
-            iconBg="#fef2f2"
-          />
-          <KpiCard
-            icon={<Target color="#0857A6" size={18} />}
-            value={totalQuizzes}
-            label={t('Quiz', 'Quiz')}
-            iconBg="#eaf2fb"
-          />
-          <KpiCard
-            icon={<BookOpen color="#0857A6" size={18} />}
-            value={enrolledCourses.length}
-            label={t('Cours', 'Kou')}
-            iconBg="#eaf2fb"
-          />
-          <KpiCard
-            icon={<Award color="#0857A6" size={18} />}
-            value={avgScore > 0 ? `${avgScore}%` : '—'}
-            label={t('Moy.', 'Moy.')}
-            iconBg="#eaf2fb"
-          />
-        </View>
-
-        {/* ------------------------------------------------------------------ */}
-        {/* HomeWidgets — 2×2 tonal grid                                         */}
-        {/* ------------------------------------------------------------------ */}
-        <View className="px-5 mb-5">
+        {/* Quick actions */}
+        <View className="px-5 mt-4 mb-5">
           <HomeWidgets
             onNavigateExams={() => navigation.navigate('Exams')}
             onNavigateTrivia={() => navigation.navigate('Trivia')}
@@ -219,162 +272,131 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* ReadinessCard — SVG donut + subject bars                             */}
-        {/* ------------------------------------------------------------------ */}
+        {/* At-a-glance stats */}
         <View className="px-5 mb-5">
-          <Text className="mb-3" style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
-            {t('Niveau de préparation', 'Nivo preparasyon')}
-          </Text>
-          <ReadinessCard />
+          <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
+            <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
+            <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
+            <StatCol value={enrolledCourses.length} label={t('Cours', 'Kou')} />
+            <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
+            <StatCol value={avgScore > 0 ? `${avgScore}%` : '—'} label={t('Moyenne', 'Mwayèn')} />
+          </View>
         </View>
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Course progress section                                              */}
-        {/* ------------------------------------------------------------------ */}
+        {/* Continue learning */}
         {displayCourses.length > 0 && (
           <View className="px-5 mb-5">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
-                {t('Continuer à apprendre', 'Kontinye aprann')}
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Courses')}
-                className="flex-row items-center gap-1"
-              >
-                <Text className="text-primary-600 text-sm font-medium">
-                  {t('Voir tout', 'Wè tout')}
-                </Text>
-                <ChevronRight color="#0857A6" size={14} />
-              </TouchableOpacity>
-            </View>
-
+            <SectionHeader
+              title={t('Continuer à apprendre', 'Kontinye aprann')}
+              actionLabel={t('Voir tout', 'Wè tout')}
+              onAction={() => navigation.navigate('Courses')}
+            />
             <View className="gap-3">
               {displayCourses.map((course: any) => {
-                const courseColor = course.color ?? '#0857A6';
+                const tint = courseTint(course.color);
                 const totalLessons = countCourseLessons(course);
                 const prog = progressByCourseId.get(course.id);
                 const pct = calculateCompletionPercentage(prog, totalLessons);
 
                 return (
-                  <TouchableOpacity
+                  <PressableScale
                     key={course.id}
-                    onPress={() => navigation.navigate('Courses')}
-                    activeOpacity={0.82}
-                    style={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: 16,
-                      borderWidth: 1,
-                      borderColor: '#e8edf5',
-                      shadowColor: '#0857A6',
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.06,
-                      shadowRadius: 6,
-                      elevation: 2,
-                    }}
+                    onPress={() => goCourse(course)}
+                    accessibilityRole="button"
+                    accessibilityLabel={course.name}
+                    style={{ ...cardSurface, padding: 16 }}
                   >
-                    {/* No flex-1 here: the card is auto-height, flex-1 collapses it */}
-                    <View className="p-4">
-                        <View className="flex-row items-center gap-3">
-                          <View
-                            className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: courseColor + '18' }}
-                          >
-                            <BookOpen color={courseColor} size={20} />
-                          </View>
-                          <View className="flex-1">
-                            <Text
-                              className="font-semibold text-gray-900 text-sm"
-                              numberOfLines={2}
-                            >
-                              {course.name}
-                            </Text>
-                            <View className="flex-row items-center gap-2 mt-1">
-                              {course.level ? (
-                                <View
-                                  className="px-2 py-0.5 rounded-full"
-                                  style={{ backgroundColor: courseColor + '18' }}
-                                >
-                                  <Text
-                                    className="text-xs font-medium"
-                                    style={{ color: courseColor }}
-                                  >
-                                    {course.level}
-                                  </Text>
-                                </View>
-                              ) : null}
-                              {totalLessons > 0 && (
-                                <Text className="text-xs text-gray-400">
-                                  {totalLessons} {t('leçons', 'leson')}
-                                </Text>
-                              )}
+                    <View className="flex-row items-center gap-3">
+                      <View
+                        className="items-center justify-center flex-shrink-0"
+                        style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '18' }}
+                      >
+                        <BookOpen color={tint} size={20} />
+                      </View>
+                      <View className="flex-1">
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.ink }} numberOfLines={2}>
+                          {course.name}
+                        </Text>
+                        <View className="flex-row items-center gap-2 mt-1">
+                          {course.level ? (
+                            <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: tint + '18' }}>
+                              <Text style={{ fontSize: 11, fontWeight: '600', color: tint }}>{course.level}</Text>
                             </View>
-                          </View>
-                          <View className="items-end">
-                            <Text
-                              className="text-sm font-bold"
-                              style={{ color: courseColor }}
-                            >
-                              {pct}%
+                          ) : null}
+                          {totalLessons > 0 && (
+                            <Text style={{ fontSize: 12, color: colors.faint }}>
+                              {totalLessons} {t('leçons', 'leson')}
                             </Text>
-                          </View>
+                          )}
                         </View>
-
-                        {pct > 0 && (
-                          <View className="mt-3">
-                            <ProgressBar value={pct} color={courseColor} height={4} />
-                          </View>
-                        )}
+                      </View>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: tint }}>{pct}%</Text>
                     </View>
-                  </TouchableOpacity>
+                    {pct > 0 && (
+                      <View className="mt-3">
+                        <ProgressBar value={pct} color={tint} height={5} />
+                      </View>
+                    )}
+                  </PressableScale>
                 );
               })}
             </View>
           </View>
         )}
 
-        {/* ------------------------------------------------------------------ */}
-        {/* Leaderboard compact                                                  */}
-        {/* ------------------------------------------------------------------ */}
+        {/* Readiness — the card renders its own title, so no duplicate heading */}
         <View className="px-5 mb-5">
-          <View className="flex-row items-center justify-between mb-3">
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
-              {t('Classement', 'Klasman')}
-            </Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Profile')}
-              className="flex-row items-center gap-1"
-            >
-              <Text className="text-primary-600 text-sm font-medium">
-                {t('Voir tout', 'Wè tout')}
-              </Text>
-              <ChevronRight color="#0857A6" size={14} />
-            </TouchableOpacity>
-          </View>
+          <ReadinessCard />
+        </View>
+
+        {/* Leaderboard */}
+        <View className="px-5 mb-5">
+          <SectionHeader
+            title={t('Classement', 'Klasman')}
+            actionLabel={t('Voir tout', 'Wè tout')}
+            onAction={() => navigation.navigate('Profile')}
+          />
           <Leaderboard compact maxRows={5} />
         </View>
 
         {/* Study plan — Sandra builds a personalized révision schedule */}
-        <TouchableOpacity
-          onPress={() => (navigation as any).navigate('StudyPlan')}
-          activeOpacity={0.85}
-          className="mx-4 mb-6"
-          style={{ backgroundColor: '#0857A6', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
-        >
-          <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-            <CalendarCheck color="#fff" size={22} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
-              {t("Mon plan d'étude", 'Plan etid mwen')}
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12.5 }}>
-              {t('Un programme de révision fait pour vous', 'Yon pwogram revizyon fèt pou ou')}
-            </Text>
-          </View>
-          <ChevronRight color="#fff" size={18} />
-        </TouchableOpacity>
-
+        <View className="px-5 mb-6">
+          <PressableScale
+            onPress={() => (navigation as any).navigate('StudyPlan')}
+            accessibilityRole="button"
+            accessibilityLabel={t("Mon plan d'étude", 'Plan etid mwen')}
+            style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+          >
+            <LinearGradient
+              colors={['#2E86F0', '#1B6FE0', '#0857A6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            >
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: radius.tile,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <CalendarCheck color="#fff" size={22} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
+                  {t("Mon plan d'étude", 'Plan etid mwen')}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12.5, marginTop: 1 }}>
+                  {t('Un programme de révision fait pour vous', 'Yon pwogram revizyon fèt pou ou')}
+                </Text>
+              </View>
+              <ChevronRight color="#fff" size={18} />
+            </LinearGradient>
+          </PressableScale>
+        </View>
       </ScrollView>
 
       {/* Sandra — AI tutor, always within thumb's reach */}

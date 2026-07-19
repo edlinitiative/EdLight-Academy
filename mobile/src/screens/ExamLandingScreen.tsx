@@ -92,7 +92,7 @@ export default function ExamLandingScreen() {
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: '#e8edf5',
-                shadowColor: '#0857A6',
+                shadowColor: '#1B6FE0',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.06,
                 shadowRadius: 6,
@@ -118,7 +118,7 @@ export default function ExamLandingScreen() {
                       marginBottom: 10,
                     }}
                   >
-                    <level.Icon color="#0857A6" size={24} />
+                    <level.Icon color="#1B6FE0" size={24} />
                   </View>
 
                   <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
@@ -127,10 +127,10 @@ export default function ExamLandingScreen() {
 
                   {/* Explorer link */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                    <Text style={{ color: '#0857A6', fontSize: 14, fontWeight: '700' }}>
+                    <Text style={{ color: '#1B6FE0', fontSize: 14, fontWeight: '700' }}>
                       {t('Explorer', 'Eksplore')}
                     </Text>
-                    <ChevronRight color="#0857A6" size={16} />
+                    <ChevronRight color="#1B6FE0" size={16} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -157,12 +157,12 @@ export default function ExamLandingScreen() {
                             paddingVertical: 6,
                             borderRadius: 99,
                             borderWidth: 1,
-                            borderColor: active ? '#0857A6' : '#e8edf5',
+                            borderColor: active ? '#1B6FE0' : '#e8edf5',
                             backgroundColor: active ? '#eaf2fb' : '#f8faff',
                           }}
                         >
-                          {active && <Check color="#0857A6" size={12} />}
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#0857A6' : '#64748b' }}>
+                          {active && <Check color="#1B6FE0" size={12} />}
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#1B6FE0' : '#64748b' }}>
                             {tr.shortLabel}
                           </Text>
                         </TouchableOpacity>
@@ -196,7 +196,7 @@ export default function ExamLandingScreen() {
                   borderWidth: 1,
                   borderColor: '#e8edf5',
                   borderRadius: 99,
-                  shadowColor: '#0857A6',
+                  shadowColor: '#1B6FE0',
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.06,
                   shadowRadius: 6,
@@ -204,7 +204,7 @@ export default function ExamLandingScreen() {
                 }}
               >
                 <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center' }}>
-                  <subj.Icon color="#0857A6" size={13} />
+                  <subj.Icon color="#1B6FE0" size={13} />
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '500', color: '#374151' }}>{subj.code}</Text>
               </TouchableOpacity>

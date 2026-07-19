@@ -43,7 +43,7 @@ export function LoadingState({ message }: { message?: string }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   return (
     <View className="flex-1 items-center justify-center gap-4 py-16">
-      <LoadingSpinner color="#0857A6" />
+      <LoadingSpinner color="#1B6FE0" />
       <Text className="text-gray-500 text-base">{message ?? t('Chargement…', 'Ap chaje…')}</Text>
     </View>
   );

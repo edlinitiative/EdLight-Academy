@@ -79,7 +79,7 @@ export async function requestPermissions(): Promise<boolean> {
         name: 'EdLight Academy',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#0857A6',
+        lightColor: '#1B6FE0',
       }),
       Notifications.setNotificationChannelAsync('reminders', {
         name: "Rappels d'étude",
