@@ -12,7 +12,7 @@ import AppNavigator, { navigationRef, navigateToTab } from './src/navigation/App
 import {
   areNotificationsEnabled,
   requestPermissions,
-  scheduleDailyStudyReminder,
+  scheduleEngagementReminders,
 } from './src/services/notificationService';
 import { registerForPushNotifications } from './src/services/pushService';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
@@ -46,7 +46,7 @@ function AuthGate() {
         requestPermissions()
           .then(async (granted) => {
             if (!granted || !(await areNotificationsEnabled())) return;
-            await scheduleDailyStudyReminder();
+            await scheduleEngagementReminders();
             await registerForPushNotifications(firebaseUser.uid);
           })
           .catch(() => {});

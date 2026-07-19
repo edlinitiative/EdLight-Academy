@@ -23,7 +23,7 @@ import {
   areNotificationsEnabled,
   setNotificationsEnabled as persistNotificationsEnabled,
   requestPermissions,
-  scheduleDailyStudyReminder,
+  scheduleEngagementReminders,
 } from '../services/notificationService';
 import { registerForPushNotifications } from '../services/pushService';
 
@@ -163,7 +163,7 @@ export default function ProfileScreen() {
         await persistNotificationsEnabled(false);
         return;
       }
-      await scheduleDailyStudyReminder();
+      await scheduleEngagementReminders();
       if (user?.uid) registerForPushNotifications(user.uid).catch(() => {});
     } else {
       await Notifications.cancelAllScheduledNotificationsAsync();
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
   function handleLanguageChange(next: string) {
     setLanguage(next);
     areNotificationsEnabled()
-      .then((enabled) => { if (enabled) return scheduleDailyStudyReminder(); })
+      .then((enabled) => { if (enabled) return scheduleEngagementReminders(); })
       .catch(() => {});
   }
 

@@ -227,6 +227,139 @@ export async function scheduleTriviaReminder(): Promise<void> {
   });
 }
 
+// ─── Engagement reminder bundle ───────────────────────────────────────────────
+// A recurring set of re-engagement nudges to bring students back, centred on the
+// daily quiz/défi and the weekly leaderboard. Copy rotates by weekday so the
+// notifications never feel repetitive.
+
+const android = (channelId: string) =>
+  Platform.OS === 'android' ? ({ channelId } as const) : ({} as const);
+
+/** Data.type values owned by the engagement bundle — cleared before rescheduling. */
+const ENGAGEMENT_TYPES = new Set(['study-reminder', 'daily-quiz', 'leaderboard', 'trivia-reminder']);
+
+/** A rotating daily-quiz message for each weekday (expo weekday: 1=Sun … 7=Sat). */
+function quizCopyForWeekday(weekday: number): { title: string; body: string } {
+  const copy: Array<{ title: string; body: string }> = [
+    { // 1 · Sunday
+      title: t('🎯 Quiz du dimanche', '🎯 Quiz dimanch'),
+      body: t('Commence la journée avec le défi du jour. +50 XP !', 'Kòmanse jounen an ak defi jodi a. +50 XP !'),
+    },
+    { // 2 · Monday
+      title: t('🚀 Nouvelle semaine, nouveau défi !', '🚀 Nouvo semèn, nouvo defi !'),
+      body: t('Attaque le quiz du jour et prends de l’avance.', 'Atake quiz jodi a epi pran devan.'),
+    },
+    { // 3 · Tuesday
+      title: t('🧠 Prêt pour le défi du jour ?', '🧠 Ou pare pou defi jodi a ?'),
+      body: t('Teste tes connaissances en 2 minutes.', 'Teste konesans ou nan 2 minit.'),
+    },
+    { // 4 · Wednesday
+      title: t('🔥 Garde ta série !', '🔥 Kenbe seri ou !'),
+      body: t('Un quiz rapide aujourd’hui pour ne pas la perdre.', 'Yon quiz rapid jodi a pou ou pa pèdi l.'),
+    },
+    { // 5 · Thursday
+      title: t('⚡ +50 XP t’attendent', '⚡ +50 XP ap tann ou'),
+      body: t('Fais le défi du jour et grimpe dans le classement.', 'Fè defi jodi a epi monte nan klasman an.'),
+    },
+    { // 6 · Friday
+      title: t('🎉 Quiz du vendredi !', '🎉 Quiz vandredi !'),
+      body: t('Termine la semaine en tête. Joue maintenant.', 'Fini semèn nan an tèt. Jwe kounye a.'),
+    },
+    { // 7 · Saturday
+      title: t('🎯 Le défi du jour est prêt', '🎯 Defi jodi a pare'),
+      body: t('Quelques questions pour rester au top ce week-end.', 'Kèk kesyon pou rete an tèt wikenn sa a.'),
+    },
+  ];
+  return copy[(weekday - 1) % 7];
+}
+
+/** Cancel every reminder owned by the engagement bundle. */
+export async function cancelEngagementReminders(): Promise<void> {
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      all
+        .filter((n) => ENGAGEMENT_TYPES.has((n.content.data as any)?.type))
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+    await AsyncStorage.removeItem(DAILY_REMINDER_KEY);
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * Schedule the full recurring re-engagement set. Idempotent — cancels the
+ * previous bundle first, so it's safe to call on sign-in, on toggling
+ * notifications on, and on a language change (to refresh the copy).
+ *
+ * Cadence (kept deliberately light to avoid notification fatigue):
+ *   • Daily quiz/défi nudge — 10:00, copy rotates by weekday → Jeux (daily-quiz)
+ *   • Daily study reminder — 18:00 → Cours (study-reminder)
+ *   • Weekly leaderboard kickoff — Monday 09:00 → Jeux (leaderboard)
+ *   • Weekly last-chance — Sunday 19:00 → Jeux (leaderboard)
+ */
+export async function scheduleEngagementReminders(): Promise<void> {
+  if (!(await canNotify())) return;
+  await cancelEngagementReminders();
+
+  const WEEKLY = Notifications.SchedulableTriggerInputTypes.WEEKLY;
+  const DAILY = Notifications.SchedulableTriggerInputTypes.DAILY;
+
+  // 1 · Daily quiz/défi — one weekly trigger per day so the copy can rotate.
+  for (let weekday = 1; weekday <= 7; weekday++) {
+    const c = quizCopyForWeekday(weekday);
+    await Notifications.scheduleNotificationAsync({
+      content: { title: c.title, body: c.body, sound: true, data: { type: 'daily-quiz' }, ...android('reminders') },
+      trigger: { type: WEEKLY, weekday, hour: 10, minute: 0 } as any,
+    });
+  }
+
+  // 2 · Daily study reminder — evening.
+  const studyId = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: t("C'est l'heure de réviser ! 📚", 'Li lè pou revize ! 📚'),
+      body: t(
+        'Continuez vos révisions et gardez votre série active.',
+        'Kontinye revizyon ou yo epi kenbe seri ou aktif.',
+      ),
+      sound: true,
+      data: { type: 'study-reminder' },
+      ...android('reminders'),
+    },
+    trigger: { type: DAILY, hour: 18, minute: 0 } as any,
+  });
+  await AsyncStorage.setItem(DAILY_REMINDER_KEY, studyId);
+
+  // 3 · Weekly leaderboard hooks — Monday kickoff + Sunday last-chance.
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: t('Nouveau classement ! 🏆', 'Nouvo klasman ! 🏆'),
+      body: t(
+        'Nouvelle semaine, nouvelle chance de grimper. Joue un quiz !',
+        'Nouvo semèn, nouvo chans pou monte. Jwe yon quiz !',
+      ),
+      sound: true,
+      data: { type: 'leaderboard' },
+      ...android('reminders'),
+    },
+    trigger: { type: WEEKLY, weekday: 2, hour: 9, minute: 0 } as any,
+  });
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: t('Dernière chance ! ⏰', 'Dènye chans ! ⏰'),
+      body: t(
+        'Le classement se termine ce soir. Gagne des points maintenant !',
+        'Klasman an fini aswè a. Genyen pwen kounye a !',
+      ),
+      sound: true,
+      data: { type: 'leaderboard' },
+      ...android('reminders'),
+    },
+    trigger: { type: WEEKLY, weekday: 1, hour: 19, minute: 0 } as any,
+  });
+}
+
 /** Notify that the user has moved up on the leaderboard (best-effort). */
 export async function notifyLeaderboardRank(rank: number): Promise<void> {
   if (!(await canNotify())) return;

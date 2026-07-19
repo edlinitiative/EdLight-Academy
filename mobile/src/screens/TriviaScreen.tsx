@@ -14,7 +14,7 @@ import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
-import { scheduleTriviaReminder, notifyLeaderboardRank } from '../services/notificationService';
+import { notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
 import VraiFauxGame from '../components/games/VraiFauxGame';
@@ -950,8 +950,8 @@ export default function TriviaScreen() {
       // Record streak activity
       recordActivity().catch(console.warn);
 
-      // Schedule a trivia reminder for tomorrow (best-effort)
-      scheduleTriviaReminder().catch(() => {});
+      // Note: daily-quiz re-engagement nudges are handled centrally by
+      // scheduleEngagementReminders (recurring), so no per-round scheduling here.
 
       // Persist XP/profile via the shared gamification service. Leaderboard
       // submission happens inside recordResult and ONLY for opted-in players
