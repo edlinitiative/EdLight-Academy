@@ -46,14 +46,16 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
         <Text className="text-xs font-bold text-primary-700">{initials}</Text>
       </View>
 
-      {/* Name + school */}
+      {/* Name + city · school (parity with the web leaderboard) */}
       <View className="flex-1">
         <Text className={`text-sm font-semibold ${isMe ? 'text-blue-800' : 'text-gray-900'}`} numberOfLines={1}>
           {entry.displayName || 'Élève'}
           {isMe ? ' (vous)' : ''}
         </Text>
-        {!compact && entry.school && (
-          <Text className="text-xs text-gray-400" numberOfLines={1}>{entry.school}</Text>
+        {!compact && (entry.city || entry.school) && (
+          <Text className="text-xs text-gray-400" numberOfLines={1}>
+            {[entry.city, entry.school].filter(Boolean).join(' · ')}
+          </Text>
         )}
       </View>
 

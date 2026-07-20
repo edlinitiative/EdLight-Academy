@@ -95,6 +95,8 @@ export default function SuitesGame({
         </Text>
       </View>
 
+      {/* Quiz block — vertically centered in the remaining space */}
+      <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 32 }}>
       <Text style={{ fontSize: 17, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginBottom: 18 }}>
         {isCreole ? 'Ki nimewo ki vini apre ?' : 'Quel nombre vient ensuite ?'}
       </Text>
@@ -150,6 +152,7 @@ export default function SuitesGame({
             </TouchableOpacity>
           );
         })}
+      </View>
       </View>
     </View>
   );

@@ -77,12 +77,8 @@ function ExamCard({
           <View className="flex-1">
             <Text className="font-semibold text-gray-900 text-sm leading-snug" numberOfLines={2}>{title}</Text>
             <View className="flex-row items-center gap-2 mt-1.5 flex-wrap">
-              {subject ? (
-                <Text
-                  className="text-xs px-2 py-0.5 rounded-full font-medium"
-                  style={{ backgroundColor: color + '18', color }}
-                >{subject}</Text>
-              ) : null}
+              {/* Subject pill removed — the title already leads with the subject
+                  (e.g. "Espagnol · Juillet 2025"), so the pill was redundant. */}
               {year ? (
                 <Text className="text-xs text-gray-400 font-medium">{year}</Text>
               ) : null}

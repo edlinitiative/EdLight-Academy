@@ -4,8 +4,8 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
-  Award, CheckCircle2, Target, BookOpen, Bell, ChevronRight,
+  Flame, Trophy, Zap, LogOut, Languages, Trash2,
+  Award, Target, BookOpen, Bell, ChevronRight,
   Sprout, Brain,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
@@ -284,15 +284,14 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
-        {/* Header — identity */}
+        {/* Header — identity. Same ground as the content below (no white block /
+            divider) so it reads as one continuous surface, not a seam. */}
         <View
           style={{
-            backgroundColor: colors.surface,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.hairline,
+            backgroundColor: colors.bg,
             paddingHorizontal: GUTTER,
             paddingTop: 20,
-            paddingBottom: 20,
+            paddingBottom: 8,
             flexDirection: 'row',
             alignItems: 'center',
             gap: 14,
@@ -417,14 +416,8 @@ export default function ProfileScreen() {
               accessory={<ChevronRight color="#cbd5e1" size={18} />}
               onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
             />
-            <SettingRow
-              icon={theme === 'light' ? <Moon color="#6b7280" size={18} /> : <Sun color={colors.warn} size={18} />}
-              iconBg="#f3f4f6"
-              label={t('Thème', 'Tèm')}
-              sublabel={theme === 'light' ? t('Mode jour', 'Mòd jou') : t('Mode nuit', 'Mòd nwit')}
-              accessory={<ChevronRight color="#cbd5e1" size={18} />}
-              onPress={toggleTheme}
-            />
+            {/* Dark theme isn't implemented app-wide yet — toggle hidden so it
+                isn't misleading. Re-add when a full dark mode ships. */}
             <SettingRow
               icon={<Bell color={colors.azure} size={18} />}
               iconBg={colors.azureSoft}

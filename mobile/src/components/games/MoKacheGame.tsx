@@ -197,7 +197,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
     <ScrollView
       className="flex-1"
       style={{ backgroundColor: '#f4f6fb' }}
-      contentContainerStyle={{ alignItems: 'center', paddingTop: 12, paddingBottom: 32 }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 12, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
       {/* Mode tabs */}
