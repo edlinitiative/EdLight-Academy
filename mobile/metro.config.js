@@ -4,6 +4,15 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
+// The exam-grading core (examUtils/mathCAS/trackConfig) is shared with the web
+// app and lives in the repo-root `shared/` directory, OUTSIDE this Metro
+// project root. Metro only bundles files it watches, so `shared/` must be an
+// explicit watch folder for `../../../shared/*` relative imports to resolve.
+config.watchFolders = [
+  ...(config.watchFolders || []),
+  path.resolve(__dirname, '../shared'),
+];
+
 // With unstable_enablePackageExports=true (Expo default), Metro reads the
 // package "exports" field but ships with an empty conditionNames list, so it
 // always falls through to the "default" condition (usually the browser ESM

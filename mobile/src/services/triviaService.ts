@@ -21,7 +21,7 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp, isValidAlias, upsertAllTimeEntry, maybeSetGameRecord } from './leaderboardService';
+import { addWeeklyXp, isValidAlias } from './leaderboardService';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
 
@@ -213,8 +213,10 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
         city: lb.city || null,
         department: (lb as any).department || null,
       };
+      // addWeeklyXp POSTs to /api/leaderboard/award, which increments BOTH the
+      // weekly and all-time entries by the earned delta — no separate all-time
+      // write is needed (doing both would double-count).
       await addWeeklyXp(uid, xpEarned, meta);
-      upsertAllTimeEntry(uid, { xp: updated.xp, ...meta }).catch(() => {});
     }
 
     return {
@@ -317,17 +319,21 @@ export async function recordGameResult(uid: string, { gameId, score = 0, maxScor
     const newLevelInfo = levelInfo(updated.xp);
     try { await recordStreakActivity(uid); } catch {}
 
-    if (updated.leaderboard?.optedIn) {
+    // A single server-authoritative award increments the weekly + all-time
+    // entries by the earned delta AND claims the per-game record (passed via
+    // gameId/score) in one POST /api/leaderboard/award. xpEarned === 0 implies
+    // score <= 0, so there's no valid record to claim in that case anyway.
+    if (updated.leaderboard?.optedIn && xpEarned > 0) {
       const meta = {
         displayName: updated.leaderboard.displayName || null,
         level: newLevelInfo.level,
         school: updated.leaderboard.school || null,
         city: updated.leaderboard.city || null,
         department: (updated.leaderboard as any).department || null,
+        gameId,
+        score,
       };
-      if (xpEarned > 0) await addWeeklyXp(uid, xpEarned, meta);
-      upsertAllTimeEntry(uid, { ...meta, xp: updated.xp }).catch(() => {});
-      maybeSetGameRecord(uid, gameId, score, updated.leaderboard.displayName).catch(() => {});
+      await addWeeklyXp(uid, xpEarned, meta);
     }
 
     return {

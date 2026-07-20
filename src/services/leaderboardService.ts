@@ -12,11 +12,16 @@
  * `setLeaderboardOptIn`). Display names default to a first-name + initial alias,
  * never the full account name, because many users are minors.
  *
- * NOTE (MVP): XP is client-reported. This is fine for a friendly board; a Cloud
- * Function can later validate increments server-side if abuse appears.
+ * XP writes are now server-authoritative: XP-award functions POST to
+ * `/api/leaderboard/award` (see api/leaderboard/award.ts) with the caller's
+ * Firebase ID token, and the Admin SDK increments the weekly + all-time entries
+ * (and claims per-game records) from a trusted uid. The client can no longer
+ * write an arbitrary `xp` value straight into Firestore. READS below still hit
+ * Firestore directly; only the profile-seed write (updateEntryProfile) remains
+ * a bounded client write because the award endpoint requires an xpDelta > 0.
  */
 
-import { db } from './firebase';
+import { db, authedFetch } from './firebase';
 import {
   doc,
   collection,
@@ -67,37 +72,47 @@ function entryRef(id, uid) {
 // ─── Writes ─────────────────────────────────────────────────────────────────
 
 /**
- * Add XP to a learner's entry for the current week (creates it on first write).
- * `increment` makes this naturally accumulate across the week and reset next.
+ * Best-effort POST to the server-authoritative award endpoint. The uid is taken
+ * from the verified ID token server-side (never the body). Failures (offline,
+ * 401, 429, 5xx) are logged and swallowed — an XP award must never crash
+ * gameplay, mirroring the old fire-and-forget Firestore writes.
+ */
+async function postAward(payload: Record<string, unknown>) {
+  try {
+    const res = await authedFetch('/api/leaderboard/award', payload);
+    if (!res.ok) {
+      console.error('[Leaderboard] award endpoint returned', res.status);
+    }
+  } catch (err) {
+    console.error('[Leaderboard] postAward error:', err);
+  }
+}
+
+/**
+ * Award XP for the current event. Routes to POST /api/leaderboard/award, which
+ * increments BOTH the current week's entry and the all-time entry by `xp`
+ * (FieldValue.increment) and, when `meta.gameId`/`meta.score` are present,
+ * claims the per-game record in the same request. `xp` is the DELTA earned this
+ * event (not a lifetime total) — the server accumulates it.
  *
- * @param {string} uid
- * @param {number} xp    — XP earned in this event (must be ≥ 0)
- * @param {Object} meta  — { displayName, level, school, city }
+ * @param {string} uid  — retained for signature parity; server trusts the token.
+ * @param {number} xp   — XP earned in this event (must be > 0)
+ * @param {Object} meta — { displayName, level, school, city, department, gameId?, score? }
  */
 export async function addWeeklyXp(uid, xp, meta: any = {}) {
   if (!uid || !xp || xp <= 0) return;
-  const id = weekId();
-  try {
-    await setDoc(
-      entryRef(id, uid),
-      {
-        uid,
-        // No fabricated fallback name — a null alias keeps accumulating XP but
-        // stays hidden from the board until the learner picks a pseudo.
-        displayName: isValidAlias(meta.displayName) ? meta.displayName : null,
-        level: meta.level || 1,
-        school: meta.school || null,
-        city: meta.city || null,
-        department: meta.department || null,
-        weekId: id,
-        xp: increment(xp),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
-  } catch (err) {
-    console.error('[Leaderboard] addWeeklyXp error:', err);
-  }
+  await postAward({
+    xpDelta: xp,
+    // Endpoint only writes displayName when it's a valid alias, so an award
+    // never erases a pseudo the learner already set.
+    displayName: meta.displayName ?? undefined,
+    level: meta.level || 1,
+    school: meta.school ?? null,
+    city: meta.city ?? null,
+    department: meta.department ?? null,
+    // Optional per-game record claim rides along on the same award.
+    ...(meta.gameId ? { gameId: meta.gameId, score: meta.score } : {}),
+  });
 }
 
 /**
@@ -132,32 +147,20 @@ export async function updateEntryProfile(uid, meta: any = {}) {
 }
 
 // ─── All-time board ─────────────────────────────────────────────────────────
-// Same entries shape under a fixed period id. Unlike weekly entries (XP
-// increments), all-time mirrors the profile's lifetime XP as an absolute
-// value on every award — so it self-backfills the first time someone plays.
+// Same entries shape under a fixed period id.
 
 const ALL_TIME_ID = 'all-time';
 
-export async function upsertAllTimeEntry(uid, meta: any = {}) {
-  if (!uid || meta.xp == null) return;
-  try {
-    await setDoc(
-      entryRef(ALL_TIME_ID, uid),
-      {
-        uid,
-        xp: meta.xp,
-        displayName: isValidAlias(meta.displayName) ? meta.displayName : null,
-        level: meta.level || 1,
-        school: meta.school || null,
-        city: meta.city || null,
-        department: meta.department || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
-  } catch (err) {
-    console.error('[Leaderboard] upsertAllTimeEntry error:', err);
-  }
+/**
+ * @deprecated No-op. The all-time entry is now incremented server-side by the
+ * award endpoint inside addWeeklyXp (a single POST /api/leaderboard/award
+ * increments BOTH the weekly and all-time entries by the earned delta). This
+ * used to write an ABSOLUTE lifetime total; calling the endpoint AND writing an
+ * absolute value would double-count, so this is intentionally a no-op. Kept
+ * exported so the public signature is preserved for any legacy caller.
+ */
+export async function upsertAllTimeEntry(_uid, _meta: any = {}) {
+  /* intentionally empty — see addWeeklyXp / api/leaderboard/award */
 }
 
 export async function getAllTimeTop(max = 50) {
@@ -184,25 +187,15 @@ export async function getGameRecords() {
   }
 }
 
-/** Claim the record for a game if `score` beats the current one. */
-export async function maybeSetGameRecord(uid, gameId, score, displayName) {
-  if (!uid || !gameId || !score || !isValidAlias(displayName)) return;
-  try {
-    const games = await getGameRecords();
-    const current = games[gameId];
-    if (current && current.score >= score && current.uid !== uid) return;
-    if (current && current.uid === uid && current.score >= score) return;
-    await setDoc(
-      recordsRef(),
-      {
-        games: { ...games, [gameId]: { score, displayName, uid } },
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
-  } catch (err) {
-    console.error('[Leaderboard] maybeSetGameRecord error:', err);
-  }
+/**
+ * @deprecated No-op. Record claims now ride along on the award endpoint:
+ * recordGameResult passes { gameId, score } to addWeeklyXp, and
+ * POST /api/leaderboard/award claims the per-game record transactionally in the
+ * same request (server-authoritative, from a trusted uid). Kept exported so the
+ * public signature is preserved for any legacy caller.
+ */
+export async function maybeSetGameRecord(_uid, _gameId, _score, _displayName) {
+  /* intentionally empty — see addWeeklyXp / api/leaderboard/award */
 }
 
 // ─── Reads ──────────────────────────────────────────────────────────────────

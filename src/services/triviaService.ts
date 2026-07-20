@@ -21,7 +21,7 @@
 import { db } from './firebase';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
-import { addWeeklyXp, getWeeklyTop, isValidAlias, upsertAllTimeEntry, maybeSetGameRecord } from './leaderboardService';
+import { addWeeklyXp, getWeeklyTop, isValidAlias } from './leaderboardService';
 import { notifyLeaderboardRank } from './notificationService';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
@@ -187,7 +187,9 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
     // Trivia is platform activity → keep the streak alive.
     try { await recordStreakActivity(uid); } catch {}
 
-    // Opt-in weekly leaderboard submission + rank notification.
+    // Opt-in weekly leaderboard submission + rank notification. addWeeklyXp now
+    // POSTs to /api/leaderboard/award, which increments BOTH the weekly and the
+    // all-time entries by the earned delta — so no separate all-time write.
     if (updated.leaderboard?.optedIn && xpEarned > 0) {
       await addWeeklyXp(uid, xpEarned, {
         displayName: updated.leaderboard.displayName || null,
@@ -196,15 +198,6 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
         city: updated.leaderboard.city || null,
         department: updated.leaderboard.department || null,
       });
-      // All-time board mirrors lifetime XP (absolute, self-backfilling).
-      upsertAllTimeEntry(uid, {
-        xp: updated.xp,
-        displayName: updated.leaderboard.displayName || null,
-        level: newLevelInfo.level,
-        school: updated.leaderboard.school || null,
-        city: updated.leaderboard.city || null,
-        department: updated.leaderboard.department || null,
-      }).catch(() => {});
       // Best-effort rank notification — fire and forget.
       getWeeklyTop(50).then((top) => {
         const entry = top.find((e) => e.id === uid);
@@ -270,26 +263,20 @@ export async function recordGameResult(uid, { gameId, score = 0, maxScore = 0 })
     const newLevelInfo = levelInfo(updated.xp);
     try { await recordStreakActivity(uid); } catch {}
 
-    if (updated.leaderboard?.optedIn) {
-      if (xpEarned > 0) {
-        await addWeeklyXp(uid, xpEarned, {
-          displayName: updated.leaderboard.displayName || null,
-          level: newLevelInfo.level,
-          school: updated.leaderboard.school || null,
-          city: updated.leaderboard.city || null,
-          department: updated.leaderboard.department || null,
-        });
-      }
-      upsertAllTimeEntry(uid, {
-        xp: updated.xp,
+    // A single server-authoritative award increments the weekly + all-time
+    // entries by the earned delta AND claims the per-game record (passed via
+    // gameId/score) in one POST /api/leaderboard/award. xpEarned === 0 implies
+    // score <= 0, so there's no valid record to claim in that case anyway.
+    if (updated.leaderboard?.optedIn && xpEarned > 0) {
+      await addWeeklyXp(uid, xpEarned, {
         displayName: updated.leaderboard.displayName || null,
         level: newLevelInfo.level,
         school: updated.leaderboard.school || null,
         city: updated.leaderboard.city || null,
         department: updated.leaderboard.department || null,
-      }).catch(() => {});
-      // Hub "Records" strip — best-ever score per game. Fire and forget.
-      maybeSetGameRecord(uid, gameId, score, updated.leaderboard.displayName).catch(() => {});
+        gameId,
+        score,
+      });
     }
 
     return {
