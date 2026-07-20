@@ -8,7 +8,7 @@ import { loadExamResult } from '../services/examResults';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme } from '../theme/theme';
 import { LoadingState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import MathText from '../components/MathText';
@@ -23,12 +23,29 @@ function ScoreGauge({ percentage }: { percentage: number }) {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const color = percentage >= 70 ? '#10b981' : percentage >= 50 ? '#f59e0b' : '#ef4444';
+
+  // Count the score up from 0 on mount (easeOutCubic over ~0.8s).
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    let raf: number;
+    const start = Date.now();
+    const duration = 800;
+    const tick = () => {
+      const p = Math.min(1, (Date.now() - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setDisplay(Math.round(percentage * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [percentage]);
+
   return (
     <View className="items-center py-8">
       <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
         <Trophy color={colors.azure} size={32} />
       </View>
-      <Text className="text-5xl font-bold" style={{ color }}>{percentage}%</Text>
+      <Text className="text-5xl font-bold" style={{ color }}>{display}%</Text>
       <Text className="text-gray-500 dark:text-slate-400 mt-1">
         {percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !')}
       </Text>
@@ -136,6 +153,7 @@ export default function ExamResultsScreen() {
   const { level, examId } = route.params;
   const { user, incrementGuestInteraction, language } = useStore();
   const colors = useColors();
+  const { cardSurface } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -181,9 +199,15 @@ export default function ExamResultsScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white dark:bg-[#131c2e] border-b border-gray-100 dark:border-slate-700">
-        <TouchableOpacity onPress={() => navigation.popToTop()} className="p-1 mr-3">
+      {/* Header — shares the page background (no white-bar seam) */}
+      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+        <TouchableOpacity
+          onPress={() => navigation.popToTop()}
+          className="p-1 mr-3"
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Retour', 'Retounen')}
+        >
           <ArrowLeft color={colors.muted} size={22} />
         </TouchableOpacity>
         <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{t('Résultats', 'Rezilta')}</Text>
@@ -191,7 +215,7 @@ export default function ExamResultsScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Score */}
-        <View style={{ backgroundColor: colors.surface, marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, overflow: 'hidden' }}>
+        <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, overflow: 'hidden' }]}>
           <ScoreGauge percentage={Math.round(percentage)} />
           <View className="px-6 pb-6">
             <ProgressBar
@@ -210,7 +234,7 @@ export default function ExamResultsScreen() {
             { label: t('Incorrectes', 'Pa kòrèk'), value: String(total - correct), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
             { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color="#f59e0b" size={20} />, color: '#f59e0b' },
           ].map((stat) => (
-            <View key={stat.label} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: colors.border, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1, alignItems: 'center', gap: 4 }}>
+            <View key={stat.label} style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}>
               {stat.icon}
               <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">{stat.value}</Text>
               <Text className="text-xs text-gray-500 dark:text-slate-400 text-center">{stat.label}</Text>
@@ -223,7 +247,7 @@ export default function ExamResultsScreen() {
           const mastery = computeMastery(questions, answers);
           if (mastery.length <= 1) return null;
           return (
-            <View style={{ backgroundColor: colors.surface, marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
+            <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
               <Text style={{ fontWeight: '700', color: colors.ink, fontSize: 15, marginBottom: 14 }}>{t('Par section', 'Dapre seksyon')}</Text>
               {mastery.map((m) => (
                 <MasteryBar key={m.section} section={m.section} pct={m.pct} correct={m.correct} total={m.total} />
@@ -234,7 +258,7 @@ export default function ExamResultsScreen() {
 
         {/* Exam info */}
         {result && (
-          <View style={{ backgroundColor: colors.surface, marginHorizontal: 16, marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, padding: 16 }}>
+          <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
             <Text className="font-semibold text-gray-900 dark:text-slate-100 mb-1" numberOfLines={2}>{result.title ?? t('Examen', 'Egzamen')}</Text>
             {result.subject && <Text className="text-sm text-gray-500 dark:text-slate-400">{t('Matière', 'Matyè')} : {result.subject}</Text>}
             {result.level && <Text className="text-sm text-gray-500 dark:text-slate-400">{t('Niveau', 'Nivo')} : {result.level}</Text>}
@@ -256,7 +280,7 @@ export default function ExamResultsScreen() {
                   key={val}
                   onPress={() => setReviewFilter(val)}
                   className={`flex-1 py-2 rounded-lg items-center`}
-                  style={reviewFilter === val ? { backgroundColor: colors.surface, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 } : {}}
+                  style={reviewFilter === val ? { backgroundColor: colors.surface, shadowColor: colors.azureDeep, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 } : {}}
                 >
                   <Text className={`text-xs font-semibold ${reviewFilter === val ? 'text-gray-900 dark:text-slate-100' : 'text-gray-500 dark:text-slate-400'}`}>{label}</Text>
                 </TouchableOpacity>

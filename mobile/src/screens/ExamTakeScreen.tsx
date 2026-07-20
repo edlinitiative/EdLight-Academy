@@ -337,19 +337,19 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
   }
 
   return (
-    <View style={{ marginTop: 16, backgroundColor: '#fffdf5', borderRadius: 16, borderWidth: 1, borderColor: '#f1e6c4', padding: 14, gap: 8 }}>
+    <View style={{ marginTop: 16, backgroundColor: colors.warn + '18', borderRadius: 16, borderWidth: 1, borderColor: colors.warn + '33', padding: 14, gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Lightbulb color="#b7791f" size={15} />
-        <Text style={{ fontSize: 12, fontWeight: '700', color: '#b7791f', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+        <Lightbulb color={colors.warn} size={15} />
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.warn, textTransform: 'uppercase', letterSpacing: 0.6 }}>
           {clean.length > 1 ? `${t('Indice', 'Endis')} ${shown} / ${clean.length}` : t('Indice', 'Endis')}
         </Text>
       </View>
       {clean.slice(0, shown).map((h, i) => (
-        <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 14, lineHeight: 21, color: '#0f172a' }} />
+        <MathText key={i} text={clean.length > 1 ? `${i + 1}. ${h}` : h} style={{ fontSize: 14, lineHeight: 21, color: colors.ink }} />
       ))}
       {shown < clean.length ? (
         <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', marginTop: 4 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: PRIMARY }}>{t('Indice suivant', 'Endis swivan')} →</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.azure }}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
     </View>

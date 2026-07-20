@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 import {
   MathChips,
   MathPreview,
@@ -21,26 +22,6 @@ import {
  * exact payload the existing grader (utils/examUtils.gradeScaffoldAnswer)
  * and the PWA already understand, so autosave/submit shapes stay intact.
  */
-
-const PRIMARY = '#1B6FE0';
-const TEXT = '#0f172a';
-const MUTED = '#64748b';
-const BORDER = '#e8edf5';
-
-const cardShadow = {
-  shadowColor: PRIMARY,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 1,
-} as const;
-
-const card = {
-  backgroundColor: '#ffffff',
-  borderWidth: 1,
-  borderColor: BORDER,
-  borderRadius: 16,
-} as const;
 
 // ── Scaffold routing logic (faithful port of the PWA) ────────────────────────
 
@@ -177,9 +158,23 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
   onChange: (v: string) => void;
   mathMode?: boolean;
 }) {
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const cardShadow = {
+    shadowColor: colors.azureDeep,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  } as const;
+  const card = {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+  } as const;
   const blanks: any[] = Array.isArray(question?.scaffold_blanks) ? question.scaffold_blanks : [];
   const parts: any[] = Array.isArray(question?.answer_parts) ? question.answer_parts : [];
 
@@ -228,7 +223,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
             style={{
               fontSize: 11,
               fontWeight: '700',
-              color: MUTED,
+              color: colors.muted,
               textTransform: 'uppercase',
               letterSpacing: 0.8,
               marginBottom: 8,
@@ -236,7 +231,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
           >
             {t('Complète la démarche', 'Konplete demach la')}
           </Text>
-          <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: TEXT }} />
+          <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: colors.ink }} />
         </View>
       ) : null}
 
@@ -259,10 +254,10 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
           <View key={i} style={[card, cardShadow, { padding: 14, gap: 10 }]}>
             {/* Label row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ fontSize: 16, color: PRIMARY }}>{circled(i)}</Text>
+              <Text style={{ fontSize: 16, color: colors.azure }}>{circled(i)}</Text>
               <MathText
                 text={label}
-                style={{ flex: 1, fontSize: 13, fontWeight: '600', color: TEXT }}
+                style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.ink }}
               />
             </View>
 
@@ -281,14 +276,14 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                         paddingVertical: 8,
                         borderRadius: 10,
                         borderWidth: 1,
-                        borderColor: selected ? PRIMARY : BORDER,
-                        backgroundColor: selected ? '#eef4fb' : '#ffffff',
+                        borderColor: selected ? colors.azure : colors.border,
+                        backgroundColor: selected ? colors.azureSoft : colors.surface,
                       }}
                     >
                       <Text
                         style={{
                           fontSize: 14,
-                          color: selected ? PRIMARY : TEXT,
+                          color: selected ? colors.azure : colors.ink,
                           fontWeight: selected ? '700' : '400',
                         }}
                       >
@@ -304,19 +299,19 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                 {mathy ? <MathChips onInsert={(c) => setBlank(i, current + c)} /> : null}
                 <TextInput
                   style={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: colors.surface,
                     borderWidth: 1,
-                    borderColor: BORDER,
+                    borderColor: colors.border,
                     borderRadius: 12,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                     fontSize: 15,
-                    color: TEXT,
+                    color: colors.ink,
                   }}
                   value={current}
                   onChangeText={(v) => setBlank(i, v)}
                   placeholder={t('Votre réponse…', 'Repons ou…')}
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor={colors.faint}
                   autoCapitalize="none"
                   autoCorrect={false}
                 />

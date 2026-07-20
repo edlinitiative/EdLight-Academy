@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 
 /**
  * Answer inputs for open exam questions, mirroring the PWA (src/pages/ExamTake.tsx):
@@ -11,31 +12,6 @@ import useStore from '../contexts/store';
  *    math symbol-chip row and a live MathText preview when the value contains
  *    LaTeX markers.
  */
-
-const PRIMARY = '#1B6FE0';
-const TEXT = '#0f172a';
-const MUTED = '#64748b';
-const BORDER = '#e8edf5';
-const OK_GREEN = '#059669';
-
-const cardShadow = {
-  shadowColor: PRIMARY,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 1,
-} as const;
-
-const inputStyle = {
-  backgroundColor: '#ffffff',
-  borderWidth: 1,
-  borderColor: BORDER,
-  borderRadius: 16,
-  padding: 16,
-  fontSize: 16,
-  lineHeight: 24,
-  color: TEXT,
-} as const;
 
 // ── Word-count constants (mirror the PWA's ExamTake.jsx) ─────────────────────
 export const ESSAY_MIN_WORDS = 50;
@@ -96,6 +72,7 @@ export function prettifyMath(s: string): string {
 const MATH_CHARS = ['²', '³', '√', 'π', '÷', '×', '±', '≤', '≥', '≠', '∞', '/', '(', ')'];
 
 export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
+  const colors = useColors();
   return (
     <ScrollView
       horizontal
@@ -113,12 +90,12 @@ export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
             width: 32,
             height: 32,
             borderRadius: 8,
-            backgroundColor: '#f4f6fb',
+            backgroundColor: colors.surfaceAlt,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text style={{ fontSize: 15, color: TEXT }}>{c}</Text>
+          <Text style={{ fontSize: 15, color: colors.ink }}>{c}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -128,6 +105,7 @@ export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
 // ── Live LaTeX preview ───────────────────────────────────────────────────────
 
 export function MathPreview({ value }: { value: string }) {
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -135,9 +113,9 @@ export function MathPreview({ value }: { value: string }) {
   return (
     <View
       style={{
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: BORDER,
+        borderColor: colors.border,
         borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 8,
@@ -147,7 +125,7 @@ export function MathPreview({ value }: { value: string }) {
         style={{
           fontSize: 10,
           fontWeight: '700',
-          color: MUTED,
+          color: colors.muted,
           textTransform: 'uppercase',
           letterSpacing: 0.8,
           marginBottom: 4,
@@ -155,7 +133,7 @@ export function MathPreview({ value }: { value: string }) {
       >
         {t('Aperçu', 'Apèsi')}
       </Text>
-      <MathText text={value} style={{ fontSize: 15, color: TEXT }} />
+      <MathText text={value} style={{ fontSize: 15, color: colors.ink }} />
     </View>
   );
 }
@@ -171,6 +149,7 @@ export function WordCountAnswer({ value, onChangeText, type }: {
   onChangeText: (v: string) => void;
   type: 'essay' | 'short_answer';
 }) {
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -179,6 +158,23 @@ export function WordCountAnswer({ value, onChangeText, type }: {
   const targetWords = isShort ? SHORT_ANSWER_TARGET_WORDS : ESSAY_TARGET_WORDS;
   const wc = countWords(value);
   const reachedMin = wc >= minWords;
+  const inputStyle = {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.ink,
+  } as const;
+  const cardShadow = {
+    shadowColor: colors.azureDeep,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  } as const;
 
   return (
     <View style={{ gap: 6 }}>
@@ -189,9 +185,9 @@ export function WordCountAnswer({ value, onChangeText, type }: {
         multiline
         textAlignVertical="top"
         placeholder={t('Rédigez votre réponse…', 'Ekri repons ou…')}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.faint}
       />
-      <Text style={{ fontSize: 12, color: reachedMin ? OK_GREEN : MUTED, paddingLeft: 4 }}>
+      <Text style={{ fontSize: 12, color: reachedMin ? colors.success : colors.muted, paddingLeft: 4 }}>
         {wc} {t(wc !== 1 ? 'mots' : 'mot', 'mo')} · {t('minimum', 'minimòm')} {minWords}
         {reachedMin && wc < targetWords ? ` · ${t('visez', 'vize')} ~${targetWords}` : ''}
       </Text>
@@ -214,9 +210,27 @@ export default function ExamAnswerInput({
   minHeight?: number;
   mathy?: boolean;
 }) {
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const inputStyle = {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 16,
+    lineHeight: 24,
+    color: colors.ink,
+  } as const;
+  const cardShadow = {
+    shadowColor: colors.azureDeep,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  } as const;
   return (
     <View style={{ gap: 8 }}>
       {mathy ? <MathChips onInsert={(c) => onChangeText(value + c)} /> : null}
@@ -227,7 +241,7 @@ export default function ExamAnswerInput({
         multiline
         textAlignVertical="top"
         placeholder={placeholder ?? t('Votre réponse…', 'Repons ou…')}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.faint}
       />
       <MathPreview value={value} />
     </View>

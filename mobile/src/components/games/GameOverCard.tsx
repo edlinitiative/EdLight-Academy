@@ -4,15 +4,18 @@
  * GameOverCard so every game ends with the same celebratory look.
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
 import {
   Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw,
 } from 'lucide-react-native';
 import { useColors } from '../../theme/theme';
+import { success } from '../../utils/haptics';
 
 const CIRC = 327; // 2 * π * 52
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface GameReward {
   xpEarned: number;
@@ -53,6 +56,9 @@ export default function GameOverCard({
   const colors = useColors();
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
+  // Celebrate the game-over reveal once on mount.
+  useEffect(() => { success(); }, []);
+
   let IconCmp: typeof Trophy;
   let message: string;
   let messageHt: string;
@@ -76,6 +82,15 @@ export default function GameOverCard({
 
   const fill = (pct / 100) * CIRC;
   const tint = `${accent}1a`; // soft accent wash for chips/pills
+
+  // Sweep the score arc up to its final value on mount.
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
+  }, [fill, progress]);
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDasharray: `${progress.value} ${CIRC}`,
+  }));
 
   return (
     <ScrollView
@@ -113,14 +128,14 @@ export default function GameOverCard({
         <View className="items-center justify-center" style={{ width: 140, height: 140 }}>
           <Svg width={140} height={140} viewBox="0 0 120 120">
             <Circle cx={60} cy={60} r={52} fill="none" stroke={colors.border} strokeWidth={10} />
-            <Circle
+            <AnimatedCircle
               cx={60}
               cy={60}
               r={52}
               fill="none"
               stroke={accent}
               strokeWidth={10}
-              strokeDasharray={`${fill} ${CIRC}`}
+              animatedProps={animatedProps}
               strokeLinecap="round"
               rotation="-90"
               origin="60, 60"

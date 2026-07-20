@@ -12,8 +12,7 @@ import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
-
-const PRIMARY = '#1B6FE0';
+import { useColors } from '../theme/theme';
 
 function defaultAlias(name?: string | null) {
   const first = String(name || '').trim().split(/\s+/)[0] || '';
@@ -28,14 +27,15 @@ function OptionSheet({ visible, title, options, onPick, onClose }: {
   visible: boolean; title: string; options: { value: string; label: string }[];
   onPick: (v: string) => void; onClose: () => void;
 }) {
+  const colors = useColors();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(10,20,40,0.45)' }} activeOpacity={1} onPress={onClose} />
-      <View style={{ maxHeight: '70%', backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingBottom: 24 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: '#eef1f6' }}>
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{title}</Text>
+      <View style={{ maxHeight: '70%', backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingBottom: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{title}</Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <X size={20} color="#64748b" />
+            <X size={20} color={colors.muted} />
           </TouchableOpacity>
         </View>
         <ScrollView>
@@ -43,9 +43,9 @@ function OptionSheet({ visible, title, options, onPick, onClose }: {
             <TouchableOpacity
               key={o.value}
               onPress={() => { onPick(o.value); onClose(); }}
-              style={{ paddingVertical: 13, paddingHorizontal: 18, borderBottomWidth: 1, borderColor: '#f4f6fa' }}
+              style={{ paddingVertical: 13, paddingHorizontal: 18, borderBottomWidth: 1, borderColor: colors.hairline }}
             >
-              <Text style={{ fontSize: 15, color: '#1f2937' }}>{o.label}</Text>
+              <Text style={{ fontSize: 15, color: colors.ink }}>{o.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -56,16 +56,17 @@ function OptionSheet({ visible, title, options, onPick, onClose }: {
 
 /** Field trigger that looks like a select. */
 function SelectField({ label, value, placeholder, onPress }: { label: string; value?: string | null; placeholder: string; onPress: () => void }) {
+  const colors = useColors();
   return (
     <View style={{ gap: 5 }}>
-      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b' }}>{label}</Text>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>{label}</Text>
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: '#dbe2ec', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, backgroundColor: '#fff' }}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, backgroundColor: colors.surfaceAlt }}
       >
-        <Text style={{ fontSize: 15, color: value ? '#0f172a' : '#9aa4b2' }}>{value || placeholder}</Text>
-        <ChevronDown size={16} color="#9aa4b2" />
+        <Text style={{ fontSize: 15, color: value ? colors.ink : colors.faint }}>{value || placeholder}</Text>
+        <ChevronDown size={16} color={colors.faint} />
       </TouchableOpacity>
     </View>
   );
@@ -73,6 +74,7 @@ function SelectField({ label, value, placeholder, onPress }: { label: string; va
 
 export default function LeaderboardJoinModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { user, language } = useStore();
+  const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { profile, setLeaderboardOptIn } = useTrivia();
@@ -137,17 +139,17 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(10,20,40,0.45)' }} activeOpacity={1} onPress={onClose} />
-        <View style={{ backgroundColor: '#f7f9fc', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 30, gap: 14 }}>
+        <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 30, gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ShieldCheck size={18} color="#10b981" />
-            <Text style={{ flex: 1, fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
+            <ShieldCheck size={18} color={colors.success} />
+            <Text style={{ flex: 1, fontSize: 16, fontWeight: '800', color: colors.ink }}>
               {t('Mon profil de classement', 'Pwofil klasman mwen')}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <X size={20} color="#64748b" />
+              <X size={20} color={colors.muted} />
             </TouchableOpacity>
           </View>
-          <Text style={{ fontSize: 12.5, color: '#64748b', marginTop: -6 }}>
+          <Text style={{ fontSize: 12.5, color: colors.muted, marginTop: -6 }}>
             {t(
               'Vous apparaissez avec un pseudo — vous restez anonyme.',
               'Ou parèt ak yon ti non — ou rete anonim.',
@@ -155,17 +157,17 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
           </Text>
 
           <View style={{ gap: 5 }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b' }}>{t('Pseudo affiché', 'Ti non pou afiche')}</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>{t('Pseudo affiché', 'Ti non pou afiche')}</Text>
             <TextInput
               value={alias}
               onChangeText={setAlias}
               maxLength={24}
               placeholder={t('Votre pseudo', 'Ti non ou')}
-              placeholderTextColor="#9aa4b2"
-              style={{ borderWidth: 1, borderColor: aliasOk || !alias ? '#dbe2ec' : '#f59e0b', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: '#fff', color: '#0f172a' }}
+              placeholderTextColor={colors.faint}
+              style={{ borderWidth: 1, borderColor: aliasOk || !alias ? colors.border : colors.warn, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: colors.surfaceAlt, color: colors.ink }}
             />
             {!aliasOk && (
-              <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#b45309' }}>
+              <Text style={{ fontSize: 11.5, fontWeight: '600', color: colors.warn }}>
                 {t(
                   'Choisissez un pseudo (au moins une lettre) pour apparaître dans le classement.',
                   'Chwazi yon ti non (omwen yon lèt) pou parèt nan klasman an.',
@@ -175,14 +177,14 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
           </View>
 
           <View style={{ gap: 5 }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748b' }}>{t('École (optionnel)', 'Lekòl (opsyonèl)')}</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted }}>{t('École (optionnel)', 'Lekòl (opsyonèl)')}</Text>
             <TextInput
               value={school}
               onChangeText={setSchool}
               maxLength={60}
               placeholder={t('Nom de votre école', 'Non lekòl ou')}
-              placeholderTextColor="#9aa4b2"
-              style={{ borderWidth: 1, borderColor: '#dbe2ec', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: '#fff', color: '#0f172a' }}
+              placeholderTextColor={colors.faint}
+              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: colors.surfaceAlt, color: colors.ink }}
             />
           </View>
 
@@ -208,8 +210,8 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
               onChangeText={setCustomCity}
               maxLength={60}
               placeholder={t('Nom de votre ville', 'Non vil ou')}
-              placeholderTextColor="#9aa4b2"
-              style={{ borderWidth: 1, borderColor: '#dbe2ec', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: '#fff', color: '#0f172a' }}
+              placeholderTextColor={colors.faint}
+              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: colors.surfaceAlt, color: colors.ink }}
             />
           )}
 
@@ -217,7 +219,7 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
             onPress={save}
             disabled={saving || !aliasOk}
             activeOpacity={0.85}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: saving || !aliasOk ? '#9dbde0' : PRIMARY, borderRadius: 999, paddingVertical: 14, marginTop: 4 }}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.azure, opacity: saving || !aliasOk ? 0.5 : 1, borderRadius: 999, paddingVertical: 14, marginTop: 4 }}
           >
             <Check size={17} color="#fff" />
             <Text style={{ color: '#fff', fontSize: 15.5, fontWeight: '800' }}>

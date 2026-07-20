@@ -18,6 +18,8 @@ function rankBadge(rank: number) {
 
 function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean; compact?: boolean }) {
   const colors = useColors();
+  const { language } = useStore();
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const badge = rankBadge(entry.rank);
 
   return (
@@ -45,8 +47,8 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
       {/* Name + city · school (parity with the web leaderboard) */}
       <View className="flex-1">
         <Text className={`text-sm font-semibold ${isMe ? 'text-blue-800 dark:text-[#4C9AF5]' : 'text-gray-900 dark:text-slate-100'}`} numberOfLines={1}>
-          {entry.displayName || 'Élève'}
-          {isMe ? ' (vous)' : ''}
+          {entry.displayName || t('Élève', 'Elèv')}
+          {isMe ? t(' (vous)', ' (ou)') : ''}
         </Text>
         {!compact && (entry.city || entry.school) && (
           <Text className="text-xs text-gray-400 dark:text-slate-500" numberOfLines={1}>
@@ -70,7 +72,7 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ compact = false, maxRows = 10 }: LeaderboardProps) {
-  const { language } = useStore();
+  const { language, toggleAuthModal } = useStore();
   const { colors, cardSurface } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -95,10 +97,10 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
         <TouchableOpacity
           onPress={() => setShowJoin(true)}
           activeOpacity={0.85}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(245, 158, 11, 0.1)' }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, padding: 10, borderRadius: 12, backgroundColor: colors.warn + '1A' }}
         >
-          <Pencil size={14} color="#b45309" />
-          <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: '#b45309' }}>
+          <Pencil size={14} color={colors.warn} />
+          <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: colors.warn }}>
             {t(
               'Il vous manque un pseudo — choisissez-en un pour apparaître.',
               'Ou manke yon ti non — chwazi youn pou parèt.',
@@ -130,6 +132,20 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
       )}
       <LeaderboardJoinModal visible={showJoin} onClose={() => setShowJoin(false)} />
     </>
+  );
+
+  // Signed-out students see the board but can't join → give them a way in.
+  const guestFooter = !isAuthed && !compact && (
+    <TouchableOpacity
+      onPress={toggleAuthModal}
+      activeOpacity={0.85}
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.azure }}
+    >
+      <ShieldCheck size={15} color="#fff" />
+      <Text style={{ color: '#fff', fontSize: 13.5, fontWeight: '800' }}>
+        {t('Se connecter pour jouer', 'Konekte pou jwe')}
+      </Text>
+    </TouchableOpacity>
   );
 
   const header = !compact && (
@@ -181,6 +197,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
             : t('Aucune entrée cette semaine.\nJoue pour apparaître !', 'Poko gen antre semèn sa a.\nJwe pou ou parèt !')}
         </Text>
         {joinFooter}
+        {guestFooter}
       </View>
     );
   }
@@ -202,6 +219,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
         </View>
       )}
       {joinFooter}
+      {guestFooter}
     </View>
   );
 }

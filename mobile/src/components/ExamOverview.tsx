@@ -4,32 +4,18 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Clock, Award, ListChecks, Layers, Play } from 'lucide-react-native';
 import { normalizeSubject, normalizeExamTitle, normalizeYear } from '../utils/examUtils';
 import useStore from '../contexts/store';
-
-const PRIMARY = '#1B6FE0';
-const TEXT = '#0f172a';
-const MUTED = '#64748b';
-
-const cardStyle = {
-  backgroundColor: '#ffffff',
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: '#e8edf5',
-  shadowColor: PRIMARY,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 1,
-} as const;
+import { useColors } from '../theme/theme';
 
 function StatItem({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
+  const colors = useColors();
   return (
-    <View style={{ flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#f4f6fb', borderRadius: 12 }}>
-      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#e8edf5' }}>
+    <View style={{ flexBasis: '47%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: colors.bg, borderRadius: 12 }}>
+      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: TEXT }} numberOfLines={1}>{value}</Text>
-        <Text style={{ fontSize: 11, color: MUTED }} numberOfLines={1}>{label}</Text>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }} numberOfLines={1}>{value}</Text>
+        <Text style={{ fontSize: 11, color: colors.muted }} numberOfLines={1}>{label}</Text>
       </View>
     </View>
   );
@@ -55,6 +41,7 @@ export default function ExamOverview({
   onBack: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -64,14 +51,26 @@ export default function ExamOverview({
   const durationMin = Number(exam?.duration_minutes) || 0;
   const totalPoints = Number(exam?.total_points) || 0;
 
+  const cardStyle = {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.azureDeep,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  } as const;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f6fb' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e8edf5' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <TouchableOpacity onPress={onBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <ArrowLeft color={TEXT} size={22} />
+          <ArrowLeft color={colors.ink} size={22} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: TEXT }}>{t("Aperçu de l'examen", 'Apèsi egzamen an')}</Text>
+        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }}>{t("Aperçu de l'examen", 'Apèsi egzamen an')}</Text>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}>
@@ -79,35 +78,35 @@ export default function ExamOverview({
         <View style={[cardStyle, { padding: 18 }]}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
             {subject ? (
-              <View style={{ backgroundColor: '#e6f0f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>{subject}</Text>
+              <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{subject}</Text>
               </View>
             ) : null}
             {year ? (
-              <View style={{ backgroundColor: '#f1f5f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>{year}</Text>
+              <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted }}>{year}</Text>
               </View>
             ) : null}
           </View>
 
-          <Text style={{ fontSize: 20, fontWeight: '800', color: TEXT, lineHeight: 27, marginBottom: 16 }}>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, lineHeight: 27, marginBottom: 16 }}>
             {title}
           </Text>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {durationMin > 0 ? (
-              <StatItem icon={<Clock color={PRIMARY} size={17} />} value={`${durationMin} min`} label={t('Durée', 'Dire')} />
+              <StatItem icon={<Clock color={colors.azure} size={17} />} value={`${durationMin} min`} label={t('Durée', 'Dire')} />
             ) : null}
             {totalPoints > 0 ? (
-              <StatItem icon={<Award color={PRIMARY} size={17} />} value={`${totalPoints} pts`} label={t('Total des points', 'Total pwen')} />
+              <StatItem icon={<Award color={colors.azure} size={17} />} value={`${totalPoints} pts`} label={t('Total des points', 'Total pwen')} />
             ) : null}
             <StatItem
-              icon={<ListChecks color={PRIMARY} size={17} />}
+              icon={<ListChecks color={colors.azure} size={17} />}
               value={String(questionCount)}
               label={t(questionCount > 1 ? 'Questions' : 'Question', 'Kesyon')}
             />
             <StatItem
-              icon={<Layers color={PRIMARY} size={17} />}
+              icon={<Layers color={colors.azure} size={17} />}
               value={String(sections.length)}
               label={t(sections.length > 1 ? 'Sections' : 'Section', 'Seksyon')}
             />
@@ -117,7 +116,7 @@ export default function ExamOverview({
         {/* Sections card */}
         {sections.length > 0 ? (
           <View style={[cardStyle, { padding: 18 }]}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
               {t('Aperçu des sections', 'Apèsi seksyon yo')}
             </Text>
             {sections.map((sec, i) => (
@@ -129,16 +128,16 @@ export default function ExamOverview({
                   gap: 12,
                   paddingVertical: 11,
                   borderTopWidth: i === 0 ? 0 : 1,
-                  borderTopColor: '#e8edf5',
+                  borderTopColor: colors.border,
                 }}
               >
-                <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: '#e6f0f9', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>{i + 1}</Text>
+                <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{i + 1}</Text>
                 </View>
-                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: TEXT }} numberOfLines={2}>
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.ink }} numberOfLines={2}>
                   {sec.title}
                 </Text>
-                <Text style={{ fontSize: 12, color: MUTED }}>
+                <Text style={{ fontSize: 12, color: colors.muted }}>
                   {sec.count} {t(sec.count > 1 ? 'questions' : 'question', 'kesyon')}
                 </Text>
               </View>
@@ -149,8 +148,8 @@ export default function ExamOverview({
         {/* Saved progress notice */}
         {hasProgress ? (
           <View style={[cardStyle, { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-            <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: PRIMARY }} />
-            <Text style={{ flex: 1, fontSize: 13, color: MUTED }}>
+            <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: colors.azure }} />
+            <Text style={{ flex: 1, fontSize: 13, color: colors.muted }}>
               {t(
                 `Progression sauvegardée — ${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''} sur ${questionCount}.`,
                 `Pwogrè konsève — ${answeredCount} repons anrejistre sou ${questionCount}.`,
@@ -162,11 +161,11 @@ export default function ExamOverview({
 
       {/* Start CTA — safe-area aware so it always clears the home indicator /
           Android gesture bar (the floating tab bar is hidden here via focus mode). */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#e8edf5' }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
         <TouchableOpacity
           onPress={onStart}
           style={{
-            backgroundColor: PRIMARY,
+            backgroundColor: colors.azure,
             borderRadius: 16,
             paddingVertical: 15,
             flexDirection: 'row',
@@ -180,7 +179,7 @@ export default function ExamOverview({
             {hasProgress ? t("Continuer l'examen", 'Kontinye egzamen an') : t("Commencer l'examen", 'Kòmanse egzamen an')}
           </Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginTop: 8 }}>
+        <Text style={{ textAlign: 'center', fontSize: 12, color: colors.muted, marginTop: 8 }}>
           {hasProgress
             ? t('Vous reprendrez là où vous vous étiez arrêté.', 'W ap kontinye kote ou te rete a.')
             : t('Votre progression sera sauvegardée automatiquement.', 'Pwogrè ou ap konsève otomatikman.')}

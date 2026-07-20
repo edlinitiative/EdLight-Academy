@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import {
   Modal, View, Text, TouchableOpacity, Dimensions, StyleSheet, findNodeHandle, UIManager,
 } from 'react-native';
+import { useColors, type Palette } from '../theme/theme';
 
-const PRIMARY = '#1B6FE0';
 const DIM = 'rgba(15,23,42,0.72)';
 const { height: SCREEN_H } = Dimensions.get('window');
 const PAD = 8;
@@ -25,6 +25,8 @@ export default function PracticeSpotlight({
   body: string;
   cta: string;
 }) {
+  const colors = useColors();
+  const styles = makeStyles(colors);
   const [rect, setRect] = useState<Rect | null>(null);
 
   useEffect(() => {
@@ -85,19 +87,19 @@ export default function PracticeSpotlight({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: Palette) => StyleSheet.create({
   dim: { position: 'absolute', backgroundColor: DIM },
   tip: {
     position: 'absolute', left: 20, right: 20,
-    backgroundColor: '#ffffff', borderRadius: 18, padding: 18,
+    backgroundColor: colors.surface, borderRadius: 18, padding: 18,
   },
-  title: { fontSize: 17, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
-  body: { fontSize: 14.5, lineHeight: 21, color: '#475569', marginBottom: 14 },
-  btn: { alignSelf: 'flex-start', backgroundColor: PRIMARY, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
+  title: { fontSize: 17, fontWeight: '800', color: colors.ink, marginBottom: 6 },
+  body: { fontSize: 14.5, lineHeight: 21, color: colors.muted, marginBottom: 14 },
+  btn: { alignSelf: 'flex-start', backgroundColor: colors.azure, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 },
   btnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   arrow: {
     position: 'absolute', bottom: -9, left: '50%', marginLeft: -9,
     width: 0, height: 0, borderLeftWidth: 9, borderRightWidth: 9, borderTopWidth: 10,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#ffffff',
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: colors.surface,
   },
 });

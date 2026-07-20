@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web:
+    name: Web (jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm ci
+      # Web tsc has many pre-existing errors, so we don't gate on it here.
+      # The jest suite is expected to pass.
+      - name: Run web tests
+        run: npm test -- --ci
+
+  mobile:
+    name: Mobile (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+      - name: Typecheck mobile
+        working-directory: mobile
+        run: node node_modules/typescript/bin/tsc --noEmit

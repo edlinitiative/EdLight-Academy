@@ -10,6 +10,7 @@ import { X, Check, Timer, Flame } from 'lucide-react-native';
 import { buildVraiFauxItems } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
 import { useColors } from '../../theme/theme';
+import { success, warn } from '../../utils/haptics';
 
 const ROUND_SECONDS = 60;
 // Volume guard: fewer than this many answers can't reach 100% XP accuracy.
@@ -75,9 +76,11 @@ export default function VraiFauxGame({
     const right = saysTrue === item.truth;
     setAnswered((n) => n + 1);
     if (right) {
+      success();
       setCorrect((n) => n + 1);
       setStreak((s) => { const ns = s + 1; setBestStreak((b) => Math.max(b, ns)); return ns; });
     } else {
+      warn();
       setStreak(0);
     }
     setFeedback(right ? 'right' : 'wrong');

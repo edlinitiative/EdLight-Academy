@@ -10,6 +10,7 @@ import { HelpCircle } from 'lucide-react-native';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
 import { useColors } from '../../theme/theme';
+import { success, warn } from '../../utils/haptics';
 
 const ROUNDS = 10;
 const ACCENT = '#0e7490';
@@ -47,7 +48,7 @@ export default function SuitesGame({
     setPicked(opt);
     const right = opt === round.answer;
     const nextScore = right ? score + 1 : score;
-    if (right) setScore(nextScore);
+    if (right) { success(); setScore(nextScore); } else { warn(); }
     advanceTimerRef.current = setTimeout(() => {
       if (idx + 1 >= ROUNDS) {
         setOver(true);

@@ -8,7 +8,8 @@ import {
   Calculator, Atom, FlaskConical, Leaf, PenLine, Globe,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme } from '../theme/theme';
+import PressableScale from '../components/ui/PressableScale';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
@@ -25,22 +26,31 @@ const LEVELS = [
   {
     id: 'terminale',
     label: 'Terminale (Bac)',
+    labelHt: 'Tèminal (Bak)',
     sublabel: 'Examens officiels du Baccalauréat',
+    sublabelHt: 'Egzamen ofisyèl Bakaloreya a',
     description: 'Révise les sujets des 5 dernières années.',
+    descriptionHt: 'Revize sijè 5 dènye ane yo.',
     Icon: GraduationCap,
   },
   {
     id: '9e',
     label: '9ème Année',
+    labelHt: '9yèm Ane',
     sublabel: 'Examens du cycle fondamental',
+    sublabelHt: 'Egzamen sik fondamantal la',
     description: 'Prépare les épreuves nationales de 9ème.',
+    descriptionHt: 'Prepare eprèv nasyonal 9yèm yo.',
     Icon: BookOpen,
   },
   {
     id: 'university',
     label: 'Université',
+    labelHt: 'Inivèsite',
     sublabel: "Examens d'entrée et concours",
+    sublabelHt: 'Egzamen antre ak konkou',
     description: 'Accès aux études supérieures.',
+    descriptionHt: 'Aksè nan etid siperyè.',
     Icon: Landmark,
   },
 ];
@@ -57,6 +67,7 @@ const SUBJECTS = [
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useColors();
+  const { cardSurface } = useTheme();
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -89,22 +100,13 @@ export default function ExamLandingScreen() {
           {LEVELS.map((level) => (
             <View
               key={level.id}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-                shadowColor: '#1B6FE0',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.06,
-                shadowRadius: 6,
-                elevation: 2,
-                overflow: 'hidden',
-              }}
+              style={[cardSurface, { overflow: 'hidden' }]}
             >
-              <TouchableOpacity
+              <PressableScale
                 onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
-                activeOpacity={0.82}
+                pressedScale={0.98}
+                accessibilityRole="button"
+                accessibilityLabel={t(level.label, level.labelHt)}
                 style={{ flexDirection: 'row' }}
               >
                 <View style={{ flex: 1, padding: 16 }}>
@@ -123,9 +125,9 @@ export default function ExamLandingScreen() {
                     <level.Icon color={colors.azure} size={24} />
                   </View>
 
-                  <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
-                  <Text style={{ color: colors.faint, fontSize: 12, marginTop: 2 }}>{level.description}</Text>
+                  <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16, lineHeight: 22 }}>{t(level.label, level.labelHt)}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 18 }}>{t(level.sublabel, level.sublabelHt)}</Text>
+                  <Text style={{ color: colors.faint, fontSize: 12, marginTop: 2 }}>{t(level.description, level.descriptionHt)}</Text>
 
                   {/* Explorer link */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
@@ -135,7 +137,7 @@ export default function ExamLandingScreen() {
                     <ChevronRight color={colors.azure} size={16} />
                   </View>
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
 
               {/* Track (filière) chips — only for Terminale */}
               {level.id === 'terminale' && (
@@ -184,10 +186,11 @@ export default function ExamLandingScreen() {
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {SUBJECTS.map((subj) => (
-              <TouchableOpacity
+              <PressableScale
                 key={subj.code}
                 onPress={() => navigation.navigate('ExamBrowser', { level: 'terminale', subject: subj.code })}
-                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={subj.code}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -198,7 +201,7 @@ export default function ExamLandingScreen() {
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 99,
-                  shadowColor: '#1B6FE0',
+                  shadowColor: colors.azureDeep,
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.06,
                   shadowRadius: 6,
@@ -209,7 +212,7 @@ export default function ExamLandingScreen() {
                   <subj.Icon color={colors.azure} size={13} />
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '500', color: colors.muted }}>{subj.code}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
         </View>

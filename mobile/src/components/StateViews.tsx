@@ -70,7 +70,18 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
   );
 }
 
-export function EmptyState({ message, icon }: { message?: string; icon?: React.ReactNode }) {
+export function EmptyState({
+  message,
+  icon,
+  ctaLabel,
+  onCta,
+}: {
+  message?: string;
+  icon?: React.ReactNode;
+  /** Optional action so an empty screen isn't a dead end. */
+  ctaLabel?: string;
+  onCta?: () => void;
+}) {
   const { language } = useStore();
   const colors = useColors();
   const isCreole = language === 'ht';
@@ -79,6 +90,11 @@ export function EmptyState({ message, icon }: { message?: string; icon?: React.R
     <View className="flex-1 items-center justify-center gap-3 py-16 px-6" style={{ backgroundColor: colors.bg }}>
       {icon ?? <Inbox color={colors.faint} size={40} />}
       <Text style={{ color: colors.muted, fontSize: 16, textAlign: 'center' }}>{message ?? t('Rien ici pour l\'instant.', 'Pa gen anyen la pou kounye a.')}</Text>
+      {ctaLabel && onCta ? (
+        <TouchableOpacity onPress={onCta} className="mt-2 px-5 py-2.5 rounded-full" style={{ backgroundColor: colors.azure }} accessibilityRole="button" accessibilityLabel={ctaLabel}>
+          <Text style={{ color: '#fff', fontWeight: '700' }}>{ctaLabel}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }

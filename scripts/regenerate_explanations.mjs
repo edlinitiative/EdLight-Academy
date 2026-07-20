@@ -27,7 +27,11 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CATALOG_PATH = resolve(__dirname, '../public/exam_catalog.json');
 const CHECKPOINT_PATH = resolve(__dirname, '../.regen_checkpoint.json');
-const GEMINI_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBA4NHDVyIbnGt7iVfPUJHi7jNMV2Maqbc';
+const GEMINI_KEY = process.env.GEMINI_API_KEY;
+if (!GEMINI_KEY) {
+  console.error('GEMINI_API_KEY not set');
+  process.exit(1);
+}
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
 
 const BATCH_SIZE = 4;

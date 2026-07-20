@@ -3,8 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } fro
 import { MessageCircle, ChevronDown, ChevronUp, Send, Flag, Ban, Trash2 } from 'lucide-react-native';
 import { addComment, subscribeToComments, reportComment, blockUser, deleteComment, getUserProfile } from '../services/firebase';
 import useStore from '../contexts/store';
-
-const PRIMARY = '#1B6FE0';
+import { useColors } from '../theme/theme';
 
 function toMillis(ts: any): number {
   if (!ts) return 0;
@@ -34,6 +33,7 @@ function timeAgo(ts: any, isCreole: boolean): string {
  * sign-in (otherwise prompts the auth modal).
  */
 export default function LessonComments({ threadKey, isCreole }: { threadKey: string; isCreole: boolean }) {
+  const colors = useColors();
   const user = useStore((s) => s.user);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const setShowAuthModal = useStore((s) => s.setShowAuthModal);
@@ -103,21 +103,21 @@ export default function LessonComments({ threadKey, isCreole }: { threadKey: str
   );
 
   return (
-    <View style={{ backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 4, marginBottom: 16 }}>
+    <View style={{ backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 4, marginBottom: 16 }}>
       <TouchableOpacity
         onPress={() => setExpanded((e) => !e)}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 12 }}
       >
-        <MessageCircle color={PRIMARY} size={18} />
-        <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
+        <MessageCircle color={colors.azure} size={18} />
+        <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: colors.ink }}>
           {isCreole ? 'Diskisyon & kòmantè' : 'Discussion & commentaires'}
         </Text>
         {visibleComments.length > 0 ? (
-          <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>{visibleComments.length}</Text>
+          <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{visibleComments.length}</Text>
           </View>
         ) : null}
-        {expanded ? <ChevronUp color="#6b7280" size={18} /> : <ChevronDown color="#6b7280" size={18} />}
+        {expanded ? <ChevronUp color={colors.muted} size={18} /> : <ChevronDown color={colors.muted} size={18} />}
       </TouchableOpacity>
 
       {expanded ? (
@@ -129,14 +129,14 @@ export default function LessonComments({ threadKey, isCreole }: { threadKey: str
                 value={text}
                 onChangeText={setText}
                 placeholder={isCreole ? 'Ekri yon kòmantè…' : 'Écrivez un commentaire…'}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.faint}
                 multiline
-                style={{ flex: 1, minHeight: 40, maxHeight: 120, borderWidth: 1, borderColor: '#e8edf5', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#0f172a', backgroundColor: '#f8fafc' }}
+                style={{ flex: 1, minHeight: 40, maxHeight: 120, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: colors.ink, backgroundColor: colors.surfaceAlt }}
               />
               <TouchableOpacity
                 onPress={post}
                 disabled={!text.trim() || posting}
-                style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: PRIMARY, alignItems: 'center', justifyContent: 'center', opacity: !text.trim() || posting ? 0.4 : 1 }}
+                style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.azure, alignItems: 'center', justifyContent: 'center', opacity: !text.trim() || posting ? 0.4 : 1 }}
               >
                 {posting ? <ActivityIndicator color="#fff" size="small" /> : <Send color="#fff" size={18} />}
               </TouchableOpacity>
@@ -144,9 +144,9 @@ export default function LessonComments({ threadKey, isCreole }: { threadKey: str
           ) : (
             <TouchableOpacity
               onPress={() => setShowAuthModal(true)}
-              style={{ borderWidth: 1, borderColor: '#e8edf5', borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: '#f8fafc' }}
+              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.surfaceAlt }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: PRIMARY }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.azure }}>
                 {isCreole ? 'Konekte pou kòmante' : 'Se connecter pour commenter'}
               </Text>
             </TouchableOpacity>
@@ -154,39 +154,39 @@ export default function LessonComments({ threadKey, isCreole }: { threadKey: str
 
           {/* Thread */}
           {visibleComments.length === 0 ? (
-            <Text style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', paddingVertical: 8 }}>
+            <Text style={{ fontSize: 13, color: colors.faint, textAlign: 'center', paddingVertical: 8 }}>
               {isCreole ? 'Poko gen kòmantè. Se ou premye a !' : 'Aucun commentaire pour le moment. Soyez le premier !'}
             </Text>
           ) : (
             visibleComments.map((c) => {
               const isOwn = !!user?.uid && c.authorId === user.uid;
               return (
-                <View key={c.id} style={{ borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 12 }}>
+                <View key={c.id} style={{ borderTopWidth: 1, borderTopColor: colors.hairline, paddingTop: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <View style={{ width: 26, height: 26, borderRadius: 999, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>
+                    <View style={{ width: 26, height: 26, borderRadius: 999, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>
                         {String(c.authorName || '?').charAt(0).toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a' }}>{c.authorName || 'Élève'}</Text>
-                    <Text style={{ fontSize: 11, color: '#94a3b8' }}>{timeAgo(c.created_at, isCreole)}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}>{c.authorName || 'Élève'}</Text>
+                    <Text style={{ fontSize: 11, color: colors.faint }}>{timeAgo(c.created_at, isCreole)}</Text>
                   </View>
-                  <Text style={{ fontSize: 14, color: '#334155', lineHeight: 20, marginLeft: 34 }}>{c.text}</Text>
+                  <Text style={{ fontSize: 14, color: colors.muted, lineHeight: 20, marginLeft: 34 }}>{c.text}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginLeft: 34, marginTop: 6 }}>
                     {isOwn ? (
                       <TouchableOpacity onPress={() => handleDelete(c)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Trash2 color="#94a3b8" size={13} />
-                        <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>{isCreole ? 'Efase' : 'Supprimer'}</Text>
+                        <Trash2 color={colors.faint} size={13} />
+                        <Text style={{ fontSize: 12, color: colors.faint, fontWeight: '600' }}>{isCreole ? 'Efase' : 'Supprimer'}</Text>
                       </TouchableOpacity>
                     ) : (
                       <>
                         <TouchableOpacity onPress={() => handleReport(c)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Flag color="#94a3b8" size={13} />
-                          <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>{isCreole ? 'Sinyale' : 'Signaler'}</Text>
+                          <Flag color={colors.faint} size={13} />
+                          <Text style={{ fontSize: 12, color: colors.faint, fontWeight: '600' }}>{isCreole ? 'Sinyale' : 'Signaler'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleBlock(c)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Ban color="#94a3b8" size={13} />
-                          <Text style={{ fontSize: 12, color: '#94a3b8', fontWeight: '600' }}>{isCreole ? 'Bloke' : 'Bloquer'}</Text>
+                          <Ban color={colors.faint} size={13} />
+                          <Text style={{ fontSize: 12, color: colors.faint, fontWeight: '600' }}>{isCreole ? 'Bloke' : 'Bloquer'}</Text>
                         </TouchableOpacity>
                       </>
                     )}

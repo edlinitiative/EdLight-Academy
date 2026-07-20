@@ -2,19 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react-native';
 import useStore from '../contexts/store';
-
-const PRIMARY = '#1B6FE0';
-const TEXT = '#0f172a';
-const MUTED = '#64748b';
-const BORDER = '#e8edf5';
-
-const cardShadow = {
-  shadowColor: PRIMARY,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 1,
-} as const;
+import { useColors } from '../theme/theme';
 
 /**
  * "I- Compétence Linguistique" → { numeral: 'I', name: 'Compétence Linguistique' }
@@ -45,23 +33,28 @@ function cleanExamText(raw: unknown): string {
 const LONG_INSTRUCTIONS = 280;
 
 function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; label?: string }) {
+  const colors = useColors();
   return (
     <View
       style={[
         {
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.surface,
           borderRadius: 16,
           borderWidth: 1,
-          borderColor: BORDER,
+          borderColor: colors.border,
           maxHeight: 240,
           overflow: 'hidden',
+          shadowColor: colors.azureDeep,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 1,
         },
-        cardShadow,
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 12 }}>
-        <BookOpen color={PRIMARY} size={14} />
-        <Text style={{ fontSize: 11, fontWeight: '700', color: MUTED, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+        <BookOpen color={colors.azure} size={14} />
+        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>
           {label}
         </Text>
       </View>
@@ -71,7 +64,7 @@ function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; la
         style={{ maxHeight: 200 }}
         contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 14 }}
       >
-        <Text style={{ fontSize: 15, lineHeight: 22, color: '#334155' }}>{passage}</Text>
+        <Text style={{ fontSize: 15, lineHeight: 22, color: colors.muted }}>{passage}</Text>
       </ScrollView>
     </View>
   );
@@ -96,10 +89,18 @@ export default function ExamSectionContext({
   passage?: string | null;
   isSectionStart: boolean;
 }) {
+  const colors = useColors();
   const [expanded, setExpanded] = useState(false);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const cardShadow = {
+    shadowColor: colors.azureDeep,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 1,
+  } as const;
 
   const safeTitle = cleanExamText(title);
   const safeInstructions = cleanExamText(instructions);
@@ -121,20 +122,20 @@ export default function ExamSectionContext({
         <View
           style={[
             {
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderRadius: 16,
               borderWidth: 1,
-              borderColor: BORDER,
+              borderColor: colors.border,
               padding: 16,
             },
             cardShadow,
           ]}
         >
-          <Text style={{ fontSize: 11, fontWeight: '700', color: PRIMARY, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.azure, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
             {t('Nouvelle section', 'Nouvo seksyon')}
           </Text>
           {safeTitle ? (
-            <Text style={{ fontSize: 17, fontWeight: '800', color: TEXT, lineHeight: 23 }}>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink, lineHeight: 23 }}>
               {displayTitle}
             </Text>
           ) : null}
@@ -152,18 +153,18 @@ export default function ExamSectionContext({
                 paddingVertical: 6,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: BORDER,
-                backgroundColor: '#f8fafc',
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceAlt,
               }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY }}>{t('Consignes', 'Konsiy')}</Text>
-              {expanded ? <ChevronUp color={PRIMARY} size={14} /> : <ChevronDown color={PRIMARY} size={14} />}
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{t('Consignes', 'Konsiy')}</Text>
+              {expanded ? <ChevronUp color={colors.azure} size={14} /> : <ChevronDown color={colors.azure} size={14} />}
             </TouchableOpacity>
           ) : null}
 
           {expanded && safeInstructions && !longInstructions ? (
-            <Text style={{ fontSize: 14, lineHeight: 21, color: '#334155', marginTop: 12 }}>
+            <Text style={{ fontSize: 14, lineHeight: 21, color: colors.muted, marginTop: 12 }}>
               {safeInstructions}
             </Text>
           ) : null}
@@ -181,8 +182,8 @@ export default function ExamSectionContext({
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ flex: 1, backgroundColor: '#e6f0f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: PRIMARY }} numberOfLines={1}>
+        <View style={{ flex: 1, backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.azure }} numberOfLines={1}>
             {displayTitle}
           </Text>
         </View>
@@ -197,13 +198,13 @@ export default function ExamSectionContext({
               paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: BORDER,
-              backgroundColor: '#ffffff',
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
             }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: MUTED }}>{t('Consignes', 'Konsiy')}</Text>
-            {expanded ? <ChevronUp color={MUTED} size={13} /> : <ChevronDown color={MUTED} size={13} />}
+            <Text style={{ fontSize: 11, fontWeight: '600', color: colors.muted }}>{t('Consignes', 'Konsiy')}</Text>
+            {expanded ? <ChevronUp color={colors.muted} size={13} /> : <ChevronDown color={colors.muted} size={13} />}
           </TouchableOpacity>
         ) : null}
       </View>
@@ -216,16 +217,16 @@ export default function ExamSectionContext({
             <View
               style={[
                 {
-                  backgroundColor: '#ffffff',
+                  backgroundColor: colors.surface,
                   borderRadius: 16,
                   borderWidth: 1,
-                  borderColor: BORDER,
+                  borderColor: colors.border,
                   padding: 14,
                 },
                 cardShadow,
               ]}
             >
-              <Text style={{ fontSize: 14, lineHeight: 21, color: '#334155' }}>{safeInstructions}</Text>
+              <Text style={{ fontSize: 14, lineHeight: 21, color: colors.muted }}>{safeInstructions}</Text>
             </View>
           ) : null}
           {safePassage ? <PassageCard passage={safePassage} label={t('Texte à lire', 'Tèks pou li')} /> : null}

@@ -145,88 +145,6 @@ export async function notifyStreak(_userId: string, streakDays: number): Promise
   });
 }
 
-// ─── Scheduled reminders ──────────────────────────────────────────────────────
-
-/**
- * Cancel the current daily study reminder (if any) and schedule a new one.
- * Persists the notification ID so it can be cancelled later.
- */
-export async function scheduleDailyStudyReminder(hour = 18, minute = 0): Promise<void> {
-  if (!(await canNotify())) return;
-
-  await cancelDailyStudyReminder();
-
-  const id = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: t("C'est l'heure de réviser ! 📚", 'Li lè pou revize ! 📚'),
-      body: t(
-        'Continuez vos révisions et gardez votre série active.',
-        'Kontinye revizyon ou yo epi kenbe seri ou aktif.',
-      ),
-      sound: true,
-      data: { type: 'study-reminder' },
-      ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    } as any,
-  });
-
-  await AsyncStorage.setItem(DAILY_REMINDER_KEY, id);
-}
-
-/** Cancel the persisted daily study reminder. */
-export async function cancelDailyStudyReminder(): Promise<void> {
-  try {
-    const existing = await AsyncStorage.getItem(DAILY_REMINDER_KEY);
-    if (existing) {
-      await Notifications.cancelScheduledNotificationAsync(existing);
-      await AsyncStorage.removeItem(DAILY_REMINDER_KEY);
-    }
-  } catch {
-    // best-effort
-  }
-}
-
-/**
- * Schedule a one-time trivia reminder for the next day at 10:00 AM.
- * Re-scheduling is idempotent — we cancel the previous one first.
- */
-export async function scheduleTriviaReminder(): Promise<void> {
-  if (!(await canNotify())) return;
-
-  // Cancel existing trivia reminders to avoid duplicates
-  const all = await Notifications.getAllScheduledNotificationsAsync();
-  for (const n of all) {
-    if ((n.content.data as any)?.type === 'trivia-reminder') {
-      await Notifications.cancelScheduledNotificationAsync(n.identifier);
-    }
-  }
-
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(10, 0, 0, 0);
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: t('Quiz du jour disponible ! 🎯', 'Quiz jodi a disponib ! 🎯'),
-      body: t(
-        'Testez vos connaissances et grimpez dans le classement.',
-        'Teste konesans ou epi monte nan klasman an.',
-      ),
-      sound: true,
-      data: { type: 'trivia-reminder' },
-      ...(Platform.OS === 'android' ? { channelId: 'reminders' } : {}),
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: tomorrow,
-    } as any,
-  });
-}
-
 // ─── Engagement reminder bundle ───────────────────────────────────────────────
 // A recurring set of re-engagement nudges to bring students back, centred on the
 // daily quiz/défi and the weekly leaderboard. Copy rotates by weekday so the
@@ -380,14 +298,4 @@ export async function notifyLeaderboardRank(rank: number): Promise<void> {
     },
     trigger: null,
   });
-}
-
-// ─── Preferences (stub — extend with Firestore later) ────────────────────────
-
-export async function getUserNotificationPreferences(_userId: string) {
-  return {
-    studyReminders: true,
-    achievementNotifications: true,
-    weeklyProgress: true,
-  };
 }

@@ -24,9 +24,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ── Config ──────────────────────────────────────────────────────────────────
 
-GEMINI_API_KEY = os.environ.get(
-    "GEMINI_API_KEY", "AIzaSyBA4NHDVyIbnGt7iVfPUJHi7jNMV2Maqbc"
-)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    sys.stderr.write("GEMINI_API_KEY not set\n")
+    sys.exit(1)
 GEMINI_MODEL = "gemini-2.0-flash"
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"

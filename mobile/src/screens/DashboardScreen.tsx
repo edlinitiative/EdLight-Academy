@@ -163,8 +163,17 @@ export default function DashboardScreen() {
   const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
   const totalQuizzes = allAttemptsList.length;
+  // Each attempt stores { score: correctCount, total: questionCount } — average
+  // the per-attempt percentage (score/total), clamped 0-100. (Matches Profile.)
   const avgScore = totalQuizzes > 0
-    ? Math.round(allAttemptsList.reduce((sum: number, a: any) => sum + (typeof a.score === 'number' ? a.score * 100 : typeof a.percentage === 'number' ? a.percentage : 0), 0) / totalQuizzes)
+    ? Math.round(
+        allAttemptsList.reduce((sum: number, a: any) => {
+          const pct = typeof a.percentage === 'number'
+            ? a.percentage
+            : (a.total > 0 ? (a.score / a.total) * 100 : 0);
+          return sum + Math.max(0, Math.min(100, pct));
+        }, 0) / totalQuizzes,
+      )
     : 0;
 
   const progressByCourseId = React.useMemo(() => {

@@ -24,7 +24,10 @@ import re
 import copy
 import requests
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyAcAXA91ta8NUPsGgmz7rLWDFdh61i1psM")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    sys.stderr.write("GEMINI_API_KEY not set\n")
+    sys.exit(1)
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
 

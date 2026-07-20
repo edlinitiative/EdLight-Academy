@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
+import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
@@ -15,6 +16,7 @@ import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
 import { useColors } from '../theme/theme';
+import { success, warn } from '../utils/haptics';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
@@ -96,6 +98,7 @@ function prepareDailyQuestions(count = 10): PreparedQuestion[] {
 
 const LETTER_LABELS = ['A', 'B', 'C', 'D'];
 const CIRC = 327; // 2 * π * 52
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // ─── TriviaHeader ─────────────────────────────────────────────────────────────
 
@@ -103,6 +106,7 @@ function TriviaHeader() {
   const colors = useColors();
   const { profile, level } = useTrivia();
   const { streak } = useStreak();
+  const isCreole = useStore((s) => s.language) === 'ht';
 
   return (
     <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 10, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -128,7 +132,7 @@ function TriviaHeader() {
       <View className="flex-row items-center gap-1">
         <Flame color="#ef4444" size={16} />
         <Text className="text-sm font-bold text-red-500">{streak?.currentStreak ?? 0}</Text>
-        <Text className="text-xs ml-0.5" style={{ color: colors.faint }}>jours</Text>
+        <Text className="text-xs ml-0.5" style={{ color: colors.faint }}>{isCreole ? 'jou' : 'jours'}</Text>
       </View>
     </View>
   );
@@ -239,10 +243,10 @@ function CategoryPicker({
 // ─── RoundPicker ──────────────────────────────────────────────────────────────
 
 const ROUND_OPTIONS = [
-  { count: 10,  label: '10 questions',   time: '~2 min',  desc: 'Rapide' },
-  { count: 25,  label: '25 questions',   time: '~5 min',  desc: 'Standard' },
-  { count: 50,  label: '50 questions',   time: '~10 min', desc: 'Long' },
-  { count: 0,   label: 'Tout',           time: 'Complet', desc: 'Toutes les questions' },
+  { count: 10,  label: '10 questions', labelHt: '10 kesyon', time: '~2 min',  timeHt: '~2 min',  desc: 'Rapide',   descHt: 'Rapid' },
+  { count: 25,  label: '25 questions', labelHt: '25 kesyon', time: '~5 min',  timeHt: '~5 min',  desc: 'Standard', descHt: 'Estanda' },
+  { count: 50,  label: '50 questions', labelHt: '50 kesyon', time: '~10 min', timeHt: '~10 min', desc: 'Long',     descHt: 'Long' },
+  { count: 0,   label: 'Tout',         labelHt: 'Tout',      time: 'Complet', timeHt: 'Konplè',  desc: 'Toutes les questions', descHt: 'Tout kesyon yo' },
 ];
 
 function RoundPicker({
@@ -282,7 +286,7 @@ function RoundPicker({
           {isCreole ? 'Konbyen kesyon ?' : 'Combien de questions ?'}
         </Text>
         <Text className="text-sm mt-1" style={{ color: colors.muted }}>
-          {totalQuestions} questions disponibles
+          {totalQuestions} {isCreole ? 'kesyon disponib' : 'questions disponibles'}
         </Text>
       </View>
 
@@ -311,12 +315,12 @@ function RoundPicker({
             >
               <View className="flex-1">
                 <Text className="font-bold text-lg" style={{ color: colors.ink }}>
-                  {opt.count === 0 ? `Tout (${totalQuestions})` : opt.label}
+                  {opt.count === 0 ? `${isCreole ? 'Tout' : 'Tout'} (${totalQuestions})` : (isCreole ? opt.labelHt : opt.label)}
                 </Text>
-                <Text className="text-sm mt-0.5" style={{ color: colors.muted }}>{opt.desc}</Text>
+                <Text className="text-sm mt-0.5" style={{ color: colors.muted }}>{isCreole ? opt.descHt : opt.desc}</Text>
               </View>
               <View className="items-end">
-                <Text className="text-sm font-semibold" style={{ color: colors.azure }}>{opt.time}</Text>
+                <Text className="text-sm font-semibold" style={{ color: colors.azure }}>{isCreole ? opt.timeHt : opt.time}</Text>
                 <ChevronRight color={colors.faint} size={16} />
               </View>
             </TouchableOpacity>
@@ -433,7 +437,10 @@ function QuizPlayer({
       setSelected((currentSelected) => {
         setConfirmed(true);
         if (currentSelected !== null && currentSelected === questions[idx]?.correctAnswer) {
+          success();
           setScore((s) => s + 1);
+        } else {
+          warn();
         }
         return currentSelected;
       });
@@ -450,7 +457,10 @@ function QuizPlayer({
     stopTimer();
     setConfirmed(true);
     if (selected === q.correctAnswer) {
+      success();
       setScore((s) => s + 1);
+    } else {
+      warn();
     }
   };
 
@@ -673,13 +683,13 @@ function QuizPlayer({
                 className="font-bold text-base"
                 style={{ color: isCorrect ? '#059669' : '#dc2626' }}
               >
-                {isCorrect ? 'Correct !' : 'Incorrect'}
+                {isCorrect ? (isCreole ? 'Kòrèk !' : 'Correct !') : (isCreole ? 'Pa kòrèk' : 'Incorrect')}
               </Text>
             </View>
 
             {!isCorrect && (
               <Text className="text-sm mt-1" style={{ color: colors.muted }}>
-                Bonne réponse :{' '}
+                {isCreole ? 'Bon repons :' : 'Bonne réponse :'}{' '}
                 <Text className="font-semibold text-emerald-700">{q.correctAnswer}</Text>
               </Text>
             )}
@@ -744,18 +754,27 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
   const fill = pct * CIRC;
   const color = pct >= 0.8 ? '#10b981' : pct >= 0.6 ? '#f59e0b' : '#ef4444';
 
+  // Sweep the arc up to its final value on mount so the score feels earned.
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
+  }, [fill, progress]);
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDasharray: `${progress.value} ${CIRC}`,
+  }));
+
   return (
     <View className="items-center justify-center" style={{ width: 140, height: 140 }}>
       <Svg width={140} height={140} viewBox="0 0 120 120">
         <Circle cx={60} cy={60} r={52} fill="none" stroke={colors.border} strokeWidth={10} />
-        <Circle
+        <AnimatedCircle
           cx={60}
           cy={60}
           r={52}
           fill="none"
           stroke={color}
           strokeWidth={10}
-          strokeDasharray={`${fill} ${CIRC}`}
+          animatedProps={animatedProps}
           strokeLinecap="round"
           rotation="-90"
           origin="60, 60"

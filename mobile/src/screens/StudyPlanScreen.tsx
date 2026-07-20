@@ -47,7 +47,8 @@ import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
 import { TRACKS, currentPlanSeason } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
-import { useColors, type Palette } from '../theme/theme';
+import { useColors, useTheme, radius, type Palette } from '../theme/theme';
+import PressableScale from '../components/ui/PressableScale';
 import {
   loadActiveStudyPlan,
   generateStudyPlan,
@@ -105,22 +106,9 @@ function difficultyColor(d: number): string {
 // ─── Small building blocks ────────────────────────────────────────────────────
 
 function Card({ children, style }: { children: React.ReactNode; style?: any }) {
-  const colors = useColors();
+  const { cardSurface } = useTheme();
   return (
-    <View
-      style={[{
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 16,
-        padding: 16,
-        shadowColor: colors.azure,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 1,
-      }, style]}
-    >
+    <View style={[cardSurface, { padding: 16 }, style]}>
       {children}
     </View>
   );
@@ -226,10 +214,9 @@ function TaskRow({
   if (task.aiFocusArea) secondary = task.aiFocusArea;
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={onPress}
       disabled={!onPress}
-      activeOpacity={0.6}
       accessibilityRole="button"
       accessibilityLabel={taskDisplayTitle(task, isCreole)}
       className={`flex-row items-center py-3 ${!last ? 'border-b border-gray-100 dark:border-slate-700' : ''}`}
@@ -296,7 +283,7 @@ function TaskRow({
       </View>
 
       {onPress && !mastered && <ChevronRight size={16} color={colors.faint} />}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -605,17 +592,17 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
 
   // ── Error banner (generation) — rendered inside form & plan views ──
   const errorBanner = genError && (
-    <Card style={{ borderColor: '#fecaca', backgroundColor: '#fef2f2', marginBottom: 14 }}>
+    <Card style={{ borderColor: colors.danger, backgroundColor: colors.dangerSoft, marginBottom: 14 }}>
       <View className="flex-row items-start" style={{ gap: 10 }}>
         {genError.kind === 'limit' ? (
-          <Clock size={18} color="#dc2626" />
+          <Clock size={18} color={colors.danger} />
         ) : genError.kind === 'auth' ? (
-          <Lock size={18} color="#dc2626" />
+          <Lock size={18} color={colors.danger} />
         ) : (
-          <WifiOff size={18} color="#dc2626" />
+          <WifiOff size={18} color={colors.danger} />
         )}
         <View style={{ flex: 1, gap: 8 }}>
-          <Text style={{ fontSize: 13, color: '#991b1b', fontWeight: '600' }}>
+          <Text style={{ fontSize: 13, color: colors.danger, fontWeight: '600' }}>
             {genError.kind === 'limit'
               ? genError.message ||
                 t(
@@ -640,7 +627,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                   : handleGenerateFromForm
               }
               activeOpacity={0.8}
-              style={{ alignSelf: 'flex-start', backgroundColor: '#dc2626', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 7 }}
+              style={{ alignSelf: 'flex-start', backgroundColor: colors.danger, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 7 }}
             >
               <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12 }}>
                 {t('Réessayer', 'Eseye ankò')}
@@ -651,7 +638,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             <TouchableOpacity
               onPress={toggleAuthModal}
               activeOpacity={0.8}
-              style={{ alignSelf: 'flex-start', backgroundColor: '#dc2626', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 7 }}
+              style={{ alignSelf: 'flex-start', backgroundColor: colors.danger, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 7 }}
             >
               <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12 }}>
                 {t('Se connecter', 'Konekte')}
@@ -812,7 +799,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           style={{ gap: 8, backgroundColor: colors.azureSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
         >
           <Sparkles size={15} color={colors.azure} />
-          <Text style={{ flex: 1, fontSize: 12, color: '#475569', lineHeight: 17 }}>
+          <Text style={{ flex: 1, fontSize: 12, color: colors.ink, lineHeight: 17 }}>
             {t(
               'Touchez une tâche pour la commencer. Votre progression se met à jour automatiquement.',
               'Peze yon travay pou kòmanse l. Pwogrè ou ap mete ajou otomatikman.',
@@ -913,8 +900,8 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             />
             {plan.tips.slice(0, 3).map((tip, i) => (
               <View key={i} className="flex-row" style={{ gap: 8, marginBottom: 8 }}>
-                <Text style={{ fontSize: 13, color: '#f59e0b' }}>•</Text>
-                <Text style={{ flex: 1, fontSize: 13, color: '#475569', lineHeight: 19 }}>{tip}</Text>
+                <Text style={{ fontSize: 13, color: colors.warn }}>•</Text>
+                <Text style={{ flex: 1, fontSize: 13, color: colors.ink, lineHeight: 19 }}>{tip}</Text>
               </View>
             ))}
           </Card>

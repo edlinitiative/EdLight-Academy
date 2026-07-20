@@ -15,7 +15,8 @@ import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { useColors, Palette } from '../theme/theme';
+import { useColors, Palette, radius } from '../theme/theme';
+import PressableScale from '../components/ui/PressableScale';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
 
@@ -68,18 +69,20 @@ function CourseCard({
   onPress: () => void;
 }) {
   const colors = useColors();
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const totalLessons = countLessons(course);
   const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
   const color = course.color ?? colors.azure;
   const soon = !!course.comingSoon;
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={soon ? undefined : onPress}
       disabled={soon}
-      activeOpacity={0.85}
-      className="bg-white dark:bg-[#131c2e] rounded-2xl mb-3"
-      style={[cardShadowFor(colors), soon ? { opacity: 0.7 } : null]}
+      accessibilityRole="button"
+      accessibilityLabel={course.name}
+      style={[{ backgroundColor: colors.surface, borderRadius: radius.card, marginBottom: 12 }, cardShadowFor(colors), soon ? { opacity: 0.7 } : null]}
     >
       <View className="p-4">
         <View className="flex-row items-center gap-3">
@@ -91,11 +94,11 @@ function CourseCard({
           </View>
           <View className="flex-1">
             <Text className="font-bold text-gray-900 dark:text-slate-100 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
-            <Text className="text-xs text-gray-400 dark:text-slate-500 mt-1">{soon ? 'Cours en préparation' : `${totalLessons} leçons`}</Text>
+            <Text className="text-xs text-gray-400 dark:text-slate-500 mt-1">{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>
           </View>
           {soon ? (
             <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-              <Text style={{ color: colors.azure, fontSize: 11, fontWeight: '700' }}>Bientôt</Text>
+              <Text style={{ color: colors.azure, fontSize: 11, fontWeight: '700' }}>{t('Bientôt', 'Talè')}</Text>
             </View>
           ) : (
             <View className="items-end flex-shrink-0">
@@ -112,7 +115,7 @@ function CourseCard({
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -123,12 +126,12 @@ function DrillCard({
 }) {
   const colors = useColors();
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={comingSoon ? undefined : onPress}
       disabled={comingSoon}
-      activeOpacity={0.85}
-      className="bg-white dark:bg-[#131c2e] rounded-2xl mb-3"
-      style={[cardShadowFor(colors), comingSoon ? { opacity: 0.7 } : null]}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={[{ backgroundColor: colors.surface, borderRadius: radius.card, marginBottom: 12 }, cardShadowFor(colors), comingSoon ? { opacity: 0.7 } : null]}
     >
       <View className="flex-row items-center p-4 gap-3">
         <View
@@ -152,7 +155,7 @@ function DrillCard({
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -267,8 +270,8 @@ export default function CoursesScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Header + search */}
-      <View className="px-5 pt-5 pb-3 bg-white dark:bg-[#131c2e] border-b border-gray-100 dark:border-slate-700">
+      {/* Header + search — shares the page ground (no seam), like the dashboard */}
+      <View className="px-5 pt-5 pb-3" style={{ backgroundColor: colors.bg }}>
         <View className="flex-row items-center mb-3">
           {canGoBack && (
             <TouchableOpacity onPress={goBack} className="mr-2 -ml-1 p-1">
@@ -305,7 +308,11 @@ export default function CoursesScreen() {
       >
         {searching ? (
           searchResults.length === 0 ? (
-            <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
+            <EmptyState
+              message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+              ctaLabel={t('Effacer la recherche', 'Efase rechèch la')}
+              onCta={() => setSearch('')}
+            />
           ) : (
             <>
               <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
@@ -361,7 +368,11 @@ export default function CoursesScreen() {
           </>
         ) : !subject ? (
           subjectsForLevel.length === 0 ? (
-            <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
+            <EmptyState
+              message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+              ctaLabel={t('Retour', 'Retounen')}
+              onCta={goBack}
+            />
           ) : (
             subjectsForLevel.map(([code, group]) => {
               const meta = subjectMeta(code);
@@ -382,7 +393,11 @@ export default function CoursesScreen() {
             })
           )
         ) : courseList.length === 0 ? (
-          <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
+          <EmptyState
+            message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+            ctaLabel={t('Retour', 'Retounen')}
+            onCta={goBack}
+          />
         ) : (
           <>
             <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{courseList.length} {t('cours', 'kou')}</Text>

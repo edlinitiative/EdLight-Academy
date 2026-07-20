@@ -475,10 +475,10 @@ export default function SandraScreen({
           {notice?.kind === 'limit' ? (
             <View
               className="flex-row items-start gap-2 rounded-xl p-3 mt-1"
-              style={{ backgroundColor: '#fef7e6', borderWidth: 1, borderColor: '#f5d78e' }}
+              style={{ backgroundColor: colors.warn + '1A', borderWidth: 1, borderColor: colors.warn + '55' }}
             >
-              <AlertTriangle size={16} color="#b45309" style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs leading-4" style={{ color: '#92400e' }}>
+              <AlertTriangle size={16} color={colors.warn} style={{ marginTop: 1 }} />
+              <Text className="flex-1 text-xs leading-4" style={{ color: colors.ink }}>
                 {notice.message}
               </Text>
             </View>
@@ -487,10 +487,10 @@ export default function SandraScreen({
           {notice?.kind === 'auth' ? (
             <View
               className="flex-row items-start gap-2 rounded-xl p-3 mt-1"
-              style={{ backgroundColor: '#eef4fb', borderWidth: 1, borderColor: '#cfdff2' }}
+              style={{ backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azureBorder }}
             >
-              <Lock size={16} color="#1B6FE0" style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs leading-4" style={{ color: '#1B6FE0' }}>
+              <Lock size={16} color={colors.azure} style={{ marginTop: 1 }} />
+              <Text className="flex-1 text-xs leading-4" style={{ color: colors.azure }}>
                 {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
               </Text>
             </View>
@@ -499,9 +499,9 @@ export default function SandraScreen({
           {notice?.kind === 'error' ? (
             <View
               className="rounded-xl p-3 mt-1"
-              style={{ backgroundColor: '#fdecea', borderWidth: 1, borderColor: '#f5b8ae' }}
+              style={{ backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger + '66' }}
             >
-              <Text className="text-xs leading-4 mb-2" style={{ color: '#b91c1c' }}>
+              <Text className="text-xs leading-4 mb-2" style={{ color: colors.danger }}>
                 {t(
                   'Oups, la réponse n’est pas arrivée. Vérifiez votre connexion.',
                   'Oups, repons lan pa rive. Tcheke koneksyon ou.',
@@ -512,7 +512,7 @@ export default function SandraScreen({
                 disabled={sending}
                 activeOpacity={0.8}
                 className="self-start rounded-full px-4 py-1.5"
-                style={{ backgroundColor: '#b91c1c', opacity: sending ? 0.5 : 1 }}
+                style={{ backgroundColor: colors.danger, opacity: sending ? 0.5 : 1 }}
               >
                 <Text className="text-white text-xs font-bold">
                   {t('Réessayer', 'Eseye ankò')}

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 
 /**
  * Guided condition builder for domain / sign / inequality answers (PWA parity).
@@ -13,10 +14,6 @@ import useStore from '../contexts/store';
  * the same shape and grader as the web app.
  */
 
-const PRIMARY = '#1B6FE0';
-const TEXT = '#0f172a';
-const MUTED = '#64748b';
-const BORDER = '#e8edf5';
 const OPS = ['>', '≥', '<', '≤', '=', '≠'];
 
 type Row = { operator: string; value: string };
@@ -30,6 +27,7 @@ export default function ConditionBuilder({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -55,13 +53,13 @@ export default function ConditionBuilder({
 
   return (
     <View style={{ gap: 12 }}>
-      <Text style={{ fontSize: 12, fontWeight: '600', color: MUTED }}>
+      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted }}>
         {t('Complétez chaque condition :', 'Konplete chak kondisyon :')}
       </Text>
       {conditions.map((cond, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <View style={{ minWidth: 44 }}>
-            <MathText text={`$${cond.left}$`} style={{ fontSize: 18, color: TEXT }} />
+            <MathText text={`$${cond.left}$`} style={{ fontSize: 18, color: colors.ink }} />
           </View>
           <View style={{ flexDirection: 'row', gap: 4 }}>
             {OPS.map((op) => {
@@ -77,13 +75,13 @@ export default function ConditionBuilder({
                     height: 40,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: selected ? PRIMARY : BORDER,
-                    backgroundColor: selected ? PRIMARY : '#ffffff',
+                    borderColor: selected ? colors.azure : colors.border,
+                    backgroundColor: selected ? colors.azure : colors.surface,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={{ fontSize: 18, fontWeight: '700', color: selected ? '#ffffff' : TEXT }}>
+                  <Text style={{ fontSize: 18, fontWeight: '700', color: selected ? '#ffffff' : colors.ink }}>
                     {op}
                   </Text>
                 </TouchableOpacity>
@@ -94,7 +92,7 @@ export default function ConditionBuilder({
             value={rows[i].value}
             onChangeText={(v) => update(i, { value: v })}
             placeholder={t('valeur', 'valè')}
-            placeholderTextColor={MUTED}
+            placeholderTextColor={colors.faint}
             autoCapitalize="none"
             autoCorrect={false}
             style={{
@@ -103,12 +101,12 @@ export default function ConditionBuilder({
               maxWidth: 160,
               height: 40,
               borderWidth: 1,
-              borderColor: BORDER,
+              borderColor: colors.border,
               borderRadius: 8,
               paddingHorizontal: 10,
               fontSize: 15,
-              color: TEXT,
-              backgroundColor: '#ffffff',
+              color: colors.ink,
+              backgroundColor: colors.surface,
             }}
           />
         </View>
