@@ -20,8 +20,9 @@
  * declared in firestore.indexes.json.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, isAdminConfigured } from './_lib/firebaseAdmin';
+import { getDb, getAuthAdmin, isAdminConfigured } from './_lib/firebaseAdmin';
 import { sendPushToUser, isPushConfigured } from './_lib/push';
+import { sendReminderEmail, isEmailConfigured, type ReminderEmailLang } from './_lib/reminderEmail';
 import type { Query } from 'firebase-admin/firestore';
 
 // Safety cap so a backlog can never blow the function timeout. Cron runs often
@@ -75,11 +76,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  if (!isPushConfigured() || !isAdminConfigured()) {
+  // Firestore admin is mandatory (we read the reminders). Delivery works over
+  // push, email, or both — so we run as long as AT LEAST ONE channel is set up.
+  const pushOn = isPushConfigured();
+  const emailOn = isEmailConfigured();
+  if (!isAdminConfigured() || (!pushOn && !emailOn)) {
     res.status(501).json({
       error: 'not_configured',
       message:
-        'Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and FIREBASE_SERVICE_ACCOUNT_JSON to enable reminder push.',
+        'Set FIREBASE_SERVICE_ACCOUNT_JSON plus at least one delivery channel: ' +
+        'VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY (push) and/or RESEND_API_KEY (email).',
     });
     return;
   }
@@ -106,7 +112,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const summary = { scanned: due.size, sent: 0, delivered: 0, pruned: 0, rescheduled: 0, errors: 0 };
+  const summary = { scanned: due.size, sent: 0, delivered: 0, emailed: 0, pruned: 0, rescheduled: 0, errors: 0 };
+
+  // Cache uid→email lookups so a user with several due reminders in one run
+  // costs a single Auth read. `undefined` = not yet looked up; `null` = no email.
+  const emailCache = new Map<string, string | null>();
+  async function emailFor(uid: string): Promise<string | null> {
+    if (emailCache.has(uid)) return emailCache.get(uid) as string | null;
+    let email: string | null = null;
+    try {
+      email = (await getAuthAdmin().getUser(uid)).email || null;
+    } catch {
+      email = null;
+    }
+    emailCache.set(uid, email);
+    return email;
+  }
 
   for (const docSnap of due.docs) {
     const userId = docSnap.ref.parent.parent?.id;
@@ -121,26 +142,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     };
 
     try {
-      // Respect the user's reminder preference if present.
+      // Respect the user's reminder preferences if present.
       const prefSnap = await db
         .collection('users')
         .doc(userId)
         .collection('settings')
         .doc('notifications')
         .get();
-      const studyReminders = prefSnap.exists ? prefSnap.data()?.studyReminders : true;
+      const prefs = prefSnap.exists ? prefSnap.data() || {} : {};
+      // `studyReminders` gates the reminder itself (default on); the per-channel
+      // toggles gate HOW it's delivered (default on).
+      const studyReminders = prefs.studyReminders !== false;
+      const wantsEmail = prefs.emailNotifications !== false;
+      const lang: ReminderEmailLang = prefs.language === 'ht' ? 'ht' : 'fr';
+      const title = reminder.title || 'Rappel EdLight';
+      const message = reminder.message || "C'est l'heure de réviser ! 📚";
+      const url = reminder.courseId ? `/courses/${reminder.courseId}` : '/dashboard';
 
-      if (studyReminders !== false) {
-        const result = await sendPushToUser(userId, {
-          title: reminder.title || 'Rappel EdLight',
-          body: reminder.message || "C'est l'heure de réviser ! 📚",
-          tag: `reminder-${docSnap.id}`,
-          url: reminder.courseId ? `/courses/${reminder.courseId}` : '/dashboard',
-          data: { kind: 'reminder', reminderId: docSnap.id },
-        });
-        summary.sent += 1;
-        summary.delivered += result.sent;
-        summary.pruned += result.pruned;
+      if (studyReminders) {
+        // Push channel.
+        if (pushOn) {
+          const result = await sendPushToUser(userId, {
+            title,
+            body: message,
+            tag: `reminder-${docSnap.id}`,
+            url,
+            data: { kind: 'reminder', reminderId: docSnap.id },
+          });
+          summary.sent += 1;
+          summary.delivered += result.sent;
+          summary.pruned += result.pruned;
+        }
+        // Email channel — reaches users without push (iOS Safari, no PWA).
+        if (emailOn && wantsEmail) {
+          const to = await emailFor(userId);
+          if (to) {
+            const r = await sendReminderEmail({ to, title, message, url, lang });
+            if ('sent' in r) summary.emailed += 1;
+          }
+        }
       }
 
       // Mark as sent so it isn't re-delivered.
