@@ -41,7 +41,7 @@ import { fetchCatalogIndex } from '../utils/examCatalog';
 import { normalizeSubject } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from './examResults';
 import { loadAppData } from './dataService';
-import { TRACK_COEFFICIENTS, TRACKS } from '../config/trackConfig';
+import { TRACK_COEFFICIENTS, TRACKS, TRACK_LEVEL } from '../config/trackConfig';
 
 const PLAN_URL = 'https://academy.edlight.org/api/generate-plan';
 
@@ -706,11 +706,19 @@ export async function generateStudyPlan(opts: {
   if (!uid || !auth.currentUser) return { kind: 'auth' };
 
   const coefficients = coefficientsFor(track);
+  // Bac séries draw from Terminale papers; Préfac from université concours.
+  const wantLevel = TRACK_LEVEL[track] || 'baccalaureat';
+  const matchesLevel = (lvl: string) => {
+    const l = String(lvl || '').toLowerCase();
+    return wantLevel === 'universite'
+      ? l.includes('univers')
+      : l.includes('bac') || l.includes('terminale');
+  };
 
   // 1 — exam catalog (slim index, cached in AsyncStorage)
   const allExams = await fetchCatalogIndex();
   const trackExams = allExams.filter(
-    (e) => coefficients[normalizeSubject(e.subject)] !== undefined,
+    (e) => matchesLevel(e.level) && coefficients[normalizeSubject(e.subject)] !== undefined,
   );
   if (trackExams.length === 0) return { kind: 'network' };
 
@@ -773,9 +781,13 @@ export async function generateStudyPlan(opts: {
   // Use the full filière label so the title never reads as a bare code like
   // "SVT" (which doubles as a subject name and confuses students).
   const trackLabel = TRACKS.find((tk) => tk.code === track)?.label ?? track;
+  const fallbackTitle =
+    wantLevel === 'universite'
+      ? "Plan d'étude — Concours d'admission"
+      : `Plan d'étude — Filière ${trackLabel}`;
   const planData = {
     track,
-    title: aiPlan?.title || `Plan d'étude — Filière ${trackLabel}`,
+    title: aiPlan?.title || fallbackTitle,
     description: aiPlan?.description || '',
     tips: aiPlan?.tips || [],
     dailyTargetMinutes: aiPlan?.dailyTargetMinutes || dailyMinutes,

@@ -55,7 +55,33 @@ export const TRACKS = [
     color: '#ec4899',
     description: 'Art, musique et expression artistique',
   },
+  {
+    // Post-Bac: université entrance exams (concours d'admission). Not a Bac
+    // série — plans for this track pull `universite`-level exams (see
+    // TRACK_LEVEL) instead of Bac papers.
+    code: 'PREFAC',
+    label: "Préfac — Concours d'admission",
+    shortLabel: 'Préfac',
+    icon: '🏛️',
+    glyph: 'campus',
+    color: '#0891b2',
+    description: "Préparation aux concours d'entrée à l'université",
+  },
 ];
+
+/**
+ * Exam level a track's plan should draw from. Bac séries → Terminale papers;
+ * Préfac → université concours papers. Consumed by the exam filter so a Préfac
+ * plan never pulls Bac exams (and vice-versa).
+ */
+export const TRACK_LEVEL: Record<string, 'baccalaureat' | 'universite'> = {
+  SVT: 'baccalaureat',
+  SMP: 'baccalaureat',
+  SES: 'baccalaureat',
+  LET: 'baccalaureat',
+  ARTS: 'baccalaureat',
+  PREFAC: 'universite',
+};
 
 export const TRACK_BY_CODE = Object.fromEntries(TRACKS.map((t) => [t.code, t]));
 
@@ -138,6 +164,21 @@ export const TRACK_COEFFICIENTS = {
     'Physique': 1,
     'SVT': 1,
     'Informatique': 1,
+  },
+  // Préfac / concours d'admission — weights over the subjects that actually
+  // appear in the université exam pool (Maths, Philo, Culture Générale, etc.).
+  PREFAC: {
+    'Mathématiques': 4,
+    'Culture Générale': 4,
+    'Français': 3,
+    'Philosophie': 3,
+    'Santé': 3,
+    'Anglais': 2,
+    'Physique': 2,
+    'Chimie': 2,
+    'SVT': 2,
+    'Compréhension de texte': 2,
+    'Mixed': 1,
   },
 };
 

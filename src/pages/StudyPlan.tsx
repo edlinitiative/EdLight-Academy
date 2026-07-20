@@ -23,7 +23,7 @@ import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
 import { useAppData } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
 import { StreakWidget } from '../components/Streak';
-import { TRACK_COEFFICIENTS, TRACK_BY_CODE } from '../config/trackConfig';
+import { TRACK_COEFFICIENTS, TRACK_BY_CODE, TRACK_LEVEL } from '../config/trackConfig';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildPlanIcs, taskTitle } from '../utils/planIcs';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
@@ -123,11 +123,19 @@ export default function StudyPlan() {
   const coefficients = TRACK_COEFFICIENTS[track] || {};
 
   // ── Filter exams for the user's track ─────────────────────────────
+  // Bac séries draw from Terminale papers; Préfac from université concours.
   const trackExams = useMemo(() => {
     if (!allExams || !track) return [];
+    const wantLevel = TRACK_LEVEL[track] || 'baccalaureat';
+    const matchesLevel = (lvl) => {
+      const l = String(lvl || '').toLowerCase();
+      return wantLevel === 'universite'
+        ? l.includes('univers')
+        : l.includes('bac') || l.includes('terminale');
+    };
     return allExams.filter((e) => {
       const subj = normalizeSubject(e.subject);
-      return coefficients[subj] !== undefined;
+      return matchesLevel(e.level) && coefficients[subj] !== undefined;
     });
   }, [allExams, track, coefficients]);
 

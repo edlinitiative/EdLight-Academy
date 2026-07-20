@@ -43,9 +43,12 @@ const sanitize = (s: string): string =>
 /** Static French plan used whenever the model path is unavailable. */
 export function buildFallbackPlan(reqData: PlanRequest): GeneratedPlan {
   const safeTrack = sanitize(reqData.track);
+  const isPrefac = safeTrack === 'PREFAC';
   return {
-    title: `Plan d'étude — ${safeTrack}`,
-    description: `Plan personnalisé pour la filière ${safeTrack} sur ${reqData.weeks} semaines.`,
+    title: isPrefac ? "Plan d'étude — Concours d'admission" : `Plan d'étude — ${safeTrack}`,
+    description: isPrefac
+      ? `Plan personnalisé pour les concours d'admission à l'université sur ${reqData.weeks} semaines.`
+      : `Plan personnalisé pour la filière ${safeTrack} sur ${reqData.weeks} semaines.`,
     weeklyGoals: reqData.weeks,
     dailyTargetMinutes: reqData.dailyMinutes,
     tips: [
@@ -72,9 +75,13 @@ function buildPlanPrompt(reqData: PlanRequest): { system: string; user: string }
     })
     .join('\n');
 
+  // Préfac plans prep university-entrance concours, not the Bac.
+  const isPrefac = safeTrack === 'PREFAC';
   const subjectList = subjects.length
     ? subjects.map(sanitize).join(', ')
-    : 'all Bac subjects';
+    : isPrefac
+      ? "les matières du concours d'admission"
+      : 'all Bac subjects';
 
   const weakSubjects =
     Object.entries(performance)
@@ -88,12 +95,17 @@ function buildPlanPrompt(reqData: PlanRequest): { system: string; user: string }
       .map(([s]) => s)
       .join(', ') || 'none identified yet';
 
-  const system = `You are a study plan advisor for Haitian Baccalauréat students on the EdLight Academy platform.
+  const system = isPrefac
+    ? `You are a study plan advisor for Haitian students preparing university-entrance exams (concours d'admission / "préfac") on the EdLight Academy platform.
+You create personalised, spaced-repetition study schedules built on past concours papers.
+Output ONLY valid JSON with the exact structure specified.`
+    : `You are a study plan advisor for Haitian Baccalauréat students on the EdLight Academy platform.
 You create personalised, spaced-repetition study schedules.
 The student's track (filière) is "${safeTrack}".
 Output ONLY valid JSON with the exact structure specified.`;
 
-  const user = `Create a ${weeks}-week study plan for a ${safeTrack} student.
+  const audience = isPrefac ? "university-entrance (concours d'admission)" : `${safeTrack}`;
+  const user = `Create a ${weeks}-week study plan for a ${audience} student.
 
 Student performance:
 ${perfLines || '  No prior data — first-time student.'}
