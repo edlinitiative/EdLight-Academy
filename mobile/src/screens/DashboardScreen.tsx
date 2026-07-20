@@ -21,7 +21,7 @@ import HomeWidgets from '../components/HomeWidgets';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
-import { colors, radius, shadow, cardSurface, courseTint } from '../theme/theme';
+import { useColors, useTheme, radius, courseTint } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
@@ -55,6 +55,7 @@ function formatXp(n: number): string {
 
 /** A small pill in the header showing a single momentum stat (streak, XP). */
 function StatChip({ icon, value, tint }: { icon: React.ReactNode; value: string | number; tint: string }) {
+  const colors = useColors();
   return (
     <View
       style={{
@@ -75,6 +76,7 @@ function StatChip({ icon, value, tint }: { icon: React.ReactNode; value: string 
 
 /** One column of the at-a-glance stats card. */
 function StatCol({ value, label }: { value: string | number; label: string }) {
+  const colors = useColors();
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
       <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 }}>{value}</Text>
@@ -92,6 +94,7 @@ function SectionHeader({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center justify-between mb-3">
       <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{title}</Text>
@@ -112,6 +115,7 @@ function SectionHeader({
 }
 
 function DashboardSkeleton() {
+  const colors = useColors();
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <View className="px-5 pt-4">
@@ -142,6 +146,7 @@ function DashboardSkeleton() {
 
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
+  const { colors, cardSurface, shadow } = useTheme();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, setPendingDailyChallenge } = useStore();
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -215,8 +220,8 @@ export default function DashboardScreen() {
       >
         {/* Header — identity + momentum */}
         <View
-          style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.hairline }}
-          className="px-5 pt-4 pb-4"
+          style={{ backgroundColor: colors.bg }}
+          className="px-5 pt-4 pb-2"
         >
           <View className="flex-row items-center">
             {/* Pixel-art avatar (seeded by uid) — tap to open the profile. */}
@@ -317,18 +322,13 @@ export default function DashboardScreen() {
                         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.ink }} numberOfLines={2}>
                           {course.name}
                         </Text>
-                        <View className="flex-row items-center gap-2 mt-1">
-                          {course.level ? (
-                            <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: tint + '18' }}>
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: tint }}>{course.level}</Text>
-                            </View>
-                          ) : null}
-                          {totalLessons > 0 && (
-                            <Text style={{ fontSize: 12, color: colors.faint }}>
-                              {totalLessons} {t('leçons', 'leson')}
-                            </Text>
-                          )}
-                        </View>
+                        {/* Level pill removed — the course name already carries
+                            the level (e.g. "Chimie NS1"), so it was redundant. */}
+                        {totalLessons > 0 && (
+                          <Text style={{ fontSize: 12, color: colors.faint, marginTop: 2 }}>
+                            {totalLessons} {t('leçons', 'leson')}
+                          </Text>
+                        )}
                       </View>
                       <Text style={{ fontSize: 14, fontWeight: '800', color: tint }}>{pct}%</Text>
                     </View>

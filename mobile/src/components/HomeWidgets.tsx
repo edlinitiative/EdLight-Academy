@@ -4,7 +4,7 @@ import { ClipboardList, Zap, Trophy, BookOpen, ChevronRight } from 'lucide-react
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import PressableScale from './ui/PressableScale';
-import { colors, radius, cardSurface } from '../theme/theme';
+import { useColors, useTheme, radius } from '../theme/theme';
 
 interface WidgetProps {
   icon: React.ReactNode;
@@ -17,6 +17,7 @@ interface WidgetProps {
 }
 
 function Widget({ icon, title, value, sub, tint, accessibilityLabel, onPress }: WidgetProps) {
+  const { colors, cardSurface } = useTheme();
   return (
     <PressableScale
       onPress={onPress}
@@ -78,6 +79,7 @@ export default function HomeWidgets({
   enrolledCount = 0,
   recommendedCourse,
 }: HomeWidgetsProps) {
+  const colors = useColors();
   const { myRank } = useLeaderboard(25);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';

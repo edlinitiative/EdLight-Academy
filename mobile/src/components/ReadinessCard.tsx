@@ -5,6 +5,7 @@ import { Target, ChevronRight } from 'lucide-react-native';
 import { useReadiness } from '../hooks/useReadiness';
 import { getSubjectColor, SUBJECT_COLORS } from '../utils/shared';
 import useStore from '../contexts/store';
+import { useTheme } from '../theme/theme';
 import { LoadingState } from './StateViews';
 
 const RADIUS = 45;
@@ -34,13 +35,14 @@ function subjectColor(name: string): string {
 
 export default function ReadinessCard() {
   const { overall, subjects, focus, hasData, isLoading } = useReadiness() as any;
+  const { colors, cardSurface } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   if (isLoading) {
     return (
-      <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+      <View style={{ ...cardSurface, padding: 16 }}>
         <LoadingState message="" />
       </View>
     );
@@ -48,7 +50,7 @@ export default function ReadinessCard() {
 
   const pct = Math.round(overall ?? 0);
   // No exam attempts yet → neutral ring with "—" (PWA behaviour), not a red 0%.
-  const stroke = hasData ? scoreColor(pct) : '#e5e7eb';
+  const stroke = hasData ? scoreColor(pct) : colors.border;
   const dashArray = hasData ? (pct / 100) * CIRCUMFERENCE : 0;
 
   // Top subjects by coefficient weight, descending
@@ -56,13 +58,13 @@ export default function ReadinessCard() {
 
   // Weakest subject for focus
   const focusSubject = focus?.subject ?? (topSubjects.length ? topSubjects[topSubjects.length - 1]?.subject : null);
-  const focusColor = focusSubject ? subjectColor(focusSubject) : '#1B6FE0';
+  const focusColor = focusSubject ? subjectColor(focusSubject) : colors.azure;
 
   return (
-    <View style={{ backgroundColor: '#ffffff', borderRadius: 16, borderWidth: 1, borderColor: '#e8edf5', padding: 16, shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+    <View style={{ ...cardSurface, padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Target color="#1B6FE0" size={18} />
-        <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16 }}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
+        <Target color={colors.azure} size={18} />
+        <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16 }}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
       </View>
 
       <View className="flex-row items-center gap-5">
@@ -73,7 +75,7 @@ export default function ReadinessCard() {
             <Circle
               cx={52} cy={52} r={RADIUS}
               fill="none"
-              stroke="#f0f0f0"
+              stroke={colors.surfaceAlt}
               strokeWidth={14}
             />
             {/* Progress arc — omitted entirely with no data (a rounded cap at
@@ -92,11 +94,11 @@ export default function ReadinessCard() {
             )}
           </Svg>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: hasData ? '#111827' : '#94a3b8' }}>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: hasData ? colors.ink : colors.faint }}>
               {hasData ? `${pct}%` : '—'}
             </Text>
             {hasData && (
-              <Text style={{ fontSize: 9, color: '#6b7280', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <Text style={{ fontSize: 9, color: colors.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 {scoreLabel(pct, isCreole)}
               </Text>
             )}
@@ -106,7 +108,7 @@ export default function ReadinessCard() {
         {/* Subject bars */}
         <View className="flex-1 gap-2">
           {topSubjects.length === 0 ? (
-            <Text className="text-xs text-gray-400 italic">
+            <Text className="text-xs text-gray-400 dark:text-slate-500 italic">
               {t('Passe des examens pour voir tes scores', 'Fè egzamen pou wè nòt ou yo')}
             </Text>
           ) : (
@@ -117,10 +119,10 @@ export default function ReadinessCard() {
               return (
                 <View key={s.subject}>
                   <View className="flex-row items-center justify-between mb-0.5">
-                    <Text className="text-xs text-gray-600" numberOfLines={1}>{label}</Text>
+                    <Text className="text-xs text-gray-600 dark:text-slate-400" numberOfLines={1}>{label}</Text>
                     <Text className="text-xs font-semibold" style={{ color }}>{sPct}%</Text>
                   </View>
-                  <View className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <View className="h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <View
                       className="h-1.5 rounded-full"
                       style={{ backgroundColor: color, width: `${sPct}%` }}
@@ -144,7 +146,7 @@ export default function ReadinessCard() {
             <Text className="text-xs font-semibold" style={{ color: focusColor }}>
               {t('Focus recommandé', 'Konsantrasyon rekòmande')}
             </Text>
-            <Text className="text-sm font-bold text-gray-800 mt-0.5" numberOfLines={1}>
+            <Text className="text-sm font-bold text-gray-800 dark:text-slate-200 mt-0.5" numberOfLines={1}>
               {focusSubject}
             </Text>
           </View>

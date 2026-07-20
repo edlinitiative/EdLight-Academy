@@ -8,6 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 import {
   loginWithEmailPassword,
   registerWithEmailPassword,
@@ -17,16 +18,18 @@ import {
 
 WebBrowser.maybeCompleteAuthSession();
 
-const AZURE = '#1B6FE0';
-const INK = '#0f172a';
-const MUTED = '#64748b';
-const BORDER = '#e8edf5';
-const FIELD = '#f8fafc';
-
 export default function AuthScreen() {
   const { setUser, setActiveTab, activeTab, language } = useStore();
+  const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  // Themed aliases so the card/text/fields adapt to light + dark.
+  const AZURE = colors.azure;
+  const INK = colors.ink;
+  const MUTED = colors.muted;
+  const BORDER = colors.border;
+  const FIELD = colors.surfaceAlt;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -113,19 +116,19 @@ export default function AuthScreen() {
 
   const isSignIn = activeTab === 'signin';
 
-  // Reusable field wrapper: lifts to white + azure ring while focused.
+  // Reusable field wrapper: lifts to the surface + azure ring while focused.
   const fieldStyle = (key: 'name' | 'email' | 'password') => ({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     borderRadius: 14,
     paddingHorizontal: 14,
     borderWidth: 1.5,
-    backgroundColor: focused === key ? '#ffffff' : FIELD,
+    backgroundColor: focused === key ? colors.surface : FIELD,
     borderColor: focused === key ? AZURE : BORDER,
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f4f6fb' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -150,7 +153,7 @@ export default function AuthScreen() {
                   width: 84,
                   height: 84,
                   borderRadius: 22,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: colors.surface,
                   alignItems: 'center',
                   justifyContent: 'center',
                   shadowColor: AZURE,
@@ -185,7 +188,7 @@ export default function AuthScreen() {
           <View
             style={{
               marginHorizontal: 20,
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderRadius: 24,
               borderWidth: 1,
               borderColor: BORDER,
@@ -199,7 +202,7 @@ export default function AuthScreen() {
             }}
           >
             {/* Segmented tabs */}
-            <View style={{ flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 14, padding: 4, marginBottom: 2 }}>
+            <View style={{ flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: 14, padding: 4, marginBottom: 2 }}>
               {(['signin', 'signup'] as const).map((tab) => {
                 const active = activeTab === tab;
                 return (
@@ -212,7 +215,7 @@ export default function AuthScreen() {
                       paddingVertical: 10,
                       borderRadius: 10,
                       alignItems: 'center',
-                      backgroundColor: active ? '#ffffff' : 'transparent',
+                      backgroundColor: active ? colors.surface : 'transparent',
                       shadowColor: active ? AZURE : 'transparent',
                       shadowOffset: { width: 0, height: 1 },
                       shadowOpacity: active ? 0.1 : 0,
@@ -230,7 +233,7 @@ export default function AuthScreen() {
 
             {!isSignIn && (
               <View style={fieldStyle('name')}>
-                <User color={focused === 'name' ? AZURE : '#9ca3af'} size={18} />
+                <User color={focused === 'name' ? AZURE : colors.faint} size={18} />
                 <TextInput
                   style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16 }}
                   placeholder={t('Nom complet', 'Non konplè')}
@@ -240,13 +243,13 @@ export default function AuthScreen() {
                   onBlur={() => setFocused(null)}
                   autoCapitalize="words"
                   textContentType="name"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor={colors.faint}
                 />
               </View>
             )}
 
             <View style={fieldStyle('email')}>
-              <Mail color={focused === 'email' ? AZURE : '#9ca3af'} size={18} />
+              <Mail color={focused === 'email' ? AZURE : colors.faint} size={18} />
               <TextInput
                 style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16 }}
                 placeholder={t('Adresse email', 'Adrès imèl')}
@@ -258,12 +261,12 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 autoComplete="email"
                 textContentType="emailAddress"
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.faint}
               />
             </View>
 
             <View style={fieldStyle('password')}>
-              <Lock color={focused === 'password' ? AZURE : '#9ca3af'} size={18} />
+              <Lock color={focused === 'password' ? AZURE : colors.faint} size={18} />
               <TextInput
                 style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16 }}
                 placeholder={t('Mot de passe', 'Modpas')}
@@ -276,10 +279,10 @@ export default function AuthScreen() {
                 textContentType={isSignIn ? 'password' : 'newPassword'}
                 returnKeyType="go"
                 onSubmitEditing={handleSubmit}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.faint}
               />
               <TouchableOpacity onPress={() => setShowPw((v) => !v)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                {showPw ? <EyeOff color="#9ca3af" size={18} /> : <Eye color="#9ca3af" size={18} />}
+                {showPw ? <EyeOff color={colors.faint} size={18} /> : <Eye color={colors.faint} size={18} />}
               </TouchableOpacity>
             </View>
 
@@ -298,9 +301,9 @@ export default function AuthScreen() {
 
             {/* Inline error — non-blocking, tells you what to fix */}
             {error && (
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 12, padding: 11 }}>
-                <AlertCircle color="#dc2626" size={16} style={{ marginTop: 1 }} />
-                <Text style={{ flex: 1, color: '#b91c1c', fontSize: 13, lineHeight: 18 }}>{error}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger, borderRadius: 12, padding: 11 }}>
+                <AlertCircle color={colors.danger} size={16} style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, color: colors.danger, fontSize: 13, lineHeight: 18 }}>{error}</Text>
               </View>
             )}
 
@@ -338,9 +341,9 @@ export default function AuthScreen() {
 
             {/* Divider */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 2 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#eef2f7' }} />
-              <Text style={{ color: '#94a3b8', fontSize: 12, marginHorizontal: 12 }}>{t('ou', 'oswa')}</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#eef2f7' }} />
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.hairline }} />
+              <Text style={{ color: colors.faint, fontSize: 12, marginHorizontal: 12 }}>{t('ou', 'oswa')}</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.hairline }} />
             </View>
 
             {/* Google */}
@@ -357,20 +360,20 @@ export default function AuthScreen() {
                 gap: 10,
                 borderWidth: 1.5,
                 borderColor: BORDER,
-                backgroundColor: '#ffffff',
+                backgroundColor: colors.surface,
               }}
             >
-              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#ffffff', borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surface, borderWidth: 1, borderColor: BORDER, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: '#4285F4', fontWeight: '800', fontSize: 14 }}>G</Text>
               </View>
-              <Text style={{ color: '#374151', fontWeight: '600', fontSize: 15 }}>
+              <Text style={{ color: INK, fontWeight: '600', fontSize: 15 }}>
                 {t('Continuer avec Google', 'Kontinye ak Google')}
               </Text>
             </TouchableOpacity>
           </View>
 
           {/* Reassurance footer */}
-          <Text style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, marginTop: 18, paddingHorizontal: 32, lineHeight: 17 }}>
+          <Text style={{ textAlign: 'center', color: colors.faint, fontSize: 12, marginTop: 18, paddingHorizontal: 32, lineHeight: 17 }}>
             {isSignIn
               ? t('Ravi de te revoir sur EdLight.', 'Kontan wè ou ankò sou EdLight.')
               : t('En continuant, tu rejoins des milliers d’élèves qui révisent sur EdLight.', 'Lè ou kontinye, ou jwenn dè milye elèv k’ap revize sou EdLight.')}

@@ -9,6 +9,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Timer, Delete, CornerDownLeft, Flame } from 'lucide-react-native';
 import { nextCalcProblem } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
+import { useColors } from '../../theme/theme';
 
 const ROUND_SECONDS = 60;
 const MIN_DENOMINATOR = 15;
@@ -26,6 +27,7 @@ interface CalculGameProps {
 export default function CalculGame({
   isCreole, onExit, onRecord, highScore = null,
 }: CalculGameProps) {
+  const colors = useColors();
   const [nonce, setNonce] = useState(0);
   const [solved, setSolved] = useState(0);
   const [attempts, setAttempts] = useState(0);
@@ -123,30 +125,30 @@ export default function CalculGame({
   }
 
   const urgent = timeLeft <= 10;
-  const problemBorder = flash === 'right' ? '#10b981' : flash === 'wrong' ? '#ef4444' : '#e5e7eb';
+  const problemBorder = flash === 'right' ? '#10b981' : flash === 'wrong' ? '#ef4444' : colors.border;
   const okDisabled = input === '' || input === '-';
 
   return (
-    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: '#f4f6fb' }}>
+    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center gap-1.5">
-          <Timer color={urgent ? '#ef4444' : '#64748b'} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? '#ef4444' : '#334155' }}>
+          <Timer color={urgent ? '#ef4444' : colors.muted} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? '#ef4444' : colors.muted }}>
             {timeLeft}s
           </Text>
         </View>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{solved}</Text>
+        <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{solved}</Text>
         <View className="flex-row items-center gap-1">
-          <Flame color={streak >= 3 ? '#f97316' : '#94a3b8'} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: streak >= 3 ? '#f97316' : '#64748b' }}>
+          <Flame color={streak >= 3 ? colors.warn : colors.faint} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: streak >= 3 ? colors.warn : colors.muted }}>
             {streak}
           </Text>
         </View>
       </View>
 
       {/* Time bar */}
-      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#e2e8f0' }}>
+      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
         <View
           className="h-1.5 rounded-full"
           style={{ width: `${(timeLeft / ROUND_SECONDS) * 100}%`, backgroundColor: ACCENT }}
@@ -155,8 +157,9 @@ export default function CalculGame({
 
       {/* Problem */}
       <View
-        className="bg-white rounded-3xl px-5 py-6 mt-4 flex-row items-center justify-center gap-3"
+        className="rounded-3xl px-5 py-6 mt-4 flex-row items-center justify-center gap-3"
         style={{
+          backgroundColor: colors.surface,
           borderWidth: 2,
           borderColor: problemBorder,
           shadowColor: '#0f172a',
@@ -166,7 +169,7 @@ export default function CalculGame({
           elevation: 3,
         }}
       >
-        <Text style={{ fontSize: 28, fontWeight: '800', color: '#0f172a' }}>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: colors.ink }}>
           {problem.text} =
         </Text>
         <View
@@ -175,7 +178,7 @@ export default function CalculGame({
             paddingHorizontal: 12,
             paddingVertical: 6,
             borderRadius: 12,
-            backgroundColor: '#f1f5f9',
+            backgroundColor: colors.surfaceAlt,
             alignItems: 'center',
           }}
         >
@@ -192,13 +195,13 @@ export default function CalculGame({
             key={k}
             onPress={() => press(k)}
             activeOpacity={0.7}
-            className="items-center justify-center bg-white rounded-2xl border border-gray-200"
-            style={{ width: '30%', height: 56 }}
+            className="items-center justify-center rounded-2xl border"
+            style={{ width: '30%', height: 56, backgroundColor: colors.surfaceAlt, borderColor: colors.border }}
           >
             {k === '⌫' ? (
-              <Delete color="#0f172a" size={20} />
+              <Delete color={colors.ink} size={20} />
             ) : (
-              <Text style={{ fontSize: 22, fontWeight: '700', color: '#0f172a' }}>{k}</Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: colors.ink }}>{k}</Text>
             )}
           </TouchableOpacity>
         ))}
@@ -209,9 +212,10 @@ export default function CalculGame({
         <TouchableOpacity
           onPress={() => advance(false)}
           activeOpacity={0.85}
-          className="flex-1 items-center justify-center py-4 rounded-2xl border border-gray-300 bg-white"
+          className="flex-1 items-center justify-center py-4 rounded-2xl border"
+          style={{ borderColor: colors.border, backgroundColor: colors.surface }}
         >
-          <Text className="text-gray-700 font-semibold text-base">
+          <Text className="font-semibold text-base" style={{ color: colors.muted }}>
             {isCreole ? 'Sote' : 'Passer'}
           </Text>
         </TouchableOpacity>

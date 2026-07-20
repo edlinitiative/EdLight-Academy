@@ -14,6 +14,7 @@ import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
+import { useColors } from '../theme/theme';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
@@ -99,25 +100,26 @@ const CIRC = 327; // 2 * π * 52
 // ─── TriviaHeader ─────────────────────────────────────────────────────────────
 
 function TriviaHeader() {
+  const colors = useColors();
   const { profile, level } = useTrivia();
   const { streak } = useStreak();
 
   return (
-    <View className="flex-row items-center bg-white border-b border-gray-100 px-4 gap-3" style={{ paddingVertical: 10 }}>
+    <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 10, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       {/* XP section */}
-      <Zap color="#1B6FE0" size={16} />
+      <Zap color={colors.azure} size={16} />
       <View className="flex-1 flex-row items-center gap-2">
-        <Text className="text-xs font-bold w-10" style={{ color: '#1B6FE0' }}>
+        <Text className="text-xs font-bold w-10" style={{ color: colors.azure }}>
           {profile?.xp ?? 0} XP
         </Text>
         {/* Level progress bar */}
-        <View className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+        <View className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
           <View
             className="h-2 rounded-full"
-            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: '#1B6FE0' }}
+            style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: colors.azure }}
           />
         </View>
-        <Text className="text-xs text-gray-400 font-semibold">
+        <Text className="text-xs font-semibold" style={{ color: colors.faint }}>
           Niv.{level?.level ?? 1}
         </Text>
       </View>
@@ -126,7 +128,7 @@ function TriviaHeader() {
       <View className="flex-row items-center gap-1">
         <Flame color="#ef4444" size={16} />
         <Text className="text-sm font-bold text-red-500">{streak?.currentStreak ?? 0}</Text>
-        <Text className="text-xs text-gray-400 ml-0.5">jours</Text>
+        <Text className="text-xs ml-0.5" style={{ color: colors.faint }}>jours</Text>
       </View>
     </View>
   );
@@ -151,17 +153,18 @@ function CategoryPicker({
   onSelect: (id: string) => void;
   isCreole: boolean;
 }) {
+  const colors = useColors();
   return (
     <ScrollView
-      style={{ backgroundColor: '#f4f6fb' }}
+      style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
     >
       <View className="px-4 pt-4 pb-3">
-        <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
           {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
         </Text>
-        <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+        <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>
           {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
         </Text>
       </View>
@@ -199,11 +202,11 @@ function CategoryPicker({
                   height: TILE_SIZE,
                   borderRadius: 22,
                   overflow: 'hidden',
-                  backgroundColor: '#f1f5f9',
+                  backgroundColor: colors.surfaceAlt,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: 1,
-                  borderColor: '#eef2f7',
+                  borderColor: colors.border,
                 }}
               >
                 {cat.image ? (
@@ -222,7 +225,7 @@ function CategoryPicker({
             {/* Name (reserve 2 lines so tiles align) */}
             <Text
               numberOfLines={2}
-              style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30, letterSpacing: -0.2 }}
+              style={{ fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30, letterSpacing: -0.2 }}
             >
               {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
             </Text>
@@ -253,31 +256,32 @@ function RoundPicker({
   onBack: () => void;
   isCreole: boolean;
 }) {
+  const colors = useColors();
   const totalQuestions = (TRIVIA_QUESTIONS as Record<string, any[]>)[category.id]?.length ?? 0;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
+    <View className="flex-1" style={{ backgroundColor: colors.bg }}>
       {/* Mini header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <TouchableOpacity onPress={onBack} className="p-1 mr-3">
-          <X color="#374151" size={22} />
+          <X color={colors.muted} size={22} />
         </TouchableOpacity>
         <View
           className="w-8 h-8 rounded-lg items-center justify-center mr-2"
-          style={{ backgroundColor: '#eaf2fb' }}
+          style={{ backgroundColor: colors.azureSoft }}
         >
           <Text style={{ fontSize: 16 }}>{category.icon}</Text>
         </View>
-        <Text className="font-bold text-gray-900 flex-1" numberOfLines={1}>
+        <Text className="font-bold flex-1" numberOfLines={1} style={{ color: colors.ink }}>
           {isCreole ? (category.nameHt ?? category.name) : category.name}
         </Text>
       </View>
 
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-xl font-bold text-gray-900">
+        <Text className="text-xl font-bold" style={{ color: colors.ink }}>
           {isCreole ? 'Konbyen kesyon ?' : 'Combien de questions ?'}
         </Text>
-        <Text className="text-sm text-gray-500 mt-1">
+        <Text className="text-sm mt-1" style={{ color: colors.muted }}>
           {totalQuestions} questions disponibles
         </Text>
       </View>
@@ -292,10 +296,11 @@ function RoundPicker({
               onPress={() => !disabled && onPick(opt.count)}
               disabled={disabled}
               activeOpacity={0.82}
-              className="bg-white rounded-2xl px-5 py-4 flex-row items-center"
+              className="rounded-2xl px-5 py-4 flex-row items-center"
               style={{
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: '#e8edf5',
+                borderColor: colors.border,
                 shadowColor: '#1B6FE0',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.06,
@@ -305,14 +310,14 @@ function RoundPicker({
               }}
             >
               <View className="flex-1">
-                <Text className="font-bold text-gray-900 text-lg">
+                <Text className="font-bold text-lg" style={{ color: colors.ink }}>
                   {opt.count === 0 ? `Tout (${totalQuestions})` : opt.label}
                 </Text>
-                <Text className="text-sm text-gray-500 mt-0.5">{opt.desc}</Text>
+                <Text className="text-sm mt-0.5" style={{ color: colors.muted }}>{opt.desc}</Text>
               </View>
               <View className="items-end">
-                <Text className="text-sm font-semibold" style={{ color: '#1B6FE0' }}>{opt.time}</Text>
-                <ChevronRight color="#d1d5db" size={16} />
+                <Text className="text-sm font-semibold" style={{ color: colors.azure }}>{opt.time}</Text>
+                <ChevronRight color={colors.faint} size={16} />
               </View>
             </TouchableOpacity>
           );
@@ -325,6 +330,7 @@ function RoundPicker({
 // ─── TriviaQuiz ───────────────────────────────────────────────────────────────
 
 function TimerRing({ timeLeft }: { timeLeft: number }) {
+  const colors = useColors();
   const progress = timeLeft / 15;
   const fill = progress * CIRC;
 
@@ -338,7 +344,7 @@ function TimerRing({ timeLeft }: { timeLeft: number }) {
         cy={60}
         r={52}
         fill="none"
-        stroke="#e5e7eb"
+        stroke={colors.border}
         strokeWidth={10}
       />
       {/* Countdown arc — starts at top (rotation -90) */}
@@ -369,6 +375,7 @@ function QuizPlayer({
   isCreole: boolean;
   onFinish: (score: number, total: number) => void;
 }) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
@@ -460,9 +467,9 @@ function QuizPlayer({
   const questionText = isCreole ? q.qHt : q.q;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: "#f4f6fb" }}>
+    <View className="flex-1" style={{ backgroundColor: colors.bg }}>
       {/* Top bar: nav circles + score badge */}
-      <View className="bg-white border-b border-gray-100 px-4 py-2">
+      <View className="px-4 py-2" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View className="flex-row items-center gap-2">
           {/* Scrollable question nav */}
           <ScrollView
@@ -480,17 +487,17 @@ function QuizPlayer({
                   className="w-6 h-6 rounded-full items-center justify-center"
                   style={{
                     backgroundColor: isCurrent
-                      ? '#1B6FE0'
+                      ? colors.azure
                       : isAnswered
                       ? '#10b981'
-                      : '#e5e7eb',
+                      : colors.border,
                   }}
                 >
                   <Text
                     style={{
                       fontSize: 9,
                       fontWeight: '700',
-                      color: isCurrent || isAnswered ? '#fff' : '#9ca3af',
+                      color: isCurrent || isAnswered ? '#fff' : colors.faint,
                     }}
                   >
                     {i + 1}
@@ -501,19 +508,19 @@ function QuizPlayer({
           </ScrollView>
 
           {/* Score badge */}
-          <View className="flex-row items-center rounded-full px-2.5 py-1 gap-1" style={{ backgroundColor: '#eaf2fb' }}>
-            <Trophy color="#1B6FE0" size={13} />
-            <Text className="font-bold text-sm" style={{ color: '#1B6FE0' }}>{score}</Text>
+          <View className="flex-row items-center rounded-full px-2.5 py-1 gap-1" style={{ backgroundColor: colors.azureSoft }}>
+            <Trophy color={colors.azure} size={13} />
+            <Text className="font-bold text-sm" style={{ color: colors.azure }}>{score}</Text>
           </View>
         </View>
 
         {/* Progress bar */}
-        <View className="h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+        <View className="h-1 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: colors.border }}>
           <View
             className="h-1 rounded-full"
             style={{
               width: `${((idx + 1) / questions.length) * 100}%`,
-              backgroundColor: '#1B6FE0',
+              backgroundColor: colors.azure,
             }}
           />
         </View>
@@ -526,7 +533,7 @@ function QuizPlayer({
       >
         {/* Timer + question number */}
         <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-sm text-gray-400 font-semibold">
+          <Text className="text-sm font-semibold" style={{ color: colors.faint }}>
             {idx + 1} / {questions.length}
           </Text>
 
@@ -557,10 +564,11 @@ function QuizPlayer({
 
         {/* Question card */}
         <View
-          className="bg-white rounded-2xl p-5 mb-5"
+          className="rounded-2xl p-5 mb-5"
           style={{
+            backgroundColor: colors.surface,
             borderWidth: 1,
-            borderColor: '#e8edf5',
+            borderColor: colors.border,
             shadowColor: '#1B6FE0',
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.06,
@@ -580,11 +588,11 @@ function QuizPlayer({
 
             // Feedback stays quiet: no colored fills or borders — the answer
             // state is carried by text color and the check/cross icon only.
-            let borderColor = '#e8edf5';
-            let bgColor = '#fff';
-            let labelBg = '#f3f4f6';
-            let labelText = '#6b7280';
-            let textColor = '#111827';
+            let borderColor = colors.border;
+            let bgColor = colors.surface;
+            let labelBg = colors.surfaceAlt;
+            let labelText = colors.muted;
+            let textColor = colors.ink;
 
             if (confirmed) {
               if (isCorrectOpt) {
@@ -595,9 +603,9 @@ function QuizPlayer({
                 labelText = '#dc2626';
               }
             } else if (isSelected) {
-              borderColor = '#1B6FE0';
-              bgColor = '#eaf2fb';
-              labelBg = '#1B6FE0';
+              borderColor = colors.azure;
+              bgColor = colors.azureSoft;
+              labelBg = colors.azure;
               labelText = '#fff';
             }
 
@@ -670,14 +678,14 @@ function QuizPlayer({
             </View>
 
             {!isCorrect && (
-              <Text className="text-sm text-gray-600 mt-1">
+              <Text className="text-sm mt-1" style={{ color: colors.muted }}>
                 Bonne réponse :{' '}
                 <Text className="font-semibold text-emerald-700">{q.correctAnswer}</Text>
               </Text>
             )}
 
             {q.explanation ? (
-              <Text className="text-sm text-gray-500 mt-2 leading-5">{q.explanation}</Text>
+              <Text className="text-sm mt-2 leading-5" style={{ color: colors.muted }}>{q.explanation}</Text>
             ) : null}
           </View>
         )}
@@ -686,8 +694,8 @@ function QuizPlayer({
       {/* Action button — safe-area aware so it clears the home indicator /
           Android gesture bar (the floating tab bar is hidden here via focus mode). */}
       <View
-        className="px-4 pt-3 bg-white border-t border-gray-100"
-        style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+        className="px-4 pt-3"
+        style={{ paddingBottom: Math.max(insets.bottom, 20), backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}
       >
         {!confirmed ? (
           <TouchableOpacity
@@ -695,11 +703,11 @@ function QuizPlayer({
             disabled={!selected}
             activeOpacity={0.85}
             className="py-4 rounded-2xl items-center"
-            style={{ backgroundColor: selected ? '#1B6FE0' : '#e5e7eb' }}
+            style={{ backgroundColor: selected ? colors.azure : colors.border }}
           >
             <Text
               className="font-bold text-base"
-              style={{ color: selected ? '#fff' : '#9ca3af' }}
+              style={{ color: selected ? '#fff' : colors.faint }}
             >
               {isCreole ? 'Konfime' : 'Confirmer'}
             </Text>
@@ -709,7 +717,7 @@ function QuizPlayer({
             onPress={handleNext}
             activeOpacity={0.85}
             className="flex-row py-4 rounded-2xl items-center justify-center gap-1"
-            style={{ backgroundColor: '#1B6FE0' }}
+            style={{ backgroundColor: colors.azure }}
           >
             <Text className="text-white font-bold text-base">
               {idx + 1 >= questions.length
@@ -731,6 +739,7 @@ function QuizPlayer({
 // ─── TriviaResults ─────────────────────────────────────────────────────────────
 
 function ScoreRing({ score, total }: { score: number; total: number }) {
+  const colors = useColors();
   const pct = total > 0 ? score / total : 0;
   const fill = pct * CIRC;
   const color = pct >= 0.8 ? '#10b981' : pct >= 0.6 ? '#f59e0b' : '#ef4444';
@@ -738,7 +747,7 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
   return (
     <View className="items-center justify-center" style={{ width: 140, height: 140 }}>
       <Svg width={140} height={140} viewBox="0 0 120 120">
-        <Circle cx={60} cy={60} r={52} fill="none" stroke="#e5e7eb" strokeWidth={10} />
+        <Circle cx={60} cy={60} r={52} fill="none" stroke={colors.border} strokeWidth={10} />
         <Circle
           cx={60}
           cy={60}
@@ -753,7 +762,7 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
         />
       </Svg>
       <View className="absolute items-center justify-center">
-        <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink }}>
           {score}/{total}
         </Text>
         <Text style={{ fontSize: 13, color, fontWeight: '700' }}>
@@ -779,21 +788,22 @@ function TriviaResults({
   onChooseCategory: () => void;
   isCreole: boolean;
 }) {
+  const colors = useColors();
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const xpEarned = score * 10;
 
   return (
     <ScrollView
-      className="flex-1" style={{ backgroundColor: "#f4f6fb" }}
+      className="flex-1" style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 40, paddingBottom: 48 }}
     >
-      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <Trophy color="#1B6FE0" size={32} />
+      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+        <Trophy color={colors.azure} size={32} />
       </View>
 
       <ScoreRing score={score} total={total} />
 
-      <Text className="text-2xl font-bold text-gray-900 mt-6 mb-1">
+      <Text className="text-2xl font-bold mt-6 mb-1" style={{ color: colors.ink }}>
         {pct >= 80
           ? isCreole ? 'Ekselan !' : 'Excellent !'
           : pct >= 60
@@ -802,9 +812,9 @@ function TriviaResults({
       </Text>
 
       {/* XP earned badge */}
-      <View className="flex-row items-center gap-2 rounded-full px-4 py-2 mt-3 mb-8" style={{ backgroundColor: '#eaf2fb' }}>
-        <Zap color="#1B6FE0" size={16} />
-        <Text className="font-bold text-sm" style={{ color: '#1B6FE0' }}>
+      <View className="flex-row items-center gap-2 rounded-full px-4 py-2 mt-3 mb-8" style={{ backgroundColor: colors.azureSoft }}>
+        <Zap color={colors.azure} size={16} />
+        <Text className="font-bold text-sm" style={{ color: colors.azure }}>
           +{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}
         </Text>
       </View>
@@ -812,10 +822,10 @@ function TriviaResults({
       {/* Category tag */}
       <View
         className="flex-row items-center gap-2 rounded-xl px-4 py-2 mb-8"
-        style={{ backgroundColor: '#eaf2fb' }}
+        style={{ backgroundColor: colors.azureSoft }}
       >
         <Text style={{ fontSize: 18 }}>{category.icon}</Text>
-        <Text className="font-semibold text-sm" style={{ color: '#1B6FE0' }}>
+        <Text className="font-semibold text-sm" style={{ color: colors.azure }}>
           {isCreole ? (category.nameHt ?? category.name) : category.name}
         </Text>
       </View>
@@ -825,7 +835,7 @@ function TriviaResults({
         onPress={onRetry}
         activeOpacity={0.85}
         className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
-        style={{ backgroundColor: '#1B6FE0' }}
+        style={{ backgroundColor: colors.azure }}
       >
         <RefreshCw color="#fff" size={18} />
         <Text className="text-white font-bold text-base">
@@ -836,9 +846,10 @@ function TriviaResults({
       <TouchableOpacity
         onPress={onChooseCategory}
         activeOpacity={0.85}
-        className="w-full items-center justify-center py-4 rounded-2xl border border-gray-300 bg-white"
+        className="w-full items-center justify-center py-4 rounded-2xl border"
+        style={{ borderColor: colors.border, backgroundColor: colors.surface }}
       >
-        <Text className="text-gray-700 font-semibold text-base">
+        <Text className="font-semibold text-base" style={{ color: colors.muted }}>
           {isCreole ? 'Chwazi yon kategori' : 'Choisir une catégorie'}
         </Text>
       </TouchableOpacity>
@@ -849,6 +860,7 @@ function TriviaResults({
 // ─── Main TriviaScreen ────────────────────────────────────────────────────────
 
 export default function TriviaScreen() {
+  const colors = useColors();
   const { user, language, incrementGuestInteraction, setFocusMode, pendingDailyChallenge, setPendingDailyChallenge } = useStore();
   const isCreole = language === 'ht';
 
@@ -1012,7 +1024,7 @@ export default function TriviaScreen() {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: "#f4f6fb" }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {/* Phase router */}
       {phase === 'hub' && (
         <JeuxHub
@@ -1024,11 +1036,11 @@ export default function TriviaScreen() {
 
       {phase === 'arcade' && selectedGame && (
         <View className="flex-1">
-          <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+          <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <TouchableOpacity onPress={exitToHub} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <X color="#374151" size={20} />
+              <X color={colors.muted} size={20} />
             </TouchableOpacity>
-            <Text className="font-bold text-gray-900">
+            <Text className="font-bold" style={{ color: colors.ink }}>
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </View>
@@ -1052,8 +1064,8 @@ export default function TriviaScreen() {
             className="flex-row items-center px-4 pt-1 pb-2"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <ChevronRight color="#1B6FE0" size={16} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={{ color: '#1B6FE0', fontWeight: '700', fontSize: 13 }}>
+            <ChevronRight color={colors.azure} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Text style={{ color: colors.azure, fontWeight: '700', fontSize: 13 }}>
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </TouchableOpacity>
@@ -1074,26 +1086,26 @@ export default function TriviaScreen() {
       {phase === 'playing' && selectedCategory && questions.length > 0 && (
         <View className="flex-1">
           {/* In-game nav bar */}
-          <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+          <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <TouchableOpacity
               onPress={() => setPhase('categories')}
               className="p-1 mr-3"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <X color="#374151" size={22} />
+              <X color={colors.muted} size={22} />
             </TouchableOpacity>
             <View
               className="w-7 h-7 rounded-lg items-center justify-center mr-2"
-              style={{ backgroundColor: '#eaf2fb' }}
+              style={{ backgroundColor: colors.azureSoft }}
             >
               <Text style={{ fontSize: 14 }}>{selectedCategory.icon}</Text>
             </View>
-            <Text className="font-bold text-gray-900 flex-1" numberOfLines={1}>
+            <Text className="font-bold flex-1" numberOfLines={1} style={{ color: colors.ink }}>
               {isCreole
                 ? (selectedCategory.nameHt ?? selectedCategory.name)
                 : selectedCategory.name}
             </Text>
-            <Trophy color="#1B6FE0" size={18} />
+            <Trophy color={colors.azure} size={18} />
           </View>
 
           <QuizPlayer
@@ -1108,9 +1120,9 @@ export default function TriviaScreen() {
       {phase === 'results' && selectedCategory && (
         <View className="flex-1">
           {/* Results nav bar */}
-          <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
-            <Trophy color="#1B6FE0" size={18} />
-            <Text className="font-bold text-gray-900 ml-2">
+          <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Trophy color={colors.azure} size={18} />
+            <Text className="font-bold ml-2" style={{ color: colors.ink }}>
               {isCreole ? 'Rezilta' : 'Résultats'}
             </Text>
           </View>

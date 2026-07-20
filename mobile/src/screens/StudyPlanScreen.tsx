@@ -47,6 +47,7 @@ import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
 import { TRACKS } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
+import { useColors, type Palette } from '../theme/theme';
 import {
   loadActiveStudyPlan,
   generateStudyPlan,
@@ -58,9 +59,6 @@ import {
 } from '../services/studyPlanService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const PRIMARY = '#1B6FE0';
-const CARD_BORDER = '#e8edf5';
 
 const WEEK_OPTIONS = [4, 6, 8, 12];
 const MINUTE_OPTIONS = [30, 60, 90, 120];
@@ -107,15 +105,16 @@ function difficultyColor(d: number): string {
 // ─── Small building blocks ────────────────────────────────────────────────────
 
 function Card({ children, style }: { children: React.ReactNode; style?: any }) {
+  const colors = useColors();
   return (
     <View
       style={[{
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: CARD_BORDER,
+        borderColor: colors.border,
         borderRadius: 16,
         padding: 16,
-        shadowColor: PRIMARY,
+        shadowColor: colors.azure,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.06,
         shadowRadius: 6,
@@ -128,10 +127,11 @@ function Card({ children, style }: { children: React.ReactNode; style?: any }) {
 }
 
 function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
+  const colors = useColors();
   return (
     <View className="flex-row items-center gap-2 mb-3">
       {icon}
-      <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>{label}</Text>
+      <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>{label}</Text>
     </View>
   );
 }
@@ -147,6 +147,7 @@ function OptionChips<T extends string | number>({
   onChange: (v: T) => void;
   labelOf: (v: T) => string;
 }) {
+  const colors = useColors();
   return (
     <View className="flex-row flex-wrap gap-2">
       {options.map((opt) => {
@@ -161,11 +162,11 @@ function OptionChips<T extends string | number>({
               paddingVertical: 8,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: active ? PRIMARY : CARD_BORDER,
-              backgroundColor: active ? PRIMARY : '#ffffff',
+              borderColor: active ? colors.azure : colors.border,
+              backgroundColor: active ? colors.azure : colors.surface,
             }}
           >
-            <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#ffffff' : '#475569' }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#ffffff' : colors.muted }}>
               {labelOf(opt)}
             </Text>
           </TouchableOpacity>
@@ -176,22 +177,23 @@ function OptionChips<T extends string | number>({
 }
 
 function StatPill({ icon, value, label }: { icon: React.ReactNode; value: string | number; label: string }) {
+  const colors = useColors();
   return (
     <View
       style={{
         flex: 1,
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ffffff',
+        backgroundColor: colors.surface,
         borderWidth: 1,
-        borderColor: CARD_BORDER,
+        borderColor: colors.border,
         borderRadius: 14,
         paddingVertical: 12,
       }}
     >
       {icon}
-      <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>{value}</Text>
-      <Text style={{ fontSize: 10, color: '#64748b' }}>{label}</Text>
+      <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{value}</Text>
+      <Text style={{ fontSize: 10, color: colors.muted }}>{label}</Text>
     </View>
   );
 }
@@ -207,6 +209,7 @@ function TaskRow({
   last: boolean;
   onPress?: () => void;
 }) {
+  const colors = useColors();
   const meta = TASK_TYPE_META[task.type || 'exam'] || TASK_TYPE_META.exam;
   const TypeIcon = meta.Icon;
   const mastered = task.status === 'mastered';
@@ -229,13 +232,13 @@ function TaskRow({
       activeOpacity={0.6}
       accessibilityRole="button"
       accessibilityLabel={taskDisplayTitle(task, isCreole)}
-      className={`flex-row items-center py-3 ${!last ? 'border-b border-gray-100' : ''}`}
+      className={`flex-row items-center py-3 ${!last ? 'border-b border-gray-100 dark:border-slate-700' : ''}`}
       style={{ gap: 10, opacity: mastered ? 0.6 : 1 }}
     >
       {mastered ? (
         <CheckCircle2 size={20} color="#10b981" />
       ) : (
-        <Circle size={20} color="#cbd5e1" />
+        <Circle size={20} color={colors.faint} />
       )}
 
       <View style={{ flex: 1, gap: 2 }}>
@@ -245,8 +248,8 @@ function TaskRow({
             {task.subject}
           </Text>
           {typeof task.scheduledWeek === 'number' && (
-            <View style={{ backgroundColor: '#eff6ff', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: PRIMARY }}>
+            <View style={{ backgroundColor: colors.azureSoft, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.azure }}>
                 {isCreole ? 'Semèn' : 'Sem.'} {task.scheduledWeek}
                 {typeof task.scheduledDay === 'number'
                   ? ` · ${isCreole ? 'Jou' : 'Jour'} ${task.scheduledDay}`
@@ -266,7 +269,7 @@ function TaskRow({
           style={{
             fontSize: 13,
             fontWeight: '600',
-            color: '#0f172a',
+            color: colors.ink,
             textDecorationLine: mastered ? 'line-through' : 'none',
           }}
         >
@@ -274,7 +277,7 @@ function TaskRow({
         </Text>
 
         {!!secondary && (
-          <Text numberOfLines={1} style={{ fontSize: 11, color: '#64748b' }}>
+          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>
             {secondary}
           </Text>
         )}
@@ -282,30 +285,31 @@ function TaskRow({
 
       <View style={{ alignItems: 'flex-end', gap: 2 }}>
         {lastScore !== null && lastScore !== undefined && (
-          <Text style={{ fontSize: 12, fontWeight: '800', color: '#0f172a' }}>{lastScore}%</Text>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: colors.ink }}>{lastScore}%</Text>
         )}
         {task.type === 'exam' && (
           <Text style={{ fontSize: 10, color: difficultyColor(task.difficulty) }}>
             {'★'.repeat(Math.max(1, Math.min(5, task.difficulty || 3)))}
           </Text>
         )}
-        <Text style={{ fontSize: 10, color: '#94a3b8' }}>{formatDate(task.nextReviewMs, isCreole)}</Text>
+        <Text style={{ fontSize: 10, color: colors.faint }}>{formatDate(task.nextReviewMs, isCreole)}</Text>
       </View>
 
-      {onPress && !mastered && <ChevronRight size={16} color="#cbd5e1" />}
+      {onPress && !mastered && <ChevronRight size={16} color={colors.faint} />}
     </TouchableOpacity>
   );
 }
 
 function MasteryRow({ subject, pct }: { subject: string; pct: number }) {
+  const colors = useColors();
   return (
     <View style={{ gap: 4, marginBottom: 10 }}>
       <View className="flex-row items-center justify-between">
         <Text style={{ fontSize: 12, fontWeight: '700', color: subjectColor(subject) }}>{subject}</Text>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a' }}>{pct}%</Text>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.ink }}>{pct}%</Text>
       </View>
-      <View style={{ height: 6, borderRadius: 3, backgroundColor: '#f1f5f9', overflow: 'hidden' }}>
-        <View style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: 6, borderRadius: 3, backgroundColor: PRIMARY }} />
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' }}>
+        <View style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: 6, borderRadius: 3, backgroundColor: colors.azure }} />
       </View>
     </View>
   );
@@ -315,6 +319,7 @@ function MasteryRow({ subject, pct }: { subject: string; pct: number }) {
 
 export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   const { user, isAuthenticated, language, track, setTrack, toggleAuthModal } = useStore();
+  const colors = useColors();
   const navigation = useNavigation<any>();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -456,7 +461,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── Shared header ───────────────────────────────────────────────────
   const header = (
     <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-      <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a' }}>
+      <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink }}>
         {plan?.title || t("Plan d'Étude", 'Plan Etid')}
       </Text>
       <View className="flex-row items-center" style={{ gap: 10 }}>
@@ -470,13 +475,13 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               borderRadius: 18,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderWidth: 1,
-              borderColor: CARD_BORDER,
+              borderColor: colors.border,
             }}
             accessibilityLabel={t('Régénérer', 'Rejenere')}
           >
-            <RefreshCw size={17} color={PRIMARY} />
+            <RefreshCw size={17} color={colors.azure} />
           </TouchableOpacity>
         )}
         {onClose && (
@@ -489,13 +494,13 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               borderRadius: 18,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderWidth: 1,
-              borderColor: CARD_BORDER,
+              borderColor: colors.border,
             }}
             accessibilityLabel={t('Fermer', 'Fèmen')}
           >
-            <X size={18} color="#475569" />
+            <X size={18} color={colors.muted} />
           </TouchableOpacity>
         )}
       </View>
@@ -505,14 +510,14 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── Not signed in ───────────────────────────────────────────────────
   if (!isAuthenticated || !uid) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }} edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
         <View className="flex-1 items-center justify-center px-8" style={{ gap: 12 }}>
-          <Lock size={40} color={PRIMARY} />
-          <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a', textAlign: 'center' }}>
+          <Lock size={40} color={colors.azure} />
+          <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
             {t('Connectez-vous pour voir votre plan', 'Konekte pou wè plan ou')}
           </Text>
-          <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+          <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
             {t(
               "Vous devez être connecté pour créer un plan d'étude personnalisé.",
               'Ou bezwen konekte pou kreye yon plan etid pèsonalize.',
@@ -521,7 +526,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <TouchableOpacity
             onPress={toggleAuthModal}
             activeOpacity={0.8}
-            style={{ backgroundColor: PRIMARY, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 12, marginTop: 6 }}
+            style={{ backgroundColor: colors.azure, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 12, marginTop: 6 }}
           >
             <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>
               {t('Se connecter', 'Konekte')}
@@ -535,17 +540,17 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── Generating (Sandra at work) ─────────────────────────────────────
   if (generating) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }} edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
         <View className="flex-1 items-center justify-center px-8" style={{ gap: 14 }}>
-          <ActivityIndicator size="large" color={PRIMARY} />
+          <ActivityIndicator size="large" color={colors.azure} />
           <View className="flex-row items-center" style={{ gap: 8 }}>
-            <Sparkles size={18} color={PRIMARY} />
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a' }}>
+            <Sparkles size={18} color={colors.azure} />
+            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>
               {t('Sandra prépare votre plan…', 'Sandra ap prepare plan ou…')}
             </Text>
           </View>
-          <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+          <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
             {t('Cela prendra quelques secondes.', 'Sa ap pran kèk segonn.')}
           </Text>
         </View>
@@ -556,10 +561,10 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── Loading the saved plan ──────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }} edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={PRIMARY} />
+          <ActivityIndicator size="large" color={colors.azure} />
         </View>
       </SafeAreaView>
     );
@@ -568,14 +573,14 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── Plan failed to load (offline) ───────────────────────────────────
   if (loadError && !plan) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }} edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
         <View className="flex-1 items-center justify-center px-8" style={{ gap: 12 }}>
-          <WifiOff size={38} color="#94a3b8" />
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#0f172a', textAlign: 'center' }}>
+          <WifiOff size={38} color={colors.faint} />
+          <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
             {t('Erreur de connexion', 'Pwoblèm koneksyon')}
           </Text>
-          <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+          <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
             {t(
               'Impossible de charger votre plan. Vérifiez votre connexion internet.',
               'Nou pa t kapab chaje plan ou. Tcheke koneksyon entènèt ou.',
@@ -584,7 +589,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           <TouchableOpacity
             onPress={loadPlan}
             activeOpacity={0.8}
-            style={{ backgroundColor: PRIMARY, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 12, marginTop: 6 }}
+            style={{ backgroundColor: colors.azure, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 12, marginTop: 6 }}
           >
             <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>
               {t('Réessayer', 'Eseye ankò')}
@@ -658,17 +663,17 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── No plan yet → setup form ────────────────────────────────────────
   if (!plan) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }} edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
         <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
           {errorBanner}
 
           <View className="items-center mb-5" style={{ gap: 8 }}>
-            <ClipboardList size={36} color={PRIMARY} />
-            <Text style={{ fontSize: 17, fontWeight: '800', color: '#0f172a', textAlign: 'center' }}>
+            <ClipboardList size={36} color={colors.azure} />
+            <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
               {t("Pas encore de plan d'étude", 'Pa gen plan etid ankò')}
             </Text>
-            <Text style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+            <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
               {t(
                 'Créez un plan personnalisé basé sur votre filière et vos performances.',
                 'Kreye yon plan pèsonalize baze sou filiyè ou ak pèfòmans ou.',
@@ -677,7 +682,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </View>
 
           <Card style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0f172a', marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 }}>
               {t('Votre filière', 'Filiyè ou')}
             </Text>
             <View className="flex-row flex-wrap gap-2">
@@ -696,12 +701,12 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                       paddingVertical: 9,
                       borderRadius: 999,
                       borderWidth: 1.5,
-                      borderColor: active ? trk.color : CARD_BORDER,
-                      backgroundColor: active ? trk.color + '18' : '#ffffff',
+                      borderColor: active ? trk.color : colors.border,
+                      backgroundColor: active ? trk.color + '18' : colors.surface,
                     }}
                   >
                     <Text style={{ fontSize: 14 }}>{trk.icon}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: active ? trk.color : '#475569' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: active ? trk.color : colors.muted }}>
                       {trk.shortLabel}
                     </Text>
                   </TouchableOpacity>
@@ -711,7 +716,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </Card>
 
           <Card style={{ marginBottom: 14 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0f172a', marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 }}>
               {t('Durée du plan', 'Dire plan an')}
             </Text>
             <OptionChips
@@ -723,7 +728,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </Card>
 
           <Card style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#0f172a', marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink, marginBottom: 10 }}>
               {t("Temps d'étude par jour", 'Tan etid pa jou')}
             </Text>
             <OptionChips
@@ -743,7 +748,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              backgroundColor: selTrack ? PRIMARY : '#cbd5e1',
+              backgroundColor: selTrack ? colors.azure : colors.faint,
               borderRadius: 999,
               paddingVertical: 15,
             }}
@@ -755,7 +760,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           </TouchableOpacity>
 
           {!selTrack && (
-            <Text style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', marginTop: 10 }}>
+            <Text style={{ fontSize: 12, color: colors.faint, textAlign: 'center', marginTop: 10 }}>
               {t("Choisissez votre filière d'abord.", 'Chwazi filiyè ou anvan.')}
             </Text>
           )}
@@ -768,7 +773,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   const trackInfo = TRACKS.find((trk: any) => trk.code === plan.track);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {header}
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
         {errorBanner}
@@ -784,26 +789,26 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                   </Text>
                 </View>
               )}
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.muted }}>
                 {masteredCount}/{totalTasks} {t('maîtrisés', 'metrize')}
               </Text>
             </View>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: PRIMARY }}>{progressPct}%</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.azure }}>{progressPct}%</Text>
           </View>
-          <View style={{ height: 8, borderRadius: 4, backgroundColor: '#f1f5f9', overflow: 'hidden' }}>
-            <View style={{ width: `${progressPct}%`, height: 8, borderRadius: 4, backgroundColor: PRIMARY }} />
+          <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' }}>
+            <View style={{ width: `${progressPct}%`, height: 8, borderRadius: 4, backgroundColor: colors.azure }} />
           </View>
           {!!plan.description && (
-            <Text style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>{plan.description}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted, marginTop: 10 }}>{plan.description}</Text>
           )}
         </Card>
 
         {/* Purpose hint */}
         <View
           className="flex-row items-center mb-4"
-          style={{ gap: 8, backgroundColor: '#eef4fb', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
+          style={{ gap: 8, backgroundColor: colors.azureSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
         >
-          <Sparkles size={15} color={PRIMARY} />
+          <Sparkles size={15} color={colors.azure} />
           <Text style={{ flex: 1, fontSize: 12, color: '#475569', lineHeight: 17 }}>
             {t(
               'Touchez une tâche pour la commencer. Votre progression se met à jour automatiquement.',
@@ -815,17 +820,17 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         {/* Quick stats */}
         <View className="flex-row mb-4" style={{ gap: 10 }}>
           <StatPill
-            icon={<Target size={16} color={PRIMARY} />}
+            icon={<Target size={16} color={colors.azure} />}
             value={todayTasks.length}
             label={t("aujourd'hui", 'jodi a')}
           />
           <StatPill
-            icon={<CalendarRange size={16} color={PRIMARY} />}
+            icon={<CalendarRange size={16} color={colors.azure} />}
             value={upcomingTasks.length}
             label={t('7 jours', '7 jou')}
           />
           <StatPill
-            icon={<Timer size={16} color={PRIMARY} />}
+            icon={<Timer size={16} color={colors.azure} />}
             value={plan.dailyTargetMinutes || 90}
             label={`min/${t('jour', 'jou')}`}
           />
@@ -834,7 +839,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         {/* Today's tasks */}
         <Card style={{ marginBottom: 14 }}>
           <SectionTitle
-            icon={<Target size={16} color={PRIMARY} />}
+            icon={<Target size={16} color={colors.azure} />}
             label={t("Aujourd'hui", 'Jodi a')}
           />
           {todayTasks.length > 0 ? (
@@ -850,7 +855,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
           ) : (
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <CheckCircle2 size={16} color="#10b981" />
-              <Text style={{ fontSize: 13, color: '#64748b' }}>
+              <Text style={{ fontSize: 13, color: colors.muted }}>
                 {t(
                   "Vous êtes à jour, rien de prévu aujourd'hui !",
                   'Ou ajou, pa gen anyen pou jodi a!',
@@ -863,7 +868,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         {/* Upcoming week */}
         <Card style={{ marginBottom: 14 }}>
           <SectionTitle
-            icon={<CalendarRange size={16} color={PRIMARY} />}
+            icon={<CalendarRange size={16} color={colors.azure} />}
             label={t('Cette semaine', 'Semèn sa a')}
           />
           {upcomingTasks.length > 0 ? (
@@ -877,7 +882,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
               />
             ))
           ) : (
-            <Text style={{ fontSize: 13, color: '#64748b' }}>
+            <Text style={{ fontSize: 13, color: colors.muted }}>
               {t('Aucune tâche cette semaine.', 'Pa gen travay pou semèn kap vini an.')}
             </Text>
           )}
@@ -887,7 +892,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         {weakestSubjects.length > 0 && (
           <Card style={{ marginBottom: 14 }}>
             <SectionTitle
-              icon={<BarChart3 size={16} color={PRIMARY} />}
+              icon={<BarChart3 size={16} color={colors.azure} />}
               label={t('Maîtrise par matière', 'Metriz pa matyè')}
             />
             {weakestSubjects.map(([subject, data]) => (
@@ -921,15 +926,15 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.surface,
             borderWidth: 1.5,
-            borderColor: PRIMARY,
+            borderColor: colors.azure,
             borderRadius: 999,
             paddingVertical: 13,
           }}
         >
-          <RefreshCw size={16} color={PRIMARY} />
-          <Text style={{ color: PRIMARY, fontWeight: '800', fontSize: 14 }}>
+          <RefreshCw size={16} color={colors.azure} />
+          <Text style={{ color: colors.azure, fontWeight: '800', fontSize: 14 }}>
             {t('Régénérer le plan', 'Rejenere plan an')}
           </Text>
         </TouchableOpacity>

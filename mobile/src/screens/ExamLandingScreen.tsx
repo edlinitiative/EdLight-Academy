@@ -8,6 +8,7 @@ import {
   Calculator, Atom, FlaskConical, Leaf, PenLine, Globe,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
@@ -55,6 +56,7 @@ const SUBJECTS = [
 
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
+  const colors = useColors();
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -69,15 +71,15 @@ export default function ExamLandingScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View className="px-5 pt-6 pb-5">
-          <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
+          <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
             {t('Examens', 'Egzamen yo')}
           </Text>
-          <Text style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
+          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>
             {t('Entraîne-toi avec des sujets officiels réels.', 'Pratike ak vrè sijè ofisyèl.')}
           </Text>
         </View>
@@ -88,10 +90,10 @@ export default function ExamLandingScreen() {
             <View
               key={level.id}
               style={{
-                backgroundColor: '#ffffff',
+                backgroundColor: colors.surface,
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: '#e8edf5',
+                borderColor: colors.border,
                 shadowColor: '#1B6FE0',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.06,
@@ -112,25 +114,25 @@ export default function ExamLandingScreen() {
                       width: 48,
                       height: 48,
                       borderRadius: 12,
-                      backgroundColor: '#eaf2fb',
+                      backgroundColor: colors.azureSoft,
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginBottom: 10,
                     }}
                   >
-                    <level.Icon color="#1B6FE0" size={24} />
+                    <level.Icon color={colors.azure} size={24} />
                   </View>
 
-                  <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
-                  <Text style={{ color: '#64748b', fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
-                  <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{level.description}</Text>
+                  <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16, lineHeight: 22 }}>{level.label}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 18 }}>{level.sublabel}</Text>
+                  <Text style={{ color: colors.faint, fontSize: 12, marginTop: 2 }}>{level.description}</Text>
 
                   {/* Explorer link */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                    <Text style={{ color: '#1B6FE0', fontSize: 14, fontWeight: '700' }}>
+                    <Text style={{ color: colors.azure, fontSize: 14, fontWeight: '700' }}>
                       {t('Explorer', 'Eksplore')}
                     </Text>
-                    <ChevronRight color="#1B6FE0" size={16} />
+                    <ChevronRight color={colors.azure} size={16} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -138,7 +140,7 @@ export default function ExamLandingScreen() {
               {/* Track (filière) chips — only for Terminale */}
               {level.id === 'terminale' && (
                 <View style={{ paddingHorizontal: 16, paddingBottom: 14, paddingTop: 2 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#94a3b8', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.faint, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>
                     {t('Ma filière', 'Seri mwen')}
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -157,12 +159,12 @@ export default function ExamLandingScreen() {
                             paddingVertical: 6,
                             borderRadius: 99,
                             borderWidth: 1,
-                            borderColor: active ? '#1B6FE0' : '#e8edf5',
-                            backgroundColor: active ? '#eaf2fb' : '#f8faff',
+                            borderColor: active ? colors.azure : colors.border,
+                            backgroundColor: active ? colors.azureSoft : colors.surfaceAlt,
                           }}
                         >
-                          {active && <Check color="#1B6FE0" size={12} />}
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#1B6FE0' : '#64748b' }}>
+                          {active && <Check color={colors.azure} size={12} />}
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? colors.azure : colors.muted }}>
                             {tr.shortLabel}
                           </Text>
                         </TouchableOpacity>
@@ -177,7 +179,7 @@ export default function ExamLandingScreen() {
 
         {/* Subject quick-links */}
         <View className="px-5 mt-6">
-          <Text style={{ fontWeight: '800', color: '#0f172a', fontSize: 16, marginBottom: 12 }}>
+          <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16, marginBottom: 12 }}>
             {t('Par matière', 'Pa matyè')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -192,9 +194,9 @@ export default function ExamLandingScreen() {
                   gap: 6,
                   paddingHorizontal: 12,
                   paddingVertical: 8,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: colors.surface,
                   borderWidth: 1,
-                  borderColor: '#e8edf5',
+                  borderColor: colors.border,
                   borderRadius: 99,
                   shadowColor: '#1B6FE0',
                   shadowOffset: { width: 0, height: 1 },
@@ -203,10 +205,10 @@ export default function ExamLandingScreen() {
                   elevation: 1,
                 }}
               >
-                <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: '#eaf2fb', alignItems: 'center', justifyContent: 'center' }}>
-                  <subj.Icon color="#1B6FE0" size={13} />
+                <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
+                  <subj.Icon color={colors.azure} size={13} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '500', color: '#374151' }}>{subj.code}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '500', color: colors.muted }}>{subj.code}</Text>
               </TouchableOpacity>
             ))}
           </View>

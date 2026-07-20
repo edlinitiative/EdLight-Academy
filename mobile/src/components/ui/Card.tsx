@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
-import { cardSurface } from '../../theme/theme';
+import { useTheme } from '../../theme/theme';
 import { tapLight } from '../../utils/haptics';
 
 interface CardProps {
@@ -11,9 +11,9 @@ interface CardProps {
 
 // TouchableOpacity (not PressableScale) so NativeWind `className` layout still
 // applies for the many screens that style Card via className.
-const cardStyle = { ...cardSurface, overflow: 'hidden' as const };
-
 export default function Card({ children, onPress, className = '' }: CardProps) {
+  const { cardSurface } = useTheme();
+  const cardStyle = { ...cardSurface, overflow: 'hidden' as const };
   if (onPress) {
     return (
       <TouchableOpacity

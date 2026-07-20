@@ -10,6 +10,7 @@ import { Timer, MousePointerClick } from 'lucide-react-native';
 import { CAPITAL_PAIRS } from '../../data/triviaData';
 import { buildMemoryDeck, MemoryCard } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
+import { useColors } from '../../theme/theme';
 
 const PAIRS = 6;
 const ACCENT = '#7c3aed';
@@ -30,6 +31,7 @@ interface MemoireGameProps {
 export default function MemoireGame({
   isCreole, onExit, onRecord, highScore = null,
 }: MemoireGameProps) {
+  const colors = useColors();
   const [nonce, setNonce] = useState(0);
   const deck = useMemo(() => buildMemoryDeck(CAPITAL_PAIRS, PAIRS, isCreole), [isCreole, nonce]);
 
@@ -113,12 +115,12 @@ export default function MemoireGame({
   }
 
   return (
-    <View className="flex-1 pt-3" style={{ backgroundColor: '#f4f6fb' }}>
+    <View className="flex-1 pt-3" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between px-4 mb-3">
         <View className="flex-row items-center gap-1.5">
-          <MousePointerClick color="#64748b" size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#334155' }}>
+          <MousePointerClick color={colors.muted} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.muted }}>
             {moves} {isCreole ? 'mouvman' : 'coups'}
           </Text>
         </View>
@@ -126,8 +128,8 @@ export default function MemoireGame({
           {isCreole ? 'Peyi ↔ Kapital' : 'Pays ↔ Capitale'}
         </Text>
         <View className="flex-row items-center gap-1.5">
-          <Timer color="#64748b" size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#334155' }}>{seconds}s</Text>
+          <Timer color={colors.muted} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.muted }}>{seconds}s</Text>
         </View>
       </View>
 
@@ -155,9 +157,9 @@ export default function MemoireGame({
                 alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: 6,
-                backgroundColor: isUp ? '#ffffff' : card.side === 'a' ? ACCENT : '#9d6ff0',
+                backgroundColor: isUp ? colors.surface : card.side === 'a' ? ACCENT : '#9d6ff0',
                 borderWidth: isUp ? 2 : 0,
-                borderColor: isMatched ? '#10b981' : '#e5e7eb',
+                borderColor: isMatched ? '#10b981' : colors.border,
                 opacity: isMatched ? 0.75 : 1,
               }}
             >
@@ -168,7 +170,7 @@ export default function MemoireGame({
                   style={{
                     fontSize: 13,
                     fontWeight: '700',
-                    color: isMatched ? '#059669' : '#0f172a',
+                    color: isMatched ? '#059669' : colors.ink,
                     textAlign: 'center',
                   }}
                 >

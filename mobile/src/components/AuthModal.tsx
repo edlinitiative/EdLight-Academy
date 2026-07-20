@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { X } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 import AuthScreen from '../screens/AuthScreen';
 
 export default function AuthModal() {
@@ -10,6 +11,7 @@ export default function AuthModal() {
   const guestInteractionCount = useStore((s) => s.guestInteractionCount);
   const setShowAuthModal = useStore((s) => s.setShowAuthModal);
   const language = useStore((s) => s.language);
+  const colors = useColors();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
   const visible = showAuthModal && !isAuthenticated;
@@ -21,9 +23,9 @@ export default function AuthModal() {
       animationType="slide"
       onRequestClose={dismissable ? () => setShowAuthModal(false) : undefined}
     >
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
         {!dismissable && (
-          <View style={{ backgroundColor: '#1B6FE0', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
+          <View style={{ backgroundColor: colors.azure, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
               {t('Crée un compte gratuit pour continuer', 'Kreye yon kont gratis pou kontinye')}
             </Text>
@@ -46,11 +48,11 @@ export default function AuthModal() {
               zIndex: 100,
               padding: 8,
               borderRadius: 20,
-              backgroundColor: 'rgba(243,244,246,0.92)',
+              backgroundColor: colors.surfaceAlt,
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <X color="#374151" size={20} />
+            <X color={colors.ink} size={20} />
           </TouchableOpacity>
         )}
 

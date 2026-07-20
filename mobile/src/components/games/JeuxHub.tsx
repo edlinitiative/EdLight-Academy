@@ -14,6 +14,7 @@ import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
 import DailyChallengeBanner from './DailyChallengeBanner';
+import { useColors } from '../../theme/theme';
 
 const GRID_PAD = 16;
 const TILE_GAP = 12;
@@ -33,6 +34,7 @@ interface JeuxHubProps {
 
 /* ─── Records strip: best-ever score per arcade game + holder ─── */
 function GameRecords({ isCreole }: { isCreole: boolean }) {
+  const colors = useColors();
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
 
   useEffect(() => {
@@ -48,8 +50,9 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
 
   return (
     <View
-      className="bg-white rounded-3xl px-4 py-4 mx-4 mt-5"
+      className="rounded-3xl px-4 py-4 mx-4 mt-5"
       style={{
+        backgroundColor: colors.surface,
         shadowColor: '#0f172a',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.06,
@@ -59,7 +62,7 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
     >
       <View className="flex-row items-center gap-1.5 mb-3">
         <Crown color="#d97706" size={15} />
-        <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>
           {isCreole ? 'Rekò yo' : 'Records'}
         </Text>
       </View>
@@ -70,7 +73,7 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
           <View
             key={g.id}
             className="flex-row items-center justify-between py-2"
-            style={{ borderTopWidth: i === 0 ? 0 : 1, borderTopColor: '#f1f5f9' }}
+            style={{ borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.hairline }}
           >
             <View className="flex-row items-center gap-1.5" style={{ flexShrink: 1 }}>
               <Icon color={g.color} size={14} />
@@ -79,13 +82,13 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
               </Text>
             </View>
             {rec ? (
-              <Text style={{ fontSize: 13, color: '#64748b' }} numberOfLines={1}>
+              <Text style={{ fontSize: 13, color: colors.muted }} numberOfLines={1}>
                 {rec.displayName} ·{' '}
-                <Text style={{ fontWeight: '800', color: '#0f172a' }}>{rec.score}</Text>
+                <Text style={{ fontWeight: '800', color: colors.ink }}>{rec.score}</Text>
               </Text>
             ) : (
-              <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: '#f1f5f9' }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748b' }}>
+              <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.surfaceAlt }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.muted }}>
                   {isCreole ? 'Poko gen rekò !' : 'À prendre !'}
                 </Text>
               </View>
@@ -101,6 +104,7 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
 export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: JeuxHubProps) {
   const { profile, level, isAuthed, daily } = useTrivia();
   const { streak } = useStreak();
+  const colors = useColors();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
 
@@ -109,7 +113,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
 
   return (
     <ScrollView
-      style={{ backgroundColor: '#f4f6fb' }}
+      style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
     >
@@ -122,24 +126,24 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
       {/* Stats row */}
       {isAuthed && (
         <View className="flex-row px-4 gap-2 mb-4">
-          <View className="flex-1 flex-row items-center justify-center gap-1.5 bg-white rounded-2xl py-3 border border-gray-100">
-            <Zap color="#1B6FE0" size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>{level.xp}</Text>
-            <Text style={{ fontSize: 12, color: '#64748b' }}>
+          <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <Zap color={colors.azure} size={16} />
+            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>{level.xp}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted }}>
               XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}
             </Text>
           </View>
-          <View className="flex-1 flex-row items-center justify-center gap-1.5 bg-white rounded-2xl py-3 border border-gray-100">
+          <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Flame color="#ef4444" size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>
               {streak?.currentStreak || 0}
             </Text>
-            <Text style={{ fontSize: 12, color: '#64748b' }}>{isCreole ? 'Seri' : 'Série'}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted }}>{isCreole ? 'Seri' : 'Série'}</Text>
           </View>
-          <View className="flex-1 flex-row items-center justify-center gap-1.5 bg-white rounded-2xl py-3 border border-gray-100">
+          <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Trophy color="#d97706" size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0f172a' }}>{gamesPlayed}</Text>
-            <Text style={{ fontSize: 12, color: '#64748b' }}>{isCreole ? 'Pati' : 'Parties'}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>{gamesPlayed}</Text>
+            <Text style={{ fontSize: 12, color: colors.muted }}>{isCreole ? 'Pati' : 'Parties'}</Text>
           </View>
         </View>
       )}

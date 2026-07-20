@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { CalendarCheck, Check } from 'lucide-react-native';
-
-const AZURE = '#1B6FE0';
+import { useColors } from '../../theme/theme';
 
 /**
  * "Défi du jour" banner — a shared once-a-day round (same 10 questions for
@@ -19,6 +18,8 @@ export default function DailyChallengeBanner({
   onStart: () => void;
   style?: object;
 }) {
+  const colors = useColors();
+  const AZURE = colors.azure;
   const done = !!daily?.completedToday;
   return (
     <TouchableOpacity
@@ -34,9 +35,9 @@ export default function DailyChallengeBanner({
           gap: 12,
           padding: 16,
           borderRadius: 16,
-          backgroundColor: done ? '#eef2f7' : AZURE,
+          backgroundColor: done ? colors.surfaceAlt : AZURE,
           borderWidth: done ? 1 : 0,
-          borderColor: '#e8edf5',
+          borderColor: colors.border,
           ...(done
             ? {}
             : {
@@ -57,16 +58,16 @@ export default function DailyChallengeBanner({
           borderRadius: 12,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: done ? '#dbe3ee' : 'rgba(255,255,255,0.18)',
+          backgroundColor: done ? colors.azureSoft : 'rgba(255,255,255,0.18)',
         }}
       >
         {done ? <Check color={AZURE} size={22} /> : <CalendarCheck color="#ffffff" size={22} />}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '800', color: done ? '#0f172a' : '#ffffff' }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: done ? colors.ink : '#ffffff' }}>
           {isCreole ? 'Defi jodi a' : 'Défi du jour'}
         </Text>
-        <Text style={{ fontSize: 12.5, marginTop: 2, color: done ? '#64748b' : 'rgba(255,255,255,0.88)' }}>
+        <Text style={{ fontSize: 12.5, marginTop: 2, color: done ? colors.muted : 'rgba(255,255,255,0.88)' }}>
           {done
             ? isCreole
               ? `Fini — ${daily?.score}/${daily?.total}. Retounen demen !`

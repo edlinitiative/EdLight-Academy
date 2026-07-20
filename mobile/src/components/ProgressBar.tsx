@@ -40,7 +40,7 @@ export default function ProgressBar({
           {showLabel && <Text className="text-xs font-semibold text-gray-700">{clamped}%</Text>}
         </View>
       )}
-      <View className="bg-gray-200 rounded-full overflow-hidden" style={{ height }}>
+      <View className="bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden" style={{ height }}>
         <Animated.View
           className="rounded-full"
           style={[{ height, backgroundColor: color }, fillStyle]}

@@ -9,6 +9,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { HelpCircle } from 'lucide-react-native';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
+import { useColors } from '../../theme/theme';
 
 const ROUNDS = 10;
 const ACCENT = '#0e7490';
@@ -23,6 +24,7 @@ interface SuitesGameProps {
 export default function SuitesGame({
   isCreole, onExit, onRecord, highScore = null,
 }: SuitesGameProps) {
+  const colors = useColors();
   const [nonce, setNonce] = useState(0);
   const rounds = useMemo(() => buildSequenceRounds(ROUNDS), [nonce]);
 
@@ -84,10 +86,10 @@ export default function SuitesGame({
   }
 
   return (
-    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: '#f4f6fb' }}>
+    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text style={{ fontSize: 14, fontWeight: '700', color: '#334155' }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.muted }}>
           {idx + 1} / {ROUNDS}
         </Text>
         <Text style={{ fontSize: 14, fontWeight: '800', color: ACCENT }}>
@@ -97,7 +99,7 @@ export default function SuitesGame({
 
       {/* Quiz block — vertically centered in the remaining space */}
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 32 }}>
-      <Text style={{ fontSize: 17, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginBottom: 18 }}>
+      <Text style={{ fontSize: 17, fontWeight: '700', color: colors.ink, textAlign: 'center', marginBottom: 18 }}>
         {isCreole ? 'Ki nimewo ki vini apre ?' : 'Quel nombre vient ensuite ?'}
       </Text>
 
@@ -106,10 +108,10 @@ export default function SuitesGame({
         {round.shown.map((n, i) => (
           <View
             key={i}
-            className="items-center justify-center bg-white rounded-xl border border-gray-200"
-            style={{ minWidth: 56, height: 52, paddingHorizontal: 10 }}
+            className="items-center justify-center rounded-xl border"
+            style={{ minWidth: 56, height: 52, paddingHorizontal: 10, backgroundColor: colors.surface, borderColor: colors.border }}
           >
-            <Text style={{ fontSize: 20, fontWeight: '800', color: '#0f172a' }}>{n}</Text>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink }}>{n}</Text>
           </View>
         ))}
         <View
@@ -123,9 +125,9 @@ export default function SuitesGame({
       {/* Options — 2×2 grid */}
       <View className="flex-row flex-wrap justify-center mt-7" style={{ gap: 10 }}>
         {round.options.map((opt) => {
-          let bg = '#ffffff';
-          let border = '#e5e7eb';
-          let color = '#0f172a';
+          let bg = colors.surface;
+          let border = colors.border;
+          let color = colors.ink;
           let opacity = 1;
           if (picked != null) {
             if (opt === round.answer) { bg = '#10b981'; border = '#10b981'; color = '#ffffff'; }

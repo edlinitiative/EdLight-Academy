@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 
 export default function WelcomeLanguageModal() {
   const hydrated = useStore((s) => s.hydrated);
@@ -8,6 +9,7 @@ export default function WelcomeLanguageModal() {
   const language = useStore((s) => s.language);
   const setLanguage = useStore((s) => s.setLanguage);
   const setLanguageChosen = useStore((s) => s.setLanguageChosen);
+  const colors = useColors();
 
   const [selected, setSelected] = useState<string>(language || 'fr');
 
@@ -26,44 +28,44 @@ export default function WelcomeLanguageModal() {
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Image
             source={require('../../assets/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
 
-          <Text style={styles.title}>Choisissez votre langue</Text>
-          <Text style={styles.titleSecondary}>Chwazi lang ou</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.ink }]}>Choisissez votre langue</Text>
+          <Text style={[styles.titleSecondary, { color: colors.muted }]}>Chwazi lang ou</Text>
+          <Text style={[styles.subtitle, { color: colors.faint }]}>
             Vous pouvez la changer à tout moment dans votre profil.
           </Text>
 
           <View style={styles.optionsContainer}>
             <TouchableOpacity
-              style={[styles.option, selected === 'fr' && styles.optionSelected]}
+              style={[styles.option, { borderColor: colors.border }, selected === 'fr' && { borderColor: colors.azure }]}
               onPress={() => handleSelect('fr')}
               activeOpacity={0.7}
             >
               <Text style={styles.flagEmoji}>🇫🇷</Text>
-              <Text style={[styles.optionText, selected === 'fr' && styles.optionTextSelected]}>
+              <Text style={[styles.optionText, { color: colors.ink }, selected === 'fr' && { color: colors.azure, fontWeight: '600' }]}>
                 Français
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.option, selected === 'ht' && styles.optionSelected]}
+              style={[styles.option, { borderColor: colors.border }, selected === 'ht' && { borderColor: colors.azure }]}
               onPress={() => handleSelect('ht')}
               activeOpacity={0.7}
             >
               <Text style={styles.flagEmoji}>🇭🇹</Text>
-              <Text style={[styles.optionText, selected === 'ht' && styles.optionTextSelected]}>
+              <Text style={[styles.optionText, { color: colors.ink }, selected === 'ht' && { color: colors.azure, fontWeight: '600' }]}>
                 Kreyòl Ayisyen
               </Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.confirmButton, { backgroundColor: colors.azure }]} onPress={handleConfirm} activeOpacity={0.85}>
             <Text style={styles.confirmButtonText}>Continuer</Text>
           </TouchableOpacity>
         </View>

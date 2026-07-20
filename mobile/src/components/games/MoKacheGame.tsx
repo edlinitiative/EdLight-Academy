@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CalendarCheck, Shuffle, Lightbulb, Share2, Delete, CornerDownLeft } from 'lucide-react-native';
 import { MO_KACHE_WORDS, WORD_LENGTH, isPlayableWordShape } from '../../data/moKacheWords';
 import { todayStr } from '../../services/streakService';
+import { useColors } from '../../theme/theme';
 
 const MAX_GUESSES = 6;
 const KEY_ROWS = ['AZERTYUIOP', 'QSDFGHJKLM', '↵WXCVBN⌫'];
@@ -74,6 +75,14 @@ interface MoKacheGameProps {
 }
 
 export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameProps) {
+  const colors = useColors();
+  // Themed grid tiles — coloured states (correct/present/absent) stay as-is;
+  // the filled/empty (white) tiles follow the surface so they read in dark.
+  const tileColors: Record<TileState, { bg: string; border: string; text: string }> = {
+    ...TILE_COLORS,
+    filled: { bg: colors.surface, border: colors.faint, text: colors.ink },
+    empty: { bg: colors.surface, border: colors.border, text: colors.ink },
+  };
   const today = todayStr();
   const [mode, setMode] = useState<'daily' | 'practice'>('daily');
   const [practiceNonce, setPracticeNonce] = useState(0);
@@ -196,7 +205,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
   return (
     <ScrollView
       className="flex-1"
-      style={{ backgroundColor: '#f4f6fb' }}
+      style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 12, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
@@ -206,10 +215,10 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
           onPress={() => setMode('daily')}
           activeOpacity={0.85}
           className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-          style={{ backgroundColor: mode === 'daily' ? ACCENT : '#ffffff', borderWidth: 1, borderColor: mode === 'daily' ? ACCENT : '#e2e8f0' }}
+          style={{ backgroundColor: mode === 'daily' ? ACCENT : colors.surface, borderWidth: 1, borderColor: mode === 'daily' ? ACCENT : colors.border }}
         >
-          <CalendarCheck color={mode === 'daily' ? '#fff' : '#64748b'} size={14} />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: mode === 'daily' ? '#fff' : '#334155' }}>
+          <CalendarCheck color={mode === 'daily' ? '#fff' : colors.muted} size={14} />
+          <Text style={{ fontSize: 13, fontWeight: '700', color: mode === 'daily' ? '#fff' : colors.muted }}>
             {isCreole ? 'Mo jou a' : 'Mot du jour'}
           </Text>
         </TouchableOpacity>
@@ -217,10 +226,10 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
           onPress={() => { setMode('practice'); setPracticeNonce((n) => n + 1); }}
           activeOpacity={0.85}
           className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-          style={{ backgroundColor: mode === 'practice' ? ACCENT : '#ffffff', borderWidth: 1, borderColor: mode === 'practice' ? ACCENT : '#e2e8f0' }}
+          style={{ backgroundColor: mode === 'practice' ? ACCENT : colors.surface, borderWidth: 1, borderColor: mode === 'practice' ? ACCENT : colors.border }}
         >
-          <Shuffle color={mode === 'practice' ? '#fff' : '#64748b'} size={14} />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: mode === 'practice' ? '#fff' : '#334155' }}>
+          <Shuffle color={mode === 'practice' ? '#fff' : colors.muted} size={14} />
+          <Text style={{ fontSize: 13, fontWeight: '700', color: mode === 'practice' ? '#fff' : colors.muted }}>
             {isCreole ? 'Antrennman' : 'Entraînement'}
           </Text>
         </TouchableOpacity>
@@ -236,7 +245,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
               {Array.from({ length: WORD_LENGTH }).map((_, col) => {
                 const letter = guess[col] || '';
                 const st: TileState = evaln ? evaln[col] : letter ? 'filled' : 'empty';
-                const c = TILE_COLORS[st];
+                const c = tileColors[st];
                 return (
                   <View
                     key={col}
@@ -265,7 +274,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
         showHint ? (
           <View className="flex-row items-center gap-1.5 mt-4 px-6">
             <Lightbulb color={ACCENT} size={14} />
-            <Text style={{ fontSize: 13, color: '#334155', flexShrink: 1 }}>
+            <Text style={{ fontSize: 13, color: colors.muted, flexShrink: 1 }}>
               {isCreole ? entry.hintHt : entry.hint}
             </Text>
           </View>
@@ -273,7 +282,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
           <TouchableOpacity
             onPress={() => setShowHint(true)}
             activeOpacity={0.85}
-            className="flex-row items-center gap-1.5 rounded-full px-4 py-2 mt-4 bg-white border border-gray-200"
+            className="flex-row items-center gap-1.5 rounded-full px-4 py-2 mt-4 border"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
           >
             <Lightbulb color={ACCENT} size={14} />
             <Text style={{ fontSize: 13, fontWeight: '700', color: ACCENT }}>
@@ -286,14 +296,14 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
       {/* End panel */}
       {over && (
         <View className="items-center px-6 mt-5 w-full">
-          <Text style={{ fontSize: 16, color: '#334155', textAlign: 'center' }}>
+          <Text style={{ fontSize: 16, color: colors.muted, textAlign: 'center' }}>
             {state === 'won'
               ? (isCreole ? 'Bravo !' : 'Bravo !')
               : (isCreole ? 'Mo a te:' : 'Le mot était :')}{' '}
-            <Text style={{ fontWeight: '800', color: '#0f172a' }}>{entry.display}</Text>
+            <Text style={{ fontWeight: '800', color: colors.ink }}>{entry.display}</Text>
           </Text>
           {!!entry.hint && (
-            <Text style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 4 }}>
+            <Text style={{ fontSize: 13, color: colors.faint, textAlign: 'center', marginTop: 4 }}>
               {isCreole ? entry.hintHt : entry.hint}
             </Text>
           )}
@@ -325,23 +335,24 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
                 onPress={() => setPracticeNonce((n) => n + 1)}
                 activeOpacity={0.85}
                 className="w-full items-center justify-center py-4 rounded-2xl mb-3"
-                style={{ backgroundColor: state === 'won' ? '#ffffff' : ACCENT, borderWidth: state === 'won' ? 1 : 0, borderColor: '#e2e8f0' }}
+                style={{ backgroundColor: state === 'won' ? colors.surface : ACCENT, borderWidth: state === 'won' ? 1 : 0, borderColor: colors.border }}
               >
-                <Text style={{ fontSize: 16, fontWeight: '700', color: state === 'won' ? '#334155' : '#ffffff' }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: state === 'won' ? colors.muted : '#ffffff' }}>
                   {isCreole ? 'Yon lòt mo' : 'Un autre mot'}
                 </Text>
               </TouchableOpacity>
             ) : (
-              <Text style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: colors.faint, textAlign: 'center', marginBottom: 12 }}>
                 {isCreole ? 'Retounen demen pou yon nouvo mo !' : 'Revenez demain pour un nouveau mot !'}
               </Text>
             )}
             <TouchableOpacity
               onPress={onExit}
               activeOpacity={0.85}
-              className="w-full items-center justify-center py-4 rounded-2xl border border-gray-300 bg-white"
+              className="w-full items-center justify-center py-4 rounded-2xl border"
+              style={{ borderColor: colors.border, backgroundColor: colors.surface }}
             >
-              <Text className="text-gray-700 font-semibold text-base">
+              <Text className="font-semibold text-base" style={{ color: colors.muted }}>
                 ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
               </Text>
             </TouchableOpacity>
@@ -369,15 +380,15 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
                       borderRadius: 8,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: kc ? kc.bg : '#e2e8f0',
+                      backgroundColor: kc ? kc.bg : colors.surfaceAlt,
                     }}
                   >
                     {k === '↵' ? (
-                      <CornerDownLeft color={kc ? kc.text : '#0f172a'} size={18} />
+                      <CornerDownLeft color={kc ? kc.text : colors.ink} size={18} />
                     ) : k === '⌫' ? (
-                      <Delete color={kc ? kc.text : '#0f172a'} size={18} />
+                      <Delete color={kc ? kc.text : colors.ink} size={18} />
                     ) : (
-                      <Text style={{ fontSize: 16, fontWeight: '700', color: kc ? kc.text : '#0f172a' }}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: kc ? kc.text : colors.ink }}>
                         {k}
                       </Text>
                     )}

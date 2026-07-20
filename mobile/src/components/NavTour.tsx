@@ -7,6 +7,7 @@ import {
   LayoutDashboard, BookOpen, ClipboardList, Zap, User,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 
 // Must mirror TabNavigator's floating-pill geometry so the spotlights line up
 // exactly over the real tabs.
@@ -76,6 +77,7 @@ const STEPS: Step[] = [
 
 export default function NavTour() {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const hydrated = useStore((s) => s.hydrated);
   const languageChosen = useStore((s) => s.languageChosen);
   const tourCompleted = useStore((s) => s.tourCompleted);
@@ -131,11 +133,11 @@ export default function NavTour() {
             pointerEvents="none"
             style={[
               styles.spotlight,
-              { left: spotLeft, top: spotTop, width: spotW, height: spotH },
+              { backgroundColor: colors.surface, left: spotLeft, top: spotTop, width: spotW, height: spotH },
             ]}
           >
-            <Icon color={PRIMARY} size={22} />
-            <Text style={styles.spotLabel} numberOfLines={1}>
+            <Icon color={colors.azure} size={22} />
+            <Text style={[styles.spotLabel, { color: colors.azure }]} numberOfLines={1}>
               {isCreole ? step.title.ht : step.title.fr}
             </Text>
           </View>
@@ -145,28 +147,28 @@ export default function NavTour() {
         <View
           style={[
             styles.tip,
-            { width: TIP_W },
+            { backgroundColor: colors.surface, width: TIP_W },
             hasTab
               ? { left: tipLeft, bottom: SCREEN_H - barTop + 16 }
               : { left: (SCREEN_W - TIP_W) / 2, top: SCREEN_H * 0.4 },
           ]}
         >
           {!hasTab && (
-            <View style={styles.tipIcon}>
-              <Icon color={PRIMARY} size={26} />
+            <View style={[styles.tipIcon, { backgroundColor: colors.azureSoft }]}>
+              <Icon color={colors.azure} size={26} />
             </View>
           )}
-          <Text style={styles.tipTitle}>{isCreole ? step.title.ht : step.title.fr}</Text>
-          <Text style={styles.tipBody}>{isCreole ? step.body.ht : step.body.fr}</Text>
+          <Text style={[styles.tipTitle, { color: colors.ink }]}>{isCreole ? step.title.ht : step.title.fr}</Text>
+          <Text style={[styles.tipBody, { color: colors.muted }]}>{isCreole ? step.body.ht : step.body.fr}</Text>
 
           {/* Dots + Next */}
           <View style={styles.tipFooter}>
             <View style={styles.dots}>
               {STEPS.map((_, i) => (
-                <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
+                <View key={i} style={[styles.dot, { backgroundColor: colors.border }, i === index && { width: 18, backgroundColor: colors.azure }]} />
               ))}
             </View>
-            <TouchableOpacity style={styles.nextBtn} onPress={next} activeOpacity={0.85}>
+            <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.azure }]} onPress={next} activeOpacity={0.85}>
               <Text style={styles.nextText}>
                 {isLast ? (isCreole ? 'Fini' : 'Terminer') : (isCreole ? 'Swivan' : 'Suivant')}
               </Text>
@@ -174,7 +176,7 @@ export default function NavTour() {
           </View>
 
           {/* Downward arrow toward the tab */}
-          {hasTab && <View style={[styles.arrow, { left: arrowLeft }]} />}
+          {hasTab && <View style={[styles.arrow, { borderTopColor: colors.surface, left: arrowLeft }]} />}
         </View>
       </TouchableOpacity>
     </Modal>

@@ -4,15 +4,10 @@ import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { History, Play, X } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { useTheme } from '../theme/theme';
 import { TabParamList } from '../navigation/TabNavigator';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
-
-const ACCENT: Record<string, string> = {
-  lesson: '#1B6FE0',
-  exam: '#1B6FE0',
-  quiz: '#1B6FE0',
-};
 
 const EYEBROW: Record<string, string> = {
   lesson: 'Leçon',
@@ -28,6 +23,7 @@ const EYEBROW_HT: Record<string, string> = {
 
 export default function ResumeBanner() {
   const navigation = useNavigation<Nav>();
+  const { colors, cardSurface } = useTheme();
   const lastActivity = useStore((s) => s.lastActivity);
   const clearActivity = useStore((s) => s.clearActivity);
   const language = useStore((s) => s.language);
@@ -36,7 +32,7 @@ export default function ResumeBanner() {
 
   if (!lastActivity) return null;
 
-  const accent = ACCENT[lastActivity.type] ?? '#1B6FE0';
+  const accent = colors.azure;
   const eyebrow = t(EYEBROW[lastActivity.type] ?? 'Activité', EYEBROW_HT[lastActivity.type] ?? 'Aktivite');
 
   function handleResume() {
@@ -50,15 +46,7 @@ export default function ResumeBanner() {
   return (
     <View
       style={{
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: '#e8edf5',
-        shadowColor: '#1B6FE0',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-        elevation: 2,
+        ...cardSurface,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 12,
@@ -90,14 +78,14 @@ export default function ResumeBanner() {
           {eyebrow}
         </Text>
         <Text
-          style={{ fontSize: 13, fontWeight: '600', color: '#111827' }}
+          style={{ fontSize: 13, fontWeight: '600', color: colors.ink }}
           numberOfLines={1}
         >
           {lastActivity.title}
         </Text>
         {lastActivity.subtitle ? (
           <Text
-            style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}
+            style={{ fontSize: 11, color: colors.muted, marginTop: 1 }}
             numberOfLines={1}
           >
             {lastActivity.subtitle}
@@ -131,7 +119,7 @@ export default function ResumeBanner() {
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={{ flexShrink: 0 }}
       >
-        <X color="#9ca3af" size={16} />
+        <X color={colors.faint} size={16} />
       </TouchableOpacity>
     </View>
   );

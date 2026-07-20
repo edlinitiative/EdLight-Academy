@@ -4,7 +4,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Flame, Trophy, Zap, LogOut, Languages, Trash2,
+  Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, Target, BookOpen, Bell, ChevronRight,
   Sprout, Brain,
 } from 'lucide-react-native';
@@ -18,7 +18,7 @@ import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import Leaderboard from '../components/Leaderboard';
-import { colors, radius, shadow, cardSurface } from '../theme/theme';
+import { useColors, useTheme, radius } from '../theme/theme';
 import {
   areNotificationsEnabled,
   setNotificationsEnabled as persistNotificationsEnabled,
@@ -43,6 +43,7 @@ function StatTile({
   label: string;
   iconBg: string;
 }) {
+  const { colors, cardSurface } = useTheme();
   return (
     <View style={{ flex: 1, ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: iconBg }}>
@@ -74,6 +75,7 @@ function SettingRow({
   onPress?: () => void;
   last?: boolean;
 }) {
+  const colors = useColors();
   const Body = (
     <View
       style={{
@@ -107,6 +109,7 @@ function SettingRow({
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink, marginBottom: 12 }}>{children}</Text>
   );
@@ -115,6 +118,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 // ── main screen ───────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
+  const { colors, cardSurface, shadow } = useTheme();
   const {
     user,
     isAuthenticated,
@@ -325,25 +329,20 @@ export default function ProfileScreen() {
                 colors={['#2E86F0', '#1B6FE0', '#0857A6']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ padding: 18 }}
+                style={{ paddingHorizontal: 16, paddingVertical: 13 }}
               >
-                <View className="flex-row items-center justify-between" style={{ marginBottom: 12 }}>
+                <View className="flex-row items-center justify-between" style={{ marginBottom: 9 }}>
                   <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <View style={{ width: 34, height: 34, borderRadius: radius.tile, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
-                      <Zap color="#fff" size={18} />
-                    </View>
-                    <Text style={{ color: '#fff', fontSize: 17, fontWeight: '800' }}>
+                    <Zap color="#fff" size={16} />
+                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
                       {t('Niveau', 'Nivo')} {level.level}
                     </Text>
                   </View>
-                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
                 </View>
-                <View style={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
-                  <View style={{ width: `${Math.min(100, Math.max(0, progressPct))}%`, height: 8, borderRadius: 4, backgroundColor: '#fff' }} />
+                <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
+                  <View style={{ width: `${Math.min(100, Math.max(0, progressPct))}%`, height: 6, borderRadius: 3, backgroundColor: '#fff' }} />
                 </View>
-                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 8 }}>
-                  {t('Progression vers le niveau', 'Pwogrè vè nivo')} {level.level + 1}
-                </Text>
               </LinearGradient>
             </PressableScale>
           </View>
@@ -371,27 +370,28 @@ export default function ProfileScreen() {
 
         {/* Achievements */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-          <View style={{ ...cardSurface, padding: 16 }}>
+          <View style={{ ...cardSurface, padding: 14 }}>
             <SectionTitle>{t('Succès', 'Siksè')}</SectionTitle>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 16 }}>
+            {/* One compact row of badges — was a tall 2-row grid. */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               {[
-                { label: t('1er jour', '1ye jou'), target: 1, Icon: Sprout },
-                { label: t('7 jours', '7 jou'), target: 7, Icon: Flame },
-                { label: t('30 jours', '30 jou'), target: 30, Icon: Zap },
-                { label: t('100 jours', '100 jou'), target: 100, Icon: Trophy },
+                { label: t('1j', '1j'), target: 1, Icon: Sprout },
+                { label: t('7j', '7j'), target: 7, Icon: Flame },
+                { label: t('30j', '30j'), target: 30, Icon: Zap },
+                { label: t('100j', '100j'), target: 100, Icon: Trophy },
                 { label: t('10 quiz', '10 quiz'), target: 10, isQuiz: true, Icon: Target },
                 { label: t('50 quiz', '50 quiz'), target: 50, isQuiz: true, Icon: Brain },
               ].map((a) => {
                 const current = a.isQuiz ? totalQuizzes : (streak?.longestStreak ?? 0);
                 const unlocked = current >= a.target;
                 return (
-                  <View key={a.label} className="items-center" style={{ width: '33.33%', gap: 6 }}>
+                  <View key={a.label} className="items-center" style={{ gap: 5 }}>
                     <View
-                      style={{ width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: unlocked ? colors.azureSoft : '#f3f4f6', borderWidth: 1, borderColor: colors.border }}
+                      style={{ width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: unlocked ? colors.azureSoft : colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }}
                     >
-                      <a.Icon color={unlocked ? colors.azure : '#9ca3af'} size={24} />
+                      <a.Icon color={unlocked ? colors.azure : colors.faint} size={20} />
                     </View>
-                    <Text style={{ fontSize: 11, textAlign: 'center', fontWeight: '600', color: unlocked ? colors.ink : '#9ca3af' }}>{a.label}</Text>
+                    <Text style={{ fontSize: 10, textAlign: 'center', fontWeight: '600', color: unlocked ? colors.ink : colors.faint }}>{a.label}</Text>
                   </View>
                 );
               })}
@@ -416,8 +416,14 @@ export default function ProfileScreen() {
               accessory={<ChevronRight color="#cbd5e1" size={18} />}
               onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
             />
-            {/* Dark theme isn't implemented app-wide yet — toggle hidden so it
-                isn't misleading. Re-add when a full dark mode ships. */}
+            <SettingRow
+              icon={theme === 'dark' ? <Sun color={colors.warn} size={18} /> : <Moon color={colors.muted} size={18} />}
+              iconBg={colors.azureSoft}
+              label={t('Thème', 'Tèm')}
+              sublabel={theme === 'dark' ? t('Mode nuit', 'Mòd nwit') : t('Mode jour', 'Mòd jou')}
+              accessory={<ChevronRight color="#cbd5e1" size={18} />}
+              onPress={toggleTheme}
+            />
             <SettingRow
               icon={<Bell color={colors.azure} size={18} />}
               iconBg={colors.azureSoft}

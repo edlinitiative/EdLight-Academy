@@ -25,6 +25,7 @@ import Markdown from 'react-native-markdown-display';
 import useStore from '../contexts/store';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
 import { tapLight, tapMedium } from '../utils/haptics';
+import { useColors, type Palette } from '../theme/theme';
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -44,50 +45,52 @@ const nextId = () => `msg-${Date.now()}-${msgSeq++}`;
 
 // ── markdown styles (Sandra bubbles) ─────────────────────────────────────────
 
-const markdownStyles = {
-  body: { color: '#0f172a', fontSize: 14, lineHeight: 21 },
+const markdownStylesFor = (colors: Palette) => ({
+  body: { color: colors.ink, fontSize: 14, lineHeight: 21 },
   paragraph: { marginTop: 0, marginBottom: 8 },
-  heading1: { fontSize: 18, fontWeight: '800' as const, color: '#0f172a', marginBottom: 6 },
-  heading2: { fontSize: 16, fontWeight: '700' as const, color: '#0f172a', marginBottom: 6 },
-  heading3: { fontSize: 15, fontWeight: '700' as const, color: '#0f172a', marginBottom: 4 },
+  heading1: { fontSize: 18, fontWeight: '800' as const, color: colors.ink, marginBottom: 6 },
+  heading2: { fontSize: 16, fontWeight: '700' as const, color: colors.ink, marginBottom: 6 },
+  heading3: { fontSize: 15, fontWeight: '700' as const, color: colors.ink, marginBottom: 4 },
   strong: { fontWeight: '700' as const },
   bullet_list: { marginBottom: 8 },
   ordered_list: { marginBottom: 8 },
   list_item: { marginBottom: 2 },
   code_inline: {
-    backgroundColor: '#eef2f9',
-    color: '#1B6FE0',
+    backgroundColor: colors.border,
+    color: colors.azure,
     borderRadius: 4,
     paddingHorizontal: 4,
     fontSize: 13,
   },
   code_block: {
-    backgroundColor: '#eef2f9',
+    backgroundColor: colors.border,
     borderRadius: 8,
     padding: 10,
     fontSize: 13,
-    color: '#0f172a',
+    color: colors.ink,
   },
   fence: {
-    backgroundColor: '#eef2f9',
+    backgroundColor: colors.border,
     borderRadius: 8,
     padding: 10,
     fontSize: 13,
-    color: '#0f172a',
+    color: colors.ink,
   },
   blockquote: {
-    backgroundColor: '#f4f7fb',
-    borderLeftColor: '#1B6FE0',
+    backgroundColor: colors.surfaceAlt,
+    borderLeftColor: colors.azure,
     borderLeftWidth: 3,
     paddingHorizontal: 10,
     marginBottom: 8,
   },
-  link: { color: '#1B6FE0' },
-};
+  link: { color: colors.azure },
+});
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
 function TypingDots({ label }: { label: string }) {
+  const colors = useColors();
+  const bubbleStyles = bubbleStylesFor(colors);
   const dots = useRef([new Animated.Value(0.3), new Animated.Value(0.3), new Animated.Value(0.3)]).current;
 
   useEffect(() => {
@@ -111,11 +114,11 @@ function TypingDots({ label }: { label: string }) {
         {dots.map((v, i) => (
           <Animated.View
             key={i}
-            style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#1B6FE0', opacity: v }}
+            style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.azure, opacity: v }}
           />
         ))}
       </View>
-      <Text className="text-xs text-gray-500">{label}</Text>
+      <Text className="text-xs text-gray-500 dark:text-slate-400">{label}</Text>
     </View>
   );
 }
@@ -127,9 +130,10 @@ function SandraBubble({
   text: string;
   onLinkPress?: (url: string) => boolean;
 }) {
+  const colors = useColors();
   return (
-    <View className="self-start max-w-[85%]" style={bubbleStyles.sandra}>
-      <Markdown style={markdownStyles} onLinkPress={onLinkPress}>
+    <View className="self-start max-w-[85%]" style={bubbleStylesFor(colors).sandra}>
+      <Markdown style={markdownStylesFor(colors)} onLinkPress={onLinkPress}>
         {text}
       </Markdown>
     </View>
@@ -137,38 +141,39 @@ function SandraBubble({
 }
 
 function UserBubble({ text }: { text: string }) {
+  const colors = useColors();
   return (
-    <View className="self-end max-w-[85%]" style={bubbleStyles.user}>
+    <View className="self-end max-w-[85%]" style={bubbleStylesFor(colors).user}>
       <Text className="text-white text-sm leading-5">{text}</Text>
     </View>
   );
 }
 
-const bubbleStyles = {
+const bubbleStylesFor = (colors: Palette) => ({
   sandra: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e8edf5',
+    borderColor: colors.border,
     borderRadius: 16,
     borderBottomLeftRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 10,
-    shadowColor: '#1B6FE0',
+    shadowColor: colors.azure,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 1,
   },
   user: {
-    backgroundColor: '#1B6FE0',
+    backgroundColor: colors.azure,
     borderRadius: 16,
     borderBottomRightRadius: 4,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 10,
   },
-};
+});
 
 // ── main screen ───────────────────────────────────────────────────────────────
 
@@ -181,6 +186,7 @@ export default function SandraScreen({
   onNavigate?: (path: string) => void;
 }) {
   const { user, language, toggleAuthModal } = useStore();
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -298,21 +304,21 @@ export default function SandraScreen({
 
   if (!user) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }}>
         <View className="flex-row items-center justify-between px-4 py-3">
           <View className="flex-row items-center gap-2">
             <Sparkles size={20} color="#E0532F" />
-            <Text className="text-lg font-bold text-gray-900">Sandra</Text>
+            <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">Sandra</Text>
           </View>
           {onClose ? (
             <TouchableOpacity
               onPress={onClose}
               activeOpacity={0.75}
               className="w-9 h-9 rounded-full items-center justify-center"
-              style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e8edf5' }}
+              style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
               accessibilityLabel={t('Fermer', 'Fèmen')}
             >
-              <X size={18} color="#0f172a" />
+              <X size={18} color={colors.ink} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -320,10 +326,10 @@ export default function SandraScreen({
           <View
             className="w-full items-center rounded-2xl p-6"
             style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: colors.surface,
               borderWidth: 1,
-              borderColor: '#e8edf5',
-              shadowColor: '#1B6FE0',
+              borderColor: colors.border,
+              shadowColor: colors.azure,
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.06,
               shadowRadius: 6,
@@ -332,14 +338,14 @@ export default function SandraScreen({
           >
             <View
               className="w-14 h-14 rounded-full items-center justify-center mb-4"
-              style={{ backgroundColor: '#fdeae4' }}
+              style={{ backgroundColor: colors.coralSoft }}
             >
               <Lock size={24} color="#E0532F" />
             </View>
-            <Text className="text-base font-bold text-gray-900 text-center mb-2">
+            <Text className="text-base font-bold text-gray-900 dark:text-slate-100 text-center mb-2">
               {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
             </Text>
-            <Text className="text-sm text-gray-500 text-center mb-5">
+            <Text className="text-sm text-gray-500 dark:text-slate-400 text-center mb-5">
               {t(
                 'Sandra est votre tutrice IA. Créez un compte gratuit pour lui poser vos questions.',
                 'Sandra se titris IA ou. Kreye yon kont gratis pou poze l kesyon ou yo.',
@@ -349,7 +355,7 @@ export default function SandraScreen({
               onPress={toggleAuthModal}
               activeOpacity={0.8}
               className="rounded-full px-6 py-3"
-              style={{ backgroundColor: '#1B6FE0' }}
+              style={{ backgroundColor: colors.azure }}
             >
               <Text className="text-white font-bold text-sm">
                 {t('Se connecter', 'Konekte')}
@@ -364,7 +370,7 @@ export default function SandraScreen({
   // ── chat ────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: '#f6f9fd' }}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.bg }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -373,18 +379,18 @@ export default function SandraScreen({
         {/* Header */}
         <View
           className="flex-row items-center justify-between px-4 py-3"
-          style={{ backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e8edf5' }}
+          style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}
         >
           <View className="flex-row items-center gap-3">
             <View
               className="w-10 h-10 rounded-full items-center justify-center"
-              style={{ backgroundColor: '#fdeae4' }}
+              style={{ backgroundColor: colors.coralSoft }}
             >
               <Sparkles size={20} color="#E0532F" />
             </View>
             <View>
-              <Text className="text-lg font-bold text-gray-900">Sandra</Text>
-              <Text className="text-xs text-gray-500">
+              <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">Sandra</Text>
+              <Text className="text-xs text-gray-500 dark:text-slate-400">
                 {t('Votre tutrice IA', 'Titris IA ou')}
               </Text>
             </View>
@@ -394,20 +400,20 @@ export default function SandraScreen({
               onPress={handleReset}
               activeOpacity={0.75}
               className="w-9 h-9 rounded-full items-center justify-center"
-              style={{ backgroundColor: '#f4f7fb', borderWidth: 1, borderColor: '#e8edf5' }}
+              style={{ backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }}
               accessibilityLabel={t('Nouvelle conversation', 'Nouvo konvèsasyon')}
             >
-              <RotateCcw size={16} color="#1B6FE0" />
+              <RotateCcw size={16} color={colors.azure} />
             </TouchableOpacity>
             {onClose ? (
               <TouchableOpacity
                 onPress={onClose}
                 activeOpacity={0.75}
                 className="w-9 h-9 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#f4f7fb', borderWidth: 1, borderColor: '#e8edf5' }}
+                style={{ backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }}
                 accessibilityLabel={t('Fermer', 'Fèmen')}
               >
-                <X size={18} color="#0f172a" />
+                <X size={18} color={colors.ink} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -417,6 +423,7 @@ export default function SandraScreen({
         <ScrollView
           ref={scrollRef}
           className="flex-1"
+          style={{ backgroundColor: colors.bg }}
           contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           keyboardShouldPersistTaps="handled"
@@ -439,13 +446,13 @@ export default function SandraScreen({
                     activeOpacity={0.75}
                     className="rounded-full px-4 py-2"
                     style={{
-                      backgroundColor: '#ffffff',
+                      backgroundColor: colors.surface,
                       borderWidth: 1,
-                      borderColor: '#cfdff2',
+                      borderColor: colors.azureBorder,
                       opacity: sending ? 0.5 : 1,
                     }}
                   >
-                    <Text className="text-xs font-semibold" style={{ color: '#1B6FE0' }}>
+                    <Text className="text-xs font-semibold" style={{ color: colors.azure }}>
                       {s}
                     </Text>
                   </TouchableOpacity>
@@ -519,9 +526,9 @@ export default function SandraScreen({
         <View
           className="flex-row items-end gap-2 px-3 pt-2"
           style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: colors.surface,
             borderTopWidth: 1,
-            borderTopColor: '#e8edf5',
+            borderTopColor: colors.border,
             // Clear the home indicator when the keyboard is down; small pad when up.
             paddingBottom: Math.max(insets.bottom, 8),
           }}
@@ -532,12 +539,12 @@ export default function SandraScreen({
             multiline
             maxLength={MAX_CHARS}
             placeholder={t('Posez votre question…', 'Poze kesyon ou…')}
-            placeholderTextColor="#94a3b8"
-            className="flex-1 text-sm text-gray-900"
+            placeholderTextColor={colors.faint}
+            className="flex-1 text-sm text-gray-900 dark:text-slate-100"
             style={{
-              backgroundColor: '#f4f7fb',
+              backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
-              borderColor: '#e8edf5',
+              borderColor: colors.border,
               borderRadius: 20,
               paddingHorizontal: 14,
               paddingTop: 10,
@@ -551,7 +558,7 @@ export default function SandraScreen({
             activeOpacity={0.8}
             className="w-11 h-11 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#1B6FE0',
+              backgroundColor: colors.azure,
               opacity: sending || !input.trim() ? 0.4 : 1,
             }}
             accessibilityLabel={t('Envoyer', 'Voye')}

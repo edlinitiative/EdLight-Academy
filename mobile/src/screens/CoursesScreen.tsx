@@ -15,6 +15,7 @@ import useStore from '../contexts/store';
 import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
+import { useColors, Palette } from '../theme/theme';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
 
@@ -47,15 +48,15 @@ function countLessons(course: any): number {
   return units.reduce((s: number, u: any) => s + (u?.lessons?.length ?? 0), 0) || course?.videoCount || 0;
 }
 
-const cardShadow = {
-  shadowColor: '#1B6FE0',
+const cardShadowFor = (colors: Palette) => ({
+  shadowColor: colors.azure,
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.06,
   shadowRadius: 6,
   elevation: 2,
   borderWidth: 1,
-  borderColor: '#e8edf5',
-} as const;
+  borderColor: colors.border,
+} as const);
 
 function CourseCard({
   course,
@@ -66,9 +67,10 @@ function CourseCard({
   completedCount: number;
   onPress: () => void;
 }) {
+  const colors = useColors();
   const totalLessons = countLessons(course);
   const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
-  const color = course.color ?? '#1B6FE0';
+  const color = course.color ?? colors.azure;
   const soon = !!course.comingSoon;
 
   return (
@@ -76,8 +78,8 @@ function CourseCard({
       onPress={soon ? undefined : onPress}
       disabled={soon}
       activeOpacity={0.85}
-      className="bg-white rounded-2xl mb-3"
-      style={[cardShadow, soon ? { opacity: 0.7 } : null]}
+      className="bg-white dark:bg-[#131c2e] rounded-2xl mb-3"
+      style={[cardShadowFor(colors), soon ? { opacity: 0.7 } : null]}
     >
       <View className="p-4">
         <View className="flex-row items-center gap-3">
@@ -88,19 +90,19 @@ function CourseCard({
             <BookOpen color={color} size={20} />
           </View>
           <View className="flex-1">
-            <Text className="font-bold text-gray-900 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
-            <Text className="text-xs text-gray-400 mt-1">{soon ? 'Cours en préparation' : `${totalLessons} leçons`}</Text>
+            <Text className="font-bold text-gray-900 dark:text-slate-100 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
+            <Text className="text-xs text-gray-400 dark:text-slate-500 mt-1">{soon ? 'Cours en préparation' : `${totalLessons} leçons`}</Text>
           </View>
           {soon ? (
-            <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-              <Text style={{ color: '#1B6FE0', fontSize: 11, fontWeight: '700' }}>Bientôt</Text>
+            <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
+              <Text style={{ color: colors.azure, fontSize: 11, fontWeight: '700' }}>Bientôt</Text>
             </View>
           ) : (
             <View className="items-end flex-shrink-0">
-              <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : '#9ca3af' }}>
+              <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : colors.faint }}>
                 {pct}%
               </Text>
-              <ChevronRight color="#9ca3af" size={16} className="mt-1" />
+              <ChevronRight color={colors.faint} size={16} className="mt-1" />
             </View>
           )}
         </View>
@@ -119,13 +121,14 @@ function DrillCard({
 }: {
   title: string; subtitle: string; badge: string; color: string; Icon: any; onPress: () => void; comingSoon?: boolean;
 }) {
+  const colors = useColors();
   return (
     <TouchableOpacity
       onPress={comingSoon ? undefined : onPress}
       disabled={comingSoon}
       activeOpacity={0.85}
-      className="bg-white rounded-2xl mb-3"
-      style={[cardShadow, comingSoon ? { opacity: 0.7 } : null]}
+      className="bg-white dark:bg-[#131c2e] rounded-2xl mb-3"
+      style={[cardShadowFor(colors), comingSoon ? { opacity: 0.7 } : null]}
     >
       <View className="flex-row items-center p-4 gap-3">
         <View
@@ -135,17 +138,17 @@ function DrillCard({
           <Icon color={color} size={22} />
         </View>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-base">{title}</Text>
-          <Text className="text-xs text-gray-500 mt-0.5">{subtitle}</Text>
+          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{title}</Text>
+          <Text className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</Text>
         </View>
         {comingSoon ? (
-          <View style={{ backgroundColor: '#eaf2fb', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-            <Text style={{ color: '#1B6FE0', fontSize: 11, fontWeight: '700' }}>{badge}</Text>
+          <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
+            <Text style={{ color: colors.azure, fontSize: 11, fontWeight: '700' }}>{badge}</Text>
           </View>
         ) : (
           <View className="items-end flex-shrink-0 flex-row items-center gap-2">
-            <Text className="text-xs text-gray-400">{badge}</Text>
-            <ChevronRight color="#9ca3af" size={18} />
+            <Text className="text-xs text-gray-400 dark:text-slate-500">{badge}</Text>
+            <ChevronRight color={colors.faint} size={18} />
           </View>
         )}
       </View>
@@ -159,6 +162,7 @@ export default function CoursesScreen() {
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const { language, progress } = useStore();
+  const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -262,32 +266,32 @@ export default function CoursesScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {/* Header + search */}
-      <View className="px-5 pt-5 pb-3 bg-white border-b border-gray-100">
+      <View className="px-5 pt-5 pb-3 bg-white dark:bg-[#131c2e] border-b border-gray-100 dark:border-slate-700">
         <View className="flex-row items-center mb-3">
           {canGoBack && (
             <TouchableOpacity onPress={goBack} className="mr-2 -ml-1 p-1">
-              <ChevronLeft color="#374151" size={24} />
+              <ChevronLeft color={colors.muted} size={24} />
             </TouchableOpacity>
           )}
           <View className="flex-1">
-            <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a', letterSpacing: -0.5 }}>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
               {headerTitle}
             </Text>
             {headerSubtitle ? (
-              <Text style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>{headerSubtitle}</Text>
+              <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>{headerSubtitle}</Text>
             ) : null}
           </View>
         </View>
-        <View className="flex-row items-center bg-gray-50 border rounded-xl px-3" style={{ borderColor: '#e8edf5' }}>
-          <Search color="#9ca3af" size={18} />
+        <View className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3" style={{ borderColor: colors.border }}>
+          <Search color={colors.faint} size={18} />
           <TextInput
-            className="flex-1 py-3 ml-2 text-gray-900 text-sm"
+            className="flex-1 py-3 ml-2 text-gray-900 dark:text-slate-100 text-sm"
             placeholder={t('Rechercher un cours…', 'Chèche kou…')}
             value={search}
             onChangeText={setSearch}
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.faint}
           />
         </View>
       </View>
@@ -295,7 +299,7 @@ export default function CoursesScreen() {
       <ScrollView
         ref={scrollRef}
         className="flex-1 px-5 pt-4"
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#1B6FE0" />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
@@ -304,7 +308,7 @@ export default function CoursesScreen() {
             <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
           ) : (
             <>
-              <Text className="text-xs text-gray-400 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
+              <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
               {searchResults.map((course) => (
                 <CourseCard
                   key={course.id}
@@ -321,25 +325,25 @@ export default function CoursesScreen() {
             <TouchableOpacity
               activeOpacity={0.82}
               onPress={() => navigation.navigate('Quizzes', {})}
-              className="mb-4 bg-white rounded-2xl"
-              style={cardShadow}
+              className="mb-4 bg-white dark:bg-[#131c2e] rounded-2xl"
+              style={cardShadowFor(colors)}
             >
               <View className="flex-row items-center p-4 gap-3">
                 <View
                   className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#eaf2fb' }}
+                  style={{ backgroundColor: colors.azureSoft }}
                 >
-                  <BookMarked color="#1B6FE0" size={20} />
+                  <BookMarked color={colors.azure} size={20} />
                 </View>
                 <View className="flex-1">
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0f172a' }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }}>
                     {t('Banque de Questions', 'Bank Kesyon')}
                   </Text>
-                  <Text style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                  <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>
                     {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
                   </Text>
                 </View>
-                <ChevronRight color="#1B6FE0" size={20} />
+                <ChevronRight color={colors.azure} size={20} />
               </View>
             </TouchableOpacity>
 
@@ -381,7 +385,7 @@ export default function CoursesScreen() {
           <EmptyState message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')} />
         ) : (
           <>
-            <Text className="text-xs text-gray-400 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
+            <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
             {courseList.map((course) => (
               <CourseCard
                 key={course.id}

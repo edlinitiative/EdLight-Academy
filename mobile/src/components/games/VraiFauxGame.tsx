@@ -9,6 +9,7 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { X, Check, Timer, Flame } from 'lucide-react-native';
 import { buildVraiFauxItems } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
+import { useColors } from '../../theme/theme';
 
 const ROUND_SECONDS = 60;
 // Volume guard: fewer than this many answers can't reach 100% XP accuracy.
@@ -26,6 +27,7 @@ interface VraiFauxGameProps {
 export default function VraiFauxGame({
   questionsMap, isCreole, onExit, onRecord, highScore = null,
 }: VraiFauxGameProps) {
+  const colors = useColors();
   const [nonce, setNonce] = useState(0);
   const items = useMemo(() => buildVraiFauxItems(questionsMap, 80), [questionsMap, nonce]);
 
@@ -114,31 +116,31 @@ export default function VraiFauxGame({
   if (!item) return null;
 
   const urgent = timeLeft <= 10;
-  const cardBorder = feedback === 'right' ? '#10b981' : feedback === 'wrong' ? '#ef4444' : '#e5e7eb';
+  const cardBorder = feedback === 'right' ? '#10b981' : feedback === 'wrong' ? '#ef4444' : colors.border;
 
   return (
-    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: '#f4f6fb' }}>
+    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center gap-1.5">
-          <Timer color={urgent ? '#ef4444' : '#64748b'} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? '#ef4444' : '#334155' }}>
+          <Timer color={urgent ? '#ef4444' : colors.muted} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? '#ef4444' : colors.muted }}>
             {timeLeft}s
           </Text>
         </View>
-        <Text style={{ fontSize: 15, fontWeight: '800', color: '#0f172a' }}>
+        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>
           {correct}/{answered}
         </Text>
         <View className="flex-row items-center gap-1">
-          <Flame color={streak >= 3 ? '#f97316' : '#94a3b8'} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: streak >= 3 ? '#f97316' : '#64748b' }}>
+          <Flame color={streak >= 3 ? colors.warn : colors.faint} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: streak >= 3 ? colors.warn : colors.muted }}>
             {streak}
           </Text>
         </View>
       </View>
 
       {/* Time bar */}
-      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#e2e8f0' }}>
+      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
         <View
           className="h-1.5 rounded-full"
           style={{ width: `${(timeLeft / ROUND_SECONDS) * 100}%`, backgroundColor: ACCENT }}
@@ -147,8 +149,9 @@ export default function VraiFauxGame({
 
       {/* Question card */}
       <View
-        className="bg-white rounded-3xl px-5 py-6 mt-4 items-center"
+        className="rounded-3xl px-5 py-6 mt-4 items-center"
         style={{
+          backgroundColor: colors.surface,
           borderWidth: 2,
           borderColor: cardBorder,
           shadowColor: '#0f172a',
@@ -171,7 +174,7 @@ export default function VraiFauxGame({
             )}
           </View>
         )}
-        <Text style={{ fontSize: 17, fontWeight: '600', color: '#0f172a', textAlign: 'center' }}>
+        <Text style={{ fontSize: 17, fontWeight: '600', color: colors.ink, textAlign: 'center' }}>
           {isCreole ? item.qHt : item.q}
         </Text>
         <Text
@@ -180,9 +183,9 @@ export default function VraiFauxGame({
           {item.proposed}
         </Text>
         {feedback === 'wrong' && (
-          <Text style={{ fontSize: 14, color: '#64748b', textAlign: 'center', marginTop: 10 }}>
+          <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center', marginTop: 10 }}>
             {isCreole ? 'Repons kòrèk la:' : 'La bonne réponse :'}{' '}
-            <Text style={{ fontWeight: '800', color: '#0f172a' }}>{item.correctAnswer}</Text>
+            <Text style={{ fontWeight: '800', color: colors.ink }}>{item.correctAnswer}</Text>
           </Text>
         )}
       </View>
@@ -211,7 +214,7 @@ export default function VraiFauxGame({
         </TouchableOpacity>
       </View>
 
-      <Text style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 12 }}>
+      <Text style={{ fontSize: 13, color: colors.faint, textAlign: 'center', marginTop: 12 }}>
         {isCreole ? 'Èske repons ki pwopoze a kòrèk ?' : 'La réponse proposée est-elle correcte ?'}
       </Text>
     </View>

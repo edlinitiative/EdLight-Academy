@@ -10,6 +10,7 @@ import Svg, { Circle } from 'react-native-svg';
 import {
   Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw,
 } from 'lucide-react-native';
+import { useColors } from '../../theme/theme';
 
 const CIRC = 327; // 2 * π * 52
 
@@ -49,6 +50,7 @@ export default function GameOverCard({
   accent = '#1B6FE0',
   highScore = null,
 }: GameOverCardProps) {
+  const colors = useColors();
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
   let IconCmp: typeof Trophy;
@@ -78,13 +80,14 @@ export default function GameOverCard({
   return (
     <ScrollView
       className="flex-1"
-      style={{ backgroundColor: '#f4f6fb' }}
+      style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 36, paddingBottom: 48 }}
       showsVerticalScrollIndicator={false}
     >
       <View
-        className="w-full items-center bg-white rounded-3xl px-5 py-8"
+        className="w-full items-center rounded-3xl px-5 py-8"
         style={{
+          backgroundColor: colors.surface,
           shadowColor: '#0f172a',
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.08,
@@ -102,14 +105,14 @@ export default function GameOverCard({
           <IconCmp color={accent} size={34} />
         </View>
 
-        <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a', marginBottom: 16 }}>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink, marginBottom: 16 }}>
           {isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
         </Text>
 
         {/* Score ring */}
         <View className="items-center justify-center" style={{ width: 140, height: 140 }}>
           <Svg width={140} height={140} viewBox="0 0 120 120">
-            <Circle cx={60} cy={60} r={52} fill="none" stroke="#e5e7eb" strokeWidth={10} />
+            <Circle cx={60} cy={60} r={52} fill="none" stroke={colors.border} strokeWidth={10} />
             <Circle
               cx={60}
               cy={60}
@@ -124,7 +127,7 @@ export default function GameOverCard({
             />
           </Svg>
           <View className="absolute items-center justify-center">
-            <Text style={{ fontSize: 26, fontWeight: '800', color: '#111827' }}>{pct}%</Text>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink }}>{pct}%</Text>
           </View>
         </View>
 
@@ -133,10 +136,10 @@ export default function GameOverCard({
           <View className="flex-row justify-center gap-6 mt-5">
             {stats.map((s) => (
               <View key={s.label} className="items-center px-2">
-                <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink }}>
                   {s.value}
                 </Text>
-                <Text style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{s.label}</Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>{s.label}</Text>
               </View>
             ))}
           </View>
@@ -152,7 +155,7 @@ export default function GameOverCard({
           </View>
         )}
 
-        <Text style={{ fontSize: 15, color: '#334155', textAlign: 'center', marginTop: 14 }}>
+        <Text style={{ fontSize: 15, color: colors.muted, textAlign: 'center', marginTop: 14 }}>
           {isCreole ? messageHt : message}
         </Text>
 
@@ -177,7 +180,7 @@ export default function GameOverCard({
               </View>
             )}
             {reward.guest && (
-              <Text style={{ fontSize: 12, color: '#94a3b8', marginTop: 6, textAlign: 'center' }}>
+              <Text style={{ fontSize: 12, color: colors.faint, marginTop: 6, textAlign: 'center' }}>
                 {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
               </Text>
             )}
@@ -202,9 +205,10 @@ export default function GameOverCard({
           <TouchableOpacity
             onPress={onExit}
             activeOpacity={0.85}
-            className="w-full items-center justify-center py-4 rounded-2xl border border-gray-300 bg-white"
+            className="w-full items-center justify-center py-4 rounded-2xl border"
+            style={{ borderColor: colors.border, backgroundColor: colors.surface }}
           >
-            <Text className="text-gray-700 font-semibold text-base">
+            <Text className="font-semibold text-base" style={{ color: colors.muted }}>
               ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </TouchableOpacity>

@@ -12,6 +12,7 @@ import { fetchFullCatalog } from '../utils/examCatalog';
 import { normalizeSubject, normalizeExamTitle, subjectColor } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
@@ -47,6 +48,7 @@ function ExamCard({
   onPress: () => void;
 }) {
   const language = useStore((s) => s.language);
+  const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const title = normalizeExamTitle(exam);
@@ -61,8 +63,8 @@ function ExamCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.82}
-      className="bg-white rounded-2xl mb-3"
-      style={{ shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: '#e8edf5' }}
+      className="bg-white dark:bg-[#131c2e] rounded-2xl mb-3"
+      style={{ shadowColor: '#1B6FE0', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: colors.border }}
     >
       <View className="p-4">
         <View className="flex-row items-start gap-3">
@@ -75,15 +77,15 @@ function ExamCard({
               : <ClipboardList color={color} size={20} />}
           </View>
           <View className="flex-1">
-            <Text className="font-semibold text-gray-900 text-sm leading-snug" numberOfLines={2}>{title}</Text>
+            <Text className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-snug" numberOfLines={2}>{title}</Text>
             <View className="flex-row items-center gap-2 mt-1.5 flex-wrap">
               {/* Subject pill removed — the title already leads with the subject
                   (e.g. "Espagnol · Juillet 2025"), so the pill was redundant. */}
               {year ? (
-                <Text className="text-xs text-gray-400 font-medium">{year}</Text>
+                <Text className="text-xs text-gray-400 dark:text-slate-500 font-medium">{year}</Text>
               ) : null}
               {qCount > 0 ? (
-                <Text className="text-xs text-gray-400">{qCount} {t('question', 'kesyon')}{qCount > 1 ? t('s', '') : ''}</Text>
+                <Text className="text-xs text-gray-400 dark:text-slate-500">{qCount} {t('question', 'kesyon')}{qCount > 1 ? t('s', '') : ''}</Text>
               ) : null}
               {done && pct !== null ? (
                 <View className="flex-row items-center gap-1">
@@ -98,7 +100,7 @@ function ExamCard({
               ) : null}
             </View>
           </View>
-          <ChevronRight color="#9ca3af" size={18} className="mt-0.5" />
+          <ChevronRight color={colors.faint} size={18} className="mt-0.5" />
         </View>
       </View>
     </TouchableOpacity>
@@ -110,6 +112,7 @@ export default function ExamBrowserScreen() {
   const route = useRoute<Route>();
   const { level, subject: initialSubject } = route.params;
   const { user, language } = useStore();
+  const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -205,13 +208,13 @@ export default function ExamBrowserScreen() {
 
   if (loading)
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {/* Header (matches the loaded layout so nothing shifts) */}
-        <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+        <View className="flex-row items-center px-4 py-3 bg-white dark:bg-[#131c2e] border-b border-gray-100 dark:border-slate-700">
           <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 p-1">
-            <ArrowLeft color="#374151" size={22} />
+            <ArrowLeft color={colors.muted} size={22} />
           </TouchableOpacity>
-          <Text className="font-bold text-gray-900 text-base">{LEVEL_LABEL[level] ?? level}</Text>
+          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{LEVEL_LABEL[level] ?? level}</Text>
         </View>
         {/* Search bar placeholder */}
         <View className="px-4 pt-3 pb-1">
@@ -222,7 +225,7 @@ export default function ExamBrowserScreen() {
           {Array.from({ length: 7 }).map((_, i) => (
             <View
               key={i}
-              className="bg-white rounded-2xl p-4 border border-gray-100 flex-row items-center"
+              className="bg-white dark:bg-[#131c2e] rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex-row items-center"
               style={{ gap: 12 }}
             >
               <Skeleton width={44} height={44} radius={12} />
@@ -238,25 +241,25 @@ export default function ExamBrowserScreen() {
   if (error) return <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />;
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f4f6fb' }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
+      <View className="flex-row items-center px-4 py-3 bg-white dark:bg-[#131c2e] border-b border-gray-100 dark:border-slate-700">
         <TouchableOpacity onPress={() => navigation.goBack()} className="mr-3 p-1">
-          <ArrowLeft color="#374151" size={22} />
+          <ArrowLeft color={colors.muted} size={22} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 text-base">{LEVEL_LABEL[level] ?? level}</Text>
+          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{LEVEL_LABEL[level] ?? level}</Text>
           {exams.length > 0 && (
-            <Text className="text-xs text-gray-400">
+            <Text className="text-xs text-gray-400 dark:text-slate-500">
               {exams.length} {t('examens', 'egzamen')} · {doneCount} {t('terminé', 'fini')}{doneCount > 1 ? t('s', '') : ''}
             </Text>
           )}
         </View>
         <TouchableOpacity
           onPress={() => setShowFilters(true)}
-          className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl ${activeFilterCount > 0 ? 'bg-primary-600' : 'bg-gray-100'}`}
+          className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl ${activeFilterCount > 0 ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
         >
-          <SlidersHorizontal color={activeFilterCount > 0 ? '#fff' : '#6b7280'} size={16} />
+          <SlidersHorizontal color={activeFilterCount > 0 ? '#fff' : colors.muted} size={16} />
           {activeFilterCount > 0 && (
             <Text className="text-white text-xs font-bold">{activeFilterCount}</Text>
           )}
@@ -264,15 +267,15 @@ export default function ExamBrowserScreen() {
       </View>
 
       {/* Search */}
-      <View className="px-4 pt-3 pb-2 bg-white border-b border-gray-100">
-        <View className="flex-row items-center bg-gray-50 border rounded-xl px-3 mb-3" style={{ borderColor: '#e8edf5' }}>
-          <Search color="#9ca3af" size={16} />
+      <View className="px-4 pt-3 pb-2 bg-white dark:bg-[#131c2e] border-b border-gray-100 dark:border-slate-700">
+        <View className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3 mb-3" style={{ borderColor: colors.border }}>
+          <Search color={colors.faint} size={16} />
           <TextInput
-            className="flex-1 py-3 ml-2 text-sm text-gray-900"
+            className="flex-1 py-3 ml-2 text-sm text-gray-900 dark:text-slate-100"
             placeholder={t('Rechercher un examen…', 'Chèche yon egzamen…')}
             value={search}
             onChangeText={setSearch}
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={colors.faint}
           />
         </View>
         {/* Subject chips */}
@@ -281,9 +284,9 @@ export default function ExamBrowserScreen() {
             <TouchableOpacity
               key={s}
               onPress={() => setSubject(s)}
-              className={`px-3 py-1.5 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-gray-100'}`}
+              className={`px-3 py-1.5 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
             >
-              <Text className={`text-xs font-semibold ${subject === s ? 'text-white' : 'text-gray-600'}`}>{s === 'Tout' ? t('Toutes', 'Tout') : s}</Text>
+              <Text className={`text-xs font-semibold ${subject === s ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{s === 'Tout' ? t('Toutes', 'Tout') : s}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -291,7 +294,7 @@ export default function ExamBrowserScreen() {
 
       {/* Active filters row */}
       {(yearFilter !== 'Tout' || statusFilter !== 'all') && (
-        <View className="flex-row items-center gap-2 px-4 py-2 border-b" style={{ backgroundColor: '#f4f6fb', borderBottomColor: '#e8edf5' }}>
+        <View className="flex-row items-center gap-2 px-4 py-2 border-b" style={{ backgroundColor: colors.bg, borderBottomColor: colors.border }}>
           {yearFilter !== 'Tout' && (
             <TouchableOpacity
               onPress={() => setYearFilter('Tout')}
@@ -311,7 +314,7 @@ export default function ExamBrowserScreen() {
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => { setYearFilter('Tout'); setStatusFilter('all'); }}>
-            <Text className="text-primary-600 text-xs font-medium">{t('Effacer tout', 'Efase tout')}</Text>
+            <Text className="text-primary-600 dark:text-[#4C9AF5] text-xs font-medium">{t('Effacer tout', 'Efase tout')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -325,7 +328,7 @@ export default function ExamBrowserScreen() {
           <EmptyState message={t('Aucun examen trouvé.', 'Nou pa jwenn okenn egzamen.')} />
         ) : (
           <>
-            <Text className="text-xs text-gray-400 mb-3">{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
+            <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
             {filtered.map((exam, i) => {
               const examId = String(exam.exam_id ?? exam.id ?? i);
               return (
@@ -348,38 +351,38 @@ export default function ExamBrowserScreen() {
           activeOpacity={1}
           onPress={() => setShowFilters(false)}
         />
-        <View className="bg-white rounded-t-3xl px-5 pt-5 pb-10">
+        <View className="bg-white dark:bg-[#131c2e] rounded-t-3xl px-5 pt-5 pb-10">
           <View className="flex-row items-center justify-between mb-5">
-            <Text className="text-lg font-bold text-gray-900">{t('Filtres', 'Filt')}</Text>
+            <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">{t('Filtres', 'Filt')}</Text>
             <TouchableOpacity onPress={() => setShowFilters(false)}>
-              <X color="#6b7280" size={22} />
+              <X color={colors.muted} size={22} />
             </TouchableOpacity>
           </View>
 
           {/* Year filter */}
-          <Text className="text-sm font-semibold text-gray-700 mb-2">{t('Année', 'Ane')}</Text>
+          <Text className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">{t('Année', 'Ane')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-5">
             {years.map((y) => (
               <TouchableOpacity
                 key={y}
                 onPress={() => setYearFilter(y)}
-                className={`px-4 py-2 rounded-full ${yearFilter === y ? 'bg-primary-600' : 'bg-gray-100'}`}
+                className={`px-4 py-2 rounded-full ${yearFilter === y ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
               >
-                <Text className={`text-sm font-semibold ${yearFilter === y ? 'text-white' : 'text-gray-600'}`}>{y === 'Tout' ? t('Toutes', 'Tout') : y}</Text>
+                <Text className={`text-sm font-semibold ${yearFilter === y ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{y === 'Tout' ? t('Toutes', 'Tout') : y}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           {/* Status filter */}
-          <Text className="text-sm font-semibold text-gray-700 mb-2">{t('Statut', 'Eta')}</Text>
+          <Text className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">{t('Statut', 'Eta')}</Text>
           <View className="flex-row gap-3 mb-6">
             {([['all', t('Tous', 'Tout')], ['todo', t('À faire', 'Pou fè')], ['done', t('Terminés', 'Fini')]] as const).map(([val, label]) => (
               <TouchableOpacity
                 key={val}
                 onPress={() => setStatusFilter(val)}
-                className={`flex-1 py-3 rounded-xl items-center ${statusFilter === val ? 'bg-primary-600' : 'bg-gray-100'}`}
+                className={`flex-1 py-3 rounded-xl items-center ${statusFilter === val ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
               >
-                <Text className={`text-sm font-semibold ${statusFilter === val ? 'text-white' : 'text-gray-600'}`}>{label}</Text>
+                <Text className={`text-sm font-semibold ${statusFilter === val ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{label}</Text>
               </TouchableOpacity>
             ))}
           </View>

@@ -105,8 +105,8 @@ export default function TabNavigator() {
       })}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: ACTIVE,
-        tabBarInactiveTintColor: INACTIVE,
+        tabBarActiveTintColor: dark ? '#4C9AF5' : ACTIVE,
+        tabBarInactiveTintColor: dark ? '#9aa8c0' : INACTIVE,
         tabBarAllowFontScaling: false,
         // Frosted-glass pill: a translucent BlurView background lets the app
         // show through, with a thin light rim for the glass edge. The overlay is
