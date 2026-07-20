@@ -272,7 +272,7 @@ async function updateStreak(userId, courseId, previousLastStudyDate) {
     }
     
     // Calculate days difference
-    const diffTime = Math.abs(now - lastStudyDate);
+    const diffTime = Math.abs(now.getTime() - lastStudyDate.getTime());
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     let currentStreak = data.currentStreak || 1;
@@ -371,7 +371,7 @@ async function checkAchievements(userId, courseId) {
     let totalAttempts = 0;
     let perfectScores = 0;
     
-    Object.values(quizAttempts).forEach(quiz => {
+    Object.values(quizAttempts).forEach((quiz: { attempts: any[] }) => {
       totalAttempts += quiz.attempts.length;
       quiz.attempts.forEach(attempt => {
         if (attempt.score === attempt.totalQuestions) {

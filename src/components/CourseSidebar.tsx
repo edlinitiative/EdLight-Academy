@@ -90,8 +90,8 @@ export default function CourseSidebar({
   const handleKeyDown = useCallback((e) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();
-    const buttons = Array.from(listRef.current?.querySelectorAll('button[data-nav]') ?? []);
-    const current = buttons.indexOf(document.activeElement);
+    const buttons = Array.from(listRef.current?.querySelectorAll('button[data-nav]') ?? []) as HTMLElement[];
+    const current = buttons.indexOf(document.activeElement as HTMLElement);
     const next = e.key === 'ArrowDown' ? buttons[current + 1] : buttons[current - 1];
     next?.focus();
   }, []);

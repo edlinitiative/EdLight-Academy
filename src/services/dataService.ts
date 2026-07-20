@@ -34,7 +34,7 @@ const extractEnglishTitle = (title) => {
   const parts = normalized.split(/\s*[\-|/|\|]\s*/).filter(Boolean);
   if (parts.length > 1) {
     // choose segment with highest score; tie-break by longest
-    const best = parts.reduce((best, cur) => {
+    const best = parts.reduce<{ val: string; s: number } | null>((best, cur) => {
       const cand = cur.trim();
       const s = score(cand);
       if (!best || s > best.s || (s === best.s && cand.length > best.val.length)) {

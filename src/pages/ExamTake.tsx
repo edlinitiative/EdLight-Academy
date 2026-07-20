@@ -26,6 +26,16 @@ import {
 } from '../utils/examUtils';
 import { Skeleton } from '../components/Skeleton';
 
+/** Per-question grading result stored in the `questionResults` map (immediate
+ *  feedback mode). Loosely typed — the grading payload is dynamic. */
+interface QuestionResultEntry {
+  question?: unknown;
+  status?: string;
+  result?: any;
+  essayFeedback?: any;
+  [key: string]: unknown;
+}
+
 /** Run async tasks with a bounded concurrency limit so a section with many
  *  free-response questions can't fire dozens of /api/grade-essay calls at once
  *  (rate limits / cost). Mirrors the helper used in utils/examCatalog. */
@@ -348,7 +358,7 @@ const ExamTake = () => {
     () => localStorage.getItem('edlight-exam-feedback-mode') || 'end'
   );
   // Per-question results for immediate mode  { [flatIndex]: gradeResult }
-  const [questionResults, setQuestionResults] = useState({});
+  const [questionResults, setQuestionResults] = useState<Record<string, QuestionResultEntry>>({});
   // Track which questions are currently being AI-graded (essay)
   const [gradingInProgress, setGradingInProgress] = useState({});
 
@@ -2195,7 +2205,17 @@ function balanceMathDelimiters(s) {
  * LaTeX). Exposes focus() so the step dots and keyboard nav keep working.
  */
 const MathSelect = React.forwardRef(function MathSelect(
-  { id, value, options, onChange, onFocus, onBlur, disabled, ariaLabel, placeholder },
+  { id, value, options, onChange, onFocus, onBlur, disabled, ariaLabel, placeholder }: {
+    id?: string;
+    value?: string;
+    options?: any[];
+    onChange?: (val: any) => void;
+    onFocus?: () => void;
+    onBlur?: () => void;
+    disabled?: boolean;
+    ariaLabel?: string;
+    placeholder?: string;
+  },
   ref
 ) {
   const language = useStore((s) => s.language);
@@ -2323,7 +2343,15 @@ function tokenizeTemplate(template) {
  * the step-dots / Enter navigation keep working.
  */
 const TemplatedBlank = React.forwardRef(function TemplatedBlank(
-  { template, slots = [], value, onChange, disabled, ariaLabel, onComplete },
+  { template, slots = [], value, onChange, disabled, ariaLabel, onComplete }: {
+    template?: string;
+    slots?: any[];
+    value?: string;
+    onChange?: (val: any) => void;
+    disabled?: boolean;
+    ariaLabel?: string;
+    onComplete?: () => void;
+  },
   ref
 ) {
   const language = useStore((s) => s.language);
@@ -2394,7 +2422,16 @@ const TemplatedBlank = React.forwardRef(function TemplatedBlank(
  * right). Exposes focus() for the step-dots / Enter navigation.
  */
 const MatrixBlank = React.forwardRef(function MatrixBlank(
-  { rows, cols, slots = [], value, onChange, disabled, ariaLabel, onComplete },
+  { rows, cols, slots = [], value, onChange, disabled, ariaLabel, onComplete }: {
+    rows?: number;
+    cols?: number;
+    slots?: any[];
+    value?: string;
+    onChange?: (val: any) => void;
+    disabled?: boolean;
+    ariaLabel?: string;
+    onComplete?: () => void;
+  },
   ref
 ) {
   const language = useStore((s) => s.language);
@@ -2460,7 +2497,7 @@ const MatrixBlank = React.forwardRef(function MatrixBlank(
   );
 });
 
-function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false }) {
+function ScaffoldedAnswer({ question, index, value, onChange, mathMode = false, disabled = false }) {
   const language = useStore((s) => s.language);
   const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const template = question.scaffold_text;
@@ -3148,7 +3185,7 @@ const ENCOURAGEMENTS = [
   'Bien raisonné ! 🧠',
 ];
 
-function ProofInput({ question, index, value, onChange }) {
+function ProofInput({ question, index, value, onChange, disabled = false }) {
   const language = useStore((s) => s.language);
   const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const katexReady = useKatex();

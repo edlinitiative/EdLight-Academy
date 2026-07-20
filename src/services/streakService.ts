@@ -91,7 +91,7 @@ export async function loadStreak(uid) {
     const { db, doc, getDoc } = await loadFirestore();
     const snap = await getDoc(streakRef(db, doc, uid));
     if (!snap.exists()) return defaultStreak();
-    return { ...defaultStreak(), ...snap.data() };
+    return { ...defaultStreak(), ...(snap.data() as Record<string, unknown>) };
   } catch (err) {
     console.error('[Streak] loadStreak error:', err);
     return defaultStreak();

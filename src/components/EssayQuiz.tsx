@@ -1,7 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useKatex, renderWithKatex } from '../utils/shared';
 
-export default function EssayQuiz({ item, onScore }) {
+interface EssayQuizProps {
+  item: any;
+  onScore?: (result: { correct: number; message: any; score: any }) => void;
+}
+
+export default function EssayQuiz({ item, onScore }: EssayQuizProps) {
   const katexReady = useKatex();
   const [textAns, setTextAns] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -73,7 +78,7 @@ export default function EssayQuiz({ item, onScore }) {
       <textarea
         className="input-field"
         placeholder="Compose your answer here (12-15 lines recommended)..."
-        rows="10"
+        rows={10}
         value={textAns}
         onChange={(e) => setTextAns(e.target.value)}
         disabled={submitted || isLoading}

@@ -6,7 +6,17 @@ import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
 
-export const CourseCard = React.memo(function CourseCard({ course }) {
+interface CourseCardProps {
+  course: any;
+}
+
+interface CourseModalProps {
+  course: any;
+  onClose: () => void;
+  onEnroll: (course: any) => void;
+}
+
+export const CourseCard = React.memo(function CourseCard({ course }: CourseCardProps) {
   const enrolledCourses = useStore((s) => s.enrolledCourses);
   const progress = useStore((s) => s.progress);
   const isEnrolled = enrolledCourses.some(c => c.id === course.id);
@@ -130,7 +140,7 @@ export const CourseCard = React.memo(function CourseCard({ course }) {
   );
 });
 
-export function CourseModal({ course, onClose, onEnroll }) {
+export function CourseModal({ course, onClose, onEnroll }: CourseModalProps) {
   const { enrolledCourses } = useStore();
   const navigate = useNavigate();
   const isEnrolled = enrolledCourses.some(c => c.id === course?.id);

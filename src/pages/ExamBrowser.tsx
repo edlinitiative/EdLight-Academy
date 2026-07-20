@@ -12,6 +12,12 @@ import { Skeleton } from '../components/Skeleton';
 
 const PAGE_SIZE = 24;
 
+/** Slim per-exam attempt summary as returned by loadAllExamResultSummaries. */
+interface ExamAttemptSummary {
+  percentage?: number | null;
+  submittedAtMs?: number | null;
+}
+
 /** Map the numeric difficulty (1–5) to a 3-tier label + tone for display. */
 const DIFFICULTY_META = {
   1: { label: 'Facile', tier: 'easy' },
@@ -76,7 +82,7 @@ function useExamAttempts() {
 
     // 1. Firestore summaries
     if (remote) {
-      for (const [id, info] of Object.entries(remote)) {
+      for (const [id, info] of Object.entries(remote) as [string, ExamAttemptSummary][]) {
         add(id, info?.percentage, info?.submittedAtMs);
       }
     }
@@ -157,8 +163,8 @@ const ExamBrowser = () => {
     );
 
     // Rebuild unique subjects / years from the filtered set
-    const subjectSet = new Set();
-    const yearSet = new Set();
+    const subjectSet = new Set<string>();
+    const yearSet = new Set<number>();
     for (const e of filtered) {
       if (e._subject) subjectSet.add(e._subject);
       if (e._year) yearSet.add(e._year);

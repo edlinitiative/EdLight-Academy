@@ -214,7 +214,7 @@ export default function StudyPlan() {
 
   const handleDownloadIcs = useCallback(() => {
     if (!plan) return;
-    const ics = buildPlanIcs(plan);
+    const ics = buildPlanIcs(plan as Parameters<typeof buildPlanIcs>[0]);
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -360,7 +360,7 @@ export default function StudyPlan() {
   const visibleTasks = showAllTasks ? tabTasks : tabTasks.slice(0, TASK_CAP);
   const hasMoreTasks = tabTasks.length > TASK_CAP;
 
-  const masteryEntries = Object.entries(mastery)
+  const masteryEntries = Object.entries(mastery as Record<string, { masteredPct?: number }>)
     .sort((a, b) => (a[1].masteredPct || 0) - (b[1].masteredPct || 0));
   const visibleMastery = showAllMastery ? masteryEntries : masteryEntries.slice(0, MASTERY_CAP);
 
@@ -759,7 +759,7 @@ function MasteryRow({ subject, data, coefficient }) {
  */
 function selectExamsForPlan(exams, coefficients, maxCount = 40) {
   // Group by subject
-  const bySubject = {};
+  const bySubject: Record<string, any[]> = {};
   for (const e of exams) {
     const s = normalizeSubject(e.subject);
     if (!bySubject[s]) bySubject[s] = [];
@@ -767,11 +767,11 @@ function selectExamsForPlan(exams, coefficients, maxCount = 40) {
   }
 
   // Allocate slots proportional to coefficient
-  const totalCoeff = Object.values(coefficients).reduce((s, v) => s + v, 0) || 1;
+  const totalCoeff: number = Number(Object.values(coefficients).reduce((s: number, v) => s + Number(v), 0)) || 1;
   const selected = [];
 
   for (const [subj, pool] of Object.entries(bySubject)) {
-    const coeff = coefficients[subj] || 1;
+    const coeff = Number(coefficients[subj] || 1);
     const slots = Math.max(1, Math.round((coeff / totalCoeff) * maxCount));
 
     // Sort pool: mix difficulties (1,3,5,2,4 pattern for variety)
@@ -804,8 +804,8 @@ function selectExamsForPlan(exams, coefficients, maxCount = 40) {
 function buildPerformanceSummary(results, exams) {
   if (!results || !exams) return {};
 
-  const bySubject = {};
-  for (const [examId, result] of Object.entries(results)) {
+  const bySubject: Record<string, { scores: number[]; attempts: number }> = {};
+  for (const [examId, result] of Object.entries(results as Record<string, { scorePct?: number }>)) {
     const exam = exams.find((e) => (e.exam_id || e.id) === examId);
     if (!exam) continue;
     const subj = normalizeSubject(exam.subject);

@@ -1954,7 +1954,7 @@ function ParallelogramSVG({ description }) {
           </text>
         )}
         {/* Vertex labels and dots */}
-        {[[A,-14,6],[B,4,6],[C,4,-4],[D,-14,-4]].map(([p,ox,oy], i) => (
+        {([[A,-14,6],[B,4,6],[C,4,-4],[D,-14,-4]] as Array<[{ x: number; y: number }, number, number]>).map(([p,ox,oy], i) => (
           <g key={i}>
             <circle cx={p.x} cy={p.y} r="3" fill="#333" />
             <text x={p.x+ox} y={p.y+oy} fontSize="14" fontWeight="600" fill="#333">

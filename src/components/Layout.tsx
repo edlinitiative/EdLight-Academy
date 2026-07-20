@@ -84,7 +84,7 @@ export function Layout() {
         })
         .catch(() => {});
     };
-    if ('requestIdleCallback' in window) {
+    if (typeof window.requestIdleCallback === 'function') {
       const id = window.requestIdleCallback(prefetch, { timeout: 2500 });
       return () => window.cancelIdleCallback(id);
     }

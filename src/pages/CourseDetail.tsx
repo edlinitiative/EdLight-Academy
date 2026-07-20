@@ -484,9 +484,12 @@ export default function CourseDetail() {
                   <div className="lesson-card__quizwrap">
                     <UnitQuiz
                       subjectCode={course?.code}
+                      unitId={undefined}
                       chapterNumber={activeModuleData?.unit_no}
+                      subchapterNumber={undefined}
                       courseId={courseId}
                       lessonId={activeLessonData?.id}
+                      onClose={undefined}
                     />
                   </div>
                 ) : primaryVideo ? (
@@ -612,9 +615,11 @@ export default function CourseDetail() {
               <>
                 <UnitQuiz
                   subjectCode={course?.code}
+                  unitId={undefined}
                   chapterNumber={activeModuleData?.unit_no}
                   subchapterNumber={activeLessonData?.lesson_no}
                   courseId={courseId}
+                  lessonId={undefined}
                   onClose={() => setShowQuiz(false)}
                 />
               </>

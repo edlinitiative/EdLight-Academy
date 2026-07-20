@@ -310,7 +310,12 @@ const Quizzes = () => {
           <div className="quiz-panel">
             {bankDirectItem ? (
               <div className="card">
-                <DirectBankQuiz item={bankDirectItem} />
+                <DirectBankQuiz
+                  item={bankDirectItem}
+                  onScore={undefined}
+                  onNext={undefined}
+                  onClose={undefined}
+                />
               </div>
             ) : (
               <div className="card quiz-placeholder">

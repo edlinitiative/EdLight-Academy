@@ -29,6 +29,7 @@ describe('condition-builder grading', () => {
     const r = gradeSingleQuestion(
       domainQuestion,
       answer([{ operator: '>', value: '0' }, { operator: '≠', value: '2' }]),
+      null,
     );
     expect(r.status).toBe('correct');
     expect(r.result.awarded).toBe(4);
@@ -38,6 +39,7 @@ describe('condition-builder grading', () => {
     const r = gradeSingleQuestion(
       domainQuestion,
       answer([{ operator: '≠', value: '2' }, { operator: '>', value: '0' }]),
+      null,
     );
     expect(r.status).toBe('correct');
     expect(r.result.awarded).toBe(4);
@@ -47,6 +49,7 @@ describe('condition-builder grading', () => {
     const r = gradeSingleQuestion(
       domainQuestion,
       answer([{ operator: '>', value: '0' }, { operator: '=', value: '2' }]),
+      null,
     );
     expect(r.status).toBe('partial');
     expect(r.result.awarded).toBe(2); // 1 of 2 → half of 4
@@ -59,7 +62,7 @@ describe('condition-builder grading', () => {
       correct: 'x >= 1',
       conditions: [{ left: 'x', operator: '≥', value: '1' }],
     };
-    const r = gradeSingleQuestion(q, answer([{ operator: '>=', value: '1' }]));
+    const r = gradeSingleQuestion(q, answer([{ operator: '>=', value: '1' }]), null);
     expect(r.status).toBe('correct');
   });
 
@@ -67,19 +70,20 @@ describe('condition-builder grading', () => {
     const r = gradeSingleQuestion(
       domainQuestion,
       answer([{ operator: '<', value: '0' }, { operator: '≠', value: '2' }]),
+      null,
     );
     expect(r.status).toBe('partial');
     expect(r.result.awarded).toBe(2);
   });
 
   it('returns unanswered when no rows are filled', () => {
-    const r = gradeSingleQuestion(domainQuestion, answer([{ operator: '', value: '' }]));
+    const r = gradeSingleQuestion(domainQuestion, answer([{ operator: '', value: '' }]), null);
     expect(r.status).toBe('unanswered');
   });
 
   it('does not affect questions without conditions', () => {
     const plain = { type: 'fill_blank', points: 1, correct: '42' };
-    const r = gradeSingleQuestion(plain, '42');
+    const r = gradeSingleQuestion(plain, '42', null);
     expect(r.status).toBe('correct');
   });
 

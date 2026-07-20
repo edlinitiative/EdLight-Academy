@@ -5,6 +5,15 @@
 
 export {};
 
+// Allow CSS custom properties (--foo) in inline `style={{ ... }}` objects.
+// React's CSSProperties doesn't permit arbitrary `--*` keys by default, so
+// every `style={{ '--track-color': ... }}` was a type error. Type-only.
+declare module 'react' {
+  interface CSSProperties {
+    [key: `--${string}`]: string | number | undefined;
+  }
+}
+
 declare global {
   interface Window {
     // YouTube IFrame Player API, loaded lazily via a <script> tag.

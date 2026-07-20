@@ -125,7 +125,7 @@ export default function Dashboard() {
   // Quiz stats: prefer Firestore attempts (cross-device), fallback to local attempts.
   const fallbackQuizAttemptsList = Object.entries(quizAttempts)
     .flatMap(([quizId, attempts]) => (attempts || []).map((attempt) => ({ ...attempt, quizId })))
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const quizAttemptsForStats = recentQuizAttempts.length
     ? recentQuizAttempts.map((a) => ({

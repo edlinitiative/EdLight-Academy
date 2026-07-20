@@ -8,7 +8,6 @@
  *     `correct_answer` is a bare letter ("B") that must resolve to option text;
  *   - chunk text must be truncated to 1500 chars.
  */
-// @ts-expect-error — plain .mjs module, no type declarations.
 import { chunkCourse, chunkQuiz, chunkExamQuestion, MAX_CHUNK_CHARS } from '../../../scripts/sandra_kb_chunks.mjs';
 
 describe('chunkCourse', () => {
