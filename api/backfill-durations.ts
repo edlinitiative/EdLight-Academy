@@ -71,11 +71,38 @@ async function fetchDurationMin(id: string): Promise<number | null> {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!authorized(req)) return res.status(401).json({ error: 'unauthorized' });
+  const db = getDb();
 
+  // ── Bridge mode: list video ids so a client that CAN reach YouTube fetches
+  // the durations, then POSTs them back here to write (YouTube blocks Vercel's
+  // datacenter IP, but Firestore admin only works from here).
+  if (req.method === 'GET' && (req.query.list === '1' || req.query.list === 'true')) {
+    const snap = await db.collection('videos').get();
+    const videos = snap.docs
+      .map((doc) => ({ doc: doc.id, videoId: ytId(doc.data().video_url), current: doc.data().duration_min ?? null }))
+      .filter((v) => v.videoId);
+    return res.status(200).json({ count: videos.length, total: snap.size, videos });
+  }
+
+  // ── Apply mode: write a precomputed { doc: minutes } map from the client.
+  if (req.method === 'POST') {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
+    const durations: Record<string, number> = body.durations || {};
+    const apply = body.apply === true;
+    let updated = 0;
+    const entries = Object.entries(durations);
+    for (const [docId, mins] of entries) {
+      if (!Number.isFinite(mins) || mins <= 0) continue;
+      if (apply) await db.collection('videos').doc(docId).update({ duration_min: mins });
+      updated++;
+    }
+    return res.status(200).json({ mode: apply ? 'APPLIED' : 'DRY_RUN', received: entries.length, updated });
+  }
+
+  // ── Self-contained mode (works only where YouTube is reachable).
   const apply = req.query.apply === '1' || req.query.apply === 'true';
   const limit = Math.min(Number(req.query.limit) || 1000, 2000);
 
-  const db = getDb();
   const snap = await db.collection('videos').get();
 
   let updated = 0, unchanged = 0, noVideo = 0, failed = 0, processed = 0;
