@@ -19,7 +19,7 @@ import {
   Animated,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
 import useStore from '../contexts/store';
@@ -181,6 +181,7 @@ export default function SandraScreen({
   onNavigate?: (path: string) => void;
 }) {
   const { user, language, toggleAuthModal } = useStore();
+  const insets = useSafeAreaInsets();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const lang: 'fr' | 'ht' = language === 'ht' ? 'ht' : 'fr';
@@ -363,10 +364,11 @@ export default function SandraScreen({
   // ── chat ────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#f6f9fd' }}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: '#f6f9fd' }}>
       <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
         {/* Header */}
         <View
@@ -515,8 +517,14 @@ export default function SandraScreen({
 
         {/* Input row */}
         <View
-          className="flex-row items-end gap-2 px-3 py-2"
-          style={{ backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#e8edf5' }}
+          className="flex-row items-end gap-2 px-3 pt-2"
+          style={{
+            backgroundColor: '#ffffff',
+            borderTopWidth: 1,
+            borderTopColor: '#e8edf5',
+            // Clear the home indicator when the keyboard is down; small pad when up.
+            paddingBottom: Math.max(insets.bottom, 8),
+          }}
         >
           <TextInput
             value={input}

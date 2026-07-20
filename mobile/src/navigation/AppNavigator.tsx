@@ -127,7 +127,11 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="Sandra"
                 component={SandraModal}
-                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                // Full-screen card (not a native 'modal'): native-stack modals on
+                // iOS break KeyboardAvoidingView (chat input hid behind the
+                // keyboard) and layer the auth modal underneath. A card that
+                // slides up keeps the same feel and fixes both.
+                options={{ animation: 'slide_from_bottom' }}
               />
               <Stack.Screen
                 name="StudyPlan"
