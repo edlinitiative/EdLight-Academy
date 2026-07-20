@@ -37,7 +37,7 @@ export function useStreak() {
 
   const [newMilestones, setNewMilestones] = useState([]);
 
-  const { data: streak, isLoading } = useQuery({
+  const { data: streak, isPending: isLoading } = useQuery({
     queryKey: STREAK_KEY,
     queryFn: () => loadStreak(uid),
     enabled: !!uid,

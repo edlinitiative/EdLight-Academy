@@ -14,7 +14,7 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const uid = user?.uid ?? null;
   const id = weekId();
 
-  const { data: entries, isLoading, refetch, isFetching } = useQuery({
+  const { data: entries, isPending: isLoading, refetch, isFetching } = useQuery({
     queryKey: ['leaderboard-weekly', period === 'all' ? 'all-time' : id, max],
     queryFn: () => (period === 'all' ? getAllTimeTop(max) : getWeeklyTop(max, id)),
     staleTime: 2 * 60 * 1000,

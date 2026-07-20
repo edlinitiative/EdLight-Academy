@@ -29,7 +29,7 @@ export function useTrivia() {
   const qc = useQueryClient();
   const [lastReward, setLastReward] = useState(null);
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isPending: isLoading } = useQuery({
     queryKey: triviaKey(uid),
     queryFn: () => loadTriviaProfile(uid),
     enabled: !!uid,

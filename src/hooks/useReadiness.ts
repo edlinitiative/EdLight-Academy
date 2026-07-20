@@ -29,7 +29,7 @@ export function useReadiness() {
   const coefficients = useMemo(() => TRACK_COEFFICIENTS[track] || {}, [track]);
 
   // exam_id → canonical subject (shared, cached forever — it's a static asset).
-  const { data: subjectByExamId, isLoading: indexLoading } = useQuery({
+  const { data: subjectByExamId, isPending: indexLoading } = useQuery({
     queryKey: ['exam-subject-index'],
     queryFn: async () => {
       const res = await fetch('/exam_catalog_index.json');
@@ -45,7 +45,7 @@ export function useReadiness() {
     staleTime: Infinity,
   });
 
-  const { data: examResults, isLoading: resultsLoading } = useQuery({
+  const { data: examResults, isPending: resultsLoading } = useQuery({
     queryKey: ['exam-results-by-subject', uid],
     queryFn: () => listRecentExamResults(uid, 300),
     enabled: !!uid,

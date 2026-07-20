@@ -106,8 +106,8 @@ export default function StudyPlan() {
     deletePlan,
   } = useStudyPlan();
 
-  const { data: allExams, isLoading: examsLoading } = useExamCatalog();
-  const { data: existingResults = {}, isLoading: resultsLoading } = useExamResultsForPlan();
+  const { data: allExams, isPending: examsLoading } = useExamCatalog();
+  const { data: existingResults = {}, isPending: resultsLoading } = useExamResultsForPlan();
   const { data: appData, isLoading: appDataLoading } = useAppData();
   const { recordActivity: recordStreakActivity } = useStreak();
 

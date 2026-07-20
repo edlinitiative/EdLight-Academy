@@ -424,7 +424,7 @@ export default function AnswerVerification() {
 
   // Load catalog. The 27 MB monolith is no longer deployed, so reconstruct it
   // from the slim index + per-exam files (admin-only, runs on demand).
-  const { data: catalog, isLoading, error } = useQuery({
+  const { data: catalog, isPending: isLoading, error } = useQuery({
     queryKey: ['exam-catalog-full'],
     queryFn: () => fetchFullCatalog(),
     staleTime: Infinity,

@@ -48,7 +48,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
 
   // Lazily fetch the single small exam file for structure + a sample question.
   // Same queryKey ExamTake uses, so opening the exam afterwards is instant.
-  const { data: full, isLoading } = useQuery({
+  const { data: full, isPending: isLoading } = useQuery({
     queryKey: ['exam', id],
     queryFn: () => fetchSingleExam(id),
     enabled: id != null,

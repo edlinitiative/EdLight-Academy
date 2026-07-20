@@ -40,7 +40,7 @@ export function useStudyPlan() {
   // ── Query: active plan ─────────────────────────────────────────────
   const {
     data: plan,
-    isLoading,
+    isPending: isLoading,
     error,
     refetch,
   } = useQuery({

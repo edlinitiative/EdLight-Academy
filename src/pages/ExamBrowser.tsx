@@ -114,7 +114,7 @@ const LEVEL_LABELS = {
 const ExamBrowser = () => {
   const { level } = useParams(); // Get level from URL
 
-  const { data: allExams, isLoading, error } = useExamCatalog();
+  const { data: allExams, isPending: isLoading, error } = useExamCatalog();
   const attempts = useExamAttempts();
 
   // Track state

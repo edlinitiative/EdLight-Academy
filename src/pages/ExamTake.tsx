@@ -232,7 +232,7 @@ const ExamTake = () => {
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
 
-  const { data: exam, isLoading, error } = useExam(examId);
+  const { data: exam, isPending: isLoading, error } = useExam(examId);
 
   // Legacy numeric routes still resolve to the saved result index; exam_id routes use the id.
   const idx = useMemo(() => (isNumericId(examId) ? parseInt(examId, 10) : null), [examId]);

@@ -108,14 +108,14 @@ export default function Dashboard() {
     return (courses && courses[0]) || null;
   }, [enrolledCourses, progressByCourseId, courses]);
 
-  const { data: recentQuizAttempts = [], isLoading: quizLoading } = useQuery({
+  const { data: recentQuizAttempts = [], isPending: quizLoading } = useQuery({
     queryKey: ['dashboard-quiz-attempts', user?.uid],
     queryFn: () => listRecentQuizAttempts(user.uid, 50),
     enabled: !!user?.uid,
     staleTime: 60 * 1000,
   });
 
-  const { data: recentExamAttempts = [], isLoading: examLoading } = useQuery({
+  const { data: recentExamAttempts = [], isPending: examLoading } = useQuery({
     queryKey: ['dashboard-exam-attempts', user?.uid],
     queryFn: () => listRecentExamAttempts(user.uid, 25),
     enabled: !!user?.uid,
