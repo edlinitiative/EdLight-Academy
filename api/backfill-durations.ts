@@ -47,16 +47,22 @@ function ytId(url: unknown): string | null {
   return m ? m[1] : null;
 }
 
+// YouTube's InnerTube player API — reliable from datacenter IPs (the watch-page
+// scrape gets a consent/bot page from Vercel). Uses the public WEB client key.
+const INNERTUBE_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8';
 async function fetchDurationMin(id: string): Promise<number | null> {
   try {
-    const res = await fetch(`https://www.youtube.com/watch?v=${id}&hl=en`, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' },
+    const res = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        videoId: id,
+        context: { client: { clientName: 'WEB', clientVersion: '2.20240101.00.00', hl: 'en' } },
+      }),
     });
     if (!res.ok) return null;
-    const html = await res.text();
-    const m = html.match(/"lengthSeconds":"(\d+)"/);
-    if (!m) return null;
-    const sec = parseInt(m[1], 10);
+    const data: any = await res.json();
+    const sec = parseInt(data?.videoDetails?.lengthSeconds ?? '', 10);
     return sec ? Math.max(1, Math.round(sec / 60)) : null;
   } catch {
     return null;
