@@ -23,7 +23,7 @@ export function toCSV(rows, columns) {
  * @param {string} k
  */
 export function normKey(k) {
-  return String(k || '').trim().toLowerCase().replace(/[\s\-]+/g, '_');
+  return String(k || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 }
 
 /**

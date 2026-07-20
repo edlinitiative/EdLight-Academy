@@ -686,7 +686,7 @@ function subExerciseGroup(num: any): string | null {
   if (!num) return null;
   const s = String(num).trim();
   // Match leading letter-based prefix: A.1 → A, II.A.2 → II.A, B → B
-  const m = s.match(/^([A-Z]+(?:\.[A-Z]+)*)(?:[.\-]?\d|$)/i);
+  const m = s.match(/^([A-Z]+(?:\.[A-Z]+)*)(?:[.-]?\d|$)/i);
   if (m) return m[1];
   // Standalone letter: "A", "B", etc.
   if (/^[A-Z]$/i.test(s)) return s;
@@ -717,7 +717,7 @@ export function cleanQuestionText(text: any, number: any, isFirstInGroup: any) {
   // or "A- Problem-solving situation (10%)\n"
   if (isFirstInGroup) {
     const directiveMatch = t.match(
-      /^([A-Z][\.\-\)]\s*.+?)(?:\s*\(?\s*\d+\s*%\s*\)?\s*)?\n/
+      /^([A-Z][.)-]\s*.+?)(?:\s*\(?\s*\d+\s*%\s*\)?\s*)?\n/
     );
     if (directiveMatch) {
       directive = directiveMatch[1].replace(/\s*\(?\s*\d+\s*%\s*\)?\s*$/, '').trim();
@@ -768,7 +768,7 @@ export function cleanQuestionText(text: any, number: any, isFirstInGroup: any) {
   // "2. If we had..." → "If we had..."
   // "a. Reorder the following..." → "Reorder the following..."
   // "b. Write a ten-line..." → "Write a ten-line..."
-  t = t.replace(/^(?:\d+|[a-z])[\.\)]\s*/, '');
+  t = t.replace(/^(?:\d+|[a-z])[.)]\s*/, '');
 
   // ── 4. Strip embedded standalone percentage markers ──
   // Remove leading "10%" or "(10%)" on their own
@@ -843,7 +843,7 @@ export function parseConsignes(text: any) {
   const contentParts = [];
 
   for (const sent of sentences) {
-    let s = sent.trim();
+    const s = sent.trim();
 
     // Preserve blank-line separators in content
     if (!s) {

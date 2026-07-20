@@ -314,7 +314,7 @@ export default function ExamPreviewModal({ exam, attempt, level, onClose }) {
             </button>
           </div>
           <p className="exam-preview__footer-hint">
-            <kbd>Entrée</kbd> {t('pour commencer', 'pou kòmanse')} <kbd>Échap</kbd> {t('pour fermer', 'pou fèmen')}
+            <kbd>Entrée</kbd> {t('pour commencer', 'pou kòmanse')} <kbd>Échap</kbd> {t('pour fermer', 'pou fèmen')}
           </p>
         </div>
       </div>

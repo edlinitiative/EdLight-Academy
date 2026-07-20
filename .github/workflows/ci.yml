@@ -17,6 +17,10 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm ci
+      # ESLint (flat config, src/ + api/ + shared/) must pass with 0 errors.
+      # Warnings are allowed; errors gate CI.
+      - name: Lint web
+        run: npm run lint
       # Web tsc has ~117 pre-existing app-level type errors, down from ~242
       # after a type-safety pass (2026-07): all TS2882 CSS/asset side-effect
       # imports are now declared (src/types/assets.d.ts), browser-global

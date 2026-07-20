@@ -46,35 +46,27 @@ googleProvider.setCustomParameters({
  * Sign in with email and password
  */
 export async function signIn(email, password) {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential;
-  } catch (error) {
-    throw error;
-  }
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  return userCredential;
 }
 
 /**
  * Create a new user account with email and password
  */
 export async function signUp(email, password, name) {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const user = userCredential.user;
 
-    if (name) {
-      await updateProfile(user, { displayName: name });
-    }
-
-    // Send verification email — non-blocking: failure doesn't prevent sign-up
-    sendEmailVerification(user).catch((err) => {
-      console.warn('[Firebase] Could not send verification email:', err);
-    });
-
-    return userCredential;
-  } catch (error) {
-    throw error;
+  if (name) {
+    await updateProfile(user, { displayName: name });
   }
+
+  // Send verification email — non-blocking: failure doesn't prevent sign-up
+  sendEmailVerification(user).catch((err) => {
+    console.warn('[Firebase] Could not send verification email:', err);
+  });
+
+  return userCredential;
 }
 
 /**
@@ -95,22 +87,14 @@ export async function signInWithGoogle() {
  * Send a password-reset email to the given address.
  */
 export async function resetPassword(email) {
-  try {
-    await sendPasswordResetEmail(auth, email);
-  } catch (error) {
-    throw error;
-  }
+  await sendPasswordResetEmail(auth, email);
 }
 
 /**
  * Sign out the current user
  */
 export async function logout() {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    throw error;
-  }
+  await signOut(auth);
 }
 
 /**

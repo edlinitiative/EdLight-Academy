@@ -332,7 +332,7 @@ export function indexQuizBank(rows) {
   };
   const extractUnitId = (row) => {
     // First, try the new Chapter_Number column (most reliable)
-    let chapterNum = String(pick(row, ['Chapter_Number', 'chapter_number'], '')).trim();
+    const chapterNum = String(pick(row, ['Chapter_Number', 'chapter_number'], '')).trim();
     if (chapterNum) {
       // Extract just the chapter number (e.g., "1" from "1.1" or "1")
       const match = chapterNum.match(/^(\d{1,2})/);
@@ -381,7 +381,7 @@ function parseChapterNo(row) {
   const raw = String(pick(row, ['Chapter_Number', 'chapter_number', 'chapterNo', 'chapter', 'lesson_no', 'lesson_number', 'Subchapter_Number', 'subchapter_number'], '')).trim();
   if (!raw) return '';
   // If "1.1" -> 1
-  const dotted = raw.match(/^(\d+)(?:[\.-]\d+)?$/);
+  const dotted = raw.match(/^(\d+)(?:[.-]\d+)?$/);
   if (dotted) return dotted[1];
   const num = raw.match(/\b(\d{1,2})\b/);
   if (num) return num[1];

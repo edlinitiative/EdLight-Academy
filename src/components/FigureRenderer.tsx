@@ -415,14 +415,14 @@ function parseTable(desc) {
     const colEntries = [];
 
     for (const m of d.matchAll(
-      /(?:(?:Left|Right|First|Second)?\s*(?:column|colonne)\s+)?(?:(?:is\s+titled|titled|labeled|header:?|intitulée?)\s+)?['"]?([A-ZÀ-Ü][^'",:]+?)['"]?\s+(?:(?:contains?|with|has|lists?|avec)\s+(?:(?:the\s+)?(?:words?|items?|sentences?|definitions?|terms?|questions?|answers?|rows?|entries?|categories?)\s*:?\s*))((?:'[^']*'(?:\s*,\s*)?|(?:\d+[\.\)]\s*[^,]+(?:,\s*)?)|(?:[a-z][\.\)]\s*[^,]+(?:,\s*)?)){2,})/gi
+      /(?:(?:Left|Right|First|Second)?\s*(?:column|colonne)\s+)?(?:(?:is\s+titled|titled|labeled|header:?|intitulée?)\s+)?['"]?([A-ZÀ-Ü][^'",:]+?)['"]?\s+(?:(?:contains?|with|has|lists?|avec)\s+(?:(?:the\s+)?(?:words?|items?|sentences?|definitions?|terms?|questions?|answers?|rows?|entries?|categories?)\s*:?\s*))((?:'[^']*'(?:\s*,\s*)?|(?:\d+[.)]\s*[^,]+(?:,\s*)?)|(?:[a-z][.)]\s*[^,]+(?:,\s*)?)){2,})/gi
     )) {
       const label = m[1].trim();
       // Extract items: either 'quoted items' or numbered/lettered items
       const raw = m[3];
       let items = [...raw.matchAll(/'([^']+)'/g)].map(x => x[1].trim());
       if (items.length < 2) {
-        items = [...raw.matchAll(/(?:\d+|[a-z])[\.\)]\s*([^,]+)/gi)].map(x => x[1].trim());
+        items = [...raw.matchAll(/(?:\d+|[a-z])[.)]\s*([^,]+)/gi)].map(x => x[1].trim());
       }
       if (items.length >= 2) colEntries.push({ label, values: items });
     }
@@ -444,7 +444,7 @@ function parseTable(desc) {
   // Show the structure even if cells are empty
   if (rowEntries.length === 0) {
     let fillHeaders = [];
-    let fillRows = [];
+    const fillRows = [];
 
     // Detect column headers from various patterns
     const colHeaderMatch = d.match(

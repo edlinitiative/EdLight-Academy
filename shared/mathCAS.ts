@@ -113,8 +113,8 @@ export function latexToJs(raw: any): string | null {
 
   // Clean up
   s = s.replace(/\s+/g, '');
-  s = s.replace(/\+\-/g, '-');
-  s = s.replace(/\-\+/g, '-');
+  s = s.replace(/\+-/g, '-');
+  s = s.replace(/-\+/g, '-');
 
   return s || null;
 }
@@ -133,7 +133,7 @@ export function safeEvaluate(expr: any): number {
   if (/[^0-9+\-*/().,%e ]/.test(sanitized)) return NaN;
 
   try {
-    // eslint-disable-next-line no-new-func
+     
     const fn = new Function('Math', `"use strict"; return (${expr});`);
     const result = fn(Math);
     return typeof result === 'number' ? result : NaN;

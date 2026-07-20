@@ -109,12 +109,12 @@ export async function showLocalNotification(
       return true;
     }
     // Last resort: a plain page notification (no SW click routing).
-    // eslint-disable-next-line no-new
+     
     new Notification(title, opts);
     return true;
   } catch {
     try {
-      // eslint-disable-next-line no-new
+       
       new Notification(title, opts);
       return true;
     } catch {

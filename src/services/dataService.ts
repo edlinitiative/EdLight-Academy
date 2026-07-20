@@ -31,7 +31,7 @@ const extractEnglishTitle = (title) => {
   }
 
   // Case 2: Delimiter-separated bilingual titles
-  const parts = normalized.split(/\s*[\-|/|\|]\s*/).filter(Boolean);
+  const parts = normalized.split(/\s*[-|/]\s*/).filter(Boolean);
   if (parts.length > 1) {
     // choose segment with highest score; tie-break by longest
     const best = parts.reduce<{ val: string; s: number } | null>((best, cur) => {

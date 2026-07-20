@@ -66,7 +66,7 @@ function formatNavLabel(q, globalIndex) {
   // Short labels are fine as-is ("1", "A.1", "B.3")
   if (num.length <= 4) return num;
   // Extract short prefix+digit: "A- COMPREHENSION 1" → "A-1", "EXERCICE 2" → "Ex.2"
-  const m = num.match(/^([A-Z]+)[\-.]?\s*.*?(\d+)$/i);
+  const m = num.match(/^([A-Z]+)[-.]?\s*.*?(\d+)$/i);
   if (m) {
     let prefix = m[1];
     // Long prefixes like EXERCICE → abbreviate to 2-letter code
@@ -325,7 +325,7 @@ const ExamTake = () => {
   const examInfo = useMemo(() => {
     if (!exam) return null;
     // Collect all consignes from all sections and strip them from instructions
-    let allRules = [];
+    const allRules = [];
     const cleanedSections = (exam.sections || []).map((sec) => {
       const raw = (sec.instructions || '').trim();
       const { rules, cleanedText } = parseConsignes(raw);
@@ -392,7 +392,7 @@ const ExamTake = () => {
     const out = {};
     for (const [k, v] of Object.entries(questionResults || {})) {
       if (!v) continue;
-      // eslint-disable-next-line no-unused-vars
+       
       const { question, ...rest } = v;
       out[k] = rest;
     }
