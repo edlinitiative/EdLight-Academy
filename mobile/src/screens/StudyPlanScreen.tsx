@@ -45,7 +45,7 @@ import {
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
-import { TRACKS } from '../config/trackConfig';
+import { TRACKS, currentPlanSeason } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
 import { useColors, type Palette } from '../theme/theme';
 import {
@@ -332,8 +332,11 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<GenError | null>(null);
 
-  // Setup-form state (mirrors the web's generation preferences)
-  const [selTrack, setSelTrack] = useState<string | null>(track);
+  // Setup-form state (mirrors the web's generation preferences). Default to the
+  // in-season mode: the user's Bac track if set, else Préfac once the Bac is over.
+  const [selTrack, setSelTrack] = useState<string | null>(
+    track || (currentPlanSeason() === 'prefac' ? 'PREFAC' : null),
+  );
   const [weeks, setWeeks] = useState(8);
   const [dailyMinutes, setDailyMinutes] = useState(90);
 

@@ -71,7 +71,30 @@ export function getNextExamSession(
 
 /** Map a Bac track / onboarding choice to a preferred exam level (best-effort). */
 export function preferredLevelForTrack(track?: string | null): string | null {
-  // All current Bac tracks (SVT/SMP/SES/LET/ARTS) are Terminale-level.
   if (!track) return null;
+  if (track === 'PREFAC') return 'university';
+  // All Bac tracks (SVT/SMP/SES/LET/ARTS) are Terminale-level.
   return 'terminale';
+}
+
+// ─── Seasonal plan mode ─────────────────────────────────────────────────────
+// Once the Bac is over, a Bac-centric study plan is the wrong default — students
+// pivot to concours d'admission ("préfac"). We surface the Bac plan only when a
+// Bac session is within this many days; otherwise the default is préfac.
+const BAC_SEASON_DAYS = 150; // ~5 months out
+
+export type PlanSeason = 'bac' | 'prefac';
+
+/**
+ * Which study-plan mode is in season right now. 'bac' when the next Bac session
+ * is within BAC_SEASON_DAYS; otherwise 'prefac'. Drives the default plan mode so
+ * the Bac plan auto-returns as the next Bac cycle approaches — no code change.
+ */
+export function currentPlanSeason(from: Date = new Date()): PlanSeason {
+  const nextBac = EXAM_SESSIONS
+    .map((s) => ({ ...s, daysRemaining: daysUntil(s.dateISO, from) }))
+    .filter((s) => s.level === 'terminale' && s.daysRemaining >= 0)
+    .sort((a, b) => a.daysRemaining - b.daysRemaining)[0];
+  if (nextBac && nextBac.daysRemaining <= BAC_SEASON_DAYS) return 'bac';
+  return 'prefac';
 }

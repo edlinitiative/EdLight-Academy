@@ -24,6 +24,7 @@ import { useAppData } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
 import { StreakWidget } from '../components/Streak';
 import { TRACK_COEFFICIENTS, TRACK_BY_CODE, TRACK_LEVEL } from '../config/trackConfig';
+import { currentPlanSeason } from '../config/examSchedule';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildPlanIcs, taskTitle } from '../utils/planIcs';
 import { normalizeSubject, subjectColor } from '../utils/examUtils';
@@ -85,7 +86,9 @@ const URL_LEVEL_MAP = {
 export default function StudyPlan() {
   const navigate = useNavigate();
   const { user, track, isAuthenticated, language } = useStore();
+  const setTrack = useStore((s) => s.setTrack);
   const isCreole = language === 'ht';
+  const prefacSeason = currentPlanSeason() === 'prefac';
 
   const {
     plan,
@@ -241,23 +244,38 @@ export default function StudyPlan() {
   }
 
   // ── No track selected ────────────────────────────────────────────
+  // Offer both paths; in préfac season the concours plan leads.
   if (!track) {
+    const prefacBtn = (
+      <button className="btn btn--primary" onClick={() => setTrack('PREFAC')}>
+        {isCreole ? "Preparasyon konkou (Prefak)" : 'Préparer les concours (Préfac)'}
+      </button>
+    );
+    const bacBtn = (
+      <button
+        className={prefacSeason ? 'btn btn--ghost' : 'btn btn--primary'}
+        onClick={() => navigate('/exams/terminale')}
+      >
+        {isCreole ? 'Chwazi filyè Bak' : 'Choisir ma filière du Bac'}
+      </button>
+    );
     return (
       <div className="sp">
         <div className="sp-empty">
           <span className="sp-empty__icon"><GraduationCap size={40} /></span>
-          <h2>{isCreole ? 'Chwazi filiyè ou anvan' : 'Choisissez votre filière d\'abord'}</h2>
+          <h2>{isCreole ? 'Kreye plan etid ou' : 'Créez votre plan d\'étude'}</h2>
           <p>
-            {isCreole
-              ? 'Ale nan paj egzamen Terminale pou chwazi filiyè ou.'
-              : 'Rendez-vous sur la page des examens Terminale pour choisir votre filière.'}
+            {prefacSeason
+              ? (isCreole
+                  ? 'Bak la fini — konsantre sou konkou admisyon inivèsite yo. Ou ka toujou chwazi yon filyè Bak.'
+                  : 'Le Bac est passé — préparez les concours d\'admission à l\'université. Vous pouvez aussi choisir une filière du Bac.')
+              : (isCreole
+                  ? 'Chwazi filyè Bak ou, oswa prepare konkou admisyon yo.'
+                  : 'Choisissez votre filière du Bac, ou préparez les concours d\'admission.')}
           </p>
-          <button
-            className="btn btn--primary"
-            onClick={() => navigate('/exams/terminale')}
-          >
-            {isCreole ? 'Ale nan Egzamen' : 'Aller aux Examens'}
-          </button>
+          <div className="track-selector__actions">
+            {prefacSeason ? <>{prefacBtn}{bacBtn}</> : <>{bacBtn}{prefacBtn}</>}
+          </div>
         </div>
       </div>
     );

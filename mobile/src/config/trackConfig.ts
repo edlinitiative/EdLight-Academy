@@ -83,6 +83,22 @@ export const TRACK_LEVEL: Record<string, 'baccalaureat' | 'universite'> = {
   PREFAC: 'universite',
 };
 
+/**
+ * Seasonal default plan mode. Once the Bac is past and the next Bac session is
+ * more than ~5 months out, préfac (concours) is the sensible default; the Bac
+ * plan auto-returns as the next cycle approaches. Kept in sync with the web's
+ * src/config/examSchedule.ts. Bac dates: bac1 ~ July 5-6, bac2 ~ July 19-20.
+ */
+export function currentPlanSeason(from: Date = new Date()): 'bac' | 'prefac' {
+  const y = from.getFullYear();
+  // Days until the next July 5 (first Bac session) on/after `from`.
+  const julyFirstBac = (yr: number) => new Date(yr, 6, 5);
+  let nextBac = julyFirstBac(y);
+  if (from > new Date(y, 6, 20)) nextBac = julyFirstBac(y + 1); // past this year's bac2 → next year
+  const days = Math.round((nextBac.getTime() - from.getTime()) / 86_400_000);
+  return days <= 150 ? 'bac' : 'prefac';
+}
+
 export const TRACK_BY_CODE = Object.fromEntries(TRACKS.map((t) => [t.code, t]));
 
 // ─── Subject Coefficients per Track ─────────────────────────────────────────
