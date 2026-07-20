@@ -104,7 +104,7 @@ export function masteryToSubjectStats(mastery: Record<string, any> = {}) {
  * attempts-weighted list. Sources with more attempts pull the average toward
  * their value (so a 12-question mock exam outweighs a single practice quiz).
  */
-export function mergeSubjectStats(...sources: Array<Record<string, any> | null | undefined>) {
+export function mergeSubjectStats(...sources: (Record<string, any> | null | undefined)[]) {
   const merged: Record<string, { weightedSum: number; weight: number; attempts: number }> = {};
   for (const src of sources) {
     if (!src) continue;

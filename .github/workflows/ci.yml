@@ -52,6 +52,11 @@ jobs:
       - name: Install dependencies
         working-directory: mobile
         run: npm ci
+      # ESLint (flat config, eslint-config-expo base) must pass with 0 errors.
+      # Warnings are allowed; errors gate CI. React-hooks rules-of-hooks is ERROR.
+      - name: Lint mobile
+        working-directory: mobile
+        run: npm run lint
       - name: Typecheck mobile
         working-directory: mobile
         run: node node_modules/typescript/bin/tsc --noEmit

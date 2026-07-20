@@ -192,7 +192,7 @@ export default function ExamResultsScreen() {
         if (exam) setQuestions(flattenQuestions(exam) as any[]);
       })
       .finally(() => setLoading(false));
-  }, [user?.uid, examId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.uid, examId]);
 
   if (loading) return <LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />;
 

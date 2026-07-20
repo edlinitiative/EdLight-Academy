@@ -76,7 +76,7 @@ export interface MemoryCard {
 }
 
 export function buildMemoryDeck(
-  pairSource: Array<{ a: string; aHt?: string; b: string }>,
+  pairSource: { a: string; aHt?: string; b: string }[],
   pairCount = 6,
   isCreole = false,
 ): MemoryCard[] {

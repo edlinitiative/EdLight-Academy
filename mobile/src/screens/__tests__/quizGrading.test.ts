@@ -2,9 +2,9 @@
 // (useData → dataService → firebase/firestore ESM + Auth init). We only exercise
 // the pure isQuizAnswerCorrect helper, so stub the hooks module to sever that
 // chain and keep the suite cheap and offline.
-jest.mock('../../hooks/useData', () => ({ usePracticeQuizzes: () => ({ data: [] }) }));
-
 import { isQuizAnswerCorrect } from '../QuizzesScreen';
+
+jest.mock('../../hooks/useData', () => ({ usePracticeQuizzes: () => ({ data: [] }) }));
 
 /**
  * Pins the QuizzesScreen scoring bug: the quiz bank stores the correct answer

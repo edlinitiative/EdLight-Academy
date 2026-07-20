@@ -14,9 +14,6 @@ import {
   getAdditionalUserInfo,
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// getReactNativePersistence lives in the RN bundle of firebase/auth (resolved at runtime)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { getReactNativePersistence } = require('firebase/auth') as { getReactNativePersistence: (s: any) => any };
 import {
   getFirestore,
   doc,
@@ -38,6 +35,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
+// getReactNativePersistence lives in the RN bundle of firebase/auth (resolved at runtime)
+const { getReactNativePersistence } = require('firebase/auth') as { getReactNativePersistence: (s: any) => any };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 

@@ -158,7 +158,7 @@ const ENGAGEMENT_TYPES = new Set(['study-reminder', 'daily-quiz', 'leaderboard',
 
 /** A rotating daily-quiz message for each weekday (expo weekday: 1=Sun … 7=Sat). */
 function quizCopyForWeekday(weekday: number): { title: string; body: string } {
-  const copy: Array<{ title: string; body: string }> = [
+  const copy: { title: string; body: string }[] = [
     { // 1 · Sunday
       title: t('🎯 Quiz du dimanche', '🎯 Quiz dimanch'),
       body: t('Commence la journée avec le défi du jour. +50 XP !', 'Kòmanse jounen an ak defi jodi a. +50 XP !'),
