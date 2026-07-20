@@ -36,7 +36,7 @@ function chapterNameOf(quiz: any): string {
  * LessonPractice), so both surfaces grade identically. Handles letters,
  * already-text answers, and out-of-range values gracefully.
  */
-function isQuizAnswerCorrect(question: any, given: string | undefined): boolean {
+export function isQuizAnswerCorrect(question: any, given: string | undefined): boolean {
   if (given == null || given === '') return false;
   const options: string[] = (question.options ?? question.choices ?? []).map(String);
   const raw = String(question.answer ?? question.correct_answer ?? question.correctAnswer ?? '').trim();

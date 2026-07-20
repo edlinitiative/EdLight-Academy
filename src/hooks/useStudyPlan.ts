@@ -67,7 +67,14 @@ export function useStudyPlan() {
   );
 
   const generateMutation = useMutation({
-    mutationFn: async ({ exams, coefficients, existingResults, aiPlan, quizBankIndex, courses }) => {
+    mutationFn: async ({ exams, coefficients, existingResults, aiPlan, quizBankIndex, courses }: {
+      exams?: any[];
+      coefficients?: any;
+      existingResults?: any;
+      aiPlan?: any;
+      quizBankIndex?: any;
+      courses?: any[];
+    }) => {
       if (!uid) throw new Error('Not authenticated');
 
       // Build tasks from exams, seeded with prior results & SRS
@@ -132,7 +139,7 @@ export function useStudyPlan() {
   });
 
   const recordResultMutation = useMutation({
-    mutationFn: async ({ taskId, scorePct }) => {
+    mutationFn: async ({ taskId, scorePct }: { taskId?: string; scorePct?: number }) => {
       if (!uid || !plan?.id) throw new Error('No active plan');
       return recordTaskResult(uid, plan.id, taskId, {
         scorePct,

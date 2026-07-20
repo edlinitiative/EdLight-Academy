@@ -135,6 +135,21 @@ const PLACEHOLDER = '▫';
  *
  * Ref: exposes { focus() } to parent for programmatic focus.
  */
+interface MathKeyboardProps {
+  value?: string;
+  onChange?: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  onKeyDown?: (event: React.KeyboardEvent) => void;
+  placeholder?: string;
+  id?: string;
+  ariaLabel?: string;
+  disabled?: boolean;
+  className?: string;
+  compact?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+}
+
 const MathKeyboard = forwardRef(function MathKeyboard({
   value = '',
   onChange,
@@ -148,7 +163,7 @@ const MathKeyboard = forwardRef(function MathKeyboard({
   className = '',
   compact = false,
   inputMode,
-}, ref) {
+}: MathKeyboardProps, ref) {
   const katexReady = useKatex();
   const inputRef = useRef(null);
   const [showToolbar, setShowToolbar] = useState(false);

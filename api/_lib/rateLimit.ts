@@ -27,6 +27,12 @@ const LIMITS: Record<string, Limit> = {
   'generate-quiz':  { max: 10, windowSec: 3600 },
   'chat':           { max: 30, windowSec: 3600 },
   'email-plan':     { max: 3,  windowSec: 86400 },
+  // Server-authoritative leaderboard XP awards (api/leaderboard/award). Not a
+  // paid endpoint, so it fails OPEN on a Firestore blip (never in COST_ENDPOINTS)
+  // — a rate-limiter outage must not break legit XP accrual. The cap is generous
+  // enough for heavy play yet bounds abuse volume (paired with the per-request
+  // xpDelta ceiling in the endpoint itself).
+  'leaderboard-award': { max: 120, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't

@@ -17,10 +17,15 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm ci
-      # Web tsc still has ~242 pre-existing app-level type errors (mostly TS2339
-      # property-access on loosely-typed data, and TS2882 CSS side-effect
-      # imports) that are unrelated to the build. We surface them here but do
-      # NOT gate on them yet. Remove continue-on-error once the count is ~0.
+      # Web tsc has ~117 pre-existing app-level type errors, down from ~242
+      # after a type-safety pass (2026-07): all TS2882 CSS/asset side-effect
+      # imports are now declared (src/types/assets.d.ts), browser-global
+      # augmentations added (src/global.d.ts), and several loosely-typed
+      # Firestore/service helpers now carry explicit return types. The
+      # remainder are mostly TS2339 property-access on loosely-typed data in
+      # the exam/grading paths. These are unrelated to the build, so we surface
+      # them here but do NOT gate on them yet. Remove continue-on-error once
+      # the count is ~0.
       - name: Typecheck web (non-blocking)
         run: npx tsc --noEmit
         continue-on-error: true

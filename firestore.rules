@@ -89,18 +89,32 @@ service cloud.firestore {
 
     // Weekly XP leaderboard (leaderboards/{weekId}/entries/{uid}).
     // The board is public — entries are opt-in and only contain a chosen
-    // display alias, so guests can browse it (web + mobile). A user may only
-    // write their OWN entry (document id must equal their uid, and the
-    // payload's uid must match). XP is client-reported for this MVP — add a
-    // Cloud Function validator later if abuse appears.
+    // display alias, so guests can browse it (web + mobile).
+    //
+    // SERVER-AUTHORITATIVE XP (target model): XP is now awarded by the
+    // POST /api/leaderboard/award endpoint, which verifies the caller's Firebase
+    // ID token and writes via the Admin SDK (Admin writes BYPASS these rules).
+    // That removes the self-report cheat vector — the client can no longer put an
+    // arbitrary `xp` straight into its own entry.
+    //
+    // ⚠️ SEQUENCING / TODO — DO NOT LOCK CLIENT WRITES YET.
+    // The live web + mobile apps still write XP client-side (leaderboardService
+    // addWeeklyXp / upsertAllTimeEntry / updateEntryProfile). If we make entries
+    // read-only before those clients are updated to call /api/leaderboard/award,
+    // every live XP write starts failing. So the bounded client-write rules below
+    // stay ACTIVE for now, and the read-only lockdown is staged (commented) right
+    // beneath them. FOLLOW-UP: once web + mobile are shipped pointing at
+    // /api/leaderboard/award, delete the create/update rules below and uncomment
+    // the LOCKED block.
     match /leaderboards/{periodId}/entries/{entryId} {
       allow read: if true;
 
-      // XP is client-reported for this MVP, so bound it: a tampered client can't
+      // ── ACTIVE (transitional client-write, bounded) ────────────────────────
+      // XP is still client-reported here, so bound it: a tampered client can't
       // write an absurd value, and an update can never DECREASE the stored total
       // (addWeeklyXp uses increment(+x); updateEntryProfile uses increment(0)).
       // A chosen alias is length-capped. Detecting XP faked WITHIN these bounds
-      // still needs a Cloud Function validator — deferred.
+      // is exactly what the server endpoint fixes — see the LOCKED block below.
       allow create: if request.auth != null
                     && request.auth.uid == entryId
                     && request.resource.data.uid == entryId
@@ -122,22 +136,34 @@ service cloud.firestore {
                         || (request.resource.data.displayName is string
                             && request.resource.data.displayName.size() <= 40));
       allow delete: if false;
+
+      // ── LOCKED (enable AFTER web + mobile switch to /api/leaderboard/award) ──
+      // Delete the two `allow create/update` rules above and uncomment this to
+      // make entries read-only to clients; all writes then flow through the
+      // Admin SDK in /api/leaderboard/award (which bypasses these rules).
+      //   allow write: if false;
     }
 
     // Per-game record holders — one public doc with the best score per arcade
     // game ({ games: { gameId: { score, displayName, uid } }, updatedAt }).
-    // Written by signed-in players when they beat a record; same client-trust
-    // MVP model as entries above.
+    // /api/leaderboard/award now claims records server-side (token-verified,
+    // Admin SDK, transactional "only increase"). Same sequencing caveat as the
+    // entries block: the LOCKED block stays commented until web + mobile stop
+    // writing records client-side. FOLLOW-UP: delete the create/update rule
+    // below and uncomment `allow write: if false;`.
     match /leaderboards/records {
       allow read: if true;
+      // ── ACTIVE (transitional client-write, shape-bounded) ─────────────────
       // `games` is a map of gameId -> { score, displayName, uid }. Rules can
       // bound the top-level shape but can't verify each score was legitimately
-      // earned — that needs a Cloud Function. Keep the MVP client-trust model,
-      // just constrain the shape so the doc can't be turned into arbitrary data.
+      // earned — that's what the server endpoint fixes.
       allow create, update: if request.auth != null
                             && request.resource.data.keys().hasOnly(['games', 'updatedAt'])
                             && request.resource.data.games is map;
       allow delete: if false;
+
+      // ── LOCKED (enable AFTER web + mobile switch to /api/leaderboard/award) ─
+      //   allow write: if false;
     }
     
     // Courses collection: Public read access, admin write

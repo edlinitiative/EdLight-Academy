@@ -159,7 +159,10 @@ export async function createStudyPlan(uid, planData) {
 /**
  * Load a specific study plan.
  */
-export async function loadStudyPlan(uid, planId) {
+export async function loadStudyPlan(
+  uid,
+  planId,
+): Promise<({ id: string; [key: string]: any }) | null> {
   if (!uid || !planId) return null;
   const snap = await getDoc(planDoc(uid, planId));
   return snap.exists() ? { id: snap.id, ...snap.data() } : null;
@@ -168,7 +171,9 @@ export async function loadStudyPlan(uid, planId) {
 /**
  * Load the user's active study plan (most recent with status='active').
  */
-export async function loadActiveStudyPlan(uid) {
+export async function loadActiveStudyPlan(
+  uid,
+): Promise<({ id: string; [key: string]: any }) | null> {
   if (!uid) return null;
   const q = query(
     plansRef(uid),

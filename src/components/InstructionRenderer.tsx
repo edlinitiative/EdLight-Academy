@@ -43,7 +43,12 @@ function formatSubParts(text) {
  *
  * Pass `inline` prop to render as a <span> (for use inside sentences).
  */
-export default function InstructionRenderer({ text, inline }) {
+interface InstructionRendererProps {
+  text?: string;
+  inline?: boolean;
+}
+
+export default function InstructionRenderer({ text, inline }: InstructionRendererProps) {
   if (!text) return null;
 
   // Pre-process the text before rendering

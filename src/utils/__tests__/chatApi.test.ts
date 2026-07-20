@@ -400,13 +400,17 @@ describe('api/chat handler', () => {
     const executor = jest.fn();
     createToolExecutorMock.mockReturnValue(executor);
 
+    // Origin now comes from a trusted env var (resolveOrigin), not the
+    // client-controlled Host header — SSRF hardening. lang defaults to 'fr'.
+    process.env.PUBLIC_ORIGIN = 'https://academy.edlight.org';
     const res = makeRes();
-    await handler(makeReq({ headers: { host: 'academy.edlight.org' } }), res as any);
+    await handler(makeReq({ headers: { host: 'attacker.example.com' } }), res as any);
 
     expect(res.statusCode).toBe(200);
     expect(createToolExecutorMock).toHaveBeenCalledWith({
       uid: 'uid-1',
       origin: 'https://academy.edlight.org',
+      lang: 'fr',
     });
 
     expect(chatWithToolsMock).toHaveBeenCalledTimes(1);

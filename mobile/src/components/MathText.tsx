@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useColors } from '../theme/theme';
+import { KATEX_CSS, KATEX_JS } from './katexAssets';
 
 /**
  * Render mixed prose + LaTeX. The whole string is NOT LaTeX — only the
@@ -9,6 +10,14 @@ import { useColors } from '../theme/theme';
  * text nodes and typesets just those, so plain French sentences stay plain
  * (the old code fed the entire sentence to katex.render, which painted it in
  * KaTeX's red error style and clipped it at a fixed height).
+ *
+ * TRUE OFFLINE: the KaTeX CSS (with every woff2 font inlined as a base64
+ * data: URI), engine, and auto-render helper are all bundled via `katexAssets`
+ * (snapshotted from the installed katex package by scripts/genKatexAssets.mjs).
+ * Nothing is fetched from a CDN, so math typesets fully with zero network —
+ * essential for the poor-connectivity contexts this app targets. If KaTeX ever
+ * fails to run we still degrade gracefully to delimiter-stripped raw LaTeX in
+ * the themed ink color.
  *
  * The WebView reports its rendered height back through postMessage so long,
  * wrapping questions are never cut off.
@@ -18,9 +27,7 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>${KATEX_CSS}</style>
 <style>
   body {
     margin: 0; padding: 2px;
@@ -31,6 +38,7 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
   /* KaTeX inherits currentColor, so themed body color carries into the math. */
   .katex { font-size: ${display ? '1.15em' : '1.05em'}; color: ${ink}; }
 </style>
+<script>${KATEX_JS}</script>
 </head>
 <body>
 <div id="math"></div>
@@ -55,8 +63,9 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
           throwOnError: false,
         });
       } else {
-        // Offline / slow network: KaTeX never loaded. The raw text is already
-        // in the (themed) body color; strip the delimiters so it reads cleaner.
+        // Should not happen (KaTeX is bundled), but if the engine failed to
+        // evaluate: the raw text is already in the (themed) body color; strip
+        // the delimiters so it reads cleaner.
         el.textContent = el.textContent
           .replace(/\\$\\$?/g, '')
           .replace(/\\\\[()\\[\\]]/g, '');

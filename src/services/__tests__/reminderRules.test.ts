@@ -107,10 +107,10 @@ describe('buildRetentionNotification', () => {
     expect(ht.title).not.toBe(fr.title); // Creole copy differs from French
   });
 
-  it('builds a daily-challenge nudge that deep-links to trivia', () => {
+  it('builds a daily-challenge nudge that deep-links to the games hub', () => {
     const note = buildRetentionNotification('daily', 'fr');
     expect(note.tag).toBe('daily-challenge-nudge');
-    expect(note.url).toBe('/trivia');
+    expect(note.url).toBe('/jeux'); // trivia hub was renamed Jeux
   });
 
   it('builds the generic study fallback', () => {
