@@ -60,7 +60,7 @@
   },
   "scripts": {
     "start": "webpack serve --mode development",
-    "prebuild": "node scripts/split_exam_catalog.mjs",
+    "prebuild": "node scripts/split_exam_catalog.mjs && node scripts/check_exam_bundles.mjs",
     "build": "webpack --mode production",
     "postbuild": "node scripts/prerender_routes.mjs",
     "split:exams": "node scripts/split_exam_catalog.mjs",
@@ -75,7 +75,9 @@
     "audit:content": "node scripts/audit_content_quality.mjs",
     "kb:sandra": "node scripts/build_sandra_kb.mjs",
     "pipeline:exams": "bash scripts/run_exam_pipeline.sh",
-    "pipeline:exams:gemini": "bash scripts/run_exam_pipeline.sh --gemini"
+    "pipeline:exams:gemini": "bash scripts/run_exam_pipeline.sh --gemini",
+    "check:bundles": "node scripts/check_exam_bundles.mjs",
+    "debundle:exams": "node scripts/debundle_exams.mjs"
   },
   "eslintConfig": {
     "extends": [
