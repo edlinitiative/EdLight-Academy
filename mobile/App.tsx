@@ -1,5 +1,6 @@
 import './global.css';
 import React, { useEffect, useRef, useState } from 'react';
+import { colorScheme } from 'nativewind';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -63,6 +64,11 @@ function AuthGate() {
 
 function App() {
   const { theme } = useStore();
+  // Drive NativeWind's dark: variants from our store theme (manual toggle, not
+  // just the OS setting), so className-based dark styles track the app's theme.
+  useEffect(() => {
+    colorScheme.set(theme === 'dark' ? 'dark' : 'light');
+  }, [theme]);
   // Seed the query cache from AsyncStorage BEFORE the first screen mounts so
   // cold starts render last-known data instantly (refetch happens in the
   // background). The read takes a few ms — the splash screen covers it.
