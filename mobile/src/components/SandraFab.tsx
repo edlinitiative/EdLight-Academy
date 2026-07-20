@@ -10,8 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MessageCircle } from 'lucide-react-native';
 import PressableScale from './ui/PressableScale';
 import { tapMedium } from '../utils/haptics';
+import { useColors } from '../theme/theme';
 
 export default function SandraFab({ onPress }: { onPress: () => void }) {
+  const colors = useColors();
   return (
     <PressableScale
       onPress={() => { tapMedium(); onPress(); }}
@@ -43,9 +45,9 @@ export default function SandraFab({ onPress }: { onPress: () => void }) {
       <View
         style={{
           marginTop: 4,
-          backgroundColor: '#ffffff',
+          backgroundColor: colors.surface,
           borderWidth: 1,
-          borderColor: '#e8edf5',
+          borderColor: colors.border,
           borderRadius: 999,
           paddingHorizontal: 8,
           paddingVertical: 2,

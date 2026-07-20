@@ -56,6 +56,36 @@ const resources = {
       a11y: {
         skipToContent: 'Skip to content'
       },
+      nav: {
+        home: 'Home',
+        courses: 'Courses',
+        exams: 'Exams',
+        games: 'Games',
+        profile: 'Profile',
+        dashboard: 'Dashboard',
+        studyPlan: 'Study plan',
+        notifications: 'Notifications',
+        mySpace: 'My space',
+        logout: 'Sign out',
+        signIn: 'Sign in',
+        createAccount: 'Create account',
+        closeMenu: 'Close menu',
+        profileMenu: 'Profile menu',
+        viewDashboard: 'View dashboard',
+        enableLight: 'Switch to light mode',
+        enableNight: 'Switch to night mode (Night Shift)',
+        lightMode: 'Light mode',
+        nightMode: 'Night Shift'
+      },
+      footer: {
+        brandCopy: 'A community platform helping Haitian students master STEM subjects with modern, bilingual resources.',
+        about: 'About',
+        contact: 'Contact',
+        privacy: 'Privacy',
+        terms: 'Terms',
+        rights: 'All rights reserved.',
+        home: 'EdLight Academy home'
+      },
       meta: {
         titleTemplate: '{{page}} · EdLight Academy',
         home: 'Home',
@@ -311,6 +341,36 @@ const resources = {
       a11y: {
         skipToContent: 'Aller au contenu'
       },
+      nav: {
+        home: 'Accueil',
+        courses: 'Cours',
+        exams: 'Examens',
+        games: 'Jeux',
+        profile: 'Profil',
+        dashboard: 'Tableau de bord',
+        studyPlan: "Plan d'étude",
+        notifications: 'Notifications',
+        mySpace: 'Mon espace',
+        logout: 'Déconnexion',
+        signIn: 'Se connecter',
+        createAccount: 'Créer un compte',
+        closeMenu: 'Fermer le menu',
+        profileMenu: 'Menu du profil',
+        viewDashboard: 'Voir le tableau de bord',
+        enableLight: 'Activer le mode clair',
+        enableNight: 'Activer le mode nuit (Night Shift)',
+        lightMode: 'Mode clair',
+        nightMode: 'Night Shift'
+      },
+      footer: {
+        brandCopy: 'Une plateforme communautaire pour aider les élèves haïtiens à maîtriser les matières STEM grâce à des ressources modernes et bilingues.',
+        about: 'À propos',
+        contact: 'Contact',
+        privacy: 'Confidentialité',
+        terms: 'Conditions',
+        rights: 'Tous droits réservés.',
+        home: 'Accueil EdLight Academy'
+      },
       sandra: {
         subtitle: 'Assistante EdLight',
         open: 'Ouvrir le chat avec Sandra',
@@ -323,7 +383,12 @@ const resources = {
         collapse: 'Réduire la fenêtre',
         signInPrompt: 'Connectez-vous pour discuter avec Sandra.',
         reviewNotice: 'Les conversations peuvent être relues par l’équipe EdLight.',
-        error: 'Sandra n’a pas pu répondre. Vérifiez votre connexion, puis réessayez.'
+        error: 'Sandra n’a pas pu répondre. Vérifiez votre connexion, puis réessayez.',
+        welcomeTitle: 'Bonjour ! Je suis Sandra 👋',
+        welcomeBody: 'Votre tutrice EdLight. Posez-moi une question sur vos cours, un exercice ou un examen.',
+        suggest1: 'Explique-moi cette leçon simplement',
+        suggest2: 'Donne-moi un exercice pour m’entraîner',
+        suggest3: 'Comment réviser pour le bac ?'
       },
       meta: {
         titleTemplate: '{{page}} · EdLight Academy',
@@ -580,6 +645,36 @@ const resources = {
       a11y: {
         skipToContent: 'Ale dirèk nan kontni an'
       },
+      nav: {
+        home: 'Akèy',
+        courses: 'Kou',
+        exams: 'Egzamen',
+        games: 'Jwèt',
+        profile: 'Pwofil',
+        dashboard: 'Tablodbò',
+        studyPlan: 'Plan etid',
+        notifications: 'Notifikasyon',
+        mySpace: 'Espas mwen',
+        logout: 'Dekonekte',
+        signIn: 'Konekte',
+        createAccount: 'Kreye yon kont',
+        closeMenu: 'Fèmen meni a',
+        profileMenu: 'Meni pwofil',
+        viewDashboard: 'Gade tablodbò a',
+        enableLight: 'Aktive mòd klè a',
+        enableNight: 'Aktive mòd lannwit (Night Shift)',
+        lightMode: 'Mòd klè',
+        nightMode: 'Night Shift'
+      },
+      footer: {
+        brandCopy: 'Yon platfòm kominotè pou ede elèv ayisyen metrize matyè STEM ak resous modèn ki nan de lang.',
+        about: 'Sou nou',
+        contact: 'Kontak',
+        privacy: 'Konfidansyalite',
+        terms: 'Kondisyon',
+        rights: 'Tout dwa rezève.',
+        home: 'Akèy EdLight Academy'
+      },
       sandra: {
         subtitle: 'Asistan EdLight',
         open: 'Louvri chat ak Sandra',
@@ -592,7 +687,12 @@ const resources = {
         collapse: 'Redui fenèt la',
         signInPrompt: 'Konekte pou pale ak Sandra.',
         reviewNotice: 'Ekip EdLight la ka li konvèsasyon yo pou amelyore Sandra.',
-        error: 'Sandra pa t ka reponn. Tcheke koneksyon ou, epi eseye ankò.'
+        error: 'Sandra pa t ka reponn. Tcheke koneksyon ou, epi eseye ankò.',
+        welcomeTitle: 'Bonjou ! Se mwen Sandra 👋',
+        welcomeBody: 'Titè EdLight ou. Poze m yon kesyon sou kou ou, yon egzèsis oswa yon egzamen.',
+        suggest1: 'Esplike m leson sa a senpleman',
+        suggest2: 'Ban m yon egzèsis pou m antrene',
+        suggest3: 'Kijan pou m revize pou bakaloreya a ?'
       },
       meta: {
         titleTemplate: '{{page}} · EdLight Academy',

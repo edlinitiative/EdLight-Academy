@@ -585,6 +585,10 @@ export function subjectColor(subject: any): string {
 
 export const QUESTION_TYPE_META = {
   multiple_choice: { icon: 'Circle', label: 'QCM', gradable: true },
+  // The take UI renders `mcq` / `qcm` alongside `multiple_choice`; they are the
+  // same single-choice question and share the same (gradable) grader path.
+  mcq: { icon: 'Circle', label: 'QCM', gradable: true },
+  qcm: { icon: 'Circle', label: 'QCM', gradable: true },
   multiple_select: { icon: 'CheckSquare', label: 'QCM (plusieurs)', gradable: true },
   true_false: { icon: 'CheckCircle', label: 'Vrai/Faux', gradable: true },
   fill_blank: { icon: 'Pencil', label: 'Compléter', gradable: true },

@@ -99,8 +99,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   } catch (err) {
     // Almost always a missing composite index on first deploy — the error
     // message includes a one-click link to create it.
+    // Log details server-side only (the index-creation link is in the logs);
+    // return a generic message to the caller.
     console.error('[send-reminders] query failed (missing index?)', err);
-    res.status(500).json({ error: 'query_failed', message: (err as Error).message });
+    res.status(500).json({ error: 'query_failed' });
     return;
   }
 

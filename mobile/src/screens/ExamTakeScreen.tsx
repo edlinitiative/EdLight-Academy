@@ -360,7 +360,7 @@ export default function ExamTakeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, recordActivity, setFocusMode, language } = useStore();
+  const { user, recordActivity, setFocusMode, language, track } = useStore();
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -388,6 +388,24 @@ export default function ExamTakeScreen() {
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
+  // Latest answers / position, so the unmount flush saves what's on screen.
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const currentIdxRef = useRef(currentIdx);
+  currentIdxRef.current = currentIdx;
+  // Set once the exam is submitted so a late autosave can't revert the doc
+  // back to `in_progress`.
+  const submittedRef = useRef(false);
+
+  // Save the current draft immediately (used by the 10s timer and the final
+  // flush on unmount/blur). No-op after submit or before the question phase.
+  const flushDraft = useCallback(() => {
+    if (!user?.uid || submittedRef.current || phaseRef.current !== 'questions') return;
+    saveExamAttemptDraft(user.uid, examId, {
+      answers: answersRef.current,
+      currentIdx: currentIdxRef.current,
+    }).catch(() => {});
+  }, [user?.uid, examId]);
 
   useEffect(() => {
     let active = true;
@@ -438,12 +456,13 @@ export default function ExamTakeScreen() {
   // Auto-save draft every 10s (only while actually taking the exam)
   useEffect(() => {
     if (!user?.uid || questions.length === 0 || phase !== 'questions') return;
-    const save = () => {
-      saveExamAttemptDraft(user.uid, examId, { answers, currentIdx }).catch(console.warn);
-    };
-    draftTimer.current = setTimeout(save, 10000);
+    draftTimer.current = setTimeout(flushDraft, 10000);
     return () => { if (draftTimer.current) clearTimeout(draftTimer.current); };
-  }, [answers, currentIdx, user?.uid, examId, questions.length, phase]);
+  }, [answers, currentIdx, user?.uid, examId, questions.length, phase, flushDraft]);
+
+  // Final flush on unmount/blur: the 10s debounce is cleared when leaving, so
+  // edits made within 10s of exiting would otherwise be lost.
+  useEffect(() => () => { flushDraft(); }, [flushDraft]);
 
   // Android back button
   useEffect(() => {
@@ -504,11 +523,23 @@ export default function ExamTakeScreen() {
 
   async function doSubmit() {
     setSubmitting(true);
+    // Block any pending / final autosave from reverting the doc to in_progress.
+    submittedRef.current = true;
+    if (draftTimer.current) clearTimeout(draftTimer.current);
     try {
-      const gradedAnswers = Object.fromEntries(
-        Object.entries(answers).map(([idx, ans]) => [idx, { given: ans }]),
-      );
-      const graded = gradeExam(questions, gradedAnswers);
+      // Pass the raw answers map (index-keyed) straight to the grader — it reads
+      // `answers[i]` directly, so wrapping in `{ given }` broke every match.
+      // Options drive language fuzzy-matching (subject) + coefficient weighting.
+      const graded = gradeExam(questions, answers, {}, { subject, track: track ?? undefined });
+
+      // Persist a lean per-question result (indexed by question order) so the
+      // results screen can render correctness from the grader instead of
+      // re-deriving it from field names the data doesn't use.
+      const gradedResults = graded.results.map((r: any) => ({
+        status: r.status,
+        awarded: r.result?.awarded ?? 0,
+        maxPoints: r.result?.maxPoints ?? 0,
+      }));
 
       if (user?.uid) {
         await markExamAttemptSubmitted(user.uid, examId, { answers });
@@ -517,8 +548,9 @@ export default function ExamTakeScreen() {
           level,
           // Save the cleaned short title, not the raw ministry boilerplate.
           title: normalizeExamTitle(exam),
-          subject: normalizeSubject(exam?.subject ?? ''),
+          subject,
           summary: graded.summary,
+          results: gradedResults,
           answers,
         });
       }

@@ -84,19 +84,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ count: videos.length, total: snap.size, videos });
   }
 
-  // ── Apply mode: write a precomputed { doc: minutes } map from the client.
+  // ── Apply mode: write a precomputed { docId: minutes } map from the client.
+  // SECURITY: the map is fully client-supplied, so we constrain it hard — only
+  // the numeric `duration_min` field of an EXISTING `videos/{docId}` doc can be
+  // touched. Doc ids are pattern-validated (no path segments), minutes are
+  // clamped to a sane range, the batch is capped, and .update() on a missing
+  // doc is skipped (so this can never create arbitrary documents or write other
+  // fields). TODO: this is a one-off maintenance route — REMOVE it after the
+  // durations backfill is complete.
   if (req.method === 'POST') {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-    const durations: Record<string, number> = body.durations || {};
+    const durations: Record<string, unknown> =
+      body.durations && typeof body.durations === 'object' ? body.durations : {};
     const apply = body.apply === true;
-    let updated = 0;
-    const entries = Object.entries(durations);
-    for (const [docId, mins] of entries) {
-      if (!Number.isFinite(mins) || mins <= 0) continue;
-      if (apply) await db.collection('videos').doc(docId).update({ duration_min: mins });
+    const ID_RE = /^[A-Za-z0-9_-]{1,200}$/;
+    let updated = 0, skipped = 0;
+    const entries = Object.entries(durations).slice(0, 2000);
+    for (const [docId, raw] of entries) {
+      const mins = Math.round(Number(raw));
+      if (!ID_RE.test(docId) || !Number.isFinite(mins) || mins <= 0 || mins > 600) { skipped++; continue; }
+      if (apply) {
+        const ref = db.collection('videos').doc(docId);
+        const snap = await ref.get();
+        if (!snap.exists) { skipped++; continue; }
+        await ref.update({ duration_min: mins });
+      }
       updated++;
     }
-    return res.status(200).json({ mode: apply ? 'APPLIED' : 'DRY_RUN', received: entries.length, updated });
+    return res.status(200).json({ mode: apply ? 'APPLIED' : 'DRY_RUN', received: entries.length, updated, skipped });
   }
 
   // ── Self-contained mode (works only where YouTube is reachable).

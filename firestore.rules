@@ -95,9 +95,32 @@ service cloud.firestore {
     // Cloud Function validator later if abuse appears.
     match /leaderboards/{periodId}/entries/{entryId} {
       allow read: if true;
-      allow create, update: if request.auth != null
-                            && request.auth.uid == entryId
-                            && request.resource.data.uid == entryId;
+
+      // XP is client-reported for this MVP, so bound it: a tampered client can't
+      // write an absurd value, and an update can never DECREASE the stored total
+      // (addWeeklyXp uses increment(+x); updateEntryProfile uses increment(0)).
+      // A chosen alias is length-capped. Detecting XP faked WITHIN these bounds
+      // still needs a Cloud Function validator — deferred.
+      allow create: if request.auth != null
+                    && request.auth.uid == entryId
+                    && request.resource.data.uid == entryId
+                    && request.resource.data.xp is number
+                    && request.resource.data.xp >= 0
+                    && request.resource.data.xp <= 10000000
+                    && (!('displayName' in request.resource.data)
+                        || request.resource.data.displayName == null
+                        || (request.resource.data.displayName is string
+                            && request.resource.data.displayName.size() <= 40));
+      allow update: if request.auth != null
+                    && request.auth.uid == entryId
+                    && request.resource.data.uid == entryId
+                    && request.resource.data.xp is number
+                    && request.resource.data.xp >= resource.data.xp
+                    && request.resource.data.xp <= 10000000
+                    && (!('displayName' in request.resource.data)
+                        || request.resource.data.displayName == null
+                        || (request.resource.data.displayName is string
+                            && request.resource.data.displayName.size() <= 40));
       allow delete: if false;
     }
 
@@ -107,8 +130,13 @@ service cloud.firestore {
     // MVP model as entries above.
     match /leaderboards/records {
       allow read: if true;
+      // `games` is a map of gameId -> { score, displayName, uid }. Rules can
+      // bound the top-level shape but can't verify each score was legitimately
+      // earned — that needs a Cloud Function. Keep the MVP client-trust model,
+      // just constrain the shape so the doc can't be turned into arbitrary data.
       allow create, update: if request.auth != null
-                            && request.resource.data.keys().hasOnly(['games', 'updatedAt']);
+                            && request.resource.data.keys().hasOnly(['games', 'updatedAt'])
+                            && request.resource.data.games is map;
       allow delete: if false;
     }
     
@@ -146,16 +174,23 @@ service cloud.firestore {
       // Anyone authenticated can read comments
       allow read: if request.auth != null;
       
-      // Authenticated users can create comments with their own authorId
-      allow create: if request.auth != null && 
+      // Authenticated users can create comments with their own authorId.
+      // Bound the free-text fields so UGC can't be used to store huge blobs.
+      allow create: if request.auth != null &&
                        request.resource.data.authorId == request.auth.uid &&
-                       request.resource.data.keys().hasAll(['threadKey', 'text', 'authorId', 'authorName', 'created_at']);
-      
+                       request.resource.data.keys().hasAll(['threadKey', 'text', 'authorId', 'authorName', 'created_at']) &&
+                       request.resource.data.text is string &&
+                       request.resource.data.text.size() <= 2000 &&
+                       request.resource.data.authorName is string &&
+                       request.resource.data.authorName.size() <= 80;
+
       // Users can update their own comments (text only), admins can update any
-      allow update: if request.auth != null && 
+      allow update: if request.auth != null &&
                        (request.auth.uid == resource.data.authorId || isAdmin()) &&
                        // Ensure they're only updating allowed fields
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'likes', 'replyCount']);
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'likes', 'replyCount']) &&
+                       request.resource.data.text is string &&
+                       request.resource.data.text.size() <= 2000;
       
       // Users can delete their own comments, admins can delete any
       allow delete: if request.auth != null && 
@@ -166,15 +201,22 @@ service cloud.firestore {
         // Anyone authenticated can read replies
         allow read: if request.auth != null;
         
-        // Authenticated users can create replies with their own authorId
-        allow create: if request.auth != null && 
+        // Authenticated users can create replies with their own authorId.
+        // Bound the free-text fields (same caps as top-level comments).
+        allow create: if request.auth != null &&
                          request.resource.data.authorId == request.auth.uid &&
-                         request.resource.data.keys().hasAll(['text', 'authorId', 'authorName', 'created_at']);
-        
+                         request.resource.data.keys().hasAll(['text', 'authorId', 'authorName', 'created_at']) &&
+                         request.resource.data.text is string &&
+                         request.resource.data.text.size() <= 2000 &&
+                         request.resource.data.authorName is string &&
+                         request.resource.data.authorName.size() <= 80;
+
         // Users can update their own replies, admins can update any
-        allow update: if request.auth != null && 
+        allow update: if request.auth != null &&
                          (request.auth.uid == resource.data.authorId || isAdmin()) &&
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'likes']);
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'likes']) &&
+                         request.resource.data.text is string &&
+                         request.resource.data.text.size() <= 2000;
         
         // Users can delete their own replies, admins can delete any
         allow delete: if request.auth != null && 

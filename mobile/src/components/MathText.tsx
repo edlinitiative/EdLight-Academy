@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useColors } from '../theme/theme';
 
 /**
  * Render mixed prose + LaTeX. The whole string is NOT LaTeX — only the
@@ -12,7 +13,7 @@ import { WebView } from 'react-native-webview';
  * The WebView reports its rendered height back through postMessage so long,
  * wrapping questions are never cut off.
  */
-const KATEX_HTML = (text: string, display: boolean) => `
+const KATEX_HTML = (text: string, display: boolean, ink: string) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -24,10 +25,11 @@ const KATEX_HTML = (text: string, display: boolean) => `
   body {
     margin: 0; padding: 2px;
     font-family: -apple-system, system-ui, sans-serif;
-    font-size: 16px; line-height: 1.5; color: #0f172a;
+    font-size: 16px; line-height: 1.5; color: ${ink};
     background: transparent;
   }
-  .katex { font-size: ${display ? '1.15em' : '1.05em'}; }
+  /* KaTeX inherits currentColor, so themed body color carries into the math. */
+  .katex { font-size: ${display ? '1.15em' : '1.05em'}; color: ${ink}; }
 </style>
 </head>
 <body>
@@ -52,8 +54,14 @@ const KATEX_HTML = (text: string, display: boolean) => `
           ],
           throwOnError: false,
         });
+      } else {
+        // Offline / slow network: KaTeX never loaded. The raw text is already
+        // in the (themed) body color; strip the delimiters so it reads cleaner.
+        el.textContent = el.textContent
+          .replace(/\\$\\$?/g, '')
+          .replace(/\\\\[()\\[\\]]/g, '');
       }
-    } catch (e) { /* leave plain text */ }
+    } catch (e) { /* leave plain text in the themed ink color */ }
     postHeight();
     setTimeout(postHeight, 150);
     setTimeout(postHeight, 500);
@@ -74,13 +82,16 @@ interface MathTextProps {
 }
 
 export function MathText({ text, display = false, style }: MathTextProps) {
+  const colors = useColors();
   const safeText = String(text ?? '');
   const hasMath = HAS_MATH.test(safeText);
   const [height, setHeight] = useState(display ? 44 : 28);
-  const html = useMemo(() => KATEX_HTML(safeText, display), [safeText, display]);
+  const html = useMemo(() => KATEX_HTML(safeText, display, colors.ink), [safeText, display, colors.ink]);
 
   if (!safeText) return null;
-  if (!hasMath) return <Text style={style}>{safeText}</Text>;
+  // Themed ink is the default text color so plain prose is legible in dark mode
+  // too; callers can still override via `style`.
+  if (!hasMath) return <Text style={[{ color: colors.ink }, style]}>{safeText}</Text>;
 
   return (
     <WebView

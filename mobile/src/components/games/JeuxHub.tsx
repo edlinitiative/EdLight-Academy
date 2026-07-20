@@ -61,7 +61,7 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
       }}
     >
       <View className="flex-row items-center gap-1.5 mb-3">
-        <Crown color="#d97706" size={15} />
+        <Crown color={colors.warn} size={15} />
         <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>
           {isCreole ? 'Rekò yo' : 'Records'}
         </Text>
@@ -134,14 +134,14 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
             </Text>
           </View>
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-            <Flame color="#ef4444" size={16} />
+            <Flame color={colors.danger} size={16} />
             <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>
               {streak?.currentStreak || 0}
             </Text>
             <Text style={{ fontSize: 12, color: colors.muted }}>{isCreole ? 'Seri' : 'Série'}</Text>
           </View>
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-            <Trophy color="#d97706" size={16} />
+            <Trophy color={colors.warn} size={16} />
             <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>{gamesPlayed}</Text>
             <Text style={{ fontSize: 12, color: colors.muted }}>{isCreole ? 'Pati' : 'Parties'}</Text>
           </View>
@@ -164,6 +164,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
             <TouchableOpacity
               key={g.id}
               onPress={() => (g.id === 'trivia' ? onStartTrivia() : onSelectGame(g.id))}
+              accessibilityRole="button"
+              accessibilityLabel={`${isCreole ? g.nameHt : g.name} — ${isCreole ? g.descriptionHt : g.description}`}
               activeOpacity={0.85}
               style={{
                 width: TILE_W,

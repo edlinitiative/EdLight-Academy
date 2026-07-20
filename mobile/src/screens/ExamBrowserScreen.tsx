@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Modal,
+  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Modal, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
@@ -337,34 +337,35 @@ export default function ExamBrowserScreen() {
         </View>
       )}
 
-      <ScrollView
-        className="flex-1 px-4 pt-3"
-        contentContainerStyle={{ paddingBottom: 100 }}
+      <FlatList
+        className="flex-1"
+        data={filtered}
+        keyExtractor={(exam, i) => String(exam.exam_id ?? exam.id ?? i)}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
-      >
-        {filtered.length === 0 ? (
+        ListHeaderComponent={
+          filtered.length > 0 ? (
+            <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
+          ) : null
+        }
+        ListEmptyComponent={
           <EmptyState
             message={t('Aucun examen trouvé.', 'Nou pa jwenn okenn egzamen.')}
             ctaLabel={activeFilterCount > 0 || search ? t('Effacer les filtres', 'Efase filt yo') : undefined}
             onCta={() => { setSubject('Tout'); setYearFilter('Tout'); setStatusFilter('all'); setSearch(''); }}
           />
-        ) : (
-          <>
-            <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
-            {filtered.map((exam, i) => {
-              const examId = String(exam.exam_id ?? exam.id ?? i);
-              return (
-                <ExamCard
-                  key={examId}
-                  exam={exam}
-                  attemptInfo={results[examId] ?? null}
-                  onPress={() => navigation.navigate('ExamTake', { level, examId })}
-                />
-              );
-            })}
-          </>
-        )}
-      </ScrollView>
+        }
+        renderItem={({ item: exam, index: i }) => {
+          const examId = String(exam.exam_id ?? exam.id ?? i);
+          return (
+            <ExamCard
+              exam={exam}
+              attemptInfo={results[examId] ?? null}
+              onPress={() => navigation.navigate('ExamTake', { level, examId })}
+            />
+          );
+        }}
+      />
 
       {/* Filter modal */}
       <Modal visible={showFilters} transparent animationType="slide" onRequestClose={() => setShowFilters(false)}>

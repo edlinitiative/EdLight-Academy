@@ -140,6 +140,8 @@ export default function SuitesGame({
               key={opt}
               onPress={() => pick(opt)}
               disabled={picked != null}
+              accessibilityRole="button"
+              accessibilityLabel={`${isCreole ? 'Chwazi' : 'Choisir'} ${opt}`}
               activeOpacity={0.85}
               className="items-center justify-center rounded-2xl"
               style={{

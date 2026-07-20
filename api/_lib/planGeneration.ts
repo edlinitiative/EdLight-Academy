@@ -67,11 +67,16 @@ function buildPlanPrompt(reqData: PlanRequest): { system: string; user: string }
   const { subjects, performance, examCount, dailyMinutes, weeks } = reqData;
   const safeTrack = sanitize(reqData.track);
 
+  // NOTE: the performance object's KEYS are user-influenced subject names, so
+  // they are sanitized (not just the values) before being interpolated into the
+  // prompt, and the numeric fields are coerced so no raw string can be injected.
   const perfLines = Object.entries(performance)
     .map(([subj, data]) => {
-      const pct = data?.avgScore ?? data?.pct ?? '?';
-      const attempts = data?.attempts ?? 0;
-      return `  - ${subj}: avg ${pct}% (${attempts} attempts)`;
+      const pctNum = Number(data?.avgScore ?? data?.pct);
+      const pct = Number.isFinite(pctNum) ? pctNum : '?';
+      const attemptsNum = Number(data?.attempts ?? 0);
+      const attempts = Number.isFinite(attemptsNum) ? attemptsNum : 0;
+      return `  - ${sanitize(subj)}: avg ${pct}% (${attempts} attempts)`;
     })
     .join('\n');
 
@@ -86,13 +91,13 @@ function buildPlanPrompt(reqData: PlanRequest): { system: string; user: string }
   const weakSubjects =
     Object.entries(performance)
       .filter(([, d]) => (d?.avgScore ?? d?.pct ?? 100) < 60)
-      .map(([s]) => s)
+      .map(([s]) => sanitize(s))
       .join(', ') || 'none identified yet';
 
   const strongSubjects =
     Object.entries(performance)
       .filter(([, d]) => (d?.avgScore ?? d?.pct ?? 0) >= 75)
-      .map(([s]) => s)
+      .map(([s]) => sanitize(s))
       .join(', ') || 'none identified yet';
 
   const system = isPrefac

@@ -194,6 +194,14 @@ export default function CalculGame({
           <TouchableOpacity
             key={k}
             onPress={() => press(k)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              k === '⌫'
+                ? (isCreole ? 'Efase' : 'Effacer')
+                : k === '−'
+                ? (isCreole ? 'Mwens' : 'Moins')
+                : k
+            }
             activeOpacity={0.7}
             className="items-center justify-center rounded-2xl border"
             style={{ width: '30%', height: 56, backgroundColor: colors.surfaceAlt, borderColor: colors.border }}
@@ -211,6 +219,8 @@ export default function CalculGame({
       <View className="flex-row gap-3 mt-4">
         <TouchableOpacity
           onPress={() => advance(false)}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Sote pwoblèm nan' : 'Passer le problème'}
           activeOpacity={0.85}
           className="flex-1 items-center justify-center py-4 rounded-2xl border"
           style={{ borderColor: colors.border, backgroundColor: colors.surface }}
@@ -222,6 +232,8 @@ export default function CalculGame({
         <TouchableOpacity
           onPress={submit}
           disabled={okDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Valide repons lan' : 'Valider la réponse'}
           activeOpacity={0.85}
           className="flex-1 flex-row items-center justify-center gap-2 py-4 rounded-2xl"
           style={{ backgroundColor: ACCENT, opacity: okDisabled ? 0.5 : 1 }}

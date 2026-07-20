@@ -171,14 +171,20 @@ const ExamResults = () => {
         if (!raw) continue;
         const parsed = JSON.parse(raw);
         setStored(parsed);
+        setRemoteLoading(false);
         return;
       } catch {
         // keep trying
       }
     }
 
-    // 2) Firestore fallback
-    if (!userId || !examKey || !exam) return;
+    // 2) Firestore fallback. If we can't run it (signed out, unknown exam, or
+    // the exam JSON isn't loaded), stop the spinner instead of hanging forever
+    // on a shared/anonymous link.
+    if (!userId || !examKey || !exam) {
+      setRemoteLoading(false);
+      return;
+    }
     let cancelled = false;
     setRemoteLoading(true);
     (async () => {
@@ -242,7 +248,7 @@ const ExamResults = () => {
     );
   }
 
-  const { result, examTitle, subject, level: storedLevel, track: examTrack } = stored;
+  const { result, examTitle, subject, level: storedLevel, track: examTrack, aiGradeFailures = 0 } = stored;
   const { summary, results } = result;
   const color = subjectColor(subject);
   const trackInfo = examTrack ? TRACK_BY_CODE[examTrack] : null;
@@ -259,8 +265,8 @@ const ExamResults = () => {
   const ringColor = pct >= 60 ? 'var(--success-500)' : pct >= 40 ? 'var(--warning-500)' : 'var(--danger-500)';
 
   // ── Mastery breakdown (where to focus) ────────────────────────────────────
-  const masteryBySection = computeMastery(results, (r) => r.question.sectionTitle || 'Questions');
-  const masteryByType = computeMastery(results, (r) => questionTypeMeta(r.question.type).label);
+  const masteryBySection = computeMastery(results, (r) => r.question?.sectionTitle || 'Questions');
+  const masteryByType = computeMastery(results, (r) => questionTypeMeta(r.question?.type).label);
   const showSectionMastery = masteryBySection.length > 1;
 
   // ── Review focus filter ───────────────────────────────────────────────────
@@ -306,8 +312,19 @@ const ExamResults = () => {
           </p>
         </div>
 
+      {aiGradeFailures > 0 && (
+        <div className="card card--message" role="status" style={{ marginBottom: '1rem' }}>
+          <p>
+            {t(
+              'Certaines réponses libres n’ont pas pu être corrigées automatiquement. Votre score peut être incomplet.',
+              'Kèk repons lib pa t ka korije otomatikman. Nòt ou a ka pa konplè.',
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Score overview */}
-      <div className="exam-results__overview" aria-label={`Score: ${pct}%`}>
+      <div className="exam-results__overview" aria-label={`${t('Score', 'Nòt')}: ${pct}%`}>
         {/* Score ring */}
         <div className="exam-results__score-ring">
           <svg viewBox="0 0 120 120" className="exam-results__ring-svg">

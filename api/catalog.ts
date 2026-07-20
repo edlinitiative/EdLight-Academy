@@ -65,7 +65,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {
+    // Log details server-side only; return a generic message to the client.
     console.error('[catalog] failed to read collections', err);
-    res.status(500).json({ error: 'catalog_failed', message: (err as Error).message });
+    res.status(500).json({ error: 'catalog_failed' });
   }
 }

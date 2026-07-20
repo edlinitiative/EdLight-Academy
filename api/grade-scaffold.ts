@@ -110,15 +110,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   try {
+    // Cap every user-supplied field before building the prompt so no single
+    // input can blow up token cost or drown the instructions (prompt-injection
+    // hardening — mirrors chat.ts's SANDRA_LIMITS.maxMessageChars).
+    const MAX_FIELD_CHARS = 2000;
+    const clamp = (v: unknown) => String(v ?? '').slice(0, MAX_FIELD_CHARS);
+
     const blanksText = blanks.map(b =>
-      `Blank #${b.index}:\n  Student's answer: "${b.userAnswer}"\n  Expected answer: "${b.expectedAnswer}"` +
-      (b.alternatives && b.alternatives.length > 0
-        ? `\n  Also acceptable: ${b.alternatives.map(a => `"${a}"`).join(', ')}`
+      `Blank #${Number(b.index) || 0}:\n  Student's answer: "${clamp(b.userAnswer)}"\n  Expected answer: "${clamp(b.expectedAnswer)}"` +
+      (Array.isArray(b.alternatives) && b.alternatives.length > 0
+        ? `\n  Also acceptable: ${b.alternatives.slice(0, 20).map(a => `"${clamp(a)}"`).join(', ')}`
         : '')
     ).join('\n\n');
 
     const prompt = PROMPT_TEMPLATE
-      .replace('{question}', question)
+      .replace('{question}', clamp(question))
       .replace('{blanks}', blanksText);
 
     const payload = {
@@ -144,7 +150,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     const body = await apiRes.json();
-    const text = body.candidates[0].content.parts[0].text;
+    // Optional-chain the whole path — a missing/blocked candidate must degrade
+    // to the manual-review fallback below, not throw a TypeError.
+    const text = body?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Gemini response missing text');
     let results: GradeResult[] = JSON.parse(text);
 
     // Ensure it's an array and has the expected shape

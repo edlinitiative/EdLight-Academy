@@ -29,6 +29,29 @@ function chapterNameOf(quiz: any): string {
   return after || String(quiz?.unit ?? 'Général');
 }
 
+/**
+ * The quiz bank stores the correct answer as a LETTER ("B" from
+ * `correct_answer`), while the runner records the selected option TEXT. Map the
+ * stored letter → option index → option text before comparing (same approach as
+ * LessonPractice), so both surfaces grade identically. Handles letters,
+ * already-text answers, and out-of-range values gracefully.
+ */
+function isQuizAnswerCorrect(question: any, given: string | undefined): boolean {
+  if (given == null || given === '') return false;
+  const options: string[] = (question.options ?? question.choices ?? []).map(String);
+  const raw = String(question.answer ?? question.correct_answer ?? question.correctAnswer ?? '').trim();
+  if (!raw) return false;
+  let idx = raw.toUpperCase().charCodeAt(0) - 65;
+  if (idx < 0 || idx >= options.length) {
+    const byText = options.findIndex((o) => o === raw);
+    idx = byText;
+  }
+  const correctText = idx >= 0 ? options[idx] : raw;
+  // Accept a match against the resolved option text or the raw stored value
+  // (covers the case where the answer was already stored as text).
+  return given === correctText || given === raw;
+}
+
 function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number, total: number) => void; t: Translate }) {
   const colors = useColors();
   const questions = useMemo(() => {
@@ -68,9 +91,7 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
       // Grade
       let correct = 0;
       questions.forEach((question: any, i: number) => {
-        const given = answers[i];
-        const answer = question.answer ?? question.correct_answer ?? question.correctAnswer ?? '';
-        if (given === answer || given === String(answer)) correct++;
+        if (isQuizAnswerCorrect(question, answers[i])) correct++;
       });
       onFinish(correct, questions.length);
     }

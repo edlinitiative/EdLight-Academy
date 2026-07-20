@@ -23,6 +23,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  runTransaction,
   serverTimestamp,
   increment,
   query,
@@ -82,9 +83,11 @@ export async function addWeeklyXp(uid: string, xp: number, meta: any = {}) {
       entryRef(id, uid),
       {
         uid,
-        // No fabricated fallback name — a null alias keeps accumulating XP but
-        // stays hidden from the board until the learner picks a pseudo.
-        displayName: isValidAlias(meta.displayName) ? meta.displayName : null,
+        // No fabricated fallback name. When there's no valid alias we OMIT the
+        // field entirely (rather than writing null) so a later XP write can't
+        // erase a pseudo the learner already set — the entry keeps accumulating
+        // XP and simply stays hidden until a valid alias exists.
+        ...(isValidAlias(meta.displayName) ? { displayName: meta.displayName } : {}),
         level: meta.level || 1,
         school: meta.school || null,
         city: meta.city || null,
@@ -146,7 +149,9 @@ export async function upsertAllTimeEntry(uid: string, meta: any = {}) {
       {
         uid,
         xp: meta.xp,
-        displayName: isValidAlias(meta.displayName) ? meta.displayName : null,
+        // Omit (not null) when there's no valid alias, so a later XP write can't
+        // erase a previously-set pseudo — mirrors addWeeklyXp.
+        ...(isValidAlias(meta.displayName) ? { displayName: meta.displayName } : {}),
         level: meta.level || 1,
         school: meta.school || null,
         city: meta.city || null,
@@ -183,21 +188,34 @@ export async function getGameRecords() {
   }
 }
 
-/** Claim the record for a game if `score` beats the current one. */
+/**
+ * Claim the record for a game if `score` beats the current one.
+ *
+ * Runs inside a transaction so the read-then-write is atomic: two games
+ * finishing at the same moment can no longer clobber each other. The write
+ * merges only `games.{gameId}` (deep merge), so sibling games' records are
+ * preserved, and the in-transaction re-read guarantees records only increase.
+ */
 export async function maybeSetGameRecord(uid: string, gameId: string, score: number, displayName: any) {
   if (!uid || !gameId || !score || !isValidAlias(displayName)) return;
   try {
-    const games = await getGameRecords();
-    const current = games[gameId];
-    if (current && current.score >= score) return;
-    await setDoc(
-      recordsRef(),
-      {
-        games: { ...games, [gameId]: { score, displayName, uid } },
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    );
+    const ref = recordsRef();
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const games = snap.exists() ? (snap.data() as any).games || {} : {};
+      const current = games[gameId];
+      if (current && current.score >= score) return;
+      tx.set(
+        ref,
+        {
+          // Only this game's field is written; merge keeps the other games'
+          // records intact instead of overwriting the whole `games` map.
+          games: { [gameId]: { score, displayName, uid } },
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+    });
   } catch (err) {
     console.error('[Leaderboard] maybeSetGameRecord error:', err);
   }

@@ -49,6 +49,18 @@ interface StoredMessage {
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
 
+/**
+ * Trusted origin for server-side fetches of our own public files (the exam
+ * catalog). Derived from configured env — NEVER from req.headers.host, which is
+ * client-controlled and would let a caller point Sandra's tools at any host.
+ */
+function resolveOrigin(): string {
+  const explicit = process.env.PUBLIC_ORIGIN || process.env.CANONICAL_ORIGIN;
+  if (explicit) return explicit.replace(/\/+$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+}
+
 function sanitizePage(raw: ChatBody['page']): PageContext | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const page: PageContext = {};
@@ -200,7 +212,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         system,
         messages: llmMessages,
         tools: SANDRA_TOOL_DEFS,
-        executeTool: createToolExecutor({ uid, origin: `https://${req.headers.host}` }),
+        executeTool: createToolExecutor({ uid, origin: resolveOrigin(), lang }),
         maxTokens: 1800,
         config: resolveLLMConfig(),
       }));

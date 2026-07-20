@@ -88,11 +88,14 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
   const [practiceNonce, setPracticeNonce] = useState(0);
 
   const entry = useMemo(() => {
+    // No words loaded → return null rather than indexing an empty array
+    // (dailyWordIndex would compute `h % 0` = NaN and entry.word would throw).
+    if (MO_KACHE_WORDS.length === 0) return null;
     if (mode === 'daily') return MO_KACHE_WORDS[dailyWordIndex(today)];
     return MO_KACHE_WORDS[Math.floor(Math.random() * MO_KACHE_WORDS.length)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, today, practiceNonce]);
-  const target = entry.word;
+  const target = entry?.word ?? '';
 
   const [guesses, setGuesses] = useState<string[]>([]);
   const [current, setCurrent] = useState('');
@@ -202,6 +205,32 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
 
   const over = state !== 'playing';
 
+  // No word bank available: friendly empty state instead of a broken grid.
+  if (!entry) {
+    return (
+      <View className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.bg }}>
+        <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink, textAlign: 'center', marginBottom: 8 }}>
+          {isCreole ? 'Poko gen mo' : 'Aucun mot disponible'}
+        </Text>
+        <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center', marginBottom: 20 }}>
+          {isCreole ? 'Tounen pita — n ap ajoute mo.' : 'Revenez plus tard — des mots arrivent.'}
+        </Text>
+        <TouchableOpacity
+          onPress={onExit}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
+          activeOpacity={0.85}
+          className="items-center justify-center py-4 px-8 rounded-2xl border"
+          style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+        >
+          <Text className="font-semibold text-base" style={{ color: colors.muted }}>
+            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       className="flex-1"
@@ -213,6 +242,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
       <View className="flex-row gap-2 mb-4">
         <TouchableOpacity
           onPress={() => setMode('daily')}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Mo jou a' : 'Mot du jour'}
           activeOpacity={0.85}
           className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
           style={{ backgroundColor: mode === 'daily' ? ACCENT : colors.surface, borderWidth: 1, borderColor: mode === 'daily' ? ACCENT : colors.border }}
@@ -224,6 +255,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => { setMode('practice'); setPracticeNonce((n) => n + 1); }}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Antrennman' : 'Entraînement'}
           activeOpacity={0.85}
           className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
           style={{ backgroundColor: mode === 'practice' ? ACCENT : colors.surface, borderWidth: 1, borderColor: mode === 'practice' ? ACCENT : colors.border }}
@@ -281,6 +314,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
         ) : (
           <TouchableOpacity
             onPress={() => setShowHint(true)}
+            accessibilityRole="button"
+            accessibilityLabel={isCreole ? 'Montre yon endis' : 'Afficher un indice'}
             activeOpacity={0.85}
             className="flex-row items-center gap-1.5 rounded-full px-4 py-2 mt-4 border"
             style={{ backgroundColor: colors.surface, borderColor: colors.border }}
@@ -320,6 +355,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
             {state === 'won' && (
               <TouchableOpacity
                 onPress={share}
+                accessibilityRole="button"
+                accessibilityLabel={isCreole ? 'Pataje rezilta a' : 'Partager le résultat'}
                 activeOpacity={0.85}
                 className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
                 style={{ backgroundColor: ACCENT }}
@@ -333,6 +370,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
             {mode === 'practice' ? (
               <TouchableOpacity
                 onPress={() => setPracticeNonce((n) => n + 1)}
+                accessibilityRole="button"
+                accessibilityLabel={isCreole ? 'Yon lòt mo' : 'Un autre mot'}
                 activeOpacity={0.85}
                 className="w-full items-center justify-center py-4 rounded-2xl mb-3"
                 style={{ backgroundColor: state === 'won' ? colors.surface : ACCENT, borderWidth: state === 'won' ? 1 : 0, borderColor: colors.border }}
@@ -348,6 +387,8 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
             )}
             <TouchableOpacity
               onPress={onExit}
+              accessibilityRole="button"
+              accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
               activeOpacity={0.85}
               className="w-full items-center justify-center py-4 rounded-2xl border"
               style={{ borderColor: colors.border, backgroundColor: colors.surface }}
@@ -373,6 +414,14 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
                   <TouchableOpacity
                     key={k}
                     onPress={() => type(k)}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      k === '↵'
+                        ? (isCreole ? 'Antre' : 'Valider')
+                        : k === '⌫'
+                        ? (isCreole ? 'Efase' : 'Effacer')
+                        : k
+                    }
                     activeOpacity={0.7}
                     style={{
                       width: wide ? Math.floor(KEY_W * 1.5) : KEY_W,

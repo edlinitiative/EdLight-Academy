@@ -47,7 +47,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
     return MO_KACHE_WORDS[Math.floor(Math.random() * MO_KACHE_WORDS.length)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, today, practiceNonce]);
-  const target = entry.word;
+  const target = entry?.word || '';
 
   const [guesses, setGuesses] = useState([]);
   const [current, setCurrent] = useState('');
@@ -140,6 +140,19 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
 
   const over = state !== 'playing';
 
+  if (!entry) {
+    return (
+      <div className="mk-game" style={{ '--cat-color': '#059669' } as React.CSSProperties}>
+        <p className="text-muted">
+          {isCreole ? 'Pa gen mo disponib kounye a.' : 'Aucun mot disponible pour le moment.'}
+        </p>
+        <button className="button button--ghost" onClick={onExit}>
+          ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mk-game" style={{ '--cat-color': '#059669' } as React.CSSProperties}>
       <div className="mk-game__modes" role="tablist">
@@ -228,7 +241,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }) {
                   key={k}
                   className={`mk-key ${k === '↵' || k === '⌫' ? 'mk-key--wide' : ''} ${keyStates[k] ? `mk-key--${keyStates[k]}` : ''}`}
                   onClick={() => type(k)}
-                  aria-label={k === '↵' ? 'Enter' : k === '⌫' ? 'Backspace' : k}
+                  aria-label={k === '↵' ? (isCreole ? 'Antre' : 'Entrée') : k === '⌫' ? (isCreole ? 'Efase' : 'Effacer') : k}
                 >
                   {k}
                 </button>

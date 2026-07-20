@@ -36,16 +36,26 @@ export function buildVraiFauxItems(
     (q: any) => q && q.q && Array.isArray(q.options) && q.options.length >= 2,
   );
   return shuffleArr(all).slice(0, count).map((q: any) => {
-    const truth = Math.random() < 0.5;
-    const proposed = truth
-      ? q.options[q.answer]
-      : shuffleArr(q.options.filter((_: any, i: number) => i !== q.answer))[0];
+    // Normalize the answer index: bad/missing data must never make
+    // correctAnswer undefined (that would blank the card and break grading).
+    const answerIdx =
+      Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length
+        ? q.answer
+        : 0;
+    const correctAnswer = q.options[answerIdx];
+    // Distractors are options whose VALUE differs from the correct one — dedupe
+    // by value so a "false" proposal can never actually be the right answer
+    // (duplicate option texts, or an invalid index, previously slipped through).
+    const distractors = q.options.filter((o: any) => o !== correctAnswer);
+    // If every option equals the correct answer, we can only pose it as true.
+    const truth = distractors.length === 0 ? true : Math.random() < 0.5;
+    const proposed = truth ? correctAnswer : shuffleArr(distractors)[0];
     return {
       q: q.q,
       qHt: q.qHt || q.q,
       proposed,
       truth,
-      correctAnswer: q.options[q.answer],
+      correctAnswer,
       // Flag questions ("De quel pays est ce drapeau ?") are meaningless
       // without their flag — carry it through so the game can render it.
       flag: q.flag || null,

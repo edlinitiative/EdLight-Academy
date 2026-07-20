@@ -10,7 +10,9 @@
  *  - When a new window begins the document is overwritten from scratch.
  *  - Uses `FieldValue.increment()` for the hot path so concurrent requests
  *    are handled atomically without a transaction.
- *  - Fails open: if Firestore is unreachable the request is allowed through.
+ *  - Cost-bearing LLM endpoints (see COST_ENDPOINTS) FAIL CLOSED on any
+ *    Firestore error — a broken limiter must never silently uncap paid model
+ *    spend. Any other endpoint fails open (a blip shouldn't break the feature).
  */
 
 import { getDb, isAdminConfigured } from './firebaseAdmin';
@@ -26,6 +28,17 @@ const LIMITS: Record<string, Limit> = {
   'chat':           { max: 30, windowSec: 3600 },
   'email-plan':     { max: 3,  windowSec: 86400 },
 };
+
+// Endpoints that spend money per call (paid LLM / email). If the limiter can't
+// reach Firestore, these DENY the request rather than risk uncapped cost.
+const COST_ENDPOINTS = new Set<string>([
+  'grade-essay',
+  'grade-scaffold',
+  'generate-plan',
+  'generate-quiz',
+  'chat',
+  'email-plan',
+]);
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -78,8 +91,13 @@ export async function checkRateLimit(
 
     return { allowed: true, remaining: limit.max - (data.count + 1), resetAt };
   } catch (err) {
-    // Fail open — a broken rate limiter is better than a broken feature
-    console.warn('[rateLimit] Firestore error, allowing request:', err);
-    return { allowed: true, remaining: 999, resetAt: 0 };
+    // Cost endpoints fail CLOSED (deny) so a Firestore blip can't uncap paid
+    // model spend; everything else stays lenient.
+    const failClosed = COST_ENDPOINTS.has(endpoint);
+    console.warn(
+      `[rateLimit] Firestore error, ${failClosed ? 'DENYING' : 'allowing'} request:`,
+      err,
+    );
+    return { allowed: !failClosed, remaining: 0, resetAt };
   }
 }

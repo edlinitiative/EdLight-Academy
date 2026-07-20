@@ -75,7 +75,7 @@ function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_
     { count: 25, label: isCreole ? 'Mwayen, 25 kesyon' : 'Moyen, 25 questions', icon: <PenLine size={18} /> },
     { count: 50, label: isCreole ? 'Difisil, 50 kesyon' : 'Difficile, 50 questions', icon: <Flame size={18} /> },
     { count: total, label: isCreole ? `Tout, ${total} kesyon` : `Tout, ${total} questions`, icon: <Trophy size={18} /> },
-  ].filter((r) => r.count <= total);
+  ].filter((r) => r.count > 0 && r.count <= total);
 
   return (
     <div className="trivia-round-picker">
@@ -90,15 +90,22 @@ function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_
         >
           {cat?.icon}
         </span>
-        <h2>{isCreole ? cat.nameHt : cat.name}</h2>
+        <h2>{isCreole ? cat?.nameHt : cat?.name}</h2>
         <p>{isCreole ? 'Chwazi konbyen kesyon ou vle reponn' : 'Choisissez le nombre de questions'}</p>
       </div>
+      {rounds.length === 0 && (
+        <p className="trivia-round-picker__empty" role="status">
+          {isCreole
+            ? 'Pa gen kesyon pou kategori sa a pou kounye a.'
+            : 'Aucune question disponible pour cette catégorie pour le moment.'}
+        </p>
+      )}
       <div className="trivia-round-picker__options">
         {rounds.map((r) => (
           <button
             key={r.count}
             className="trivia-round-btn"
-            style={{ '--cat-color': cat.color }}
+            style={{ '--cat-color': cat?.color }}
             onClick={() => onStart(r.count)}
           >
             <span className="trivia-round-btn__icon">{r.icon}</span>
@@ -178,6 +185,30 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
     if (idx === selected) return `${base} ${base}--wrong`;
     return `${base} ${base}--dimmed`;
   };
+
+  // Guard: an empty/misconfigured category would leave `q` undefined and crash
+  // on `q.flag` / `q.options.map`. Show a graceful message instead.
+  if (!questions.length || !q) {
+    return (
+      <div className="trivia-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
+        <div className="trivia-quiz__top-bar">
+          <button className="trivia-quiz__close" onClick={onBack} aria-label={isCreole ? 'Kite' : 'Quitter'}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="trivia-quiz__question-card">
+          <h2 className="trivia-quiz__question">
+            {isCreole
+              ? 'Pa gen kesyon pou kategori sa a pou kounye a.'
+              : 'Aucune question disponible pour cette catégorie pour le moment.'}
+          </h2>
+        </div>
+        <button className="trivia-next-btn" onClick={onBack}>
+          ← {isCreole ? 'Retounen' : 'Retour'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="trivia-quiz" style={{ '--cat-color': accent } as React.CSSProperties}>
@@ -401,6 +432,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
   const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
   const [reward, setReward] = useState(null);
   const [playNonce, setPlayNonce] = useState(0);
+  const [dailyNotice, setDailyNotice] = useState('');
   const autoStartedRef = useRef(false);
 
   // While a round is in play, go heads-down: drop the bottom tab bar + footer
@@ -409,14 +441,21 @@ function TriviaClassic({ isCreole, onExitHub }) {
 
   const startDaily = useCallback(() => {
     const qs = getDailyChallengeQuestions(questions, todayStr(), 10);
-    if (!qs.length) return;
+    if (!qs.length) {
+      setDailyNotice(isCreole
+        ? 'Defi jodi a poko disponib. Tanpri retounen pita.'
+        : "Le défi du jour n'est pas encore disponible. Revenez plus tard.");
+      setTimeout(() => setDailyNotice(''), 4000);
+      return;
+    }
+    setDailyNotice('');
     setDailyQuestions(qs);
     setCategory('daily');
     setRoundCount(qs.length);
     setReward(null);
     setPlayNonce((n) => n + 1);
     setScreen('play');
-  }, [questions]);
+  }, [questions, isCreole]);
 
   // Deep-link from the home "Défi du jour" widget:
   // navigate('/trivia', { state: { startDaily: true } }).
@@ -493,6 +532,11 @@ function TriviaClassic({ isCreole, onExitHub }) {
           </button>
           {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
           <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
+          {dailyNotice && (
+            <p className="trivia-daily__notice" role="status" style={{ textAlign: 'center', color: 'var(--text-muted)', margin: '0.5rem 0' }}>
+              {dailyNotice}
+            </p>
+          )}
           <CategoryPicker
             onSelect={handleCategorySelect}
             isCreole={isCreole}

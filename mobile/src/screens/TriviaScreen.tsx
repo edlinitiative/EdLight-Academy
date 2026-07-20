@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Dimensions,
+  View, Text, ScrollView, TouchableOpacity, Dimensions, FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
@@ -159,84 +159,79 @@ function CategoryPicker({
 }) {
   const colors = useColors();
   return (
-    <ScrollView
+    <FlatList
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
-    >
-      <View className="px-4 pt-4 pb-3">
-        <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
-          {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>
-          {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
-        </Text>
-      </View>
-
-      {/* App-icon grid: illustrated squircle tiles, 3 per row */}
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: COL_GAP,
-          paddingHorizontal: GRID_PAD,
-        }}
-      >
-        {TRIVIA_CATEGORIES.map((cat: any) => (
-          <TouchableOpacity
-            key={cat.id}
-            onPress={() => onSelect(cat.id)}
-            activeOpacity={0.8}
-            style={{ width: TILE_SIZE, alignItems: 'center', marginBottom: 6 }}
+      data={TRIVIA_CATEGORIES as any[]}
+      keyExtractor={(cat: any) => cat.id}
+      numColumns={3}
+      // gap → column gutters + side padding; the extra marginBottom + the tile's
+      // own marginBottom reproduce the original wrapped grid's row spacing.
+      columnWrapperStyle={{ gap: COL_GAP, paddingHorizontal: GRID_PAD, marginBottom: COL_GAP }}
+      ListHeaderComponent={
+        <View className="px-4 pt-4 pb-3">
+          <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
+            {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>
+            {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
+          </Text>
+        </View>
+      }
+      renderItem={({ item: cat }: { item: any }) => (
+        <TouchableOpacity
+          onPress={() => onSelect(cat.id)}
+          activeOpacity={0.8}
+          style={{ width: TILE_SIZE, alignItems: 'center', marginBottom: 6 }}
+        >
+          {/* Shadow on the outer view; clipped illustration on the inner. */}
+          <View
+            style={{
+              borderRadius: 22,
+              shadowColor: '#0f172a',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 3,
+            }}
           >
-            {/* Shadow on the outer view; clipped illustration on the inner. */}
             <View
               style={{
+                width: TILE_SIZE,
+                height: TILE_SIZE,
                 borderRadius: 22,
-                shadowColor: '#0f172a',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
+                overflow: 'hidden',
+                backgroundColor: colors.surfaceAlt,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.border,
               }}
             >
-              <View
-                style={{
-                  width: TILE_SIZE,
-                  height: TILE_SIZE,
-                  borderRadius: 22,
-                  overflow: 'hidden',
-                  backgroundColor: colors.surfaceAlt,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                {cat.image ? (
-                  <SvgUri
-                    uri={`${ASSET_BASE_URL}${cat.image}`}
-                    width={TILE_SIZE}
-                    height={TILE_SIZE}
-                    preserveAspectRatio="xMidYMid slice"
-                  />
-                ) : (
-                  <Text style={{ fontSize: 38 }}>{cat.icon ?? '🎯'}</Text>
-                )}
-              </View>
+              {cat.image ? (
+                <SvgUri
+                  uri={`${ASSET_BASE_URL}${cat.image}`}
+                  width={TILE_SIZE}
+                  height={TILE_SIZE}
+                  preserveAspectRatio="xMidYMid slice"
+                />
+              ) : (
+                <Text style={{ fontSize: 38 }}>{cat.icon ?? '🎯'}</Text>
+              )}
             </View>
+          </View>
 
-            {/* Name (reserve 2 lines so tiles align) */}
-            <Text
-              numberOfLines={2}
-              style={{ fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30, letterSpacing: -0.2 }}
-            >
-              {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </ScrollView>
+          {/* Name (reserve 2 lines so tiles align) */}
+          <Text
+            numberOfLines={2}
+            style={{ fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30, letterSpacing: -0.2 }}
+          >
+            {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
+          </Text>
+        </TouchableOpacity>
+      )}
+    />
   );
 }
 

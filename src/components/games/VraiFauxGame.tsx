@@ -51,7 +51,7 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
   }, [over, answered, correct, onRecord]);
 
   const answer = (saysTrue) => {
-    if (over || feedback) return;
+    if (over || feedback || !item) return;
     const right = saysTrue === item.truth;
     setAnswered((n) => n + 1);
     if (right) {
@@ -64,14 +64,18 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
     setTimeout(() => { setFeedback(null); setIdx((i) => i + 1); }, right ? 350 : 900);
   };
 
+  // Keep the latest `answer` in a ref so the keydown listener can be registered
+  // once (stable [] deps) instead of on every one-second timer re-render.
+  const answerRef = useRef(answer);
+  answerRef.current = answer;
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'ArrowRight') answer(true);
-      if (e.key === 'ArrowLeft') answer(false);
+      if (e.key === 'ArrowRight') answerRef.current(true);
+      if (e.key === 'ArrowLeft') answerRef.current(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
 
   const replay = () => {
     recordedRef.current = false;
@@ -79,6 +83,21 @@ export default function VraiFauxGame({ questionsMap, isCreole, onExit, onRecord,
     setIdx(0); setCorrect(0); setAnswered(0); setStreak(0); setBestStreak(0);
     setFeedback(null); setTimeLeft(ROUND_SECONDS); setOver(false); setReward(null);
   };
+
+  if (!items.length || !item) {
+    return (
+      <div className="vf-game" style={{ '--cat-color': '#e0532f' } as React.CSSProperties}>
+        <p className="vf-game__question">
+          {isCreole
+            ? 'Pa gen ase kesyon pou jwe kounye a.'
+            : 'Pas assez de questions pour jouer pour le moment.'}
+        </p>
+        <button className="button button--ghost" onClick={onExit}>
+          ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+        </button>
+      </div>
+    );
+  }
 
   if (over) {
     return (

@@ -1,12 +1,12 @@
-// Returns the latest Users CSV from GitHub main branch so Admin sees up-to-date data without redeploy.
-// Requires a valid Firebase ID token from an admin user.
+// Returns the user roster as CSV for the Admin console. Built server-side from
+// the access-controlled Firestore `users` collection (NOT a public file), and
+// gated to admin callers only. Previously fetched a plaintext CSV from the
+// public GitHub repo — that PII file has been removed.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyIdToken, getDb, isAdminConfigured } from '../_lib/firebaseAdmin';
 
-const OWNER = 'edlinitiative';
-const REPO = 'EdLight-Academy';
-const PATH = 'public/data/edlight_users.csv';
+const COLUMNS = ['user_id', 'name', 'email', 'role', 'enrolled_courses', 'created_at', 'last_seen'];
 
 async function isAdminUser(uid: string): Promise<boolean> {
   try {
@@ -16,6 +16,24 @@ async function isAdminUser(uid: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function csvEscape(v: unknown): string {
+  const s = v == null ? '' : String(v);
+  if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+/** Firestore Timestamp | ISO string | epoch ms → ISO string (best effort). */
+function toIso(v: unknown): string {
+  if (!v) return '';
+  if (typeof v === 'object' && typeof (v as { toDate?: () => Date }).toDate === 'function') {
+    try { return (v as { toDate: () => Date }).toDate().toISOString(); } catch { return ''; }
+  }
+  if (typeof v === 'number') return new Date(v).toISOString();
+  return String(v);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -53,17 +71,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   try {
-    const url = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main/${PATH}`;
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      const text = await resp.text();
-      res.status(resp.status).json({ error: 'upstream_fetch_failed', details: text });
-      return;
-    }
-    const csv = await resp.text();
+    const snap = await getDb().collection('users').get();
+    const rows = snap.docs.map((doc) => {
+      const d = doc.data() || {};
+      const enrolled = Array.isArray(d.enrolled_courses)
+        ? d.enrolled_courses.join(';')
+        : (d.enrolled_courses ?? d.enrollment ?? '');
+      return {
+        user_id: doc.id,
+        name: d.full_name ?? d.name ?? '',
+        email: d.email ?? '',
+        role: d.role ?? 'student',
+        enrolled_courses: enrolled,
+        created_at: toIso(d.created_at),
+        last_seen: toIso(d.last_seen),
+      } as Record<string, unknown>;
+    });
+
+    const lines = [
+      COLUMNS.join(','),
+      ...rows.map((r) => COLUMNS.map((c) => csvEscape(r[c])).join(',')),
+    ];
+
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
-    res.status(200).send(csv);
+    res.status(200).send(lines.join('\n'));
   } catch (e) {
     console.error('users/export error', e);
     res.status(500).json({ error: 'internal_error' });

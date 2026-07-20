@@ -18,7 +18,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,6 +48,7 @@ import { TRACKS, currentPlanSeason } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
 import { useColors, useTheme, radius, type Palette } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import { LoadingState, ErrorState } from '../components/StateViews';
 import {
   loadActiveStudyPlan,
   generateStudyPlan,
@@ -342,7 +342,8 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     setLoadError(false);
     try {
       setPlan(await loadActiveStudyPlan(uid));
-    } catch {
+    } catch (err) {
+      console.warn('[StudyPlan] loadPlan error:', err);
       setPlan(null);
       setLoadError(true);
     } finally {
@@ -532,18 +533,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
-        <View className="flex-1 items-center justify-center px-8" style={{ gap: 14 }}>
-          <ActivityIndicator size="large" color={colors.azure} />
-          <View className="flex-row items-center" style={{ gap: 8 }}>
-            <Sparkles size={18} color={colors.azure} />
-            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>
-              {t('Sandra prépare votre plan…', 'Sandra ap prepare plan ou…')}
-            </Text>
-          </View>
-          <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
-            {t('Cela prendra quelques secondes.', 'Sa ap pran kèk segonn.')}
-          </Text>
-        </View>
+        <LoadingState message={t('Sandra prépare votre plan…', 'Sandra ap prepare plan ou…')} />
       </SafeAreaView>
     );
   }
@@ -553,9 +543,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={colors.azure} />
-        </View>
+        <LoadingState />
       </SafeAreaView>
     );
   }
@@ -565,27 +553,13 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
-        <View className="flex-1 items-center justify-center px-8" style={{ gap: 12 }}>
-          <WifiOff size={38} color={colors.faint} />
-          <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
-            {t('Erreur de connexion', 'Pwoblèm koneksyon')}
-          </Text>
-          <Text style={{ fontSize: 13, color: colors.muted, textAlign: 'center' }}>
-            {t(
-              'Impossible de charger votre plan. Vérifiez votre connexion internet.',
-              'Nou pa t kapab chaje plan ou. Tcheke koneksyon entènèt ou.',
-            )}
-          </Text>
-          <TouchableOpacity
-            onPress={loadPlan}
-            activeOpacity={0.8}
-            style={{ backgroundColor: colors.azure, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 12, marginTop: 6 }}
-          >
-            <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>
-              {t('Réessayer', 'Eseye ankò')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState
+          message={t(
+            'Impossible de charger votre plan. Vérifiez votre connexion internet.',
+            'Nou pa t kapab chaje plan ou. Tcheke koneksyon entènèt ou.',
+          )}
+          onRetry={loadPlan}
+        />
       </SafeAreaView>
     );
   }

@@ -72,7 +72,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   res.setHeader('X-RateLimit-Remaining', String(remaining));
 
   const body: GradeEssayBody = req.body || {};
-  const { question, answer, modelAnswer, context, answerParts, subject, level } = body;
+  // Cap every user-supplied text field before it reaches the prompt builder so
+  // no single input can blow up token cost or drown the grading instructions
+  // (prompt-injection / DoS hardening). Answers/context are long-form, so they
+  // get a generous cap; short metadata fields are tightly bounded.
+  const clamp = (v: unknown, max: number) =>
+    typeof v === 'string' ? v.slice(0, max) : undefined;
+  const question = clamp(body.question, 4000);
+  const answer = clamp(body.answer, 12000);
+  const modelAnswer = clamp(body.modelAnswer, 4000);
+  const context = clamp(body.context, 8000);
+  const subject = clamp(body.subject, 100);
+  const level = clamp(body.level, 100);
+  const answerParts = Array.isArray(body.answerParts) ? body.answerParts.slice(0, 30) : body.answerParts;
   const type = body.type === 'short_answer' ? 'short_answer' : 'essay';
   const points = typeof body.points === 'number' && body.points > 0 ? body.points : 10;
 

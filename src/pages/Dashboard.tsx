@@ -28,6 +28,31 @@ function subjectInitial(subject) {
   return (String(subject || '?').trim()[0] || '?').toUpperCase();
 }
 
+// Turn a raw quiz id like "CHEM-NSI-U1-L2" into a readable title
+// ("Chimie · NS1 · Unité 1 · Leçon 2"). Falls back to the raw id / "Quiz".
+const QUIZ_SUBJECT_NAMES = {
+  MATH: { fr: 'Mathématiques', ht: 'Matematik' },
+  PHYS: { fr: 'Physique', ht: 'Fizik' },
+  CHEM: { fr: 'Chimie', ht: 'Chimi' },
+  ECON: { fr: 'Économie', ht: 'Ekonomi' },
+};
+function humanizeQuizId(quizId, isCreole) {
+  if (!quizId || typeof quizId !== 'string') return 'Quiz';
+  const parts = quizId.split('-');
+  const bits = [];
+  const subj = QUIZ_SUBJECT_NAMES[(parts[0] || '').toUpperCase()];
+  if (subj) bits.push(isCreole ? subj.ht : subj.fr);
+  for (const p of parts.slice(1)) {
+    const ns = p.match(/^NS(\w+)$/i);
+    if (ns) { bits.push(`NS${ns[1]}`); continue; }
+    const u = p.match(/^U(\d+)$/i);
+    if (u) { bits.push(`${isCreole ? 'Inite' : 'Unité'} ${u[1]}`); continue; }
+    const l = p.match(/^L(\d+)$/i);
+    if (l) { bits.push(`${isCreole ? 'Leson' : 'Leçon'} ${l[1]}`); continue; }
+  }
+  return bits.length ? bits.join(' · ') : quizId;
+}
+
 function countCourseLessons(course) {
   const units = Array.isArray(course?.modules) ? course.modules : [];
   const lessonsCount = units.reduce((sum, unit) => sum + (unit?.lessons?.length || 0), 0);
@@ -157,10 +182,12 @@ export default function Dashboard() {
       <section className="section">
         <div className="container" style={{ textAlign: 'center', padding: '4rem 1rem' }}>
           <p className="text-muted" style={{ marginBottom: '1.5rem' }}>
-            Connectez-vous pour accéder à votre tableau de bord.
+            {isCreole
+              ? 'Konekte pou ou ka gen aksè ak tablodbò ou.'
+              : 'Connectez-vous pour accéder à votre tableau de bord.'}
           </p>
           <button type="button" className="button button--primary" onClick={() => setShowAuthModal(true)}>
-            Se connecter
+            {isCreole ? 'Konekte' : 'Se connecter'}
           </button>
         </div>
       </section>
@@ -360,7 +387,7 @@ export default function Dashboard() {
                       const pct = typeof a.percentage === 'number' ? Math.round(a.percentage) : 0;
                       const good = pct >= 80;
                       const courseName = a.courseId ? (courses?.find((c) => c.id === a.courseId)?.name || '') : '';
-                      const label = a.quizId || 'Quiz';
+                      const label = humanizeQuizId(a.quizId, isCreole);
                       const dateMs = a.attemptedAtMs || a.attemptedAt_ms || a.date || Date.now();
                       return (
                         <div key={`${a.quizId || 'quiz'}-${idx}`} className="dash-activity__row">

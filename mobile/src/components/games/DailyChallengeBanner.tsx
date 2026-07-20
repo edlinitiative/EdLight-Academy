@@ -25,6 +25,13 @@ export default function DailyChallengeBanner({
     <TouchableOpacity
       activeOpacity={done ? 1 : 0.85}
       disabled={done}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: done }}
+      accessibilityLabel={
+        done
+          ? (isCreole ? 'Defi jodi a fini' : 'Défi du jour terminé')
+          : (isCreole ? 'Jwe defi jodi a' : 'Jouer le défi du jour')
+      }
       onPress={() => {
         if (!done) onStart();
       }}

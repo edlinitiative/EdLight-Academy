@@ -367,58 +367,94 @@ const QUESTIONS_COLLECTION = 'trivia_questions';
 
 const isGeneratedCategory = (id: string) => GENERATED_CATEGORY_IDS.includes(id);
 
+// ── In-memory read cache ────────────────────────────────────────────────────
+// /jeux used to re-read the ENTIRE trivia bank (both collections) on every
+// visit. These docs carry BOTH languages, so the cached payload is language
+// agnostic — switching fr↔ht needs no re-fetch. Empty/failed reads are NOT
+// cached, so the static fallback keeps working and the next visit retries.
+const TRIVIA_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let _catsCache: { at: number; data: any[] } | null = null;
+let _catsInflight: Promise<any[]> | null = null;
+let _qsCache: { at: number; data: Record<string, any[]> } | null = null;
+let _qsInflight: Promise<Record<string, any[]>> | null = null;
+
+/** Drop the cached banks (call after an admin write so edits show immediately). */
+export function clearTriviaCache(): void {
+  _catsCache = null;
+  _catsInflight = null;
+  _qsCache = null;
+  _qsInflight = null;
+}
+
 /**
  * Load all category docs, sorted by `order` then id.
- * Returns [] on empty or error (never throws).
+ * Returns [] on empty or error (never throws). Cached for TTL_MS.
  */
 export async function loadTriviaCategories(): Promise<any[]> {
-  try {
-    const snap = await getDocs(collection(db, CATEGORIES_COLLECTION));
-    if (snap.empty) return [];
-    const cats: any[] = [];
-    snap.forEach((d) => cats.push({ id: d.id, ...d.data() }));
-    cats.sort((a, b) => {
-      const oa = typeof a.order === 'number' ? a.order : 9999;
-      const ob = typeof b.order === 'number' ? b.order : 9999;
-      if (oa !== ob) return oa - ob;
-      return String(a.id).localeCompare(String(b.id));
-    });
-    return cats;
-  } catch (err) {
-    console.warn('[triviaService] loadTriviaCategories failed:', err);
-    return [];
-  }
+  if (_catsCache && Date.now() - _catsCache.at < TRIVIA_CACHE_TTL_MS) return _catsCache.data;
+  if (_catsInflight) return _catsInflight;
+  _catsInflight = (async () => {
+    try {
+      const snap = await getDocs(collection(db, CATEGORIES_COLLECTION));
+      if (snap.empty) return [];
+      const cats: any[] = [];
+      snap.forEach((d) => cats.push({ id: d.id, ...d.data() }));
+      cats.sort((a, b) => {
+        const oa = typeof a.order === 'number' ? a.order : 9999;
+        const ob = typeof b.order === 'number' ? b.order : 9999;
+        if (oa !== ob) return oa - ob;
+        return String(a.id).localeCompare(String(b.id));
+      });
+      _catsCache = { at: Date.now(), data: cats };
+      return cats;
+    } catch (err) {
+      console.warn('[triviaService] loadTriviaCategories failed:', err);
+      return [];
+    } finally {
+      _catsInflight = null;
+    }
+  })();
+  return _catsInflight;
 }
 
 /**
  * Load all question docs, assembled into a map { catId: Question[] },
  * each category's list sorted by `order`.
- * Returns {} on empty or error (never throws).
+ * Returns {} on empty or error (never throws). Cached for TTL_MS.
  */
 export async function loadTriviaQuestions(): Promise<Record<string, any[]>> {
-  try {
-    const snap = await getDocs(collection(db, QUESTIONS_COLLECTION));
-    if (snap.empty) return {};
-    const map: Record<string, any[]> = {};
-    snap.forEach((d) => {
-      const data: any = d.data();
-      const catId = data.categoryId;
-      if (!catId) return;
-      if (!map[catId]) map[catId] = [];
-      map[catId].push({ id: d.id, ...data });
-    });
-    for (const catId of Object.keys(map)) {
-      map[catId].sort((a, b) => {
-        const oa = typeof a.order === 'number' ? a.order : 9999;
-        const ob = typeof b.order === 'number' ? b.order : 9999;
-        return oa - ob;
+  if (_qsCache && Date.now() - _qsCache.at < TRIVIA_CACHE_TTL_MS) return _qsCache.data;
+  if (_qsInflight) return _qsInflight;
+  _qsInflight = (async () => {
+    try {
+      const snap = await getDocs(collection(db, QUESTIONS_COLLECTION));
+      if (snap.empty) return {};
+      const map: Record<string, any[]> = {};
+      snap.forEach((d) => {
+        const data: any = d.data();
+        const catId = data.categoryId;
+        if (!catId) return;
+        if (!map[catId]) map[catId] = [];
+        map[catId].push({ id: d.id, ...data });
       });
+      for (const catId of Object.keys(map)) {
+        map[catId].sort((a, b) => {
+          const oa = typeof a.order === 'number' ? a.order : 9999;
+          const ob = typeof b.order === 'number' ? b.order : 9999;
+          return oa - ob;
+        });
+      }
+      _qsCache = { at: Date.now(), data: map };
+      return map;
+    } catch (err) {
+      console.warn('[triviaService] loadTriviaQuestions failed:', err);
+      return {};
+    } finally {
+      _qsInflight = null;
     }
-    return map;
-  } catch (err) {
-    console.warn('[triviaService] loadTriviaQuestions failed:', err);
-    return {};
-  }
+  })();
+  return _qsInflight;
 }
 
 /** Delete every doc in a collection in batches < 500. */
@@ -516,6 +552,7 @@ export async function seedTriviaFromStatic(
     }
   }
 
+  clearTriviaCache();
   return { categories: catCount, questions: qCount };
 }
 
@@ -542,16 +579,19 @@ export async function saveTriviaQuestion(
 
   if (questionId) {
     await setDoc(doc(db, QUESTIONS_COLLECTION, questionId), payload, { merge: true });
+    clearTriviaCache();
     return questionId;
   }
   const ref = doc(collection(db, QUESTIONS_COLLECTION));
   await setDoc(ref, { ...payload, created_at: serverTimestamp() });
+  clearTriviaCache();
   return ref.id;
 }
 
 /** Delete a single question doc. */
 export async function deleteTriviaQuestion(questionId: string): Promise<void> {
   await deleteDoc(doc(db, QUESTIONS_COLLECTION, questionId));
+  clearTriviaCache();
 }
 
 /** Create or update category metadata (setDoc merge). */
@@ -561,4 +601,5 @@ export async function saveTriviaCategory(catId: string, data: any): Promise<void
     { ...data, updated_at: serverTimestamp() },
     { merge: true },
   );
+  clearTriviaCache();
 }

@@ -17,6 +17,24 @@ import { ExamsParamList } from '../navigation/ExamsNavigator';
 type Route = RouteProp<ExamsParamList, 'ExamResults'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamResults'>;
 
+/**
+ * Correctness for a reviewed question. Prefer the grader's persisted per-item
+ * status (`results[]`); fall back to a text comparison against `question.correct`
+ * for legacy results saved before the status array was persisted.
+ */
+function isCorrectResult(item: any, answer: any, question: any): boolean {
+  if (item?.status) return item.status === 'correct' || item.status === 'scaffold-complete';
+  const given = answer?.given ?? answer;
+  const correctAnswer = question?.correct;
+  return given != null && given !== '' && String(given).toLowerCase() === String(correctAnswer ?? '').toLowerCase();
+}
+
+function isUnansweredResult(item: any, answer: any): boolean {
+  if (item?.status) return item.status === 'unanswered';
+  const given = answer?.given ?? answer;
+  return given == null || given === '';
+}
+
 function ScoreGauge({ percentage }: { percentage: number }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
@@ -53,16 +71,16 @@ function ScoreGauge({ percentage }: { percentage: number }) {
   );
 }
 
-function QuestionReviewItem({ question, index, answer }: { question: any; index: number; answer: any }) {
+function QuestionReviewItem({ question, index, answer, result }: { question: any; index: number; answer: any; result: any }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [expanded, setExpanded] = useState(false);
-  const correctAnswer = question.correct_answer ?? question.answer ?? question.solution;
+  const correctAnswer = question.correct;
   const given = answer?.given ?? answer;
-  const isCorrect = given != null && given !== '' && String(given).toLowerCase() === String(correctAnswer ?? '').toLowerCase();
-  const isUnanswered = given == null || given === '';
+  const isUnanswered = isUnansweredResult(result, answer);
+  const isCorrect = !isUnanswered && isCorrectResult(result, answer, question);
 
   return (
     <TouchableOpacity
@@ -111,16 +129,13 @@ function QuestionReviewItem({ question, index, answer }: { question: any; index:
   );
 }
 
-function computeMastery(questions: any[], answers: Record<string, any>) {
+function computeMastery(questions: any[], answers: Record<string, any>, gradedResults: any[]) {
   const groups: Record<string, { correct: number; total: number }> = {};
   questions.forEach((q, i) => {
     const section = q.sectionTitle || q.section || 'Général';
     if (!groups[section]) groups[section] = { correct: 0, total: 0 };
     groups[section].total++;
-    const given = answers[i]?.given ?? answers[i];
-    const correctAnswer = q.correct_answer ?? q.answer ?? q.solution;
-    const isCorrect = given != null && given !== '' && String(given).toLowerCase() === String(correctAnswer ?? '').toLowerCase();
-    if (isCorrect) groups[section].correct++;
+    if (isCorrectResult(gradedResults[i], answers[i], q)) groups[section].correct++;
   });
   return Object.entries(groups)
     .map(([section, { correct, total }]) => ({ section, correct, total, pct: Math.round((correct / total) * 100) }))
@@ -181,19 +196,21 @@ export default function ExamResultsScreen() {
 
   if (loading) return <LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />;
 
+  // The grader emits correctCount/incorrectCount/earnedPoints/totalPoints and a
+  // per-question `results[]` array (persisted at submit). Read those real field
+  // names — the old summary.correct/total/scored/maxScore never existed.
   const summary = result?.summary ?? {};
   const percentage = summary.percentage ?? result?.percentage ?? 0;
-  const correct = summary.correct ?? 0;
-  const total = summary.total ?? 0;
-  const scored = summary.scored ?? 0;
-  const maxScore = summary.maxScore ?? 0;
+  const correct = Math.round(summary.correctCount ?? 0);
+  const incorrect = summary.incorrectCount ?? 0;
+  const scored = summary.earnedPoints ?? 0;
+  const maxScore = summary.totalPoints ?? 0;
   const answers = result?.answers ?? {};
+  const gradedResults: any[] = Array.isArray(result?.results) ? result.results : [];
 
   const filteredQuestions = questions.filter((q, i) => {
     if (reviewFilter === 'all') return true;
-    const given = answers[i]?.given ?? answers[i];
-    const correctAnswer = q.correct_answer ?? q.answer ?? q.solution;
-    const isCorrect = given != null && given !== '' && String(given).toLowerCase() === String(correctAnswer ?? '').toLowerCase();
+    const isCorrect = isCorrectResult(gradedResults[i], answers[i], q);
     return reviewFilter === 'correct' ? isCorrect : !isCorrect;
   });
 
@@ -231,7 +248,7 @@ export default function ExamResultsScreen() {
         <View className="flex-row gap-3 mx-4 mt-4">
           {[
             { label: t('Correctes', 'Kòrèk'), value: String(correct), icon: <CheckCircle2 color="#10b981" size={20} />, color: '#10b981' },
-            { label: t('Incorrectes', 'Pa kòrèk'), value: String(total - correct), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
+            { label: t('Incorrectes', 'Pa kòrèk'), value: String(incorrect), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
             { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color="#f59e0b" size={20} />, color: '#f59e0b' },
           ].map((stat) => (
             <View key={stat.label} style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}>
@@ -244,7 +261,7 @@ export default function ExamResultsScreen() {
 
         {/* Mastery by section */}
         {questions.length > 0 && (() => {
-          const mastery = computeMastery(questions, answers);
+          const mastery = computeMastery(questions, answers, gradedResults);
           if (mastery.length <= 1) return null;
           return (
             <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
@@ -300,6 +317,7 @@ export default function ExamResultsScreen() {
                     question={q}
                     index={originalIdx}
                     answer={answers[originalIdx]}
+                    result={gradedResults[originalIdx]}
                   />
                 );
               })

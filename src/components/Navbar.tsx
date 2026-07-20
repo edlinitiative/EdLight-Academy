@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Home,
   BookOpen,
@@ -25,15 +26,16 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 /** Primary destinations shown in the desktop inline nav and the mobile drawer.
  *  Kept identical to the PWA bottom bar (BottomNav) so web + app agree. */
 const NAV_ITEMS = [
-  { to: '/', label: 'Accueil', icon: Home, exact: true },
-  { to: '/courses', label: 'Cours', icon: BookOpen },
-  { to: '/exams', label: 'Examens', icon: ClipboardList },
-  { to: '/jeux', label: 'Jeux', icon: Gamepad2 },
-  { to: '/profile', label: 'Profil', icon: User },
+  { to: '/', labelKey: 'nav.home', icon: Home, exact: true },
+  { to: '/courses', labelKey: 'nav.courses', icon: BookOpen },
+  { to: '/exams', labelKey: 'nav.exams', icon: ClipboardList },
+  { to: '/jeux', labelKey: 'nav.games', icon: Gamepad2 },
+  { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 
 export function Navbar() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const dropdownRef = useRef(null);
   const navLinksRef = useRef(null);
@@ -55,8 +57,8 @@ export function Navbar() {
       type="button"
       className={`theme-toggle ${className}`.trim()}
       onClick={() => toggleTheme()}
-      aria-label={isDark ? 'Activer le mode clair' : 'Activer le mode nuit (Night Shift)'}
-      title={isDark ? 'Mode clair' : 'Night Shift'}
+      aria-label={isDark ? t('nav.enableLight') : t('nav.enableNight')}
+      title={isDark ? t('nav.lightMode') : t('nav.nightMode')}
     >
       {isDark ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -154,7 +156,7 @@ export function Navbar() {
               type="button"
               className="nav-links__close"
               onClick={closeMenu}
-              aria-label="Fermer le menu"
+              aria-label={t('nav.closeMenu')}
             >
               <X size={22} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -168,13 +170,13 @@ export function Navbar() {
               </span>
               <span className="nav-drawer__profile-info">
                 <span className="nav-drawer__profile-name">{user.name}</span>
-                <span className="nav-drawer__profile-email">{user.email || 'Voir le tableau de bord'}</span>
+                <span className="nav-drawer__profile-email">{user.email || t('nav.viewDashboard')}</span>
               </span>
               <ChevronRight size={18} className="nav-drawer__profile-chevron" aria-hidden="true" />
             </Link>
           )}
 
-          {NAV_ITEMS.map(({ to, label, icon: ItemIcon, exact }) => (
+          {NAV_ITEMS.map(({ to, labelKey, icon: ItemIcon, exact }) => (
             <Link
               key={to}
               to={to}
@@ -182,13 +184,13 @@ export function Navbar() {
               onClick={closeMenu}
             >
               <span className="nav-link__icon"><ItemIcon size={19} strokeWidth={2} aria-hidden="true" /></span>
-              <span className="nav-link__label">{label}</span>
+              <span className="nav-link__label">{t(labelKey)}</span>
             </Link>
           ))}
 
           {/* Secondary actions (mobile only) */}
           <div className="nav-drawer__section">
-            <span className="nav-drawer__section-label">Mon espace</span>
+            <span className="nav-drawer__section-label">{t('nav.mySpace')}</span>
 
             <ThemeToggle className="theme-toggle--mobile-only" />
 
@@ -196,7 +198,7 @@ export function Navbar() {
               <>
                 <Link to="/dashboard" className="nav-link nav-link--mobile-only" onClick={closeMenu}>
                   <span className="nav-link__icon"><LayoutDashboard size={19} strokeWidth={2} aria-hidden="true" /></span>
-                  <span className="nav-link__label">Tableau de bord</span>
+                  <span className="nav-link__label">{t('nav.dashboard')}</span>
                 </Link>
                 <button
                   type="button"
@@ -207,15 +209,15 @@ export function Navbar() {
                   }}
                 >
                   <span className="nav-link__icon"><Bell size={19} strokeWidth={2} aria-hidden="true" /></span>
-                  <span className="nav-link__label">Notifications</span>
+                  <span className="nav-link__label">{t('nav.notifications')}</span>
                 </button>
                 <Link to="/study-plan" className="nav-link nav-link--mobile-only" onClick={closeMenu}>
                   <span className="nav-link__icon"><CalendarCheck size={19} strokeWidth={2} aria-hidden="true" /></span>
-                  <span className="nav-link__label">Plan d'étude</span>
+                  <span className="nav-link__label">{t('nav.studyPlan')}</span>
                 </Link>
                 <button type="button" className="nav-link nav-link--mobile-only nav-link--danger" onClick={handleLogout}>
                   <span className="nav-link__icon"><LogOut size={19} strokeWidth={2} aria-hidden="true" /></span>
-                  <span className="nav-link__label">Déconnexion</span>
+                  <span className="nav-link__label">{t('nav.logout')}</span>
                 </button>
               </>
             ) : (
@@ -227,7 +229,7 @@ export function Navbar() {
                     closeMenu();
                   }}
                 >
-                  Se connecter
+                  {t('nav.signIn')}
                 </button>
                 <button
                   className="button button--primary nav-drawer__cta"
@@ -237,7 +239,7 @@ export function Navbar() {
                     closeMenu();
                   }}
                 >
-                  Créer un compte
+                  {t('nav.createAccount')}
                 </button>
               </div>
             )}
@@ -268,7 +270,7 @@ export function Navbar() {
                   onClick={() => toggleUserDropdown()}
                   aria-haspopup="true"
                   aria-expanded={showUserDropdown}
-                  aria-label="Menu du profil"
+                  aria-label={t('nav.profileMenu')}
                 >
                   <PixelAvatar seed={user?.uid || user?.email || user?.name} size={32} />
                 </button>
@@ -283,7 +285,7 @@ export function Navbar() {
                 className="button button--ghost nav-actions__signin"
                 onClick={() => useStore.getState().toggleAuthModal()}
               >
-                Se connecter
+                {t('nav.signIn')}
               </button>
               <button
                 className="button button--primary nav-actions__signup"
@@ -292,7 +294,7 @@ export function Navbar() {
                   useStore.getState().setActiveTab('signup');
                 }}
               >
-                Créer un compte
+                {t('nav.createAccount')}
               </button>
             </>
           )}

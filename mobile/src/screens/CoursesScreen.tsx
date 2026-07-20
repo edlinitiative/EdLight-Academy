@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl,
+  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
@@ -299,75 +299,90 @@ export default function CoursesScreen() {
         </View>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        className="flex-1 px-5 pt-4"
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {searching ? (
-          searchResults.length === 0 ? (
+      {searching ? (
+        <FlatList
+          ref={scrollRef}
+          data={searchResults}
+          keyExtractor={(course) => course.id}
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
+          ListHeaderComponent={
+            searchResults.length > 0 ? (
+              <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
+            ) : null
+          }
+          ListEmptyComponent={
             <EmptyState
               message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
               ctaLabel={t('Effacer la recherche', 'Efase rechèch la')}
               onCta={() => setSearch('')}
             />
-          ) : (
-            <>
-              <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
-              {searchResults.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  completedCount={completedForCourse(course)}
-                  onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
-                />
-              ))}
-            </>
-          )
-        ) : !level ? (
-          <>
-            {/* Banque de Questions banner (top-level only) */}
-            <TouchableOpacity
-              activeOpacity={0.82}
-              onPress={() => navigation.navigate('Quizzes', {})}
-              className="mb-4 bg-white dark:bg-[#131c2e] rounded-2xl"
-              style={cardShadowFor(colors)}
-            >
-              <View className="flex-row items-center p-4 gap-3">
-                <View
-                  className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: colors.azureSoft }}
-                >
-                  <BookMarked color={colors.azure} size={20} />
-                </View>
-                <View className="flex-1">
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }}>
-                    {t('Banque de Questions', 'Bank Kesyon')}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>
-                    {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
-                  </Text>
-                </View>
-                <ChevronRight color={colors.azure} size={20} />
+          }
+          renderItem={({ item: course }) => (
+            <CourseCard
+              course={course}
+              completedCount={completedForCourse(course)}
+              onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
+            />
+          )}
+        />
+      ) : !level ? (
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1 px-5 pt-4"
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Banque de Questions banner (top-level only) */}
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => navigation.navigate('Quizzes', {})}
+            className="mb-4 bg-white dark:bg-[#131c2e] rounded-2xl"
+            style={cardShadowFor(colors)}
+          >
+            <View className="flex-row items-center p-4 gap-3">
+              <View
+                className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: colors.azureSoft }}
+              >
+                <BookMarked color={colors.azure} size={20} />
               </View>
-            </TouchableOpacity>
+              <View className="flex-1">
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }}>
+                  {t('Banque de Questions', 'Bank Kesyon')}
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>
+                  {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
+                </Text>
+              </View>
+              <ChevronRight color={colors.azure} size={20} />
+            </View>
+          </TouchableOpacity>
 
-            {LEVELS.filter((l) => (levelCounts[l.code] ?? 0) > 0).map((l) => (
-              <DrillCard
-                key={l.code}
-                title={l.label}
-                subtitle={isCreole ? l.sublabelHt : l.sublabel}
-                badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
-                color="#1B6FE0"
-                Icon={GraduationCap}
-                onPress={() => setLevel(l.code)}
-              />
-            ))}
-          </>
-        ) : !subject ? (
-          subjectsForLevel.length === 0 ? (
+          {LEVELS.filter((l) => (levelCounts[l.code] ?? 0) > 0).map((l) => (
+            <DrillCard
+              key={l.code}
+              title={l.label}
+              subtitle={isCreole ? l.sublabelHt : l.sublabel}
+              badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
+              color="#1B6FE0"
+              Icon={GraduationCap}
+              onPress={() => setLevel(l.code)}
+            />
+          ))}
+        </ScrollView>
+      ) : !subject ? (
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1 px-5 pt-4"
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {subjectsForLevel.length === 0 ? (
             <EmptyState
               message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
               ctaLabel={t('Retour', 'Retounen')}
@@ -391,27 +406,38 @@ export default function CoursesScreen() {
                 />
               );
             })
-          )
-        ) : courseList.length === 0 ? (
-          <EmptyState
-            message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
-            ctaLabel={t('Retour', 'Retounen')}
-            onCta={goBack}
-          />
-        ) : (
-          <>
-            <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
-            {courseList.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                completedCount={completedForCourse(course)}
-                onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
-              />
-            ))}
-          </>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          ref={scrollRef}
+          data={courseList}
+          keyExtractor={(course) => course.id}
+          className="flex-1"
+          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
+          ListHeaderComponent={
+            courseList.length > 0 ? (
+              <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
+            ) : null
+          }
+          ListEmptyComponent={
+            <EmptyState
+              message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+              ctaLabel={t('Retour', 'Retounen')}
+              onCta={goBack}
+            />
+          }
+          renderItem={({ item: course }) => (
+            <CourseCard
+              course={course}
+              completedCount={completedForCourse(course)}
+              onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
+            />
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }

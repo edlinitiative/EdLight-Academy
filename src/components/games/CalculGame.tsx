@@ -74,16 +74,22 @@ export default function CalculGame({ isCreole, onExit, onRecord, highScore = nul
     else if (input.replace('-', '').length < 5) setInput((s) => s + k);
   };
 
+  // Register the keydown listener once (stable [] deps) rather than on every
+  // one-second timer re-render; refs keep the handlers current.
+  const pressRef = useRef(press);
+  pressRef.current = press;
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
   useEffect(() => {
     const onKey = (e) => {
-      if (/^[0-9]$/.test(e.key)) press(e.key);
-      else if (e.key === 'Backspace') press('⌫');
-      else if (e.key === '-') press('−');
-      else if (e.key === 'Enter') submit();
+      if (/^[0-9]$/.test(e.key)) pressRef.current(e.key);
+      else if (e.key === 'Backspace') pressRef.current('⌫');
+      else if (e.key === '-') pressRef.current('−');
+      else if (e.key === 'Enter') submitRef.current();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, []);
 
   const replay = () => {
     recordedRef.current = false;
@@ -134,7 +140,7 @@ export default function CalculGame({ isCreole, onExit, onRecord, highScore = nul
 
       <div className="calc-game__pad" translate="no">
         {['7', '8', '9', '4', '5', '6', '1', '2', '3', '−', '0', '⌫'].map((k) => (
-          <button key={k} className="calc-game__key" onClick={() => press(k)} aria-label={k === '⌫' ? 'Effacer' : k}>
+          <button key={k} className="calc-game__key" onClick={() => press(k)} aria-label={k === '⌫' ? (isCreole ? 'Efase' : 'Effacer') : k}>
             {k === '⌫' ? <Delete size={18} /> : k}
           </button>
         ))}

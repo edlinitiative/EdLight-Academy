@@ -36,8 +36,8 @@ export default function ProgressBar({
     <View>
       {(showLabel || label) && (
         <View className="flex-row justify-between mb-1">
-          {label && <Text className="text-xs text-gray-500">{label}</Text>}
-          {showLabel && <Text className="text-xs font-semibold text-gray-700">{clamped}%</Text>}
+          {label && <Text className="text-xs text-gray-500 dark:text-slate-400">{label}</Text>}
+          {showLabel && <Text className="text-xs font-semibold text-gray-700 dark:text-slate-300">{clamped}%</Text>}
         </View>
       )}
       <View className="bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden" style={{ height }}>

@@ -26,6 +26,22 @@ import {
 } from '../utils/examUtils';
 import { Skeleton } from '../components/Skeleton';
 
+/** Run async tasks with a bounded concurrency limit so a section with many
+ *  free-response questions can't fire dozens of /api/grade-essay calls at once
+ *  (rate limits / cost). Mirrors the helper used in utils/examCatalog. */
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let next = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await worker(items[i], i);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
 /** Format hierarchical question number for display (e.g. "A.1" → "A.1", "5" → "5") */
 function formatQuestionLabel(q, globalIndex) {
   const num = q._displayNumber;
@@ -861,33 +877,36 @@ const ExamTake = () => {
       aiJobs.push({ index: i, question: q, userAnswer, modelRef });
     });
 
-    // Run all AI grading requests in parallel
+    // Run AI grading with a bounded concurrency cap (never fire more than a
+    // handful of /api/grade-essay calls at once). Track failures so we can
+    // surface an aggregate "some answers couldn't be auto-graded" notice.
+    let aiGradeFailures = 0;
     if (aiJobs.length > 0) {
-      const settled = await Promise.allSettled(
-        aiJobs.map(async (job) => {
-          try {
-            const response = await authedFetch('/api/grade-essay', {
-                question: job.question._displayText || job.question.question,
-                context: job.question.sectionInstructions || '',
-                answer: job.userAnswer,
-                modelAnswer: job.modelRef,
-              });
-            if (response.ok) {
-              return { index: job.index, essayResult: await response.json() };
-            }
-          } catch { /* network error — fall through */ }
-          return {
-            index: job.index,
-            essayResult: { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
-          };
-        })
-      );
+      const graded = await mapWithConcurrency(aiJobs, 5, async (job) => {
+        try {
+          const response = await authedFetch('/api/grade-essay', {
+            question: job.question._displayText || job.question.question,
+            context: job.question.sectionInstructions || '',
+            answer: job.userAnswer,
+            modelAnswer: job.modelRef,
+          });
+          if (response.ok) {
+            return { index: job.index, essayResult: await response.json() };
+          }
+        } catch { /* network error — fall through */ }
+        aiGradeFailures += 1;
+        return {
+          index: job.index,
+          essayResult: { isCorrect: false, feedback: t('Évaluation automatique indisponible.', 'Koreksyon otomatik pa disponib.'), score: 'N/A' },
+        };
+      });
 
-      for (const outcome of settled) {
-        if (outcome.status !== 'fulfilled') continue;
-        const { index, essayResult } = outcome.value;
+      for (const { index, essayResult } of graded) {
         const q = questions[index];
         preGraded[index] = gradeSingleQuestion(q, answers[index], essayResult, { subject: examSubject });
+      }
+      if (aiGradeFailures > 0) {
+        console.warn(`[ExamTake] ${aiGradeFailures}/${aiJobs.length} free-response question(s) could not be auto-graded.`);
       }
     }
 
@@ -911,6 +930,7 @@ const ExamTake = () => {
         level: normalizeLevel(exam.level),
         track: currentTrack,
         result,
+        aiGradeFailures,
         timestamp: Date.now(),
       })
     );
@@ -948,7 +968,7 @@ const ExamTake = () => {
         const activePlan = await loadActiveStudyPlan(userId);
         if (activePlan?.tasks?.some((t) => t.examId === examKey)) {
           await recordTaskResult(userId, activePlan.id, examKey, {
-            scorePct: result.percentage ?? 0,
+            scorePct: result.summary.percentage ?? 0,
             answeredAt: Date.now(),
           });
         }

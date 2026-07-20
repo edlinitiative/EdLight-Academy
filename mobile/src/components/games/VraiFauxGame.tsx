@@ -47,7 +47,8 @@ export default function VraiFauxGame({
   const item = items[idx % Math.max(items.length, 1)];
 
   useEffect(() => {
-    if (over) return;
+    // Don't run the clock (nor let it end + record a bogus 0) with no questions.
+    if (over || items.length === 0) return;
     const iv = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) { clearInterval(iv); setOver(true); return 0; }
@@ -55,7 +56,7 @@ export default function VraiFauxGame({
       });
     }, 1000);
     return () => clearInterval(iv);
-  }, [over, nonce]);
+  }, [over, nonce, items.length]);
 
   // Clear any pending feedback timeout on unmount.
   useEffect(() => () => {
@@ -96,6 +97,33 @@ export default function VraiFauxGame({
     setIdx(0); setCorrect(0); setAnswered(0); setStreak(0); setBestStreak(0);
     setFeedback(null); setTimeLeft(ROUND_SECONDS); setOver(false); setReward(null);
   };
+
+  // Thin/empty question bank: show a friendly message instead of the play UI
+  // (an empty items[] would otherwise leave nothing to answer).
+  if (items.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.bg }}>
+        <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink, textAlign: 'center', marginBottom: 8 }}>
+          {isCreole ? 'Poko gen kesyon' : 'Aucune question disponible'}
+        </Text>
+        <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center', marginBottom: 20 }}>
+          {isCreole ? 'Tounen pita — n ap ajoute kesyon.' : 'Revenez plus tard — des questions arrivent.'}
+        </Text>
+        <TouchableOpacity
+          onPress={onExit}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
+          activeOpacity={0.85}
+          className="items-center justify-center py-4 px-8 rounded-2xl border"
+          style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+        >
+          <Text className="font-semibold text-base" style={{ color: colors.muted }}>
+            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (over) {
     return (
@@ -198,6 +226,8 @@ export default function VraiFauxGame({
         <TouchableOpacity
           onPress={() => answer(false)}
           disabled={!!feedback}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Repons lan fo' : 'La réponse est fausse'}
           activeOpacity={0.85}
           className="flex-1 flex-row items-center justify-center gap-2 py-4 rounded-2xl"
           style={{ backgroundColor: '#ef4444', opacity: feedback ? 0.55 : 1 }}
@@ -208,6 +238,8 @@ export default function VraiFauxGame({
         <TouchableOpacity
           onPress={() => answer(true)}
           disabled={!!feedback}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Repons lan vre' : 'La réponse est vraie'}
           activeOpacity={0.85}
           className="flex-1 flex-row items-center justify-center gap-2 py-4 rounded-2xl"
           style={{ backgroundColor: '#10b981', opacity: feedback ? 0.55 : 1 }}

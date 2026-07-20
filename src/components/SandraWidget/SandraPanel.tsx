@@ -228,6 +228,29 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
       </header>
 
       <div className="sandra-panel__messages" ref={listRef} aria-live="polite">
+        {signedIn && messages.length === 0 && !sending && !error && (
+          <div className="sandra-welcome">
+            <span className="sandra-glyph sandra-glyph--bubble" aria-hidden="true">
+              <Sparkles size={13} strokeWidth={2.4} />
+            </span>
+            <div className="sandra-welcome__body">
+              <p className="sandra-welcome__title">{t('sandra.welcomeTitle')}</p>
+              <p className="sandra-welcome__text">{t('sandra.welcomeBody')}</p>
+              <div className="sandra-welcome__prompts">
+                {[t('sandra.suggest1'), t('sandra.suggest2'), t('sandra.suggest3')].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className="sandra-welcome__prompt"
+                    onClick={() => send(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {messages.map((m, i) =>
           m.role === 'user' ? (
             <div key={i} className="sandra-msg sandra-msg--user">

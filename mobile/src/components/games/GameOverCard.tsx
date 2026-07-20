@@ -207,6 +207,8 @@ export default function GameOverCard({
           {onReplay && (
             <TouchableOpacity
               onPress={onReplay}
+              accessibilityRole="button"
+              accessibilityLabel={isCreole ? 'Jwe ankò' : 'Rejouer'}
               activeOpacity={0.85}
               className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
               style={{ backgroundColor: accent }}
@@ -219,6 +221,8 @@ export default function GameOverCard({
           )}
           <TouchableOpacity
             onPress={onExit}
+            accessibilityRole="button"
+            accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
             activeOpacity={0.85}
             className="w-full items-center justify-center py-4 rounded-2xl border"
             style={{ borderColor: colors.border, backgroundColor: colors.surface }}

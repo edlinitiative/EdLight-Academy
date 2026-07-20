@@ -17,10 +17,20 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm ci
-      # Web tsc has many pre-existing errors, so we don't gate on it here.
+      # Web tsc still has ~242 pre-existing app-level type errors (mostly TS2339
+      # property-access on loosely-typed data, and TS2882 CSS side-effect
+      # imports) that are unrelated to the build. We surface them here but do
+      # NOT gate on them yet. Remove continue-on-error once the count is ~0.
+      - name: Typecheck web (non-blocking)
+        run: npx tsc --noEmit
+        continue-on-error: true
       # The jest suite is expected to pass.
       - name: Run web tests
         run: npm test -- --ci
+      # A broken production build (webpack + prebuild/postbuild hooks) must
+      # fail CI. These build scripts are self-contained (no secrets/network).
+      - name: Build web (production)
+        run: npm run build
 
   mobile:
     name: Mobile (tsc)

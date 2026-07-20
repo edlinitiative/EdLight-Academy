@@ -149,6 +149,8 @@ export default function MemoireGame({
             <TouchableOpacity
               key={card.id}
               onPress={() => flip(card)}
+              accessibilityRole="button"
+              accessibilityLabel={isUp ? card.label : (isCreole ? 'Vire kat la' : 'Retourner la carte')}
               activeOpacity={0.85}
               style={{
                 width: CARD_W,

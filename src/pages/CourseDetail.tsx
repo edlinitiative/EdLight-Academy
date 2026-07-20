@@ -237,16 +237,17 @@ export default function CourseDetail() {
   // Remember where the learner was so Home can offer "Reprendre où vous étiez".
   useEffect(() => {
     if (!course || !courseId) return;
+    const courseName = course.name || course.title || '';
     const lessonTitle = activeLessonData?.title || activeModuleData?.title || '';
     recordActivity({
       type: 'lesson',
       path: `/courses/${courseId}`,
-      title: course.title || lessonTitle || String(courseId),
-      subtitle: lessonTitle && lessonTitle !== course.title ? lessonTitle : undefined,
+      title: courseName || lessonTitle || String(courseId),
+      subtitle: lessonTitle && lessonTitle !== courseName ? lessonTitle : undefined,
       ts: Date.now(),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId, course?.title, activeModuleData?.id, activeLessonData?.id]);
+  }, [courseId, course?.name, activeModuleData?.id, activeLessonData?.id]);
 
   // Handler to mark lesson as complete
   const handleMarkComplete = async () => {

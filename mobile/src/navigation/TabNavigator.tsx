@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,8 +68,26 @@ function TabIcon({
   );
 }
 
+// Tab label as its own Text so it honors Dynamic Type but stays capped: modest
+// scaling (up to 1.3×) keeps the floating pill from overflowing on large-font
+// devices while no longer opting fully out of accessibility scaling.
+function TabLabel({ label, color }: { label: string; color: string }) {
+  return (
+    <Text
+      allowFontScaling
+      maxFontSizeMultiplier={1.3}
+      numberOfLines={1}
+      style={{ fontSize: 10, fontWeight: '600', color }}
+    >
+      {label}
+    </Text>
+  );
+}
+
 export default function TabNavigator() {
   const theme = useStore((s) => s.theme);
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const focusMode = useStore((s) => s.focusMode);
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
@@ -107,7 +125,8 @@ export default function TabNavigator() {
         headerShown: false,
         tabBarActiveTintColor: dark ? '#4C9AF5' : ACTIVE,
         tabBarInactiveTintColor: dark ? '#9aa8c0' : INACTIVE,
-        tabBarAllowFontScaling: false,
+        // Allow Dynamic Type; the per-label maxFontSizeMultiplier caps growth.
+        tabBarAllowFontScaling: true,
         // Frosted-glass pill: a translucent BlurView background lets the app
         // show through, with a thin light rim for the glass edge. The overlay is
         // kept light so scrolling content stays visible (blurred) behind it.
@@ -157,7 +176,7 @@ export default function TabNavigator() {
         name="Dashboard"
         component={DashboardScreen}
         options={{
-          tabBarLabel: 'Accueil',
+          tabBarLabel: ({ color }) => <TabLabel label={t('Accueil', 'Akèy')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={LayoutDashboard} color={color} size={size} focused={focused} dark={dark} />
           ),
@@ -167,7 +186,7 @@ export default function TabNavigator() {
         name="Courses"
         component={CoursesNavigator}
         options={{
-          tabBarLabel: 'Cours',
+          tabBarLabel: ({ color }) => <TabLabel label={t('Cours', 'Kou')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={BookOpen} color={color} size={size} focused={focused} dark={dark} />
           ),
@@ -177,7 +196,7 @@ export default function TabNavigator() {
         name="Exams"
         component={ExamsNavigator}
         options={{
-          tabBarLabel: 'Exams',
+          tabBarLabel: ({ color }) => <TabLabel label={t('Examens', 'Egzamen')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={ClipboardList} color={color} size={size} focused={focused} dark={dark} />
           ),
@@ -187,7 +206,7 @@ export default function TabNavigator() {
         name="Trivia"
         component={TriviaScreen}
         options={{
-          tabBarLabel: 'Jeux',
+          tabBarLabel: ({ color }) => <TabLabel label={t('Jeux', 'Jwèt')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={Gamepad2} color={color} size={size} focused={focused} dark={dark} />
           ),
@@ -197,7 +216,7 @@ export default function TabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profil',
+          tabBarLabel: ({ color }) => <TabLabel label={t('Profil', 'Pwofil')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={User} color={color} size={size} focused={focused} dark={dark} />
           ),
