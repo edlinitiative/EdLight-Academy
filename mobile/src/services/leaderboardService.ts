@@ -35,9 +35,11 @@ import {
   orderBy,
   limit as fbLimit,
 } from 'firebase/firestore';
+import type { GroupField, GroupRanking } from '../../../shared/leaderboardAgg';
 
 /** Same serverless base as sandraService / studyPlan — the deployed web API. */
 const AWARD_URL = 'https://academy.edlight.org/api/leaderboard/award';
+const COLLECTIVES_URL = 'https://academy.edlight.org/api/leaderboard/collectives';
 
 /**
  * A public alias must contain at least one letter. Entries that fail this
@@ -230,6 +232,26 @@ export async function getWeeklyTop(max = 50, id = weekId()) {
     return snap.docs.map((d, i) => ({ rank: i + 1, id: d.id, ...(d.data() as any) }));
   } catch (err) {
     console.error('[Leaderboard] getWeeklyTop error:', err);
+    return [];
+  }
+}
+
+/**
+ * Exhaustive collective ranking (schools/cities/departments) for the period,
+ * computed server-side over ALL entries — see GET /api/leaderboard/collectives.
+ * Returns [] on error/offline so the caller can fall back to a local aggregate.
+ */
+export async function getCollectives(
+  field: GroupField,
+  period: 'week' | 'all' = 'week',
+): Promise<GroupRanking[]> {
+  try {
+    const res = await fetch(`${COLLECTIVES_URL}?field=${field}&period=${period}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.groups) ? (data.groups as GroupRanking[]) : [];
+  } catch (err) {
+    console.error('[Leaderboard] getCollectives error:', err);
     return [];
   }
 }
