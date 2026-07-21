@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Image, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Image, ActivityIndicator, useColorScheme,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
@@ -13,6 +15,7 @@ import {
   loginWithEmailPassword,
   registerWithEmailPassword,
   loginWithGoogleCredential,
+  loginWithAppleCredential,
   sendPasswordReset,
 } from '../services/authService';
 
@@ -66,6 +69,49 @@ export default function AuthScreen() {
       setUser(user);
     } catch (e: any) {
       setError(e?.message || t('Connexion Google impossible.', 'Koneksyon Google echwe.'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Sign in with Apple — iOS only, and only when the device supports it.
+  const colorScheme = useColorScheme();
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  React.useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => setAppleAvailable(false));
+  }, []);
+
+  async function handleAppleSignIn() {
+    setError(null);
+    try {
+      // Firebase verifies Apple's token against the SHA-256 of a nonce; we send
+      // the hash to Apple and the raw value to Firebase.
+      const rawNonce = Array.from(await Crypto.getRandomBytesAsync(16))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+      if (!credential.identityToken) {
+        setError(t('Connexion Apple impossible.', 'Koneksyon Apple echwe.'));
+        return;
+      }
+      const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ');
+      setLoading(true);
+      const user = await loginWithAppleCredential(credential.identityToken, rawNonce, fullName || undefined);
+      setUser(user);
+    } catch (e: any) {
+      // The user cancelling the native sheet is not an error.
+      if (e?.code === 'ERR_REQUEST_CANCELED') return;
+      setError(e?.message || t('Connexion Apple impossible.', 'Koneksyon Apple echwe.'));
     } finally {
       setLoading(false);
     }
@@ -370,6 +416,22 @@ export default function AuthScreen() {
                 {t('Continuer avec Google', 'Kontinye ak Google')}
               </Text>
             </TouchableOpacity>
+
+            {/* Sign in with Apple — required by App Store guideline 4.8 alongside
+                Google. iOS only, using Apple's own button per their HIG. */}
+            {appleAvailable && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                buttonStyle={
+                  colorScheme === 'dark'
+                    ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={16}
+                style={{ height: 50, width: '100%' }}
+                onPress={handleAppleSignIn}
+              />
+            )}
           </View>
 
           {/* Reassurance footer */}

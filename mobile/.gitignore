@@ -5,3 +5,7 @@ google-play-service-account.json
 
 # App Store Connect API key (never commit)
 *.p8
+
+# Local build artifacts
+*.ipa
+*.aab
