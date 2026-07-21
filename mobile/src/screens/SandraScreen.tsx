@@ -22,6 +22,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
+import { mathToText } from '../utils/mathText';
 import useStore from '../contexts/store';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
 import { tapLight, tapMedium } from '../utils/haptics';
@@ -134,7 +135,7 @@ function SandraBubble({
   return (
     <View className="self-start max-w-[85%]" style={bubbleStylesFor(colors).sandra}>
       <Markdown style={markdownStylesFor(colors)} onLinkPress={onLinkPress}>
-        {text}
+        {mathToText(text)}
       </Markdown>
     </View>
   );

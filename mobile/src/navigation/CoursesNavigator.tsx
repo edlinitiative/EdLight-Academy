@@ -14,7 +14,7 @@ const Stack = createNativeStackNavigator<CoursesParamList>();
 
 export default function CoursesNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="CourseList" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CourseList" component={CoursesScreen} />
       <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
       <Stack.Screen name="Quizzes" component={QuizzesScreen} />

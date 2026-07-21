@@ -16,7 +16,7 @@ const Stack = createNativeStackNavigator<ExamsParamList>();
 
 export default function ExamsNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator initialRouteName="ExamLanding" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ExamLanding" component={ExamLandingScreen} />
       <Stack.Screen name="ExamBrowser" component={ExamBrowserScreen} />
       <Stack.Screen name="ExamTake" component={ExamTakeScreen} />

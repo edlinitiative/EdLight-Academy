@@ -215,7 +215,7 @@ export default function ExamBrowserScreen() {
         {/* Header (matches the loaded layout so nothing shifts) */}
         <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ExamLanding'))}
             className="mr-3 p-1"
             hitSlop={8}
             accessibilityRole="button"
@@ -254,7 +254,7 @@ export default function ExamBrowserScreen() {
       {/* Header — shares the page background (no white-bar seam) */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ExamLanding'))}
           className="mr-3 p-1"
           hitSlop={8}
           accessibilityRole="button"

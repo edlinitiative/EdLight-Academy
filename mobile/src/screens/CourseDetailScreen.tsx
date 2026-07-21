@@ -228,7 +228,7 @@ export default function CourseDetailScreen() {
       {/* Back bar — shares the page ground (no seam), like the dashboard */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('CourseList'))}
           className="mr-3 p-1"
           accessibilityRole="button"
           accessibilityLabel={t('Retour', 'Retounen')}
@@ -345,7 +345,7 @@ export default function CourseDetailScreen() {
         )}
         {!activeLesson && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, shadowColor: colors.azure, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
-            <Text className="font-semibold text-gray-900 dark:text-slate-100 mb-1">{course.name}</Text>
+            {/* Course name is already in the header bar above — don't repeat it here. */}
             {course.description ? (
               <Text className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{course.description}</Text>
             ) : null}
