@@ -10,6 +10,7 @@ import {
   sendEmailVerification,
   updateProfile,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithCredential,
   getAdditionalUserInfo,
 } from 'firebase/auth';
@@ -69,6 +70,24 @@ export async function signUp(email: string, password: string, name: string) {
 export async function signInWithGoogleCredential(idToken: string, accessToken?: string) {
   const credential = GoogleAuthProvider.credential(idToken, accessToken);
   const result = await signInWithCredential(auth, credential);
+  const additionalInfo = getAdditionalUserInfo(result);
+  return { ...result, isNewUser: additionalInfo?.isNewUser ?? false };
+}
+
+/**
+ * Sign in with Apple (native). `identityToken` comes from
+ * expo-apple-authentication and `rawNonce` is the UN-hashed nonce whose SHA-256
+ * was passed to Apple — Firebase re-hashes it to verify the token. Apple only
+ * returns the user's name on the very first authorization, so `fullName` (when
+ * present) seeds the Firebase displayName if it isn't set yet.
+ */
+export async function signInWithAppleCredential(identityToken: string, rawNonce: string, fullName?: string) {
+  const provider = new OAuthProvider('apple.com');
+  const credential = provider.credential({ idToken: identityToken, rawNonce });
+  const result = await signInWithCredential(auth, credential);
+  if (fullName && !result.user.displayName) {
+    await updateProfile(result.user, { displayName: fullName }).catch(() => {});
+  }
   const additionalInfo = getAdditionalUserInfo(result);
   return { ...result, isNewUser: additionalInfo?.isNewUser ?? false };
 }

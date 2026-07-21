@@ -25,6 +25,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.edlightacademy",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleURLTypes": [
@@ -48,6 +49,7 @@
     },
     "plugins": [
       "expo-font",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {

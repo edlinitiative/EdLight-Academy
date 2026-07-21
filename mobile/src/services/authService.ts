@@ -65,6 +65,20 @@ export async function loginWithGoogleCredential(idToken: string, accessToken?: s
   };
 }
 
+export async function loginWithAppleCredential(identityToken: string, rawNonce: string, fullName?: string) {
+  const { signInWithAppleCredential, upsertUserDocument } = await loadFirebase();
+  const result = await signInWithAppleCredential(identityToken, rawNonce, fullName);
+  const user = result.user;
+  await upsertUserDocument(user, result.isNewUser ?? false);
+  await syncUserProfile(user.uid);
+  return {
+    uid: user.uid,
+    name: user.displayName || getDefaultStudentName(),
+    email: user.email || '',
+    picture: user.photoURL || '',
+  };
+}
+
 export async function logoutUser() {
   const { logout } = await loadFirebase();
   // Best-effort: stop remote pushes to this device before signing out.

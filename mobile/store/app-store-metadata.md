@@ -37,19 +37,19 @@ Recommended rating: **4+ (Everyone)**. The app is built for secondary-school stu
 EdLight Academy
 ```
 
-**Subtitle** (26 chars)
+**Subtitle** (22 chars)
 ```
-Cours, quiz & Bac gratuits
-```
-
-**Promotional text** (139 chars)
-```
-Réussissez le Bac avec des cours vidéo, des examens officiels corrigés et Sandra, votre tuteur IA — 100% gratuit, en français et en kreyòl.
+Cours, quiz et examens
 ```
 
-**Keywords** (90 chars)
+**Promotional text** (125 chars)
 ```
-bac,examen,MENFP,9ème,cours,quiz,maths,sciences,révision,Haïti,kreyòl,lycée,gratuit,tuteur
+Réussissez le Bac avec des cours vidéo, des examens officiels corrigés et Sandra, votre tuteur IA — en français et en kreyòl.
+```
+
+**Keywords** (89 chars)
+```
+bac,examen,MENFP,9ème,cours,quiz,maths,sciences,révision,Haïti,kreyòl,lycée,apprendre,tuteur
 ```
 
 **Description**
@@ -109,19 +109,19 @@ Un problème ou une idée ? Écrivez-nous à info@edlight.org — bonne réussit
 EdLight Academy
 ```
 
-**Subtitle** (22 chars)
+**Subtitle** (20 chars)
 ```
-Kou, quiz & Bak gratis
+Kou, quiz ak egzamen
 ```
 
-**Promotional text** (117 chars)
+**Promotional text** (104 chars)
 ```
-Reyisi Bak la ak leson videyo, egzamen ofisyèl ki korije ak Sandra, tutè AI ou — 100% gratis, an franse ak an kreyòl.
+Reyisi Bak la ak leson videyo, egzamen ofisyèl ki korije ak Sandra, tutè AI ou — an franse ak an kreyòl.
 ```
 
 **Keywords** (95 chars)
 ```
-bak,egzamen,MENFP,9yèm,kou,quiz,matematik,syans,revizyon,Ayiti,kreyòl,lekòl,gratis,tutè,egzèsis
+bak,egzamen,MENFP,9yèm,kou,quiz,matematik,syans,revizyon,Ayiti,kreyòl,lekòl,aprann,tutè,egzèsis
 ```
 
 **Description**
@@ -181,19 +181,19 @@ Ou gen yon pwoblèm oswa yon lide ? Ekri nou nan info@edlight.org — bòn chans
 EdLight Academy
 ```
 
-**Subtitle** (29 chars)
+**Subtitle** (24 chars)
 ```
-Free courses, quizzes & exams
-```
-
-**Promotional text** (126 chars)
-```
-Ace the Bac with video lessons, corrected official exams, and Sandra, your AI tutor — 100% free, in French and Haitian Creole.
+Courses, quizzes & exams
 ```
 
-**Keywords** (95 chars)
+**Promotional text** (115 chars)
 ```
-bac,exam,MENFP,courses,quiz,math,science,revision,Haiti,creole,high school,free,tutor,exercises
+Ace the Bac with video lessons, corrected official exams, and Sandra, your AI tutor — in French and Haitian Creole.
+```
+
+**Keywords** (99 chars)
+```
+bac,exam,MENFP,courses,quiz,math,science,revision,Haiti,creole,high school,learning,tutor,exercises
 ```
 
 **Description**
@@ -248,10 +248,11 @@ Found a bug or have an idea? Write to us at info@edlight.org — good luck!
 
 ## Verification checklist
 - [ ] App name ≤30 — all locales use "EdLight Academy" (15).
-- [ ] Subtitles ≤30 — fr 26, ht 22, en 29.
-- [ ] Promotional text ≤170 — fr 139, ht 117, en 126.
-- [ ] Keywords ≤100, comma-separated, no spaces after commas — fr 90, ht 95, en 95.
+- [ ] Subtitles ≤30 — fr 22, ht 20, en 24.
+- [ ] Promotional text ≤170 — fr 125, ht 104, en 115.
+- [ ] Keywords ≤100, comma-separated, no spaces after commas — fr 89, ht 95, en 99.
 - [ ] Descriptions well under 4000 (approx. 1,900–2,100 chars each).
 - [ ] Release notes well under 4000.
+- [ ] **Guideline 2.3.7 (price in metadata):** NO "gratuit/gratis/free" in name, subtitle, promo text, or keywords — the word "free" now appears ONLY in the description (Apple allows price mentions there). Fixed in this doc; make sure the same holds when you paste into App Store Connect.
 - [ ] Confirm `academy.edlight.org/help` resolves before submitting as Support URL; otherwise use `/contact`.
 ```
