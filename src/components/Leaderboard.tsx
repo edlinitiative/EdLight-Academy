@@ -12,12 +12,13 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Crown, Medal, Flame, ChevronRight, ShieldCheck, Pencil } from 'lucide-react';
+import { Trophy, Crown, Medal, Flame, ChevronRight, ChevronDown, ShieldCheck, Pencil } from 'lucide-react';
 import useStore from '../contexts/store';
-import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
-import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity, cityKey } from '../data/haitiGeo';
+import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
+import { aggregateBy, normalizeName } from '../../shared/leaderboardAgg';
 import './Leaderboard.css';
 
 // First name only — the board is publicly readable, so never expose any part
@@ -68,6 +69,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
   const needsAlias = optedIn && !isValidAlias(profile?.leaderboard?.displayName);
 
   const [scope, setScope] = useState('national'); // 'school' | 'city' | 'national'
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [alias, setAlias] = useState(defaultAlias(user));
   const [school, setSchool] = useState(mySchool || '');
@@ -107,17 +109,39 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
     setCustomCity('');
   };
 
-  const visible = useMemo(() => {
-    if (scope === 'school' && mySchool) {
-      return entries.filter((e) => e.school && e.school === mySchool);
-    }
-    if (scope === 'city' && myCity) {
-      // Normalized match so legacy free-typed spellings ("Port-au-prince",
-      // "Port au Prince") still land in the same ville board.
-      return entries.filter((e) => e.city && cityKey(e.city) === cityKey(myCity));
-    }
-    return entries;
-  }, [entries, scope, mySchool, myCity]);
+  // École / Ville are collective boards: schools (or cities) ranked against
+  // each other by their members' total XP. National stays an individual board.
+  const collectiveField: 'school' | 'city' | null =
+    scope === 'school' ? 'school' : scope === 'city' ? 'city' : null;
+
+  const collectivePeriod = periodToggle ? (period as 'week' | 'all') : 'week';
+  // Exhaustive ranking from the server (counts every learner, not just the
+  // fetched top-N). Only queried when a collective tab is open.
+  const { groups: serverGroups, isLoading: collLoading } = useCollectives(
+    collectiveField || 'school',
+    collectivePeriod,
+    !!collectiveField,
+  );
+
+  // Prefer the exhaustive server ranking; fall back to a local aggregate over
+  // the fetched entries if the endpoint is unreachable so the board still works.
+  const groups = useMemo(() => {
+    if (!collectiveField) return [];
+    return serverGroups.length ? serverGroups : aggregateBy(entries, collectiveField, 50);
+  }, [collectiveField, serverGroups, entries]);
+
+  // The normalized key of the viewer's own school/city, so we can highlight
+  // their collective in the ranking (null when they haven't set one).
+  const myGroupKey = useMemo(() => {
+    if (!collectiveField) return null;
+    const mine = collectiveField === 'school' ? mySchool : myCity;
+    return mine ? normalizeName(mine) : null;
+  }, [collectiveField, mySchool, myCity]);
+
+  const changeScope = (next: string) => {
+    setScope(next);
+    setExpandedKey(null); // collapse any open drill-down when switching boards
+  };
 
   const aliasOk = isValidAlias(alias.trim());
 
@@ -185,7 +209,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             role="tab"
             aria-selected={scope === 'school'}
             className={`leaderboard__scope ${scope === 'school' ? 'is-active' : ''}`}
-            onClick={() => setScope('school')}
+            onClick={() => changeScope('school')}
           >
             {t('École', 'Lekòl')}
           </button>
@@ -193,7 +217,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             role="tab"
             aria-selected={scope === 'city'}
             className={`leaderboard__scope ${scope === 'city' ? 'is-active' : ''}`}
-            onClick={() => setScope('city')}
+            onClick={() => changeScope('city')}
           >
             {t('Ville', 'Vil')}
           </button>
@@ -201,22 +225,102 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             role="tab"
             aria-selected={scope === 'national'}
             className={`leaderboard__scope ${scope === 'national' ? 'is-active' : ''}`}
-            onClick={() => setScope('national')}
+            onClick={() => changeScope('national')}
           >
             {t('National', 'Nasyonal')}
           </button>
         </div>
       )}
 
-      {isLoading ? (
+      {isLoading || (collectiveField && collLoading && groups.length === 0) ? (
         <div className="leaderboard__loading">
           {Array.from({ length: compact ? 3 : 5 }).map((_, i) => (
             <div key={i} className="skeleton" style={{ height: 44, borderRadius: 10, marginBottom: 8 }} />
           ))}
         </div>
-      ) : visible.length > 0 ? (
+      ) : collectiveField ? (
+        // ── Collective board: schools / cities ranked by total member XP ──
+        groups.length > 0 ? (
+          <>
+            <ol className="leaderboard__list leaderboard__groups">
+              {groups.map((g) => {
+                const isMine = myGroupKey != null && g.key === myGroupKey;
+                const open = expandedKey === g.key;
+                const memberWord = g.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv');
+                return (
+                  <li key={g.key} className={`leaderboard__group ${isMine ? 'is-me' : ''}`}>
+                    <button
+                      type="button"
+                      className="leaderboard__group-head"
+                      aria-expanded={open}
+                      onClick={() => setExpandedKey(open ? null : g.key)}
+                    >
+                      <RankBadge rank={g.rank} />
+                      <span className="leaderboard__name">
+                        {g.label}
+                        {isMine && <span className="leaderboard__you">{t('vous', 'ou')}</span>}
+                      </span>
+                      <span className="leaderboard__group-meta">
+                        {g.members} {memberWord}
+                      </span>
+                      <span className="leaderboard__xp">
+                        <Flame size={12} /> {g.totalXp}
+                      </span>
+                      <ChevronDown size={15} className={`leaderboard__chevron ${open ? 'is-open' : ''}`} />
+                    </button>
+                    {open && (
+                      <ol className="leaderboard__members">
+                        {g.topMembers.map((m, i) => {
+                          const isMe = m.uid === user?.uid;
+                          return (
+                            <li key={m.uid || i} className={`leaderboard__member ${isMe ? 'is-me' : ''}`}>
+                              <span className="leaderboard__member-rank">{i + 1}</span>
+                              <span className="leaderboard__name">
+                                {m.displayName || 'Élève'}
+                                {isMe && <span className="leaderboard__you">{t('vous', 'ou')}</span>}
+                              </span>
+                              <span className="leaderboard__xp">
+                                <Flame size={12} /> {m.xp || 0}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+            {/* Not yet in any ranked collective → nudge to add school/city. */}
+            {!myGroupKey && isAuthed && !showForm && (
+              <button className="leaderboard__edit" onClick={openForm}>
+                <Pencil size={13} />
+                {scope === 'school'
+                  ? t('Ajoutez votre école pour y figurer', 'Ajoute lekòl ou pou parèt ladan l')
+                  : t('Ajoutez votre ville pour y figurer', 'Ajoute vil ou pou parèt ladan l')}
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="leaderboard__empty">
+            <p className="text-muted">
+              {scope === 'school'
+                ? t('Aucune école classée pour le moment.', 'Poko gen lekòl klase.')
+                : t('Aucune ville classée pour le moment.', 'Poko gen vil klase.')}
+            </p>
+            {isAuthed && !showForm && (
+              <button className="button button--primary leaderboard__empty-cta" onClick={openForm}>
+                {scope === 'school'
+                  ? t('Ajouter mon école', 'Ajoute lekòl mwen')
+                  : t('Ajouter ma ville', 'Ajoute vil mwen')}
+              </button>
+            )}
+          </div>
+        )
+      ) : entries.length > 0 ? (
+        // ── National board: individual learners ──
         <ol className="leaderboard__list">
-          {visible.map((e) => {
+          {entries.map((e) => {
             const isMe = e.id === user?.uid;
             return (
               <li key={e.id} className={`leaderboard__row ${isMe ? 'is-me' : ''}`}>
@@ -235,28 +339,6 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             );
           })}
         </ol>
-      ) : (scope === 'school' && !mySchool) ? (
-        <div className="leaderboard__empty">
-          <p className="text-muted">
-            {t('Ajoutez votre école pour voir son classement.', 'Ajoute lekòl ou pou wè klasman li.')}
-          </p>
-          {isAuthed && !showForm && (
-            <button className="button button--primary leaderboard__empty-cta" onClick={openForm}>
-              {t('Ajouter mon école', 'Ajoute lekòl mwen')}
-            </button>
-          )}
-        </div>
-      ) : (scope === 'city' && !myCity) ? (
-        <div className="leaderboard__empty">
-          <p className="text-muted">
-            {t('Ajoutez votre ville pour voir son classement.', 'Ajoute vil ou pou wè klasman li.')}
-          </p>
-          {isAuthed && !showForm && (
-            <button className="button button--primary leaderboard__empty-cta" onClick={openForm}>
-              {t('Ajouter ma ville', 'Ajoute vil mwen')}
-            </button>
-          )}
-        </div>
       ) : (
         <div className="leaderboard__empty leaderboard__empty--sample">
           <ol className="leaderboard__list leaderboard__list--sample" aria-hidden="true">
@@ -275,8 +357,8 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
         </div>
       )}
 
-      {/* Viewer's own rank line when they're not in the visible slice */}
-      {!compact && optedIn && myEntry && !visible.some((e) => e.id === user?.uid) && (
+      {/* Viewer's own rank line (national board only) when off-slice */}
+      {!compact && scope === 'national' && optedIn && myEntry && !entries.some((e) => e.id === user?.uid) && (
         <div className="leaderboard__self">
           <RankBadge rank={myRank} />
           <span className="leaderboard__name">

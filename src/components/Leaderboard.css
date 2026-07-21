@@ -199,6 +199,86 @@
   text-decoration: underline;
 }
 
+/* Collective boards (École / Ville) — schools/cities ranked as groups */
+.leaderboard__groups {
+  gap: 0.4rem;
+}
+
+.leaderboard__group {
+  border-radius: 10px;
+  background: var(--surface-alt, #f7f8fa);
+  overflow: hidden;
+}
+
+.leaderboard__group.is-me {
+  background: rgba(27, 111, 224, 0.1);
+  outline: 1px solid rgba(27, 111, 224, 0.25);
+}
+
+.leaderboard__group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.leaderboard__group-meta {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted, #667085);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.leaderboard__chevron {
+  color: var(--text-muted, #667085);
+  flex: 0 0 auto;
+  transition: transform 0.15s ease;
+}
+
+.leaderboard__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+/* Drill-down: members of one school/city, ranked */
+.leaderboard__members {
+  list-style: none;
+  margin: 0;
+  padding: 0.15rem 0.4rem 0.5rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.leaderboard__member {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.4rem;
+  border-radius: 8px;
+  background: var(--surface, #fff);
+}
+
+.leaderboard__member.is-me {
+  background: rgba(27, 111, 224, 0.12);
+}
+
+.leaderboard__member-rank {
+  flex: 0 0 auto;
+  width: 20px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted, #667085);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Sample/example ranking shown when the real board is empty */
 .leaderboard__empty--sample {
   padding-top: 0;

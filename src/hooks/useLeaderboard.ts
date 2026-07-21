@@ -7,7 +7,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { getWeeklyTop, getAllTimeTop, weekId, isValidAlias } from '../services/leaderboardService';
+import { getWeeklyTop, getAllTimeTop, getCollectives, weekId, isValidAlias } from '../services/leaderboardService';
+import type { GroupField } from '../../shared/leaderboardAgg';
 
 export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const user = useStore((s) => s.user);
@@ -38,5 +39,29 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
     isFetching,
     refetch,
     weekId: id,
+  };
+}
+
+/**
+ * useCollectives — exhaustive school/city/department ranking for a period.
+ * Server-aggregated (GET /api/leaderboard/collectives) so the totals count
+ * every opted-in learner, not just the individual top-N the board fetches.
+ * Only runs when `enabled` (i.e. a collective tab is actually open).
+ */
+export function useCollectives(field: GroupField, period: 'week' | 'all' = 'week', enabled = true) {
+  const { data, isPending, isFetching } = useQuery({
+    queryKey: ['leaderboard-collectives', field, period],
+    queryFn: () => getCollectives(field, period),
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    enabled,
+  });
+
+  return {
+    groups: data || [],
+    // isPending is `true` for a disabled query that never ran; only surface
+    // loading when the query is actually enabled.
+    isLoading: enabled && isPending,
+    isFetching,
   };
 }

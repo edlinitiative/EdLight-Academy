@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Crown, Medal, Trophy, Pencil, ShieldCheck } from 'lucide-react-native';
-import { useLeaderboard } from '../hooks/useLeaderboard';
+import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown } from 'lucide-react-native';
+import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useColors, useTheme } from '../theme/theme';
+import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import Avatar from './ui/Avatar';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
 
@@ -66,6 +67,79 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
   );
 }
 
+/** A ranked collective (school/city) with tap-to-expand member drill-down. */
+function GroupRow({
+  group, isMine, open, onToggle, myUid,
+}: {
+  group: GroupRanking;
+  isMine: boolean;
+  open: boolean;
+  onToggle: () => void;
+  myUid?: string;
+}) {
+  const colors = useColors();
+  const { language } = useStore();
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  const badge = rankBadge(group.rank);
+  const memberWord = group.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv');
+
+  return (
+    <View
+      className="rounded-xl mb-1.5"
+      style={isMine
+        ? { backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azure }
+        : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+    >
+      <TouchableOpacity onPress={onToggle} activeOpacity={0.7} className="flex-row items-center py-2.5 px-3">
+        <View className="w-7 h-7 rounded-full items-center justify-center mr-3" style={{ backgroundColor: badge.bg }}>
+          {badge.icon ?? <Text className="text-xs font-bold" style={{ color: colors.muted }}>{group.rank}</Text>}
+        </View>
+        <View className="flex-1">
+          <Text
+            className="text-sm font-semibold"
+            style={{ color: isMine ? colors.azure : colors.ink }}
+            numberOfLines={1}
+          >
+            {group.label}{isMine ? t(' (vous)', ' (ou)') : ''}
+          </Text>
+          <Text className="text-xs" style={{ color: colors.muted }} numberOfLines={1}>
+            {group.members} {memberWord} · {t('moy.', 'mwayèn')} {group.avgXp} XP
+          </Text>
+        </View>
+        <View className="items-end mr-2">
+          <Text className="text-sm font-bold" style={{ color: colors.azure }}>{group.totalXp}</Text>
+          <Text className="text-xs" style={{ color: colors.muted }}>XP</Text>
+        </View>
+        <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }} />
+      </TouchableOpacity>
+      {open && (
+        <View className="px-3 pb-2.5" style={{ gap: 4 }}>
+          {group.topMembers.map((m, i) => {
+            const isMe = m.uid === myUid;
+            return (
+              <View
+                key={m.uid || i}
+                className="flex-row items-center py-1.5 px-2 rounded-lg"
+                style={{ backgroundColor: isMe ? colors.azureSoft : colors.surfaceAlt }}
+              >
+                <Text className="text-xs font-bold w-5 text-center mr-2" style={{ color: colors.muted }}>{i + 1}</Text>
+                <Text
+                  className="flex-1 text-sm"
+                  style={{ color: isMe ? colors.azure : colors.ink }}
+                  numberOfLines={1}
+                >
+                  {m.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
+                </Text>
+                <Text className="text-sm font-bold" style={{ color: colors.azure }}>{m.xp}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+}
+
 interface LeaderboardProps {
   compact?: boolean;
   maxRows?: number;
@@ -78,6 +152,8 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [period, setPeriod] = useState<'week' | 'all'>('week');
+  const [scope, setScope] = useState<'national' | 'school' | 'city'>('national');
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const { entries, myEntry, myRank, isLoading } = useLeaderboard(maxRows, compact ? 'week' : period);
   const { profile, isAuthed } = useTrivia();
   const [showJoin, setShowJoin] = useState(false);
@@ -86,8 +162,38 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   const optedIn = !!profile?.leaderboard?.optedIn;
   // Opted in but no usable pseudo → hidden from the board; prompt to fix.
   const needsAlias = optedIn && !isValidAlias(profile?.leaderboard?.displayName);
+  const mySchool = profile?.leaderboard?.school || null;
+  const myCity = profile?.leaderboard?.city || null;
 
   const displayList = entries.slice(0, maxRows);
+
+  // École / Ville are collective boards (schools/cities ranked by total member
+  // XP); National stays individual. Compact widget is always the national board.
+  const collectiveField: GroupField | null =
+    !compact && scope === 'school' ? 'school' : !compact && scope === 'city' ? 'city' : null;
+
+  // Exhaustive ranking from the server (counts every learner, not just the
+  // fetched top-N). Only queried when a collective tab is open; falls back to a
+  // local aggregate over the fetched entries if the endpoint is unreachable.
+  const { groups: serverGroups, isLoading: collLoading } = useCollectives(
+    collectiveField || 'school',
+    compact ? 'week' : period,
+    !!collectiveField,
+  );
+  const groups = useMemo(() => {
+    if (!collectiveField) return [];
+    return serverGroups.length ? serverGroups : aggregateBy(entries, collectiveField, 50);
+  }, [collectiveField, serverGroups, entries]);
+  const myGroupKey = useMemo(() => {
+    if (!collectiveField) return null;
+    const mine = collectiveField === 'school' ? mySchool : myCity;
+    return mine ? normalizeName(mine) : null;
+  }, [collectiveField, mySchool, myCity]);
+
+  const changeScope = (next: 'national' | 'school' | 'city') => {
+    setScope(next);
+    setExpandedKey(null);
+  };
 
   const cardStyle = { ...cardSurface, padding: 16 };
 
@@ -175,6 +281,25 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
           </TouchableOpacity>
         ))}
       </View>
+      {/* Scope: National (individuals) · École · Ville (collectives) */}
+      <View style={{ flexDirection: 'row', gap: 4, backgroundColor: colors.surfaceAlt, borderRadius: 10, padding: 3, marginBottom: 12 }}>
+        {([
+          ['national', t('National', 'Nasyonal')],
+          ['school', t('École', 'Lekòl')],
+          ['city', t('Ville', 'Vil')],
+        ] as const).map(([key, label]) => (
+          <TouchableOpacity
+            key={key}
+            onPress={() => changeScope(key)}
+            activeOpacity={0.8}
+            style={{ flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8, backgroundColor: scope === key ? colors.surface : 'transparent' }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '700', color: scope === key ? colors.azure : colors.muted }}>
+              {label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </>
   );
 
@@ -205,18 +330,61 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   return (
     <View style={cardStyle}>
       {header}
-      {displayList.map((entry: any) => (
-        <EntryRow
-          key={entry.id}
-          entry={entry}
-          isMe={entry.id === myUid}
-          compact={compact}
-        />
-      ))}
-      {myEntry && !displayList.find((e: any) => e.id === myUid) && (
-        <View className="border-t border-dashed border-gray-200 dark:border-slate-700 mt-1 pt-2">
-          <EntryRow entry={myEntry} isMe compact={compact} />
-        </View>
+      {collectiveField ? (
+        groups.length > 0 ? (
+          <>
+            {groups.map((g) => (
+              <GroupRow
+                key={g.key}
+                group={g}
+                isMine={myGroupKey != null && g.key === myGroupKey}
+                open={expandedKey === g.key}
+                onToggle={() => setExpandedKey(expandedKey === g.key ? null : g.key)}
+                myUid={myUid}
+              />
+            ))}
+            {!myGroupKey && isAuthed && (
+              <TouchableOpacity
+                onPress={() => setShowJoin(true)}
+                activeOpacity={0.7}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, alignSelf: 'center' }}
+              >
+                <Pencil size={12} color={colors.azure} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>
+                  {scope === 'school'
+                    ? t('Ajoutez votre école pour y figurer', 'Ajoute lekòl ou pou parèt ladan l')
+                    : t('Ajoutez votre ville pour y figurer', 'Ajoute vil ou pou parèt ladan l')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </>
+        ) : (
+          <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+            <Text style={{ color: colors.faint, fontSize: 13, textAlign: 'center' }}>
+              {collLoading
+                ? t('Chargement…', 'Ap chaje…')
+                : scope === 'school'
+                  ? t('Aucune école classée pour le moment.', 'Poko gen lekòl klase.')
+                  : t('Aucune ville classée pour le moment.', 'Poko gen vil klase.')}
+            </Text>
+          </View>
+        )
+      ) : (
+        <>
+          {displayList.map((entry: any) => (
+            <EntryRow
+              key={entry.id}
+              entry={entry}
+              isMe={entry.id === myUid}
+              compact={compact}
+            />
+          ))}
+          {myEntry && !displayList.find((e: any) => e.id === myUid) && (
+            <View className="border-t border-dashed border-gray-200 dark:border-slate-700 mt-1 pt-2">
+              <EntryRow entry={myEntry} isMe compact={compact} />
+            </View>
+          )}
+        </>
       )}
       {joinFooter}
       {guestFooter}
