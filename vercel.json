@@ -5,7 +5,8 @@
   "installCommand": "npm install",
   "framework": null,
   "crons": [
-    { "path": "/api/send-reminders", "schedule": "*/15 * * * *" }
+    { "path": "/api/send-reminders", "schedule": "*/15 * * * *" },
+    { "path": "/api/leaderboard/aggregate-snapshot", "schedule": "*/15 * * * *" }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

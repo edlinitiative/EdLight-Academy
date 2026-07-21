@@ -34,6 +34,13 @@ import { aggregateBy, type GroupField, type LeaderboardEntry } from '../../share
 const ENTRIES_CAP = 5000;
 /** Members carried on each group for the drill-down preview. */
 const MEMBER_PREVIEW = 50;
+/**
+ * How old a precomputed snapshot may be before we ignore it and scan live. The
+ * snapshot cron runs every 15 min (see vercel.json), so this tolerates a couple
+ * of missed runs while guaranteeing we never serve badly stale data — a live
+ * scan is always correct.
+ */
+const SNAPSHOT_MAX_AGE_MS = 40 * 60 * 1000;
 const ALL_TIME_ID = 'all-time';
 const FIELDS: GroupField[] = ['school', 'city', 'department'];
 
@@ -77,6 +84,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const db = getDb();
+
+    // Fast path: a fresh precomputed snapshot (one doc read) written by the
+    // aggregate-snapshot cron. Falls through to a live scan if it's missing or
+    // stale, so correctness never depends on the cron having run.
+    const snapDoc = await db.doc(`leaderboards/${id}/collectives/${field}`).get();
+    if (snapDoc.exists) {
+      const data = snapDoc.data() as { groups?: unknown; count?: number; generatedAtMs?: number };
+      const age = Date.now() - (data.generatedAtMs ?? 0);
+      if (Array.isArray(data.groups) && age <= SNAPSHOT_MAX_AGE_MS) {
+        res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
+        res.status(200).json({
+          ok: true, period, field, weekId: id,
+          count: data.count ?? 0, groups: data.groups, source: 'snapshot',
+        });
+        return;
+      }
+    }
+
+    // Live path: scan the entries collection and aggregate on the fly.
     const snap = await db
       .collection(`leaderboards/${id}/entries`)
       .orderBy('xp', 'desc')
@@ -94,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // Identical for every viewer → cache hard at the edge. Fresh enough for a
     // board that the client itself only refetches every 2 min.
     res.setHeader('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=600');
-    res.status(200).json({ ok: true, period, field, weekId: id, count: entries.length, groups });
+    res.status(200).json({ ok: true, period, field, weekId: id, count: entries.length, groups, source: 'live' });
   } catch (err) {
     console.error('[leaderboard/collectives] read error:', err);
     res.status(500).json({ error: 'read_failed' });
