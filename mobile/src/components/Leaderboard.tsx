@@ -152,7 +152,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [period, setPeriod] = useState<'week' | 'all'>('week');
-  const [scope, setScope] = useState<'national' | 'school' | 'city'>('national');
+  const [scope, setScope] = useState<'national' | 'school' | 'city' | 'department'>('national');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const { entries, myEntry, myRank, isLoading } = useLeaderboard(maxRows, compact ? 'week' : period);
   const { profile, isAuthed } = useTrivia();
@@ -164,13 +164,14 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   const needsAlias = optedIn && !isValidAlias(profile?.leaderboard?.displayName);
   const mySchool = profile?.leaderboard?.school || null;
   const myCity = profile?.leaderboard?.city || null;
+  const myDepartment = profile?.leaderboard?.department || null;
 
   const displayList = entries.slice(0, maxRows);
 
   // École / Ville are collective boards (schools/cities ranked by total member
   // XP); National stays individual. Compact widget is always the national board.
   const collectiveField: GroupField | null =
-    !compact && scope === 'school' ? 'school' : !compact && scope === 'city' ? 'city' : null;
+    !compact && scope === 'school' ? 'school' : !compact && scope === 'city' ? 'city' : !compact && scope === 'department' ? 'department' : null;
 
   // Exhaustive ranking from the server (counts every learner, not just the
   // fetched top-N). Only queried when a collective tab is open; falls back to a
@@ -186,11 +187,11 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   }, [collectiveField, serverGroups, entries]);
   const myGroupKey = useMemo(() => {
     if (!collectiveField) return null;
-    const mine = collectiveField === 'school' ? mySchool : myCity;
+    const mine = collectiveField === 'school' ? mySchool : collectiveField === 'city' ? myCity : myDepartment;
     return mine ? normalizeName(mine) : null;
-  }, [collectiveField, mySchool, myCity]);
+  }, [collectiveField, mySchool, myCity, myDepartment]);
 
-  const changeScope = (next: 'national' | 'school' | 'city') => {
+  const changeScope = (next: 'national' | 'school' | 'city' | 'department') => {
     setScope(next);
     setExpandedKey(null);
   };
@@ -287,6 +288,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
           ['national', t('National', 'Nasyonal')],
           ['school', t('École', 'Lekòl')],
           ['city', t('Ville', 'Vil')],
+          ['department', t('Département', 'Depatman')],
         ] as const).map(([key, label]) => (
           <TouchableOpacity
             key={key}
@@ -353,7 +355,9 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
                 <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>
                   {scope === 'school'
                     ? t('Ajoutez votre école pour y figurer', 'Ajoute lekòl ou pou parèt ladan l')
-                    : t('Ajoutez votre ville pour y figurer', 'Ajoute vil ou pou parèt ladan l')}
+                    : scope === 'city'
+                    ? t('Ajoutez votre ville pour y figurer', 'Ajoute vil ou pou parèt ladan l')
+                    : t('Ajoutez votre département pour y figurer', 'Ajoute depatman ou pou parèt ladan l')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -365,7 +369,9 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
                 ? t('Chargement…', 'Ap chaje…')
                 : scope === 'school'
                   ? t('Aucune école classée pour le moment.', 'Poko gen lekòl klase.')
-                  : t('Aucune ville classée pour le moment.', 'Poko gen vil klase.')}
+                  : scope === 'city'
+                    ? t('Aucune ville classée pour le moment.', 'Poko gen vil klase.')
+                    : t('Aucun département classé pour le moment.', 'Poko gen depatman klase.')}
             </Text>
           </View>
         )
