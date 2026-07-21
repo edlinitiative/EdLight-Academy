@@ -3,6 +3,13 @@
     "name": "EdLight Academy",
     "slug": "edlight-academy",
     "version": "1.1.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/84d5c2a1-53bc-443c-8a93-e17a1207322b",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "_note_assets": "Run: npx expo install and then generate assets with: npx expo-doctor. Placeholder PNGs can be 1024x1024 for icon and 1284x2778 for splash.",

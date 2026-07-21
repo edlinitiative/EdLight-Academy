@@ -64,6 +64,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
   const optedIn = !!profile?.leaderboard?.optedIn;
   const mySchool = profile?.leaderboard?.school || null;
   const myCity = profile?.leaderboard?.city || null;
+  const myDepartment = profile?.leaderboard?.department || null;
   // Opted in but no usable pseudo (legacy "." etc.) → hidden from the board
   // until they pick one; we surface a prompt instead.
   const needsAlias = optedIn && !isValidAlias(profile?.leaderboard?.displayName);
@@ -111,8 +112,8 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
 
   // École / Ville are collective boards: schools (or cities) ranked against
   // each other by their members' total XP. National stays an individual board.
-  const collectiveField: 'school' | 'city' | null =
-    scope === 'school' ? 'school' : scope === 'city' ? 'city' : null;
+  const collectiveField: 'school' | 'city' | 'department' | null =
+    scope === 'school' ? 'school' : scope === 'city' ? 'city' : scope === 'department' ? 'department' : null;
 
   const collectivePeriod = periodToggle ? (period as 'week' | 'all') : 'week';
   // Exhaustive ranking from the server (counts every learner, not just the
@@ -134,9 +135,9 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
   // their collective in the ranking (null when they haven't set one).
   const myGroupKey = useMemo(() => {
     if (!collectiveField) return null;
-    const mine = collectiveField === 'school' ? mySchool : myCity;
+    const mine = collectiveField === 'school' ? mySchool : collectiveField === 'city' ? myCity : myDepartment;
     return mine ? normalizeName(mine) : null;
-  }, [collectiveField, mySchool, myCity]);
+  }, [collectiveField, mySchool, myCity, myDepartment]);
 
   const changeScope = (next: string) => {
     setScope(next);
@@ -223,6 +224,14 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
           </button>
           <button
             role="tab"
+            aria-selected={scope === 'department'}
+            className={`leaderboard__scope ${scope === 'department' ? 'is-active' : ''}`}
+            onClick={() => changeScope('department')}
+          >
+            {t('Département', 'Depatman')}
+          </button>
+          <button
+            role="tab"
             aria-selected={scope === 'national'}
             className={`leaderboard__scope ${scope === 'national' ? 'is-active' : ''}`}
             onClick={() => changeScope('national')}
@@ -297,7 +306,9 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
                 <Pencil size={13} />
                 {scope === 'school'
                   ? t('Ajoutez votre école pour y figurer', 'Ajoute lekòl ou pou parèt ladan l')
-                  : t('Ajoutez votre ville pour y figurer', 'Ajoute vil ou pou parèt ladan l')}
+                  : scope === 'city'
+                  ? t('Ajoutez votre ville pour y figurer', 'Ajoute vil ou pou parèt ladan l')
+                  : t('Ajoutez votre département pour y figurer', 'Ajoute depatman ou pou parèt ladan l')}
               </button>
             )}
           </>
@@ -306,13 +317,17 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             <p className="text-muted">
               {scope === 'school'
                 ? t('Aucune école classée pour le moment.', 'Poko gen lekòl klase.')
-                : t('Aucune ville classée pour le moment.', 'Poko gen vil klase.')}
+                : scope === 'city'
+                ? t('Aucune ville classée pour le moment.', 'Poko gen vil klase.')
+                : t('Aucun département classé pour le moment.', 'Poko gen depatman klase.')}
             </p>
             {isAuthed && !showForm && (
               <button className="button button--primary leaderboard__empty-cta" onClick={openForm}>
                 {scope === 'school'
                   ? t('Ajouter mon école', 'Ajoute lekòl mwen')
-                  : t('Ajouter ma ville', 'Ajoute vil mwen')}
+                  : scope === 'city'
+                  ? t('Ajouter ma ville', 'Ajoute vil mwen')
+                  : t('Ajouter mon département', 'Ajoute depatman mwen')}
               </button>
             )}
           </div>
