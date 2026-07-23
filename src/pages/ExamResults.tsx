@@ -201,6 +201,13 @@ const ExamResults = () => {
         const subject = normalizeSubject(exam.subject);
         const result = gradeExam(questions, answers, pre, { track, subject });
 
+        // Prefer the score computed at SUBMIT time (docData.summary). A cross-
+        // device / post-refresh re-grade runs off preGradedResults, which can be
+        // partial for AI-graded essays (grading failed at submit, or older doc
+        // schema) — re-grading would then score those free-response questions 0
+        // and show a LOWER score than the student actually earned.
+        const summary = docData.summary || result.summary;
+
         // Ensure every row has the question object (pre-graded entries omit it)
         const mergedResults = (result.results || []).map((r, i) => {
           if (r && r.question) return r;
@@ -218,7 +225,7 @@ const ExamResults = () => {
           subject,
           level: normalizeLevel(exam.level),
           track,
-          result: { ...result, results: mergedResults },
+          result: { ...result, summary, results: mergedResults },
           timestamp: docData.submitted_at_ms || Date.now(),
         });
       } finally {

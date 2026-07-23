@@ -96,13 +96,23 @@ async function processDueReminders(userId: string): Promise<void> {
     if (firedThisSession.has(reminder.id)) continue;
     firedThisSession.add(reminder.id);
 
+    // Claim the reminder (flip status pending→sent) BEFORE showing it and
+    // scheduling the next occurrence. Firing first left a window where a second
+    // tab or a reload mid-processing re-fired the same notification and created
+    // a DUPLICATE recurring occurrence. Marking first shrinks that window and
+    // guarantees at most one next-occurrence. (A fully atomic cross-tab claim
+    // would need a conditional/transactional update in markReminderSent.)
+    try {
+      await markReminderSent(userId, reminder.id);
+    } catch {
+      continue; // couldn't claim it — don't fire or it may double-fire
+    }
+
     await showLocalNotification(reminder.title || 'Rappel EdLight', {
       body: reminder.message || "C'est l'heure de réviser ! 📚",
       tag: `reminder-${reminder.id}`,
       url: reminder.courseId ? `/courses/${reminder.courseId}` : '/dashboard',
     });
-
-    await markReminderSent(userId, reminder.id);
 
     // Recurring reminders schedule their next occurrence.
     if (reminder.recurring) {
