@@ -300,6 +300,7 @@ const ExamTake = () => {
   const location = useLocation();
   const autostart = Boolean(location.state?.autostart);
   const recordActivity = useStore((s) => s.recordActivity);
+  const clearActivity = useStore((s) => s.clearActivity);
   const [viewState, setViewState] = useState(autostart ? 'active' : 'preview'); // 'preview' | 'active' | (legacy) 'cover'
 
   const sectionSummary = useMemo(() => {
@@ -386,6 +387,52 @@ const ExamTake = () => {
   const [showRestartConfirm, setShowRestartConfirm] = useState(false);
   const resumeCheckedRef = useRef(false);
   const startedAtMsRef = useRef(Date.now());
+  // Gate draft saving until the resume decision is settled (see save effect).
+  const [draftChecked, setDraftChecked] = useState(false);
+
+  // Refs mirror the latest state so the leave/unmount handlers persist fresh
+  // values instead of a stale closure.
+  const draftRef = useRef(null);
+  const viewStateRef = useRef(viewState);
+  const submittedRef = useRef(submitted);
+  viewStateRef.current = viewState;
+  submittedRef.current = submitted;
+
+  // A synchronous localStorage mirror of the draft — survives PWA backgrounding
+  // / app kill, when the debounced Firestore write can't complete.
+  const localDraftKey = examKey ? `edlight-exam-draft-${examKey}` : null;
+  const persistLocal = useCallback((payload) => {
+    if (!localDraftKey || typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(localDraftKey, JSON.stringify({ ...payload, status: 'in_progress', updated_at_ms: Date.now() }));
+    } catch { /* quota / unavailable */ }
+  }, [localDraftKey]);
+  const clearLocalDraft = useCallback(() => {
+    if (!localDraftKey || typeof localStorage === 'undefined') return;
+    try { localStorage.removeItem(localDraftKey); } catch { /* ignore */ }
+  }, [localDraftKey]);
+  // Best-effort flush of the current in-progress draft (localStorage synchronously
+  // + Firestore fire-and-forget). Called on navigate-away / tab-hide / app-background.
+  const flushDraft = useCallback(() => {
+    if (!userId || !examKey || !draftRef.current) return;
+    if (submittedRef.current || viewStateRef.current !== 'active') return;
+    persistLocal(draftRef.current);
+    saveExamAttemptDraft(userId, examKey, draftRef.current).catch(() => {});
+  }, [userId, examKey, persistLocal]);
+
+  // Flush on tab-hide, page-hide, and component unmount — the debounced periodic
+  // save alone loses the last change when the user leaves (its pending timer is
+  // cleared on unmount and frozen when a PWA is backgrounded).
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'hidden') flushDraft(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', flushDraft);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', flushDraft);
+      flushDraft();
+    };
+  }, [flushDraft]);
 
   // Compact pre-graded results for persistence (avoid duplicating full question objects)
   const compactQuestionResults = useMemo(() => {
@@ -406,27 +453,47 @@ const ExamTake = () => {
 
     let cancelled = false;
     (async () => {
+      let draft = null;
       try {
-        const draft = await loadExamAttemptDraft(userId, examKey);
-        if (cancelled) return;
-        resumeCheckedRef.current = true;
-        if (!draft || draft.status !== 'in_progress') return;
-        const hasAnswers = draft.answers && Object.keys(draft.answers).length > 0;
-        if (!hasAnswers) return;
-        // Only prompt at the start (avoid overwriting an in-progress local session)
-        startedAtMsRef.current = draft.started_at_ms || Date.now();
-        setResumeDraft(draft);
-        setShowResumePrompt(true);
+        draft = await loadExamAttemptDraft(userId, examKey);
       } catch (e) {
-        resumeCheckedRef.current = true;
         console.warn('[ExamAttempt] Failed to load draft:', e);
       }
+      if (cancelled) return;
+
+      // Prefer the local mirror when it's newer than Firestore — a background /
+      // app-kill can lose the debounced Firestore write, but localStorage is
+      // written synchronously, so it holds the true latest position/answers.
+      try {
+        if (localDraftKey && typeof localStorage !== 'undefined') {
+          const raw = localStorage.getItem(localDraftKey);
+          if (raw) {
+            const local = JSON.parse(raw);
+            if (local && local.status === 'in_progress' &&
+                (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
+              draft = local;
+            }
+          }
+        }
+      } catch { /* ignore corrupt mirror */ }
+
+      resumeCheckedRef.current = true;
+      setDraftChecked(true); // unblock the save effect (even when there's no draft)
+      if (!draft || draft.status !== 'in_progress') return;
+      const hasAnswers = draft.answers && Object.keys(draft.answers).length > 0;
+      // Also resume when they'd navigated past Q1 without answering yet — position
+      // alone is worth restoring (essay/proof questions are often read first).
+      const hasPosition = Number.isFinite(draft.currentQ) && draft.currentQ > 0;
+      if (!hasAnswers && !hasPosition) return;
+      startedAtMsRef.current = draft.started_at_ms || Date.now();
+      setResumeDraft(draft);
+      setShowResumePrompt(true);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId, examKey, exam]);
+  }, [userId, examKey, exam, localDraftKey]);
 
   const handleResume = useCallback(() => {
     if (!resumeDraft) return;
@@ -456,6 +523,7 @@ const ExamTake = () => {
     setSecondsLeft(durationMin * 60);
     setViewState('preview');
 
+    clearLocalDraft(); // drop the synchronous mirror too
     if (userId && examKey && exam) {
       try {
         await saveExamAttemptDraft(userId, examKey, {
@@ -470,12 +538,12 @@ const ExamTake = () => {
           answers: {},
           questionResults: {},
           started_at_ms: startedAtMsRef.current,
-        });
+        }, { replace: true }); // full overwrite — clears the old attempt's answers
       } catch (e) {
         console.warn('[ExamAttempt] Failed to reset draft:', e);
       }
     }
-  }, [userId, examKey, exam, durationMin, feedbackMode]);
+  }, [userId, examKey, exam, durationMin, feedbackMode, clearLocalDraft]);
 
   const resumeOverlays = (
     <>
@@ -572,24 +640,32 @@ const ExamTake = () => {
   useEffect(() => {
     if (!userId || !examKey || !exam) return;
     if (submitted || viewState !== 'active') return;
+    // Don't persist until the resume decision is settled — otherwise a fresh
+    // autostart session (currentQ:0, full timer) races the async draft load and
+    // clobbers the saved draft before the user can choose "Reprendre".
+    if (!draftChecked || showResumePrompt || showRestartConfirm) return;
 
-    // Debounce saves so we don't write on every keystroke
+    const payload = {
+      exam_id: examKey,
+      level: normalizeLevel(exam.level),
+      subject: normalizeSubject(exam.subject),
+      exam_title: normalizeExamTitle(exam),
+      duration_minutes: durationMin || 0,
+      feedbackMode,
+      currentQ,
+      secondsLeft,
+      answers,
+      // Only persist compacted pre-graded results (optional, mainly for immediate mode)
+      questionResults: feedbackMode === 'immediate' ? compactQuestionResults : {},
+      started_at_ms: startedAtMsRef.current,
+    };
+    draftRef.current = payload;   // for the leave/unmount flush handlers
+    persistLocal(payload);        // synchronous mirror (survives background/kill)
+
+    // Debounce the Firestore write so we don't write on every keystroke
     if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
     saveDraftTimerRef.current = setTimeout(() => {
-      saveExamAttemptDraft(userId, examKey, {
-        exam_id: examKey,
-        level: normalizeLevel(exam.level),
-        subject: normalizeSubject(exam.subject),
-        exam_title: normalizeExamTitle(exam),
-        duration_minutes: durationMin || 0,
-        feedbackMode,
-        currentQ,
-        secondsLeft,
-        answers,
-        // Only persist compacted pre-graded results (optional, mainly for immediate mode)
-        questionResults: feedbackMode === 'immediate' ? compactQuestionResults : {},
-        started_at_ms: startedAtMsRef.current,
-      }).catch((e) => {
+      saveExamAttemptDraft(userId, examKey, payload).catch((e) => {
         console.warn('[ExamAttempt] Save draft failed:', e);
       });
     }, 800);
@@ -603,6 +679,9 @@ const ExamTake = () => {
     examKey,
     submitted,
     viewState,
+    draftChecked,
+    showResumePrompt,
+    showRestartConfirm,
     currentQ,
     feedbackMode,
     timeBucket,
@@ -857,6 +936,12 @@ const ExamTake = () => {
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
     clearInterval(timerRef.current);
+    // Stop the draft machinery: cancel any pending debounced write, drop the
+    // local mirror, and clear the Home "Reprendre" banner so a finished exam
+    // isn't offered as resumable (which would dead-end at a submitted attempt).
+    if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
+    clearLocalDraft();
+    clearActivity();
     setSubmitting(true);
 
     // Get the user's track for coefficient-weighted scoring
@@ -988,7 +1073,7 @@ const ExamTake = () => {
     }
 
     navigate(`/exams/${level}/${examKey}/results`);
-  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate, examKey, userId]);
+  }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate, examKey, userId, clearLocalDraft, clearActivity]);
 
   // ── Render gates ───────────────────────────────────────────────────────────
   if (isLoading) {
