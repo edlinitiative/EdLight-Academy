@@ -13,11 +13,19 @@ service cloud.firestore {
     match /users/{userId} {
       // Allow user to read their own document, or admins to read any
       allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      
-      // Allow user to create/update their own document
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow admins to update any user
+
+      // Allow a user to create their own document, but NEVER self-assign a
+      // privileged role — isAdmin() is derived from this doc's `role` field, so
+      // an unrestricted self-write was a full admin-escalation primitive.
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && (!('role' in request.resource.data) || request.resource.data.role == 'student');
+
+      // Allow a user to update their own document, but not change `role`
+      // (only admins can change roles — see the admin rule below).
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+
+      // Allow admins to update any user (including role changes).
       allow update: if isAdmin();
       
       // Prevent deletion (optional - remove this line if you want users to delete their accounts)
