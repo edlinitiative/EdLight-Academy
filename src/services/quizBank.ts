@@ -124,15 +124,26 @@ export function toPerseusItemFromRow(row) {
   }
 
   // Default/MCQ path
-  // Map correct to index: A/B/C/D or 1/2/3/4 or by content match
+  // Map correct to index: a letter key (A, B, …), a number (1, 2, … incl. 2+
+  // digits), or by matching the answer text to an option. Text matching is
+  // accent/case/punctuation-insensitive so a key stored without accents (very
+  // common in this FR/HT dataset) still resolves — otherwise the whole item
+  // silently degraded to a broken text box and every choice graded wrong.
+  const matchNorm = (s) => String(s ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')   // strip accents
+    .toLowerCase().replace(/\s+/g, ' ').trim()
+    .replace(/^[\s.,;:!?'"()[\]]+|[\s.,;:!?'"()[\]]+$/g, ''); // strip surrounding punct
   let correctIdx = -1;
-  if (/^[A-D]$/i.test(correctRaw)) {
+  if (/^[A-Z]$/i.test(correctRaw)) {
     correctIdx = correctRaw.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
-  } else if (/^[1-9]$/.test(correctRaw)) {
+  } else if (/^\d+$/.test(correctRaw)) {
     correctIdx = parseInt(correctRaw, 10) - 1;
-  } else if (correctRaw) {
-    const idx = labels.findIndex((l) => l.trim().toLowerCase() === correctRaw.trim().toLowerCase());
-    if (idx !== -1) correctIdx = idx;
+  }
+  // A letter/number key that lands outside the option range is not a valid
+  // index — fall back to matching the answer text against the options.
+  if (correctIdx < 0 || correctIdx >= labels.length) {
+    const target = matchNorm(correctRaw);
+    correctIdx = target ? labels.findIndex((l) => matchNorm(l) === target) : -1;
   }
 
   if (labels.length >= 2 && correctIdx >= 0) {

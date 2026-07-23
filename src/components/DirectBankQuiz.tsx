@@ -48,7 +48,14 @@ export default function DirectBankQuiz({
       if (selected === null) return;
       isCorrect = selected === item.correctIndex;
     } else {
-      const norm = (s) => String(s || '').trim().toLowerCase();
+      // Collapse internal whitespace + strip surrounding punctuation so answers
+      // like "42 " (trailing space), "42." or "  a  b" aren't false-negatives.
+      // Accents are kept significant (they matter for FR/Bac grading).
+      const norm = (s) => String(s || '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^[\s.,;:!?'"()[\]]+|[\s.,;:!?'"()[\]]+$/g, '');
       const target = norm(item.correctText);
       const alt = Array.isArray(item.alternatives) ? item.alternatives.map(norm).filter(Boolean) : [];
       isCorrect = norm(textAns) === target || alt.includes(norm(textAns));
