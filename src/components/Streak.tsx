@@ -98,9 +98,10 @@ export function StreakWidget({ isCreole = false }) {
                   className={[
                     'streak-heatmap__cell',
                     day.active ? 'streak-heatmap__cell--active' : '',
+                    day.frozen ? 'streak-heatmap__cell--frozen' : '',
                     day.isToday ? 'streak-heatmap__cell--today' : '',
                   ].join(' ')}
-                  title={day.date}
+                  title={day.frozen ? `${day.date} · ${isCreole ? 'jou pwoteje' : 'jour protégé'} ❄️` : day.date}
                 />
               ))}
             </div>
@@ -111,6 +112,9 @@ export function StreakWidget({ isCreole = false }) {
           <div className="streak-heatmap__cell" />
           <div className="streak-heatmap__cell streak-heatmap__cell--active" />
           <span>{isCreole ? 'Plis' : 'Plus'}</span>
+          <span className="streak-heatmap__legend-sep" aria-hidden="true">·</span>
+          <div className="streak-heatmap__cell streak-heatmap__cell--frozen" />
+          <span>{isCreole ? 'Pwoteje ❄️' : 'Protégé ❄️'}</span>
         </div>
       </div>
 

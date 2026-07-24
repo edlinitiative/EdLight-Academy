@@ -119,7 +119,8 @@ export async function recordActivity(uid) {
       return { streak: current, newMilestones: [] };
     }
 
-    let { currentStreak, longestStreak, activeDays, milestones, streakFreezes, lastFreezeUsed } = current;
+    let { currentStreak, longestStreak, activeDays, milestones, streakFreezes, lastFreezeUsed, frozenDays } = current;
+    frozenDays = Array.isArray(frozenDays) ? frozenDays : [];
 
     // Determine continuity
     const gap = current.lastActivityDate
@@ -137,6 +138,13 @@ export async function recordActivity(uid) {
       currentStreak += 1;
       streakFreezes -= 1;
       lastFreezeUsed = today;
+      // Record the bridged (skipped) day — the calendar day between the last
+      // activity and today — so the heatmap shows it as frozen-covered instead
+      // of an empty gap that contradicts the unbroken streak count.
+      const skipped = new Date(parseDate(current.lastActivityDate));
+      skipped.setDate(skipped.getDate() + 1);
+      const skippedStr = `${skipped.getFullYear()}-${String(skipped.getMonth() + 1).padStart(2, '0')}-${String(skipped.getDate()).padStart(2, '0')}`;
+      frozenDays = trimActiveDays([...frozenDays, skippedStr]);
     } else {
       // Streak broken
       currentStreak = 1;
@@ -162,6 +170,7 @@ export async function recordActivity(uid) {
       lastActivityDate: today,
       totalActiveDays: (current.totalActiveDays || 0) + 1,
       activeDays,
+      frozenDays,
       milestones,
       streakFreezes,
       lastFreezeUsed,
@@ -195,10 +204,13 @@ export async function awardStreakFreeze(uid) {
 
 /**
  * Build a 7×N grid for the heatmap calendar component.
- * Returns { weeks: [[{date, active, level}]] } for the last `numWeeks` weeks.
+ * Returns { weeks: [[{date, active, frozen, level}]] } for the last `numWeeks`
+ * weeks. `frozenDays` are days a streak-freeze bridged — rendered as covered
+ * (distinct style) so the calendar matches the unbroken streak count.
  */
-export function buildHeatmapData(activeDays = [], numWeeks = 12) {
+export function buildHeatmapData(activeDays = [], numWeeks = 12, frozenDays = []) {
   const activeSet = new Set(activeDays);
+  const frozenSet = new Set(frozenDays);
   const today = new Date();
   const todayDay = today.getDay(); // 0=Sun
   const totalDays = numWeeks * 7;
@@ -218,11 +230,13 @@ export function buildHeatmapData(activeDays = [], numWeeks = 12) {
 
     const str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const active = activeSet.has(str);
+    const frozen = !active && frozenSet.has(str);
 
     currentWeek.push({
       date: str,
       active,
-      level: active ? 1 : 0,
+      frozen,
+      level: active ? 1 : frozen ? 2 : 0,
       isToday: str === todayStr(),
     });
 
@@ -258,6 +272,7 @@ function defaultStreak() {
     lastActivityDate: null,
     totalActiveDays: 0,
     activeDays: [],
+    frozenDays: [],
     milestones: [],
     streakFreezes: 0,
     lastFreezeUsed: null,
