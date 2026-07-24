@@ -89,9 +89,17 @@ export async function fetchSingleExam(examIdParam: string | number): Promise<any
   if (!id) return null;
 
   // Legacy numeric route → resolve to a stable exam_id via the index.
+  // The index has no numeric key, so a number can only map by position; but the
+  // raw index order is server-controlled and shifts when exams are added or
+  // re-sorted, which silently opened the WRONG exam over time. Sort by the
+  // stable exam_id first so a given legacy number always resolves to the same
+  // exam, and bounds-check.
   if (isNumericId(id)) {
     const index = await fetchCatalogIndex();
-    id = index[parseInt(id, 10)]?.exam_id ?? '';
+    const n = parseInt(id, 10);
+    const sorted = [...index].sort((a, b) =>
+      String(a?.exam_id ?? a?.id ?? '').localeCompare(String(b?.exam_id ?? b?.id ?? '')));
+    id = (n >= 0 && n < sorted.length ? sorted[n]?.exam_id : '') ?? '';
     if (!id) return null;
   }
 
