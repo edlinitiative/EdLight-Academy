@@ -6,6 +6,8 @@
 
 import React from 'react';
 import { Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw } from 'lucide-react';
+import Celebration from '../Celebration';
+import { CountUp } from '../../hooks/useCountUp';
 
 export default function GameOverCard({
   score,
@@ -19,6 +21,11 @@ export default function GameOverCard({
   highScore = null,
 }) {
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+
+  // Big-win moments earn a confetti burst: a fresh personal record, a level-up,
+  // or a near-perfect round. Everyone still sees the score + message.
+  const isNewRecord = highScore != null && score >= highScore && score > 0;
+  const bigWin = pct >= 90 || isNewRecord || !!reward?.leveledUp;
 
   let IconCmp, message, messageHt;
   if (pct >= 90) {
@@ -42,6 +49,7 @@ export default function GameOverCard({
   return (
     <div className="trivia-results" style={{ '--cat-color': accent } as React.CSSProperties}>
       <div className="trivia-results__card">
+        <Celebration active={bigWin} />
         <span className="trivia-results__emoji"><IconCmp size={48} /></span>
         <h2 className="trivia-results__title">{isCreole ? 'Rezilta Ou' : 'Vos Résultats'}</h2>
         <div className="trivia-results__score-ring">
@@ -73,7 +81,9 @@ export default function GameOverCard({
         <p className="trivia-results__message">{isCreole ? messageHt : message}</p>
         {reward && reward.xpEarned > 0 && (
           <div className="trivia-reward">
-            <span className="trivia-reward__xp"><Sparkles size={16} /> +{reward.xpEarned} XP</span>
+            <span className="trivia-reward__xp">
+              <Sparkles size={16} /> <CountUp value={reward.xpEarned} prefix="+" suffix=" XP" />
+            </span>
             {reward.leveledUp && (
               <span className="trivia-reward__levelup">
                 <Crown size={14} /> {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
