@@ -374,7 +374,7 @@ export default function CoursesScreen() {
               title={l.label}
               subtitle={isCreole ? l.sublabelHt : l.sublabel}
               badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
-              color="#1B6FE0"
+              color={colors.azure}
               Icon={GraduationCap}
               onPress={() => setLevel(l.code)}
             />

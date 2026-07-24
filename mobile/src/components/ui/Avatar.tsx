@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Image } from 'react-native';
+import { useColors } from '../../theme/theme';
 
 interface AvatarProps {
   name?: string;
@@ -41,6 +42,7 @@ function identiconRows(seed: string): boolean[][] {
 
 // Last-resort offline fallback: locally rendered deterministic pixel identicon
 function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
+  const colors = useColors();
   const rows = React.useMemo(() => identiconRows(seed), [seed]);
   const cell = Math.round((size * 0.6) / 5);
   return (
@@ -50,7 +52,7 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
           {row.map((on, c) => (
             <View
               key={c}
-              style={{ width: cell, height: cell, backgroundColor: on ? '#1B6FE0' : 'transparent' }}
+              style={{ width: cell, height: cell, backgroundColor: on ? colors.azure : 'transparent' }}
             />
           ))}
         </View>
@@ -66,6 +68,7 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
 const ROBOHASH_SET = 'set1';
 
 export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: AvatarProps) {
+  const colors = useColors();
   const [characterFailed, setCharacterFailed] = React.useState(false);
 
   const charSeed = seed || name || 'edlight';
@@ -76,7 +79,7 @@ export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: Avatar
   return (
     <View
       className="rounded-full items-center justify-center overflow-hidden"
-      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#eaf2fb' }}
+      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.azureSoft }}
     >
       {characterFailed ? (
         <PixelIdenticon seed={charSeed} size={size} />

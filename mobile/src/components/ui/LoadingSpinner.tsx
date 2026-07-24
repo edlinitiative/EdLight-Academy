@@ -1,13 +1,16 @@
 import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { useColors } from '../../theme/theme';
 
-export default function LoadingSpinner({ full = false, color = '#1B6FE0' }: { full?: boolean; color?: string }) {
+export default function LoadingSpinner({ full = false, color }: { full?: boolean; color?: string }) {
+  const colors = useColors();
+  const spinnerColor = color ?? colors.azure;
   if (full) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={color} />
+        <ActivityIndicator size="large" color={spinnerColor} />
       </View>
     );
   }
-  return <ActivityIndicator size="large" color={color} />;
+  return <ActivityIndicator size="large" color={spinnerColor} />;
 }

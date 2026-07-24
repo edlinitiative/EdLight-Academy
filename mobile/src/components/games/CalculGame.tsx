@@ -125,7 +125,7 @@ export default function CalculGame({
   }
 
   const urgent = timeLeft <= 10;
-  const problemBorder = flash === 'right' ? '#10b981' : flash === 'wrong' ? '#ef4444' : colors.border;
+  const problemBorder = flash === 'right' ? colors.success : flash === 'wrong' ? colors.danger : colors.border;
   const okDisabled = input === '' || input === '-';
 
   return (
@@ -133,8 +133,8 @@ export default function CalculGame({
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center gap-1.5">
-          <Timer color={urgent ? '#ef4444' : colors.muted} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? '#ef4444' : colors.muted }}>
+          <Timer color={urgent ? colors.danger : colors.muted} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? colors.danger : colors.muted }}>
             {timeLeft}s
           </Text>
         </View>

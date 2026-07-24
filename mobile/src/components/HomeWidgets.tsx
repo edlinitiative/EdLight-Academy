@@ -44,7 +44,7 @@ function Widget({ icon, title, value, sub, tint, accessibilityLabel, onPress }: 
         >
           {icon}
         </View>
-        <ChevronRight color="#cbd5e1" size={16} />
+        <ChevronRight color={colors.faint} size={16} />
       </View>
       <View style={{ marginTop: 10 }}>
         <Text

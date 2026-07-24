@@ -76,7 +76,7 @@ function ExamCard({
             style={{ backgroundColor: color + '18' }}
           >
             {done
-              ? <CheckCircle2 color="#10b981" size={20} />
+              ? <CheckCircle2 color={colors.success} size={20} />
               : <ClipboardList color={color} size={20} />}
           </View>
           <View className="flex-1">
@@ -92,13 +92,13 @@ function ExamCard({
               ) : null}
               {done && pct !== null ? (
                 <View className="flex-row items-center gap-1">
-                  <CheckCircle2 color="#10b981" size={12} />
-                  <Text className="text-xs text-emerald-700 font-semibold">{pct}%</Text>
+                  <CheckCircle2 color={colors.success} size={12} />
+                  <Text className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">{pct}%</Text>
                 </View>
               ) : done ? (
                 <View className="flex-row items-center gap-1">
-                  <CheckCircle2 color="#10b981" size={12} />
-                  <Text className="text-xs text-emerald-600 font-medium">{t('Terminé', 'Fini')}</Text>
+                  <CheckCircle2 color={colors.success} size={12} />
+                  <Text className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('Terminé', 'Fini')}</Text>
                 </View>
               ) : null}
             </View>

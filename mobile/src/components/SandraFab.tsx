@@ -58,7 +58,7 @@ export default function SandraFab({ onPress }: { onPress: () => void }) {
           elevation: 2,
         }}
       >
-        <Text style={{ fontSize: 10, fontWeight: '700', color: '#E0532F' }}>Sandra</Text>
+        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.coral }}>Sandra</Text>
       </View>
     </PressableScale>
   );

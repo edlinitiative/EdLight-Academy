@@ -44,7 +44,7 @@ function ScoreGauge({ percentage }: { percentage: number }) {
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const color = percentage >= 70 ? '#10b981' : percentage >= 50 ? '#f59e0b' : '#ef4444';
+  const color = percentage >= 70 ? colors.success : percentage >= 50 ? colors.warn : colors.danger;
   const reduceMotion = useReduceMotion();
 
   // Celebrate a strong result — this is the emotional peak of the exam flow.
@@ -105,8 +105,8 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
         {isUnanswered
           ? <View className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-slate-600" />
           : isCorrect
-            ? <CheckCircle2 color="#10b981" size={20} />
-            : <XCircle color="#ef4444" size={20} />}
+            ? <CheckCircle2 color={colors.success} size={20} />
+            : <XCircle color={colors.danger} size={20} />}
         <Text className="text-xs font-semibold text-gray-500 dark:text-slate-400 w-6">Q{index + 1}</Text>
         <Text className="flex-1 text-sm text-gray-800 dark:text-slate-200 font-medium" numberOfLines={expanded ? undefined : 2}>
           {question._displayText ?? question.question ?? ''}
@@ -120,7 +120,7 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
           <View className="h-px bg-gray-200 dark:bg-slate-700 mb-1" />
           <View className="flex-row gap-2">
             <Text className="text-xs font-semibold text-gray-400 dark:text-slate-500 w-20">{t('Votre réponse', 'Repons ou')}</Text>
-            <Text className="flex-1 text-xs font-medium" style={{ color: isUnanswered ? colors.faint : isCorrect ? '#10b981' : '#ef4444' }}>
+            <Text className="flex-1 text-xs font-medium" style={{ color: isUnanswered ? colors.faint : isCorrect ? colors.success : colors.danger }}>
               {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
             </Text>
           </View>
@@ -159,7 +159,7 @@ function MasteryBar({ section, pct, correct, total }: { section: string; pct: nu
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const color = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+  const color = pct >= 75 ? colors.success : pct >= 50 ? colors.warn : colors.danger;
   return (
     <View style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
@@ -252,7 +252,7 @@ export default function ExamResultsScreen() {
           <View className="px-6 pb-6">
             <ProgressBar
               value={Math.round(percentage)}
-              color={percentage >= 70 ? '#10b981' : percentage >= 50 ? '#f59e0b' : '#ef4444'}
+              color={percentage >= 70 ? colors.success : percentage >= 50 ? colors.warn : colors.danger}
               height={8}
               showLabel
             />
@@ -262,9 +262,9 @@ export default function ExamResultsScreen() {
         {/* Stats */}
         <View className="flex-row gap-3 mx-4 mt-4">
           {[
-            { label: t('Correctes', 'Kòrèk'), value: String(correct), icon: <CheckCircle2 color="#10b981" size={20} />, color: '#10b981' },
-            { label: t('Incorrectes', 'Pa kòrèk'), value: String(incorrect), icon: <XCircle color="#ef4444" size={20} />, color: '#ef4444' },
-            { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color="#f59e0b" size={20} />, color: '#f59e0b' },
+            { label: t('Correctes', 'Kòrèk'), value: String(correct), icon: <CheckCircle2 color={colors.success} size={20} />, color: colors.success },
+            { label: t('Incorrectes', 'Pa kòrèk'), value: String(incorrect), icon: <XCircle color={colors.danger} size={20} />, color: colors.danger },
+            { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color={colors.warn} size={20} />, color: colors.warn },
           ].map((stat) => (
             <View key={stat.label} style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}>
               {stat.icon}

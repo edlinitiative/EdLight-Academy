@@ -16,7 +16,7 @@ export type Palette = {
   coral: string; coralSoft: string;
   bg: string; surface: string; surfaceAlt: string; border: string; hairline: string;
   ink: string; muted: string; faint: string;
-  danger: string; dangerSoft: string; warn: string; success: string;
+  danger: string; dangerSoft: string; warn: string; warnSoft: string; success: string; successSoft: string;
 };
 
 export const lightColors: Palette = {
@@ -41,7 +41,9 @@ export const lightColors: Palette = {
   danger: '#ef4444',
   dangerSoft: '#fef2f2',
   warn: '#f59e0b',
+  warnSoft: '#fffbeb',
   success: '#22c55e',
+  successSoft: '#ecfdf5',
 };
 
 export const darkColors: Palette = {
@@ -66,7 +68,9 @@ export const darkColors: Palette = {
   danger: '#f87171',
   dangerSoft: 'rgba(248,113,113,0.16)',
   warn: '#fbbf24',
+  warnSoft: 'rgba(251,191,36,0.16)',
   success: '#34d399',
+  successSoft: 'rgba(52,211,153,0.16)',
 };
 
 /**

@@ -308,7 +308,7 @@ export default function SandraScreen({
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }}>
         <View className="flex-row items-center justify-between px-4 py-3">
           <View className="flex-row items-center gap-2">
-            <Sparkles size={20} color="#E0532F" />
+            <Sparkles size={20} color={colors.coral} />
             <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">Sandra</Text>
           </View>
           {onClose ? (
@@ -341,7 +341,7 @@ export default function SandraScreen({
               className="w-14 h-14 rounded-full items-center justify-center mb-4"
               style={{ backgroundColor: colors.coralSoft }}
             >
-              <Lock size={24} color="#E0532F" />
+              <Lock size={24} color={colors.coral} />
             </View>
             <Text className="text-base font-bold text-gray-900 dark:text-slate-100 text-center mb-2">
               {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
@@ -387,7 +387,7 @@ export default function SandraScreen({
               className="w-10 h-10 rounded-full items-center justify-center"
               style={{ backgroundColor: colors.coralSoft }}
             >
-              <Sparkles size={20} color="#E0532F" />
+              <Sparkles size={20} color={colors.coral} />
             </View>
             <View>
               <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">Sandra</Text>

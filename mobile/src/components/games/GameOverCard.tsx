@@ -169,8 +169,8 @@ export default function GameOverCard({
         {/* Personal record */}
         {highScore != null && score >= highScore && score > 0 && (
           <View className="flex-row items-center gap-1.5 mt-4">
-            <Trophy color="#d97706" size={14} />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#d97706' }}>
+            <Trophy color={colors.warn} size={14} />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.warn }}>
               {isCreole ? 'Nouvo rekò pèsonèl !' : 'Nouveau record personnel !'}
             </Text>
           </View>
@@ -194,8 +194,8 @@ export default function GameOverCard({
             </View>
             {reward.leveledUp && (
               <View className="flex-row items-center gap-1.5 mt-2">
-                <Crown color="#d97706" size={14} />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#d97706' }}>
+                <Crown color={colors.warn} size={14} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.warn }}>
                   {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
                 </Text>
               </View>

@@ -714,7 +714,7 @@ function QuizPlayer({
             {!isCorrect && (
               <Text className="text-sm mt-1" style={{ color: colors.muted }}>
                 {isCreole ? 'Bon repons :' : 'Bonne réponse :'}{' '}
-                <Text className="font-semibold text-emerald-700">{q.correctAnswer}</Text>
+                <Text className="font-semibold text-emerald-700 dark:text-emerald-400">{q.correctAnswer}</Text>
               </Text>
             )}
 

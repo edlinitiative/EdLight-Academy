@@ -413,7 +413,7 @@ export default function ProfileScreen() {
               iconBg={colors.azureSoft}
               label={t('Langue', 'Lang')}
               sublabel={language === 'fr' ? 'Français' : 'Kreyòl Ayisyen'}
-              accessory={<ChevronRight color="#cbd5e1" size={18} />}
+              accessory={<ChevronRight color={colors.faint} size={18} />}
               onPress={() => handleLanguageChange(language === 'fr' ? 'ht' : 'fr')}
             />
             <SettingRow
@@ -421,7 +421,7 @@ export default function ProfileScreen() {
               iconBg={colors.azureSoft}
               label={t('Thème', 'Tèm')}
               sublabel={theme === 'dark' ? t('Mode nuit', 'Mòd nwit') : t('Mode jour', 'Mòd jou')}
-              accessory={<ChevronRight color="#cbd5e1" size={18} />}
+              accessory={<ChevronRight color={colors.faint} size={18} />}
               onPress={toggleTheme}
             />
             <SettingRow
@@ -434,9 +434,9 @@ export default function ProfileScreen() {
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={handleNotificationToggle}
-                  trackColor={{ false: '#e2e8f0', true: '#bfdbfe' }}
-                  thumbColor={notificationsEnabled ? colors.azure : '#94a3b8'}
-                  ios_backgroundColor="#e2e8f0"
+                  trackColor={{ false: colors.border, true: colors.azureBorder }}
+                  thumbColor={notificationsEnabled ? colors.azure : colors.faint}
+                  ios_backgroundColor={colors.border}
                 />
               }
             />
@@ -449,10 +449,10 @@ export default function ProfileScreen() {
             onPress={handleLogout}
             activeOpacity={0.75}
             className="flex-row items-center justify-center"
-            style={{ gap: 8, paddingVertical: 14, borderRadius: radius.chip, borderWidth: 1.5, borderColor: '#fecaca', backgroundColor: colors.surface }}
+            style={{ gap: 8, paddingVertical: 14, borderRadius: radius.chip, borderWidth: 1.5, borderColor: colors.dangerSoft, backgroundColor: colors.surface }}
           >
-            <LogOut color="#dc2626" size={16} />
-            <Text style={{ color: '#dc2626', fontWeight: '800', fontSize: 14 }}>{t('Se déconnecter', 'Dekonekte')}</Text>
+            <LogOut color={colors.danger} size={16} />
+            <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 14 }}>{t('Se déconnecter', 'Dekonekte')}</Text>
           </TouchableOpacity>
         </View>
 
