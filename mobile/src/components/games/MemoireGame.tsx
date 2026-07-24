@@ -161,7 +161,7 @@ export default function MemoireGame({
                 paddingHorizontal: 6,
                 backgroundColor: isUp ? colors.surface : card.side === 'a' ? ACCENT : '#9d6ff0',
                 borderWidth: isUp ? 2 : 0,
-                borderColor: isMatched ? '#10b981' : colors.border,
+                borderColor: isMatched ? colors.success : colors.border,
                 opacity: isMatched ? 0.75 : 1,
               }}
             >
@@ -172,7 +172,7 @@ export default function MemoireGame({
                   style={{
                     fontSize: 13,
                     fontWeight: '700',
-                    color: isMatched ? '#059669' : colors.ink,
+                    color: isMatched ? colors.success : colors.ink,
                     textAlign: 'center',
                   }}
                 >

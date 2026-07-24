@@ -223,7 +223,7 @@ function TaskRow({
       style={{ gap: 10, opacity: mastered ? 0.6 : 1 }}
     >
       {mastered ? (
-        <CheckCircle2 size={20} color="#10b981" />
+        <CheckCircle2 size={20} color={colors.success} />
       ) : (
         <Circle size={20} color={colors.faint} />
       )}
@@ -245,7 +245,7 @@ function TaskRow({
             </View>
           )}
           {overdue && (
-            <Text style={{ fontSize: 10, fontWeight: '700', color: '#ef4444' }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: colors.danger }}>
               {isCreole ? 'Anreta' : 'En retard'}
             </Text>
           )}
@@ -818,7 +818,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
             ))
           ) : (
             <View className="flex-row items-center" style={{ gap: 8 }}>
-              <CheckCircle2 size={16} color="#10b981" />
+              <CheckCircle2 size={16} color={colors.success} />
               <Text style={{ fontSize: 13, color: colors.muted }}>
                 {t(
                   "Vous êtes à jour, rien de prévu aujourd'hui !",
@@ -869,7 +869,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         {!!plan.tips?.length && (
           <Card style={{ marginBottom: 14 }}>
             <SectionTitle
-              icon={<Lightbulb size={16} color="#f59e0b" />}
+              icon={<Lightbulb size={16} color={colors.warn} />}
               label={t('Conseils de Sandra', 'Konsèy Sandra')}
             />
             {plan.tips.slice(0, 3).map((tip, i) => (

@@ -7,6 +7,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useReduceMotion } from '../utils/motion';
+import { useColors } from '../theme/theme';
 
 interface ProgressBarProps {
   value: number; // 0–100
@@ -18,11 +19,13 @@ interface ProgressBarProps {
 
 export default function ProgressBar({
   value,
-  color = '#1B6FE0',
+  color,
   height = 6,
   showLabel = false,
   label,
 }: ProgressBarProps) {
+  const colors = useColors();
+  const fill = color ?? colors.azure;
   const clamped = Math.max(0, Math.min(100, value));
   const reduceMotion = useReduceMotion();
   const width = useSharedValue(0);
@@ -48,7 +51,7 @@ export default function ProgressBar({
       <View className="bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden" style={{ height }}>
         <Animated.View
           className="rounded-full"
-          style={[{ height, backgroundColor: color }, fillStyle]}
+          style={[{ height, backgroundColor: fill }, fillStyle]}
         />
       </View>
     </View>

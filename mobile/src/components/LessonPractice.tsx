@@ -165,8 +165,8 @@ function Exercices({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
             // Neutral option is themed; correct/incorrect keep their green/red.
             let border = colors.border; let bg = colors.surface; let color = colors.ink;
             if (checked) {
-              if (isCorrect) { border = '#10b981'; bg = '#ecfdf5'; color = '#047857'; }
-              else if (isSel) { border = '#ef4444'; bg = '#fef2f2'; color = '#b91c1c'; }
+              if (isCorrect) { border = colors.success; bg = colors.successSoft; color = colors.success; }
+              else if (isSel) { border = colors.danger; bg = colors.dangerSoft; color = colors.danger; }
             } else if (isSel) { border = colors.azure; bg = colors.azureSoft; }
             return (
               <TouchableOpacity
@@ -179,8 +179,8 @@ function Exercices({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
                   <Text style={{ fontSize: 12, fontWeight: '700', color: isSel && !checked ? '#fff' : colors.muted }}>{String.fromCharCode(65 + i)}</Text>
                 </View>
                 <Text style={{ flex: 1, fontSize: 14.5, color, lineHeight: 20 }}>{opt}</Text>
-                {checked && isCorrect ? <Check color="#10b981" size={18} /> : null}
-                {checked && isSel && !isCorrect ? <X color="#ef4444" size={18} /> : null}
+                {checked && isCorrect ? <Check color={colors.success} size={18} /> : null}
+                {checked && isSel && !isCorrect ? <X color={colors.danger} size={18} /> : null}
               </TouchableOpacity>
             );
           })}

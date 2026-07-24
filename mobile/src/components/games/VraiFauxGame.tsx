@@ -147,15 +147,15 @@ export default function VraiFauxGame({
   if (!item) return null;
 
   const urgent = timeLeft <= 10;
-  const cardBorder = feedback === 'right' ? '#10b981' : feedback === 'wrong' ? '#ef4444' : colors.border;
+  const cardBorder = feedback === 'right' ? colors.success : feedback === 'wrong' ? colors.danger : colors.border;
 
   return (
     <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center gap-1.5">
-          <Timer color={urgent ? '#ef4444' : colors.muted} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? '#ef4444' : colors.muted }}>
+          <Timer color={urgent ? colors.danger : colors.muted} size={15} />
+          <Text style={{ fontSize: 14, fontWeight: '800', color: urgent ? colors.danger : colors.muted }}>
             {timeLeft}s
           </Text>
         </View>
