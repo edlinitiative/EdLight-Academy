@@ -7,16 +7,17 @@
 
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { getWeeklyTop, getAllTimeTop, getCollectives, weekId, isValidAlias } from '../services/leaderboardService';
+import { getWeeklyTop, getAllTimeTop, getCollectives, getUserWeeklyRank, weekId, isValidAlias } from '../services/leaderboardService';
 import type { GroupField } from '../../shared/leaderboardAgg';
 
 export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const user = useStore((s) => s.user);
   const uid = user?.uid ?? null;
   const id = weekId();
+  const periodId = period === 'all' ? 'all-time' : id;
 
   const { data: entries, isPending: isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['leaderboard-weekly', period === 'all' ? 'all-time' : id, max],
+    queryKey: ['leaderboard-weekly', periodId, max],
     queryFn: () => (period === 'all' ? getAllTimeTop(max) : getWeeklyTop(max, id)),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: true,
@@ -29,12 +30,27 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const list = (entries || [])
     .filter((e) => isValidAlias(e.displayName))
     .map((e, i) => ({ ...e, rank: i + 1 }));
-  const myEntry = uid ? list.find((e) => e.id === uid) || null : null;
+  const myEntryInPage = uid ? list.find((e) => e.id === uid) || null : null;
+
+  // When the learner isn't in the fetched page, look up their exact rank via a
+  // count aggregate — otherwise a genuinely-ranked user past the top-N wrongly
+  // saw the "join" CTA / "—". Only fires when needed.
+  const needsRankLookup = !!uid && !isLoading && !myEntryInPage;
+  const { data: fallbackRank } = useQuery({
+    queryKey: ['leaderboard-my-rank', periodId, uid],
+    queryFn: () => getUserWeeklyRank(uid, periodId),
+    enabled: needsRankLookup,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const myEntry = myEntryInPage || fallbackRank?.entry || null;
+  const myRank = myEntryInPage ? myEntryInPage.rank : (fallbackRank?.rank ?? null);
 
   return {
     entries: list,
     myEntry,
-    myRank: myEntry ? myEntry.rank : null,
+    myRank,
     isLoading,
     isFetching,
     refetch,
