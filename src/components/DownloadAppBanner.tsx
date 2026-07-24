@@ -71,21 +71,21 @@ export default function DownloadAppBanner() {
           alignItems: 'center',
           gap: 10,
           padding: '8px 12px',
-          background: '#ffffff',
-          borderBottom: '1px solid #e8edf5',
+          background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)',
         }}
       >
         <button
           onClick={dismiss}
           aria-label={t('Fermer', 'Fèmen')}
-          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-500)' }}
         >
           <X size={18} />
         </button>
         <img src="/assets/logo.png" alt="" width={32} height={32} style={{ borderRadius: 8 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>EdLight Academy</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>{t('Plus rapide dans l’app', 'Pi rapid nan app la')}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-900)' }}>EdLight Academy</div>
+          <div style={{ fontSize: 11, color: 'var(--text-500)' }}>{t('Plus rapide dans l’app', 'Pi rapid nan app la')}</div>
         </div>
         <a
           href={PLAY_STORE_URL}
@@ -119,27 +119,27 @@ export default function DownloadAppBanner() {
         right: 24,
         zIndex: 1200,
         width: 300,
-        background: '#ffffff',
+        background: 'var(--surface)',
         borderRadius: 20,
-        border: '1px solid #e8edf5',
-        boxShadow: '0 12px 40px rgba(8,87,166,0.16)',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-lg)',
         padding: 20,
       }}
     >
       <button
         onClick={dismiss}
         aria-label={t('Fermer', 'Fèmen')}
-        style={{ position: 'absolute', top: 6, right: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+        style={{ position: 'absolute', top: 6, right: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-500)' }}
       >
         <X size={18} />
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
         <img src="/assets/logo.png" alt="" width={36} height={36} style={{ borderRadius: 8 }} />
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-900)' }}>
           {t('EdLight sur mobile', 'EdLight sou mobil')}
         </div>
       </div>
-      <p style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.5, margin: '0 0 14px' }}>
+      <p style={{ fontSize: 12.5, color: 'var(--text-500)', lineHeight: 1.5, margin: '0 0 14px' }}>
         {t('Scanne pour installer l’app sur ton téléphone.', 'Eskane pou enstale app la sou telefòn ou.')}
       </p>
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>

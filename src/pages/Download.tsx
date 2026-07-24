@@ -38,15 +38,15 @@ export default function Download() {
     justifyContent: 'center',
     padding: 24,
     fontFamily: "'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif",
-    background: '#f4f6fb',
-    color: '#0f172a',
+    background: 'var(--background)',
+    color: 'var(--text-900)',
   };
 
   if (platform) {
     // Redirecting — brief message in case the store is slow to open.
     return (
       <div style={wrap}>
-        <p style={{ fontSize: 16, color: '#64748b' }}>
+        <p style={{ fontSize: 16, color: 'var(--text-500)' }}>
           {t('Ouverture de la boutique…', 'Ap louvri boutik la…')}
         </p>
       </div>
@@ -58,10 +58,10 @@ export default function Download() {
     <div style={wrap}>
       <div
         style={{
-          background: '#fff',
+          background: 'var(--surface)',
           borderRadius: 24,
-          border: '1px solid #e8edf5',
-          boxShadow: '0 8px 30px rgba(8,87,166,0.10)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-lg)',
           padding: 32,
           maxWidth: 420,
           width: '100%',
@@ -72,7 +72,7 @@ export default function Download() {
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
           {t('Emporte EdLight partout', 'Pote EdLight tout kote')}
         </h1>
-        <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.5, margin: '0 0 24px' }}>
+        <p style={{ fontSize: 14, color: 'var(--text-500)', lineHeight: 1.5, margin: '0 0 24px' }}>
           {t(
             'Scanne le code avec ton téléphone pour installer l’application.',
             'Eskane kòd la ak telefòn ou pou enstale aplikasyon an.',
@@ -83,7 +83,8 @@ export default function Download() {
             display: 'inline-flex',
             padding: 12,
             borderRadius: 16,
-            border: '1px solid #e8edf5',
+            border: '1px solid var(--border)',
+            /* QR needs a light ground to stay scannable in either theme. */
             background: '#fff',
             marginBottom: 24,
           }}

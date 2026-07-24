@@ -402,3 +402,21 @@
 @media (max-width: 520px) {
   .profile-achievements { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── Dark ── The brand chips/badge use a very dark navy tint (rgba(8,87,166,…))
+   with #1558B8 text that all but disappears on the night canvas. Swap to the
+   dark-mode primary tint + a light-blue label so they meet contrast. Surfaces,
+   borders, and body/muted text already adapt through the token aliases. */
+[data-theme="dark"] .profile-chip--level,
+[data-theme="dark"] .profile-chip--xp,
+[data-theme="dark"] .profile-soon-badge {
+  background: var(--primary-50);
+  color: var(--primary-400);
+}
+[data-theme="dark"] .profile-chip--streak {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+[data-theme="dark"] .profile-milestone.is-unlocked {
+  background: rgba(52, 196, 112, 0.16);
+}
