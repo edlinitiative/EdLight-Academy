@@ -159,7 +159,9 @@ function transformFirestoreCourses(
             type: lessonType,
             order,
             videoUrl: v.video_url || '',
-            duration: v.duration_min || 15,
+            // Only surface a duration we actually know — don't fabricate a
+            // uniform "15 min" for every video (the UI hides it when null).
+            duration: v.duration_min || null,
             objectives: v.learning_objectives || '',
             thumbnail: v.thumbnail_url || '',
             unit_no: v.unit_no,
@@ -180,7 +182,7 @@ function transformFirestoreCourses(
             passingScore: q.passing_score || 70,
           };
         }
-        return { id: lessonId, title: lesson.title, type: lessonType, order, videoUrl: null, duration: 15, objectives: '' };
+        return { id: lessonId, title: lesson.title, type: lessonType, order, videoUrl: null, duration: null, objectives: '' };
       });
       const firstVideo = lessons.find((l: any) => l.type === 'video' && l.unit_no);
       return { id: unit.unitId || unit.id, title: unit.title, order: unit.order, unit_no: firstVideo?.unit_no ?? unit.order, lessons };

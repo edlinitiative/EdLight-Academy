@@ -36,10 +36,21 @@ export default function ResumeBanner() {
   const eyebrow = t(EYEBROW[lastActivity.type] ?? 'Activité', EYEBROW_HT[lastActivity.type] ?? 'Aktivite');
 
   function handleResume() {
-    if (lastActivity!.type === 'exam') {
-      navigation.navigate('Exams');
+    const a = lastActivity!;
+    // Deep-link into the actual exam / course, not just the tab. Previously this
+    // only navigated to the tab root ('Exams' / 'Courses'), so tapping Reprendre
+    // dropped the user on the exam list instead of reopening what they left off.
+    if (a.type === 'exam') {
+      (navigation as any).navigate('Exams', {
+        screen: 'ExamTake',
+        params: { level: a.level ?? '', examId: a.path },
+      });
     } else {
-      navigation.navigate('Courses');
+      // lesson (path = courseId) → reopen the course
+      (navigation as any).navigate('Courses', {
+        screen: 'CourseDetail',
+        params: { courseId: a.path, courseName: a.subtitle },
+      });
     }
   }
 
