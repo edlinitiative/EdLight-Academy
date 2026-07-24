@@ -6,9 +6,14 @@
  *   • Never caches auth or any cross-origin (Firebase/Google) traffic
  *
  * Hand-written (no build tooling) so it stays simple and reviewable.
- * Bump CACHE_VERSION to force-refresh all caches after a structural change.
+ *
+ * Bump CACHE_VERSION to force-refresh ALL caches on the next activation. Do this
+ * on a structural change AND whenever exam CONTENT is corrected (e.g. a fixed
+ * answer key): exam/catalog JSON is served stale-while-revalidate (fast + works
+ * offline on slow connections), so without a version bump a returning learner
+ * would see the old copy for one load before the background refresh lands.
  */
-const CACHE_VERSION = 'v29';
+const CACHE_VERSION = 'v30';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
