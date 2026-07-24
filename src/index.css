@@ -33,6 +33,18 @@
 	--success-500: #17A75C;
 	--warning-500: #E8930C;
 	--danger-500: #E23D3D;
+	/* ── Compatibility aliases ─────────────────────────────────────────
+	   A few component stylesheets predate the canonical token names and
+	   reference --text / --text-muted / --surface-alt / --border-color with
+	   hardcoded LIGHT fallbacks. Those aliases were never defined, so in dark
+	   mode they silently fell back to the light literals. Mapping them onto the
+	   canonical tokens makes every one of those files inherit light AND dark
+	   automatically (the canonical tokens are overridden under
+	   [data-theme="dark"] below). */
+	--text: var(--text-900);
+	--text-muted: var(--text-500);
+	--surface-alt: var(--surface-muted);
+	--border-color: var(--border);
 	--radius-lg: 20px;
 	--radius-md: 14px;
 	--radius-sm: 10px;

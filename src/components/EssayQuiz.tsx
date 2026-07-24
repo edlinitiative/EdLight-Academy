@@ -69,7 +69,7 @@ export default function EssayQuiz({ item, onScore }: EssayQuizProps) {
       <div className="quiz-card__question" dangerouslySetInnerHTML={renderWithKatex(item.stem, katexReady)} />
 
       {item.context && (
-        <div className="reference-text" style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '0.25rem' }}>
+        <div className="reference-text" style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: 'var(--surface-muted)', border: '1px solid var(--border)', borderRadius: '0.25rem', color: 'var(--text-800)' }}>
           <h5 style={{ marginTop: 0 }}>Reference Text</h5>
           <div dangerouslySetInnerHTML={renderWithKatex(item.context, katexReady)} />
         </div>

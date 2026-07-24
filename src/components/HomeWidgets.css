@@ -100,3 +100,17 @@
     font-size: 1.1rem;
   }
 }
+
+/* ── Dark ── The tonal icon chips use a near-black navy tint (rgba(8,87,166,…))
+   with a #1558B8 glyph — both vanish on the night surface. Use the dark-mode
+   primary tint + a light-blue glyph (and a readable emerald) instead. */
+[data-theme="dark"] .home-widget[data-tone='indigo'] .home-widget__icon,
+[data-theme="dark"] .home-widget[data-tone='violet'] .home-widget__icon,
+[data-theme="dark"] .home-widget[data-tone='amber'] .home-widget__icon {
+  background: var(--primary-50);
+  color: var(--primary-400);
+}
+[data-theme="dark"] .home-widget[data-tone='emerald'] .home-widget__icon {
+  background: rgba(52, 196, 112, 0.16);
+  color: #4ade80;
+}

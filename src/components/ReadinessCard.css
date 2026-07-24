@@ -259,10 +259,27 @@
 .readiness-card--loading { flex-direction: row; align-items: center; gap: 1.25rem; }
 .readiness-card__body { flex: 1 1 auto; }
 
-/* ── Dark = opt-in night mode ── */
+/* ── Dark = opt-in night mode ──
+   On the Dashboard this card lives inside `.dash--st`, which already supplies
+   dark --st-* values. But it also renders standalone on the Profile page with
+   no `.dash--st` ancestor — there the --st-* fallbacks are all LIGHT, so the
+   inner text/gauge would stay dark-on-dark. Re-declare the dark --st-* set on
+   the card itself so it is correct in both mount points. Values mirror the
+   `[data-theme="dark"] .dash--st` block. */
 [data-theme="dark"] .readiness-card {
-  background: var(--st-surface, #121c2e);
-  border-color: var(--st-line, rgba(255, 255, 255, 0.10));
+  --st-surface: #131F38;
+  --st-ink: #E9F0FA;
+  --st-ink-2: #CBD8EC;
+  --st-muted: #8DA2C6;
+  --st-line: rgba(255, 255, 255, 0.08);
+  --st-line-strong: rgba(255, 255, 255, 0.16);
+  --st-accent: #4D8FF0;
+  --st-accent-tint: rgba(77, 143, 240, 0.15);
+  --st-good: #34c470;
+  --st-warn: #f0a03e;
+  --st-crit: #f26a6a;
+  background: var(--st-surface);
+  border-color: var(--st-line);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 

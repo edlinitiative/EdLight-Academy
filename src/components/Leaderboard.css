@@ -368,3 +368,12 @@
 .leaderboard--compact {
   gap: 0.6rem;
 }
+
+/* ── Dark ── The #1558B8 accent (trophy glyph + XP tally) is too dark on the
+   night surface; lift it to the dark-mode primary. Surfaces/rows/muted text
+   adapt through the token aliases. Medal tints stay as-is — they read on both
+   grounds. */
+[data-theme="dark"] .leaderboard__title svg,
+[data-theme="dark"] .leaderboard__xp {
+  color: var(--primary-400);
+}

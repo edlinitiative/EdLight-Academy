@@ -104,7 +104,7 @@ function DataTable({ rows, columns, onEdit }) {
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c} style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #e5e7eb' }}>{c}</th>
+              <th key={c} style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid var(--border-strong)' }}>{c}</th>
             ))}
             <th style={{ padding: '8px' }}>Actions</th>
           </tr>
@@ -113,7 +113,7 @@ function DataTable({ rows, columns, onEdit }) {
           {rows.map((r, idx) => (
             <tr key={idx}>
               {columns.map((c) => (
-                <td key={c} style={{ padding: '8px', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r[c]}</td>
+                <td key={c} style={{ padding: '8px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r[c]}</td>
               ))}
               <td style={{ padding: '8px' }}>
                 <button className="button button--ghost" onClick={() => handleEditClick(idx)}>Edit</button>
