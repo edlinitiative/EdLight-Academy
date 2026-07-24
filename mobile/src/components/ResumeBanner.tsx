@@ -23,7 +23,7 @@ const EYEBROW_HT: Record<string, string> = {
 
 export default function ResumeBanner() {
   const navigation = useNavigation<Nav>();
-  const { colors, cardSurface } = useTheme();
+  const { colors, cardSurface, shadow, radius } = useTheme();
   const lastActivity = useStore((s) => s.lastActivity);
   const clearActivity = useStore((s) => s.clearActivity);
   const language = useStore((s) => s.language);
@@ -58,26 +58,27 @@ export default function ResumeBanner() {
     <View
       style={{
         ...cardSurface,
+        ...shadow.md,
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingVertical: 11,
         gap: 10,
       }}
     >
-      {/* Icon circle */}
+      {/* Icon chip */}
       <View
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 40,
+          height: 40,
+          borderRadius: 12,
           backgroundColor: accent + '18',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
         }}
       >
-        <History color={accent} size={18} />
+        <History color={accent} size={19} />
       </View>
 
       {/* Text block */}
@@ -113,9 +114,9 @@ export default function ResumeBanner() {
           alignItems: 'center',
           gap: 4,
           backgroundColor: accent,
-          paddingHorizontal: 10,
-          paddingVertical: 7,
-          borderRadius: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: radius.control,
           flexShrink: 0,
         }}
       >

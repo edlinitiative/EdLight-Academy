@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, Dimensions, FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -360,7 +361,7 @@ function TimerRing({ timeLeft }: { timeLeft: number }) {
   const color = timeLeft > 8 ? '#10b981' : timeLeft > 5 ? '#f59e0b' : '#ef4444';
 
   return (
-    <Svg width={52} height={52} viewBox="0 0 120 120">
+    <Svg width={44} height={44} viewBox="0 0 120 120">
       {/* Track */}
       <Circle
         cx={60}
@@ -500,85 +501,42 @@ function QuizPlayer({
 
   const questionText = isCreole ? q.qHt : q.q;
 
+  const pct = ((idx + 1) / questions.length) * 100;
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.bg }}>
-      {/* Top bar: nav circles + score badge */}
-      <View className="px-4 py-2" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <View className="flex-row items-center gap-2">
-          {/* Scrollable question nav */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="flex-1"
-            contentContainerStyle={{ gap: 6, paddingRight: 8 }}
-          >
-            {questions.map((_, i) => {
-              const isAnswered = i < idx;
-              const isCurrent = i === idx;
-              return (
-                <View
-                  key={i}
-                  className="w-6 h-6 rounded-full items-center justify-center"
-                  style={{
-                    backgroundColor: isCurrent
-                      ? colors.azure
-                      : isAnswered
-                      ? '#10b981'
-                      : colors.border,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 9,
-                      fontWeight: '700',
-                      color: isCurrent || isAnswered ? '#fff' : colors.faint,
-                    }}
-                  >
-                    {i + 1}
-                  </Text>
-                </View>
-              );
-            })}
-          </ScrollView>
-
-          {/* Score badge */}
-          <View className="flex-row items-center rounded-full px-2.5 py-1 gap-1" style={{ backgroundColor: colors.azureSoft }}>
-            <Trophy color={colors.azure} size={13} />
-            <Text className="font-bold text-sm" style={{ color: colors.azure }}>{score}</Text>
+      {/* Compact top: slim gradient progress bar + "Question X / N" + timer ring */}
+      <View className="px-4 pt-3 pb-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View className="flex-row items-center" style={{ gap: 12 }}>
+          <View className="flex-1">
+            <View className="flex-row items-center justify-between" style={{ marginBottom: 7 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}>
+                {isCreole ? 'Kesyon' : 'Question'} {idx + 1} / {questions.length}
+              </Text>
+              {/* Live score badge */}
+              <View className="flex-row items-center rounded-full px-2.5 py-1" style={{ gap: 4, backgroundColor: colors.azureSoft }}>
+                <Trophy color={colors.azure} size={13} />
+                <Text className="font-bold text-sm" style={{ color: colors.azure }}>{score}</Text>
+              </View>
+            </View>
+            {/* Slim brand-gradient progress bar */}
+            <View className="rounded-full overflow-hidden" style={{ height: 6, backgroundColor: colors.border }}>
+              <LinearGradient
+                colors={[colors.azure, colors.azureDeep]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ height: 6, width: `${pct}%`, borderRadius: 999 }}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* Progress bar */}
-        <View className="h-1 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: colors.border }}>
-          <View
-            className="h-1 rounded-full"
-            style={{
-              width: `${((idx + 1) / questions.length) * 100}%`,
-              backgroundColor: colors.azure,
-            }}
-          />
-        </View>
-      </View>
-
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Timer + question number */}
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-sm font-semibold" style={{ color: colors.faint }}>
-            {idx + 1} / {questions.length}
-          </Text>
-
-          {/* SVG ring timer */}
-          <View className="items-center justify-center" style={{ width: 52, height: 52 }}>
+          {/* SVG ring timer with number overlay */}
+          <View className="items-center justify-center" style={{ width: 44, height: 44 }}>
             <TimerRing timeLeft={timeLeft} />
-            {/* Number overlay */}
             <View className="absolute items-center justify-center">
               <Text
                 style={{
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: '800',
                   color: timeLeft > 8 ? '#10b981' : timeLeft > 5 ? '#f59e0b' : '#ef4444',
                 }}
@@ -588,7 +546,13 @@ function QuizPlayer({
             </View>
           </View>
         </View>
+      </View>
 
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Flag (for flags category) */}
         {q.flag != null && (
           <View className="items-center mb-4">
@@ -596,51 +560,63 @@ function QuizPlayer({
           </View>
         )}
 
-        {/* Question card */}
+        {/* Question card — lifted, subtle top→bottom surface gradient */}
         <View
-          className="rounded-2xl p-5 mb-5"
+          className="mb-4"
           style={{
-            backgroundColor: colors.surface,
+            borderRadius: 20,
+            overflow: 'hidden',
             borderWidth: 1,
             borderColor: colors.border,
-            shadowColor: '#1B6FE0',
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.06,
-            shadowRadius: 6,
-            elevation: 2,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.07,
+            shadowRadius: 10,
+            elevation: 3,
           }}
         >
-          <MathText text={questionText} />
+          <LinearGradient
+            colors={[colors.surface, colors.surfaceAlt]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{ padding: 18 }}
+          >
+            <MathText text={questionText} />
+          </LinearGradient>
         </View>
 
         {/* Answer options */}
-        <View className="gap-3">
+        <View style={{ gap: 10 }}>
           {q.options.map((opt, i) => {
             const label = LETTER_LABELS[i] ?? String(i + 1);
             const isSelected = opt === selected;
             const isCorrectOpt = opt === q.correctAnswer;
 
-            // Feedback stays quiet: no colored fills or borders — the answer
-            // state is carried by text color and the check/cross icon only.
+            // Tighter tonal states: selected = amber, confirmed = green/red,
+            // each with a filled letter chip so state reads at a glance.
             let borderColor = colors.border;
             let bgColor = colors.surface;
             let labelBg = colors.surfaceAlt;
             let labelText = colors.muted;
-            let textColor = colors.ink;
+            const textColor = colors.ink;
 
             if (confirmed) {
               if (isCorrectOpt) {
-                textColor = '#059669';
-                labelText = '#059669';
+                borderColor = colors.success;
+                bgColor = colors.successSoft;
+                labelBg = colors.success;
+                labelText = '#ffffff';
               } else if (isSelected) {
-                textColor = '#dc2626';
-                labelText = '#dc2626';
+                borderColor = colors.danger;
+                bgColor = colors.dangerSoft;
+                labelBg = colors.danger;
+                labelText = '#ffffff';
               }
             } else if (isSelected) {
-              borderColor = colors.azure;
-              bgColor = colors.azureSoft;
-              labelBg = colors.azure;
-              labelText = '#fff';
+              borderColor = colors.warn;
+              bgColor = colors.warnSoft;
+              labelBg = colors.warn;
+              labelText = '#ffffff';
             }
 
             return (
@@ -649,22 +625,18 @@ function QuizPlayer({
                 onPress={() => handleSelect(opt)}
                 disabled={confirmed}
                 activeOpacity={0.8}
-                className="flex-row items-center rounded-xl overflow-hidden"
+                className="flex-row items-center overflow-hidden"
                 style={{
-                  borderWidth: 1,
+                  borderWidth: 1.5,
                   borderColor,
                   backgroundColor: bgColor,
-                  shadowColor: '#1B6FE0',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  borderRadius: 15,
                 }}
               >
-                {/* Letter badge */}
+                {/* Letter chip */}
                 <View
-                  className="w-10 h-10 items-center justify-center m-2 rounded-lg"
-                  style={{ backgroundColor: labelBg }}
+                  className="items-center justify-center m-2"
+                  style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: labelBg }}
                 >
                   <Text style={{ fontSize: 14, fontWeight: '800', color: labelText }}>
                     {label}
@@ -673,7 +645,7 @@ function QuizPlayer({
 
                 <Text
                   className="flex-1 text-sm font-medium pr-3"
-                  style={{ color: textColor, lineHeight: 20 }}
+                  style={{ color: textColor, lineHeight: 20, paddingVertical: 10 }}
                 >
                   {opt}
                 </Text>
@@ -681,12 +653,12 @@ function QuizPlayer({
                 {/* Check/X icon when confirmed */}
                 {confirmed && isCorrectOpt && (
                   <View className="pr-3">
-                    <Check color="#10b981" size={18} />
+                    <Check color={colors.success} size={18} />
                   </View>
                 )}
                 {confirmed && isSelected && !isCorrectOpt && (
                   <View className="pr-3">
-                    <X color="#ef4444" size={18} />
+                    <X color={colors.danger} size={18} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -736,8 +708,16 @@ function QuizPlayer({
             onPress={handleConfirm}
             disabled={!selected}
             activeOpacity={0.85}
-            className="py-4 rounded-2xl items-center"
-            style={{ backgroundColor: selected ? colors.azure : colors.border }}
+            className="py-4 items-center"
+            style={{
+              backgroundColor: selected ? colors.azure : colors.border,
+              borderRadius: 16,
+              shadowColor: colors.azureDeep,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: selected ? 0.28 : 0,
+              shadowRadius: 12,
+              elevation: selected ? 5 : 0,
+            }}
           >
             <Text
               className="font-bold text-base"
@@ -750,8 +730,16 @@ function QuizPlayer({
           <TouchableOpacity
             onPress={handleNext}
             activeOpacity={0.85}
-            className="flex-row py-4 rounded-2xl items-center justify-center gap-1"
-            style={{ backgroundColor: colors.azure }}
+            className="flex-row py-4 items-center justify-center gap-1"
+            style={{
+              backgroundColor: colors.azure,
+              borderRadius: 16,
+              shadowColor: colors.azureDeep,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.28,
+              shadowRadius: 12,
+              elevation: 5,
+            }}
           >
             <Text className="text-white font-bold text-base">
               {idx + 1 >= questions.length

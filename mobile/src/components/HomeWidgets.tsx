@@ -1,63 +1,80 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { ClipboardList, Zap, Trophy, BookOpen, ChevronRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ClipboardList, Zap, Trophy, Compass, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import PressableScale from './ui/PressableScale';
-import { useColors, useTheme, radius } from '../theme/theme';
+import { useColors, useTheme } from '../theme/theme';
 
-interface WidgetProps {
+/** Append an 8-bit alpha to a 6-digit hex color (e.g. "#1B6FE0" + 0.12). */
+function tint(hex: string, alpha: number): string {
+  const a = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return /^#[0-9a-f]{6}$/i.test(hex) ? `${hex}${a}` : hex;
+}
+
+interface TileProps {
   icon: React.ReactNode;
-  title: string;
-  value: string | number;
-  sub: string;
-  tint: string; // icon-tile background
+  accent: string;
+  value: string;
+  label: string;
   accessibilityLabel: string;
   onPress?: () => void;
 }
 
-function Widget({ icon, title, value, sub, tint, accessibilityLabel, onPress }: WidgetProps) {
-  const { colors, cardSurface } = useTheme();
+/** A tonal action tile — soft gradient tint, icon chip, chevron, value + label. */
+function Tile({ icon, accent, value, label, accessibilityLabel, onPress }: TileProps) {
+  const { colors } = useTheme();
   return (
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={{
-        flex: 1,
-        ...cardSurface,
-        padding: 14,
-        minHeight: 112,
-        justifyContent: 'space-between',
-      }}
+      pressedScale={0.97}
+      style={{ flex: 1, borderRadius: 18, overflow: 'hidden' }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: radius.tile,
-            backgroundColor: tint,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {icon}
+      <LinearGradient
+        colors={[tint(accent, 0.16), tint(accent, 0.05)]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          minHeight: 96,
+          padding: 13,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: tint(accent, 0.28),
+          justifyContent: 'space-between',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 11,
+              backgroundColor: tint(accent, 0.18),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {icon}
+          </View>
+          <ChevronRight color={tint(accent, 0.55)} size={16} />
         </View>
-        <ChevronRight color={colors.faint} size={16} />
-      </View>
-      <View style={{ marginTop: 10 }}>
-        <Text
-          style={{ color: colors.ink, fontSize: 19, fontWeight: '800', letterSpacing: -0.4, lineHeight: 23 }}
-          numberOfLines={1}
-        >
-          {value}
-        </Text>
-        <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '600', marginTop: 2 }}>{title}</Text>
-        <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
-          {sub}
-        </Text>
-      </View>
+        <View style={{ marginTop: 8 }}>
+          <Text
+            style={{ color: colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 }}
+            numberOfLines={1}
+          >
+            {value}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>
+            {label}
+          </Text>
+        </View>
+      </LinearGradient>
     </PressableScale>
   );
 }
@@ -77,59 +94,58 @@ export default function HomeWidgets({
   onNavigateDaily,
   onNavigateCourses,
   enrolledCount = 0,
-  recommendedCourse,
 }: HomeWidgetsProps) {
   const colors = useColors();
+  const { isDark } = useTheme();
   const { myRank } = useLeaderboard(25);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
+  // Per-tile accents. Blue/amber/green come from the theme palette (dark-aware);
+  // violet has no palette token, so lift it on dark grounds to stay vivid.
+  const blue = colors.azure;
+  const amber = colors.warn;
+  const violet = isDark ? '#a78bfa' : '#7c3aed';
+  const green = colors.success;
+
+  const ICON = 18;
+
   return (
-    <View style={{ flexDirection: 'row', gap: 12 }}>
-      <View style={{ flex: 1, gap: 12 }}>
-        <Widget
-          icon={<ClipboardList color={colors.azure} size={19} />}
-          tint={colors.azureSoft}
-          title={t('Examens Bac', 'Egzamen Bak')}
+    <View style={{ gap: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Tile
+          icon={<ClipboardList color={blue} size={ICON} />}
+          accent={blue}
           value={t("S'entraîner", 'Antrene')}
-          sub={t('Sujets officiels', 'Sijè ofisyèl')}
+          label={t('Examens Bac', 'Egzamen Bak')}
           accessibilityLabel={t('Examens Bac', 'Egzamen Bak')}
           onPress={onNavigateExams}
         />
-        <Widget
-          icon={<Zap color={colors.coral} size={19} />}
-          tint={colors.coralSoft}
-          title={t('Défi du jour', 'Defi jodi a')}
-          value={t('Jouer', 'Jwe')}
-          sub={t('+50 XP bonus', '+50 XP boni')}
-          accessibilityLabel={t('Défi du jour', 'Defi jodi a')}
-          onPress={onNavigateDaily ?? onNavigateTrivia}
-        />
-      </View>
-      <View style={{ flex: 1, gap: 12 }}>
-        <Widget
-          icon={<Trophy color={colors.azure} size={19} />}
-          tint={colors.azureSoft}
-          title={t('Classement', 'Klasman')}
+        <Tile
+          icon={<Trophy color={amber} size={ICON} />}
+          accent={amber}
           value={myRank ? `#${myRank}` : '—'}
-          sub={t('Cette semaine', 'Semèn sa a')}
+          label={t('Classement', 'Klasman')}
           accessibilityLabel={t('Classement', 'Klasman')}
           onPress={onNavigateTrivia}
         />
-        <Widget
-          icon={<BookOpen color={colors.azure} size={19} />}
-          tint={colors.azureSoft}
-          title={recommendedCourse ? t('Continuer', 'Kontinye') : t('Mes cours', 'Kou mwen yo')}
-          value={
-            recommendedCourse
-              ? (recommendedCourse.name?.slice(0, 14) ?? t('Cours', 'Kou'))
-              : enrolledCount > 0
-                ? `${enrolledCount}`
-                : t('Explorer', 'Eksplore')
-          }
-          sub={recommendedCourse ? (recommendedCourse.level ?? t('cours', 'kou')) : t('Catalogue', 'Katalòg')}
-          accessibilityLabel={recommendedCourse ? t('Continuer le cours', 'Kontinye kou a') : t('Mes cours', 'Kou mwen yo')}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 12 }}>
+        <Tile
+          icon={<Zap color={violet} size={ICON} />}
+          accent={violet}
+          value={t('+50 XP', '+50 XP')}
+          label={t('Défi du jour', 'Defi jodi a')}
+          accessibilityLabel={t('Défi du jour', 'Defi jodi a')}
+          onPress={onNavigateDaily ?? onNavigateTrivia}
+        />
+        <Tile
+          icon={<Compass color={green} size={ICON} />}
+          accent={green}
+          value={enrolledCount > 0 ? t('Continuer', 'Kontinye') : t('Explorer', 'Eksplore')}
+          label={enrolledCount > 0 ? t('Mes cours', 'Kou mwen yo') : t('Catalogue', 'Katalòg')}
+          accessibilityLabel={t('Mes cours', 'Kou mwen yo')}
           onPress={onNavigateCourses}
         />
       </View>
