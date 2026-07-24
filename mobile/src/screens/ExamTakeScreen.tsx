@@ -459,6 +459,7 @@ export default function ExamTakeScreen() {
         recordActivity({
           type: 'exam',
           path: examId,
+          level: lvl,
           title: subject || normalizeExamTitle(e) || 'Examen',
           subtitle: when || lvl || undefined,
           ts: Date.now(),

@@ -7,6 +7,8 @@ export const FREE_VIDEO_LIMIT = 3;
 export interface LastActivity {
   type: 'lesson' | 'exam' | 'quiz';
   path: string;
+  /** For exams: the exam's level, needed to deep-link into ExamTake on resume. */
+  level?: string;
   title: string;
   subtitle?: string;
   ts: number;

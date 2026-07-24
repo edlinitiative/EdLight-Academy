@@ -294,9 +294,14 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
             key={key}
             onPress={() => changeScope(key)}
             activeOpacity={0.8}
-            style={{ flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8, backgroundColor: scope === key ? colors.surface : 'transparent' }}
+            style={{ flex: 1, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 8, backgroundColor: scope === key ? colors.surface : 'transparent' }}
           >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: scope === key ? colors.azure : colors.muted }}>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              style={{ fontSize: 12, fontWeight: '700', color: scope === key ? colors.azure : colors.muted }}
+            >
               {label}
             </Text>
           </TouchableOpacity>
