@@ -212,7 +212,7 @@ export async function cancelEngagementReminders(): Promise<void> {
  * notifications on, and on a language change (to refresh the copy).
  *
  * Cadence (kept deliberately light to avoid notification fatigue):
- *   • Daily quiz/défi nudge — 10:00, copy rotates by weekday → Jeux (daily-quiz)
+ *   • Daily quiz/défi nudge — 06:00, copy rotates by weekday → Jeux (daily-quiz)
  *   • Daily study reminder — 18:00 → Cours (study-reminder)
  *   • Weekly leaderboard kickoff — Monday 09:00 → Jeux (leaderboard)
  *   • Weekly last-chance — Sunday 19:00 → Jeux (leaderboard)
@@ -225,11 +225,12 @@ export async function scheduleEngagementReminders(): Promise<void> {
   const DAILY = Notifications.SchedulableTriggerInputTypes.DAILY;
 
   // 1 · Daily quiz/défi — one weekly trigger per day so the copy can rotate.
+  //     Fires early (06:00) so students see it first thing, per user request.
   for (let weekday = 1; weekday <= 7; weekday++) {
     const c = quizCopyForWeekday(weekday);
     await Notifications.scheduleNotificationAsync({
       content: { title: c.title, body: c.body, sound: true, data: { type: 'daily-quiz' }, ...android('reminders') },
-      trigger: { type: WEEKLY, weekday, hour: 10, minute: 0 } as any,
+      trigger: { type: WEEKLY, weekday, hour: 6, minute: 0 } as any,
     });
   }
 
