@@ -14977,6 +14977,16 @@ textarea:focus-visible,
 .streak-heatmap__cell--active {
 	background: #22c55e;
 }
+/* A day bridged by a streak-freeze — covered (so no gap contradicts the
+   unbroken streak) but visually distinct from an earned active day. */
+.streak-heatmap__cell--frozen {
+	background: #7dd3fc;
+	background-image: repeating-linear-gradient(
+		45deg,
+		transparent, transparent 2px,
+		rgba(255, 255, 255, 0.55) 2px, rgba(255, 255, 255, 0.55) 4px
+	);
+}
 .streak-heatmap__cell--today {
 	outline: 1.5px solid var(--primary-500);
 	outline-offset: 0.5px;
@@ -15147,6 +15157,14 @@ textarea:focus-visible,
 }
 [data-theme="dark"] .streak-heatmap__cell--active {
 	background: #22c55e;
+}
+[data-theme="dark"] .streak-heatmap__cell--frozen {
+	background: #38bdf8;
+	background-image: repeating-linear-gradient(
+		45deg,
+		transparent, transparent 2px,
+		rgba(255, 255, 255, 0.28) 2px, rgba(255, 255, 255, 0.28) 4px
+	);
 }
 [data-theme="dark"] .streak-widget__flame-ring {
 	background: linear-gradient(135deg, rgba(8, 87, 166, 0.2), rgba(74, 147, 221, 0.15));
