@@ -6,6 +6,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useReduceMotion } from '../utils/motion';
 
 interface ProgressBarProps {
   value: number; // 0–100
@@ -23,12 +24,16 @@ export default function ProgressBar({
   label,
 }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, value));
+  const reduceMotion = useReduceMotion();
   const width = useSharedValue(0);
 
   useEffect(() => {
-    // Ease the fill toward its value so progress feels earned, not snapped.
-    width.value = withTiming(clamped, { duration: 650, easing: Easing.out(Easing.cubic) });
-  }, [clamped, width]);
+    // Ease the fill toward its value so progress feels earned, not snapped —
+    // unless the user prefers reduced motion, in which case snap to the value.
+    width.value = reduceMotion
+      ? clamped
+      : withTiming(clamped, { duration: 650, easing: Easing.out(Easing.cubic) });
+  }, [clamped, width, reduceMotion]);
 
   const fillStyle = useAnimatedStyle(() => ({ width: `${width.value}%` }));
 

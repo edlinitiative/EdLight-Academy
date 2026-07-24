@@ -7,10 +7,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Trophy, ChevronRight, BookOpen } from 'lucide-react-native';
 import { usePracticeQuizzes } from '../hooks/useData';
 import useStore from '../contexts/store';
-import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
+import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import { useColors } from '../theme/theme';
 import { subjectColor } from '../utils/examUtils';
-import { tapLight, success, warn } from '../utils/haptics';
+import { tapLight, tapMedium, success, warn } from '../utils/haptics';
+import Confetti from '../components/ui/Confetti';
+import PopIn from '../components/ui/PopIn';
 
 type Translate = (fr: string, ht: string) => string;
 
@@ -97,6 +99,7 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
   }
 
   function handleNext() {
+    tapMedium();
     if (idx < questions.length - 1) {
       setIdx((i) => i + 1);
     } else {
@@ -164,15 +167,18 @@ function QuizResultScreen({ score, total, onRetry, onBack, t }: {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   return (
     <View className="flex-1 items-center justify-center p-8" style={{ backgroundColor: colors.bg }}>
-      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <Trophy color={colors.azure} size={32} />
-      </View>
+      {pct >= 60 && <Confetti />}
+      <PopIn from={0.6}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <Trophy color={colors.azure} size={32} />
+        </View>
+      </PopIn>
       <Text className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-1">{score}/{total}</Text>
       <Text className="text-xl text-primary-600 dark:text-[#4C9AF5] font-semibold mb-6">{pct}% {t('correct', 'kòrèk')}</Text>
-      <TouchableOpacity onPress={onRetry} className="w-full bg-primary-600 py-4 rounded-2xl items-center mb-3">
+      <TouchableOpacity onPress={() => { tapMedium(); onRetry(); }} accessibilityRole="button" accessibilityLabel={t('Recommencer', 'Rekòmanse')} className="w-full bg-primary-600 py-4 rounded-2xl items-center mb-3">
         <Text className="text-white font-bold text-base">{t('Recommencer', 'Rekòmanse')}</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onBack} className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-[#131c2e] py-4 rounded-2xl items-center">
+      <TouchableOpacity onPress={() => { tapLight(); onBack(); }} accessibilityRole="button" accessibilityLabel={t('Retour aux quiz', 'Tounen nan quiz yo')} className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-[#131c2e] py-4 rounded-2xl items-center">
         <Text className="text-gray-700 dark:text-slate-300 font-semibold text-base">{t('Retour aux quiz', 'Tounen nan quiz yo')}</Text>
       </TouchableOpacity>
     </View>
@@ -247,7 +253,7 @@ export default function QuizzesScreen() {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-          <TouchableOpacity onPress={() => setState('list')} className="p-1 mr-3">
+          <TouchableOpacity onPress={() => setState('list')} className="p-1 mr-3" hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
             <ChevronRight color={colors.muted} size={22} style={{ transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
           <Text className="font-bold text-gray-900 dark:text-slate-100 flex-1" numberOfLines={1}>{activeQuiz.title}</Text>
@@ -271,7 +277,13 @@ export default function QuizzesScreen() {
     );
   }
 
-  if (isLoading) return <LoadingState message={t('Chargement des quiz…', 'Ap chaje quiz yo…')} />;
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <ListSkeleton rows={6} />
+      </SafeAreaView>
+    );
+  }
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   const cardStyle = {
@@ -315,7 +327,7 @@ export default function QuizzesScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '600', color: colors.ink, fontSize: 14 }} numberOfLines={2}>{chapterNameOf(quiz)}</Text>
-                <Text style={{ color: colors.faint, fontSize: 12, marginTop: 2 }}>{quiz.questions?.length ?? 0} {t('questions', 'kesyon')}</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{quiz.questions?.length ?? 0} {t('questions', 'kesyon')}</Text>
               </View>
               <ChevronRight color={colors.faint} size={18} />
             </TouchableOpacity>
@@ -354,7 +366,7 @@ export default function QuizzesScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: '700', color: colors.ink, fontSize: 15 }} numberOfLines={1}>{s.name}</Text>
-                  <Text style={{ color: colors.faint, fontSize: 12, marginTop: 2 }}>
+                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
                     {s.chapters.length} {t('chapitres', 'chapit')} · {s.questionCount} {t('questions', 'kesyon')}
                   </Text>
                 </View>

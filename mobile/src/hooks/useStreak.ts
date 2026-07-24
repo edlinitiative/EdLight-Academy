@@ -14,6 +14,7 @@ import {
   getNextMilestone,
   buildHeatmapData,
 } from '../services/streakService';
+import { success } from '../utils/haptics';
 
 const STREAK_KEY = ['global-streak'];
 
@@ -75,6 +76,9 @@ export function useStreak() {
     qc.setQueryData(STREAK_KEY, updated);
 
     if (milestones.length > 0) {
+      // Reaching a streak milestone is a genuine win — celebrate it with a
+      // success haptic (the visual celebration is surfaced by the UI).
+      success();
       setNewMilestones(milestones);
     }
 

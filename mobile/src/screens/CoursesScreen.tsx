@@ -12,7 +12,7 @@ import {
 import { useCourses } from '../hooks/useData';
 import { getSubjectColor } from '../utils/shared';
 import useStore from '../contexts/store';
-import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
+import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, Palette, radius } from '../theme/theme';
@@ -94,7 +94,7 @@ function CourseCard({
           </View>
           <View className="flex-1">
             <Text className="font-bold text-gray-900 dark:text-slate-100 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
-            <Text className="text-xs text-gray-400 dark:text-slate-500 mt-1">{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>
+            <Text className="text-xs text-gray-500 dark:text-slate-400 mt-1">{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>
           </View>
           {soon ? (
             <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
@@ -150,7 +150,7 @@ function DrillCard({
           </View>
         ) : (
           <View className="items-end flex-shrink-0 flex-row items-center gap-2">
-            <Text className="text-xs text-gray-400 dark:text-slate-500">{badge}</Text>
+            <Text className="text-xs text-gray-500 dark:text-slate-400">{badge}</Text>
             <ChevronRight color={colors.faint} size={18} />
           </View>
         )}
@@ -239,7 +239,13 @@ export default function CoursesScreen() {
     return all.filter((c) => c.level === level && c.subject === subject);
   }, [all, level, subject]);
 
-  if (isLoading) return <LoadingState message={t('Chargement des cours…', 'Ap chaje kou yo…')} />;
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <ListSkeleton rows={6} />
+      </SafeAreaView>
+    );
+  }
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   const levelInfo = LEVELS.find((l) => l.code === level);
@@ -274,7 +280,7 @@ export default function CoursesScreen() {
       <View className="px-5 pt-5 pb-3" style={{ backgroundColor: colors.bg }}>
         <View className="flex-row items-center mb-3">
           {canGoBack && (
-            <TouchableOpacity onPress={goBack} className="mr-2 -ml-1 p-1">
+            <TouchableOpacity onPress={goBack} className="mr-2 -ml-1 p-1" hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
               <ChevronLeft color={colors.muted} size={24} />
             </TouchableOpacity>
           )}
@@ -310,7 +316,7 @@ export default function CoursesScreen() {
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
           ListHeaderComponent={
             searchResults.length > 0 ? (
-              <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
+              <Text className="text-xs text-gray-500 dark:text-slate-400 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
             ) : null
           }
           ListEmptyComponent={
@@ -419,7 +425,7 @@ export default function CoursesScreen() {
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
           ListHeaderComponent={
             courseList.length > 0 ? (
-              <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
+              <Text className="text-xs text-gray-500 dark:text-slate-400 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
             ) : null
           }
           ListEmptyComponent={

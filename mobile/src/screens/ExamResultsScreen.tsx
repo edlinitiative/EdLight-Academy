@@ -11,6 +11,10 @@ import useStore from '../contexts/store';
 import { useColors, useTheme } from '../theme/theme';
 import { LoadingState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
+import Confetti from '../components/ui/Confetti';
+import PopIn from '../components/ui/PopIn';
+import { useReduceMotion } from '../utils/motion';
+import { success as hapticSuccess, tapMedium, tapLight } from '../utils/haptics';
 import MathText from '../components/MathText';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
@@ -41,10 +45,16 @@ function ScoreGauge({ percentage }: { percentage: number }) {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const color = percentage >= 70 ? '#10b981' : percentage >= 50 ? '#f59e0b' : '#ef4444';
+  const reduceMotion = useReduceMotion();
 
-  // Count the score up from 0 on mount (easeOutCubic over ~0.8s).
-  const [display, setDisplay] = useState(0);
+  // Celebrate a strong result — this is the emotional peak of the exam flow.
+  useEffect(() => { if (percentage >= 70) hapticSuccess(); }, [percentage]);
+
+  // Count the score up from 0 on mount (easeOutCubic over ~0.8s). Reduced-motion
+  // users see the final number immediately.
+  const [display, setDisplay] = useState(reduceMotion ? percentage : 0);
   useEffect(() => {
+    if (reduceMotion) { setDisplay(percentage); return; }
     let raf: number;
     const start = Date.now();
     const duration = 800;
@@ -56,13 +66,15 @@ function ScoreGauge({ percentage }: { percentage: number }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [percentage]);
+  }, [percentage, reduceMotion]);
 
   return (
     <View className="items-center py-8">
-      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-        <Trophy color={colors.azure} size={32} />
-      </View>
+      <PopIn from={0.6}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Trophy color={colors.azure} size={32} />
+        </View>
+      </PopIn>
       <Text className="text-5xl font-bold" style={{ color }}>{display}%</Text>
       <Text className="text-gray-500 dark:text-slate-400 mt-1">
         {percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !')}
@@ -230,6 +242,9 @@ export default function ExamResultsScreen() {
         <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{t('Résultats', 'Rezilta')}</Text>
       </View>
 
+      {/* Celebration burst for a passing result (skipped under reduce-motion) */}
+      {Math.round(percentage) >= 70 && <Confetti />}
+
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Score */}
         <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, overflow: 'hidden' }]}>
@@ -328,14 +343,18 @@ export default function ExamResultsScreen() {
         {/* Actions */}
         <View className="px-4 mt-6 gap-3">
           <TouchableOpacity
-            onPress={() => navigation.replace('ExamTake', { level, examId })}
+            onPress={() => { tapMedium(); navigation.replace('ExamTake', { level, examId }); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Recommencer', 'Rekòmanse')}
             className="flex-row items-center justify-center gap-2 bg-primary-600 py-4 rounded-2xl"
           >
             <RefreshCw color="#fff" size={18} />
             <Text className="text-white font-bold text-base">{t('Recommencer', 'Rekòmanse')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('ExamBrowser', { level })}
+            onPress={() => { tapLight(); navigation.navigate('ExamBrowser', { level }); }}
+            accessibilityRole="button"
+            accessibilityLabel={t("Voir d'autres examens", 'Wè lòt egzamen')}
             className="flex-row items-center justify-center gap-2 border border-gray-300 dark:border-slate-700 py-4 rounded-2xl bg-white dark:bg-[#131c2e]"
           >
             <Text className="text-gray-700 dark:text-slate-300 font-semibold text-base">{t("Voir d'autres examens", 'Wè lòt egzamen')}</Text>

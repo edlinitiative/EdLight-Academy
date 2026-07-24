@@ -13,6 +13,8 @@ import {
 } from 'lucide-react-native';
 import { useColors } from '../../theme/theme';
 import { success } from '../../utils/haptics';
+import { useReduceMotion } from '../../utils/motion';
+import Confetti from '../ui/Confetti';
 
 const CIRC = 327; // 2 * π * 52
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -54,6 +56,7 @@ export default function GameOverCard({
   highScore = null,
 }: GameOverCardProps) {
   const colors = useColors();
+  const reduceMotion = useReduceMotion();
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
   // Celebrate the game-over reveal once on mount.
@@ -83,11 +86,13 @@ export default function GameOverCard({
   const fill = (pct / 100) * CIRC;
   const tint = `${accent}1a`; // soft accent wash for chips/pills
 
-  // Sweep the score arc up to its final value on mount.
+  // Sweep the score arc up to its final value on mount (snap for reduce-motion).
   const progress = useSharedValue(0);
   useEffect(() => {
-    progress.value = withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
-  }, [fill, progress]);
+    progress.value = reduceMotion
+      ? fill
+      : withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
+  }, [fill, progress, reduceMotion]);
   const animatedProps = useAnimatedProps(() => ({
     strokeDasharray: `${progress.value} ${CIRC}`,
   }));
@@ -99,6 +104,7 @@ export default function GameOverCard({
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 36, paddingBottom: 48 }}
       showsVerticalScrollIndicator={false}
     >
+      {(pct >= 90 || reward?.leveledUp) && <Confetti />}
       <View
         className="w-full items-center rounded-3xl px-5 py-8"
         style={{

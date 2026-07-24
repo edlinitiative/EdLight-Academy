@@ -12,7 +12,7 @@ import {
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
-import { LoadingState, ErrorState } from '../components/StateViews';
+import { ListSkeleton, ErrorState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import LessonPractice from '../components/LessonPractice';
 import PracticeSpotlight from '../components/PracticeSpotlight';
@@ -196,7 +196,13 @@ export default function CourseDetailScreen() {
   const completedCount = useMemo(() => allLessons.filter((l: any) => completedIds.has(l.id)).length, [allLessons, completedIds]);
   const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <ListSkeleton rows={6} />
+      </SafeAreaView>
+    );
+  }
   if (isError || !course) return <ErrorState />;
 
   function onLessonPress(lesson: any) {

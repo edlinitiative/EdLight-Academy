@@ -108,8 +108,11 @@ export default function ReadinessCard() {
         {/* Subject bars */}
         <View className="flex-1 gap-2">
           {topSubjects.length === 0 ? (
-            <Text className="text-xs text-gray-400 dark:text-slate-500 italic">
-              {t('Passe des examens pour voir tes scores', 'Fè egzamen pou wè nòt ou yo')}
+            <Text style={{ fontSize: 13, lineHeight: 19, color: colors.muted, fontWeight: '500' }}>
+              {t(
+                'Passe ton premier examen pour débloquer ton score de préparation 🎯',
+                'Fè premye egzamen ou pou debloke nòt preparasyon ou 🎯',
+              )}
             </Text>
           ) : (
             topSubjects.map((s: any) => {
