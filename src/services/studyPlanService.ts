@@ -295,7 +295,7 @@ export function computeSubjectMastery(plan) {
   for (const task of plan.tasks) {
     const subj = task.subject || 'Autre';
     if (!mastery[subj]) {
-      mastery[subj] = { score: 0, total: 0, attempts: 0, mastered: 0 };
+      mastery[subj] = { score: 0, total: 0, practiced: 0, attempts: 0, mastered: 0 };
     }
 
     const m = mastery[subj];
@@ -311,6 +311,7 @@ export function computeSubjectMastery(plan) {
       const recent = history.slice(-3);
       const best = Math.max(...recent.map((h) => h.scorePct || 0));
       m.score += best;
+      m.practiced += 1;
       m.attempts += history.length;
     }
   }
@@ -318,7 +319,11 @@ export function computeSubjectMastery(plan) {
   // Compute percentages
   for (const subj of Object.keys(mastery)) {
     const m = mastery[subj];
-    m.pct = m.total > 0 ? Math.round(m.score / m.total) : 0;
+    // Average the best score across PRACTICED tasks only. Dividing the summed
+    // scores by m.total (which includes never-practiced tasks) systematically
+    // under-reported mastery (e.g. two 100% tasks out of 6 planned → 33%),
+    // deflating the headline Exam Readiness gauge that consumes this value.
+    m.pct = m.practiced > 0 ? Math.round(m.score / m.practiced) : 0;
     m.masteredPct = m.total > 0 ? Math.round((m.mastered / m.total) * 100) : 0;
   }
 
