@@ -176,6 +176,9 @@ export default function DashboardScreen() {
       )
     : 0;
 
+  // Brand-new student: nothing done yet. Drives the motivating first-run nudge.
+  const isFirstRun = totalQuizzes === 0 && enrolledCourses.length === 0 && (streak?.currentStreak ?? 0) === 0;
+
   const progressByCourseId = React.useMemo(() => {
     const m = new Map<string, any>();
     for (const p of allProgress || []) {
@@ -272,6 +275,45 @@ export default function DashboardScreen() {
         {lastActivity ? (
           <View className="px-5 mt-4">
             <ResumeBanner />
+          </View>
+        ) : null}
+
+        {/* First-run nudge — a brand-new student (no quiz, course or streak yet)
+            sees an inviting starting point instead of a wall of zeros. */}
+        {!lastActivity && isFirstRun ? (
+          <View className="px-5 mt-4">
+            <PressableScale
+              onPress={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }}
+              accessibilityRole="button"
+              accessibilityLabel={t('Commencer', 'Kòmanse')}
+              style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+            >
+              <LinearGradient
+                colors={['#2E86F0', '#1B6FE0', '#0857A6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+              >
+                <View
+                  style={{
+                    width: 44, height: 44, borderRadius: radius.tile,
+                    backgroundColor: 'rgba(255,255,255,0.18)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Zap color="#fff" size={22} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
+                    {t('Commence ton parcours', 'Kòmanse pakou ou')}
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12.5, marginTop: 1 }}>
+                    {t('Fais ton premier quiz pour gagner des XP', 'Fè premye quiz ou pou genyen XP')}
+                  </Text>
+                </View>
+                <ChevronRight color="#fff" size={18} />
+              </LinearGradient>
+            </PressableScale>
           </View>
         ) : null}
 

@@ -14,6 +14,7 @@ import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } 
 import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
+import { select, tapMedium } from '../utils/haptics';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
@@ -194,7 +195,10 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
         return (
           <TouchableOpacity
             key={idx}
-            onPress={() => onAnswer(value)}
+            onPress={() => { select(); onAnswer(value); }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            accessibilityLabel={String(label)}
             style={[
               {
                 flexDirection: 'row',
@@ -282,7 +286,10 @@ function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onA
         return (
           <TouchableOpacity
             key={value}
-            onPress={() => onAnswer(value)}
+            onPress={() => { select(); onAnswer(value); }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            accessibilityLabel={label}
             style={[
               {
                 flex: 1,
@@ -686,7 +693,7 @@ export default function ExamTakeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={handleBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={handleBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
           <ArrowLeft color={colors.ink} size={22} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -694,8 +701,10 @@ export default function ExamTakeScreen() {
           <Text style={{ fontSize: 12, color: colors.muted }}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
         </View>
         <TouchableOpacity
-          onPress={handleSubmit}
+          onPress={() => { tapMedium(); handleSubmit(); }}
           disabled={submitting}
+          accessibilityRole="button"
+          accessibilityLabel={t('Soumettre', 'Soumèt')}
           style={{ backgroundColor: colors.azure, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: submitting ? 0.6 : 1 }}
         >
           <Send color="#fff" size={14} />
@@ -831,8 +840,10 @@ export default function ExamTakeScreen() {
         <View style={{ flex: 1 }} />
         {isLast ? (
           <TouchableOpacity
-            onPress={handleSubmit}
+            onPress={() => { tapMedium(); handleSubmit(); }}
             disabled={submitting}
+            accessibilityRole="button"
+            accessibilityLabel={t('Terminer', 'Fini')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.azure, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, opacity: submitting ? 0.6 : 1 }}
           >
             <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>{t('Terminer', 'Fini')}</Text>

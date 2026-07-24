@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
@@ -16,7 +16,10 @@ import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
 import { useColors } from '../theme/theme';
-import { success, warn } from '../utils/haptics';
+import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
+import { useReduceMotion } from '../utils/motion';
+import Confetti from '../components/ui/Confetti';
+import PopIn from '../components/ui/PopIn';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
@@ -107,6 +110,25 @@ function TriviaHeader() {
   const { profile, level } = useTrivia();
   const { streak } = useStreak();
   const isCreole = useStore((s) => s.language) === 'ht';
+  const reduceMotion = useReduceMotion();
+
+  // Gentle flame flicker so the streak feels alive (skipped for reduce-motion).
+  const flame = useSharedValue(1);
+  useEffect(() => {
+    if (reduceMotion || (streak?.currentStreak ?? 0) <= 0) {
+      flame.value = 1;
+      return;
+    }
+    flame.value = withRepeat(
+      withSequence(
+        withTiming(1.18, { duration: 620, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: 620, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      false,
+    );
+  }, [reduceMotion, streak?.currentStreak, flame]);
+  const flameStyle = useAnimatedStyle(() => ({ transform: [{ scale: flame.value }] }));
 
   return (
     <View className="flex-row items-center px-4 gap-3" style={{ paddingVertical: 10, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -130,7 +152,9 @@ function TriviaHeader() {
 
       {/* Streak section */}
       <View className="flex-row items-center gap-1">
-        <Flame color="#ef4444" size={16} />
+        <Animated.View style={flameStyle}>
+          <Flame color="#ef4444" size={16} />
+        </Animated.View>
         <Text className="text-sm font-bold text-red-500">{streak?.currentStreak ?? 0}</Text>
         <Text className="text-xs ml-0.5" style={{ color: colors.faint }}>{isCreole ? 'jou' : 'jours'}</Text>
       </View>
@@ -262,7 +286,7 @@ function RoundPicker({
     <View className="flex-1" style={{ backgroundColor: colors.bg }}>
       {/* Mini header */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={onBack} className="p-1 mr-3">
+        <TouchableOpacity onPress={onBack} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={isCreole ? 'Tounen' : 'Retour'}>
           <X color={colors.muted} size={22} />
         </TouchableOpacity>
         <View
@@ -444,11 +468,15 @@ function QuizPlayer({
   }, [timeLeft, confirmed, idx, questions, stopTimer]);
 
   const handleSelect = (opt: string) => {
-    if (!confirmed) setSelected(opt);
+    if (!confirmed) {
+      select();
+      setSelected(opt);
+    }
   };
 
   const handleConfirm = () => {
     if (confirmed) return;
+    tapMedium();
     stopTimer();
     setConfirmed(true);
     if (selected === q.correctAnswer) {
@@ -460,6 +488,7 @@ function QuizPlayer({
   };
 
   const handleNext = () => {
+    tapMedium();
     if (idx + 1 >= questions.length) {
       onFinish(score, questions.length);
     } else {
@@ -667,7 +696,7 @@ function QuizPlayer({
 
         {/* Feedback — just the verdict word, no box, border or fill */}
         {confirmed && (
-          <View className="mt-4 px-1">
+          <PopIn style={{ marginTop: 16, paddingHorizontal: 4 }} from={0.85}>
             <View className="flex-row items-center gap-2 mb-1">
               {isCorrect ? (
                 <Check color="#059669" size={18} />
@@ -692,7 +721,7 @@ function QuizPlayer({
             {q.explanation ? (
               <Text className="text-sm mt-2 leading-5" style={{ color: colors.muted }}>{q.explanation}</Text>
             ) : null}
-          </View>
+          </PopIn>
         )}
       </ScrollView>
 
@@ -748,12 +777,15 @@ function ScoreRing({ score, total }: { score: number; total: number }) {
   const pct = total > 0 ? score / total : 0;
   const fill = pct * CIRC;
   const color = pct >= 0.8 ? '#10b981' : pct >= 0.6 ? '#f59e0b' : '#ef4444';
+  const reduceMotion = useReduceMotion();
 
   // Sweep the arc up to its final value on mount so the score feels earned.
   const progress = useSharedValue(0);
   useEffect(() => {
-    progress.value = withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
-  }, [fill, progress]);
+    progress.value = reduceMotion
+      ? fill
+      : withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
+  }, [fill, progress, reduceMotion]);
   const animatedProps = useAnimatedProps(() => ({
     strokeDasharray: `${progress.value} ${CIRC}`,
   }));
@@ -806,14 +838,20 @@ function TriviaResults({
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const xpEarned = score * 10;
 
+  // Fire the celebration once for a strong round (the emotional payoff).
+  useEffect(() => { if (pct >= 80) success(); }, [pct]);
+
   return (
     <ScrollView
       className="flex-1" style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 40, paddingBottom: 48 }}
     >
-      <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-        <Trophy color={colors.azure} size={32} />
-      </View>
+      {pct >= 80 && <Confetti />}
+      <PopIn from={0.6}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <Trophy color={colors.azure} size={32} />
+        </View>
+      </PopIn>
 
       <ScoreRing score={score} total={total} />
 
@@ -826,12 +864,14 @@ function TriviaResults({
       </Text>
 
       {/* XP earned badge */}
-      <View className="flex-row items-center gap-2 rounded-full px-4 py-2 mt-3 mb-8" style={{ backgroundColor: colors.azureSoft }}>
-        <Zap color={colors.azure} size={16} />
-        <Text className="font-bold text-sm" style={{ color: colors.azure }}>
-          +{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}
-        </Text>
-      </View>
+      <PopIn delay={450} style={{ marginTop: 12, marginBottom: 32 }}>
+        <View className="flex-row items-center gap-2 rounded-full px-4 py-2" style={{ backgroundColor: colors.azureSoft }}>
+          <Zap color={colors.azure} size={16} />
+          <Text className="font-bold text-sm" style={{ color: colors.azure }}>
+            +{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}
+          </Text>
+        </View>
+      </PopIn>
 
       {/* Category tag */}
       <View
@@ -948,6 +988,7 @@ export default function TriviaScreen() {
 
   // Start from category selection
   const handleSelectCategory = useCallback((categoryId: string) => {
+    select();
     const cat = TRIVIA_CATEGORIES.find((c: any) => c.id === categoryId);
     setSelectedCategory(cat ?? null);
     setIsDailyRound(false);
@@ -958,6 +999,7 @@ export default function TriviaScreen() {
   const handlePickRound = useCallback(
     (count: number) => {
       if (!selectedCategory) return;
+      tapMedium();
       const qs = prepareQuestions(selectedCategory.id, count);
       setQuestions(qs);
       setRoundSize(count);
@@ -1014,6 +1056,7 @@ export default function TriviaScreen() {
   // Challenge this replays today's fixed set (the +50 XP bonus is only
   // awarded once/day; the service dedupes further attempts).
   const handleRetry = useCallback(() => {
+    tapMedium();
     if (isDailyRound) {
       const qs = prepareDailyQuestions(roundSize || 10);
       if (qs.length) {
@@ -1032,6 +1075,7 @@ export default function TriviaScreen() {
   }, [isDailyRound, selectedCategory, roundSize]);
 
   const handleChooseCategory = useCallback(() => {
+    tapLight();
     setPhase('categories');
     setSelectedCategory(null);
     setIsDailyRound(false);
@@ -1051,7 +1095,7 @@ export default function TriviaScreen() {
       {phase === 'arcade' && selectedGame && (
         <View className="flex-1">
           <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <TouchableOpacity onPress={exitToHub} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={exitToHub} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={isCreole ? 'Fèmen' : 'Fermer'}>
               <X color={colors.muted} size={20} />
             </TouchableOpacity>
             <Text className="font-bold" style={{ color: colors.ink }}>
@@ -1077,6 +1121,8 @@ export default function TriviaScreen() {
             onPress={exitToHub}
             className="flex-row items-center px-4 pt-1 pb-2"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={isCreole ? 'Jwèt yo' : 'Les jeux'}
           >
             <ChevronRight color={colors.azure} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
             <Text style={{ color: colors.azure, fontWeight: '700', fontSize: 13 }}>
@@ -1105,6 +1151,8 @@ export default function TriviaScreen() {
               onPress={() => setPhase('categories')}
               className="p-1 mr-3"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={isCreole ? 'Kite' : 'Quitter'}
             >
               <X color={colors.muted} size={22} />
             </TouchableOpacity>

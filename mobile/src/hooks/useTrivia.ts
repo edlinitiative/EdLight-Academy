@@ -21,6 +21,7 @@ import {
   recordGameResult as svcRecordGameResult,
   computeGameXp,
 } from '../services/triviaService';
+import { success } from '../utils/haptics';
 
 const triviaKey = (uid: string | null) => ['trivia-profile', uid];
 
@@ -57,10 +58,12 @@ export function useTrivia() {
       }
       const res = await recordTriviaResult(uid, { category, score, total, isDaily, defaultName: getFirstName(user) });
       qc.setQueryData(triviaKey(uid), res.profile);
+      // Leveling up is a milestone — punctuate it with a success haptic.
+      if (res?.leveledUp) success();
       setLastReward(res);
       return res;
     },
-    [uid, qc],
+    [uid, qc, user],
   );
 
   // Arcade (non-trivia) games — same reward contract as recordResult.
