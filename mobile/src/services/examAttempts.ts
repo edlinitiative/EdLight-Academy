@@ -29,7 +29,12 @@ export async function loadExamAttemptDraft(userId: string, examId: string) {
   return snap.exists() ? snap.data() : null;
 }
 
-export async function saveExamAttemptDraft(userId: string, examId: string, draft: any) {
+export async function saveExamAttemptDraft(
+  userId: string,
+  examId: string,
+  draft: any,
+  opts: { replace?: boolean } = {},
+) {
   if (!userId || !examId || !hasFirebaseAuth()) return;
   const ref = doc(db, 'users', userId, 'examAttempts', examId);
 
@@ -40,7 +45,11 @@ export async function saveExamAttemptDraft(userId: string, examId: string, draft
     updated_at_ms: Date.now(),
   });
 
-  await setDoc(ref, payload, { merge: true });
+  // `replace: true` writes WITHOUT merge — required when clearing state (e.g.
+  // restart), because Firestore's {merge:true} deep-merges the `answers` map
+  // key-by-key and never deletes keys, so writing `answers:{}` on top of a
+  // populated map is a no-op and stale answers survive into the new attempt.
+  await setDoc(ref, payload, opts.replace ? {} : { merge: true });
 }
 
 export async function markExamAttemptSubmitted(userId: string, examId: string, extra: any = {}) {

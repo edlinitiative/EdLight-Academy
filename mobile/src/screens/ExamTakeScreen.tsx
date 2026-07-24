@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  Alert, BackHandler, KeyboardAvoidingView, Platform, Dimensions,
+  Alert, BackHandler, KeyboardAvoidingView, Platform, Dimensions, AppState,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -360,7 +361,7 @@ export default function ExamTakeScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, recordActivity, setFocusMode, language, track } = useStore();
+  const { user, recordActivity, clearActivity, setFocusMode, language, track } = useStore();
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -397,15 +398,38 @@ export default function ExamTakeScreen() {
   // back to `in_progress`.
   const submittedRef = useRef(false);
 
-  // Save the current draft immediately (used by the 10s timer and the final
-  // flush on unmount/blur). No-op after submit or before the question phase.
+  const localDraftKey = `edlight-exam-draft-${examId}`;
+
+  // Save the current draft immediately (used by the 10s timer, the final flush
+  // on unmount/blur, and the AppState background handler). No-op after submit or
+  // before the question phase. Writes a synchronous-ish AsyncStorage mirror in
+  // addition to Firestore: when the OS backgrounds then KILLS the app, the
+  // debounced/unmount Firestore write may never complete, but the local mirror
+  // persists and is preferred on next load when newer.
   const flushDraft = useCallback(() => {
     if (!user?.uid || submittedRef.current || phaseRef.current !== 'questions') return;
+    const payload = {
+      answers: answersRef.current,
+      currentIdx: currentIdxRef.current,
+      status: 'in_progress',
+      updated_at_ms: Date.now(),
+    };
+    AsyncStorage.setItem(localDraftKey, JSON.stringify(payload)).catch(() => {});
     saveExamAttemptDraft(user.uid, examId, {
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
     }).catch(() => {});
-  }, [user?.uid, examId]);
+  }, [user?.uid, examId, localDraftKey]);
+
+  // Flush when the app is backgrounded/inactivated (iOS/Android): unmount only
+  // fires on in-app navigation, NOT when the user swipes the app away or the OS
+  // suspends it — the most common way an in-progress exam was lost.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') flushDraft();
+    });
+    return () => sub.remove();
+  }, [flushDraft]);
 
   useEffect(() => {
     let active = true;
@@ -434,19 +458,34 @@ export default function ExamTakeScreen() {
         });
         // Load draft (in-progress attempts only)
         if (user?.uid) {
-          loadExamAttemptDraft(user.uid, examId)
-            .then((draft) => {
-              if (!active) return;
-              // Only apply while still on the overview: a late-arriving draft
-              // must never clobber answers the user has started entering.
-              if (phaseRef.current !== 'overview') return;
-              if (draft?.answers && draft.status !== 'submitted') {
-                setAnswers(draft.answers);
-                if (Object.keys(draft.answers).length > 0) setHasDraft(true);
-                if (Number.isFinite(draft.currentIdx)) draftIdxRef.current = draft.currentIdx;
+          (async () => {
+            let draft: any = null;
+            try { draft = await loadExamAttemptDraft(user.uid, examId); } catch { /* ignore */ }
+            // Prefer the local mirror when it's newer — a background/app-kill can
+            // lose the debounced Firestore write, but the AsyncStorage mirror is
+            // written on every flush and holds the true latest state.
+            try {
+              const raw = await AsyncStorage.getItem(localDraftKey);
+              if (raw) {
+                const local = JSON.parse(raw);
+                if (local && local.status === 'in_progress' &&
+                    (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) {
+                  draft = local;
+                }
               }
-            })
-            .catch(() => {});
+            } catch { /* ignore corrupt mirror */ }
+            if (!active || phaseRef.current !== 'overview') return;
+            if (draft && draft.status !== 'submitted') {
+              const answerCount = draft.answers ? Object.keys(draft.answers).length : 0;
+              if (answerCount > 0) { setAnswers(draft.answers); setHasDraft(true); }
+              // Restore the saved position even with no answers yet (e.g. read
+              // ahead on essay questions), so Reprendre lands on the right one.
+              if (Number.isFinite(draft.currentIdx) && draft.currentIdx > 0) {
+                draftIdxRef.current = draft.currentIdx;
+                setHasDraft(true);
+              }
+            }
+          })();
         }
       })
       .catch(() => { if (active) { setError(true); setLoading(false); } });
@@ -526,6 +565,10 @@ export default function ExamTakeScreen() {
     // Block any pending / final autosave from reverting the doc to in_progress.
     submittedRef.current = true;
     if (draftTimer.current) clearTimeout(draftTimer.current);
+    // Drop the local mirror + clear the dashboard "Reprendre" banner so a
+    // finished exam isn't offered as resumable.
+    AsyncStorage.removeItem(localDraftKey).catch(() => {});
+    clearActivity();
     try {
       // Pass the raw answers map (index-keyed) straight to the grader — it reads
       // `answers[i]` directly, so wrapping in `{ given }` broke every match.

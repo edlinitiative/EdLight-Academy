@@ -41,15 +41,27 @@ export function isQuizAnswerCorrect(question: any, given: string | undefined): b
   const options: string[] = (question.options ?? question.choices ?? []).map(String);
   const raw = String(question.answer ?? question.correct_answer ?? question.correctAnswer ?? '').trim();
   if (!raw) return false;
-  let idx = raw.toUpperCase().charCodeAt(0) - 65;
+
+  // Case/whitespace/punctuation-insensitive compare (accents kept significant
+  // for FR grading). Previously this was an exact, case-sensitive === compare,
+  // so "paris" ≠ "Paris" and "42 " ≠ "42" were false negatives.
+  const norm = (s: string) => String(s ?? '')
+    .toLowerCase().replace(/\s+/g, ' ').trim()
+    .replace(/^[\s.,;:!?'"()[\]]+|[\s.,;:!?'"()[\]]+$/g, '');
+
+  // Resolve the correct option index — but only treat `raw` as a letter/number
+  // key when it truly is one. The old code read the first char of ANY answer as
+  // a letter index, so a text answer like "Cellule" was misread as option C.
+  let idx = -1;
+  if (/^[A-Z]$/i.test(raw)) idx = raw.toUpperCase().charCodeAt(0) - 65;
+  else if (/^\d+$/.test(raw)) idx = parseInt(raw, 10) - 1;
   if (idx < 0 || idx >= options.length) {
-    const byText = options.findIndex((o) => o === raw);
-    idx = byText;
+    const target = norm(raw);
+    idx = options.findIndex((o) => norm(o) === target);
   }
+
   const correctText = idx >= 0 ? options[idx] : raw;
-  // Accept a match against the resolved option text or the raw stored value
-  // (covers the case where the answer was already stored as text).
-  return given === correctText || given === raw;
+  return norm(given) === norm(correctText) || norm(given) === norm(raw);
 }
 
 function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number, total: number) => void; t: Translate }) {
