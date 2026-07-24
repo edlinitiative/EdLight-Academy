@@ -27,13 +27,27 @@ const queryClient = new QueryClient({
   },
 });
 
+// Throttle passive user-doc upserts. onAuthStateChange fires on every ID-token
+// refresh (~hourly) and app resume, not just sign-in — writing the user doc on
+// each was wasteful (getDoc + setDoc, and bumped last_seen far more than
+// intended). Upsert at most once per hour per uid from the passive listener
+// (explicit sign-in paths in authService still upsert immediately).
+let lastPassiveUpsertUid: string | null = null;
+let lastPassiveUpsertAt = 0;
+const PASSIVE_UPSERT_INTERVAL_MS = 60 * 60 * 1000;
+
 function AuthGate() {
   const { setUser, setAuthConfirmed, logout } = useStore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
-        await upsertUserDocument(firebaseUser, false);
+        const now = Date.now();
+        if (firebaseUser.uid !== lastPassiveUpsertUid || now - lastPassiveUpsertAt > PASSIVE_UPSERT_INTERVAL_MS) {
+          lastPassiveUpsertUid = firebaseUser.uid;
+          lastPassiveUpsertAt = now;
+          await upsertUserDocument(firebaseUser, false);
+        }
         setUser({
           uid: firebaseUser.uid,
           name: firebaseUser.displayName || '',
@@ -52,6 +66,7 @@ function AuthGate() {
           })
           .catch(() => {});
       } else {
+        lastPassiveUpsertUid = null; // re-upsert on next sign-in
         logout();
       }
       setAuthConfirmed();
@@ -120,7 +135,16 @@ function App() {
       // achievement / streak — no navigation needed; they're ambient
     };
 
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    // Dedupe: the cold-start launch response (fetched below) can also be
+    // re-delivered to the listener on some platforms — handle each tap once.
+    const handledIds = new Set<string>();
+    const runHandle = (response: Notifications.NotificationResponse | null) => {
+      if (!response) return;
+      const id = response.notification?.request?.identifier;
+      if (id) {
+        if (handledIds.has(id)) return;
+        handledIds.add(id);
+      }
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
       // A cold-start tap can fire before the nav tree is ready; retry briefly.
       let tries = 0;
@@ -130,7 +154,14 @@ function App() {
         setTimeout(attempt, 150);
       };
       attempt();
-    });
+    };
+
+    // Cold start launched BY tapping a notification: that response is delivered
+    // via getLastNotificationResponseAsync, NOT to the listener below, so
+    // without this the app opened on Dashboard instead of the target screen.
+    Notifications.getLastNotificationResponseAsync().then(runHandle).catch(() => {});
+
+    const sub = Notifications.addNotificationResponseReceivedListener(runHandle);
     return () => sub.remove();
   }, []);
 
