@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Flame, Zap, ChevronRight, CalendarCheck, BookOpen } from 'lucide-react-native';
 import SandraFab from '../components/SandraFab';
@@ -15,7 +16,7 @@ import { getFirstName } from '../utils/shared';
 import { Skeleton, ErrorState } from '../components/StateViews';
 import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
-import ProgressBar from '../components/ProgressBar';
+import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
 import Leaderboard from '../components/Leaderboard';
@@ -53,23 +54,32 @@ function formatXp(n: number): string {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-/** A small pill in the header showing a single momentum stat (streak, XP). */
-function StatChip({ icon, value, tint }: { icon: React.ReactNode; value: string | number; tint: string }) {
-  const colors = useColors();
+/** A frosted momentum pill on the blue hero (streak, XP). */
+function HeroPill({
+  icon,
+  value,
+  valueColor = '#ffffff',
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  valueColor?: string;
+}) {
   return (
     <View
       style={{
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: tint,
+        backgroundColor: 'rgba(255,255,255,0.16)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.22)',
         borderRadius: radius.chip,
         paddingHorizontal: 10,
         paddingVertical: 6,
       }}
     >
       {icon}
-      <Text style={{ fontSize: 13, fontWeight: '800', color: colors.ink }}>{value}</Text>
+      <Text style={{ fontSize: 13, fontWeight: '800', color: valueColor }}>{value}</Text>
     </View>
   );
 }
@@ -148,10 +158,21 @@ export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface, shadow } = useTheme();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, setPendingDailyChallenge } = useStore();
+  const themeMode = useStore((s) => s.theme);
+  const insets = useSafeAreaInsets();
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  // The compact hero is deep blue and runs under the status bar, so its icons
+  // must be light while this screen is focused; restore the app default on blur.
+  useFocusEffect(
+    React.useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle(themeMode === 'dark' ? 'light' : 'dark');
+    }, [themeMode]),
+  );
 
   const { data: courses, isLoading, isError, refetch, isFetching } = useCourses();
   const { streak } = useStreak();
@@ -215,9 +236,10 @@ export default function DashboardScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#0A66C2' }} edges={[]}>
       <ScrollView
         ref={scrollRef}
+        style={{ backgroundColor: colors.bg }}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -230,15 +252,23 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Header — identity + momentum. Shares the page background and uses a
-            uniform vertical padding so the safe-area/status band and the
-            greeting read as one continuous block (no seam / dead space). */}
-        <View
-          style={{ backgroundColor: colors.bg }}
-          className="px-5 pt-3 pb-3"
+        {/* Compact gradient hero — identity + momentum as one continuous band.
+            Runs under the status bar (paddingTop = safe inset) and rounds off at
+            the bottom so the resume banner can overlap it just below. */}
+        <LinearGradient
+          colors={['#0A66C2', '#0857A6', '#0b3f7d']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={{
+            paddingTop: insets.top + 10,
+            paddingHorizontal: 20,
+            paddingBottom: 22,
+            borderBottomLeftRadius: 26,
+            borderBottomRightRadius: 26,
+          }}
         >
           <View className="flex-row items-center">
-            {/* Pixel-art avatar (seeded by uid) — tap to open the profile. */}
+            {/* Real-photo avatar (seeded by uid) — tap to open the profile. */}
             <TouchableOpacity
               onPress={() => { tapLight(); navigation.navigate('Profile'); }}
               activeOpacity={0.8}
@@ -251,36 +281,37 @@ export default function DashboardScreen() {
                 uri={user?.picture || user?.photoURL || null}
                 seed={user?.uid || ''}
                 size={44}
+                radius={14}
               />
             </TouchableOpacity>
 
             <View className="flex-1 px-3">
-              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink }} numberOfLines={1}>
+              <Text style={{ fontSize: 19, fontWeight: '800', color: '#ffffff' }} numberOfLines={1}>
                 {greeting}, {firstName || t('Étudiant', 'Elèv')} 👋
               </Text>
-              <Text style={{ fontSize: 13, color: colors.muted, marginTop: 1 }} numberOfLines={1}>
-                {t('Prêt à apprendre aujourd\'hui ?', 'Ou pare pou aprann jodi a ?')}
+              <Text style={{ fontSize: 12, color: '#bfdbfe', marginTop: 1 }} numberOfLines={1}>
+                {t('Prêt à apprendre ?', 'Ou pare pou aprann ?')}
               </Text>
             </View>
 
             <View className="flex-row items-center gap-2">
-              <StatChip
-                icon={<Flame color={colors.danger} size={15} />}
+              <HeroPill
+                icon={<Flame color="#fecaca" size={14} />}
                 value={streak?.currentStreak ?? 0}
-                tint={colors.dangerSoft}
               />
-              <StatChip
-                icon={<Zap color={colors.azure} size={15} />}
+              <HeroPill
+                icon={<Zap color="#fde68a" size={14} />}
                 value={formatXp(weeklyXp)}
-                tint={colors.azureSoft}
+                valueColor="#fde68a"
               />
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Resume banner — the top action when there's an activity to continue */}
+        {/* Resume banner — overlaps just under the hero as a layered card. Its
+            deep-link logic is unchanged; only its placement/elevation here. */}
         {lastActivity ? (
-          <View className="px-5 mt-4">
+          <View className="px-5" style={{ marginTop: -12, zIndex: 2 }}>
             <ResumeBanner />
           </View>
         ) : null}
@@ -325,7 +356,7 @@ export default function DashboardScreen() {
         ) : null}
 
         {/* Quick actions */}
-        <View className="px-5 mt-4 mb-5">
+        <View className="px-5 mt-4 mb-4">
           <HomeWidgets
             onNavigateExams={() => navigation.navigate('Exams')}
             onNavigateTrivia={() => navigation.navigate('Trivia')}
@@ -336,7 +367,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* At-a-glance stats */}
-        <View className="px-5 mb-5">
+        <View className="px-5 mb-4">
           <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
             <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
             <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
@@ -348,7 +379,7 @@ export default function DashboardScreen() {
 
         {/* Continue learning */}
         {displayCourses.length > 0 && (
-          <View className="px-5 mb-5">
+          <View className="px-5 mb-4">
             <SectionHeader
               title={t('Continuer à apprendre', 'Kontinye aprann')}
               actionLabel={t('Voir tout', 'Wè tout')}
@@ -367,7 +398,7 @@ export default function DashboardScreen() {
                     onPress={() => goCourse(course)}
                     accessibilityRole="button"
                     accessibilityLabel={course.name}
-                    style={{ ...cardSurface, padding: 16 }}
+                    style={{ ...cardSurface, padding: 14 }}
                   >
                     <View className="flex-row items-center gap-3">
                       <View
@@ -377,24 +408,20 @@ export default function DashboardScreen() {
                         <BookOpen color={tint} size={20} />
                       </View>
                       <View className="flex-1">
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.ink }} numberOfLines={2}>
+                        {/* Single subject tag = the course name itself, which already
+                            carries the level (e.g. "Chimie NS1") — no redundant pills. */}
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.ink }} numberOfLines={2}>
                           {course.name}
                         </Text>
-                        {/* Level pill removed — the course name already carries
-                            the level (e.g. "Chimie NS1"), so it was redundant. */}
                         {totalLessons > 0 && (
                           <Text style={{ fontSize: 12, color: colors.faint, marginTop: 2 }}>
                             {totalLessons} {t('leçons', 'leson')}
                           </Text>
                         )}
                       </View>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: tint }}>{pct}%</Text>
+                      {/* Circular progress ring (conic-style via SVG) */}
+                      <ProgressRing value={pct} color={tint} size={46} strokeWidth={5} />
                     </View>
-                    {pct > 0 && (
-                      <View className="mt-3">
-                        <ProgressBar value={pct} color={tint} height={5} />
-                      </View>
-                    )}
                   </PressableScale>
                 );
               })}
@@ -403,12 +430,12 @@ export default function DashboardScreen() {
         )}
 
         {/* Readiness — the card renders its own title, so no duplicate heading */}
-        <View className="px-5 mb-5">
+        <View className="px-5 mb-4">
           <ReadinessCard />
         </View>
 
         {/* Leaderboard */}
-        <View className="px-5 mb-5">
+        <View className="px-5 mb-4">
           <SectionHeader
             title={t('Classement', 'Klasman')}
             actionLabel={t('Voir tout', 'Wè tout')}

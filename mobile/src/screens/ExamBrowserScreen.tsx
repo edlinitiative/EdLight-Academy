@@ -6,10 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  ArrowLeft, Search, ClipboardList, ChevronRight, CheckCircle2, SlidersHorizontal, X,
+  ArrowLeft, Search, ChevronRight, CheckCircle2, SlidersHorizontal, X,
+  Clock, Layers, Award,
 } from 'lucide-react-native';
 import { fetchFullCatalog } from '../utils/examCatalog';
-import { normalizeSubject, normalizeExamTitle, subjectColor } from '../utils/examUtils';
+import { normalizeSubject, normalizeLevel, normalizeExamTitle, examTitleParts, subjectColor } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
 import { useColors, useTheme } from '../theme/theme';
@@ -39,6 +40,35 @@ function questionCount(exam: any): number {
   return sections.reduce((s: number, sec: any) => s + (Array.isArray(sec.questions) ? sec.questions.length : 0), 0);
 }
 
+function sectionCount(exam: any): number {
+  if (typeof exam._sectionCount === 'number') return exam._sectionCount;
+  return Array.isArray(exam.sections) ? exam.sections.length : 0;
+}
+
+/** Emoji per canonical subject — the scannable "badge" on each exam card. */
+const SUBJECT_EMOJI: Record<string, string> = {
+  Mathématiques: '📐',
+  Physique: '⚛️',
+  Chimie: '⚗️',
+  SVT: '🧬',
+  Français: '📖',
+  Anglais: '🗣️',
+  Espagnol: '🗣️',
+  'Histoire-Géo': '🌍',
+  Philosophie: '💭',
+  Kreyòl: '📖',
+  Économie: '📊',
+  'Art & Musique': '🎨',
+  Informatique: '💻',
+  Santé: '🩺',
+  'Culture Générale': '🧠',
+  Mixed: '🧩',
+};
+
+function subjectEmoji(subject: string): string {
+  return SUBJECT_EMOJI[subject] ?? '📝';
+}
+
 function ExamCard({
   exam,
   attemptInfo,
@@ -53,58 +83,100 @@ function ExamCard({
   const { cardSurface } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const title = normalizeExamTitle(exam);
-  const subject = normalizeSubject(exam.subject ?? '');
+
+  const parts = examTitleParts(exam);
+  const subject = parts.subject || normalizeSubject(exam.subject ?? '') || t('Examen', 'Egzamen');
   const color = subjectColor(subject);
-  const year = exam.year ?? '';
+  const yearOrSession = parts.session || (parts.year ? String(parts.year) : '');
+  const levelLbl = normalizeLevel(exam.level ?? exam.niveau ?? '');
+  // Meta = "Niveau · [topic / série]" — the distinguishing detail so two exams of
+  // the same subject/year never read as one.
+  const metaBits = [levelLbl, parts.topic || parts.series].filter(Boolean);
+
+  const durationMin = Number(exam.duration_minutes) || 0;
+  const totalPoints = Number(exam.total_points) || 0;
+  const secCount = sectionCount(exam);
   const qCount = questionCount(exam);
+
   const done = !!attemptInfo?.attempted;
   const pct = typeof attemptInfo?.percentage === 'number' ? Math.round(attemptInfo.percentage) : null;
+
+  const a11y = `${subject}${yearOrSession ? ' ' + yearOrSession : ''}`;
 
   return (
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={a11y}
       pressedScale={0.98}
-      style={[cardSurface, { marginBottom: 12 }]}
+      style={[cardSurface, { marginBottom: 12, padding: 14 }]}
     >
-      <View className="p-4">
-        <View className="flex-row items-start gap-3">
-          <View
-            className="w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 mt-0.5"
-            style={{ backgroundColor: color + '18' }}
-          >
-            {done
-              ? <CheckCircle2 color={colors.success} size={20} />
-              : <ClipboardList color={color} size={20} />}
-          </View>
-          <View className="flex-1">
-            <Text className="font-semibold text-gray-900 dark:text-slate-100 text-sm leading-snug" numberOfLines={2}>{title}</Text>
-            <View className="flex-row items-center gap-2 mt-1.5 flex-wrap">
-              {/* Subject pill removed — the title already leads with the subject
-                  (e.g. "Espagnol · Juillet 2025"), so the pill was redundant. */}
-              {year ? (
-                <Text className="text-xs text-gray-400 dark:text-slate-500 font-medium">{year}</Text>
-              ) : null}
-              {qCount > 0 ? (
-                <Text className="text-xs text-gray-400 dark:text-slate-500">{qCount} {t('question', 'kesyon')}{qCount > 1 ? t('s', '') : ''}</Text>
-              ) : null}
-              {done && pct !== null ? (
-                <View className="flex-row items-center gap-1">
-                  <CheckCircle2 color={colors.success} size={12} />
-                  <Text className="text-xs text-emerald-700 dark:text-emerald-300 font-semibold">{pct}%</Text>
-                </View>
-              ) : done ? (
-                <View className="flex-row items-center gap-1">
-                  <CheckCircle2 color={colors.success} size={12} />
-                  <Text className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('Terminé', 'Fini')}</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-          <ChevronRight color={colors.faint} size={18} className="mt-0.5" />
+      <View className="flex-row items-center" style={{ gap: 12 }}>
+        {/* Subject badge — the only carrier of the subject color (no left stripe) */}
+        <View
+          className="items-center justify-center flex-shrink-0"
+          style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: color + '1f' }}
+        >
+          <Text style={{ fontSize: 22 }}>{subjectEmoji(subject)}</Text>
         </View>
+
+        <View className="flex-1" style={{ minWidth: 0 }}>
+          {/* Title: "Matière · Année" */}
+          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }} numberOfLines={1}>
+            {subject}
+            {yearOrSession ? <Text style={{ color }}>{`  ·  ${yearOrSession}`}</Text> : null}
+          </Text>
+
+          {/* Meta: "Niveau · Session/Topic" */}
+          {metaBits.length > 0 ? (
+            <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }} numberOfLines={1}>
+              {metaBits.join('  ·  ')}
+            </Text>
+          ) : null}
+
+          {/* Stats row: ⏱ min · sections/questions · pts */}
+          <View className="flex-row items-center flex-wrap" style={{ gap: 12, marginTop: 7 }}>
+            {durationMin > 0 ? (
+              <View className="flex-row items-center" style={{ gap: 4 }}>
+                <Clock color={colors.faint} size={13} />
+                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>{durationMin} min</Text>
+              </View>
+            ) : null}
+            {secCount > 0 ? (
+              <View className="flex-row items-center" style={{ gap: 4 }}>
+                <Layers color={colors.faint} size={13} />
+                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>
+                  {secCount} {t(secCount > 1 ? 'exercices' : 'exercice', 'egzèsis')}
+                </Text>
+              </View>
+            ) : qCount > 0 ? (
+              <View className="flex-row items-center" style={{ gap: 4 }}>
+                <Layers color={colors.faint} size={13} />
+                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>
+                  {qCount} {t(qCount > 1 ? 'questions' : 'question', 'kesyon')}
+                </Text>
+              </View>
+            ) : null}
+            {totalPoints > 0 ? (
+              <View className="flex-row items-center" style={{ gap: 4 }}>
+                <Award color={colors.faint} size={13} />
+                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>{totalPoints} pts</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Right: completion badge or chevron */}
+        {done ? (
+          <View className="items-center" style={{ gap: 2 }}>
+            <CheckCircle2 color={colors.success} size={20} />
+            {pct !== null ? (
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.success }}>{pct}%</Text>
+            ) : null}
+          </View>
+        ) : (
+          <ChevronRight color={colors.faint} size={18} />
+        )}
       </View>
     </PressableScale>
   );
@@ -296,17 +368,28 @@ export default function ExamBrowserScreen() {
             placeholderTextColor={colors.faint}
           />
         </View>
-        {/* Subject chips */}
+        {/* Matière filter pills — active = brand fill, inactive = hairline tint */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          {subjects.map((s) => (
-            <TouchableOpacity
-              key={s}
-              onPress={() => setSubject(s)}
-              className={`px-3 py-1.5 rounded-full ${subject === s ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
-            >
-              <Text className={`text-xs font-semibold ${subject === s ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{s === 'Tout' ? t('Toutes', 'Tout') : s}</Text>
-            </TouchableOpacity>
-          ))}
+          {subjects.map((s) => {
+            const active = subject === s;
+            return (
+              <TouchableOpacity
+                key={s}
+                onPress={() => setSubject(s)}
+                activeOpacity={0.8}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: active ? colors.azure : colors.hairline,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#ffffff' : colors.muted }}>
+                  {s === 'Tout' ? t('Toutes', 'Tout') : s}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 

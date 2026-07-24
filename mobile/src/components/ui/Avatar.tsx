@@ -8,6 +8,8 @@ interface AvatarProps {
   /** Stable per-user seed for the generated character (prefer uid; falls back to name) */
   seed?: string;
   size?: number;
+  /** Corner radius. Defaults to a full circle (size / 2); pass e.g. 14 for a rounded square. */
+  radius?: number;
 }
 
 // FNV-1a 32-bit hash — deterministic starting point for the identicon bits
@@ -68,10 +70,11 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
 // (humans) to restyle the generated fallback across the whole app.
 const ROBOHASH_SET = 'set1';
 
-export default function Avatar({ name = '', uri, seed, size = 48 }: AvatarProps) {
+export default function Avatar({ name = '', uri, seed, size = 48, radius }: AvatarProps) {
   const colors = useColors();
   const [characterFailed, setCharacterFailed] = React.useState(false);
   const [photoFailed, setPhotoFailed] = React.useState(false);
+  const corner = radius ?? size / 2;
 
   const charSeed = seed || name || 'edlight';
   React.useEffect(() => setCharacterFailed(false), [charSeed]);
@@ -85,8 +88,8 @@ export default function Avatar({ name = '', uri, seed, size = 48 }: AvatarProps)
 
   return (
     <View
-      className="rounded-full items-center justify-center overflow-hidden"
-      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.azureSoft }}
+      className="items-center justify-center overflow-hidden"
+      style={{ width: size, height: size, borderRadius: corner, backgroundColor: colors.azureSoft }}
     >
       {photoUri && !photoFailed ? (
         <Image
