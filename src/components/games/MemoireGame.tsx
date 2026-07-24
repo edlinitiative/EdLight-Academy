@@ -33,12 +33,16 @@ export default function MemoireGame({ isCreole, onExit, onRecord, highScore = nu
   }, [done, nonce]);
 
   const score = Math.max(0, PAIRS * 10 - moves);
+  // A flawless game still uses PAIRS moves (you must flip each pair once), so
+  // the best achievable score is PAIRS*10 - PAIRS. Using PAIRS*10 as the max
+  // capped a perfect run at 90% and made the +perfect XP bonus unreachable.
+  const maxScore = PAIRS * 10 - PAIRS;
 
   useEffect(() => {
     if (!done || recordedRef.current) return;
     recordedRef.current = true;
-    onRecord({ gameId: 'memoire', score, maxScore: PAIRS * 10 }).then(setReward).catch(() => setReward(null));
-  }, [done, score, onRecord]);
+    onRecord({ gameId: 'memoire', score: Math.min(score, maxScore), maxScore }).then(setReward).catch(() => setReward(null));
+  }, [done, score, maxScore, onRecord]);
 
   const flip = (card) => {
     if (lockRef.current || matched.has(card.id) || flipped.includes(card.id)) return;
@@ -72,8 +76,8 @@ export default function MemoireGame({ isCreole, onExit, onRecord, highScore = nu
   if (done) {
     return (
       <GameOverCard
-        score={score}
-        maxScore={PAIRS * 10}
+        score={Math.min(score, maxScore)}
+        maxScore={maxScore}
         stats={[
           { label: isCreole ? 'Mouvman' : 'Coups', value: moves },
           { label: isCreole ? 'Tan' : 'Temps', value: `${seconds}s` },

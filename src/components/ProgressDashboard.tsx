@@ -30,8 +30,23 @@ export default function ProgressDashboard() {
   const totalPoints = allProgress.reduce((sum, p) => sum + (p.totalPoints || 0), 0);
   const allBadges = allProgress.flatMap(p => p.badges || []);
   const uniqueBadges = [...new Set(allBadges)];
-  const maxStreak = Math.max(...allProgress.map(p => p.longestStreak || 0), 0);
   const currentStreak = allProgress[0]?.currentStreak || 0; // Most recent course streak
+
+  // Turn a raw course id like "CHEM-NSI" into a readable "Chimie · NS I" label,
+  // instead of showing the internal id to the learner.
+  const SUBJECT_FR: Record<string, string> = {
+    CHEM: isCreole ? 'Chimi' : 'Chimie',
+    PHYS: isCreole ? 'Fizik' : 'Physique',
+    MATH: isCreole ? 'Matematik' : 'Mathématiques',
+    ECON: isCreole ? 'Ekonomi' : 'Économie',
+    BIO: isCreole ? 'Byoloji' : 'Biologie',
+  };
+  const courseLabel = (courseId: string): string => {
+    const [subj, ...rest] = String(courseId || '').split('-');
+    const subjLabel = SUBJECT_FR[subj?.toUpperCase()] || subj || courseId;
+    const level = rest.join('-').replace(/^NS([IVX]+)$/i, 'NS $1');
+    return level ? `${subjLabel} · ${level}` : subjLabel;
+  };
 
   return (
     <div className="progress-dashboard">
@@ -91,12 +106,13 @@ export default function ProgressDashboard() {
         <div className="course-progress-list">
           {allProgress.map((progress) => {
             const completedCount = progress.completedLessons?.length || 0;
-            // Note: We'd need total lesson count from course data for accurate percentage
-            // For now, show completed count
+            // Total lesson count per course isn't loaded here, so we show the
+            // completed count as a plain total (not an "X / Y" fraction that
+            // would imply a denominator we don't have).
             return (
               <div key={progress.courseId} className="course-progress-item">
                 <div className="course-progress-item__header">
-                  <span className="course-progress-item__name">{progress.courseId}</span>
+                  <span className="course-progress-item__name">{courseLabel(progress.courseId)}</span>
                   <span className="course-progress-item__points">{progress.totalPoints || 0} pts</span>
                 </div>
                 <div className="course-progress-item__stats">

@@ -142,10 +142,13 @@ export default function Dashboard() {
       }));
 
   const quizzesTaken = quizAttemptsForStats.length;
-  const avgScore = quizzesTaken
+  // Average only over attempts that actually have a numeric score. Dividing by
+  // every attempt (incl. ungraded short-answer / local fallbacks with no
+  // percentage) treated those as 0% and dragged the average down.
+  const gradedAttempts = quizAttemptsForStats.filter((a) => typeof a.percentage === 'number');
+  const avgScore = gradedAttempts.length
     ? Math.round(
-        (quizAttemptsForStats.reduce((sum, a) => sum + (typeof a.percentage === 'number' ? a.percentage : 0), 0) /
-          quizzesTaken)
+        gradedAttempts.reduce((sum, a) => sum + a.percentage, 0) / gradedAttempts.length
       )
     : 0;
 
