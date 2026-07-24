@@ -198,9 +198,15 @@ export async function recordTriviaResult(uid, { category, score = 0, total = 0, 
         city: updated.leaderboard.city || null,
         department: updated.leaderboard.department || null,
       });
-      // Best-effort rank notification — fire and forget.
+      // Best-effort rank notification — fire and forget. Re-rank over
+      // valid-alias entries exactly as the visible board does, so the notified
+      // rank matches what the learner sees when they open the leaderboard
+      // (the old raw positional rank counted hidden aliasless entries).
       getWeeklyTop(50).then((top) => {
-        const entry = top.find((e) => e.id === uid);
+        const ranked = top
+          .filter((e) => isValidAlias(e.displayName))
+          .map((e, i) => ({ ...e, rank: i + 1 }));
+        const entry = ranked.find((e) => e.id === uid);
         if (entry && entry.rank <= 10) notifyLeaderboardRank(uid, entry.rank).catch(() => {});
       }).catch(() => {});
     }

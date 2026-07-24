@@ -31,8 +31,10 @@ import {
   serverTimestamp,
   increment,
   query,
+  where,
   orderBy,
   limit as fbLimit,
+  getCountFromServer,
 } from 'firebase/firestore';
 import type { GroupField, GroupRanking } from '../../shared/leaderboardAgg';
 
@@ -246,4 +248,36 @@ export async function getUserWeeklyEntry(uid, id = weekId()) {
     console.error('[Leaderboard] getUserWeeklyEntry error:', err);
     return null;
   }
+}
+
+/**
+ * The signed-in learner's EXACT rank for the period, even when they're outside
+ * the fetched top-N. Uses a Firestore count aggregate (server-side, no document
+ * reads) of entries with strictly more XP, so rank = count + 1. Returns null
+ * when the learner has no board-eligible entry (not opted in, no valid alias,
+ * or 0 XP this week) — the caller then shows the "join" CTA correctly.
+ *
+ * Note: the aggregate can't apply the valid-alias filter the visible board uses,
+ * so in the rare case of invalid-alias entries ranked above the learner the
+ * number can be off by a few. This still matches the trivia rank notification
+ * (which now uses the same helper) and is a large improvement over falsely
+ * showing "join"/"—" for anyone past the fetched page.
+ */
+export async function getUserWeeklyRank(uid, id = weekId()) {
+  if (!uid) return null;
+  try {
+    const entry = await getUserWeeklyEntry(uid, id);
+    if (!entry || !isValidAlias(entry.displayName) || !(Number(entry.xp) > 0)) return null;
+    const higher = query(entriesRef(id), where('xp', '>', Number(entry.xp)));
+    const cnt = await getCountFromServer(higher);
+    return { rank: cnt.data().count + 1, entry };
+  } catch (err) {
+    console.error('[Leaderboard] getUserWeeklyRank error:', err);
+    return null;
+  }
+}
+
+/** All-time variant of getUserWeeklyRank. */
+export async function getUserAllTimeRank(uid) {
+  return getUserWeeklyRank(uid, ALL_TIME_ID);
 }
