@@ -91,6 +91,15 @@ export async function logoutUser() {
   } catch {
     // never block logout
   }
+  // Clear the Sandra conversation pointer so the next account on this device
+  // can't resume the previous user's AI thread (context/PII bleed on shared
+  // devices). Best-effort — never block logout.
+  try {
+    const { writeConvId } = await import('./sandraService');
+    await writeConvId(null);
+  } catch {
+    // ignore
+  }
   await logout();
 }
 

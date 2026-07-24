@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { Text, Animated, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff } from 'lucide-react-native';
 import NetInfo from '@react-native-community/netinfo';
+import useStore from '../contexts/store';
 
 /**
  * Live connectivity via NetInfo. Returns:
@@ -28,7 +30,11 @@ function useConnectivity(): boolean | null {
 
 export default function NetworkStatus() {
   const isConnected = useConnectivity();
-  const translateY = useRef(new Animated.Value(-60)).current;
+  const insets = useSafeAreaInsets();
+  const language = useStore((s) => s.language);
+  const isCreole = language === 'ht';
+  const hiddenY = -(80 + insets.top); // fully off-screen even with a large notch
+  const translateY = useRef(new Animated.Value(hiddenY)).current;
   const [visible, setVisible] = useState(false);
 
   const offline = isConnected === false;
@@ -43,19 +49,19 @@ export default function NetworkStatus() {
       }).start();
     } else {
       Animated.timing(translateY, {
-        toValue: -60,
+        toValue: hiddenY,
         duration: 300,
         useNativeDriver: true,
       }).start(() => setVisible(false));
     }
-  }, [offline]);
+  }, [offline, hiddenY]);
 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.banner, { transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.banner, { paddingTop: 8 + insets.top, transform: [{ translateY }] }]}>
       <WifiOff color="#ffffff" size={14} />
-      <Text style={styles.text}>Pas de connexion</Text>
+      <Text style={styles.text}>{isCreole ? 'Pa gen koneksyon' : 'Pas de connexion'}</Text>
     </Animated.View>
   );
 }

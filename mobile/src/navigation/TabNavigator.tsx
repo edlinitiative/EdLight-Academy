@@ -114,7 +114,10 @@ export default function TabNavigator() {
           const now = Date.now();
           const prev = lastPress.current;
           if (prev.name === route.name && now - prev.time < DOUBLE_TAP_MS) {
-            queryClient.invalidateQueries();
+            // Only refresh what's currently on screen. A blanket invalidate
+            // refetched every cached query (incl. the heavy exam catalog) on a
+            // stray double tap — expensive on slow/metered connections.
+            queryClient.invalidateQueries({ type: 'active' });
             lastPress.current = { name: '', time: 0 };
           } else {
             lastPress.current = { name: route.name, time: now };
