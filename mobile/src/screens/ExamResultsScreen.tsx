@@ -231,7 +231,7 @@ export default function ExamResultsScreen() {
       {/* Header — shares the page background (no white-bar seam) */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
-          onPress={() => navigation.popToTop()}
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ExamLanding'))}
           className="p-1 mr-3"
           hitSlop={8}
           accessibilityRole="button"

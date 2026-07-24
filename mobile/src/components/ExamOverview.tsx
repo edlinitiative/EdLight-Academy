@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, Award, ListChecks, Layers, Play } from 'lucide-react-native';
-import { normalizeSubject, normalizeExamTitle, normalizeYear } from '../utils/examUtils';
+import { normalizeExamTitle } from '../utils/examUtils';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
 
@@ -46,8 +46,6 @@ export default function ExamOverview({
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const title = normalizeExamTitle(exam);
-  const subject = normalizeSubject(exam?.subject ?? '');
-  const { year } = normalizeYear(exam?.year);
   const durationMin = Number(exam?.duration_minutes) || 0;
   const totalPoints = Number(exam?.total_points) || 0;
 
@@ -74,21 +72,10 @@ export default function ExamOverview({
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}>
-        {/* Hero card */}
+        {/* Hero card — the composed title already leads with the subject and
+            ends with the year/session (e.g. "Espagnol — … · Juillet 2025"), so
+            the old subject/year pills above it were redundant and were removed. */}
         <View style={[cardStyle, { padding: 18 }]}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-            {subject ? (
-              <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{subject}</Text>
-              </View>
-            ) : null}
-            {year ? (
-              <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted }}>{year}</Text>
-              </View>
-            ) : null}
-          </View>
-
           <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, lineHeight: 27, marginBottom: 16 }}>
             {title}
           </Text>

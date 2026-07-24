@@ -40,9 +40,15 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
         )}
       </View>
 
-      {/* Avatar — the same seeded robot used across the app (not initials) */}
+      {/* Avatar — the user's real profile photo when we have one, else the same
+          seeded robot used across the app (never bare initials). */}
       <View className="mr-2.5">
-        <Avatar name={entry.displayName || ''} seed={entry.id || entry.uid || entry.displayName || ''} size={32} />
+        <Avatar
+          name={entry.displayName || ''}
+          uri={entry.photoURL || entry.picture || null}
+          seed={entry.id || entry.uid || entry.displayName || ''}
+          size={32}
+        />
       </View>
 
       {/* Name + city · school (parity with the web leaderboard) */}

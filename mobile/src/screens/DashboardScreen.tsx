@@ -230,10 +230,12 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Header — identity + momentum */}
+        {/* Header — identity + momentum. Shares the page background and uses a
+            uniform vertical padding so the safe-area/status band and the
+            greeting read as one continuous block (no seam / dead space). */}
         <View
           style={{ backgroundColor: colors.bg }}
-          className="px-5 pt-4 pb-2"
+          className="px-5 pt-3 pb-3"
         >
           <View className="flex-row items-center">
             {/* Pixel-art avatar (seeded by uid) — tap to open the profile. */}
@@ -244,7 +246,12 @@ export default function DashboardScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('Ouvrir le profil', 'Louvri pwofil la')}
             >
-              <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={46} />
+              <Avatar
+                name={user?.name || user?.displayName || ''}
+                uri={user?.picture || user?.photoURL || null}
+                seed={user?.uid || ''}
+                size={44}
+              />
             </TouchableOpacity>
 
             <View className="flex-1 px-3">
