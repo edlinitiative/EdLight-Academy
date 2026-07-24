@@ -1,18 +1,31 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Target, Trophy, Flame, BookOpen, GraduationCap, PenLine, Award, Gem, Zap, Crown, Medal } from 'lucide-react';
 import { useAllProgress } from '../hooks/useProgress';
 import { calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
+import { Skeleton } from './Skeleton';
 
 export default function ProgressDashboard() {
+  const navigate = useNavigate();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const { progress: allProgress, loading } = useAllProgress();
 
+  // Skeleton that mirrors the real stats grid, so there's minimal layout shift
+  // when data arrives — kinder than a spinner on slow connections.
   if (loading) {
     return (
-      <div className="card">
-        <p className="text-muted">{isCreole ? 'Ap chaje pwogrè…' : 'Chargement de la progression…'}</p>
+      <div className="progress-dashboard" aria-busy="true">
+        <div className="progress-dashboard__header">
+          <Skeleton variant="text" width="55%" height={22} />
+          <Skeleton variant="text" width="40%" height={14} style={{ marginTop: 8 }} />
+        </div>
+        <div className="progress-dashboard__stats">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rect" height={112} radius={16} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -21,7 +34,19 @@ export default function ProgressDashboard() {
     return (
       <div className="card">
         <h3>{isCreole ? 'Pwogrè ou' : 'Votre progression'}</h3>
-        <p className="text-muted">{isCreole ? 'Kòmanse aprann pou swiv pwogrè ou!' : 'Commencez à apprendre pour suivre votre progression !'}</p>
+        <p className="text-muted">
+          {isCreole
+            ? 'Fè premye leson ou pou kòmanse swiv pwogrè ou ak ranmase badj!'
+            : 'Terminez votre première leçon pour commencer à suivre votre progression et gagner des badges !'}
+        </p>
+        <button
+          type="button"
+          className="button button--primary"
+          style={{ marginTop: '0.75rem' }}
+          onClick={() => navigate('/courses')}
+        >
+          {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
+        </button>
       </div>
     );
   }

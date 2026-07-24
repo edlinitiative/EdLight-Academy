@@ -638,6 +638,8 @@
 }
 
 .trivia-results__card {
+  position: relative; /* anchors the confetti Celebration layer */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -651,6 +653,26 @@
   width: 100%;
   text-align: center;
   animation: trivia-fadeUp 0.4s ease;
+}
+
+/* The XP reward tallies up and pops in — the round's payoff moment. */
+.trivia-reward__xp {
+  animation: reward-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* A correct answer gives a subtle confirming pulse on reveal. */
+@keyframes trivia-answer-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+.trivia-option--correct {
+  animation: trivia-answer-pop 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trivia-reward__xp { animation: none; }
+  .trivia-option--correct { animation: none; }
 }
 
 .trivia-results__emoji {

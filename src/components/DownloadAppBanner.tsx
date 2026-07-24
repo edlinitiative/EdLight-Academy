@@ -78,7 +78,7 @@ export default function DownloadAppBanner() {
         <button
           onClick={dismiss}
           aria-label={t('Fermer', 'Fèmen')}
-          style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#94a3b8' }}
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
         >
           <X size={18} />
         </button>
@@ -129,7 +129,7 @@ export default function DownloadAppBanner() {
       <button
         onClick={dismiss}
         aria-label={t('Fermer', 'Fèmen')}
-        style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#94a3b8' }}
+        style={{ position: 'absolute', top: 6, right: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
       >
         <X size={18} />
       </button>

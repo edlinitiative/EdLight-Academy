@@ -9,6 +9,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Flame, Trophy, Shield, Zap, Dumbbell, Crown, Gem } from 'lucide-react';
 import { useStreak } from '../hooks/useStreak';
+import Celebration from './Celebration';
 
 // Maps a streak-milestone id to a monochrome Lucide icon (replaces emoji).
 const MILESTONE_ICONS = {
@@ -179,6 +180,7 @@ export function StreakMilestoneModal({ isCreole = false }) {
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
       >
+        <Celebration active count={20} duration={1800} />
         {/* Animated emoji burst */}
         <div className="streak-milestone__burst">
           <span className="streak-milestone__emoji"><MilestoneIcon id={milestone.id} size={52} /></span>

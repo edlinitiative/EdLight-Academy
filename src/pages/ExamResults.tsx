@@ -9,6 +9,8 @@ import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
 import ReviewSession from '../components/ReviewSession';
+import Celebration from '../components/Celebration';
+import { CountUp } from '../hooks/useCountUp';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
 import { loadExamResult } from '../services/examResults';
@@ -332,6 +334,8 @@ const ExamResults = () => {
 
       {/* Score overview */}
       <div className="exam-results__overview" aria-label={`${t('Score', 'Nòt')}: ${pct}%`}>
+        {/* A passing score (≥60%) earns a confetti payoff. */}
+        <Celebration active={pct >= 60} count={22} />
         {/* Score ring */}
         <div className="exam-results__score-ring">
           <svg viewBox="0 0 120 120" className="exam-results__ring-svg">
@@ -348,7 +352,7 @@ const ExamResults = () => {
             />
           </svg>
           <div className="exam-results__score-text">
-            <span className="exam-results__score-pct">{pct}%</span>
+            <CountUp className="exam-results__score-pct" value={pct} suffix="%" duration={1000} />
             <span className="exam-results__score-label"><GradeIcon size={16} /> {gradeLabel}</span>
           </div>
         </div>

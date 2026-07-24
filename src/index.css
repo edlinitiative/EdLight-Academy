@@ -28,7 +28,7 @@
 	--text-700: #31415F;
 	--text-600: #46587A;
 	--text-500: #5A6B85;
-	--text-400: #8496B0;
+	--text-400: #64778E;         /* darkened for WCAG AA (~4.6:1 on white); dark theme overrides below */
 	--text-300: #A9B7CC;
 	--success-500: #17A75C;
 	--warning-500: #E8930C;
@@ -281,6 +281,79 @@ main {
 	50% {
 		box-shadow: 0 0 40px rgba(27, 111, 224, 0.6);
 	}
+}
+
+/* ── Celebration confetti ────────────────────────────────────────────────────
+   A tiny CSS/DOM confetti layer (see components/Celebration.tsx). Fills its
+   positioned parent, purely decorative, never intercepts pointer events. The
+   whole layer is suppressed under prefers-reduced-motion (guard at the bottom
+   of this file's reduced-motion block, plus the component renders nothing). */
+.celebration {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	border-radius: inherit;
+	pointer-events: none;
+	z-index: 6;
+}
+
+.celebration__piece {
+	position: absolute;
+	top: -12%;
+	width: 9px;
+	height: 9px;
+	border-radius: 2px;
+	opacity: 0;
+	will-change: transform, opacity;
+	animation-name: confetti-fall;
+	animation-timing-function: cubic-bezier(0.35, 0.6, 0.6, 1);
+	animation-fill-mode: forwards;
+}
+
+/* Shape variety: block, dot, ribbon. */
+.celebration__piece--1 { border-radius: 50%; }
+.celebration__piece--2 { width: 5px; height: 12px; border-radius: 3px; }
+
+@keyframes confetti-fall {
+	0% {
+		opacity: 0;
+		transform: translate3d(0, -10px, 0) rotate(0deg);
+	}
+	12% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: translate3d(var(--drift, 0px), 340px, 0) rotate(var(--spin, 360deg));
+	}
+}
+
+/* Gentle scale/opacity pop for a reward number or badge appearing. */
+@keyframes reward-pop-in {
+	0% { opacity: 0; transform: scale(0.6); }
+	70% { transform: scale(1.06); }
+	100% { opacity: 1; transform: scale(1); }
+}
+
+/* Progress-fill grow: a bar sweeps from empty to its inline width on mount.
+   Uses scaleX so it works with any inline `width: N%` and rounded caps. */
+@keyframes fill-grow-x {
+	from { transform: scaleX(0); }
+	to { transform: scaleX(1); }
+}
+
+.exam-results__mastery-fill,
+.readiness-subject__fill,
+.dash-course__bar > span {
+	transform-origin: left center;
+	animation: fill-grow-x 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.celebration { display: none !important; }
+	.exam-results__mastery-fill,
+	.readiness-subject__fill,
+	.dash-course__bar > span { animation: none; }
 }
 
 /* Layout */
@@ -11627,6 +11700,8 @@ textarea:focus-visible,
 }
 
 .exam-results__overview {
+	position: relative; /* anchors the confetti Celebration layer */
+	overflow: hidden;
 	display: grid;
 	grid-template-columns: 200px 1fr;
 	gap: 2rem;
