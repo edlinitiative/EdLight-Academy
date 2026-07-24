@@ -3,8 +3,10 @@ import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Trophy, ChevronRight, BookOpen } from 'lucide-react-native';
+import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { usePracticeQuizzes } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
@@ -186,6 +188,7 @@ function QuizResultScreen({ score, total, onRetry, onBack, t }: {
 }
 
 export default function QuizzesScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<CoursesParamList, 'Quizzes'>>();
   const { data, isLoading, isError, refetch, isFetching } = usePracticeQuizzes();
   const { language, recordQuizAttempt, setFocusMode } = useStore();
   const colors = useColors();
@@ -340,9 +343,22 @@ export default function QuizzesScreen() {
   // ── Level 1: subject picker ────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      <View className="px-5 pt-6 pb-3">
-        <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>{t('Banque de questions', 'Bank kesyon')}</Text>
-        <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>{t('Entraîne-toi par matière et chapitre', 'Antrene w pa matyè ak chapit')}</Text>
+      {/* Pushed onto the Courses stack, so it needs its own back affordance to
+          return to the course list (there's no native header). */}
+      <View className="flex-row items-center px-5 pt-6 pb-3" style={{ gap: 8 }}>
+        <TouchableOpacity
+          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('CourseList'))}
+          hitSlop={8}
+          className="p-1 -ml-1"
+          accessibilityRole="button"
+          accessibilityLabel={t('Retour', 'Tounen')}
+        >
+          <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
+        </TouchableOpacity>
+        <View className="flex-1">
+          <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>{t('Banque de questions', 'Bank kesyon')}</Text>
+          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>{t('Entraîne-toi par matière et chapitre', 'Antrene w pa matyè ak chapit')}</Text>
+        </View>
       </View>
 
       <ScrollView

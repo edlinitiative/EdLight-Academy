@@ -7,7 +7,7 @@
  * button renders in the header when provided).
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
-import { mathToText } from '../utils/mathText';
+import MathText, { HAS_MATH } from '../components/MathText';
 import useStore from '../contexts/store';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
 import { tapLight, tapMedium } from '../utils/haptics';
@@ -124,6 +124,26 @@ function TypingDots({ label }: { label: string }) {
   );
 }
 
+/**
+ * Split an assistant reply into consecutive runs of "math" lines (those
+ * carrying inline/display LaTeX) and "markdown" lines. Math runs are typeset by
+ * KaTeX via <MathText>, so `$…$` / `$$…$$` render as real formatted fractions,
+ * roots, etc.; markdown runs keep bold, lists and links. A reply with no math
+ * collapses to a single markdown run, so plain-text messages render exactly as
+ * before.
+ */
+type Segment = { type: 'math' | 'md'; content: string };
+function segmentSandraText(text: string): Segment[] {
+  const segs: Segment[] = [];
+  for (const line of String(text ?? '').split('\n')) {
+    const type: Segment['type'] = HAS_MATH.test(line) ? 'math' : 'md';
+    const last = segs[segs.length - 1];
+    if (last && last.type === type) last.content += '\n' + line;
+    else segs.push({ type, content: line });
+  }
+  return segs;
+}
+
 function SandraBubble({
   text,
   onLinkPress,
@@ -132,11 +152,30 @@ function SandraBubble({
   onLinkPress?: (url: string) => boolean;
 }) {
   const colors = useColors();
+  const mdStyles = markdownStylesFor(colors);
+  const segments = useMemo(() => segmentSandraText(text), [text]);
+  const hasMath = segments.some((s) => s.type === 'math');
+
   return (
     <View className="self-start max-w-[85%]" style={bubbleStylesFor(colors).sandra}>
-      <Markdown style={markdownStylesFor(colors)} onLinkPress={onLinkPress}>
-        {mathToText(text)}
-      </Markdown>
+      {!hasMath ? (
+        // No LaTeX anywhere → single markdown pass (unchanged plain-text path).
+        <Markdown style={mdStyles} onLinkPress={onLinkPress}>
+          {text}
+        </Markdown>
+      ) : (
+        segments.map((seg, i) =>
+          seg.type === 'math' ? (
+            // KaTeX typesets the `$…$` parts; surrounding prose stays plain in
+            // the themed ink color (MathText injects colors.ink).
+            <MathText key={i} text={seg.content} />
+          ) : seg.content.trim() ? (
+            <Markdown key={i} style={mdStyles} onLinkPress={onLinkPress}>
+              {seg.content}
+            </Markdown>
+          ) : null,
+        )
+      )}
     </View>
   );
 }

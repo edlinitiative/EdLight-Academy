@@ -81,8 +81,9 @@ const KATEX_HTML = (text: string, display: boolean, ink: string) => `
 `;
 
 // Only reach for the WebView when the text plausibly contains typeset math:
-// paired $…$ delimiters or an actual TeX command.
-const HAS_MATH = /\$[^$]+\$|\\\(|\\\[|\\frac|\\sqrt|\\int|\\sum|\\prod|\\lim|\\pm|\\times|\\cdot|\\div/;
+// paired $…$ delimiters or an actual TeX command. Exported so other surfaces
+// (e.g. the Sandra chat) can route just the math-bearing lines through KaTeX.
+export const HAS_MATH = /\$[^$]+\$|\\\(|\\\[|\\frac|\\sqrt|\\int|\\sum|\\prod|\\lim|\\pm|\\times|\\cdot|\\div/;
 
 interface MathTextProps {
   text: string;

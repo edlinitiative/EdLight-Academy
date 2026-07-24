@@ -61,18 +61,25 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
   );
 }
 
-// Every user gets a deterministic pixel robot from RoboHash (set1 = robots).
-// We ignore any provider photo (e.g. Google's initials image) so the look is
-// consistent for everyone. Swap `set1` for set2 (monsters), set3 (robot heads),
-// set4 (cats), or set5 (humans) to restyle the whole app.
+// When a user has a real profile photo (Google/Apple `photoURL`) we show it.
+// Otherwise everyone gets a deterministic pixel robot from RoboHash (set1 =
+// robots), with a locally-drawn identicon as the last-resort offline fallback.
+// Swap `set1` for set2 (monsters), set3 (robot heads), set4 (cats), or set5
+// (humans) to restyle the generated fallback across the whole app.
 const ROBOHASH_SET = 'set1';
 
-export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: AvatarProps) {
+export default function Avatar({ name = '', uri, seed, size = 48 }: AvatarProps) {
   const colors = useColors();
   const [characterFailed, setCharacterFailed] = React.useState(false);
+  const [photoFailed, setPhotoFailed] = React.useState(false);
 
   const charSeed = seed || name || 'edlight';
   React.useEffect(() => setCharacterFailed(false), [charSeed]);
+
+  // Only trust a real remote photo URL; blank/relative values fall through to
+  // the generated character (and a broken photo retries as the robot on error).
+  const photoUri = typeof uri === 'string' && /^https?:\/\//i.test(uri.trim()) ? uri.trim() : null;
+  React.useEffect(() => setPhotoFailed(false), [photoUri]);
 
   const characterUri = `https://robohash.org/${encodeURIComponent(charSeed)}.png?set=${ROBOHASH_SET}&size=128x128`;
 
@@ -81,7 +88,14 @@ export default function Avatar({ name = '', uri: _uri, seed, size = 48 }: Avatar
       className="rounded-full items-center justify-center overflow-hidden"
       style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.azureSoft }}
     >
-      {characterFailed ? (
+      {photoUri && !photoFailed ? (
+        <Image
+          source={{ uri: photoUri }}
+          style={{ width: size, height: size }}
+          onError={() => setPhotoFailed(true)}
+          accessibilityLabel={name || 'Avatar'}
+        />
+      ) : characterFailed ? (
         <PixelIdenticon seed={charSeed} size={size} />
       ) : (
         <Image
