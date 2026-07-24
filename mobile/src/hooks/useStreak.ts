@@ -48,13 +48,14 @@ export function useStreak() {
     currentStreak: 0,
     longestStreak: 0,
     activeDays: [],
+    frozenDays: [],
     milestones: [],
     lastActivityDate: null,
     totalActiveDays: 0,
     streakFreezes: 0,
   };
 
-  const heatmap = buildHeatmapData(safeStreak.activeDays, 12);
+  const heatmap = buildHeatmapData(safeStreak.activeDays, 12, safeStreak.frozenDays || []);
 
   const nextMilestone = getNextMilestone(
     safeStreak.currentStreak,

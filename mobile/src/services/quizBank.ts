@@ -35,9 +35,24 @@ export function toPerseusItemFromRow(row: any): any {
     }
   }
   const correctRaw = String(pick(row, ['correct_answer', 'answer', 'correct'], '')).trim();
-  const correctIdx = labels.findIndex(
-    (l, i) => l === correctRaw || ['A', 'B', 'C', 'D'][i] === correctRaw.toUpperCase(),
-  );
+  // Resolve the correct option: letter key (A–Z), number (1..N, incl. 2 digits),
+  // or an accent/case/punctuation-insensitive text match. The old check only did
+  // exact-string or A–D, so a key stored without accents / past D / as a number
+  // silently matched nothing → every choice graded wrong.
+  const matchNorm = (s: string) => String(s ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/\s+/g, ' ').trim()
+    .replace(/^[\s.,;:!?'"()[\]]+|[\s.,;:!?'"()[\]]+$/g, '');
+  let correctIdx = -1;
+  if (/^[A-Z]$/i.test(correctRaw)) {
+    correctIdx = correctRaw.toUpperCase().charCodeAt(0) - 65;
+  } else if (/^\d+$/.test(correctRaw)) {
+    correctIdx = parseInt(correctRaw, 10) - 1;
+  }
+  if (correctIdx < 0 || correctIdx >= labels.length) {
+    const target = matchNorm(correctRaw);
+    correctIdx = target ? labels.findIndex((l) => matchNorm(l) === target) : -1;
+  }
 
   return {
     question: { content: stem, images: {}, widgets: {} },
