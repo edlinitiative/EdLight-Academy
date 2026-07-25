@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, Target, BookOpen, Bell, ChevronRight,
-  Sprout, Brain,
+  Sprout, Brain, Gift,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import Avatar from '../components/ui/Avatar';
@@ -18,6 +18,7 @@ import { useStreak } from '../hooks/useStreak';
 import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import Leaderboard from '../components/Leaderboard';
+import InviteSheet from '../components/InviteSheet';
 import { useColors, useTheme, radius } from '../theme/theme';
 import {
   areNotificationsEnabled,
@@ -152,6 +153,7 @@ export default function ProfileScreen() {
   })();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
     areNotificationsEnabled().then(setNotificationsEnabled).catch(() => {});
@@ -348,6 +350,27 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
+        {/* Invite friends — two-sided referral CTA */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
+          <PressableScale
+            onPress={() => setInviteOpen(true)}
+            style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Inviter des amis', 'Envite zanmi')}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.coralSoft }}>
+              <Gift color={colors.coral} size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>{t('Inviter des amis', 'Envite zanmi')}</Text>
+              <Text style={{ fontSize: 12, color: colors.muted, marginTop: 1 }} numberOfLines={1}>
+                {t('Gagnez un bonus quand ils s’inscrivent', 'Genyen yon bonus lè yo enskri')}
+              </Text>
+            </View>
+            <ChevronRight color={colors.faint} size={18} />
+          </PressableScale>
+        </View>
+
         {/* Progress stats — 2×2 grid */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
           <SectionTitle>{t('Votre progression', 'Pwogrè ou')}</SectionTitle>
@@ -465,6 +488,8 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+
+      <InviteSheet visible={inviteOpen} onClose={() => setInviteOpen(false)} lang={isCreole ? 'ht' : 'fr'} />
     </SafeAreaView>
   );
 }

@@ -4,6 +4,7 @@ import { RefreshCw, GraduationCap, Eye, EyeOff, User, LogOut } from 'lucide-reac
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset } from '../services/authService';
+import { redeemReferral, getStoredRef, clearStoredRef } from '../services/referralService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { useSwipeToDismiss } from '../hooks/useSwipeToDismiss';
@@ -21,10 +22,50 @@ export function AuthModal({ onClose }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  // Optional referral code — prefilled from a ?ref invite link if present.
+  const [referralCode, setReferralCode] = useState(() => getStoredRef());
+  const [referralNote, setReferralNote] = useState('');
   const modalRef = useRef(null);
 
   const setUser = useStore(state => state.setUser);
   const isAuthenticated = useStore(state => state.isAuthenticated);
+  const language = useStore(state => state.language);
+  // Local bilingual helper for referral copy (react-i18next keys aren't defined
+  // for these new strings; the app-wide fr/ht `language` flag drives them).
+  const tb = (fr, ht) => (language === 'ht' ? ht : fr);
+
+  /** Gentle localized note for a redeem rejection. */
+  const reasonNote = (reason) => {
+    switch (reason) {
+      case 'invalid_code': return tb('Code invalide — ton compte est bien créé.', 'Kòd la pa bon — men kont ou kreye byen.');
+      case 'already_referred': return tb('Tu as déjà utilisé un code.', 'Ou deja sèvi ak yon kòd.');
+      case 'self': return tb('Tu ne peux pas utiliser ton propre code.', 'Ou pa ka sèvi ak pwòp kòd ou.');
+      case 'too_old': return tb('Ce code ne peut plus être utilisé.', 'Kòd sa a pa ka itilize ankò.');
+      default: return tb('Code non appliqué — ton compte est prêt.', 'Kòd la pa aplike — men kont ou pare.');
+    }
+  };
+
+  /**
+   * Best-effort referral redemption for a NEW account. Updates the success /
+   * note UI and clears the stored ref. Never throws — signup already succeeded.
+   * Returns true when a code was attempted (so the caller can hold the modal
+   * open a touch longer to show the result).
+   */
+  const redeemForNewUser = async () => {
+    const code = (referralCode || getStoredRef()).trim();
+    if (!code) return false;
+    const result = await redeemReferral(code);
+    clearStoredRef();
+    if (result.kind === 'ok') {
+      setSuccess(tb(
+        `🎉 Bonus débloqué : +${result.reward.streakFreeze} gel de série, +${result.reward.xp} XP`,
+        `🎉 Bonus debloke : +${result.reward.streakFreeze} jèl seri, +${result.reward.xp} XP`,
+      ));
+    } else if (result.kind === 'rejected') {
+      setReferralNote(reasonNote(result.reason));
+    }
+    return true;
+  };
 
   // Auth is the source of truth for "am I signed in". Close the modal as soon
   // as the store reports an authenticated session — this covers the case where
@@ -117,7 +158,9 @@ export function AuthModal({ onClose }) {
         setTimeout(() => onClose(), 1000);
       } else {
         setSuccess('Compte créé ! Vérifiez votre boîte mail pour activer votre compte.');
-        setTimeout(() => onClose(), 2500);
+        // Best-effort referral redemption — never blocks or fails signup.
+        const attempted = await redeemForNewUser();
+        setTimeout(() => onClose(), attempted ? 3200 : 2500);
       }
     } catch (err) {
       setError(mapAuthError(err.message));
@@ -164,9 +207,10 @@ export function AuthModal({ onClose }) {
       setUser(userData);
       setSuccess(t('auth.googleSuccess'));
 
-      setTimeout(() => {
-        onClose();
-      }, 1000);
+      // Redeem a referral only for a brand-new Google account (not returning
+      // logins). Best-effort — never blocks the sign-in.
+      const attempted = userData?.isNewUser ? await redeemForNewUser() : false;
+      setTimeout(() => onClose(), attempted ? 3200 : 1000);
     } catch (err) {
       // Ignore if user simply closed the popup
       if (err.message && err.message.includes('popup-closed-by-user')) {
@@ -344,6 +388,26 @@ export function AuthModal({ onClose }) {
                 )}
               </div>
 
+              {activeTab === 'signup' && (
+                <div className="form-field">
+                  <label className="form-label" htmlFor="auth-referral">
+                    {tb('Code d’invitation (facultatif)', 'Kòd envitasyon (opsyonèl)')}
+                  </label>
+                  <input
+                    id="auth-referral"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    className="form-input"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    placeholder={tb('Un ami vous a invité ?', 'Yon zanmi envite w ?')}
+                    maxLength={12}
+                    style={{ letterSpacing: '0.15em' }}
+                  />
+                </div>
+              )}
+
               {activeTab === 'signin' && (
                 <div style={{ textAlign: 'right', marginBottom: '0.4rem' }}>
                   <button type="button" className="form-footnote__link" onClick={() => switchMode('reset')}>
@@ -354,6 +418,7 @@ export function AuthModal({ onClose }) {
 
               {error && <div className="form-message form-message--error" role="alert">{error}</div>}
               {success && <div className="form-message form-message--success" role="status">{success}</div>}
+              {referralNote && <div className="form-message" role="status" style={{ color: 'var(--text-muted)' }}>{referralNote}</div>}
 
               <button
                 type="submit"

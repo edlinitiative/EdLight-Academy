@@ -9,6 +9,7 @@
     "readiness  aside"
     "progress   progress"
     "leaderboard monespace"
+    "invite     invite"
     "certs      certs";
   gap: 1rem;
   max-width: 1060px;
@@ -22,6 +23,7 @@
 .profile-area--progress    { grid-area: progress; }
 .profile-area--leaderboard { grid-area: leaderboard; }
 .profile-area--monespace   { grid-area: monespace; }
+.profile-area--invite      { grid-area: invite; }
 .profile-area--certs       { grid-area: certs; }
 
 /* ── Hero card: identity + level ── */
@@ -392,6 +394,7 @@
       "progress"
       "leaderboard"
       "monespace"
+      "invite"
       "certs";
   }
 
