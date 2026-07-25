@@ -198,6 +198,27 @@ export default function TabNavigator() {
       <Tab.Screen
         name="Exams"
         component={ExamsNavigator}
+        listeners={({ navigation }) => ({
+          // Tapping "Examens" should land on the exam home (the level/subject
+          // picker) — not resume whatever the nested stack retained (a specific
+          // exam list, or the in-progress ExamTake the user just left). Because
+          // ExamTake hides the tab bar, the user always leaves the exam before
+          // tapping the tab, so the retained top is a stale exam context. Reset
+          // the stack to ExamLanding whenever it isn't already there.
+          // (In-progress answers aren't lost — the "Reprendre" banner resumes.)
+          tabPress: (e) => {
+            const examsRoute = navigation
+              .getState()
+              .routes.find((r: any) => r.name === 'Exams') as any;
+            const nested = examsRoute?.state;
+            if (!nested) return; // stack not initialized yet → default (ExamLanding)
+            const topName = nested.routes[nested.index ?? nested.routes.length - 1]?.name;
+            if (topName && topName !== 'ExamLanding') {
+              e.preventDefault();
+              (navigation as any).navigate('Exams', { screen: 'ExamLanding' });
+            }
+          },
+        })}
         options={{
           tabBarLabel: ({ color }) => <TabLabel label={t('Examens', 'Egzamen')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
