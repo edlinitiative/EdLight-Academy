@@ -303,6 +303,11 @@ export default function ProfileScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: '#0A66C2' }} edges={[]}>
       <ScrollView ref={scrollRef} style={{ backgroundColor: colors.bg }} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
+        {/* Overscroll filler — when the list is pulled down past the top, iOS
+            reveals the ScrollView's own background. Paint that region in the hero
+            colour so the pull-down shows blue, not a grey gap above the hero. */}
+        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: '#0A66C2' }} />
+
         {/* Compact gradient hero — identity + level/XP as one continuous band,
             matching the Dashboard. Runs under the status bar and rounds off at
             the bottom. Streak sits as a frosted momentum pill. */}
@@ -321,7 +326,6 @@ export default function ProfileScreen() {
           <View className="flex-row items-center" style={{ gap: 14 }}>
             <Avatar
               name={user?.name || user?.displayName || ''}
-              uri={user?.picture || user?.photoURL || null}
               seed={user?.uid || ''}
               size={60}
               radius={18}

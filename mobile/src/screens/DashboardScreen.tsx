@@ -252,6 +252,10 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* Overscroll filler — paint the pull-down-past-top region in the hero
+            colour so it never reveals a grey gap above the hero. */}
+        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: '#0A66C2' }} />
+
         {/* Compact gradient hero — identity + momentum as one continuous band.
             Runs under the status bar (paddingTop = safe inset) and rounds off at
             the bottom so the resume banner can overlap it just below. */}
@@ -278,7 +282,6 @@ export default function DashboardScreen() {
             >
               <Avatar
                 name={user?.name || user?.displayName || ''}
-                uri={user?.picture || user?.photoURL || null}
                 seed={user?.uid || ''}
                 size={44}
                 radius={14}
