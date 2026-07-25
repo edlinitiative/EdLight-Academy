@@ -21,9 +21,12 @@ service cloud.firestore {
                     && (!('role' in request.resource.data) || request.resource.data.role == 'student');
 
       // Allow a user to update their own document, but not change `role`
-      // (only admins can change roles — see the admin rule below).
+      // (only admins can change roles — see the admin rule below), nor the
+      // server-set referral fields `referralCode` / `referredBy` (minted &
+      // written only by the Admin SDK in /api/referrals/*; a client that could
+      // set them could self-assign a code or fake being referred for the reward).
       allow update: if request.auth != null && request.auth.uid == userId
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'referralCode', 'referredBy']);
 
       // Allow admins to update any user (including role changes).
       allow update: if isAdmin();
@@ -296,6 +299,28 @@ service cloud.firestore {
     match /sandraKb/{chunkId} {
       allow read, write: if false;
     }
+
+    // Referral code → uid lookup docs ({ uid, createdAt }). Server-side ONLY:
+    // clients never read (the code is resolved by /api/referrals/redeem via the
+    // Admin SDK) or write these (codes are minted by /api/referrals/code). The
+    // doc id is the code itself, which enforces uniqueness.
+    match /referralCodes/{code} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // Confirmed referrals ({ referrerUid, referredUid, status, createdAt }).
+    // A participant may READ their own referral records (either side); all
+    // writes go through the Admin SDK in /api/referrals/redeem (bypasses rules).
+    match /referrals/{docId} {
+      allow read: if request.auth != null
+                  && (resource.data.referrerUid == request.auth.uid
+                      || resource.data.referredUid == request.auth.uid);
+      allow write: if false;
+    }
+    // (Referral XP rewards increment users/{uid}/gamification/profile.xp, whose
+    //  rule already exists under the users/{userId} block — owner read/write.
+    //  Admin SDK writes bypass rules, so no new rule is needed for it.)
 
     // Default: deny all other access
     match /{document=**} {

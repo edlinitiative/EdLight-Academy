@@ -33,6 +33,11 @@ const LIMITS: Record<string, Limit> = {
   // enough for heavy play yet bounds abuse volume (paired with the per-request
   // xpDelta ceiling in the endpoint itself).
   'leaderboard-award': { max: 120, windowSec: 3600 },
+  // Referral redemption (api/referrals/redeem). Not a paid endpoint, so it fails
+  // OPEN on a Firestore blip (never in COST_ENDPOINTS). The cap only bounds abuse
+  // volume — the real anti-double-reward protection is the transactional
+  // one-referral-per-user guard inside the endpoint.
+  'referrals-redeem': { max: 20, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't
