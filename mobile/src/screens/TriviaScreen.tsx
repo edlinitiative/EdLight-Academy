@@ -16,6 +16,7 @@ import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
+import PressableScale from '../components/ui/PressableScale';
 import { useColors } from '../theme/theme';
 import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
@@ -205,9 +206,11 @@ function CategoryPicker({
         </View>
       }
       renderItem={({ item: cat }: { item: any }) => (
-        <TouchableOpacity
+        <PressableScale
           onPress={() => onSelect(cat.id)}
-          activeOpacity={0.8}
+          pressedScale={0.94}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? (cat.nameHt ?? cat.name) : cat.name}
           style={{ width: TILE_SIZE, alignItems: 'center', marginBottom: 6 }}
         >
           {/* Shadow on the outer view; clipped illustration on the inner. */}
@@ -254,7 +257,7 @@ function CategoryPicker({
           >
             {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
     />
   );
