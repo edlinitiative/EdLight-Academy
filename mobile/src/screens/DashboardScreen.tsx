@@ -431,17 +431,20 @@ export default function DashboardScreen() {
 
         {/* Readiness — the card renders its own title, so no duplicate heading */}
         <View className="px-5 mb-4">
-          <ReadinessCard />
+          <ReadinessCard onFocusPress={() => navigation.navigate('Exams')} />
         </View>
 
-        {/* Leaderboard */}
+        {/* Leaderboard — compact teaser; "Voir tout" (and the card) open the
+            dedicated full-page classement on the root stack. */}
         <View className="px-5 mb-4">
           <SectionHeader
             title={t('Classement', 'Klasman')}
             actionLabel={t('Voir tout', 'Wè tout')}
-            onAction={() => navigation.navigate('Profile')}
+            onAction={() => (navigation as any).navigate('Leaderboard')}
           />
-          <Leaderboard compact maxRows={5} />
+          <TouchableOpacity activeOpacity={0.9} onPress={() => { tapLight(); (navigation as any).navigate('Leaderboard'); }}>
+            <Leaderboard compact maxRows={5} />
+          </TouchableOpacity>
         </View>
 
         {/* Study plan — secondary. De-emphasized now that the Bac is over and

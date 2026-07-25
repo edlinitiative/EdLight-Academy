@@ -33,7 +33,7 @@ function subjectColor(name: string): string {
   return key in SUBJECT_COLORS ? getSubjectColor(key) : '#64748b';
 }
 
-export default function ReadinessCard() {
+export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subject: string) => void } = {}) {
   const { overall, subjects, focus, hasData, isLoading } = useReadiness() as any;
   const { colors, cardSurface } = useTheme();
   const language = useStore((s) => s.language);
@@ -138,24 +138,43 @@ export default function ReadinessCard() {
         </View>
       </View>
 
-      {/* Focus recommendation */}
-      {focusSubject && (
-        <TouchableOpacity
-          className="mt-3 flex-row items-center justify-between rounded-xl px-3 py-2.5"
-          style={{ backgroundColor: focusColor + '15' }}
-          activeOpacity={0.8}
-        >
-          <View>
-            <Text className="text-xs font-semibold" style={{ color: focusColor }}>
-              {t('Focus recommandé', 'Konsantrasyon rekòmande')}
-            </Text>
-            <Text className="text-sm font-bold text-gray-800 dark:text-slate-200 mt-0.5" numberOfLines={1}>
-              {focusSubject}
-            </Text>
+      {/* Focus recommendation — tappable only when the parent wires a handler
+          (e.g. Profile/Dashboard route it to Exams). Without one it renders as a
+          plain callout, never a chevron that does nothing when tapped. */}
+      {focusSubject && (() => {
+        const inner = (
+          <>
+            <View style={{ flex: 1 }}>
+              <Text className="text-xs font-semibold" style={{ color: focusColor }}>
+                {t('Focus recommandé', 'Konsantrasyon rekòmande')}
+              </Text>
+              <Text className="text-sm font-bold text-gray-800 dark:text-slate-200 mt-0.5" numberOfLines={1}>
+                {focusSubject}
+              </Text>
+            </View>
+            {onFocusPress ? <ChevronRight color={focusColor} size={18} /> : null}
+          </>
+        );
+        return onFocusPress ? (
+          <TouchableOpacity
+            onPress={() => onFocusPress(focusSubject)}
+            className="mt-3 flex-row items-center justify-between rounded-xl px-3 py-2.5"
+            style={{ backgroundColor: focusColor + '15' }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t(`S'entraîner en ${focusSubject}`, `Antrene nan ${focusSubject}`)}
+          >
+            {inner}
+          </TouchableOpacity>
+        ) : (
+          <View
+            className="mt-3 flex-row items-center justify-between rounded-xl px-3 py-2.5"
+            style={{ backgroundColor: focusColor + '15' }}
+          >
+            {inner}
           </View>
-          <ChevronRight color={focusColor} size={18} />
-        </TouchableOpacity>
-      )}
+        );
+      })()}
     </View>
   );
 }

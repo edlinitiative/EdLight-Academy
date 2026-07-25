@@ -10,12 +10,14 @@ import NavTour from '../components/NavTour';
 import NetworkStatus from '../components/NetworkStatus';
 import SandraScreen from '../screens/SandraScreen';
 import StudyPlanScreen from '../screens/StudyPlanScreen';
+import LeaderboardScreen from '../screens/LeaderboardScreen';
 
 export type RootParamList = {
   Loading: undefined;
   Main: undefined;
   Sandra: undefined;
   StudyPlan: undefined;
+  Leaderboard: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
@@ -62,11 +64,10 @@ function navigateFromSandra(navigation: any, path: string) {
     goTab('Courses');
   } else if (p.startsWith('/jeux') || p.startsWith('/game') || p.startsWith('/trivia')) {
     goTab('Trivia');
-  } else if (
-    p.startsWith('/profile') ||
-    p.startsWith('/classement') ||
-    p.startsWith('/leaderboard')
-  ) {
+  } else if (p.startsWith('/classement') || p.startsWith('/leaderboard')) {
+    navigation.goBack();
+    navigation.navigate('Leaderboard');
+  } else if (p.startsWith('/profile')) {
     goTab('Profile');
   }
 }
@@ -81,6 +82,9 @@ function SandraModal({ navigation }: any) {
 }
 function StudyPlanModal({ navigation }: any) {
   return <StudyPlanScreen onClose={() => navigation.goBack()} />;
+}
+function LeaderboardModal({ navigation }: any) {
+  return <LeaderboardScreen onClose={() => navigation.goBack()} />;
 }
 
 function LoadingScreen() {
@@ -137,6 +141,11 @@ export default function AppNavigator() {
                 name="StudyPlan"
                 component={StudyPlanModal}
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+              />
+              <Stack.Screen
+                name="Leaderboard"
+                component={LeaderboardModal}
+                options={{ animation: 'slide_from_right' }}
               />
             </>
           )}

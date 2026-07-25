@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useScrollToTop } from '@react-navigation/native';
+import { useScrollToTop, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { setStatusBarStyle } from 'expo-status-bar';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, Target, BookOpen, Bell, ChevronRight,
@@ -15,9 +16,9 @@ import useStore from '../contexts/store';
 import { logoutUser, deleteAccount } from '../services/authService';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
-import Leaderboard from '../components/Leaderboard';
 import InviteSheet from '../components/InviteSheet';
 import { useColors, useTheme, radius } from '../theme/theme';
 import {
@@ -138,9 +139,21 @@ export default function ProfileScreen() {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
+  const { myRank } = useLeaderboard(25);
+
+  // The gradient hero runs under the status bar, so its glyphs must be light
+  // while this screen is focused; restore the theme default on blur.
+  useFocusEffect(
+    React.useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle(theme === 'dark' ? 'light' : 'dark');
+    }, [theme]),
+  );
 
   const allAttempts = Object.values(quizAttempts).flat() as { score: number; total: number; date: number }[];
   const totalQuizzes = allAttempts.length;
@@ -287,68 +300,92 @@ export default function ProfileScreen() {
   const displayName = user.name || user.displayName || firstName || 'Étudiant';
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: '#0A66C2' }} edges={[]}>
+      <ScrollView ref={scrollRef} style={{ backgroundColor: colors.bg }} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
-        {/* Header — identity. Same ground as the content below (no white block /
-            divider) so it reads as one continuous surface, not a seam. */}
-        <View
+        {/* Compact gradient hero — identity + level/XP as one continuous band,
+            matching the Dashboard. Runs under the status bar and rounds off at
+            the bottom. Streak sits as a frosted momentum pill. */}
+        <LinearGradient
+          colors={['#0A66C2', '#0857A6', '#0b3f7d']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={{
-            backgroundColor: colors.bg,
+            paddingTop: insets.top + 14,
             paddingHorizontal: GUTTER,
-            paddingTop: 20,
-            paddingBottom: 8,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
+            paddingBottom: 20,
+            borderBottomLeftRadius: 26,
+            borderBottomRightRadius: 26,
           }}
         >
-          <Avatar name={user?.name || user?.displayName || ''} seed={user?.uid || ''} size={64} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.ink, fontSize: 22, fontWeight: '800' }} numberOfLines={1}>
-              {displayName}
-            </Text>
-            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
-              {user.email}
-            </Text>
-            {track ? (
-              <View style={{ alignSelf: 'flex-start', marginTop: 8, backgroundColor: colors.azureSoft, borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 3 }}>
-                <Text style={{ color: colors.azure, fontSize: 12, fontWeight: '700' }}>{t('Série', 'Seri')} {track}</Text>
+          <View className="flex-row items-center" style={{ gap: 14 }}>
+            <Avatar
+              name={user?.name || user?.displayName || ''}
+              uri={user?.picture || user?.photoURL || null}
+              seed={user?.uid || ''}
+              size={60}
+              radius={18}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#ffffff', fontSize: 21, fontWeight: '800' }} numberOfLines={1}>
+                {displayName}
+              </Text>
+              <Text style={{ color: '#bfdbfe', fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                {user.email}
+              </Text>
+              {track ? (
+                <View
+                  style={{
+                    alignSelf: 'flex-start', marginTop: 8,
+                    backgroundColor: 'rgba(255,255,255,0.16)',
+                    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+                    borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 3,
+                  }}
+                >
+                  <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>{t('Série', 'Seri')} {track}</Text>
+                </View>
+              ) : null}
+            </View>
+            {streak?.currentStreak ? (
+              <View
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                  backgroundColor: 'rgba(255,255,255,0.16)',
+                  borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+                  borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 6,
+                }}
+              >
+                <Flame color="#fecaca" size={14} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#ffffff' }}>{streak.currentStreak}</Text>
               </View>
             ) : null}
           </View>
-        </View>
 
-        {/* Level / XP hero — the single home for level + XP (no more duplicate chips + card) */}
-        {profile && level ? (
-          <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
-            <PressableScale
-              haptic={false}
-              pressedScale={1}
-              style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+          {/* Level / XP — frosted panel inside the hero */}
+          {profile && level ? (
+            <View
+              style={{
+                marginTop: 16,
+                backgroundColor: 'rgba(255,255,255,0.12)',
+                borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+                borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12,
+              }}
             >
-              <LinearGradient
-                colors={['#2E86F0', '#1B6FE0', '#0857A6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ paddingHorizontal: 16, paddingVertical: 13 }}
-              >
-                <View className="flex-row items-center justify-between" style={{ marginBottom: 9 }}>
-                  <View className="flex-row items-center" style={{ gap: 8 }}>
-                    <Zap color="#fff" size={16} />
-                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
-                      {t('Niveau', 'Nivo')} {level.level}
-                    </Text>
-                  </View>
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
+              <View className="flex-row items-center justify-between" style={{ marginBottom: 9 }}>
+                <View className="flex-row items-center" style={{ gap: 8 }}>
+                  <Zap color="#fde68a" size={16} />
+                  <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '800' }}>
+                    {t('Niveau', 'Nivo')} {level.level}
+                  </Text>
                 </View>
-                <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' }}>
-                  <View style={{ width: `${Math.min(100, Math.max(0, progressPct))}%`, height: 6, borderRadius: 3, backgroundColor: '#fff' }} />
-                </View>
-              </LinearGradient>
-            </PressableScale>
-          </View>
-        ) : null}
+                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
+              </View>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.22)', overflow: 'hidden' }}>
+                <View style={{ width: `${Math.min(100, Math.max(0, progressPct))}%`, height: 6, borderRadius: 3, backgroundColor: '#fff' }} />
+              </View>
+            </View>
+          ) : null}
+        </LinearGradient>
 
         {/* Invite friends — two-sided referral CTA */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
@@ -388,7 +425,7 @@ export default function ProfileScreen() {
 
         {/* Readiness */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-          <ReadinessCard />
+          <ReadinessCard onFocusPress={() => navigation.navigate('Exams')} />
         </View>
 
         {/* Achievements */}
@@ -422,9 +459,31 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Leaderboard */}
+        {/* Classement — entry point to the dedicated full-page leaderboard
+            (no longer embedded here). Shows my current national rank inline. */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-          <Leaderboard compact={false} maxRows={10} />
+          <PressableScale
+            onPress={() => navigation.navigate('Leaderboard')}
+            style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Voir le classement', 'Wè klasman an')}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
+              <Trophy color={colors.azure} size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>{t('Classement', 'Klasman')}</Text>
+              <Text style={{ fontSize: 12, color: colors.muted, marginTop: 1 }} numberOfLines={1}>
+                {t('Voyez où vous vous situez', 'Wè kote ou ye')}
+              </Text>
+            </View>
+            {myRank ? (
+              <View style={{ backgroundColor: colors.azureSoft, borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: colors.azure, fontSize: 13, fontWeight: '800' }}>#{myRank}</Text>
+              </View>
+            ) : null}
+            <ChevronRight color={colors.faint} size={18} />
+          </PressableScale>
         </View>
 
         {/* Settings — one grouped card */}
