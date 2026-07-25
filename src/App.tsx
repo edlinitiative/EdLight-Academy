@@ -8,6 +8,7 @@ import AdminLayout from './components/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
 import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import { captureRefFromUrl } from './services/referralService';
 
 // Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
 const Courses = lazyWithRetry(() => import('./pages/Courses'));
@@ -58,6 +59,13 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  // Capture a ?ref=CODE invite param once on load, before any navigation, so it
+  // survives the route change to signup (stored in localStorage). Stripped from
+  // the URL by the helper.
+  React.useEffect(() => {
+    captureRefFromUrl();
+  }, []);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>

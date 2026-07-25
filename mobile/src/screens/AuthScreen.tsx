@@ -8,7 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
-import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle } from 'lucide-react-native';
+import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle, Gift, ChevronDown, ChevronUp } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
 import {
@@ -18,6 +18,10 @@ import {
   loginWithAppleCredential,
   sendPasswordReset,
 } from '../services/authService';
+import { redeemReferral, type RedeemResult } from '../services/referralService';
+import Confetti from '../components/ui/Confetti';
+import PopIn from '../components/ui/PopIn';
+import * as haptics from '../utils/haptics';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -41,7 +45,14 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [focused, setFocused] = useState<'name' | 'email' | 'password' | null>(null);
+  const [focused, setFocused] = useState<'name' | 'email' | 'password' | 'referral' | null>(null);
+
+  // Optional referral code entered at signup (collapsible / secondary).
+  const [referralCode, setReferralCode] = useState('');
+  const [showReferral, setShowReferral] = useState(false);
+  // When a code was redeemed at signup we hold the result + the pending user and
+  // show a brief overlay BEFORE flipping auth state (which unmounts this screen).
+  const [celebration, setCelebration] = useState<{ result: RedeemResult; user: any } | null>(null);
 
   // Google OAuth client IDs from the edlight-academy Firebase project.
   // webClientId is the audience Firebase expects for the returned idToken.
@@ -125,15 +136,66 @@ export default function AuthScreen() {
     setError(null);
     setLoading(true);
     try {
-      const user =
-        activeTab === 'signin'
-          ? await loginWithEmailPassword(email.trim(), password)
-          : await registerWithEmailPassword(email.trim(), password, name.trim());
-      setUser(user);
+      if (activeTab === 'signin') {
+        const user = await loginWithEmailPassword(email.trim(), password);
+        setUser(user);
+      } else {
+        const user = await registerWithEmailPassword(email.trim(), password, name.trim());
+        await finishSignup(user);
+      }
     } catch (e: any) {
       setError(e?.message || t('Une erreur est survenue.', 'Yon erè rive.'));
     } finally {
       setLoading(false);
+    }
+  }
+
+  /**
+   * Complete a NEW-account signup. If the learner entered a friend's code, we
+   * redeem it best-effort: on a real result (reward or a rejection reason) we
+   * show a brief overlay, then flip auth state. A network/auth glitch never
+   * blocks signup — we just proceed.
+   */
+  async function finishSignup(user: any) {
+    const code = referralCode.trim();
+    if (!code) {
+      setUser(user);
+      return;
+    }
+    const result = await redeemReferral(code);
+    if (result.kind === 'ok') {
+      haptics.success();
+      setCelebration({ result, user });
+    } else if (result.kind === 'rejected') {
+      haptics.warn();
+      setCelebration({ result, user });
+    } else {
+      // 'auth' | 'error' — best-effort, never block signup.
+      setUser(user);
+    }
+  }
+
+  // Auto-continue from the referral overlay into the app.
+  React.useEffect(() => {
+    if (!celebration) return;
+    const ms = celebration.result.kind === 'ok' ? 2600 : 2200;
+    const id = setTimeout(() => setUser(celebration.user), ms);
+    return () => clearTimeout(id);
+  }, [celebration, setUser]);
+
+  /** Gentle localized note for a redeem rejection. */
+  function reasonNote(reason: string): string {
+    switch (reason) {
+      case 'invalid_code':
+        return t('Code invalide — mais ton compte est bien créé.', 'Kòd la pa bon — men kont ou kreye byen.');
+      case 'already_referred':
+        return t('Tu as déjà utilisé un code.', 'Ou deja sèvi ak yon kòd.');
+      case 'self':
+        return t('Tu ne peux pas utiliser ton propre code.', 'Ou pa ka sèvi ak pwòp kòd ou.');
+      case 'too_old':
+        return t('Ce code ne peut plus être utilisé sur ce compte.', 'Kòd sa a pa ka itilize sou kont sa a ankò.');
+      default:
+        return t('Code non appliqué — mais ton compte est prêt.', 'Kòd la pa aplike — men kont ou pare.');
     }
   }
 
@@ -163,7 +225,7 @@ export default function AuthScreen() {
   const isSignIn = activeTab === 'signin';
 
   // Reusable field wrapper: lifts to the surface + azure ring while focused.
-  const fieldStyle = (key: 'name' | 'email' | 'password') => ({
+  const fieldStyle = (key: 'name' | 'email' | 'password' | 'referral') => ({
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     borderRadius: 14,
@@ -332,6 +394,41 @@ export default function AuthScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Optional referral code — secondary, collapsible, signup only. */}
+            {!isSignIn && (
+              <View>
+                <TouchableOpacity
+                  onPress={() => setShowReferral((v) => !v)}
+                  activeOpacity={0.7}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}
+                  accessibilityRole="button"
+                >
+                  <Gift color={colors.azure} size={16} />
+                  <Text style={{ flex: 1, color: MUTED, fontSize: 13, fontWeight: '600' }}>
+                    {t('Un ami vous a invité ? Entrez son code', 'Yon zanmi envite w ? Antre kòd li')}
+                  </Text>
+                  {showReferral ? <ChevronUp color={colors.faint} size={16} /> : <ChevronDown color={colors.faint} size={16} />}
+                </TouchableOpacity>
+                {showReferral && (
+                  <View style={[fieldStyle('referral'), { marginTop: 8 }]}>
+                    <Gift color={focused === 'referral' ? AZURE : colors.faint} size={18} />
+                    <TextInput
+                      style={{ flex: 1, paddingVertical: 14, marginLeft: 10, color: INK, fontSize: 16, letterSpacing: 2 }}
+                      placeholder={t('Code d’invitation', 'Kòd envitasyon')}
+                      value={referralCode}
+                      onChangeText={(v) => setReferralCode(v.toUpperCase())}
+                      onFocus={() => setFocused('referral')}
+                      onBlur={() => setFocused(null)}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={12}
+                      placeholderTextColor={colors.faint}
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+
             {isSignIn && (
               <TouchableOpacity onPress={handleReset} style={{ alignSelf: 'flex-end' }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 {resetSent ? (
@@ -442,6 +539,42 @@ export default function AuthScreen() {
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Referral result overlay — shown briefly before entering the app. */}
+      {celebration && (
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setUser(celebration.user)}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(6,12,24,0.78)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}
+        >
+          {celebration.result.kind === 'ok' && <Confetti fireKey={String(celebration.result.reward.xp)} />}
+          <PopIn>
+            <View style={{ alignItems: 'center', gap: 10 }}>
+              <Text style={{ fontSize: 44 }}>{celebration.result.kind === 'ok' ? '🎉' : '👍'}</Text>
+              {celebration.result.kind === 'ok' ? (
+                <>
+                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' }}>
+                    {t('Bonus débloqué !', 'Bonus debloke !')}
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600', textAlign: 'center', opacity: 0.95 }}>
+                    {t(
+                      `+${celebration.result.reward.streakFreeze} gel de série, +${celebration.result.reward.xp} XP`,
+                      `+${celebration.result.reward.streakFreeze} jèl seri, +${celebration.result.reward.xp} XP`,
+                    )}
+                  </Text>
+                </>
+              ) : celebration.result.kind === 'rejected' ? (
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center', lineHeight: 22 }}>
+                  {reasonNote(celebration.result.reason)}
+                </Text>
+              ) : null}
+              <Text style={{ color: '#fff', fontSize: 13, opacity: 0.7, marginTop: 6 }}>
+                {t('Appuyez pour continuer', 'Peze pou kontinye')}
+              </Text>
+            </View>
+          </PopIn>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }

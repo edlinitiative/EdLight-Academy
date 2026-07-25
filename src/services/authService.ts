@@ -114,12 +114,15 @@ export async function loginWithGoogle() {
 
     // Sync track/onboarding from Firestore
     await syncUserProfile(user.uid);
-    
+
     return {
       uid: user.uid,
       name: user.displayName || getDefaultStudentName(),
       email: user.email || '',
       picture: user.photoURL || '',
+      // Surfaced so the signup UI can redeem a referral only for first-time
+      // Google accounts (not returning logins). Not persisted into the store.
+      isNewUser,
     };
   } catch (error) {
     throw new Error(error.message);

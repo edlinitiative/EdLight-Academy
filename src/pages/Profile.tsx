@@ -12,11 +12,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Flame, Trophy, Zap, Target, LayoutDashboard, CalendarCheck, Bell, Brain,
   Info, LogOut, Moon, Sun, Languages, Award, GraduationCap, Sparkles, ChevronRight, Check,
+  Gift, Share2, Copy, MessageCircle, Loader2,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { logoutUser } from '../services/authService';
+import { getReferralCode, inviteMessage, type ReferralCode } from '../services/referralService';
 import { STREAK_MILESTONES } from '../services/streakService';
 import ReadinessCard from '../components/ReadinessCard';
 import ProgressDashboard from '../components/ProgressDashboard';
@@ -29,6 +31,118 @@ function initialsOf(user) {
   const parts = String(name).trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return 'EL';
   return parts.map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+}
+
+/**
+ * InviteCard — "Inviter des amis". Reveals the caller's referral code on demand
+ * (GET /api/referrals/code), then offers WhatsApp, native share, and copy. Fully
+ * theme-aware via CSS custom properties.
+ */
+function InviteCard({ lang }: { lang: 'fr' | 'ht' }) {
+  const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
+  const [data, setData] = React.useState<ReferralCode | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [failed, setFailed] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setFailed(false);
+    const res = await getReferralCode();
+    setData(res);
+    setFailed(!res);
+    setLoading(false);
+  };
+
+  const message = data ? inviteMessage(data.code, data.link, lang) : '';
+
+  const shareWhatsApp = () => {
+    if (!data) return;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const shareNative = async () => {
+    if (!data) return;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ text: message }); } catch { /* cancelled */ }
+    } else {
+      shareWhatsApp();
+    }
+  };
+
+  const copy = async () => {
+    if (!data) return;
+    try {
+      await navigator.clipboard.writeText(`${data.code} — ${data.link}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      shareNative();
+    }
+  };
+
+  return (
+    <div className="profile-card">
+      <h2 className="profile-card__title"><Gift size={18} /> {t('Inviter des amis', 'Envite zanmi')}</h2>
+      <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '-0.25rem' }}>
+        {t(
+          'Vous et votre ami gagnez un bonus quand il s’inscrit avec votre code : +1 gel de série et des XP chacun.',
+          'Ou menm ak zanmi ou chak ap genyen yon bonus lè li enskri ak kòd ou : +1 jèl seri ak XP pou chak.',
+        )}
+      </p>
+
+      {!data ? (
+        <button
+          type="button"
+          className="button button--primary"
+          style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+          onClick={load}
+          disabled={loading}
+        >
+          {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Gift size={16} />}
+          {failed ? t('Réessayer', 'Eseye ankò') : t('Obtenir mon code', 'Jwenn kòd mwen')}
+        </button>
+      ) : (
+        <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.75rem' }}>
+          <button
+            type="button"
+            onClick={copy}
+            title={t('Copier', 'Kopye')}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
+              background: 'var(--surface-muted)', border: '1px solid var(--primary-100)',
+              borderRadius: 'var(--r-card)', padding: '0.9rem 1rem', cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '0.18em', color: 'var(--primary-500)' }}>
+              {data.code}
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+              {copied ? <><Check size={14} /> {t('Copié', 'Kopye')}</> : <><Copy size={14} /> {t('Copier', 'Kopye')}</>}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="button"
+            onClick={shareWhatsApp}
+            style={{ background: '#25D366', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          >
+            <MessageCircle size={18} /> {t('Partager sur WhatsApp', 'Pataje sou WhatsApp')}
+          </button>
+
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={shareNative}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          >
+            <Share2 size={18} /> {t('Partager', 'Pataje')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function Profile() {
@@ -180,6 +294,11 @@ export default function Profile() {
         {/* ── Leaderboard ── */}
         <div className="profile-area profile-area--leaderboard">
           <Leaderboard variant="full" />
+        </div>
+
+        {/* ── Invite friends (two-sided referral) ── */}
+        <div className="profile-area profile-area--invite">
+          <InviteCard lang={isCreole ? 'ht' : 'fr'} />
         </div>
 
         {/* ── Mon espace — icon tile grid ── */}
