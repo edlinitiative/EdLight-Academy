@@ -431,7 +431,14 @@ export default function DashboardScreen() {
 
         {/* Readiness — the card renders its own title, so no duplicate heading */}
         <View className="px-5 mb-4">
-          <ReadinessCard onFocusPress={() => navigation.navigate('Exams')} />
+          <ReadinessCard
+            onFocusPress={(subject) =>
+              (navigation as any).navigate('Exams', {
+                screen: 'ExamBrowser',
+                params: { level: 'terminale', subject },
+              })
+            }
+          />
         </View>
 
         {/* Leaderboard — compact teaser; "Voir tout" (and the card) open the

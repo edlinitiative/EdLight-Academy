@@ -425,7 +425,14 @@ export default function ProfileScreen() {
 
         {/* Readiness */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-          <ReadinessCard onFocusPress={() => navigation.navigate('Exams')} />
+          <ReadinessCard
+            onFocusPress={(subject) =>
+              navigation.navigate('Exams', {
+                screen: 'ExamBrowser',
+                params: { level: 'terminale', subject },
+              })
+            }
+          />
         </View>
 
         {/* Achievements */}

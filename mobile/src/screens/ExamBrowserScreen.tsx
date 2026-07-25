@@ -202,6 +202,14 @@ export default function ExamBrowserScreen() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'done' | 'todo'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Re-apply the subject filter when navigated here with a new `subject` param
+  // while this screen is already mounted (e.g. the readiness "Focus recommandé"
+  // chip or a "Par matière" link tapped from another tab). useState only reads
+  // its initial value on first mount, so without this the filter would go stale.
+  useEffect(() => {
+    if (initialSubject) setSubject(initialSubject);
+  }, [initialSubject]);
+
   const load = useCallback(() => {
     let active = true;
     setLoading(true);
