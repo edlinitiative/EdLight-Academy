@@ -444,42 +444,35 @@ export default function DashboardScreen() {
           <Leaderboard compact maxRows={5} />
         </View>
 
-        {/* Study plan — Sandra builds a personalized révision schedule */}
+        {/* Study plan — secondary. De-emphasized now that the Bac is over and
+            the daily practice loop (défi, jeux, examens) leads the home. Kept as
+            a quiet entry point rather than a prominent gradient CTA; will be
+            re-centered around prefac when that content lands. */}
         <View className="px-5 mb-6">
           <PressableScale
             onPress={() => (navigation as any).navigate('StudyPlan')}
             accessibilityRole="button"
             accessibilityLabel={t("Mon plan d'étude", 'Plan etid mwen')}
-            style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+            style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
           >
-            <LinearGradient
-              colors={['#2E86F0', '#1B6FE0', '#0857A6']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            <View
+              style={{
+                width: 38, height: 38, borderRadius: radius.tile,
+                backgroundColor: colors.azure + '14',
+                alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: radius.tile,
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <CalendarCheck color="#fff" size={22} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
-                  {t("Mon plan d'étude", 'Plan etid mwen')}
-                </Text>
-                <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12.5, marginTop: 1 }}>
-                  {t('Un programme de révision fait pour vous', 'Yon pwogram revizyon fèt pou ou')}
-                </Text>
-              </View>
-              <ChevronRight color="#fff" size={18} />
-            </LinearGradient>
+              <CalendarCheck color={colors.azure} size={19} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.ink, fontSize: 14, fontWeight: '700' }}>
+                {t("Mon plan d'étude", 'Plan etid mwen')}
+              </Text>
+              <Text style={{ color: colors.faint, fontSize: 12, marginTop: 1 }}>
+                {t('Planifier mes révisions', 'Planifye revizyon mwen')}
+              </Text>
+            </View>
+            <ChevronRight color={colors.faint} size={18} />
           </PressableScale>
         </View>
       </ScrollView>
