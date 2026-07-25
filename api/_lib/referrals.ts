@@ -17,8 +17,10 @@
  *   • streak freezes live in users/{uid}/streaks/global.streakFreezes — the
  *     referral cap is higher (REFERRAL_FREEZE_CAP) than the client's own +1
  *     award logic (max 2) so referral rewards can stack a little further.
- *   • XP lives in gameStats/{uid}.xp / .weeklyXp (top-level collection),
- *     incremented with FieldValue.increment like leaderboard/award does.
+ *   • XP lives in users/{uid}/gamification/profile.xp — Academy's real,
+ *     user-visible cumulative XP (level is DERIVED from it via
+ *     triviaService.levelInfo(xp)). Incremented with FieldValue.increment,
+ *     mirroring how triviaService writes the profile doc.
  */
 import { FieldValue, type Firestore, type Transaction } from 'firebase-admin/firestore';
 
@@ -103,8 +105,8 @@ export async function ensureReferralCode(db: Firestore, uid: string): Promise<st
 
 /**
  * Apply a referral reward to one user: bump their streak-freeze balance by one
- * (capped at REFERRAL_FREEZE_CAP) and increment their all-time + weekly XP.
- * Seeds the streaks/global and gameStats docs if missing (merge writes).
+ * (capped at REFERRAL_FREEZE_CAP) and increment their cumulative XP.
+ * Seeds the streaks/global and gamification/profile docs if missing (merge writes).
  *
  * The freeze bump reads-then-writes inside a transaction so the cap holds under
  * concurrency; XP uses FieldValue.increment (monotonic, like leaderboard/award).
@@ -115,7 +117,7 @@ export async function applyReferralReward(
   xp: number,
 ): Promise<void> {
   const streakRef = db.collection('users').doc(uid).collection('streaks').doc('global');
-  const gameStatsRef = db.collection('gameStats').doc(uid);
+  const profileRef = db.collection('users').doc(uid).collection('gamification').doc('profile');
 
   // Freeze token — capped, so read current then set (not a blind increment).
   await db.runTransaction(async (tx: Transaction) => {
@@ -129,11 +131,12 @@ export async function applyReferralReward(
     );
   });
 
-  // XP — monotonic accumulation, mirrors api/leaderboard/award.ts.
-  await gameStatsRef.set(
+  // XP — Academy's user-visible cumulative XP; level is derived from it.
+  // Monotonic accumulation (FieldValue.increment); merge seeds the profile doc
+  // if missing, and the client backfills the rest via defaultTriviaProfile().
+  await profileRef.set(
     {
       xp: FieldValue.increment(xp),
-      weeklyXp: FieldValue.increment(xp),
       updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true },

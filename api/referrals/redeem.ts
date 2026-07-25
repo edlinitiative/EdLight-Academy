@@ -20,8 +20,8 @@
  *      referrals/{referrerUid}_{callerUid}; the referredBy check-before-write in
  *      the transaction is the single-winner guard against double-reward.
  *   4. Two-sided rewards (Admin SDK, only after the transaction claims the referral):
- *        • referrer: +1 streak freeze (cap 5), +100 xp / +100 weeklyXp
- *        • referred: +1 streak freeze (cap 5),  +50 xp /  +50 weeklyXp
+ *        • referrer: +1 streak freeze (cap 5), +100 xp (gamification/profile.xp)
+ *        • referred: +1 streak freeze (cap 5),  +50 xp (gamification/profile.xp)
  *
  * Response:
  *   200 → { ok: true, reward: { streakFreeze: 1, xp: 50 } }   (the caller's reward)

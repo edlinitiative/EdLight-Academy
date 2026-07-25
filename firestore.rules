@@ -318,14 +318,9 @@ service cloud.firestore {
                       || resource.data.referredUid == request.auth.uid);
       allow write: if false;
     }
-
-    // Game / XP stats ({ xp, weeklyXp, updatedAt }). Written only by the Admin
-    // SDK (e.g. referral rewards in /api/referrals/redeem); a user may read their
-    // own so the client UI can display the totals.
-    match /gameStats/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow write: if false;
-    }
+    // (Referral XP rewards increment users/{uid}/gamification/profile.xp, whose
+    //  rule already exists under the users/{userId} block — owner read/write.
+    //  Admin SDK writes bypass rules, so no new rule is needed for it.)
 
     // Default: deny all other access
     match /{document=**} {
