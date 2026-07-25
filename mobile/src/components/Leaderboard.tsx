@@ -146,6 +146,62 @@ function GroupRow({
   );
 }
 
+// Medal treatment per podium place: pedestal tint + a darker readable number.
+const PODIUM_META: Record<number, { tint: string; ink: string; ring: string; h: number; av: number }> = {
+  1: { tint: '#FFD70022', ink: '#B8860B', ring: '#F5C518', h: 62, av: 62 },
+  2: { tint: '#C0C0C022', ink: '#7A7A7A', ring: '#C0C0C0', h: 46, av: 52 },
+  3: { tint: '#CD7F3222', ink: '#A15A1E', ring: '#CD7F32', h: 34, av: 52 },
+};
+
+/** Top-3 podium for the full board — 2nd · 1st · 3rd, tallest in the middle. */
+function Podium({
+  top3, myUid, t,
+}: {
+  top3: any[];
+  myUid?: string;
+  t: (fr: string, ht: string) => string;
+}) {
+  const colors = useColors();
+  // Visual order places the winner in the centre.
+  const order = [top3[1], top3[0], top3[2]].filter(Boolean);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 10, paddingTop: 4, paddingBottom: 16 }}>
+      {order.map((e) => {
+        const rank = Number(e.rank) || 3;
+        const m = PODIUM_META[rank] ?? PODIUM_META[3];
+        const isMe = e.id === myUid;
+        return (
+          <View key={e.id || e.displayName} style={{ flex: 1, maxWidth: 110, alignItems: 'center' }}>
+            {rank === 1 ? <Crown size={18} color="#F5C518" style={{ marginBottom: 2 }} /> : <View style={{ height: 20 }} />}
+            <View style={{ borderWidth: 2.5, borderColor: m.ring, borderRadius: 999, padding: 2 }}>
+              <Avatar
+                name={e.displayName || ''}
+                uri={e.photoURL || e.picture || null}
+                seed={e.id || e.uid || e.displayName || ''}
+                size={m.av}
+              />
+            </View>
+            <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12.5, fontWeight: '800', color: isMe ? colors.azure : colors.ink, maxWidth: 104 }}>
+              {e.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
+            </Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{e.xp ?? 0} XP</Text>
+            <View
+              style={{
+                width: '100%', height: m.h, marginTop: 8,
+                borderTopLeftRadius: 12, borderTopRightRadius: 12,
+                backgroundColor: m.tint, borderWidth: 1, borderColor: m.ring + '66',
+                alignItems: 'center', paddingTop: 6,
+              }}
+            >
+              <Text style={{ fontSize: 19, fontWeight: '900', color: m.ink }}>{rank}</Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 interface LeaderboardProps {
   compact?: boolean;
   maxRows?: number;
@@ -388,14 +444,20 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
         )
       ) : (
         <>
-          {displayList.map((entry: any) => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              isMe={entry.id === myUid}
-              compact={compact}
-            />
-          ))}
+          {/* Full board leads with a top-3 podium; the compact widget stays a
+              plain list. Falls back to a plain list when fewer than 3 ranked. */}
+          {!compact && displayList.length >= 3 ? (
+            <>
+              <Podium top3={displayList.slice(0, 3)} myUid={myUid} t={t} />
+              {displayList.slice(3).map((entry: any) => (
+                <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} />
+              ))}
+            </>
+          ) : (
+            displayList.map((entry: any) => (
+              <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} />
+            ))
+          )}
           {myEntry && !displayList.find((e: any) => e.id === myUid) && (
             <View className="border-t border-dashed border-gray-200 dark:border-slate-700 mt-1 pt-2">
               <EntryRow entry={myEntry} isMe compact={compact} />
