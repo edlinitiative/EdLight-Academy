@@ -61,7 +61,7 @@ function Tile({ icon, accent, value, label, accessibilityLabel, onPress }: TileP
           >
             {icon}
           </View>
-          <ChevronRight color={tint(accent, 0.55)} size={16} />
+          {onPress ? <ChevronRight color={tint(accent, 0.55)} size={16} /> : null}
         </View>
         <View style={{ marginTop: 8 }}>
           <Text
@@ -84,6 +84,7 @@ interface HomeWidgetsProps {
   onNavigateTrivia?: () => void;
   onNavigateDaily?: () => void;
   onNavigateCourses?: () => void;
+  onNavigateLeaderboard?: () => void;
   enrolledCount?: number;
   recommendedCourse?: any;
 }
@@ -93,6 +94,7 @@ export default function HomeWidgets({
   onNavigateTrivia,
   onNavigateDaily,
   onNavigateCourses,
+  onNavigateLeaderboard,
   enrolledCount = 0,
 }: HomeWidgetsProps) {
   const colors = useColors();
@@ -128,7 +130,7 @@ export default function HomeWidgets({
           value={myRank ? `#${myRank}` : '—'}
           label={t('Classement', 'Klasman')}
           accessibilityLabel={t('Classement', 'Klasman')}
-          onPress={onNavigateTrivia}
+          onPress={onNavigateLeaderboard ?? onNavigateTrivia}
         />
       </View>
       <View style={{ flexDirection: 'row', gap: 12 }}>

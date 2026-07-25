@@ -365,6 +365,7 @@ export default function DashboardScreen() {
             onNavigateTrivia={() => navigation.navigate('Trivia')}
             onNavigateDaily={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }}
             onNavigateCourses={() => navigation.navigate('Courses')}
+            onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}
             enrolledCount={enrolledCourses.length}
           />
         </View>
