@@ -307,3 +307,44 @@ export function getDirectiveForTrack(directives: any[], trackCode: string) {
   }
   return null;
 }
+
+// ─── Season-aware Home suggestion ───────────────────────────────────────────
+/**
+ * A single "smart suggestion" for the Home screen, chosen from the student's
+ * track (série) and the calendar season (see currentPlanSeason). This is what
+ * powers the "Recommandé pour toi" card:
+ *   • no track yet                    → choose-track (personalise everything)
+ *   • Bac is over + a Bac série       → prefac-switch (push concours prep)
+ *   • Bac season + a Bac série        → bac-focus (revise with real papers)
+ *   • already Préfac / off-season     → null (nothing to nudge)
+ *
+ * The `key` is stable per season-year so a dismissed card stays hidden for the
+ * current season but re-appears next cycle.
+ */
+export type HomeSuggestionKind = 'choose-track' | 'prefac-switch' | 'bac-focus';
+
+/** Year of the next Bac session on/after `from` — the stable anchor for a season. */
+export function seasonAnchorYear(from: Date = new Date()): number {
+  const y = from.getFullYear();
+  return from > new Date(y, 6, 20) ? y + 1 : y;
+}
+
+export function pickHomeSuggestion(
+  opts: { track: string | null; from?: Date },
+): { kind: HomeSuggestionKind; key: string } | null {
+  const from = opts.from ?? new Date();
+  const season = currentPlanSeason(from);
+  const anchor = seasonAnchorYear(from);
+  const track = opts.track;
+
+  if (!track) return { kind: 'choose-track', key: `choose-track-${anchor}` };
+
+  const isBacSerie = (TRACK_LEVEL[track] ?? 'baccalaureat') === 'baccalaureat';
+  if (season === 'prefac') {
+    // Bac is behind us. Bac-série students are the "just finished, now what?"
+    // cohort → nudge them toward concours prep. Préfac students are already set.
+    return isBacSerie ? { kind: 'prefac-switch', key: `prefac-switch-${anchor}` } : null;
+  }
+  // Bac season: keep Bac-série students focused on real papers.
+  return isBacSerie ? { kind: 'bac-focus', key: `bac-focus-${anchor}` } : null;
+}

@@ -19,6 +19,7 @@ import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
+import SmartSuggestion from '../components/SmartSuggestion';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
@@ -369,6 +370,11 @@ export default function DashboardScreen() {
             enrolledCount={enrolledCourses.length}
           />
         </View>
+
+        {/* Season-aware recommendation — pushes the next step (choose filière,
+            switch to Préfac once the Bac is over, or revise for the Bac).
+            Self-hides (and takes its margin with it) when there's nothing. */}
+        <SmartSuggestion />
 
         {/* At-a-glance stats */}
         <View className="px-5 mb-4">

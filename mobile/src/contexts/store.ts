@@ -21,6 +21,8 @@ export interface AppState {
   language: string;
   hydrated: boolean;
   track: string | null;
+  /** Key of the last Home "Recommandé pour toi" suggestion the user dismissed. */
+  dismissedSuggestionKey: string | null;
   onboardingCompleted: boolean;
   tourCompleted: boolean;
   practiceTipSeen: boolean;
@@ -44,6 +46,7 @@ export interface AppState {
   setAuthConfirmed: () => void;
   setLanguage: (language: string) => void;
   setTrack: (track: string | null) => void;
+  setDismissedSuggestion: (key: string) => void;
   setOnboardingCompleted: (completed: boolean) => void;
   setTourCompleted: (completed: boolean) => void;
   setPracticeTipSeen: (seen: boolean) => void;
@@ -75,6 +78,7 @@ const useStore = create<AppState>()(
       language: 'fr',
       hydrated: false,
       track: null,
+      dismissedSuggestionKey: null,
       onboardingCompleted: false,
       tourCompleted: false,
       practiceTipSeen: false,
@@ -96,6 +100,7 @@ const useStore = create<AppState>()(
       setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
+      setDismissedSuggestion: (key) => set({ dismissedSuggestionKey: key }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       setTourCompleted: (completed) => set({ tourCompleted: !!completed }),
       setPracticeTipSeen: (seen) => set({ practiceTipSeen: !!seen }),
@@ -172,6 +177,7 @@ const useStore = create<AppState>()(
         isAuthenticated: s.isAuthenticated,
         language: s.language,
         track: s.track,
+        dismissedSuggestionKey: s.dismissedSuggestionKey,
         onboardingCompleted: s.onboardingCompleted,
         tourCompleted: s.tourCompleted,
         practiceTipSeen: s.practiceTipSeen,
