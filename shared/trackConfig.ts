@@ -321,7 +321,61 @@ export function getDirectiveForTrack(directives: any[], trackCode: string) {
  * The `key` is stable per season-year so a dismissed card stays hidden for the
  * current season but re-appears next cycle.
  */
-export type HomeSuggestionKind = 'choose-track' | 'prefac-switch' | 'bac-focus';
+export type HomeSuggestionKind =
+  | 'choose-track'
+  | 'prefac-switch'
+  | 'bac-focus'
+  | 'trivia-first'   // 7e–8e: no cours/exams yet → play to learn
+  | 'cours-first'    // NS1–NS3: build foundations with cours + quizzes
+  | 'exam9e-focus';  // 9e: the national 9ème exam
+
+// ─── Grade / class ──────────────────────────────────────────────────────────
+/**
+ * Haitian school grades the app personalises around. `track` (filière) only
+ * matters at NS4/Terminale (Bac) and Post-Bac; lower grades don't need one.
+ */
+export const GRADES = [
+  { code: '7e',      label: '7ᵉ année',              labelHt: '7yèm ane' },
+  { code: '8e',      label: '8ᵉ année',              labelHt: '8yèm ane' },
+  { code: '9e',      label: '9ᵉ année',              labelHt: '9yèm ane' },
+  { code: 'NS1',     label: 'NS1 (Secondaire)',      labelHt: 'NS1 (Segondè)' },
+  { code: 'NS2',     label: 'NS2 (Secondaire)',      labelHt: 'NS2 (Segondè)' },
+  { code: 'NS3',     label: 'NS3 (Secondaire)',      labelHt: 'NS3 (Segondè)' },
+  { code: 'NS4',     label: 'NS4 · Terminale (Bac)', labelHt: 'NS4 · Tèminal (Bak)' },
+  { code: 'POSTBAC', label: 'Après le Bac (Préfac)', labelHt: 'Apre Bak (Prefak)' },
+];
+
+export type PrimaryTab = 'Exams' | 'Quiz';
+export type HomeSurface = 'exams' | 'cours' | 'quiz' | 'trivia' | 'readiness' | 'prefac';
+
+export interface GradeProfile {
+  /** Which practice surface leads the bottom bar / Home for this grade. */
+  primaryTab: PrimaryTab;
+  /** Exam level relevant to this grade (null = de-emphasize exams entirely). */
+  examLevel: 'baccalaureat' | 'universite' | '9eme_af' | null;
+  /** Home surfaces in priority order (an availability gate still applies downstream). */
+  lead: HomeSurface[];
+}
+
+/** Resolve a grade to its content profile. Unknown/null → the Bac default. */
+export function gradeProfile(grade: string | null | undefined): GradeProfile {
+  switch (grade) {
+    case '7e':
+    case '8e':
+      return { primaryTab: 'Quiz', examLevel: null, lead: ['trivia', 'quiz', 'cours'] };
+    case '9e':
+      return { primaryTab: 'Exams', examLevel: '9eme_af', lead: ['exams', 'quiz', 'trivia', 'cours'] };
+    case 'NS1':
+    case 'NS2':
+    case 'NS3':
+      return { primaryTab: 'Quiz', examLevel: null, lead: ['cours', 'quiz', 'trivia'] };
+    case 'POSTBAC':
+      return { primaryTab: 'Exams', examLevel: 'universite', lead: ['prefac', 'exams', 'quiz'] };
+    case 'NS4':
+    default:
+      return { primaryTab: 'Exams', examLevel: 'baccalaureat', lead: ['exams', 'readiness', 'cours', 'quiz'] };
+  }
+}
 
 /** Year of the next Bac session on/after `from` — the stable anchor for a season. */
 export function seasonAnchorYear(from: Date = new Date()): number {
@@ -329,22 +383,46 @@ export function seasonAnchorYear(from: Date = new Date()): number {
   return from > new Date(y, 6, 20) ? y + 1 : y;
 }
 
+/**
+ * The one "Recommandé pour toi" suggestion for the Home. Grade drives it when
+ * known (surface the best of what we have for that background); otherwise it
+ * falls back to the track + season heuristic.
+ */
 export function pickHomeSuggestion(
-  opts: { track: string | null; from?: Date },
+  opts: { track: string | null; grade?: string | null; from?: Date },
 ): { kind: HomeSuggestionKind; key: string } | null {
   const from = opts.from ?? new Date();
   const season = currentPlanSeason(from);
   const anchor = seasonAnchorYear(from);
-  const track = opts.track;
+  const { track, grade } = opts;
 
+  // Grade known → background-aware nudge (the best of what we have for them).
+  if (grade) {
+    switch (grade) {
+      case '7e':
+      case '8e':
+        return { kind: 'trivia-first', key: `trivia-first-${grade}` };
+      case 'NS1':
+      case 'NS2':
+      case 'NS3':
+        return { kind: 'cours-first', key: `cours-first-${grade}` };
+      case '9e':
+        return { kind: 'exam9e-focus', key: `exam9e-focus-${anchor}` };
+      case 'POSTBAC':
+        return { kind: 'prefac-switch', key: `prefac-switch-${anchor}` };
+      case 'NS4':
+        if (!track) return { kind: 'choose-track', key: `choose-track-${anchor}` };
+        return season === 'prefac'
+          ? { kind: 'prefac-switch', key: `prefac-switch-${anchor}` }
+          : { kind: 'bac-focus', key: `bac-focus-${anchor}` };
+    }
+  }
+
+  // No grade → track + season heuristic (existing behaviour).
   if (!track) return { kind: 'choose-track', key: `choose-track-${anchor}` };
-
   const isBacSerie = (TRACK_LEVEL[track] ?? 'baccalaureat') === 'baccalaureat';
   if (season === 'prefac') {
-    // Bac is behind us. Bac-série students are the "just finished, now what?"
-    // cohort → nudge them toward concours prep. Préfac students are already set.
     return isBacSerie ? { kind: 'prefac-switch', key: `prefac-switch-${anchor}` } : null;
   }
-  // Bac season: keep Bac-série students focused on real papers.
   return isBacSerie ? { kind: 'bac-focus', key: `bac-focus-${anchor}` } : null;
 }

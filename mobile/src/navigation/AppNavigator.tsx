@@ -6,6 +6,7 @@ import useStore from '../contexts/store';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
 import WelcomeLanguageModal from '../components/WelcomeLanguageModal';
+import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import NavTour from '../components/NavTour';
 import NetworkStatus from '../components/NetworkStatus';
 import SandraScreen from '../screens/SandraScreen';
@@ -152,6 +153,7 @@ export default function AppNavigator() {
         </Stack.Navigator>
         <AuthModal />
         <WelcomeLanguageModal />
+        <WelcomeGradeModal />
         <NavTour />
       </NavigationContainer>
     </>

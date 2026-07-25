@@ -21,6 +21,10 @@ export interface AppState {
   language: string;
   hydrated: boolean;
   track: string | null;
+  /** Student's grade/class (7e, 8e, 9e, NS1–NS4, POSTBAC) — drives adaptive content. */
+  grade: string | null;
+  /** True once the grade question has been answered or skipped (gates the prompt). */
+  gradeChosen: boolean;
   /** Key of the last Home "Recommandé pour toi" suggestion the user dismissed. */
   dismissedSuggestionKey: string | null;
   onboardingCompleted: boolean;
@@ -46,6 +50,8 @@ export interface AppState {
   setAuthConfirmed: () => void;
   setLanguage: (language: string) => void;
   setTrack: (track: string | null) => void;
+  setGrade: (grade: string | null) => void;
+  setGradeChosen: (chosen: boolean) => void;
   setDismissedSuggestion: (key: string) => void;
   setOnboardingCompleted: (completed: boolean) => void;
   setTourCompleted: (completed: boolean) => void;
@@ -78,6 +84,8 @@ const useStore = create<AppState>()(
       language: 'fr',
       hydrated: false,
       track: null,
+      grade: null,
+      gradeChosen: false,
       dismissedSuggestionKey: null,
       onboardingCompleted: false,
       tourCompleted: false,
@@ -100,6 +108,8 @@ const useStore = create<AppState>()(
       setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
+      setGrade: (grade) => set({ grade }),
+      setGradeChosen: (chosen) => set({ gradeChosen: !!chosen }),
       setDismissedSuggestion: (key) => set({ dismissedSuggestionKey: key }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       setTourCompleted: (completed) => set({ tourCompleted: !!completed }),
@@ -177,6 +187,8 @@ const useStore = create<AppState>()(
         isAuthenticated: s.isAuthenticated,
         language: s.language,
         track: s.track,
+        grade: s.grade,
+        gradeChosen: s.gradeChosen,
         dismissedSuggestionKey: s.dismissedSuggestionKey,
         onboardingCompleted: s.onboardingCompleted,
         tourCompleted: s.tourCompleted,

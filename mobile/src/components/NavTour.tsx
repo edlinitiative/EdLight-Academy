@@ -80,6 +80,7 @@ export default function NavTour() {
   const colors = useColors();
   const hydrated = useStore((s) => s.hydrated);
   const languageChosen = useStore((s) => s.languageChosen);
+  const gradeChosen = useStore((s) => s.gradeChosen);
   const tourCompleted = useStore((s) => s.tourCompleted);
   const setTourCompleted = useStore((s) => s.setTourCompleted);
   const language = useStore((s) => s.language);
@@ -87,7 +88,8 @@ export default function NavTour() {
 
   const [index, setIndex] = useState(0);
 
-  const visible = hydrated && languageChosen && !tourCompleted;
+  // Wait for the grade prompt to resolve first, so the tour never overlays it.
+  const visible = hydrated && languageChosen && gradeChosen && !tourCompleted;
   const step = STEPS[index];
   const isLast = index >= STEPS.length - 1;
 

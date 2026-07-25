@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { GraduationCap, Landmark, ClipboardList, ChevronRight, Sparkles, X } from 'lucide-react-native';
+import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ChevronRight, Sparkles, X } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
 import PressableScale from './ui/PressableScale';
@@ -18,11 +18,11 @@ import { tapLight } from '../utils/haptics';
  */
 export default function SmartSuggestion() {
   const navigation = useNavigation<any>();
-  const { track, language, dismissedSuggestionKey, setDismissedSuggestion } = useStore();
+  const { track, grade, language, dismissedSuggestionKey, setDismissedSuggestion } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const suggestion = pickHomeSuggestion({ track });
+  const suggestion = pickHomeSuggestion({ track, grade });
   if (!suggestion || suggestion.key === dismissedSuggestionKey) return null;
 
   const COPY: Record<HomeSuggestionKind, {
@@ -60,6 +60,30 @@ export default function SmartSuggestion() {
       subtitle: t('Révise avec les vrais sujets officiels.', 'Revize ak vre sijè ofisyèl yo.'),
       cta: t("S'entraîner", 'Antrene'),
       onPress: () => navigation.navigate('Exams'),
+    },
+    'trivia-first': {
+      Icon: Gamepad2,
+      colors: ['#7C3AED', '#6D28D9', '#5B21B6'],
+      title: t('Apprends en jouant 🎮', 'Aprann ak jwèt 🎮'),
+      subtitle: t('Des quiz rapides et des jeux pour progresser chaque jour.', 'Quiz rapid ak jwèt pou w pwogrese chak jou.'),
+      cta: t('Jouer', 'Jwe'),
+      onPress: () => navigation.navigate('Trivia'),
+    },
+    'cours-first': {
+      Icon: BookOpen,
+      colors: ['#0EA5C4', '#0891B2', '#0E7490'],
+      title: t('Renforce tes bases', 'Ranfòse baz ou yo'),
+      subtitle: t('Suis tes cours et teste-toi avec des quiz ciblés.', 'Swiv kou ou yo epi teste tèt ou ak quiz.'),
+      cta: t('Voir les cours', 'Wè kou yo'),
+      onPress: () => navigation.navigate('Courses'),
+    },
+    'exam9e-focus': {
+      Icon: GraduationCap,
+      colors: ['#2E86F0', '#1B6FE0', '#0857A6'],
+      title: t("Prépare l'examen de 9ᵉ", 'Prepare egzamen 9yèm'),
+      subtitle: t("Entraîne-toi avec les vrais sujets de 9ème année.", 'Antrene ak vre sijè 9yèm ane yo.'),
+      cta: t("S'entraîner", 'Antrene'),
+      onPress: () => navigation.navigate('Exams', { screen: 'ExamBrowser', params: { level: '9e' } }),
     },
   };
 
