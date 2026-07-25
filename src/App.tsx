@@ -44,6 +44,7 @@ const AnswerVerification = lazyWithRetry(() => import('./pages/AnswerVerificatio
 const StudyPlan = lazyWithRetry(() => import('./pages/StudyPlan'));
 const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
 const Profile = lazyWithRetry(() => import('./pages/Profile'));
+const Classement = lazyWithRetry(() => import('./pages/Classement'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 const FigureEmbed = lazyWithRetry(() => import('./pages/FigureEmbed'));
 const Download = lazyWithRetry(() => import('./pages/Download'));
@@ -101,6 +102,8 @@ export default function App() {
                 <Route path="trivia" element={<Navigate to="/jeux" replace />} />
                 <Route path="trivia/:gameId" element={<Navigate to="/jeux" replace />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="classement" element={<Classement />} />
+                <Route path="leaderboard" element={<Navigate to="/classement" replace />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
 

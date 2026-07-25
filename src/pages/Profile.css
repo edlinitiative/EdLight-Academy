@@ -423,3 +423,63 @@
 [data-theme="dark"] .profile-milestone.is-unlocked {
   background: rgba(52, 196, 112, 0.16);
 }
+
+/* ── Classement entry (links to the dedicated /classement page) ── */
+.profile-leaderboard-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border-color, #e6e8eb);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.profile-leaderboard-link:hover {
+  background: var(--primary-50, #e8f1fb);
+  border-color: var(--primary-100, #cfe2f7);
+  transform: translateY(-1px);
+}
+.profile-leaderboard-link__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--primary-50, #e8f1fb);
+  color: var(--primary-600, #1558B8);
+  flex-shrink: 0;
+}
+.profile-leaderboard-link__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.profile-leaderboard-link__title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text, #37352f);
+}
+.profile-leaderboard-link__sub {
+  font-size: 0.78rem;
+  color: var(--text-muted, #746a59);
+  margin-top: 1px;
+}
+.profile-leaderboard-link__rank {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--primary-600, #1558B8);
+  background: var(--primary-50, #e8f1fb);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.profile-leaderboard-link__chev {
+  color: var(--text-muted, #746a59);
+  flex-shrink: 0;
+}

@@ -177,7 +177,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             : t('Classement de la semaine', 'Klasman semèn nan')}
         </h3>
         {compact && (
-          <button className="leaderboard__more" onClick={() => navigate('/profile')}>
+          <button className="leaderboard__more" onClick={() => navigate('/classement')}>
             {t('Voir tout', 'Wè tout')} <ChevronRight size={14} />
           </button>
         )}

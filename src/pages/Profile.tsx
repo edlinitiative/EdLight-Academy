@@ -22,7 +22,7 @@ import { getReferralCode, inviteMessage, type ReferralCode } from '../services/r
 import { STREAK_MILESTONES } from '../services/streakService';
 import ReadinessCard from '../components/ReadinessCard';
 import ProgressDashboard from '../components/ProgressDashboard';
-import Leaderboard from '../components/Leaderboard';
+import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import './Profile.css';
 
@@ -156,6 +156,7 @@ export default function Profile() {
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
+  const { myRank } = useLeaderboard(50);
 
   // ── Guest view ──────────────────────────────────────────────────────────
   if (!isAuthenticated || !user) {
@@ -291,9 +292,21 @@ export default function Profile() {
           <ProgressDashboard />
         </div>
 
-        {/* ── Leaderboard ── */}
+        {/* ── Classement — entry to the dedicated full page (no longer embedded) ── */}
         <div className="profile-area profile-area--leaderboard">
-          <Leaderboard variant="full" />
+          <button
+            className="profile-leaderboard-link"
+            onClick={() => navigate('/classement')}
+            type="button"
+          >
+            <span className="profile-leaderboard-link__icon"><Trophy size={20} /></span>
+            <span className="profile-leaderboard-link__body">
+              <span className="profile-leaderboard-link__title">{t('Classement', 'Klasman')}</span>
+              <span className="profile-leaderboard-link__sub">{t('Voyez où vous vous situez', 'Wè kote ou ye')}</span>
+            </span>
+            {myRank ? <span className="profile-leaderboard-link__rank num">#{myRank}</span> : null}
+            <ChevronRight size={18} className="profile-leaderboard-link__chev" />
+          </button>
         </div>
 
         {/* ── Invite friends (two-sided referral) ── */}
