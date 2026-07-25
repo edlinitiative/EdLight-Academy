@@ -1979,3 +1979,30 @@ function checkAnswer(question: any, userAnswer: any, options: Record<string, any
       return user === correct;
   }
 }
+
+/**
+ * Scanned Bac papers print an exam-hall header ("no programmable calculators, no
+ * electronic gadgets, silence required in the room"). On many exams that header
+ * was OCR'd into a section's `instructions`/`passage`, where it surfaces as an
+ * irrelevant "consigne" (TestFlight feedback). Detect that regulation boilerplate
+ * and drop it.
+ *
+ * Requires >=2 distinct markers so a legitimate reading passage that merely
+ * mentions, say, a telephone is never stripped.
+ */
+const EXAM_HALL_MARKERS: RegExp[] = [
+  /calculatrice/i,
+  /gadget\s*[ée]lectronique/i,
+  /salle\s*d['’’]?\s*examen/i,
+  /formellement\s*interdit/i,
+  /silence\s*est\s*obligatoire/i,
+  /montre\s*intelligente/i,
+  /\btablette\b/i,
+  /\biPad\b/i,
+];
+
+export function stripExamHallBoilerplate(text: string | null | undefined): string {
+  if (!text) return '';
+  const hits = EXAM_HALL_MARKERS.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0);
+  return hits >= 2 ? '' : text;
+}

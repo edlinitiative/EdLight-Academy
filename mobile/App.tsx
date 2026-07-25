@@ -120,19 +120,23 @@ function App() {
 
     const handle = (data: Record<string, unknown> | undefined) => {
       const type = data?.type as string | undefined;
-      if (type === 'trivia-reminder' || type === 'daily-quiz') {
-        // "Quiz du jour" — open the daily challenge on the Jeux tab and auto-start it.
+      if (type === 'trivia-reminder' || type === 'daily-quiz' || type === 'streak') {
+        // "Quiz du jour" / streak nudge — open the daily challenge and auto-start it.
         navigateToTab('Trivia', { daily: true });
       } else if (type === 'leaderboard') {
-        navigateToTab('Trivia');
+        // Weekly ranking nudge → the dedicated Classement page (a root screen),
+        // not the Jeux tab.
+        if (navigationRef.isReady()) (navigationRef.navigate as any)('Leaderboard');
       } else if (type === 'study-reminder') {
         navigateToTab('Courses');
+      } else if (type === 'achievement') {
+        // Badge unlocked → Profile, where achievements live.
+        navigateToTab('Profile');
       } else if (typeof data?.tab === 'string') {
         navigateToTab(TAB_ALIASES[data.tab.toLowerCase()] ?? 'Dashboard');
       } else if (typeof data?.url === 'string') {
         Linking.openURL(data.url).catch(() => {});
       }
-      // achievement / streak — no navigation needed; they're ambient
     };
 
     // Dedupe: the cold-start launch response (fetched below) can also be
@@ -146,10 +150,17 @@ function App() {
         handledIds.add(id);
       }
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-      // A cold-start tap can fire before the nav tree is ready; retry briefly.
+      // A cold-start tap fires before the nav tree is ready. Crucially, wait for
+      // `authConfirmed` too: the target routes (Main's tabs, Leaderboard) only
+      // exist once auth resolves — until then the navigator is still on the
+      // Loading screen, so navigating silently no-ops and the app opens on the
+      // default screen. Retry (up to ~9s) until both the container is ready AND
+      // auth has resolved (true for signed-in or signed-out).
       let tries = 0;
       const attempt = () => {
-        if (navigationRef.isReady() || tries > 20) return handle(data);
+        if ((navigationRef.isReady() && useStore.getState().authConfirmed) || tries > 60) {
+          return handle(data);
+        }
         tries += 1;
         setTimeout(attempt, 150);
       };

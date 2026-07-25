@@ -9,7 +9,7 @@ import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear } from '../utils/examUtils';
+import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
@@ -637,8 +637,8 @@ export default function ExamTakeScreen() {
       if (count === 0) return;
       metas.push({
         title: String(sec?.section_title || sec?.title || sec?.name || `Section ${i + 1}`).trim(),
-        instructions: typeof sec?.instructions === 'string' ? sec.instructions.trim() : '',
-        passage: typeof sec?.passage === 'string' ? sec.passage.trim() : '',
+        instructions: stripExamHallBoilerplate(typeof sec?.instructions === 'string' ? sec.instructions.trim() : ''),
+        passage: stripExamHallBoilerplate(typeof sec?.passage === 'string' ? sec.passage.trim() : ''),
         start: cursor,
         end: cursor + count - 1,
       });
@@ -686,7 +686,7 @@ export default function ExamTakeScreen() {
   // (which knows about `passage`); fall back to what flattenQuestions attached.
   const section = sectionMeta.find((s) => safeIdx >= s.start && safeIdx <= s.end) ?? null;
   const sectionTitle = section?.title ?? String(q?.sectionTitle ?? '').trim();
-  const sectionInstructions = section?.instructions ?? String(q?.sectionInstructions ?? '').trim();
+  const sectionInstructions = section?.instructions ?? stripExamHallBoilerplate(String(q?.sectionInstructions ?? '').trim());
   const sectionPassage = section?.passage ?? '';
   const isSectionStart = section ? safeIdx === section.start : safeIdx === 0;
 
