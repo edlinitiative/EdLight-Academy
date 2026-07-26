@@ -315,6 +315,57 @@ export function detectStall(attempts: AttemptEvent[], opts: DeriveOptions = {}):
   return null;
 }
 
+// ─── Pillar A — adaptive difficulty ─────────────────────────────────────────
+// v1 works off the item's authored difficulty (exams carry 1–5). Slice 3b will
+// replace that scalar with a crowd-calibrated p-value from questionStats — only
+// the *input* to predictedSuccess sharpens; the selection shape below is stable.
+
+/** Each difficulty step away from average (3) shifts predicted success by this. */
+const DIFFICULTY_SLOPE = 0.12;
+
+/**
+ * Predicted success probability (0–1) for a learner of `ability` (0–100) on an
+ * item of `difficulty` (1–5). At average difficulty (3) success ≈ ability/100;
+ * harder items lower it, easier ones raise it. A deliberately simple monotonic
+ * model — enough to rank a pool by challenge fit.
+ */
+export function predictedSuccess(ability: number, difficulty: number): number {
+  const a = Math.max(0, Math.min(1, (ability || 0) / 100));
+  const d = Math.max(1, Math.min(5, typeof difficulty === 'number' ? difficulty : 3));
+  return Math.max(0, Math.min(1, a - DIFFICULTY_SLOPE * (d - 3)));
+}
+
+/**
+ * Order a pool by how well each item fits the learner's challenge band. Items
+ * whose predicted success lands inside [band.min, band.max] rank first (closest
+ * to band centre wins); ties break toward harder items so a confident learner
+ * keeps being stretched. Cold start (no ability estimate) falls back to easiest-
+ * first (spec §4). Pure; items need only an optional numeric `difficulty` (1–5).
+ */
+export function selectAdaptiveItems<T extends { difficulty?: number }>(
+  pool: T[],
+  opts: { ability: number; band?: { min: number; max: number } },
+): T[] {
+  const list = pool || [];
+  // Cold start: without an ability estimate, serve easiest → hardest.
+  if (!(opts.ability > 0)) {
+    return [...list].sort((x, y) => (x.difficulty ?? 3) - (y.difficulty ?? 3));
+  }
+  const band = opts.band ?? DEFAULT_CHALLENGE_BAND;
+  const centre = (band.min + band.max) / 2;
+  const scored = list.map((item, i) => {
+    const p = predictedSuccess(opts.ability, item.difficulty ?? 3);
+    return { item, i, inBand: p >= band.min && p <= band.max, dist: Math.abs(p - centre), diff: item.difficulty ?? 3 };
+  });
+  scored.sort((a, b) =>
+    (Number(b.inBand) - Number(a.inBand)) ||
+    (a.dist - b.dist) ||
+    (b.diff - a.diff) ||
+    (a.i - b.i),
+  );
+  return scored.map((s) => s.item);
+}
+
 // ─── Public entry point ─────────────────────────────────────────────────────
 
 /**

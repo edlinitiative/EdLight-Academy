@@ -4,6 +4,8 @@ import {
   velocityFromAttempts,
   dueReviews,
   detectStall,
+  predictedSuccess,
+  selectAdaptiveItems,
   MIN_ATTEMPTS_FOR_SIGNALS,
   DEFAULT_CHALLENGE_BAND,
   type AttemptEvent,
@@ -179,5 +181,64 @@ describe('deriveSignals', () => {
     expect(sig.totalAttempts).toBe(0);
     expect(sig.stall).toBeNull();
     expect(sig.reviewQueue).toEqual([]);
+  });
+});
+
+describe('predictedSuccess', () => {
+  it('falls monotonically as difficulty rises for fixed ability', () => {
+    const easy = predictedSuccess(70, 1);
+    const mid = predictedSuccess(70, 3);
+    const hard = predictedSuccess(70, 5);
+    expect(easy).toBeGreaterThan(mid);
+    expect(mid).toBeGreaterThan(hard);
+  });
+
+  it('equals ability/100 at average difficulty', () => {
+    expect(predictedSuccess(80, 3)).toBeCloseTo(0.8, 5);
+  });
+
+  it('clamps into [0,1] for extreme inputs', () => {
+    expect(predictedSuccess(10, 5)).toBeGreaterThanOrEqual(0);
+    expect(predictedSuccess(100, 1)).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('selectAdaptiveItems', () => {
+  const pool = [
+    { id: 'd1', difficulty: 1 },
+    { id: 'd2', difficulty: 2 },
+    { id: 'd3', difficulty: 3 },
+    { id: 'd4', difficulty: 4 },
+    { id: 'd5', difficulty: 5 },
+  ];
+
+  it('serves a stretch (harder) item to a high-ability learner', () => {
+    // ability 90 → success in band (0.75–0.82) around difficulty 4.
+    const top = selectAdaptiveItems(pool, { ability: 90 })[0];
+    expect(top.difficulty).toBeGreaterThanOrEqual(4);
+  });
+
+  it('serves an easier item to a struggling learner', () => {
+    // ability 55 → only the easiest items keep success near the band.
+    const top = selectAdaptiveItems(pool, { ability: 55 })[0];
+    expect(top.difficulty).toBeLessThanOrEqual(2);
+  });
+
+  it('cold start (no ability) serves easiest-first', () => {
+    const ordered = selectAdaptiveItems(pool, { ability: 0 });
+    expect(ordered.map((x) => x.difficulty)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('treats missing difficulty as average (3) and never drops items', () => {
+    const mixed = [{ id: 'a' }, { id: 'b', difficulty: 4 }];
+    expect(selectAdaptiveItems(mixed, { ability: 80 })).toHaveLength(2);
+  });
+
+  it('is a pure reordering — same members, no mutation', () => {
+    const copy = [...pool];
+    const out = selectAdaptiveItems(pool, { ability: 75 });
+    expect(out).toHaveLength(pool.length);
+    expect(new Set(out.map((x) => x.id))).toEqual(new Set(pool.map((x) => x.id)));
+    expect(pool).toEqual(copy); // input untouched
   });
 });
