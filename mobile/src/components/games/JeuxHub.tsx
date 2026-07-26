@@ -7,13 +7,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Dimensions } from 'react-native';
-import { Zap, Flame, Trophy, Clock, Crown } from 'lucide-react-native';
+import { Zap, Flame, Trophy, Clock, Crown, Sparkles } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
 import DailyChallengeBanner from './DailyChallengeBanner';
+import { Skeleton } from '../StateViews';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
 
@@ -38,17 +39,51 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
   const colors = useColors();
   const { shadow } = useTheme();
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
-    getGameRecords().then((r: Record<string, GameRecord>) => {
-      if (alive) setRecords(r || {});
-    });
+    getGameRecords()
+      .then((r: Record<string, GameRecord>) => {
+        if (alive) setRecords(r || {});
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
     return () => { alive = false; };
   }, []);
 
   const arcade = GAMES.filter((g) => g.id !== 'trivia');
-  if (!arcade.some((g) => records[g.id])) return null; // nothing set yet
+
+  // Fetch in flight → show a layout-matched skeleton instead of a silent gap.
+  if (loading) {
+    return (
+      <View
+        className="px-4 py-4 mx-4 mt-5"
+        style={{ backgroundColor: colors.surface, borderRadius: radius.hero, ...shadow.md }}
+        accessible
+        accessibilityLabel={isCreole ? 'Ap chaje' : 'Chargement…'}
+        accessibilityLiveRegion="polite"
+      >
+        <View className="flex-row items-center gap-1.5 mb-3">
+          <Crown color={colors.warn} size={15} />
+          <Skeleton width={90} height={16} radius={6} />
+        </View>
+        {arcade.map((g, i) => (
+          <View
+            key={g.id}
+            className="flex-row items-center justify-between py-2"
+            style={{ borderTopWidth: i === 0 ? 0 : 1, borderTopColor: colors.hairline }}
+          >
+            <Skeleton width={110} height={13} radius={6} />
+            <Skeleton width={64} height={13} radius={6} />
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  if (!arcade.some((g) => records[g.id])) return null; // loaded, nothing set yet
 
   return (
     <View
@@ -123,8 +158,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
         <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
       </View>
 
-      {/* Stats row */}
-      {isAuthed && (
+      {/* Stats row — or, for guests, a friendly prompt instead of an empty band */}
+      {isAuthed ? (
         <View className="flex-row px-4 gap-2 mb-4">
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Zap color={colors.azure} size={16} />
@@ -144,6 +179,38 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
             <Trophy color={colors.warn} size={16} />
             <Text style={[typeScale.titleSm, { color: colors.ink }]}>{gamesPlayed}</Text>
             <Text style={[typeScale.caption, { color: colors.muted }]}>{isCreole ? 'Pati' : 'Parties'}</Text>
+          </View>
+        </View>
+      ) : (
+        <View
+          className="flex-row items-center mx-4 mb-4 px-4 py-3 rounded-2xl border"
+          style={{ backgroundColor: colors.surface, borderColor: colors.border, gap: 12 }}
+          accessible
+          accessibilityLabel={isCreole
+            ? 'Konekte pou swiv XP, seri ak pati ou yo'
+            : 'Connecte-toi pour suivre tes XP, ta série et tes parties'}
+        >
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radius.control,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.azureSoft,
+            }}
+          >
+            <Sparkles color={colors.azure} size={20} />
+          </View>
+          <View className="flex-1">
+            <Text style={[typeScale.titleSm, { color: colors.ink }]}>
+              {isCreole ? 'Konekte pou kenbe pwogrè w' : 'Connecte-toi pour suivre tes XP'}
+            </Text>
+            <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
+              {isCreole
+                ? 'XP, seri ak pati ap parèt isit la.'
+                : 'Tes XP, ta série et tes parties s\'afficheront ici.'}
+            </Text>
           </View>
         </View>
       )}

@@ -30,11 +30,11 @@ function OptionSheet({ visible, title, options, onPick, onClose }: {
   const colors = useColors();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} />
-      <View style={{ maxHeight: '70%', backgroundColor: colors.surface, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, paddingBottom: 24 }}>
+      <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={title} />
+      <View accessibilityViewIsModal style={{ maxHeight: '70%', backgroundColor: colors.surface, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, paddingBottom: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
           <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Fermer">
             <X size={20} color={colors.muted} />
           </TouchableOpacity>
         </View>
@@ -138,16 +138,20 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} />
-        <View style={{ backgroundColor: colors.bg, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, padding: 18, paddingBottom: 30, gap: 14 }}>
-          {/* grabber */}
-          <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: -4, marginBottom: 2 }} />
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
+        <View accessibilityViewIsModal style={{ backgroundColor: colors.bg, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, padding: 18, paddingBottom: 30, gap: 14 }}>
+          {/* grabber — decorative, hidden from screen readers */}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginTop: -4, marginBottom: 2 }}
+          />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ShieldCheck size={18} color={colors.success} />
             <Text style={[typeScale.title, { flex: 1, color: colors.ink }]}>
               {t('Mon profil de classement', 'Pwofil klasman mwen')}
             </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
               <X size={20} color={colors.muted} />
             </TouchableOpacity>
           </View>
@@ -221,6 +225,9 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
             onPress={save}
             disabled={saving || !aliasOk}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={t('Confirmer', 'Konfime')}
+            accessibilityState={{ disabled: saving || !aliasOk }}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.azure, opacity: saving || !aliasOk ? 0.5 : 1, borderRadius: 999, paddingVertical: 14, marginTop: 4 }}
           >
             <Check size={17} color="#fff" />

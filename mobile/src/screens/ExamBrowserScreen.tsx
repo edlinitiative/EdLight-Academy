@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Modal, FlatList,
 } from 'react-native';
@@ -9,12 +9,13 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ArrowLeft, Search, ChevronRight, CheckCircle2, SlidersHorizontal, X,
-  Clock, Layers, Award,
+  Clock, Layers, Award, GraduationCap,
 } from 'lucide-react-native';
 import { fetchFullCatalog } from '../utils/examCatalog';
 import { normalizeSubject, normalizeLevel, normalizeExamTitle, examTitleParts, subjectColor } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
+import { gradeProfile } from '../config/trackConfig';
 import { useColors, useTheme } from '../theme/theme';
 import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import PressableScale from '../components/ui/PressableScale';
@@ -33,6 +34,21 @@ const LEVEL_FILTER_MAP: Record<string, string[]> = {
   terminale: ['baccalaureat', 'bac', 'terminale'],
   '9e': ['9eme', '9ème', '9e', 'neuvieme', 'neuvième'],
   university: ['universite', 'université', 'university'],
+};
+
+// gradeProfile().examLevel → this screen's route-level keys, so a student's
+// grade can pick the default pool (POSTBAC → université concours, 9e → 9ème).
+const EXAM_LEVEL_TO_ROUTE: Record<string, string> = {
+  baccalaureat: 'terminale',
+  universite: 'university',
+  '9eme_af': '9e',
+};
+
+// Short, human labels for the dismissible "level context" chip (FR / HT).
+const CURATED_LEVEL_LABEL: Record<string, [string, string]> = {
+  terminale: ['Terminale · Bac', 'Tèminal · Bak'],
+  '9e': ['9ème année', '9yèm ane'],
+  university: ['Préfac · Concours', 'Prefak · Konkou'],
 };
 
 function questionCount(exam: any): number {
@@ -189,13 +205,14 @@ export default function ExamBrowserScreen() {
   const route = useRoute<Route>();
   const { level, subject: initialSubject } = route.params;
   const { user, language } = useStore();
+  const grade = useStore((s) => s.grade);
   const colors = useColors();
   const { typeScale, radius, shadow } = useTheme();
   const reduceMotion = useReduceMotion();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const [exams, setExams] = useState<any[]>([]);
+  const [catalog, setCatalog] = useState<any[]>([]);
   const [results, setResults] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -205,6 +222,26 @@ export default function ExamBrowserScreen() {
   const [yearFilter, setYearFilter] = useState('Tout');
   const [statusFilter, setStatusFilter] = useState<'all' | 'done' | 'todo'>('all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // ── Grade-based curation ──────────────────────────────────────────────────
+  // Map the student's grade to an exam level; when it differs from the browser's
+  // default (terminale) pool, default-filter to it so a post-Bac (or 9e) student
+  // isn't dumped into 470 Bac papers. Only ever curates away from the default
+  // terminale pool — an explicit level choice (9e / université card) is left as
+  // is. Dismissible, never locked (see the level chip below).
+  const curatedLevel = useMemo(() => {
+    const mapped = EXAM_LEVEL_TO_ROUTE[gradeProfile(grade).examLevel ?? ''] ?? null;
+    return level === 'terminale' && mapped && mapped !== 'terminale' ? mapped : null;
+  }, [grade, level]);
+  const [activeLevel, setActiveLevel] = useState<string>(curatedLevel ?? level);
+  const levelTouched = useRef(false);
+  // Late store hydration: snap to the curated level once grade resolves, unless
+  // the student has already chosen a level via the chip.
+  useEffect(() => {
+    if (!levelTouched.current && curatedLevel && activeLevel === level && curatedLevel !== level) {
+      setActiveLevel(curatedLevel);
+    }
+  }, [curatedLevel, level, activeLevel]);
 
   // Re-apply the subject filter when navigated here with a new `subject` param
   // while this screen is already mounted (e.g. the readiness "Focus recommandé"
@@ -221,21 +258,10 @@ export default function ExamBrowserScreen() {
     // The catalog index is cache-first and drives the list — render as soon
     // as it arrives. The "done / best score" badges come from Firestore and
     // fill in when ready; they must never block the list behind a spinner.
+    // The full catalog is kept so the in-browser level filter (grade curation /
+    // "tous les niveaux") can switch pools without a re-fetch.
     fetchFullCatalog()
-      .then((catalog) => {
-        if (!active) return;
-        const filters = LEVEL_FILTER_MAP[level] ?? [];
-        const levelExams = catalog.filter((e: any) => {
-          const lvl = String(e.level ?? e.niveau ?? '').toLowerCase();
-          return filters.some((f) => lvl.includes(f));
-        });
-        levelExams.sort((a: any, b: any) => {
-          const ya = parseInt(String(a.year ?? '0'), 10);
-          const yb = parseInt(String(b.year ?? '0'), 10);
-          return yb - ya;
-        });
-        setExams(levelExams);
-      })
+      .then((cat) => { if (active) setCatalog(cat); })
       .catch(() => { if (active) setError(true); })
       .finally(() => { if (active) setLoading(false); });
 
@@ -247,11 +273,29 @@ export default function ExamBrowserScreen() {
       setResults({});
     }
     return () => { active = false; };
-  }, [level, user?.uid, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.uid, retryCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return load();
   }, [load]);
+
+  // Level-filtered, year-sorted pool the list renders. Level comes from the
+  // in-browser selector (grade-curated by default); 'all' shows every level.
+  const exams = useMemo(() => {
+    let pool = catalog;
+    if (activeLevel !== 'all') {
+      const filters = LEVEL_FILTER_MAP[activeLevel] ?? [];
+      pool = catalog.filter((e: any) => {
+        const lvl = String(e.level ?? e.niveau ?? '').toLowerCase();
+        return filters.some((f) => lvl.includes(f));
+      });
+    }
+    return [...pool].sort((a: any, b: any) => {
+      const ya = parseInt(String(a.year ?? '0'), 10);
+      const yb = parseInt(String(b.year ?? '0'), 10);
+      return yb - ya;
+    });
+  }, [catalog, activeLevel]);
 
   const subjects = useMemo(() => {
     const s = new Set<string>();
@@ -292,6 +336,24 @@ export default function ExamBrowserScreen() {
 
   const doneCount = useMemo(() => exams.filter((e) => !!results[String(e.exam_id ?? e.id ?? '')]).length, [exams, results]);
   const activeFilterCount = [subject !== 'Tout', yearFilter !== 'Tout', statusFilter !== 'all'].filter(Boolean).length;
+  const screenTitle = activeLevel === 'all'
+    ? t('Tous les examens', 'Tout egzamen')
+    : (LEVEL_LABEL[activeLevel] ?? LEVEL_LABEL[level] ?? level);
+  const curatedChipLabel = activeLevel === 'all'
+    ? t('Tous les niveaux', 'Tout nivo')
+    : (CURATED_LEVEL_LABEL[activeLevel]
+        ? t(CURATED_LEVEL_LABEL[activeLevel][0], CURATED_LEVEL_LABEL[activeLevel][1])
+        : activeLevel);
+
+  // Toggle the level chip between the grade-curated pool and every level.
+  function toggleLevel() {
+    levelTouched.current = true;
+    setSubject('Tout');
+    setYearFilter('Tout');
+    setStatusFilter('all');
+    setSearch('');
+    setActiveLevel((cur) => (cur === curatedLevel ? 'all' : (curatedLevel ?? level)));
+  }
 
   if (loading)
     return (
@@ -307,7 +369,7 @@ export default function ExamBrowserScreen() {
           >
             <ArrowLeft color={colors.muted} size={22} />
           </TouchableOpacity>
-          <Text style={[typeScale.h1, { color: colors.ink }]}>{LEVEL_LABEL[level] ?? level}</Text>
+          <Text style={[typeScale.h1, { color: colors.ink }]}>{screenTitle}</Text>
         </View>
         {/* Search bar placeholder */}
         <View className="px-4 pt-3 pb-1">
@@ -348,7 +410,7 @@ export default function ExamBrowserScreen() {
           <ArrowLeft color={colors.muted} size={22} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text style={[typeScale.h1, { color: colors.ink }]}>{LEVEL_LABEL[level] ?? level}</Text>
+          <Text style={[typeScale.h1, { color: colors.ink }]}>{screenTitle}</Text>
           {exams.length > 0 && (
             <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
               {exams.length} {t('examens', 'egzamen')} · {doneCount} {t('terminé', 'fini')}{doneCount > 1 ? t('s', '') : ''}
@@ -368,6 +430,54 @@ export default function ExamBrowserScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* Level context — grade-curated by default (e.g. "Préfac · Concours"),
+          with a one-tap escape to browse every level. Only shown when the
+          student's grade implies a different pool than the default Bac papers. */}
+      {curatedLevel ? (
+        <View style={{ paddingHorizontal: 16, paddingTop: 4, backgroundColor: colors.bg }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 9,
+              borderRadius: radius.control,
+              backgroundColor: colors.azureSoft,
+              borderWidth: 1,
+              borderColor: colors.azure + '33',
+            }}
+          >
+            <GraduationCap color={colors.azure} size={17} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]} numberOfLines={1}>
+                {curatedChipLabel}
+              </Text>
+              <Text style={[typeScale.micro, { color: colors.muted }]} numberOfLines={1}>
+                {activeLevel === curatedLevel
+                  ? t('Adapté à ton profil', 'Adapte pou pwofil ou')
+                  : t('Affichage de tous les examens', 'N ap montre tout egzamen')}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={toggleLevel}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={
+                activeLevel === curatedLevel
+                  ? t('Voir tous les niveaux', 'Wè tout nivo')
+                  : t('Revenir à mon niveau', 'Retounen nan nivo mwen')
+              }
+              style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+            >
+              <Text style={[typeScale.micro, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>
+                {activeLevel === curatedLevel ? t('Tous les niveaux', 'Tout nivo') : t('Mon niveau', 'Nivo mwen')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
 
       {/* Search */}
       <View className="px-4 pt-3 pb-2" style={{ backgroundColor: colors.bg }}>
@@ -459,7 +569,7 @@ export default function ExamBrowserScreen() {
             <ExamCard
               exam={exam}
               attemptInfo={results[examId] ?? null}
-              onPress={() => navigation.navigate('ExamTake', { level, examId })}
+              onPress={() => navigation.navigate('ExamTake', { level: activeLevel !== 'all' ? activeLevel : level, examId })}
             />
           );
           if (reduceMotion) return card;

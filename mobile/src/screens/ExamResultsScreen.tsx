@@ -74,16 +74,33 @@ function ScoreGauge({ percentage, onDark = false }: { percentage: number; onDark
     return () => cancelAnimationFrame(raf);
   }, [percentage, reduceMotion]);
 
+  const phrase = percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !');
+  // One spoken node for the whole score — "Score : 78 pour cent, Bien essayé".
+  const scoreA11y = `${t('Score', 'Nòt')} : ${percentage} ${t('pour cent', 'pou san')}, ${phrase}`;
+
   return (
     <View className="items-center py-8">
+      {/* Decorative trophy — hidden from VoiceOver (the score node speaks it). */}
       <PopIn from={0.6}>
-        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: trophyBg, borderWidth: onDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+        <View
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: trophyBg, borderWidth: onDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}
+        >
           <Trophy color={trophyColor} size={32} />
         </View>
       </PopIn>
-      <Text style={{ fontSize: 52, fontWeight: '900', color, letterSpacing: -1 }}>{display}%</Text>
-      <Text style={{ marginTop: 4, color: onDark ? 'rgba(255,255,255,0.82)' : colors.muted }}>
-        {percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !')}
+      <Text
+        accessible
+        accessibilityLabel={scoreA11y}
+        maxFontSizeMultiplier={1.3}
+        style={{ fontSize: 52, fontWeight: '900', color, letterSpacing: -1 }}
+      >
+        {display}%
+      </Text>
+      {/* Already spoken via the score label above — kept visual only. */}
+      <Text importantForAccessibility="no" style={{ marginTop: 4, color: onDark ? 'rgba(255,255,255,0.82)' : colors.muted }}>
+        {phrase}
       </Text>
     </View>
   );
@@ -100,11 +117,18 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
   const given = answer?.given ?? answer;
   const isUnanswered = isUnansweredResult(result, answer);
   const isCorrect = !isUnanswered && isCorrectResult(result, answer, question);
+  // Correctness must not rely on the icon colour alone — state it in the label.
+  const statusLabel = isUnanswered ? t('sans réponse', 'san repons') : isCorrect ? t('correcte', 'kòrèk') : t('incorrecte', 'pa kòrèk');
+  const questionText = String(question._displayText ?? question.question ?? '');
 
   return (
     <PressableScale
       onPress={() => setExpanded((v) => !v)}
       pressedScale={0.98}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      accessibilityLabel={`${t('Question', 'Kesyon')} ${index + 1}, ${statusLabel}. ${questionText}`}
+      accessibilityHint={t('Toucher pour voir le détail', 'Manyen pou wè detay')}
       style={[{ borderRadius: radius.card, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }, shadow.sm]}
     >
       <View className="flex-row items-center px-4 py-3 gap-3">
@@ -259,7 +283,7 @@ export default function ExamResultsScreen() {
             <View pointerEvents="none" style={{ position: 'absolute', top: -50, left: -30, width: 180, height: 180, borderRadius: 90, backgroundColor: '#3B82F6', opacity: 0.3 }} />
             <View pointerEvents="none" style={{ position: 'absolute', bottom: -40, right: -20, width: 180, height: 180, borderRadius: 90, backgroundColor: '#7C3AED', opacity: 0.28 }} />
             <ScoreGauge percentage={Math.round(percentage)} onDark />
-            <View style={{ paddingHorizontal: 24, paddingBottom: 22 }}>
+            <View style={{ paddingHorizontal: 24, paddingBottom: 22 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
               <View style={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
                 <View style={{ height: 8, borderRadius: 99, width: `${Math.round(percentage)}%`, backgroundColor: '#ffffff' }} />
               </View>
@@ -291,9 +315,14 @@ export default function ExamResultsScreen() {
             { label: t('Incorrectes', 'Pa kòrèk'), value: String(incorrect), icon: <XCircle color={colors.danger} size={20} />, color: colors.danger },
             { label: t('Score', 'Nòt'), value: maxScore > 0 ? `${scored}/${maxScore}` : `${Math.round(percentage)}%`, icon: <Trophy color={colors.warn} size={20} />, color: colors.warn },
           ].map((stat) => (
-            <View key={stat.label} style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}>
+            <View
+              key={stat.label}
+              accessible
+              accessibilityLabel={`${stat.label}: ${stat.value}`}
+              style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}
+            >
               {stat.icon}
-              <Text style={[typeScale.h2, { color: colors.ink }]}>{stat.value}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[typeScale.h2, { color: colors.ink }]}>{stat.value}</Text>
               <Text style={[typeScale.caption, { color: colors.muted, textAlign: 'center' }]}>{stat.label}</Text>
             </View>
           ))}
@@ -338,6 +367,9 @@ export default function ExamResultsScreen() {
                   onPress={() => setReviewFilter(val)}
                   pressedScale={0.97}
                   haptic={false}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: reviewFilter === val }}
+                  accessibilityLabel={label}
                   className={`flex-1 py-2 rounded-lg items-center`}
                   style={reviewFilter === val ? { backgroundColor: colors.surface, ...shadow.sm } : {}}
                 >

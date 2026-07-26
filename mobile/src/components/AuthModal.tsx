@@ -23,7 +23,7 @@ export default function AuthModal() {
       animationType="slide"
       onRequestClose={dismissable ? () => setShowAuthModal(false) : undefined}
     >
-      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg }} accessibilityViewIsModal>
         {!dismissable && (
           <View style={{ backgroundColor: colors.azure, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
             <Text style={[typeScale.title, { color: '#fff' }]}>
@@ -51,6 +51,8 @@ export default function AuthModal() {
               backgroundColor: colors.surfaceAlt,
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Fermer', 'Fèmen')}
           >
             <X color={colors.ink} size={20} />
           </TouchableOpacity>

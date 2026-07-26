@@ -70,7 +70,13 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
       <View className="flex-row items-center gap-5">
         {/* Donut ring */}
         <View style={{ width: 104, height: 104, alignItems: 'center', justifyContent: 'center' }}>
-          <Svg width={104} height={104} style={{ position: 'absolute' }}>
+          <Svg
+            width={104}
+            height={104}
+            style={{ position: 'absolute' }}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
             {/* Track */}
             <Circle
               cx={52} cy={52} r={RADIUS}
@@ -93,8 +99,19 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
               />
             )}
           </Svg>
-          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={[typeScale.h1, { color: hasData ? colors.ink : colors.faint }]}>
+          <View
+            style={{ alignItems: 'center', justifyContent: 'center' }}
+            accessible
+            accessibilityLabel={
+              hasData
+                ? `${t('Score de préparation', 'Nòt preparasyon')}: ${pct} ${t('pour cent', 'pou san')}, ${scoreLabel(pct, isCreole)}`
+                : `${t('Score de préparation', 'Nòt preparasyon')}: ${t('non disponible', 'poko disponib')}`
+            }
+          >
+            <Text
+              style={[typeScale.h1, { color: hasData ? colors.ink : colors.faint }]}
+              maxFontSizeMultiplier={1.3}
+            >
               {hasData ? `${pct}%` : '—'}
             </Text>
             {hasData && (
@@ -120,10 +137,14 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
               const color = subjectColor(s.subject, colors);
               const label = String(s.subject || '');
               return (
-                <View key={s.subject}>
+                <View
+                  key={s.subject}
+                  accessible
+                  accessibilityLabel={`${label} ${sPct} ${t('pour cent', 'pou san')}`}
+                >
                   <View className="flex-row items-center justify-between mb-0.5">
                     <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
-                    <Text style={[typeScale.caption, { color }]}>{sPct}%</Text>
+                    <Text style={[typeScale.caption, { color }]} maxFontSizeMultiplier={1.3}>{sPct}%</Text>
                   </View>
                   <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.surfaceAlt }}>
                     <View

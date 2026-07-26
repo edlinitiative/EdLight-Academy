@@ -1,24 +1,19 @@
 /**
- * Shared game-over screen for the arcade games — score ring, per-game stat
- * rows, the XP reward block, and replay/exit actions. RN port of the web's
- * GameOverCard so every game ends with the same celebratory look.
+ * Shared game-over screen for the arcade games — now built on the same
+ * "Aurora Depth" QuizResultHero as the Trivia and practice-quiz results, so
+ * every surface in the app ends on one victory language. The per-game accent is
+ * preserved (it tints the deep gradient, the count-up score ring and the glows),
+ * while the stat rows, XP reward block and replay/exit actions ride on glass.
  */
 
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from 'react-native-reanimated';
+import { View, Text } from 'react-native';
 import {
   Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw,
 } from 'lucide-react-native';
-import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
-import PressableScale from '../ui/PressableScale';
+import { typeScale } from '../../theme/theme';
 import { success } from '../../utils/haptics';
-import { useReduceMotion } from '../../utils/motion';
-import Confetti from '../ui/Confetti';
-
-const CIRC = 327; // 2 * π * 52
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+import QuizResultHero, { HeroButton, glass } from '../quiz/QuizResultHero';
 
 export interface GameReward {
   xpEarned: number;
@@ -56,12 +51,10 @@ export default function GameOverCard({
   accent = '#1B6FE0',
   highScore = null,
 }: GameOverCardProps) {
-  const colors = useColors();
-  const { shadow } = useTheme();
-  const reduceMotion = useReduceMotion();
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
-  // Celebrate the game-over reveal once on mount.
+  // Celebrate the game-over reveal once on mount (kept here so the haptic fires
+  // for every game; the hero's own celebrateHaptic stays off to avoid doubling).
   useEffect(() => { success(); }, []);
 
   let IconCmp: typeof Trophy;
@@ -85,155 +78,91 @@ export default function GameOverCard({
     messageHt = 'Kouraj! Eseye ankò pou pwogrese.';
   }
 
-  const fill = (pct / 100) * CIRC;
-  const tint = `${accent}1a`; // soft accent wash for chips/pills
-
-  // Sweep the score arc up to its final value on mount (snap for reduce-motion).
-  const progress = useSharedValue(0);
-  useEffect(() => {
-    progress.value = reduceMotion
-      ? fill
-      : withTiming(fill, { duration: 850, easing: Easing.out(Easing.cubic) });
-  }, [fill, progress, reduceMotion]);
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDasharray: `${progress.value} ${CIRC}`,
-  }));
+  const isRecord = highScore != null && score >= highScore && score > 0;
 
   return (
-    <ScrollView
-      className="flex-1"
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={{ alignItems: 'center', padding: 24, paddingTop: 36, paddingBottom: 48 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {(pct >= 90 || reward?.leveledUp) && <Confetti />}
-      <View
-        className="w-full items-center px-5 py-8"
-        style={{
-          borderRadius: radius.hero,
-          backgroundColor: colors.surface,
-          ...shadow.md,
-        }}
-      >
-        {/* Result icon */}
-        <View
-          style={{
-            width: 72, height: 72, borderRadius: 36, backgroundColor: tint,
-            alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-          }}
-        >
-          <IconCmp color={accent} size={34} />
-        </View>
-
-        <Text style={[typeScale.h1, { color: colors.ink, marginBottom: 16 }]}>
-          {isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
-        </Text>
-
-        {/* Score ring */}
-        <View className="items-center justify-center" style={{ width: 140, height: 140 }}>
-          <Svg width={140} height={140} viewBox="0 0 120 120">
-            <Circle cx={60} cy={60} r={52} fill="none" stroke={colors.border} strokeWidth={10} />
-            <AnimatedCircle
-              cx={60}
-              cy={60}
-              r={52}
-              fill="none"
-              stroke={accent}
-              strokeWidth={10}
-              animatedProps={animatedProps}
-              strokeLinecap="round"
-              rotation="-90"
-              origin="60, 60"
+    <QuizResultHero
+      score={score}
+      total={maxScore}
+      isCreole={isCreole}
+      accent={accent}
+      title={isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
+      showConfetti={pct >= 90 || !!reward?.leveledUp}
+      footer={
+        <>
+          {onReplay && (
+            <HeroButton
+              variant="solid"
+              color={accent}
+              icon={<RefreshCw color="#fff" size={18} />}
+              label={isCreole ? 'Jwe ankò' : 'Rejouer'}
+              onPress={onReplay}
+              style={{ marginBottom: 10 }}
             />
-          </Svg>
-          <View className="absolute items-center justify-center">
-            <Text style={[typeScale.display, { color: colors.ink }]}>{pct}%</Text>
-          </View>
+          )}
+          <HeroButton
+            variant="ghost"
+            label={`← ${isCreole ? 'Jwèt yo' : 'Les jeux'}`}
+            accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
+            onPress={onExit}
+          />
+        </>
+      }
+    >
+      {/* Tier badge + message */}
+      <View style={{ ...glass, width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', marginTop: 16 }}>
+        <IconCmp color="#fff" size={24} />
+      </View>
+      <Text style={{ fontFamily: typeScale.body.fontFamily, fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 12, paddingHorizontal: 8 }}>
+        {isCreole ? messageHt : message}
+      </Text>
+
+      {/* Stat chips */}
+      {stats.length > 0 && (
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
+          {stats.map((s) => (
+            <View key={s.label} style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{s.value}</Text>
+              <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5, marginTop: 2, textAlign: 'center' }}>{s.label}</Text>
+            </View>
+          ))}
         </View>
+      )}
 
-        {/* Stat rows */}
-        {stats.length > 0 && (
-          <View className="flex-row justify-center gap-6 mt-5">
-            {stats.map((s) => (
-              <View key={s.label} className="items-center px-2">
-                <Text style={[typeScale.h2, { color: colors.ink }]}>
-                  {s.value}
-                </Text>
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>{s.label}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+      {/* Personal record */}
+      {isRecord && (
+        <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, marginTop: 14 }}>
+          <Trophy color="#fde68a" size={14} />
+          <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 13, color: '#fde68a' }}>
+            {isCreole ? 'Nouvo rekò pèsonèl !' : 'Nouveau record personnel !'}
+          </Text>
+        </View>
+      )}
 
-        {/* Personal record */}
-        {highScore != null && score >= highScore && score > 0 && (
-          <View className="flex-row items-center gap-1.5 mt-4">
-            <Trophy color={colors.warn} size={14} />
-            <Text style={[typeScale.label, { color: colors.warn }]}>
-              {isCreole ? 'Nouvo rekò pèsonèl !' : 'Nouveau record personnel !'}
+      {/* XP reward */}
+      {reward && reward.xpEarned > 0 && (
+        <View style={{ alignItems: 'center', marginTop: 16 }}>
+          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}>
+            <Sparkles color="#fde68a" size={16} />
+            <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 14, color: '#fde68a' }}>
+              +{reward.xpEarned} XP
             </Text>
           </View>
-        )}
-
-        <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginTop: 14 }]}>
-          {isCreole ? messageHt : message}
-        </Text>
-
-        {/* XP reward */}
-        {reward && reward.xpEarned > 0 && (
-          <View className="items-center mt-4">
-            <View
-              className="flex-row items-center gap-1.5 rounded-full px-4 py-2"
-              style={{ backgroundColor: tint }}
-            >
-              <Sparkles color={accent} size={16} />
-              <Text style={[typeScale.bodyMd, { color: accent }]}>
-                +{reward.xpEarned} XP
+          {reward.leveledUp && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+              <Crown color="#fde68a" size={14} />
+              <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 13, color: '#fde68a' }}>
+                {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
               </Text>
             </View>
-            {reward.leveledUp && (
-              <View className="flex-row items-center gap-1.5 mt-2">
-                <Crown color={colors.warn} size={14} />
-                <Text style={[typeScale.label, { color: colors.warn }]}>
-                  {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
-                </Text>
-              </View>
-            )}
-            {reward.guest && (
-              <Text style={[typeScale.caption, { color: colors.faint, marginTop: 6, textAlign: 'center' }]}>
-                {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
-              </Text>
-            )}
-          </View>
-        )}
-
-        {/* Actions */}
-        <View className="w-full mt-6">
-          {onReplay && (
-            <PressableScale
-              onPress={onReplay}
-              accessibilityRole="button"
-              accessibilityLabel={isCreole ? 'Jwe ankò' : 'Rejouer'}
-              style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: radius.tile, marginBottom: 12, backgroundColor: accent }}
-            >
-              <RefreshCw color="#fff" size={18} />
-              <Text style={[typeScale.title, { color: '#fff' }]}>
-                {isCreole ? 'Jwe ankò' : 'Rejouer'}
-              </Text>
-            </PressableScale>
           )}
-          <PressableScale
-            onPress={onExit}
-            accessibilityRole="button"
-            accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
-            style={{ width: '100%', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: radius.tile, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
-          >
-            <Text style={[typeScale.title, { color: colors.muted }]}>
-              ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+          {reward.guest && (
+            <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 6, textAlign: 'center' }}>
+              {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
             </Text>
-          </PressableScale>
+          )}
         </View>
-      </View>
-    </ScrollView>
+      )}
+    </QuizResultHero>
   );
 }

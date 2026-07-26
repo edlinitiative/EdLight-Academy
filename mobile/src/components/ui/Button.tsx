@@ -43,6 +43,9 @@ export default function Button({
         ? { paddingVertical: 15, paddingHorizontal: 20 }
         : { paddingVertical: 12, paddingHorizontal: 16 };
   const fontSize = size === 'sm' ? 14 : size === 'lg' ? 16 : 15;
+  // Accessibility floor: even the smallest button keeps a ~44px tap target.
+  // md/lg already exceed this, so minHeight only lifts sm — no layout shift.
+  const minHeight = 44;
 
   const V = {
     primary: { bg: colors.azure, fg: '#ffffff', border: 'transparent' },
@@ -71,6 +74,7 @@ export default function Button({
           backgroundColor: V.bg,
           opacity: disabled ? 0.45 : 1,
           alignSelf: fullWidth ? 'stretch' : undefined,
+          minHeight,
           ...pad,
         },
         style,
@@ -81,7 +85,12 @@ export default function Button({
       ) : (
         <>
           {icon}
-          <Text style={[typeScale.title, { color: V.fg, fontSize, lineHeight: fontSize + 4 }]}>{label}</Text>
+          <Text
+            maxFontSizeMultiplier={1.3}
+            style={[typeScale.title, { color: V.fg, fontSize, lineHeight: fontSize + 4 }]}
+          >
+            {label}
+          </Text>
         </>
       )}
     </PressableScale>

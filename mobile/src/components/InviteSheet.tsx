@@ -81,6 +81,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
       <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
         <View
+          accessibilityViewIsModal
           style={{
             backgroundColor: colors.bg,
             borderTopLeftRadius: radius.hero,
@@ -91,8 +92,12 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
             ...shadow.lg,
           }}
         >
-          {/* grabber */}
-          <View style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: 14 }} />
+          {/* grabber — decorative, hidden from screen readers */}
+          <View
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: 14 }}
+          />
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <View style={{ width: 40, height: 40, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
@@ -139,7 +144,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
                 <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 6 }]}>
                   {t('Votre code', 'Kòd ou')}
                 </Text>
-                <Text style={[typeScale.num, { color: colors.azure, letterSpacing: 4 }]}>
+                <Text maxFontSizeMultiplier={1.3} style={[typeScale.num, { color: colors.azure, letterSpacing: 4 }]}>
                   {data.code}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>

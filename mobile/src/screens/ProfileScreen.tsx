@@ -22,6 +22,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import InviteSheet from '../components/InviteSheet';
+import FollowInstagram from '../components/FollowInstagram';
 import { GRADES } from '../config/trackConfig';
 import { useColors, useTheme, radius, typeScale, gradients } from '../theme/theme';
 import {
@@ -55,7 +56,7 @@ function StatTile({
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[typeScale.h2, { color: colors.ink }]}>{value}</Text>
+        <Text style={[typeScale.h2, { color: colors.ink }]} maxFontSizeMultiplier={1.3}>{value}</Text>
         <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>{label}</Text>
       </View>
     </View>
@@ -389,7 +390,7 @@ export default function ProfileScreen() {
                     {t('Niveau', 'Nivo')} {level.level}
                   </Text>
                 </View>
-                <Text style={[typeScale.bodyMd, { color: '#ffffff' }]}>{profile.xp ?? 0} XP</Text>
+                <Text style={[typeScale.bodyMd, { color: '#ffffff' }]} maxFontSizeMultiplier={1.3}>{profile.xp ?? 0} XP</Text>
               </View>
               <XpBar pct={progressPct} height={6} />
             </View>
@@ -506,11 +507,17 @@ export default function ProfileScreen() {
             </View>
             {myRank ? (
               <View style={{ backgroundColor: colors.azureSoft, borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={[typeScale.label, { color: colors.azure }]}>#{myRank}</Text>
+                <Text style={[typeScale.label, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>#{myRank}</Text>
               </View>
             ) : null}
             <ChevronRight color={colors.faint} size={18} />
           </PressableScale>
+        </View>
+
+        {/* Follow on Instagram — a quiet, secondary social touchpoint. One row,
+            near the settings area; deep-links into the app with a web fallback. */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+          <FollowInstagram />
         </View>
 
         {/* Settings — one grouped card */}

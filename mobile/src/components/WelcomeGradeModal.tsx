@@ -32,12 +32,12 @@ export default function WelcomeGradeModal() {
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={[styles.card, { backgroundColor: colors.surface }]} accessibilityViewIsModal>
           <View style={[styles.iconWrap, { backgroundColor: colors.azureSoft }]}>
             <GraduationCap color={colors.azure} size={30} />
           </View>
 
-          <Text style={[styles.title, { color: colors.ink }]}>
+          <Text maxFontSizeMultiplier={1.3} style={[styles.title, { color: colors.ink }]}>
             {t('Tu es en quelle classe ?', 'Ki klas ou ye ?')}
           </Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
@@ -61,7 +61,13 @@ export default function WelcomeGradeModal() {
             ))}
           </View>
 
-          <TouchableOpacity onPress={() => setGradeChosen(true)} activeOpacity={0.7} style={styles.skip}>
+          <TouchableOpacity
+            onPress={() => setGradeChosen(true)}
+            activeOpacity={0.7}
+            style={styles.skip}
+            accessibilityRole="button"
+            accessibilityLabel={t('Passer', 'Sote')}
+          >
             <Text style={[styles.skipText, { color: colors.faint }]}>{t('Passer', 'Sote')}</Text>
           </TouchableOpacity>
         </View>

@@ -147,9 +147,15 @@ function segmentSandraText(text: string): Segment[] {
 function SandraBubble({
   text,
   onLinkPress,
+  accessibilityLabel,
+  live,
 }: {
   text: string;
   onLinkPress?: (url: string) => boolean;
+  /** Screen-reader label, e.g. "Sandra: …". Groups the bubble as one node. */
+  accessibilityLabel?: string;
+  /** When true the bubble is announced politely as it appears (latest reply). */
+  live?: boolean;
 }) {
   const colors = useColors();
   const mdStyles = markdownStylesFor(colors);
@@ -157,7 +163,12 @@ function SandraBubble({
   const hasMath = segments.some((s) => s.type === 'math');
 
   return (
-    <View className="flex-row self-start max-w-[90%] gap-2">
+    <View
+      className="flex-row self-start max-w-[90%] gap-2"
+      accessible
+      accessibilityLabel={accessibilityLabel}
+      accessibilityLiveRegion={live ? 'polite' : 'none'}
+    >
       {/* Sandra identity glyph */}
       <View
         style={{
@@ -196,10 +207,15 @@ function SandraBubble({
   );
 }
 
-function UserBubble({ text }: { text: string }) {
+function UserBubble({ text, accessibilityLabel }: { text: string; accessibilityLabel?: string }) {
   const colors = useColors();
   return (
-    <View className="self-end max-w-[85%]" style={bubbleStylesFor(colors).user}>
+    <View
+      className="self-end max-w-[85%]"
+      style={bubbleStylesFor(colors).user}
+      accessible
+      accessibilityLabel={accessibilityLabel}
+    >
       <Text style={[typeScale.body, { color: '#ffffff' }]}>{text}</Text>
     </View>
   );
@@ -441,7 +457,7 @@ export default function SandraScreen({
               <Sparkles size={20} color={colors.coral} />
             </View>
             <View>
-              <Text style={[typeScale.h2, { color: colors.ink }]}>Sandra</Text>
+              <Text maxFontSizeMultiplier={1.3} style={[typeScale.h2, { color: colors.ink }]}>Sandra</Text>
               <Text style={[typeScale.caption, { color: colors.muted }]}>
                 {t('Votre tutrice IA', 'Titris IA ou')}
               </Text>
@@ -488,6 +504,10 @@ export default function SandraScreen({
                   'Bonjour ! Je suis Sandra, votre tutrice. Posez-moi vos questions sur vos cours !',
                   'Bonjou ! Mwen se Sandra, titris ou. Poze m kesyon ou yo sou kou ou yo !',
                 )}
+                accessibilityLabel={`Sandra : ${t(
+                  'Bonjour ! Je suis Sandra, votre tutrice. Posez-moi vos questions sur vos cours !',
+                  'Bonjou ! Mwen se Sandra, titris ou. Poze m kesyon ou yo sou kou ou yo !',
+                )}`}
               />
               <View className="flex-row flex-wrap gap-2 mt-2">
                 {suggestions.map((s) => (
@@ -512,11 +532,23 @@ export default function SandraScreen({
               </View>
             </View>
           ) : (
-            messages.map((m) =>
+            messages.map((m, i) =>
               m.role === 'user' ? (
-                <UserBubble key={m.id} text={m.text} />
+                <UserBubble
+                  key={m.id}
+                  text={m.text}
+                  accessibilityLabel={`${t('Vous', 'Ou')} : ${m.text}`}
+                />
               ) : (
-                <SandraBubble key={m.id} text={m.text} onLinkPress={handleLinkPress} />
+                <SandraBubble
+                  key={m.id}
+                  text={m.text}
+                  onLinkPress={handleLinkPress}
+                  accessibilityLabel={`Sandra : ${m.text}`}
+                  // Announce only the newest reply so VoiceOver reads it aloud
+                  // as it lands, without re-announcing the whole transcript.
+                  live={i === messages.length - 1}
+                />
               ),
             )
           )}
@@ -592,6 +624,7 @@ export default function SandraScreen({
             maxLength={MAX_CHARS}
             placeholder={t('Posez votre question…', 'Poze kesyon ou…')}
             placeholderTextColor={colors.faint}
+            accessibilityLabel={t('Votre question pour Sandra', 'Kesyon ou pou Sandra')}
             className="flex-1"
             style={{
               ...typeScale.body,
@@ -615,7 +648,9 @@ export default function SandraScreen({
               backgroundColor: colors.azure,
               opacity: sending || !input.trim() ? 0.4 : 1,
             }}
+            accessibilityRole="button"
             accessibilityLabel={t('Envoyer', 'Voye')}
+            accessibilityState={{ disabled: sending || !input.trim() }}
           >
             <Send size={18} color="#ffffff" />
           </TouchableOpacity>

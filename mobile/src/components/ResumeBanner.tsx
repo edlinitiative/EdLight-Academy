@@ -109,6 +109,8 @@ export default function ResumeBanner() {
       <TouchableOpacity
         onPress={handleResume}
         activeOpacity={0.82}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('Reprendre', 'Kontinye')}: ${eyebrow}, ${lastActivity.title}`}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -129,6 +131,8 @@ export default function ResumeBanner() {
         onPress={clearActivity}
         activeOpacity={0.82}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel={t('Ignorer', 'Inyore')}
         style={{ flexShrink: 0 }}
       >
         <X color={colors.faint} size={16} />

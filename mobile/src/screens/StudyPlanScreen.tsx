@@ -180,7 +180,7 @@ function StatPill({ icon, value, label }: { icon: React.ReactNode; value: string
       }}
     >
       {icon}
-      <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{value}</Text>
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{value}</Text>
       <Text style={{ fontSize: 10, color: colors.muted }}>{label}</Text>
     </View>
   );
@@ -218,7 +218,12 @@ function TaskRow({
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole="button"
-      accessibilityLabel={taskDisplayTitle(task, isCreole)}
+      // Read the row as "subject, title, status" so VoiceOver conveys the whole
+      // task without needing to focus each fragment.
+      accessibilityLabel={`${task.subject}, ${taskDisplayTitle(task, isCreole)}, ${
+        mastered ? (isCreole ? 'metrize' : 'maîtrisé') : isCreole ? 'pou fè' : 'à faire'
+      }`}
+      accessibilityState={{ selected: mastered, disabled: !onPress }}
       className={`flex-row items-center py-3 ${!last ? 'border-b border-gray-100 dark:border-slate-700' : ''}`}
       style={{ gap: 10, opacity: mastered ? 0.6 : 1 }}
     >
@@ -512,7 +517,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   // ── Shared header ───────────────────────────────────────────────────
   const header = (
     <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-      <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink }}>
+      <Text maxFontSizeMultiplier={1.3} style={{ fontSize: 22, fontWeight: '800', color: colors.ink }}>
         {plan?.title || t("Plan d'Étude", 'Plan Etid')}
       </Text>
       <View className="flex-row items-center" style={{ gap: 10 }}>
@@ -817,7 +822,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
                 {masteredCount}/{totalTasks} {t('maîtrisés', 'metrize')}
               </Text>
             </View>
-            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.azure }}>{progressPct}%</Text>
+            <Text maxFontSizeMultiplier={1.3} style={{ fontSize: 18, fontWeight: '800', color: colors.azure }}>{progressPct}%</Text>
           </View>
           <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' }}>
             <View style={{ width: `${progressPct}%`, height: 8, borderRadius: 4, backgroundColor: colors.azure }} />

@@ -69,6 +69,8 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
   onGoto: (i: number) => void;
 }) {
   const colors = useColors();
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const scrollRef = useRef<ScrollView>(null);
 
   // Keep the active question centered as the student navigates.
@@ -91,6 +93,8 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
           onPress={() => onGoto(s.start)}
           pressedScale={0.97}
           hitSlop={{ top: 6, bottom: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('Section', 'Seksyon')} ${sectionNumeral(s.title, sectionIdx + 1)}`}
           style={{
             width: 30,
             height: 36,
@@ -114,6 +118,9 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
         key={i}
         onPress={() => onGoto(i)}
         pressedScale={0.97}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
+        accessibilityLabel={`${t('Question', 'Kesyon')} ${i + 1}, ${active ? t('active', 'aktif') : answered ? t('répondue', 'reponn') : t('sans réponse', 'san repons')}`}
         style={{
           width: 36,
           height: 36,
@@ -215,9 +222,9 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
             key={idx}
             onPress={() => { select(); onAnswer(value); }}
             pressedScale={0.98}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
-            accessibilityLabel={String(label)}
+            accessibilityRole="button"
+            accessibilityState={{ selected, disabled: false }}
+            accessibilityLabel={`${key.toUpperCase()}. ${label}`}
             style={[
               {
                 flexDirection: 'row',
@@ -309,8 +316,8 @@ function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onA
             key={value}
             onPress={() => { select(); onAnswer(value); }}
             pressedScale={0.98}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
+            accessibilityRole="button"
+            accessibilityState={{ selected, disabled: false }}
             accessibilityLabel={label}
             style={[
               {
@@ -358,6 +365,8 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
     return (
       <TouchableOpacity
         onPress={() => setShown(1)}
+        accessibilityRole="button"
+        accessibilityLabel={t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
       >
         <Lightbulb color={colors.azure} size={16} />
@@ -853,6 +862,9 @@ export default function ExamTakeScreen() {
           onPress={() => setCurrentIdx(Math.max(0, safeIdx - 1))}
           disabled={isFirst}
           pressedScale={0.97}
+          accessibilityRole="button"
+          accessibilityLabel={t('Question précédente', 'Kesyon anvan')}
+          accessibilityState={{ disabled: isFirst }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, opacity: isFirst ? 0.4 : 1 }}
         >
           <ChevronLeft color={colors.ink} size={18} />
@@ -870,6 +882,8 @@ export default function ExamTakeScreen() {
           <PressableScale
             onPress={() => setCurrentIdx(Math.min(questions.length - 1, safeIdx + 1))}
             pressedScale={0.97}
+            accessibilityRole="button"
+            accessibilityLabel={t('Question suivante', 'Kesyon pwochen')}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.azure, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.control }}
           >
             <Text style={[typeScale.label, { color: '#ffffff' }]}>{t('Suiv.', 'Pwochen')}</Text>

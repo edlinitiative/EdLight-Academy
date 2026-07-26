@@ -322,7 +322,9 @@ export default function CoursesScreen() {
           }
           ListEmptyComponent={
             <EmptyState
+              icon={<Search color={colors.azure} size={34} strokeWidth={1.75} />}
               message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+              description={t('Essaie un autre mot-clé ou explore les cours par niveau.', 'Eseye yon lòt mo oswa gade kou yo pa nivo.')}
               ctaLabel={t('Effacer la recherche', 'Efase rechèch la')}
               onCta={() => setSearch('')}
             />
@@ -391,7 +393,9 @@ export default function CoursesScreen() {
         >
           {subjectsForLevel.length === 0 ? (
             <EmptyState
+              icon={<GraduationCap color={colors.azure} size={34} strokeWidth={1.75} />}
               message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+              description={t('Ce niveau n\'a pas encore de matières. Reviens bientôt !', 'Nivo sa a poko gen matyè. Tounen talè !')}
               ctaLabel={t('Retour', 'Retounen')}
               onCta={goBack}
             />
@@ -431,7 +435,9 @@ export default function CoursesScreen() {
           }
           ListEmptyComponent={
             <EmptyState
+              icon={<BookOpen color={colors.azure} size={34} strokeWidth={1.75} />}
               message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+              description={t('Aucun cours dans cette matière pour l\'instant.', 'Pa gen kou nan matyè sa a pou kounye a.')}
               ctaLabel={t('Retour', 'Retounen')}
               onCta={goBack}
             />

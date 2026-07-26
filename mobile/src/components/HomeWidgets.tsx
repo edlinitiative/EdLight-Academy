@@ -69,6 +69,7 @@ function Tile({ icon, accent, value, label, accessibilityLabel, onPress, valueMu
           <Text
             style={[valueMuted ? typeScale.caption : typeScale.h2, { color: valueMuted ? colors.muted : colors.ink }]}
             numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
           >
             {value}
           </Text>
@@ -126,7 +127,11 @@ export default function HomeWidgets({
           accent={blue}
           value={t("S'entraîner", 'Antrene')}
           label={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : t('Examens Bac', 'Egzamen Bak')}
-          accessibilityLabel={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : t('Examens Bac', 'Egzamen Bak')}
+          accessibilityLabel={
+            practiceMode === 'quiz'
+              ? t("S'entraîner, Quiz", 'Antrene, Quiz')
+              : t("S'entraîner, Examens Bac", 'Antrene, Egzamen Bak')
+          }
           onPress={onNavigateExams}
         />
         <Tile
@@ -135,7 +140,11 @@ export default function HomeWidgets({
           value={myRank ? `#${myRank}` : t('Nouveau', 'Nouvo')}
           valueMuted={!myRank}
           label={t('Classement', 'Klasman')}
-          accessibilityLabel={t('Classement', 'Klasman')}
+          accessibilityLabel={
+            myRank
+              ? `${t('Classement', 'Klasman')}, ${t('rang', 'ran')} ${myRank}`
+              : t('Classement, nouveau', 'Klasman, nouvo')
+          }
           onPress={onNavigateLeaderboard ?? onNavigateTrivia}
         />
       </View>
@@ -145,7 +154,7 @@ export default function HomeWidgets({
           accent={violet}
           value={t('+50 XP', '+50 XP')}
           label={t('Défi du jour', 'Defi jodi a')}
-          accessibilityLabel={t('Défi du jour', 'Defi jodi a')}
+          accessibilityLabel={t('Défi du jour, gagne 50 XP', 'Defi jodi a, genyen 50 XP')}
           onPress={onNavigateDaily ?? onNavigateTrivia}
         />
         <Tile
@@ -153,7 +162,11 @@ export default function HomeWidgets({
           accent={green}
           value={enrolledCount > 0 ? t('Continuer', 'Kontinye') : t('Explorer', 'Eksplore')}
           label={enrolledCount > 0 ? t('Mes cours', 'Kou mwen yo') : t('Catalogue', 'Katalòg')}
-          accessibilityLabel={t('Mes cours', 'Kou mwen yo')}
+          accessibilityLabel={
+            enrolledCount > 0
+              ? t('Continuer, mes cours', 'Kontinye, kou mwen yo')
+              : t('Explorer le catalogue', 'Eksplore katalòg')
+          }
           onPress={onNavigateCourses}
         />
       </View>

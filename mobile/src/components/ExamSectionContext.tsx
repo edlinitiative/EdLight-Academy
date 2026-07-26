@@ -149,6 +149,9 @@ export default function ExamSectionContext({
                 backgroundColor: colors.surfaceAlt,
               }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              accessibilityLabel={t('Consignes', 'Konsiy')}
             >
               <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{t('Consignes', 'Konsiy')}</Text>
               {expanded ? <ChevronUp color={colors.azure} size={14} /> : <ChevronDown color={colors.azure} size={14} />}
@@ -194,6 +197,9 @@ export default function ExamSectionContext({
               backgroundColor: colors.surface,
             }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
+            accessibilityLabel={t('Consignes', 'Konsiy')}
           >
             <Text style={[typeScale.micro, { color: colors.muted }]}>{t('Consignes', 'Konsiy')}</Text>
             {expanded ? <ChevronUp color={colors.muted} size={13} /> : <ChevronDown color={colors.muted} size={13} />}

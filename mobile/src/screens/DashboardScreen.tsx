@@ -82,7 +82,7 @@ function HeroPill({
       }}
     >
       {icon}
-      <Text style={[typeScale.label, { color: valueColor }]}>{value}</Text>
+      <Text style={[typeScale.label, { color: valueColor }]} maxFontSizeMultiplier={1.3}>{value}</Text>
     </View>
   );
 }
@@ -92,7 +92,7 @@ function StatCol({ value, label }: { value: string | number; label: string }) {
   const colors = useColors();
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={[typeScale.h2, { color: colors.ink }]}>{value}</Text>
+      <Text style={[typeScale.h2, { color: colors.ink }]} maxFontSizeMultiplier={1.3}>{value}</Text>
       <Text style={[typeScale.micro, { color: colors.muted, marginTop: 2 }]}>{label}</Text>
     </View>
   );
@@ -301,7 +301,11 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
-            <View className="flex-row items-center gap-2">
+            <View
+              className="flex-row items-center gap-2"
+              accessible
+              accessibilityLabel={`${t('Série', 'Seri')} ${streak?.currentStreak ?? 0} ${t('jours', 'jou')}, ${weeklyXp} XP ${t('cette semaine', 'semèn sa a')}`}
+            >
               <HeroPill
                 icon={<StreakFlame count={streak?.currentStreak ?? 0} color="#fecaca" size={14} />}
                 value={streak?.currentStreak ?? 0}

@@ -41,9 +41,15 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const badge = rankBadge(entry.rank, isDark);
+  const name = entry.displayName || t('Élève', 'Elèv');
+  // One grouped label so VoiceOver reads "Rang 3, Sandra, 215 XP" as a single
+  // unit rather than three disjoint bits (rank chip · name · number · "XP").
+  const rowLabel = `${t('Rang', 'Ran')} ${entry.rank}, ${name}${isMe ? t(' (vous)', ' (ou)') : ''}, ${entry.xp ?? 0} XP`;
 
   return (
     <View
+      accessible
+      accessibilityLabel={rowLabel}
       className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
       style={isMe
         ? { backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azure }
@@ -85,7 +91,7 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
 
       {/* XP */}
       <View className="items-end">
-        <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{entry.xp ?? 0}</Text>
+        <Text style={[typeScale.bodyMd, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>{entry.xp ?? 0}</Text>
         <Text style={[typeScale.caption, { color: colors.faint }]}>XP</Text>
       </View>
     </View>
@@ -171,6 +177,15 @@ const PODIUM_META: Record<number, { tint: string; ink: string; ring: string; h: 
   3: { tint: '#CD7F3222', ink: '#A15A1E', ring: '#CD7F32', h: 34, av: 52 },
 };
 
+/** Ordinal place wording for the podium, so the medal state is never conveyed
+ *  by colour alone — VoiceOver hears "1re place / 2e place / 3e place". */
+function placeLabel(rank: number, t: (fr: string, ht: string) => string): string {
+  if (rank === 1) return t('1re place', '1ye plas');
+  if (rank === 2) return t('2e place', '2yèm plas');
+  if (rank === 3) return t('3e place', '3yèm plas');
+  return `${t('Rang', 'Ran')} ${rank}`;
+}
+
 /** A single animated podium column that rises + fades + scales in on mount. */
 function PodiumColumn({
   e, delay, isWinner, myUid, t,
@@ -216,8 +231,15 @@ function PodiumColumn({
     transform: [{ scale: crownScale.value }],
   }));
 
+  const podiumName = e.displayName || t('Élève', 'Elèv');
+  const podiumLabel = `${placeLabel(rank, t)}, ${podiumName}${isMe ? t(' (vous)', ' (ou)') : ''}, ${e.xp ?? 0} XP`;
+
   return (
-    <Animated.View style={[{ flex: 1, maxWidth: 110, alignItems: 'center' }, colStyle]}>
+    <Animated.View
+      style={[{ flex: 1, maxWidth: 110, alignItems: 'center' }, colStyle]}
+      accessible
+      accessibilityLabel={podiumLabel}
+    >
       {rank === 1 ? (
         <Animated.View style={crownStyle}>
           <Crown size={18} color="#F5C518" style={{ marginBottom: 2 }} />
@@ -236,7 +258,7 @@ function PodiumColumn({
       <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12.5, fontWeight: '800', color: isMe ? colors.azure : colors.ink, maxWidth: 104 }}>
         {e.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
       </Text>
-      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{e.xp ?? 0} XP</Text>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }} maxFontSizeMultiplier={1.3}>{e.xp ?? 0} XP</Text>
       <View
         style={{
           width: '100%', height: m.h, marginTop: 8,
@@ -245,7 +267,7 @@ function PodiumColumn({
           alignItems: 'center', paddingTop: 6,
         }}
       >
-        <Text style={{ fontSize: 19, fontWeight: '900', color: m.ink }}>{rank}</Text>
+        <Text style={{ fontSize: 19, fontWeight: '900', color: m.ink }} maxFontSizeMultiplier={1.3}>{rank}</Text>
       </View>
     </Animated.View>
   );
@@ -414,6 +436,9 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
             key={p}
             onPress={() => setPeriod(p)}
             activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: period === p }}
+            accessibilityLabel={p === 'week' ? t('Cette semaine', 'Semèn sa a') : t('Tous les temps', 'Tout tan')}
             style={{ flex: 1, alignItems: 'center', paddingVertical: 7, borderRadius: 8, backgroundColor: period === p ? colors.surface : 'transparent' }}
           >
             <Text style={{ fontSize: 12, fontWeight: '700', color: period === p ? colors.azure : colors.muted }}>
@@ -434,6 +459,9 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
             key={key}
             onPress={() => changeScope(key)}
             activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: scope === key }}
+            accessibilityLabel={label}
             style={{ flex: 1, alignItems: 'center', paddingVertical: 7, paddingHorizontal: 2, borderRadius: 8, backgroundColor: scope === key ? colors.surface : 'transparent' }}
           >
             <Text

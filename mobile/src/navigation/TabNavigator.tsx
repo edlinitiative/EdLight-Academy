@@ -206,6 +206,7 @@ export default function TabNavigator() {
         name="Dashboard"
         component={DashboardScreen}
         options={{
+          tabBarAccessibilityLabel: t('Accueil', 'Akèy'),
           tabBarLabel: ({ color }) => <TabLabel label={t('Accueil', 'Akèy')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={LayoutDashboard} color={color} size={size} focused={focused} dark={dark} />
@@ -216,6 +217,7 @@ export default function TabNavigator() {
         name="Courses"
         component={CoursesNavigator}
         options={{
+          tabBarAccessibilityLabel: t('Cours', 'Kou'),
           tabBarLabel: ({ color }) => <TabLabel label={t('Cours', 'Kou')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={BookOpen} color={color} size={size} focused={focused} dark={dark} />
@@ -247,6 +249,7 @@ export default function TabNavigator() {
           },
         })}
         options={{
+          tabBarAccessibilityLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),
           tabBarLabel: ({ color }) => (
             <TabLabel label={quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen')} color={color} />
           ),
@@ -259,6 +262,7 @@ export default function TabNavigator() {
         name="Trivia"
         component={TriviaScreen}
         options={{
+          tabBarAccessibilityLabel: t('Jeux', 'Jwèt'),
           tabBarLabel: ({ color }) => <TabLabel label={t('Jeux', 'Jwèt')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={Gamepad2} color={color} size={size} focused={focused} dark={dark} />
@@ -269,6 +273,7 @@ export default function TabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{
+          tabBarAccessibilityLabel: t('Profil', 'Pwofil'),
           tabBarLabel: ({ color }) => <TabLabel label={t('Profil', 'Pwofil')} color={color} />,
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon Icon={User} color={color} size={size} focused={focused} dark={dark} />

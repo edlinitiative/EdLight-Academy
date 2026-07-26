@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, SvgUri, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, Easing } from 'react-native-reanimated';
+import Svg, { Circle, SvgUri } from 'react-native-svg';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, Share2 } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
@@ -20,13 +20,12 @@ import PressableScale from '../components/ui/PressableScale';
 import { useColors, useTheme, typeScale, radius } from '../theme/theme';
 import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
-import Confetti from '../components/ui/Confetti';
 import PopIn from '../components/ui/PopIn';
+import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
 import { shareScore } from '../services/scoreShare';
-import { useCountUp } from '../hooks/useCountUp';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -105,7 +104,6 @@ function prepareDailyQuestions(count = 10): PreparedQuestion[] {
 
 const LETTER_LABELS = ['A', 'B', 'C', 'D'];
 const CIRC = 327; // 2 * π * 52
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // ─── TriviaHeader ─────────────────────────────────────────────────────────────
 
@@ -814,64 +812,6 @@ function QuizPlayer({
 
 // ─── TriviaResults ─────────────────────────────────────────────────────────────
 
-// Aurora ScoreRing — iridescent gradient arc that draws on mount, over the deep
-// results gradient. Numbers count up so the score feels earned.
-function ScoreRing({ score, total }: { score: number; total: number }) {
-  const pct = total > 0 ? score / total : 0;
-  const pctInt = total > 0 ? Math.round(pct * 100) : 0;
-  const fill = pct * CIRC;
-  const reduceMotion = useReduceMotion();
-  const shownScore = useCountUp(score, 900);
-  const shownPct = useCountUp(pctInt, 900);
-
-  const progress = useSharedValue(0);
-  useEffect(() => {
-    progress.value = reduceMotion
-      ? fill
-      : withTiming(fill, { duration: 950, easing: Easing.out(Easing.cubic) });
-  }, [fill, progress, reduceMotion]);
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDasharray: `${progress.value} ${CIRC}`,
-  }));
-
-  return (
-    <View
-      className="items-center justify-center"
-      style={{ width: 150, height: 150, shadowColor: '#9dc3ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 22 }}
-    >
-      <Svg width={150} height={150} viewBox="0 0 120 120">
-        <Defs>
-          <SvgLinearGradient id="auroraRing" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#7EE7FF" />
-            <Stop offset="1" stopColor="#C9A6FF" />
-          </SvgLinearGradient>
-        </Defs>
-        <Circle cx={60} cy={60} r={52} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={11} />
-        <AnimatedCircle
-          cx={60}
-          cy={60}
-          r={52}
-          fill="none"
-          stroke="url(#auroraRing)"
-          strokeWidth={11}
-          animatedProps={animatedProps}
-          strokeLinecap="round"
-          rotation="-90"
-          origin="60, 60"
-        />
-      </Svg>
-      <View className="absolute items-center justify-center">
-        <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff', letterSpacing: -0.5 }}>
-          {shownScore}<Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }}>/{total}</Text>
-        </Text>
-        <Text style={{ fontSize: 12, color: '#C9A6FF', fontWeight: '800', letterSpacing: 0.5 }}>
-          {shownPct}%
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 function TriviaResults({
   score,
   total,
@@ -890,82 +830,68 @@ function TriviaResults({
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const xpEarned = score * 10;
   const lang = isCreole ? 'ht' : 'fr';
-  const glass = { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' } as const;
+  const categoryName = isCreole ? (category.nameHt ?? category.name) : category.name;
 
-  // Fire the celebration once for a strong round (the emotional payoff).
-  useEffect(() => { if (pct >= 80) success(); }, [pct]);
+  const title = pct >= 80
+    ? (isCreole ? 'Ekselan !' : 'Excellent !')
+    : pct >= 60
+      ? (isCreole ? 'Bon travay !' : 'Bon travail !')
+      : (isCreole ? 'Kontinye pratike !' : 'Continue à pratiquer !');
 
   return (
-    <View style={{ flex: 1 }}>
-      <LinearGradient
-        colors={['#2E6FE6', '#123A86', '#0A1F52']}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-        style={{ flex: 1 }}
-      >
-        {/* Aurora glows */}
-        <View pointerEvents="none" style={{ position: 'absolute', top: -50, left: -40, width: 210, height: 210, borderRadius: 105, backgroundColor: '#3B82F6', opacity: 0.32 }} />
-        <View pointerEvents="none" style={{ position: 'absolute', bottom: -40, right: -30, width: 210, height: 210, borderRadius: 105, backgroundColor: '#7C3AED', opacity: 0.28 }} />
-        {pct >= 80 && <Confetti />}
+    <QuizResultHero
+      score={score}
+      total={total}
+      isCreole={isCreole}
+      title={title}
+      celebrateHaptic
+      footer={
+        <>
+          <HeroButton
+            variant="glass"
+            icon={<RefreshCw color="#fff" size={18} />}
+            label={isCreole ? 'Jwe ankò' : 'Rejouer'}
+            onPress={onRetry}
+            style={{ marginBottom: 10 }}
+          />
+          <HeroButton
+            variant="solid"
+            color="#22C55E"
+            icon={<Share2 color="#fff" size={18} />}
+            label={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
+            onPress={() => shareScore({ title: categoryName, score, total, lang })}
+            style={{ marginBottom: 10 }}
+          />
+          <HeroButton
+            variant="ghost"
+            label={isCreole ? 'Chwazi yon kategori' : 'Choisir une catégorie'}
+            onPress={onChooseCategory}
+          />
+        </>
+      }
+    >
+      {/* XP earned — glass chip */}
+      <PopIn delay={400} style={{ marginTop: 12 }}>
+        <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
+          <Zap color="#fde68a" size={16} />
+          <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#fde68a' }}>+{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}</Text>
+        </View>
+      </PopIn>
 
-        <ScrollView contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 24, paddingTop: 60, paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
-          <PopIn from={0.6}><ScoreRing score={score} total={total} /></PopIn>
-
-          <Text style={{ fontSize: 26, fontWeight: '900', color: '#fff', marginTop: 22, letterSpacing: -0.5 }}>
-            {pct >= 80
-              ? isCreole ? 'Ekselan !' : 'Excellent !'
-              : pct >= 60
-              ? isCreole ? 'Bon travay !' : 'Bon travail !'
-              : isCreole ? 'Kontinye pratike !' : 'Continue à pratiquer !'}
+      {/* Glass stat row */}
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
+        <View style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{pct}%</Text>
+          <Text style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{isCreole ? 'PRESIZYON' : 'PRÉCISION'}</Text>
+        </View>
+        <View style={{ ...glass, flex: 1.4, borderRadius: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 18 }}>{category.icon}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 10, fontFamily: typeScale.label.fontFamily, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
+            {categoryName}
           </Text>
-
-          {/* XP earned — glass chip */}
-          <PopIn delay={400} style={{ marginTop: 12 }}>
-            <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
-              <Zap color="#fde68a" size={16} />
-              <Text style={{ fontWeight: '800', fontSize: 14, color: '#fde68a' }}>+{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}</Text>
-            </View>
-          </PopIn>
-
-          {/* Glass stat row */}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
-            <View style={{ ...glass, flex: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' }}>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: '#fff' }}>{pct}%</Text>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{isCreole ? 'PRESIZYON' : 'PRÉCISION'}</Text>
-            </View>
-            <View style={{ ...glass, flex: 1.4, borderRadius: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 18 }}>{category.icon}</Text>
-              <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-                {isCreole ? (category.nameHt ?? category.name) : category.name}
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ height: 28 }} />
-
-          {/* Buttons */}
-          <TouchableOpacity onPress={onRetry} activeOpacity={0.85} style={{ ...glass, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, borderRadius: 16, marginBottom: 10 }}>
-            <RefreshCw color="#fff" size={18} />
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{isCreole ? 'Jwe ankò' : 'Rejouer'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => shareScore({ title: isCreole ? (category.nameHt ?? category.name) : category.name, score, total, lang })}
-            activeOpacity={0.85}
-            style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 15, borderRadius: 16, backgroundColor: '#22C55E', marginBottom: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
-          >
-            <Share2 color="#fff" size={18} />
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={onChooseCategory} activeOpacity={0.85} style={{ width: '100%', alignItems: 'center', paddingVertical: 14 }}>
-            <Text style={{ color: 'rgba(255,255,255,0.75)', fontWeight: '700', fontSize: 14 }}>{isCreole ? 'Chwazi yon kategori' : 'Choisir une catégorie'}</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </LinearGradient>
-    </View>
+        </View>
+      </View>
+    </QuizResultHero>
   );
 }
 
