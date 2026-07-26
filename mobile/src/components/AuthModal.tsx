@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { X } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, typeScale } from '../theme/theme';
 import AuthScreen from '../screens/AuthScreen';
 
 export default function AuthModal() {
@@ -26,10 +26,10 @@ export default function AuthModal() {
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         {!dismissable && (
           <View style={{ backgroundColor: colors.azure, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+            <Text style={[typeScale.title, { color: '#fff' }]}>
               {t('Crée un compte gratuit pour continuer', 'Kreye yon kont gratis pou kontinye')}
             </Text>
-            <Text style={{ color: '#93c5fd', fontSize: 13, marginTop: 3 }}>
+            <Text style={[typeScale.label, { color: 'rgba(255,255,255,0.85)', marginTop: 3 }]}>
               {t(
                 "Tu as atteint la limite d'exploration — inscris-toi pour garder ta progression.",
                 'Ou rive nan limit eksplorasyon an — enskri pou konsève pwogrè ou.',

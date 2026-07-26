@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
 
 /**
  * Answer inputs for open exam questions, mirroring the PWA (src/pages/ExamTake.tsx):
@@ -106,6 +106,7 @@ export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
 
 export function MathPreview({ value }: { value: string }) {
   const colors = useColors();
+  const { radius } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -116,21 +117,12 @@ export function MathPreview({ value }: { value: string }) {
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.border,
-        borderRadius: 12,
+        borderRadius: radius.control,
         paddingHorizontal: 12,
         paddingVertical: 8,
       }}
     >
-      <Text
-        style={{
-          fontSize: 10,
-          fontWeight: '700',
-          color: colors.muted,
-          textTransform: 'uppercase',
-          letterSpacing: 0.8,
-          marginBottom: 4,
-        }}
-      >
+      <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 4 }]}>
         {t('Aperçu', 'Apèsi')}
       </Text>
       <MathText text={value} style={{ fontSize: 15, color: colors.ink }} />
@@ -150,6 +142,7 @@ export function WordCountAnswer({ value, onChangeText, type }: {
   type: 'essay' | 'short_answer';
 }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -162,24 +155,17 @@ export function WordCountAnswer({ value, onChangeText, type }: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: radius.card,
     padding: 16,
     fontSize: 16,
     lineHeight: 24,
     color: colors.ink,
   } as const;
-  const cardShadow = {
-    shadowColor: colors.azureDeep,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 1,
-  } as const;
 
   return (
     <View style={{ gap: 6 }}>
       <TextInput
-        style={[inputStyle, cardShadow, { minHeight: isShort ? 100 : 140 }]}
+        style={[inputStyle, shadow.sm, { minHeight: isShort ? 100 : 140 }]}
         value={value}
         onChangeText={onChangeText}
         multiline
@@ -187,7 +173,7 @@ export function WordCountAnswer({ value, onChangeText, type }: {
         placeholder={t('Rédigez votre réponse…', 'Ekri repons ou…')}
         placeholderTextColor={colors.faint}
       />
-      <Text style={{ fontSize: 12, color: reachedMin ? colors.success : colors.muted, paddingLeft: 4 }}>
+      <Text style={[typeScale.caption, { color: reachedMin ? colors.success : colors.muted, paddingLeft: 4 }]}>
         {wc} {t(wc !== 1 ? 'mots' : 'mot', 'mo')} · {t('minimum', 'minimòm')} {minWords}
         {reachedMin && wc < targetWords ? ` · ${t('visez', 'vize')} ~${targetWords}` : ''}
       </Text>
@@ -211,6 +197,7 @@ export default function ExamAnswerInput({
   mathy?: boolean;
 }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -218,24 +205,17 @@ export default function ExamAnswerInput({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 16,
+    borderRadius: radius.card,
     padding: 16,
     fontSize: 16,
     lineHeight: 24,
     color: colors.ink,
   } as const;
-  const cardShadow = {
-    shadowColor: colors.azureDeep,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 1,
-  } as const;
   return (
     <View style={{ gap: 8 }}>
       {mathy ? <MathChips onInsert={(c) => onChangeText(value + c)} /> : null}
       <TextInput
-        style={[inputStyle, cardShadow, { minHeight }]}
+        style={[inputStyle, shadow.sm, { minHeight }]}
         value={value}
         onChangeText={onChangeText}
         multiline

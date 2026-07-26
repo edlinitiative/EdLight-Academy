@@ -26,7 +26,7 @@ interface InviteSheetProps {
 }
 
 export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps) {
-  const { colors, radius, shadow } = useTheme();
+  const { colors, radius, shadow, typeScale } = useTheme();
   const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
 
   const [data, setData] = useState<ReferralCode | null>(null);
@@ -78,7 +78,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(6,12,24,0.55)', justifyContent: 'flex-end' }}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', justifyContent: 'flex-end' }}>
         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={onClose} accessibilityLabel={t('Fermer', 'Fèmen')} />
         <View
           style={{
@@ -98,7 +98,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
             <View style={{ width: 40, height: 40, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
               <Gift color={colors.azure} size={20} />
             </View>
-            <Text style={{ flex: 1, fontSize: 18, fontWeight: '800', color: colors.ink }}>
+            <Text style={[typeScale.h2, { flex: 1, color: colors.ink }]}>
               {t('Inviter des amis', 'Envite zanmi')}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
@@ -106,7 +106,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
             </TouchableOpacity>
           </View>
 
-          <Text style={{ fontSize: 13.5, color: colors.muted, lineHeight: 19, marginBottom: 16 }}>
+          <Text style={[typeScale.body, { color: colors.muted, marginBottom: 16 }]}>
             {t(
               'Vous et votre ami gagnez un bonus quand il s’inscrit avec votre code : +1 gel de série et des XP chacun.',
               'Ou menm ak zanmi ou chak ap genyen yon bonus lè li enskri ak kòd ou : +1 jèl seri ak XP pou chak.',
@@ -124,7 +124,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
               style={{ height: 92, borderRadius: radius.card, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', gap: 8, flexDirection: 'row' }}
             >
               <RefreshCw color={colors.azure} size={16} />
-              <Text style={{ color: colors.azure, fontWeight: '700', fontSize: 14 }}>
+              <Text style={[typeScale.titleSm, { color: colors.azure }]}>
                 {t('Réessayer', 'Eseye ankò')}
               </Text>
             </TouchableOpacity>
@@ -136,15 +136,15 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
                 activeOpacity={0.8}
                 style={{ borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.azureBorder, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', ...shadow.sm }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+                <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 6 }]}>
                   {t('Votre code', 'Kòd ou')}
                 </Text>
-                <Text style={{ fontSize: 30, fontWeight: '800', color: colors.azure, letterSpacing: 4 }}>
+                <Text style={[typeScale.num, { color: colors.azure, letterSpacing: 4 }]}>
                   {data.code}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
                   <Copy color={colors.faint} size={13} />
-                  <Text style={{ fontSize: 12, color: colors.faint }}>{t('Appuyez pour partager le code', 'Peze pou pataje kòd la')}</Text>
+                  <Text style={[typeScale.caption, { color: colors.faint }]}>{t('Appuyez pour partager le code', 'Peze pou pataje kòd la')}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -155,7 +155,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
                 style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#25D366', borderRadius: radius.control, paddingVertical: 15 }}
               >
                 <MessageCircle color="#fff" size={18} />
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{t('Partager sur WhatsApp', 'Pataje sou WhatsApp')}</Text>
+                <Text style={[typeScale.titleSm, { color: '#fff' }]}>{t('Partager sur WhatsApp', 'Pataje sou WhatsApp')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -164,7 +164,7 @@ export default function InviteSheet({ visible, onClose, lang }: InviteSheetProps
                 style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.control, paddingVertical: 14 }}
               >
                 <Share2 color={colors.azure} size={18} />
-                <Text style={{ color: colors.ink, fontWeight: '700', fontSize: 15 }}>{t('Partager', 'Pataje')}</Text>
+                <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Partager', 'Pataje')}</Text>
               </TouchableOpacity>
             </>
           )}

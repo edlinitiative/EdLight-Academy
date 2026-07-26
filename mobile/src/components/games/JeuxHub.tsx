@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import { View, Text, ScrollView, Dimensions } from 'react-native';
 import { Zap, Flame, Trophy, Clock, Crown } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
@@ -14,7 +14,8 @@ import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
 import DailyChallengeBanner from './DailyChallengeBanner';
-import { useColors } from '../../theme/theme';
+import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
+import PressableScale from '../ui/PressableScale';
 
 const GRID_PAD = 16;
 const TILE_GAP = 12;
@@ -35,6 +36,7 @@ interface JeuxHubProps {
 /* ─── Records strip: best-ever score per arcade game + holder ─── */
 function GameRecords({ isCreole }: { isCreole: boolean }) {
   const colors = useColors();
+  const { shadow } = useTheme();
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
 
   useEffect(() => {
@@ -50,19 +52,16 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
 
   return (
     <View
-      className="rounded-3xl px-4 py-4 mx-4 mt-5"
+      className="px-4 py-4 mx-4 mt-5"
       style={{
         backgroundColor: colors.surface,
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
-        elevation: 3,
+        borderRadius: radius.hero,
+        ...shadow.md,
       }}
     >
       <View className="flex-row items-center gap-1.5 mb-3">
         <Crown color={colors.warn} size={15} />
-        <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>
+        <Text style={[typeScale.title, { color: colors.ink }]}>
           {isCreole ? 'Rekò yo' : 'Records'}
         </Text>
       </View>
@@ -77,18 +76,18 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
           >
             <View className="flex-row items-center gap-1.5" style={{ flexShrink: 1 }}>
               <Icon color={g.color} size={14} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: g.color }}>
+              <Text style={[typeScale.label, { color: g.color }]}>
                 {isCreole ? g.nameHt : g.name}
               </Text>
             </View>
             {rec ? (
-              <Text style={{ fontSize: 13, color: colors.muted }} numberOfLines={1}>
+              <Text style={[typeScale.label, { color: colors.muted }]} numberOfLines={1}>
                 {rec.displayName} ·{' '}
-                <Text style={{ fontWeight: '800', color: colors.ink }}>{rec.score}</Text>
+                <Text style={[typeScale.label, { color: colors.ink }]}>{rec.score}</Text>
               </Text>
             ) : (
               <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.surfaceAlt }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.muted }}>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>
                   {isCreole ? 'Poko gen rekò !' : 'À prendre !'}
                 </Text>
               </View>
@@ -105,6 +104,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
   const { profile, level, isAuthed, daily } = useTrivia();
   const { streak } = useStreak();
   const colors = useColors();
+  const { shadow } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
 
@@ -128,22 +128,22 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
         <View className="flex-row px-4 gap-2 mb-4">
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Zap color={colors.azure} size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>{level.xp}</Text>
-            <Text style={{ fontSize: 12, color: colors.muted }}>
+            <Text style={[typeScale.titleSm, { color: colors.ink }]}>{level.xp}</Text>
+            <Text style={[typeScale.caption, { color: colors.muted }]}>
               XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}
             </Text>
           </View>
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Flame color={colors.danger} size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>
+            <Text style={[typeScale.titleSm, { color: colors.ink }]}>
               {streak?.currentStreak || 0}
             </Text>
-            <Text style={{ fontSize: 12, color: colors.muted }}>{isCreole ? 'Seri' : 'Série'}</Text>
+            <Text style={[typeScale.caption, { color: colors.muted }]}>{isCreole ? 'Seri' : 'Série'}</Text>
           </View>
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Trophy color={colors.warn} size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>{gamesPlayed}</Text>
-            <Text style={{ fontSize: 12, color: colors.muted }}>{isCreole ? 'Pati' : 'Parties'}</Text>
+            <Text style={[typeScale.titleSm, { color: colors.ink }]}>{gamesPlayed}</Text>
+            <Text style={[typeScale.caption, { color: colors.muted }]}>{isCreole ? 'Pati' : 'Parties'}</Text>
           </View>
         </View>
       )}
@@ -161,15 +161,15 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
           const Icon = GAME_ICONS[g.id];
           const hs = highScores[g.id];
           return (
-            <TouchableOpacity
+            <PressableScale
               key={g.id}
               onPress={() => (g.id === 'trivia' ? onStartTrivia() : onSelectGame(g.id))}
               accessibilityRole="button"
               accessibilityLabel={`${isCreole ? g.nameHt : g.name} — ${isCreole ? g.descriptionHt : g.description}`}
-              activeOpacity={0.85}
+              pressedScale={0.96}
               style={{
                 width: TILE_W,
-                borderRadius: 22,
+                borderRadius: radius.hero,
                 backgroundColor: g.color,
                 padding: 14,
                 paddingTop: 16,
@@ -187,7 +187,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
                 style={{
                   width: 44,
                   height: 44,
-                  borderRadius: 14,
+                  borderRadius: radius.control,
                   backgroundColor: 'rgba(255,255,255,0.22)',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -209,34 +209,30 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
                     paddingHorizontal: 8,
                     paddingVertical: 3,
                     transform: [{ rotate: '4deg' }],
-                    shadowColor: '#0f172a',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 3,
-                    elevation: 3,
+                    ...shadow.sm,
                   }}
                 >
                   <Trophy color={g.color} size={11} />
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: g.color }}>{hs}</Text>
+                  <Text style={[typeScale.micro, { color: g.color }]}>{hs}</Text>
                 </View>
               )}
 
-              <Text style={{ fontSize: 17, fontWeight: '800', color: '#ffffff', marginTop: 12 }}>
+              <Text style={[typeScale.h2, { color: '#ffffff', marginTop: 12 }]}>
                 {isCreole ? g.nameHt : g.name}
               </Text>
               <Text
-                style={{ fontSize: 12, color: 'rgba(255,255,255,0.88)', marginTop: 4, flexGrow: 1 }}
+                style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 4, flexGrow: 1 }]}
                 numberOfLines={3}
               >
                 {isCreole ? g.descriptionHt : g.description}
               </Text>
               <View className="flex-row items-center gap-1 mt-2">
                 <Clock color="rgba(255,255,255,0.85)" size={12} />
-                <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)' }}>
+                <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.85)' }]}>
                   ~{g.minutes} min
                 </Text>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </View>

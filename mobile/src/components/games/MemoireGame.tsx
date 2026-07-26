@@ -5,12 +5,13 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, Dimensions } from 'react-native';
 import { Timer, MousePointerClick } from 'lucide-react-native';
 import { CAPITAL_PAIRS } from '../../data/triviaData';
 import { buildMemoryDeck, MemoryCard } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
-import { useColors } from '../../theme/theme';
+import { useColors, typeScale, radius } from '../../theme/theme';
+import PressableScale from '../ui/PressableScale';
 
 const PAIRS = 6;
 const ACCENT = '#7c3aed';
@@ -120,16 +121,16 @@ export default function MemoireGame({
       <View className="flex-row items-center justify-between px-4 mb-3">
         <View className="flex-row items-center gap-1.5">
           <MousePointerClick color={colors.muted} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.muted }}>
+          <Text style={[typeScale.bodyMd, { color: colors.muted }]}>
             {moves} {isCreole ? 'mouvman' : 'coups'}
           </Text>
         </View>
-        <Text style={{ fontSize: 13, fontWeight: '700', color: ACCENT }}>
+        <Text style={[typeScale.label, { color: ACCENT }]}>
           {isCreole ? 'Peyi ↔ Kapital' : 'Pays ↔ Capitale'}
         </Text>
         <View className="flex-row items-center gap-1.5">
           <Timer color={colors.muted} size={15} />
-          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.muted }}>{seconds}s</Text>
+          <Text style={[typeScale.bodyMd, { color: colors.muted }]}>{seconds}s</Text>
         </View>
       </View>
 
@@ -146,16 +147,16 @@ export default function MemoireGame({
           const isMatched = matched.has(card.id);
           const isUp = flipped.includes(card.id) || isMatched;
           return (
-            <TouchableOpacity
+            <PressableScale
               key={card.id}
               onPress={() => flip(card)}
               accessibilityRole="button"
               accessibilityLabel={isUp ? card.label : (isCreole ? 'Vire kat la' : 'Retourner la carte')}
-              activeOpacity={0.85}
+              pressedScale={0.94}
               style={{
                 width: CARD_W,
                 height: CARD_H,
-                borderRadius: 16,
+                borderRadius: radius.tile,
                 alignItems: 'center',
                 justifyContent: 'center',
                 paddingHorizontal: 6,
@@ -169,21 +170,19 @@ export default function MemoireGame({
                 <Text
                   numberOfLines={3}
                   adjustsFontSizeToFit
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '700',
+                  style={[typeScale.label, {
                     color: isMatched ? colors.success : colors.ink,
                     textAlign: 'center',
-                  }}
+                  }]}
                 >
                   {card.label}
                 </Text>
               ) : (
-                <Text style={{ fontSize: 26, fontWeight: '800', color: 'rgba(255,255,255,0.9)' }}>
+                <Text style={[typeScale.display, { color: 'rgba(255,255,255,0.9)' }]}>
                   ?
                 </Text>
               )}
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </View>

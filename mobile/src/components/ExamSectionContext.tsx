@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { ChevronDown, ChevronUp, BookOpen } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
 
 /**
  * "I- Compétence Linguistique" → { numeral: 'I', name: 'Compétence Linguistique' }
@@ -34,27 +34,24 @@ const LONG_INSTRUCTIONS = 280;
 
 function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; label?: string }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   return (
     <View
       style={[
         {
           backgroundColor: colors.surface,
-          borderRadius: 16,
+          borderRadius: radius.card,
           borderWidth: 1,
           borderColor: colors.border,
           maxHeight: 240,
           overflow: 'hidden',
-          shadowColor: colors.azureDeep,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 1,
         },
+        shadow.sm,
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingTop: 12 }}>
         <BookOpen color={colors.azure} size={14} />
-        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+        <Text style={[typeScale.overline, { color: colors.muted }]}>
           {label}
         </Text>
       </View>
@@ -64,7 +61,7 @@ function PassageCard({ passage, label = 'Texte à lire' }: { passage: string; la
         style={{ maxHeight: 200 }}
         contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 14 }}
       >
-        <Text style={{ fontSize: 15, lineHeight: 22, color: colors.muted }}>{passage}</Text>
+        <Text style={[typeScale.body, { lineHeight: 22, color: colors.muted }]}>{passage}</Text>
       </ScrollView>
     </View>
   );
@@ -90,17 +87,12 @@ export default function ExamSectionContext({
   isSectionStart: boolean;
 }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const cardShadow = {
-    shadowColor: colors.azureDeep,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 1,
-  } as const;
+  const cardShadow = shadow.sm;
 
   const safeTitle = cleanExamText(title);
   const safeInstructions = cleanExamText(instructions);
@@ -123,7 +115,7 @@ export default function ExamSectionContext({
           style={[
             {
               backgroundColor: colors.surface,
-              borderRadius: 16,
+              borderRadius: radius.card,
               borderWidth: 1,
               borderColor: colors.border,
               padding: 16,
@@ -131,11 +123,11 @@ export default function ExamSectionContext({
             cardShadow,
           ]}
         >
-          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.azure, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 4 }}>
+          <Text style={[typeScale.overline, { color: colors.azure, marginBottom: 4 }]}>
             {t('Nouvelle section', 'Nouvo seksyon')}
           </Text>
           {safeTitle ? (
-            <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink, lineHeight: 23 }}>
+            <Text style={[typeScale.h2, { color: colors.ink }]}>
               {displayTitle}
             </Text>
           ) : null}
@@ -158,13 +150,13 @@ export default function ExamSectionContext({
               }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{t('Consignes', 'Konsiy')}</Text>
+              <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{t('Consignes', 'Konsiy')}</Text>
               {expanded ? <ChevronUp color={colors.azure} size={14} /> : <ChevronDown color={colors.azure} size={14} />}
             </TouchableOpacity>
           ) : null}
 
           {expanded && safeInstructions && !longInstructions ? (
-            <Text style={{ fontSize: 14, lineHeight: 21, color: colors.muted, marginTop: 12 }}>
+            <Text style={[typeScale.bodyMd, { lineHeight: 21, color: colors.muted, marginTop: 12 }]}>
               {safeInstructions}
             </Text>
           ) : null}
@@ -183,7 +175,7 @@ export default function ExamSectionContext({
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={{ flex: 1, backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start' }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: colors.azure }} numberOfLines={1}>
+          <Text style={[typeScale.micro, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]} numberOfLines={1}>
             {displayTitle}
           </Text>
         </View>
@@ -203,7 +195,7 @@ export default function ExamSectionContext({
             }}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Text style={{ fontSize: 11, fontWeight: '600', color: colors.muted }}>{t('Consignes', 'Konsiy')}</Text>
+            <Text style={[typeScale.micro, { color: colors.muted }]}>{t('Consignes', 'Konsiy')}</Text>
             {expanded ? <ChevronUp color={colors.muted} size={13} /> : <ChevronDown color={colors.muted} size={13} />}
           </TouchableOpacity>
         ) : null}
@@ -218,7 +210,7 @@ export default function ExamSectionContext({
               style={[
                 {
                   backgroundColor: colors.surface,
-                  borderRadius: 16,
+                  borderRadius: radius.card,
                   borderWidth: 1,
                   borderColor: colors.border,
                   padding: 14,
@@ -226,7 +218,7 @@ export default function ExamSectionContext({
                 cardShadow,
               ]}
             >
-              <Text style={{ fontSize: 14, lineHeight: 21, color: colors.muted }}>{safeInstructions}</Text>
+              <Text style={[typeScale.bodyMd, { lineHeight: 21, color: colors.muted }]}>{safeInstructions}</Text>
             </View>
           ) : null}
           {safePassage ? <PassageCard passage={safePassage} label={t('Texte à lire', 'Tèks pou li')} /> : null}

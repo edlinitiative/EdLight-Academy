@@ -7,13 +7,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb } from 'lucide-react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
+import PressableScale from '../components/ui/PressableScale';
+import Button from '../components/ui/Button';
 import { select, tapMedium } from '../utils/haptics';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
@@ -30,15 +33,23 @@ type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamTake'>;
 
 type Answer = string | string[] | null;
 
-const PRIMARY = '#1B6FE0';
-
-const cardShadow = {
-  shadowColor: PRIMARY,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 8,
-  elevation: 1,
-} as const;
+/**
+ * Live progress strip under the header — rounded track + fill, width animated
+ * with reanimated withTiming so it glides instead of jumping between questions.
+ */
+function ProgressStrip({ progress }: { progress: number }) {
+  const colors = useColors();
+  const w = useSharedValue(progress);
+  useEffect(() => {
+    w.value = withTiming(progress, { duration: 320 });
+  }, [progress]);
+  const fillStyle = useAnimatedStyle(() => ({ width: `${w.value}%` }));
+  return (
+    <View style={{ height: 6, borderRadius: 999, backgroundColor: colors.border, marginHorizontal: 16, marginTop: 10, overflow: 'hidden' }}>
+      <Animated.View style={[{ height: 6, borderRadius: 999, backgroundColor: colors.azure }, fillStyle]} />
+    </View>
+  );
+}
 
 // Fixed item widths so the auto-scroll offset can be computed without
 // measuring: dot 36 + 8 gap, section chip 30 + 8 gap.
@@ -75,9 +86,10 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
       const s = sections[sectionIdx];
       const inSection = current >= s.start && current <= s.end;
       items.push(
-        <TouchableOpacity
+        <PressableScale
           key={`s${sectionIdx}`}
           onPress={() => onGoto(s.start)}
+          pressedScale={0.97}
           hitSlop={{ top: 6, bottom: 6 }}
           style={{
             width: 30,
@@ -89,18 +101,19 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
             backgroundColor: inSection ? colors.azureSoft : colors.bg,
           }}
         >
-          <Text style={{ fontSize: 11, fontWeight: '800', color: inSection ? colors.azure : colors.muted }}>
+          <Text style={[typeScale.micro, { color: inSection ? colors.azure : colors.muted, fontFamily: 'Satoshi-Bold' }]}>
             {sectionNumeral(s.title, sectionIdx + 1)}
           </Text>
-        </TouchableOpacity>,
+        </PressableScale>,
       );
     }
     const answered = answers[i] != null && answers[i] !== '';
     const active = i === current;
     items.push(
-      <TouchableOpacity
+      <PressableScale
         key={i}
         onPress={() => onGoto(i)}
+        pressedScale={0.97}
         style={{
           width: 36,
           height: 36,
@@ -113,10 +126,14 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
           borderColor: colors.border,
         }}
       >
-        <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#ffffff' : answered ? colors.azure : colors.muted }}>
-          {i + 1}
-        </Text>
-      </TouchableOpacity>,
+        {answered && !active ? (
+          <Check color={colors.azure} size={16} strokeWidth={3} />
+        ) : (
+          <Text style={[typeScale.caption, { color: active ? '#ffffff' : colors.muted, fontFamily: 'Satoshi-Bold' }]}>
+            {i + 1}
+          </Text>
+        )}
+      </PressableScale>,
     );
   }
 
@@ -171,6 +188,7 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   isCreole: boolean;
 }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const entries = normalizeOptions(question?.options ?? question?.choices);
 
@@ -178,7 +196,7 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   if (entries.length === 0) {
     return (
       <View style={{ gap: 8 }}>
-        <Text style={{ fontSize: 12, color: colors.muted }}>{t('Options non disponibles — écris ta réponse :', 'Opsyon pa disponib — ekri repons ou :')}</Text>
+        <Text style={[typeScale.caption, { color: colors.muted }]}>{t('Options non disponibles — écris ta réponse :', 'Opsyon pa disponib — ekri repons ou :')}</Text>
         <OpenQuestion answer={answer} onAnswer={onAnswer} isCreole={isCreole} />
       </View>
     );
@@ -193,9 +211,10 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
           (typeof answer === 'string' && answer.toLowerCase() === key.toLowerCase()) ||
           (Array.isArray(answer) && (answer.includes(value) || answer.includes(label)));
         return (
-          <TouchableOpacity
+          <PressableScale
             key={idx}
             onPress={() => { select(); onAnswer(value); }}
+            pressedScale={0.98}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             accessibilityLabel={String(label)}
@@ -205,12 +224,12 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
                 alignItems: 'center',
                 gap: 12,
                 padding: 14,
-                borderRadius: 16,
+                borderRadius: radius.card,
                 borderWidth: 1,
                 borderColor: selected ? colors.azure : colors.border,
                 backgroundColor: selected ? colors.azureSoft : colors.surface,
               },
-              selected ? undefined : cardShadow,
+              selected ? undefined : shadow.sm,
             ]}
           >
             <View
@@ -223,10 +242,10 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
                 backgroundColor: selected ? colors.azure : colors.surfaceAlt,
               }}
             >
-              <Text style={{ fontSize: 13, fontWeight: '700', color: selected ? '#ffffff' : colors.muted }}>{key.toUpperCase()}</Text>
+              <Text style={[typeScale.label, { color: selected ? '#ffffff' : colors.muted, fontFamily: 'Satoshi-Bold' }]}>{key.toUpperCase()}</Text>
             </View>
             <MathText text={String(label)} style={{ flex: 1, fontSize: 15, lineHeight: 22, color: colors.ink }} />
-          </TouchableOpacity>
+          </PressableScale>
         );
       })}
     </View>
@@ -241,6 +260,7 @@ function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole
   isCreole?: boolean;
 }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const resolvedPlaceholder = placeholder ?? t('Votre réponse…', 'Repons ou…');
   const value = Array.isArray(answer) ? answer.join(', ') : String(answer ?? '');
@@ -251,14 +271,14 @@ function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.border,
-          borderRadius: 16,
+          borderRadius: radius.card,
           padding: 16,
           fontSize: 16,
           lineHeight: 24,
           color: colors.ink,
           minHeight,
         },
-        cardShadow,
+        shadow.sm,
       ]}
       value={value}
       onChangeText={onAnswer}
@@ -272,6 +292,7 @@ function OpenQuestion({ answer, onAnswer, placeholder, minHeight = 120, isCreole
 
 function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onAnswer: (a: Answer) => void; isCreole: boolean }) {
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   // `value` is the stored/graded answer (kept in French so grading is unaffected);
   // `label` is display-only.
@@ -284,9 +305,10 @@ function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onA
       {opts.map(({ value, label }) => {
         const selected = answer === value;
         return (
-          <TouchableOpacity
+          <PressableScale
             key={value}
             onPress={() => { select(); onAnswer(value); }}
+            pressedScale={0.98}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             accessibilityLabel={label}
@@ -294,17 +316,17 @@ function TrueFalseQuestion({ answer, onAnswer, isCreole }: { answer: Answer; onA
               {
                 flex: 1,
                 paddingVertical: 16,
-                borderRadius: 16,
+                borderRadius: radius.card,
                 alignItems: 'center',
                 borderWidth: 1,
                 borderColor: selected ? colors.azure : colors.border,
                 backgroundColor: selected ? colors.azureSoft : colors.surface,
               },
-              selected ? undefined : cardShadow,
+              selected ? undefined : shadow.sm,
             ]}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: selected ? colors.azure : colors.muted }}>{label}</Text>
-          </TouchableOpacity>
+            <Text style={[typeScale.titleSm, { color: selected ? colors.azure : colors.muted }]}>{label}</Text>
+          </PressableScale>
         );
       })}
     </View>
@@ -339,7 +361,7 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
       >
         <Lightbulb color={colors.azure} size={16} />
-        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.azure }}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
+        <Text style={[typeScale.label, { color: colors.azure }]}>{t("Besoin d'un indice ?", 'Ou bezwen yon endis?')}</Text>
       </TouchableOpacity>
     );
   }
@@ -348,7 +370,7 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
     <View style={{ marginTop: 16, backgroundColor: colors.warn + '18', borderRadius: 16, borderWidth: 1, borderColor: colors.warn + '33', padding: 14, gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         <Lightbulb color={colors.warn} size={15} />
-        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.warn, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+        <Text style={[typeScale.overline, { color: colors.warn }]}>
           {clean.length > 1 ? `${t('Indice', 'Endis')} ${shown} / ${clean.length}` : t('Indice', 'Endis')}
         </Text>
       </View>
@@ -357,7 +379,7 @@ function ExamHint({ hints, isCreole }: { hints?: any; isCreole: boolean }) {
       ))}
       {shown < clean.length ? (
         <TouchableOpacity onPress={() => setShown((s) => s + 1)} style={{ alignSelf: 'flex-start', marginTop: 4 }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.azure }}>{t('Indice suivant', 'Endis swivan')} →</Text>
+          <Text style={[typeScale.label, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{t('Indice suivant', 'Endis swivan')} →</Text>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -370,6 +392,7 @@ export default function ExamTakeScreen() {
   const { level, examId } = route.params;
   const { user, recordActivity, clearActivity, setFocusMode, language, track } = useStore();
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -698,25 +721,21 @@ export default function ExamTakeScreen() {
           <ArrowLeft color={colors.ink} size={22} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.ink }} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
-          <Text style={{ fontSize: 12, color: colors.muted }}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
+          <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{normalizeExamTitle(exam)}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted }]}>{answeredCount}/{questions.length} {t('réponses', 'repons')}</Text>
         </View>
-        <TouchableOpacity
+        <Button
           onPress={() => { tapMedium(); handleSubmit(); }}
-          disabled={submitting}
-          accessibilityRole="button"
+          loading={submitting}
+          size="sm"
+          icon={<Send color="#fff" size={14} />}
           accessibilityLabel={t('Soumettre', 'Soumèt')}
-          style={{ backgroundColor: colors.azure, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6, opacity: submitting ? 0.6 : 1 }}
-        >
-          <Send color="#fff" size={14} />
-          <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 13 }}>{submitting ? '…' : t('Soumettre', 'Soumèt')}</Text>
-        </TouchableOpacity>
+          label={t('Soumettre', 'Soumèt')}
+        />
       </View>
 
       {/* Progress */}
-      <View style={{ height: 3, backgroundColor: colors.border }}>
-        <View style={{ height: 3, backgroundColor: colors.azure, width: `${progress}%` }} />
-      </View>
+      <ProgressStrip progress={progress} />
 
       {/* Question nav */}
       <QuestionNav
@@ -747,14 +766,14 @@ export default function ExamTakeScreen() {
           {/* Question label */}
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+              <Text style={[typeScale.overline, { color: colors.muted }]}>
                 {t('Question', 'Kesyon')} {safeIdx + 1} / {questions.length}
               </Text>
               {points > 0 ? (
-                <Text style={{ fontSize: 11, color: colors.muted }}>{points} pt{points > 1 ? 's' : ''}</Text>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>{points} pt{points > 1 ? 's' : ''}</Text>
               ) : null}
             </View>
-            <View style={[{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border }, cardShadow]}>
+            <View style={[{ backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border }, shadow.sm]}>
               <MathText text={questionText} style={{ fontSize: 16, color: colors.ink, lineHeight: 24 }} />
               {q?.has_figure && q?.figure_description ? (
                 <ExamFigure description={String(q.figure_description)} />
@@ -796,7 +815,7 @@ export default function ExamTakeScreen() {
             />
           ) : qType === 'essay' || qType === 'short_answer' ? (
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.muted }}>{t('Rédige ta réponse', 'Ekri repons ou an')}</Text>
+              <Text style={[typeScale.label, { color: colors.muted }]}>{t('Rédige ta réponse', 'Ekri repons ou an')}</Text>
               <WordCountAnswer
                 value={answerText}
                 onChangeText={(v) => setAnswer(safeIdx, v)}
@@ -830,33 +849,32 @@ export default function ExamTakeScreen() {
 
       {/* Navigation buttons */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
-        <TouchableOpacity
+        <PressableScale
           onPress={() => setCurrentIdx(Math.max(0, safeIdx - 1))}
           disabled={isFirst}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, opacity: isFirst ? 0.4 : 1 }}
+          pressedScale={0.97}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.control, borderWidth: 1, borderColor: colors.border, opacity: isFirst ? 0.4 : 1 }}
         >
           <ChevronLeft color={colors.ink} size={18} />
-          <Text style={{ color: colors.ink, fontWeight: '500', fontSize: 13 }}>{t('Préc.', 'Anvan')}</Text>
-        </TouchableOpacity>
+          <Text style={[typeScale.label, { color: colors.ink }]}>{t('Préc.', 'Anvan')}</Text>
+        </PressableScale>
         <View style={{ flex: 1 }} />
         {isLast ? (
-          <TouchableOpacity
+          <Button
             onPress={() => { tapMedium(); handleSubmit(); }}
-            disabled={submitting}
-            accessibilityRole="button"
+            loading={submitting}
             accessibilityLabel={t('Terminer', 'Fini')}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.azure, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, opacity: submitting ? 0.6 : 1 }}
-          >
-            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>{t('Terminer', 'Fini')}</Text>
-          </TouchableOpacity>
+            label={t('Terminer', 'Fini')}
+          />
         ) : (
-          <TouchableOpacity
+          <PressableScale
             onPress={() => setCurrentIdx(Math.min(questions.length - 1, safeIdx + 1))}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.azure, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}
+            pressedScale={0.97}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.azure, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.control }}
           >
-            <Text style={{ color: '#ffffff', fontWeight: '500', fontSize: 13 }}>{t('Suiv.', 'Pwochen')}</Text>
+            <Text style={[typeScale.label, { color: '#ffffff' }]}>{t('Suiv.', 'Pwochen')}</Text>
             <ChevronRight color="#fff" size={18} />
-          </TouchableOpacity>
+          </PressableScale>
         )}
       </View>
     </SafeAreaView>

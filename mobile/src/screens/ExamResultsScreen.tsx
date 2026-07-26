@@ -3,14 +3,16 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CheckCircle2, XCircle, Trophy, RefreshCw, ArrowLeft, ChevronDown, ChevronRight as ChevronRightIcon, Share2 } from 'lucide-react-native';
+import { CheckCircle2, XCircle, Trophy, RefreshCw, ArrowLeft, ChevronDown, ChevronRight as ChevronRightIcon, Share2, Lightbulb } from 'lucide-react-native';
 import { loadExamResult } from '../services/examResults';
 import { shareScore } from '../services/scoreShare';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
-import { useColors, useTheme } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
+import PressableScale from '../components/ui/PressableScale';
+import Button from '../components/ui/Button';
 import { LoadingState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import Confetti from '../components/ui/Confetti';
@@ -90,6 +92,7 @@ function ScoreGauge({ percentage, onDark = false }: { percentage: number; onDark
 function QuestionReviewItem({ question, index, answer, result }: { question: any; index: number; answer: any; result: any }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
+  const { radius, shadow } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [expanded, setExpanded] = useState(false);
@@ -99,20 +102,19 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
   const isCorrect = !isUnanswered && isCorrectResult(result, answer, question);
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={() => setExpanded((v) => !v)}
-      activeOpacity={0.85}
-      className="rounded-xl mb-2 overflow-hidden"
-      style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
+      pressedScale={0.98}
+      style={[{ borderRadius: radius.card, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }, shadow.sm]}
     >
       <View className="flex-row items-center px-4 py-3 gap-3">
         {isUnanswered
-          ? <View className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-slate-600" />
+          ? <View style={{ width: 20, height: 20, borderRadius: 999, borderWidth: 2, borderColor: colors.border }} />
           : isCorrect
             ? <CheckCircle2 color={colors.success} size={20} />
             : <XCircle color={colors.danger} size={20} />}
-        <Text className="text-xs font-semibold text-gray-500 dark:text-slate-400 w-6">Q{index + 1}</Text>
-        <Text className="flex-1 text-sm text-gray-800 dark:text-slate-200 font-medium" numberOfLines={expanded ? undefined : 2}>
+        <Text style={[typeScale.caption, { width: 24, color: colors.muted, fontFamily: 'Satoshi-Bold' }]}>Q{index + 1}</Text>
+        <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={expanded ? undefined : 2}>
           {question._displayText ?? question.question ?? ''}
         </Text>
         {expanded
@@ -121,27 +123,28 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
       </View>
       {expanded && (
         <View className="px-4 pb-3 gap-2">
-          <View className="h-px bg-gray-200 dark:bg-slate-700 mb-1" />
+          <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 4 }} />
           <View className="flex-row gap-2">
-            <Text className="text-xs font-semibold text-gray-400 dark:text-slate-500 w-20">{t('Votre réponse', 'Repons ou')}</Text>
-            <Text className="flex-1 text-xs font-medium" style={{ color: isUnanswered ? colors.faint : isCorrect ? colors.success : colors.danger }}>
+            <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: 'Satoshi-Bold' }]}>{t('Votre réponse', 'Repons ou')}</Text>
+            <Text style={[typeScale.caption, { flex: 1, fontFamily: 'Satoshi-Medium', color: isUnanswered ? colors.faint : isCorrect ? colors.success : colors.danger }]}>
               {isUnanswered ? t('Sans réponse', 'San repons') : String(given)}
             </Text>
           </View>
           {!isCorrect && correctAnswer != null && (
             <View className="flex-row gap-2">
-              <Text className="text-xs font-semibold text-gray-400 dark:text-slate-500 w-20">{t('Bonne réponse', 'Bon repons')}</Text>
-              <Text className="flex-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">{String(correctAnswer)}</Text>
+              <Text style={[typeScale.caption, { width: 80, color: colors.faint, fontFamily: 'Satoshi-Bold' }]}>{t('Bonne réponse', 'Bon repons')}</Text>
+              <Text style={[typeScale.caption, { flex: 1, color: colors.success, fontFamily: 'Satoshi-Medium' }]}>{String(correctAnswer)}</Text>
             </View>
           )}
           {question.explanation && (
-            <View className="mt-1 p-3 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
-              <Text className="text-xs text-gray-600 dark:text-slate-400 leading-relaxed">{question.explanation}</Text>
+            <View style={{ marginTop: 4, flexDirection: 'row', gap: 8, padding: 12, backgroundColor: colors.surfaceAlt, borderRadius: radius.tile, borderWidth: 1, borderColor: colors.border }}>
+              <Lightbulb color={colors.azure} size={15} style={{ marginTop: 1 }} />
+              <Text style={[typeScale.caption, { flex: 1, lineHeight: 18, color: colors.muted }]}>{question.explanation}</Text>
             </View>
           )}
         </View>
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -167,13 +170,13 @@ function MasteryBar({ section, pct, correct, total }: { section: string; pct: nu
   return (
     <View style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.muted, flex: 1 }} numberOfLines={1}>{section === 'Général' ? t('Général', 'Jeneral') : section}</Text>
-        <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 8, color }}>{pct}%</Text>
+        <Text style={[typeScale.label, { flex: 1, color: colors.muted }]} numberOfLines={1}>{section === 'Général' ? t('Général', 'Jeneral') : section}</Text>
+        <Text style={[typeScale.caption, { marginLeft: 8, color, fontFamily: 'Satoshi-Bold' }]}>{pct}%</Text>
       </View>
       <View style={{ height: 6, backgroundColor: colors.hairline, borderRadius: 99, overflow: 'hidden' }}>
         <View style={{ width: `${pct}%` as any, height: 6, backgroundColor: color, borderRadius: 99 }} />
       </View>
-      <Text style={{ fontSize: 11, color: colors.faint, marginTop: 3 }}>{correct}/{total} {t('correctes', 'kòrèk')}</Text>
+      <Text style={[typeScale.micro, { color: colors.faint, marginTop: 3 }]}>{correct}/{total} {t('correctes', 'kòrèk')}</Text>
     </View>
   );
 }
@@ -184,7 +187,7 @@ export default function ExamResultsScreen() {
   const { level, examId } = route.params;
   const { user, incrementGuestInteraction, language } = useStore();
   const colors = useColors();
-  const { cardSurface } = useTheme();
+  const { cardSurface, shadow } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -243,7 +246,7 @@ export default function ExamResultsScreen() {
         >
           <ArrowLeft color={colors.muted} size={22} />
         </TouchableOpacity>
-        <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{t('Résultats', 'Rezilta')}</Text>
+        <Text style={[typeScale.title, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
       </View>
 
       {/* Celebration burst for a passing result (skipped under reduce-motion) */}
@@ -265,22 +268,21 @@ export default function ExamResultsScreen() {
         </View>
 
         {/* Share the score — doubles as a referral invite. */}
-        <TouchableOpacity
+        <Button
           onPress={() => shareScore({
             title: t('Bac blanc', 'Bak blan'),
             score: Math.round(percentage),
             asPercent: true,
             lang: isCreole ? 'ht' : 'fr',
           })}
-          activeOpacity={0.85}
-          className="flex-row items-center justify-center gap-2 mx-4 mt-4 py-3.5 rounded-2xl"
-          style={{ backgroundColor: '#22C55E' }}
-          accessibilityRole="button"
+          variant="success"
+          size="lg"
+          fullWidth
+          icon={<Share2 color="#fff" size={18} />}
           accessibilityLabel={t('Partager mon score', 'Pataje nòt mwen')}
-        >
-          <Share2 color="#fff" size={18} />
-          <Text className="text-white font-bold text-base">{t('Partager mon score', 'Pataje nòt mwen')}</Text>
-        </TouchableOpacity>
+          label={t('Partager mon score', 'Pataje nòt mwen')}
+          style={{ marginHorizontal: 16, marginTop: 20 }}
+        />
 
         {/* Stats */}
         <View className="flex-row gap-3 mx-4 mt-4">
@@ -291,8 +293,8 @@ export default function ExamResultsScreen() {
           ].map((stat) => (
             <View key={stat.label} style={[cardSurface, { flex: 1, padding: 12, alignItems: 'center', gap: 4 }]}>
               {stat.icon}
-              <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">{stat.value}</Text>
-              <Text className="text-xs text-gray-500 dark:text-slate-400 text-center">{stat.label}</Text>
+              <Text style={[typeScale.h2, { color: colors.ink }]}>{stat.value}</Text>
+              <Text style={[typeScale.caption, { color: colors.muted, textAlign: 'center' }]}>{stat.label}</Text>
             </View>
           ))}
         </View>
@@ -303,7 +305,7 @@ export default function ExamResultsScreen() {
           if (mastery.length <= 1) return null;
           return (
             <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
-              <Text style={{ fontWeight: '700', color: colors.ink, fontSize: 15, marginBottom: 14 }}>{t('Par section', 'Dapre seksyon')}</Text>
+              <Text style={[typeScale.titleSm, { color: colors.ink, marginBottom: 14 }]}>{t('Par section', 'Dapre seksyon')}</Text>
               {mastery.map((m) => (
                 <MasteryBar key={m.section} section={m.section} pct={m.pct} correct={m.correct} total={m.total} />
               ))}
@@ -314,9 +316,9 @@ export default function ExamResultsScreen() {
         {/* Exam info */}
         {result && (
           <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, padding: 16 }]}>
-            <Text className="font-semibold text-gray-900 dark:text-slate-100 mb-1" numberOfLines={2}>{result.title ?? t('Examen', 'Egzamen')}</Text>
-            {result.subject && <Text className="text-sm text-gray-500 dark:text-slate-400">{t('Matière', 'Matyè')} : {result.subject}</Text>}
-            {result.level && <Text className="text-sm text-gray-500 dark:text-slate-400">{t('Niveau', 'Nivo')} : {result.level}</Text>}
+            <Text style={[typeScale.title, { color: colors.ink, marginBottom: 4 }]} numberOfLines={2}>{result.title ?? t('Examen', 'Egzamen')}</Text>
+            {result.subject && <Text style={[typeScale.body, { color: colors.muted }]}>{t('Matière', 'Matyè')} : {result.subject}</Text>}
+            {result.level && <Text style={[typeScale.body, { color: colors.muted }]}>{t('Niveau', 'Nivo')} : {result.level}</Text>}
           </View>
         )}
 
@@ -324,27 +326,29 @@ export default function ExamResultsScreen() {
         {questions.length > 0 && (
           <View className="mx-4 mt-5">
             <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-base font-bold text-gray-900 dark:text-slate-100">{t('Revue des questions', 'Revi kesyon yo')}</Text>
-              <Text className="text-xs text-gray-400 dark:text-slate-500">{questions.length} {t('questions', 'kesyon')}</Text>
+              <Text style={[typeScale.title, { color: colors.ink }]}>{t('Revue des questions', 'Revi kesyon yo')}</Text>
+              <Text style={[typeScale.caption, { color: colors.faint }]}>{questions.length} {t('questions', 'kesyon')}</Text>
             </View>
 
             {/* Filter tabs */}
-            <View className="flex-row bg-gray-100 dark:bg-slate-800 rounded-xl p-1 mb-4">
+            <View className="flex-row rounded-xl p-1 mb-4" style={{ backgroundColor: colors.surfaceAlt }}>
               {([['all', t('Toutes', 'Tout')], ['wrong', t('À revoir', 'Pou revize')], ['correct', t('Réussies', 'Reyisi')]] as const).map(([val, label]) => (
-                <TouchableOpacity
+                <PressableScale
                   key={val}
                   onPress={() => setReviewFilter(val)}
+                  pressedScale={0.97}
+                  haptic={false}
                   className={`flex-1 py-2 rounded-lg items-center`}
-                  style={reviewFilter === val ? { backgroundColor: colors.surface, shadowColor: colors.azureDeep, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 } : {}}
+                  style={reviewFilter === val ? { backgroundColor: colors.surface, ...shadow.sm } : {}}
                 >
-                  <Text className={`text-xs font-semibold ${reviewFilter === val ? 'text-gray-900 dark:text-slate-100' : 'text-gray-500 dark:text-slate-400'}`}>{label}</Text>
-                </TouchableOpacity>
+                  <Text style={[typeScale.label, { color: reviewFilter === val ? colors.ink : colors.muted, fontFamily: 'Satoshi-Bold' }]}>{label}</Text>
+                </PressableScale>
               ))}
             </View>
 
             {filteredQuestions.length === 0 ? (
               <View className="items-center py-6">
-                <Text className="text-gray-400 dark:text-slate-500 text-sm">{t('Aucune question dans ce filtre.', 'Pa gen kesyon nan filt sa a.')}</Text>
+                <Text style={[typeScale.body, { color: colors.faint }]}>{t('Aucune question dans ce filtre.', 'Pa gen kesyon nan filt sa a.')}</Text>
               </View>
             ) : (
               filteredQuestions.map((q, i) => {
@@ -365,23 +369,23 @@ export default function ExamResultsScreen() {
 
         {/* Actions */}
         <View className="px-4 mt-6 gap-3">
-          <TouchableOpacity
+          <Button
             onPress={() => { tapMedium(); navigation.replace('ExamTake', { level, examId }); }}
-            accessibilityRole="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            icon={<RefreshCw color="#fff" size={18} />}
             accessibilityLabel={t('Recommencer', 'Rekòmanse')}
-            className="flex-row items-center justify-center gap-2 bg-primary-600 py-4 rounded-2xl"
-          >
-            <RefreshCw color="#fff" size={18} />
-            <Text className="text-white font-bold text-base">{t('Recommencer', 'Rekòmanse')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+            label={t('Recommencer', 'Rekòmanse')}
+          />
+          <Button
             onPress={() => { tapLight(); navigation.navigate('ExamBrowser', { level }); }}
-            accessibilityRole="button"
+            variant="ghost"
+            size="lg"
+            fullWidth
             accessibilityLabel={t("Voir d'autres examens", 'Wè lòt egzamen')}
-            className="flex-row items-center justify-center gap-2 border border-gray-300 dark:border-slate-700 py-4 rounded-2xl bg-white dark:bg-[#131c2e]"
-          >
-            <Text className="text-gray-700 dark:text-slate-300 font-semibold text-base">{t("Voir d'autres examens", 'Wè lòt egzamen')}</Text>
-          </TouchableOpacity>
+            label={t("Voir d'autres examens", 'Wè lòt egzamen')}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

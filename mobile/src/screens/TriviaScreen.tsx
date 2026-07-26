@@ -17,7 +17,7 @@ import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import MathText from '../components/MathText';
 import PressableScale from '../components/ui/PressableScale';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme, typeScale, radius } from '../theme/theme';
 import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import Confetti from '../components/ui/Confetti';
@@ -139,7 +139,7 @@ function TriviaHeader() {
       {/* XP section */}
       <Zap color={colors.azure} size={16} />
       <View className="flex-1 flex-row items-center gap-2">
-        <Text className="text-xs font-bold w-10" style={{ color: colors.azure }}>
+        <Text className="w-10" style={[typeScale.caption, { color: colors.azure }]}>
           {profile?.xp ?? 0} XP
         </Text>
         {/* Level progress bar */}
@@ -149,7 +149,7 @@ function TriviaHeader() {
             style={{ width: `${Math.min(100, level?.progressPct ?? 0)}%`, backgroundColor: colors.azure }}
           />
         </View>
-        <Text className="text-xs font-semibold" style={{ color: colors.faint }}>
+        <Text style={[typeScale.caption, { color: colors.faint }]}>
           Niv.{level?.level ?? 1}
         </Text>
       </View>
@@ -157,10 +157,10 @@ function TriviaHeader() {
       {/* Streak section */}
       <View className="flex-row items-center gap-1">
         <Animated.View style={flameStyle}>
-          <Flame color="#ef4444" size={16} />
+          <Flame color={colors.danger} size={16} />
         </Animated.View>
-        <Text className="text-sm font-bold text-red-500">{streak?.currentStreak ?? 0}</Text>
-        <Text className="text-xs ml-0.5" style={{ color: colors.faint }}>{isCreole ? 'jou' : 'jours'}</Text>
+        <Text style={[typeScale.titleSm, { color: colors.danger }]}>{streak?.currentStreak ?? 0}</Text>
+        <Text className="ml-0.5" style={[typeScale.caption, { color: colors.faint }]}>{isCreole ? 'jou' : 'jours'}</Text>
       </View>
     </View>
   );
@@ -186,6 +186,7 @@ function CategoryPicker({
   isCreole: boolean;
 }) {
   const colors = useColors();
+  const { shadow } = useTheme();
   return (
     <FlatList
       style={{ backgroundColor: colors.bg }}
@@ -199,10 +200,10 @@ function CategoryPicker({
       columnWrapperStyle={{ gap: COL_GAP, paddingHorizontal: GRID_PAD, marginBottom: COL_GAP }}
       ListHeaderComponent={
         <View className="px-4 pt-4 pb-3">
-          <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
+          <Text style={[typeScale.display, { color: colors.ink }]}>
             {isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}
           </Text>
-          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>
+          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>
             {isCreole ? 'Chwazi yon kategori' : 'Choisissez une catégorie'}
           </Text>
         </View>
@@ -218,19 +219,15 @@ function CategoryPicker({
           {/* Shadow on the outer view; clipped illustration on the inner. */}
           <View
             style={{
-              borderRadius: 22,
-              shadowColor: '#0f172a',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 3,
+              borderRadius: radius.hero,
+              ...shadow.md,
             }}
           >
             <View
               style={{
                 width: TILE_SIZE,
                 height: TILE_SIZE,
-                borderRadius: 22,
+                borderRadius: radius.hero,
                 overflow: 'hidden',
                 backgroundColor: colors.surfaceAlt,
                 alignItems: 'center',
@@ -255,7 +252,7 @@ function CategoryPicker({
           {/* Name (reserve 2 lines so tiles align) */}
           <Text
             numberOfLines={2}
-            style={{ fontSize: 12, fontWeight: '700', color: colors.ink, textAlign: 'center', marginTop: 8, lineHeight: 15, minHeight: 30, letterSpacing: -0.2 }}
+            style={[typeScale.caption, { color: colors.ink, textAlign: 'center', marginTop: 8, minHeight: 30 }]}
           >
             {isCreole ? (cat.nameHt ?? cat.name) : cat.name}
           </Text>
@@ -286,6 +283,7 @@ function RoundPicker({
   isCreole: boolean;
 }) {
   const colors = useColors();
+  const { shadow } = useTheme();
   const totalQuestions = (TRIVIA_QUESTIONS as Record<string, any[]>)[category.id]?.length ?? 0;
 
   return (
@@ -301,16 +299,16 @@ function RoundPicker({
         >
           <Text style={{ fontSize: 16 }}>{category.icon}</Text>
         </View>
-        <Text className="font-bold flex-1" numberOfLines={1} style={{ color: colors.ink }}>
+        <Text className="flex-1" numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>
           {isCreole ? (category.nameHt ?? category.name) : category.name}
         </Text>
       </View>
 
       <View className="px-4 pt-6 pb-3">
-        <Text className="text-xl font-bold" style={{ color: colors.ink }}>
+        <Text style={[typeScale.h1, { color: colors.ink }]}>
           {isCreole ? 'Konbyen kesyon ?' : 'Combien de questions ?'}
         </Text>
-        <Text className="text-sm mt-1" style={{ color: colors.muted }}>
+        <Text className="mt-1" style={[typeScale.body, { color: colors.muted }]}>
           {totalQuestions} {isCreole ? 'kesyon disponib' : 'questions disponibles'}
         </Text>
       </View>
@@ -330,22 +328,18 @@ function RoundPicker({
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.border,
-                shadowColor: '#1B6FE0',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.06,
-                shadowRadius: 6,
-                elevation: 1,
+                ...shadow.sm,
                 opacity: disabled ? 0.4 : 1,
               }}
             >
               <View className="flex-1">
-                <Text className="font-bold text-lg" style={{ color: colors.ink }}>
+                <Text style={[typeScale.h2, { color: colors.ink }]}>
                   {opt.count === 0 ? `${isCreole ? 'Tout' : 'Tout'} (${totalQuestions})` : (isCreole ? opt.labelHt : opt.label)}
                 </Text>
-                <Text className="text-sm mt-0.5" style={{ color: colors.muted }}>{isCreole ? opt.descHt : opt.desc}</Text>
+                <Text className="mt-0.5" style={[typeScale.body, { color: colors.muted }]}>{isCreole ? opt.descHt : opt.desc}</Text>
               </View>
               <View className="items-end">
-                <Text className="text-sm font-semibold" style={{ color: colors.azure }}>{isCreole ? opt.timeHt : opt.time}</Text>
+                <Text style={[typeScale.label, { color: colors.azure }]}>{isCreole ? opt.timeHt : opt.time}</Text>
                 <ChevronRight color={colors.faint} size={16} />
               </View>
             </TouchableOpacity>
@@ -528,6 +522,7 @@ function QuizPlayer({
   onFinish: (score: number, total: number) => void;
 }) {
   const colors = useColors();
+  const { shadow } = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
   const [idx, setIdx] = useState(0);
@@ -639,13 +634,13 @@ function QuizPlayer({
         <View className="flex-row items-center" style={{ gap: 12 }}>
           <View className="flex-1">
             <View className="flex-row items-center justify-between" style={{ marginBottom: 7 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.ink }}>
+              <Text style={[typeScale.label, { color: colors.ink }]}>
                 {isCreole ? 'Kesyon' : 'Question'} {idx + 1} / {questions.length}
               </Text>
               {/* Live score badge */}
               <View className="flex-row items-center rounded-full px-2.5 py-1" style={{ gap: 4, backgroundColor: colors.azureSoft }}>
                 <Trophy color={colors.azure} size={13} />
-                <Text className="font-bold text-sm" style={{ color: colors.azure }}>{score}</Text>
+                <Text style={[typeScale.label, { color: colors.azure }]}>{score}</Text>
               </View>
             </View>
             {/* Slim brand-gradient progress bar */}
@@ -693,15 +688,11 @@ function QuizPlayer({
         <View
           className="mb-4"
           style={{
-            borderRadius: 20,
+            borderRadius: radius.card,
             overflow: 'hidden',
             borderWidth: 1,
             borderColor: colors.border,
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.07,
-            shadowRadius: 10,
-            elevation: 3,
+            ...shadow.md,
           }}
         >
           <LinearGradient
@@ -736,27 +727,26 @@ function QuizPlayer({
           <PopIn style={{ marginTop: 16, paddingHorizontal: 4 }} from={0.85}>
             <View className="flex-row items-center gap-2 mb-1">
               {isCorrect ? (
-                <Check color="#059669" size={18} />
+                <Check color={colors.success} size={18} />
               ) : (
-                <X color="#dc2626" size={18} />
+                <X color={colors.danger} size={18} />
               )}
               <Text
-                className="font-bold text-base"
-                style={{ color: isCorrect ? '#059669' : '#dc2626' }}
+                style={[typeScale.title, { color: isCorrect ? colors.success : colors.danger }]}
               >
                 {isCorrect ? (isCreole ? 'Kòrèk !' : 'Correct !') : (isCreole ? 'Pa kòrèk' : 'Incorrect')}
               </Text>
             </View>
 
             {!isCorrect && (
-              <Text className="text-sm mt-1" style={{ color: colors.muted }}>
+              <Text className="mt-1" style={[typeScale.body, { color: colors.muted }]}>
                 {isCreole ? 'Bon repons :' : 'Bonne réponse :'}{' '}
-                <Text className="font-semibold text-emerald-700 dark:text-emerald-400">{q.correctAnswer}</Text>
+                <Text style={[typeScale.bodyMd, { color: colors.success }]}>{q.correctAnswer}</Text>
               </Text>
             )}
 
             {q.explanation ? (
-              <Text className="text-sm mt-2 leading-5" style={{ color: colors.muted }}>{q.explanation}</Text>
+              <Text className="mt-2" style={[typeScale.body, { color: colors.muted }]}>{q.explanation}</Text>
             ) : null}
           </PopIn>
         )}
@@ -776,7 +766,7 @@ function QuizPlayer({
             className="py-4 items-center"
             style={{
               backgroundColor: selected ? colors.azure : colors.border,
-              borderRadius: 16,
+              borderRadius: radius.tile,
               shadowColor: colors.azureDeep,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: selected ? 0.28 : 0,
@@ -785,8 +775,7 @@ function QuizPlayer({
             }}
           >
             <Text
-              className="font-bold text-base"
-              style={{ color: selected ? '#fff' : colors.faint }}
+              style={[typeScale.title, { color: selected ? '#fff' : colors.faint }]}
             >
               {isCreole ? 'Konfime' : 'Confirmer'}
             </Text>
@@ -798,7 +787,7 @@ function QuizPlayer({
             className="flex-row py-4 items-center justify-center gap-1"
             style={{
               backgroundColor: colors.azure,
-              borderRadius: 16,
+              borderRadius: radius.tile,
               shadowColor: colors.azureDeep,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.28,
@@ -806,7 +795,7 @@ function QuizPlayer({
               elevation: 5,
             }}
           >
-            <Text className="text-white font-bold text-base">
+            <Text style={[typeScale.title, { color: '#ffffff' }]}>
               {idx + 1 >= questions.length
                 ? isCreole
                   ? 'Wè rezilta yo'
@@ -1167,7 +1156,7 @@ export default function TriviaScreen() {
             <TouchableOpacity onPress={exitToHub} className="p-1 mr-3" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={isCreole ? 'Fèmen' : 'Fermer'}>
               <X color={colors.muted} size={20} />
             </TouchableOpacity>
-            <Text className="font-bold" style={{ color: colors.ink }}>
+            <Text style={[typeScale.title, { color: colors.ink }]}>
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </View>
@@ -1194,7 +1183,7 @@ export default function TriviaScreen() {
             accessibilityLabel={isCreole ? 'Jwèt yo' : 'Les jeux'}
           >
             <ChevronRight color={colors.azure} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
-            <Text style={{ color: colors.azure, fontWeight: '700', fontSize: 13 }}>
+            <Text style={[typeScale.label, { color: colors.azure }]}>
               {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
           </TouchableOpacity>
@@ -1231,7 +1220,7 @@ export default function TriviaScreen() {
             >
               <Text style={{ fontSize: 14 }}>{selectedCategory.icon}</Text>
             </View>
-            <Text className="font-bold flex-1" numberOfLines={1} style={{ color: colors.ink }}>
+            <Text className="flex-1" numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>
               {isCreole
                 ? (selectedCategory.nameHt ?? selectedCategory.name)
                 : selectedCategory.name}
@@ -1253,7 +1242,7 @@ export default function TriviaScreen() {
           {/* Results nav bar */}
           <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <Trophy color={colors.azure} size={18} />
-            <Text className="font-bold ml-2" style={{ color: colors.ink }}>
+            <Text className="ml-2" style={[typeScale.title, { color: colors.ink }]}>
               {isCreole ? 'Rezilta' : 'Résultats'}
             </Text>
           </View>

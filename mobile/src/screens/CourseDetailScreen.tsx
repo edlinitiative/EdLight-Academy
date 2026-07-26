@@ -18,7 +18,7 @@ import LessonPractice from '../components/LessonPractice';
 import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { useColors } from '../theme/theme';
+import { useColors, typeScale, radius } from '../theme/theme';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseDetail'>;
@@ -59,7 +59,7 @@ function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: bool
         style={{ aspectRatio: 16 / 9, backgroundColor: '#111827' }}
       >
         <PlayCircle color="#9ca3af" size={36} />
-        <Text className="text-gray-400 text-xs">{isCreole ? 'Videyo pa disponib pou kounye a' : 'Vidéo indisponible pour le moment'}</Text>
+        <Text style={[typeScale.caption, { color: '#9ca3af' }]}>{isCreole ? 'Videyo pa disponib pou kounye a' : 'Vidéo indisponible pour le moment'}</Text>
       </View>
     );
   }
@@ -108,8 +108,8 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreo
         className="flex-row items-center bg-gray-100 dark:bg-slate-800 rounded-xl px-4 py-3 gap-2"
       >
         <View className="flex-1">
-          <Text className="font-bold text-gray-800 dark:text-slate-200 text-sm">{unit.title}</Text>
-          <Text className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{unitDone}/{unitTotal} {isCreole ? 'leson' : 'leçons'}</Text>
+          <Text style={[typeScale.titleSm, { color: colors.ink }]}>{unit.title}</Text>
+          <Text className="mt-0.5" style={[typeScale.caption, { color: colors.muted }]}>{unitDone}/{unitTotal} {isCreole ? 'leson' : 'leçons'}</Text>
         </View>
         {open ? <ChevronDown color={colors.muted} size={18} /> : <ChevronRight color={colors.muted} size={18} />}
       </TouchableOpacity>
@@ -128,8 +128,8 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreo
                   ? <PlayCircle color={done ? colors.success : active ? colors.azure : colors.faint} size={20} />
                   : <ClipboardList color={done ? colors.success : active ? colors.warn : colors.faint} size={20} />}
                 <Text
-                  className="flex-1 text-sm"
-                  style={{ color: active ? colors.azure : colors.ink, fontWeight: active ? '600' : '400' }}
+                  className="flex-1"
+                  style={[active ? typeScale.bodyMd : typeScale.body, { color: active ? colors.azure : colors.ink }]}
                   numberOfLines={2}
                 >
                   {lesson.title}
@@ -137,7 +137,7 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreo
                 {done
                   ? <CheckCircle2 color={colors.success} size={16} />
                   : lesson.duration
-                    ? <Text className="text-xs text-gray-400 dark:text-slate-500">{lesson.duration}min</Text>
+                    ? <Text style={[typeScale.caption, { color: colors.faint }]}>{lesson.duration}min</Text>
                     : null}
               </TouchableOpacity>
             );
@@ -243,8 +243,8 @@ export default function CourseDetailScreen() {
           <ArrowLeft color={colors.muted} size={22} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base" numberOfLines={1}>{course.name}</Text>
-          <Text className="text-xs text-gray-400 dark:text-slate-500">{completedCount}/{allLessons.length} {t('leçons', 'leson')}</Text>
+          <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
+          <Text style={[typeScale.caption, { color: colors.faint }]}>{completedCount}/{allLessons.length} {t('leçons', 'leson')}</Text>
         </View>
       </View>
 
@@ -263,7 +263,7 @@ export default function CourseDetailScreen() {
           className="w-full items-center justify-center"
           style={{ height: 80, backgroundColor: colors.surfaceAlt }}
         >
-          <Text style={{ color: colors.muted, fontSize: 14 }}>
+          <Text style={[typeScale.body, { color: colors.muted }]}>
             {activeLesson.type === 'video' ? t('Vidéo non disponible', 'Videyo pa disponib') : t('Quiz / Exercice', 'Quiz / Egzèsis')}
           </Text>
         </View>
@@ -272,15 +272,15 @@ export default function CourseDetailScreen() {
       {/* Active lesson info + mark complete */}
       {activeLesson && (
         <View className="px-5 py-4" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.hairline }}>
-          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{activeLesson.title}</Text>
+          <Text style={[typeScale.title, { color: colors.ink }]}>{activeLesson.title}</Text>
           {activeLesson.objectives ? (
-            <Text className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{activeLesson.objectives}</Text>
+            <Text className="mt-1 leading-relaxed" style={[typeScale.caption, { color: colors.muted }]}>{activeLesson.objectives}</Text>
           ) : null}
           <View className="flex-row gap-3 mt-3">
             {isAlreadyDone ? (
               <View className="flex-row items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950 rounded-xl border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 color={colors.success} size={16} />
-                <Text className="text-emerald-700 dark:text-emerald-300 text-sm font-semibold">{t('Terminé', 'Fini')}</Text>
+                <Text style={[typeScale.label, { color: colors.success }]}>{t('Terminé', 'Fini')}</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -289,7 +289,7 @@ export default function CourseDetailScreen() {
                 style={{ backgroundColor: course.color ?? colors.azure }}
               >
                 <CheckCircle2 color="#fff" size={16} />
-                <Text className="text-white text-sm font-bold">{t('Marquer terminé', 'Make kòm fini')}</Text>
+                <Text style={[typeScale.titleSm, { color: '#fff' }]}>{t('Marquer terminé', 'Make kòm fini')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -301,7 +301,7 @@ export default function CourseDetailScreen() {
               className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-[#131c2e]"
             >
               <Sparkles color={colors.azure} size={16} />
-              <Text className="text-gray-800 dark:text-slate-200 text-sm font-semibold">{t('Flashcards', 'Flashcards')}</Text>
+              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Flashcards', 'Flashcards')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setPracticeMode('exercices')}
@@ -309,7 +309,7 @@ export default function CourseDetailScreen() {
               style={{ backgroundColor: course.color ?? colors.azure }}
             >
               <ClipboardList color="#fff" size={16} />
-              <Text className="text-white text-sm font-bold">{isCreole ? 'Egzèsis' : 'Exercices'}</Text>
+              <Text style={[typeScale.titleSm, { color: '#fff' }]}>{isCreole ? 'Egzèsis' : 'Exercices'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -321,13 +321,13 @@ export default function CourseDetailScreen() {
               className={`flex-row items-center gap-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-slate-700 ${activeIndex <= 0 ? 'opacity-30' : ''}`}
             >
               <ChevronLeft color={colors.muted} size={16} />
-              <Text className="text-gray-700 dark:text-slate-300 text-xs font-medium">{t('Préc.', 'Avan')}</Text>
+              <Text style={[typeScale.micro, { color: colors.muted }]}>{t('Préc.', 'Avan')}</Text>
             </TouchableOpacity>
             <View className="flex-1" />
             {isLastLesson ? (
               <View className="flex-row items-center gap-1 px-3 py-2 bg-amber-50 dark:bg-amber-950 rounded-xl border border-amber-200 dark:border-amber-800">
                 <Trophy color={colors.warn} size={16} />
-                <Text className="text-amber-700 dark:text-amber-300 text-xs font-semibold">{t('Dernière leçon', 'Dènye leson')}</Text>
+                <Text style={[typeScale.micro, { color: colors.warn }]}>{t('Dernière leçon', 'Dènye leson')}</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -335,7 +335,7 @@ export default function CourseDetailScreen() {
                 className="flex-row items-center gap-1 px-3 py-2 rounded-xl"
                 style={{ backgroundColor: course.color ?? colors.azure }}
               >
-                <Text className="text-white text-xs font-medium">{t('Suiv.', 'Aprè')}</Text>
+                <Text style={[typeScale.micro, { color: '#fff' }]}>{t('Suiv.', 'Aprè')}</Text>
                 <ChevronRight color="#fff" size={16} />
               </TouchableOpacity>
             )}
@@ -350,12 +350,12 @@ export default function CourseDetailScreen() {
           <LessonComments threadKey={`comments:${course.id}:${activeLesson.id}`} isCreole={isCreole} />
         )}
         {!activeLesson && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, shadowColor: colors.azure, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: radius.tile, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, shadowColor: colors.azure, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
             {/* Course name is already in the header bar above — don't repeat it here. */}
             {course.description ? (
-              <Text className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{course.description}</Text>
+              <Text className="leading-relaxed" style={[typeScale.body, { color: colors.muted }]}>{course.description}</Text>
             ) : null}
-            <Text className="text-xs text-gray-400 dark:text-slate-500 mt-3">{allLessons.length} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('unités', 'inite')}</Text>
+            <Text className="mt-3" style={[typeScale.caption, { color: colors.faint }]}>{allLessons.length} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('unités', 'inite')}</Text>
           </View>
         )}
         {(course.modules ?? []).map((unit: any) => (

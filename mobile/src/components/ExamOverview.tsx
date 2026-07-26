@@ -4,7 +4,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ArrowLeft, Clock, Award, ListChecks, Layers, Play } from 'lucide-react-native';
 import { normalizeExamTitle } from '../utils/examUtils';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
+import Button from './ui/Button';
 
 function StatItem({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   const colors = useColors();
@@ -14,8 +15,8 @@ function StatItem({ icon, value, label }: { icon: React.ReactNode; value: string
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }} numberOfLines={1}>{value}</Text>
-        <Text style={{ fontSize: 11, color: colors.muted }} numberOfLines={1}>{label}</Text>
+        <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{value}</Text>
+        <Text style={[typeScale.micro, { color: colors.muted }]} numberOfLines={1}>{label}</Text>
       </View>
     </View>
   );
@@ -42,6 +43,7 @@ export default function ExamOverview({
 }) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const { shadow, radius } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -51,14 +53,10 @@ export default function ExamOverview({
 
   const cardStyle = {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.azureDeep,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 1,
+    ...shadow.sm,
   } as const;
 
   return (
@@ -68,7 +66,7 @@ export default function ExamOverview({
         <TouchableOpacity onPress={onBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <ArrowLeft color={colors.ink} size={22} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }}>{t("Aperçu de l'examen", 'Apèsi egzamen an')}</Text>
+        <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t("Aperçu de l'examen", 'Apèsi egzamen an')}</Text>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 24, gap: 14 }}>
@@ -76,7 +74,7 @@ export default function ExamOverview({
             ends with the year/session (e.g. "Espagnol — … · Juillet 2025"), so
             the old subject/year pills above it were redundant and were removed. */}
         <View style={[cardStyle, { padding: 18 }]}>
-          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, lineHeight: 27, marginBottom: 16 }}>
+          <Text style={[typeScale.h1, { color: colors.ink, marginBottom: 16 }]}>
             {title}
           </Text>
 
@@ -103,7 +101,7 @@ export default function ExamOverview({
         {/* Sections card */}
         {sections.length > 0 ? (
           <View style={[cardStyle, { padding: 18 }]}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 12 }}>
+            <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 12 }]}>
               {t('Aperçu des sections', 'Apèsi seksyon yo')}
             </Text>
             {sections.map((sec, i) => (
@@ -119,12 +117,12 @@ export default function ExamOverview({
                 }}
               >
                 <View style={{ width: 28, height: 28, borderRadius: 999, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{i + 1}</Text>
+                  <Text style={[typeScale.caption, { color: colors.azure, fontFamily: 'Satoshi-Bold' }]}>{i + 1}</Text>
                 </View>
-                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.ink }} numberOfLines={2}>
+                <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={2}>
                   {sec.title}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.muted }}>
+                <Text style={[typeScale.caption, { color: colors.muted }]}>
                   {sec.count} {t(sec.count > 1 ? 'questions' : 'question', 'kesyon')}
                 </Text>
               </View>
@@ -136,7 +134,7 @@ export default function ExamOverview({
         {hasProgress ? (
           <View style={[cardStyle, { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
             <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: colors.azure }} />
-            <Text style={{ flex: 1, fontSize: 13, color: colors.muted }}>
+            <Text style={[typeScale.label, { flex: 1, color: colors.muted }]}>
               {t(
                 `Progression sauvegardée — ${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''} sur ${questionCount}.`,
                 `Pwogrè konsève — ${answeredCount} repons anrejistre sou ${questionCount}.`,
@@ -149,24 +147,15 @@ export default function ExamOverview({
       {/* Start CTA — safe-area aware so it always clears the home indicator /
           Android gesture bar (the floating tab bar is hidden here via focus mode). */}
       <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
-        <TouchableOpacity
+        <Button
           onPress={onStart}
-          style={{
-            backgroundColor: colors.azure,
-            borderRadius: 16,
-            paddingVertical: 15,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-          }}
-        >
-          <Play color="#ffffff" size={17} fill="#ffffff" />
-          <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700' }}>
-            {hasProgress ? t("Continuer l'examen", 'Kontinye egzamen an') : t("Commencer l'examen", 'Kòmanse egzamen an')}
-          </Text>
-        </TouchableOpacity>
-        <Text style={{ textAlign: 'center', fontSize: 12, color: colors.muted, marginTop: 8 }}>
+          variant="primary"
+          size="lg"
+          fullWidth
+          icon={<Play color="#ffffff" size={17} fill="#ffffff" />}
+          label={hasProgress ? t("Continuer l'examen", 'Kontinye egzamen an') : t("Commencer l'examen", 'Kòmanse egzamen an')}
+        />
+        <Text style={[typeScale.caption, { textAlign: 'center', color: colors.muted, marginTop: 8 }]}>
           {hasProgress
             ? t('Vous reprendrez là où vous vous étiez arrêté.', 'W ap kontinye kote ou te rete a.')
             : t('Votre progression sera sauvegardée automatiquement.', 'Pwogrè ou ap konsève otomatikman.')}

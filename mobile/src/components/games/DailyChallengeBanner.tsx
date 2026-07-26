@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CalendarCheck, Check, ChevronRight } from 'lucide-react-native';
 import PressableScale from '../ui/PressableScale';
-import { useColors, radius } from '../../theme/theme';
+import { useColors, radius, typeScale } from '../../theme/theme';
 
 /**
  * "Défi du jour" banner — a shared once-a-day round (same 10 questions for
@@ -34,7 +34,7 @@ export default function DailyChallengeBanner({
             alignItems: 'center',
             gap: 12,
             padding: 16,
-            borderRadius: 18,
+            borderRadius: radius.card,
             backgroundColor: colors.surfaceAlt,
             borderWidth: 1,
             borderColor: colors.border,
@@ -42,14 +42,14 @@ export default function DailyChallengeBanner({
           style,
         ]}
       >
-        <View style={{ width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
+        <View style={{ width: 44, height: 44, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
           <Check color={colors.azure} size={22} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>
+          <Text style={[typeScale.title, { color: colors.ink }]}>
             {isCreole ? 'Defi jodi a' : 'Défi du jour'}
           </Text>
-          <Text style={{ fontSize: 12.5, marginTop: 2, color: colors.muted }}>
+          <Text style={[typeScale.caption, { marginTop: 2, color: colors.muted }]}>
             {isCreole
               ? `Fini — ${daily?.score}/${daily?.total}. Retounen demen !`
               : `Terminé — ${daily?.score}/${daily?.total}. Revenez demain !`}
@@ -66,7 +66,7 @@ export default function DailyChallengeBanner({
       accessibilityLabel={isCreole ? 'Jwe defi jodi a' : 'Jouer le défi du jour'}
       style={[
         {
-          borderRadius: 18,
+          borderRadius: radius.card,
           overflow: 'hidden',
           shadowColor: colors.azure,
           shadowOffset: { width: 0, height: 6 },
@@ -87,7 +87,7 @@ export default function DailyChallengeBanner({
           style={{
             width: 46,
             height: 46,
-            borderRadius: 13,
+            borderRadius: radius.tile,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: 'rgba(255,255,255,0.18)',
@@ -98,11 +98,11 @@ export default function DailyChallengeBanner({
           <CalendarCheck color="#ffffff" size={23} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15.5, fontWeight: '800', color: '#ffffff' }}>
+          <Text style={[typeScale.title, { color: '#ffffff' }]}>
             {isCreole ? 'Defi jodi a' : 'Défi du jour'}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-            <Text style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.9)' }}>
+            <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.9)' }]}>
               {isCreole ? '10 kesyon' : '10 questions'}
             </Text>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: radius.chip, paddingHorizontal: 7, paddingVertical: 1.5 }}>

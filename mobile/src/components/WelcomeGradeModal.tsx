@@ -3,7 +3,7 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { GraduationCap } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { GRADES } from '../config/trackConfig';
-import { useColors } from '../theme/theme';
+import { useColors, typeScale, radius } from '../theme/theme';
 
 /**
  * One-time "Quelle classe ?" prompt, shown right after the language choice (and
@@ -72,13 +72,13 @@ export default function WelcomeGradeModal() {
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 420, borderRadius: 24, padding: 24, alignItems: 'center' },
+  card: { width: '100%', maxWidth: 420, borderRadius: radius.hero, padding: 24, alignItems: 'center' },
   iconWrap: { width: 60, height: 60, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  title: { fontSize: 21, fontWeight: '800', textAlign: 'center' },
-  subtitle: { fontSize: 14, textAlign: 'center', marginTop: 6, marginBottom: 18 },
+  title: { ...typeScale.h1, textAlign: 'center' },
+  subtitle: { ...typeScale.body, textAlign: 'center', marginTop: 6, marginBottom: 18 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
-  chip: { width: '47%', minHeight: 52, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 10 },
-  chipText: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  chip: { width: '47%', minHeight: 52, borderRadius: radius.control, borderWidth: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, paddingVertical: 10 },
+  chipText: { ...typeScale.titleSm, textAlign: 'center' },
   skip: { marginTop: 18, paddingVertical: 6, paddingHorizontal: 16 },
-  skipText: { fontSize: 14, fontWeight: '600' },
+  skipText: { ...typeScale.bodyMd },
 });

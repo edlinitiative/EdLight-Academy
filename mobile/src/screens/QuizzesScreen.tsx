@@ -10,11 +10,12 @@ import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { usePracticeQuizzes } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import { useColors } from '../theme/theme';
+import { useColors, useTheme, typeScale, radius } from '../theme/theme';
 import { subjectColor } from '../utils/examUtils';
 import { tapLight, tapMedium, success, warn } from '../utils/haptics';
 import Confetti from '../components/ui/Confetti';
 import PopIn from '../components/ui/PopIn';
+import PressableScale from '../components/ui/PressableScale';
 
 type Translate = (fr: string, ht: string) => string;
 
@@ -70,6 +71,7 @@ export function isQuizAnswerCorrect(question: any, given: string | undefined): b
 
 function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number, total: number) => void; t: Translate }) {
   const colors = useColors();
+  const { shadow } = useTheme();
   const questions = useMemo(() => {
     const qs = quiz.questions ?? [];
     return qs.slice(0, 20);
@@ -82,9 +84,9 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
   if (questions.length === 0) {
     return (
       <View className="flex-1 items-center justify-center p-6" style={{ backgroundColor: colors.bg }}>
-        <Text className="text-gray-500 dark:text-slate-400 text-base">{t('Ce quiz n\'a pas de questions.', 'Quiz sa a pa gen kesyon.')}</Text>
-        <TouchableOpacity onPress={() => onFinish(0, 0)} className="mt-4 bg-primary-600 px-6 py-3 rounded-xl">
-          <Text className="text-white font-bold">{t('Retour', 'Tounen')}</Text>
+        <Text style={[typeScale.body, { color: colors.muted }]}>{t('Ce quiz n\'a pas de questions.', 'Quiz sa a pa gen kesyon.')}</Text>
+        <TouchableOpacity onPress={() => onFinish(0, 0)} className="mt-4 px-6 py-3" style={{ backgroundColor: colors.azure, borderRadius: radius.control }}>
+          <Text style={[typeScale.title, { color: '#fff' }]}>{t('Retour', 'Tounen')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -116,41 +118,48 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.bg }}>
-      <View className="h-1 bg-gray-200 dark:bg-slate-700">
-        <View className="h-1 bg-primary-600" style={{ width: `${((idx + 1) / questions.length) * 100}%` }} />
+      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
+        <View className="h-1.5 rounded-full" style={{ width: `${((idx + 1) / questions.length) * 100}%`, backgroundColor: colors.azure }} />
       </View>
       <ScrollView className="flex-1 p-5" contentContainerStyle={{ paddingBottom: 100 }}>
-        <Text className="text-xs text-gray-400 dark:text-slate-500 font-semibold uppercase mb-3">
+        <Text className="mb-3" style={[typeScale.overline, { color: colors.faint }]}>
           {t('Question', 'Kesyon')} {idx + 1} / {questions.length}
         </Text>
-        <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border, shadowColor: colors.azure, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 1 }}>
-          <Text className="text-base text-gray-900 dark:text-slate-100 leading-6">{q.question ?? q.stem ?? ''}</Text>
+        <View style={{ backgroundColor: colors.surface, borderRadius: radius.tile, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border, ...shadow.sm }}>
+          <Text style={[typeScale.title, { color: colors.ink }]}>{q.question ?? q.stem ?? ''}</Text>
         </View>
         {options.map((opt, i) => (
-          <TouchableOpacity
+          <PressableScale
             key={i}
             onPress={() => handleSelect(opt)}
-            className="flex-row items-center p-4 rounded-xl mb-3 gap-3"
+            pressedScale={0.98}
             style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 16,
+              marginBottom: 12,
+              gap: 12,
               borderWidth: 1,
+              borderRadius: radius.control,
               borderColor: selected === opt ? colors.azure : colors.border,
               backgroundColor: selected === opt ? colors.azureSoft : colors.surface,
             }}
           >
-            <View className={`w-8 h-8 rounded-full items-center justify-center ${selected === opt ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-700'}`}>
-              <Text className={`text-sm font-bold ${selected === opt ? 'text-white' : 'text-gray-500 dark:text-slate-400'}`}>{letters[i]}</Text>
+            <View className="w-8 h-8 rounded-full items-center justify-center" style={{ backgroundColor: selected === opt ? colors.azure : colors.surfaceAlt }}>
+              <Text style={[typeScale.label, { color: selected === opt ? '#fff' : colors.muted }]}>{letters[i]}</Text>
             </View>
-            <Text className="flex-1 text-gray-800 dark:text-slate-200 text-sm">{opt}</Text>
-          </TouchableOpacity>
+            <Text className="flex-1" style={[typeScale.body, { color: colors.ink }]}>{opt}</Text>
+          </PressableScale>
         ))}
       </ScrollView>
-      <View className="px-5 pb-5 bg-white dark:bg-[#131c2e] border-t border-gray-100 dark:border-slate-700">
+      <View className="px-5 pb-5 pt-3" style={{ backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border }}>
         <TouchableOpacity
           onPress={handleNext}
           disabled={!selected}
-          className={`flex-row py-4 rounded-2xl items-center justify-center gap-1 ${selected ? 'bg-primary-600' : 'bg-gray-200 dark:bg-slate-700'}`}
+          className="flex-row py-4 items-center justify-center gap-1"
+          style={{ backgroundColor: selected ? colors.azure : colors.border, borderRadius: radius.tile }}
         >
-          <Text className={`font-bold text-base ${selected ? 'text-white' : 'text-gray-400 dark:text-slate-500'}`}>
+          <Text style={[typeScale.title, { color: selected ? '#ffffff' : colors.faint }]}>
             {idx === questions.length - 1 ? t('Terminer', 'Fini') : t('Suivant', 'Swivan')}
           </Text>
           {idx < questions.length - 1 && (
@@ -175,13 +184,13 @@ function QuizResultScreen({ score, total, onRetry, onBack, t }: {
           <Trophy color={colors.azure} size={32} />
         </View>
       </PopIn>
-      <Text className="text-4xl font-bold text-gray-900 dark:text-slate-100 mb-1">{score}/{total}</Text>
-      <Text className="text-xl text-primary-600 dark:text-[#4C9AF5] font-semibold mb-6">{pct}% {t('correct', 'kòrèk')}</Text>
-      <TouchableOpacity onPress={() => { tapMedium(); onRetry(); }} accessibilityRole="button" accessibilityLabel={t('Recommencer', 'Rekòmanse')} className="w-full bg-primary-600 py-4 rounded-2xl items-center mb-3">
-        <Text className="text-white font-bold text-base">{t('Recommencer', 'Rekòmanse')}</Text>
+      <Text className="mb-1" style={[typeScale.num, { color: colors.ink }]}>{score}/{total}</Text>
+      <Text className="mb-6" style={[typeScale.h2, { color: colors.azure }]}>{pct}% {t('correct', 'kòrèk')}</Text>
+      <TouchableOpacity onPress={() => { tapMedium(); onRetry(); }} accessibilityRole="button" accessibilityLabel={t('Recommencer', 'Rekòmanse')} className="w-full py-4 items-center mb-3" style={{ backgroundColor: colors.azure, borderRadius: radius.tile }}>
+        <Text style={[typeScale.title, { color: '#fff' }]}>{t('Recommencer', 'Rekòmanse')}</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => { tapLight(); onBack(); }} accessibilityRole="button" accessibilityLabel={t('Retour aux quiz', 'Tounen nan quiz yo')} className="w-full border border-gray-300 dark:border-slate-700 bg-white dark:bg-[#131c2e] py-4 rounded-2xl items-center">
-        <Text className="text-gray-700 dark:text-slate-300 font-semibold text-base">{t('Retour aux quiz', 'Tounen nan quiz yo')}</Text>
+      <TouchableOpacity onPress={() => { tapLight(); onBack(); }} accessibilityRole="button" accessibilityLabel={t('Retour aux quiz', 'Tounen nan quiz yo')} className="w-full py-4 items-center" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.tile }}>
+        <Text style={[typeScale.title, { color: colors.ink }]}>{t('Retour aux quiz', 'Tounen nan quiz yo')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -192,6 +201,7 @@ export default function QuizzesScreen() {
   const { data, isLoading, isError, refetch, isFetching } = usePracticeQuizzes();
   const { language, recordQuizAttempt, setFocusMode } = useStore();
   const colors = useColors();
+  const { shadow } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -259,7 +269,7 @@ export default function QuizzesScreen() {
           <TouchableOpacity onPress={() => setState('list')} className="p-1 mr-3" hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Retour', 'Tounen')}>
             <ChevronRight color={colors.muted} size={22} style={{ transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
-          <Text className="font-bold text-gray-900 dark:text-slate-100 flex-1" numberOfLines={1}>{activeQuiz.title}</Text>
+          <Text className="flex-1" numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{activeQuiz.title}</Text>
         </View>
         <QuizRunner quiz={activeQuiz} onFinish={handleFinish} t={t} />
       </SafeAreaView>
@@ -291,14 +301,10 @@ export default function QuizzesScreen() {
 
   const cardStyle = {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: radius.tile,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: colors.azure,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...shadow.sm,
     marginBottom: 12,
     padding: 16,
     flexDirection: 'row' as const,
@@ -316,8 +322,8 @@ export default function QuizzesScreen() {
             <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
           <View className="flex-1">
-            <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink, letterSpacing: -0.4 }}>{activeSubject.name}</Text>
-            <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>
+            <Text style={[typeScale.h1, { color: colors.ink }]}>{activeSubject.name}</Text>
+            <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>
               {activeSubject.chapters.length} {t('chapitres', 'chapit')} · {activeSubject.questionCount} {t('questions', 'kesyon')}
             </Text>
           </View>
@@ -325,12 +331,12 @@ export default function QuizzesScreen() {
         <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 100 }}>
           {activeSubject.chapters.map((quiz: any) => (
             <TouchableOpacity key={quiz.id} onPress={() => startQuiz(quiz)} activeOpacity={0.82} style={cardStyle}>
-              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
                 <BookOpen color={tint} size={20} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '600', color: colors.ink, fontSize: 14 }} numberOfLines={2}>{chapterNameOf(quiz)}</Text>
-                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{quiz.questions?.length ?? 0} {t('questions', 'kesyon')}</Text>
+                <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>{chapterNameOf(quiz)}</Text>
+                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>{quiz.questions?.length ?? 0} {t('questions', 'kesyon')}</Text>
               </View>
               <ChevronRight color={colors.faint} size={18} />
             </TouchableOpacity>
@@ -359,8 +365,8 @@ export default function QuizzesScreen() {
           </TouchableOpacity>
         ) : null}
         <View className="flex-1">
-          <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>{t('Banque de questions', 'Bank kesyon')}</Text>
-          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>{t('Entraîne-toi par matière et chapitre', 'Antrene w pa matyè ak chapit')}</Text>
+          <Text style={[typeScale.display, { color: colors.ink }]}>{t('Banque de questions', 'Bank kesyon')}</Text>
+          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>{t('Entraîne-toi par matière et chapitre', 'Antrene w pa matyè ak chapit')}</Text>
         </View>
       </View>
 
@@ -380,12 +386,12 @@ export default function QuizzesScreen() {
             const tint = subjectColor(s.code);
             return (
               <TouchableOpacity key={s.name} onPress={() => setSelectedSubject(s.name)} activeOpacity={0.82} style={cardStyle}>
-                <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
                   <BookOpen color={tint} size={20} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '700', color: colors.ink, fontSize: 15 }} numberOfLines={1}>{s.name}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
+                  <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{s.name}</Text>
+                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
                     {s.chapters.length} {t('chapitres', 'chapit')} · {s.questionCount} {t('questions', 'kesyon')}
                   </Text>
                 </View>

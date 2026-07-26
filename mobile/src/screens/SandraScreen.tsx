@@ -26,7 +26,7 @@ import MathText, { HAS_MATH } from '../components/MathText';
 import useStore from '../contexts/store';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
 import { tapLight, tapMedium } from '../utils/haptics';
-import { useColors, type Palette } from '../theme/theme';
+import { useColors, typeScale, shadow, type Palette } from '../theme/theme';
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -57,21 +57,21 @@ const markdownStylesFor = (colors: Palette) => ({
   ordered_list: { marginBottom: 8 },
   list_item: { marginBottom: 2 },
   code_inline: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     color: colors.azure,
     borderRadius: 4,
     paddingHorizontal: 4,
     fontSize: 13,
   },
   code_block: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     padding: 10,
     fontSize: 13,
     color: colors.ink,
   },
   fence: {
-    backgroundColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
     borderRadius: 8,
     padding: 10,
     fontSize: 13,
@@ -119,7 +119,7 @@ function TypingDots({ label }: { label: string }) {
           />
         ))}
       </View>
-      <Text className="text-xs text-gray-500 dark:text-slate-400">{label}</Text>
+      <Text style={[typeScale.caption, { color: colors.muted }]}>{label}</Text>
     </View>
   );
 }
@@ -157,25 +157,41 @@ function SandraBubble({
   const hasMath = segments.some((s) => s.type === 'math');
 
   return (
-    <View className="self-start max-w-[85%]" style={bubbleStylesFor(colors).sandra}>
-      {!hasMath ? (
-        // No LaTeX anywhere → single markdown pass (unchanged plain-text path).
-        <Markdown style={mdStyles} onLinkPress={onLinkPress}>
-          {text}
-        </Markdown>
-      ) : (
-        segments.map((seg, i) =>
-          seg.type === 'math' ? (
-            // KaTeX typesets the `$…$` parts; surrounding prose stays plain in
-            // the themed ink color (MathText injects colors.ink).
-            <MathText key={i} text={seg.content} />
-          ) : seg.content.trim() ? (
-            <Markdown key={i} style={mdStyles} onLinkPress={onLinkPress}>
-              {seg.content}
-            </Markdown>
-          ) : null,
-        )
-      )}
+    <View className="flex-row self-start max-w-[90%] gap-2">
+      {/* Sandra identity glyph */}
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: colors.azureSoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: 2,
+        }}
+      >
+        <Sparkles size={13} color={colors.azure} />
+      </View>
+      <View className="flex-1" style={bubbleStylesFor(colors).sandra}>
+        {!hasMath ? (
+          // No LaTeX anywhere → single markdown pass (unchanged plain-text path).
+          <Markdown style={mdStyles} onLinkPress={onLinkPress}>
+            {text}
+          </Markdown>
+        ) : (
+          segments.map((seg, i) =>
+            seg.type === 'math' ? (
+              // KaTeX typesets the `$…$` parts; surrounding prose stays plain in
+              // the themed ink color (MathText injects colors.ink).
+              <MathText key={i} text={seg.content} />
+            ) : seg.content.trim() ? (
+              <Markdown key={i} style={mdStyles} onLinkPress={onLinkPress}>
+                {seg.content}
+              </Markdown>
+            ) : null,
+          )
+        )}
+      </View>
     </View>
   );
 }
@@ -184,7 +200,7 @@ function UserBubble({ text }: { text: string }) {
   const colors = useColors();
   return (
     <View className="self-end max-w-[85%]" style={bubbleStylesFor(colors).user}>
-      <Text className="text-white text-sm leading-5">{text}</Text>
+      <Text style={[typeScale.body, { color: '#ffffff' }]}>{text}</Text>
     </View>
   );
 }
@@ -199,11 +215,7 @@ const bubbleStylesFor = (colors: Palette) => ({
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 10,
-    shadowColor: colors.azure,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 1,
+    ...shadow.sm,
   },
   user: {
     backgroundColor: colors.azure,
@@ -348,14 +360,14 @@ export default function SandraScreen({
         <View className="flex-row items-center justify-between px-4 py-3">
           <View className="flex-row items-center gap-2">
             <Sparkles size={20} color={colors.coral} />
-            <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">Sandra</Text>
+            <Text style={[typeScale.h2, { color: colors.ink }]}>Sandra</Text>
           </View>
           {onClose ? (
             <TouchableOpacity
               onPress={onClose}
               activeOpacity={0.75}
               className="w-9 h-9 rounded-full items-center justify-center"
-              style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+              style={{ backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }}
               accessibilityLabel={t('Fermer', 'Fèmen')}
             >
               <X size={18} color={colors.ink} />
@@ -382,10 +394,10 @@ export default function SandraScreen({
             >
               <Lock size={24} color={colors.coral} />
             </View>
-            <Text className="text-base font-bold text-gray-900 dark:text-slate-100 text-center mb-2">
+            <Text style={[typeScale.title, { color: colors.ink, textAlign: 'center', marginBottom: 8 }]}>
               {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
             </Text>
-            <Text className="text-sm text-gray-500 dark:text-slate-400 text-center mb-5">
+            <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
               {t(
                 'Sandra est votre tutrice IA. Créez un compte gratuit pour lui poser vos questions.',
                 'Sandra se titris IA ou. Kreye yon kont gratis pou poze l kesyon ou yo.',
@@ -397,7 +409,7 @@ export default function SandraScreen({
               className="rounded-full px-6 py-3"
               style={{ backgroundColor: colors.azure }}
             >
-              <Text className="text-white font-bold text-sm">
+              <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
                 {t('Se connecter', 'Konekte')}
               </Text>
             </TouchableOpacity>
@@ -429,8 +441,8 @@ export default function SandraScreen({
               <Sparkles size={20} color={colors.coral} />
             </View>
             <View>
-              <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">Sandra</Text>
-              <Text className="text-xs text-gray-500 dark:text-slate-400">
+              <Text style={[typeScale.h2, { color: colors.ink }]}>Sandra</Text>
+              <Text style={[typeScale.caption, { color: colors.muted }]}>
                 {t('Votre tutrice IA', 'Titris IA ou')}
               </Text>
             </View>
@@ -492,7 +504,7 @@ export default function SandraScreen({
                       opacity: sending ? 0.5 : 1,
                     }}
                   >
-                    <Text className="text-xs font-semibold" style={{ color: colors.azure }}>
+                    <Text style={[typeScale.label, { color: colors.azure }]}>
                       {s}
                     </Text>
                   </TouchableOpacity>
@@ -518,7 +530,7 @@ export default function SandraScreen({
               style={{ backgroundColor: colors.warn + '1A', borderWidth: 1, borderColor: colors.warn + '55' }}
             >
               <AlertTriangle size={16} color={colors.warn} style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs leading-4" style={{ color: colors.ink }}>
+              <Text style={[typeScale.caption, { flex: 1, color: colors.ink }]}>
                 {notice.message}
               </Text>
             </View>
@@ -530,7 +542,7 @@ export default function SandraScreen({
               style={{ backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azureBorder }}
             >
               <Lock size={16} color={colors.azure} style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs leading-4" style={{ color: colors.azure }}>
+              <Text style={[typeScale.caption, { flex: 1, color: colors.azure }]}>
                 {t('Connectez-vous pour parler à Sandra', 'Konekte pou pale ak Sandra')}
               </Text>
             </View>
@@ -541,7 +553,7 @@ export default function SandraScreen({
               className="rounded-xl p-3 mt-1"
               style={{ backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger + '66' }}
             >
-              <Text className="text-xs leading-4 mb-2" style={{ color: colors.danger }}>
+              <Text style={[typeScale.caption, { color: colors.danger, marginBottom: 8 }]}>
                 {t(
                   'Oups, la réponse n’est pas arrivée. Vérifiez votre connexion.',
                   'Oups, repons lan pa rive. Tcheke koneksyon ou.',
@@ -554,7 +566,7 @@ export default function SandraScreen({
                 className="self-start rounded-full px-4 py-1.5"
                 style={{ backgroundColor: colors.danger, opacity: sending ? 0.5 : 1 }}
               >
-                <Text className="text-white text-xs font-bold">
+                <Text style={[typeScale.label, { color: '#ffffff' }]}>
                   {t('Réessayer', 'Eseye ankò')}
                 </Text>
               </TouchableOpacity>
@@ -580,8 +592,10 @@ export default function SandraScreen({
             maxLength={MAX_CHARS}
             placeholder={t('Posez votre question…', 'Poze kesyon ou…')}
             placeholderTextColor={colors.faint}
-            className="flex-1 text-sm text-gray-900 dark:text-slate-100"
+            className="flex-1"
             style={{
+              ...typeScale.body,
+              color: colors.ink,
               backgroundColor: colors.surfaceAlt,
               borderWidth: 1,
               borderColor: colors.border,

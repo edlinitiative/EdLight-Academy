@@ -15,7 +15,7 @@ import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { useColors, Palette, radius } from '../theme/theme';
+import { useColors, Palette, radius, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
@@ -93,16 +93,16 @@ function CourseCard({
             <BookOpen color={color} size={20} />
           </View>
           <View className="flex-1">
-            <Text className="font-bold text-gray-900 dark:text-slate-100 text-sm leading-snug" numberOfLines={2}>{course.name}</Text>
-            <Text className="text-xs text-gray-500 dark:text-slate-400 mt-1">{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>
+            <Text className="leading-snug" numberOfLines={2} style={[typeScale.titleSm, { color: colors.ink }]}>{course.name}</Text>
+            <Text className="mt-1" style={[typeScale.caption, { color: colors.muted }]}>{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>
           </View>
           {soon ? (
             <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-              <Text style={{ color: colors.azure, fontSize: 11, fontWeight: '700' }}>{t('Bientôt', 'Talè')}</Text>
+              <Text style={[typeScale.micro, { color: colors.azure }]}>{t('Bientôt', 'Talè')}</Text>
             </View>
           ) : (
             <View className="items-end flex-shrink-0">
-              <Text className="text-sm font-bold" style={{ color: pct > 0 ? color : colors.faint }}>
+              <Text style={[typeScale.label, { color: pct > 0 ? color : colors.faint }]}>
                 {pct}%
               </Text>
               <ChevronRight color={colors.faint} size={16} className="mt-1" />
@@ -141,16 +141,16 @@ function DrillCard({
           <Icon color={color} size={22} />
         </View>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{title}</Text>
-          <Text className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{subtitle}</Text>
+          <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
+          <Text className="mt-0.5" style={[typeScale.caption, { color: colors.muted }]}>{subtitle}</Text>
         </View>
         {comingSoon ? (
           <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-            <Text style={{ color: colors.azure, fontSize: 11, fontWeight: '700' }}>{badge}</Text>
+            <Text style={[typeScale.micro, { color: colors.azure }]}>{badge}</Text>
           </View>
         ) : (
           <View className="items-end flex-shrink-0 flex-row items-center gap-2">
-            <Text className="text-xs text-gray-500 dark:text-slate-400">{badge}</Text>
+            <Text style={[typeScale.caption, { color: colors.muted }]}>{badge}</Text>
             <ChevronRight color={colors.faint} size={18} />
           </View>
         )}
@@ -285,18 +285,19 @@ export default function CoursesScreen() {
             </TouchableOpacity>
           )}
           <View className="flex-1">
-            <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
+            <Text style={[typeScale.display, { color: colors.ink }]}>
               {headerTitle}
             </Text>
             {headerSubtitle ? (
-              <Text style={{ fontSize: 13, color: colors.muted, marginTop: 2 }}>{headerSubtitle}</Text>
+              <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>{headerSubtitle}</Text>
             ) : null}
           </View>
         </View>
         <View className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3" style={{ borderColor: colors.border }}>
           <Search color={colors.faint} size={18} />
           <TextInput
-            className="flex-1 py-3 ml-2 text-gray-900 dark:text-slate-100 text-sm"
+            className="flex-1 py-3 ml-2"
+            style={[typeScale.body, { color: colors.ink }]}
             placeholder={t('Rechercher un cours…', 'Chèche kou…')}
             value={search}
             onChangeText={setSearch}
@@ -316,7 +317,7 @@ export default function CoursesScreen() {
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
           ListHeaderComponent={
             searchResults.length > 0 ? (
-              <Text className="text-xs text-gray-500 dark:text-slate-400 mb-3">{searchResults.length} {t('cours', 'kou')}</Text>
+              <Text className="mb-3" style={[typeScale.caption, { color: colors.muted }]}>{searchResults.length} {t('cours', 'kou')}</Text>
             ) : null
           }
           ListEmptyComponent={
@@ -346,8 +347,8 @@ export default function CoursesScreen() {
           <TouchableOpacity
             activeOpacity={0.82}
             onPress={() => navigation.navigate('Quizzes', {})}
-            className="mb-4 bg-white dark:bg-[#131c2e] rounded-2xl"
-            style={cardShadowFor(colors)}
+            className="mb-4"
+            style={[{ backgroundColor: colors.surface, borderRadius: radius.card }, cardShadowFor(colors)]}
           >
             <View className="flex-row items-center p-4 gap-3">
               <View
@@ -357,10 +358,10 @@ export default function CoursesScreen() {
                 <BookMarked color={colors.azure} size={20} />
               </View>
               <View className="flex-1">
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.ink }}>
+                <Text style={[typeScale.titleSm, { color: colors.ink }]}>
                   {t('Banque de Questions', 'Bank Kesyon')}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>
+                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
                   {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
                 </Text>
               </View>
@@ -425,7 +426,7 @@ export default function CoursesScreen() {
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
           ListHeaderComponent={
             courseList.length > 0 ? (
-              <Text className="text-xs text-gray-500 dark:text-slate-400 mb-3">{courseList.length} {t('cours', 'kou')}</Text>
+              <Text className="mb-3" style={[typeScale.caption, { color: colors.muted }]}>{courseList.length} {t('cours', 'kou')}</Text>
             ) : null
           }
           ListEmptyComponent={
