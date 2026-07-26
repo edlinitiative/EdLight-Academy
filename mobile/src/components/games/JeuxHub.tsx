@@ -94,12 +94,15 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
         ...shadow.md,
       }}
     >
-      <View className="flex-row items-center gap-1.5 mb-3">
+      <View className="flex-row items-center gap-1.5 mb-0.5">
         <Crown color={colors.warn} size={15} />
         <Text style={[typeScale.title, { color: colors.ink }]}>
           {isCreole ? 'Rekò yo' : 'Records'}
         </Text>
       </View>
+      <Text style={[typeScale.caption, { color: colors.muted, marginBottom: 10 }]}>
+        {isCreole ? 'Meyè nòt kominote a' : 'Meilleurs scores de la communauté'}
+      </Text>
       {arcade.map((g, i) => {
         const rec = records[g.id];
         const Icon = GAME_ICONS[g.id];
@@ -116,10 +119,20 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
               </Text>
             </View>
             {rec ? (
-              <Text style={[typeScale.label, { color: colors.muted }]} numberOfLines={1}>
-                {rec.displayName} ·{' '}
-                <Text style={[typeScale.label, { color: colors.ink }]}>{rec.score}</Text>
-              </Text>
+              // Score is the hero (gold chip); the holder is a clear caption so
+              // a bare "L · 12" no longer reads as a mystery — it's "🏆 12, par L".
+              <View style={{ alignItems: 'flex-end' }}>
+                <View
+                  className="flex-row items-center gap-1 rounded-full"
+                  style={{ backgroundColor: colors.warnSoft, paddingHorizontal: 9, paddingVertical: 3 }}
+                >
+                  <Trophy color={colors.warn} size={12} />
+                  <Text style={[typeScale.label, { color: colors.ink }]}>{rec.score}</Text>
+                </View>
+                <Text style={[typeScale.micro, { color: colors.faint, marginTop: 2 }]} numberOfLines={1}>
+                  {isCreole ? 'pa' : 'par'} {rec.displayName}
+                </Text>
+              </View>
             ) : (
               <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.surfaceAlt }}>
                 <Text style={[typeScale.micro, { color: colors.muted }]}>

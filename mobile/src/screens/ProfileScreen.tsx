@@ -23,7 +23,7 @@ import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import InviteSheet from '../components/InviteSheet';
 import FollowInstagram from '../components/FollowInstagram';
-import { GRADES } from '../config/trackConfig';
+import { GRADES, gradeProfile } from '../config/trackConfig';
 import { useColors, useTheme, radius, typeScale, gradients } from '../theme/theme';
 import {
   areNotificationsEnabled,
@@ -444,17 +444,21 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Readiness */}
-        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-          <ReadinessCard
-            onFocusPress={(subject) =>
-              navigation.navigate('Exams', {
-                screen: 'ExamBrowser',
-                params: { level: 'terminale', subject },
-              })
-            }
-          />
-        </View>
+        {/* Readiness — the Bac preparation score only makes sense for Bac-track
+            students (coefficient-weighted Bac subjects). For prefac / lower
+            grades it's just noise, so hide it there. */}
+        {gradeProfile(grade).examLevel === 'baccalaureat' && (
+          <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+            <ReadinessCard
+              onFocusPress={(subject) =>
+                navigation.navigate('Exams', {
+                  screen: 'ExamBrowser',
+                  params: { level: 'terminale', subject },
+                })
+              }
+            />
+          </View>
+        )}
 
         {/* Achievements */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>

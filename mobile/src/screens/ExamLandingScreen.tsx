@@ -8,6 +8,7 @@ import {
   Calculator, Atom, FlaskConical, Leaf, PenLine, Globe,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { gradeProfile } from '../config/trackConfig';
 import { useColors, useTheme } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -71,9 +72,17 @@ export default function ExamLandingScreen() {
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
-  const { language, track, setTrack, setOnboardingCompleted } = useStore();
+  const { language, track, grade, setTrack, setOnboardingCompleted } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  // Lead with the level that matches the student's grade (prefac → Université
+  // first, 9e → 9ème first, etc.) so the relevant path is the top card.
+  const EXAM_LEVEL_TO_ID: Record<string, string> = { baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' };
+  const myLevelId = EXAM_LEVEL_TO_ID[gradeProfile(grade).examLevel ?? ''] ?? null;
+  const orderedLevels = myLevelId
+    ? [...LEVELS].sort((a, b) => (a.id === myLevelId ? -1 : b.id === myLevelId ? 1 : 0))
+    : LEVELS;
 
   function pickTrack(code: string) {
     setTrack(code);
@@ -97,7 +106,7 @@ export default function ExamLandingScreen() {
 
         {/* Level cards */}
         <View className="px-5 gap-3">
-          {LEVELS.map((level) => (
+          {orderedLevels.map((level) => (
             <View
               key={level.id}
               style={[cardSurface, { overflow: 'hidden' }]}
@@ -107,36 +116,30 @@ export default function ExamLandingScreen() {
                 pressedScale={0.98}
                 accessibilityRole="button"
                 accessibilityLabel={t(level.label, level.labelHt)}
-                style={{ flexDirection: 'row' }}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
               >
-                <View style={{ flex: 1, padding: 16 }}>
-                  {/* Icon */}
-                  <View
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 12,
-                      backgroundColor: colors.azureSoft,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: 10,
-                    }}
-                  >
-                    <level.Icon color={colors.azure} size={24} />
-                  </View>
-
-                  <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
-                  <Text style={[typeScale.label, { color: colors.muted, marginTop: 4 }]}>{t(level.sublabel, level.sublabelHt)}</Text>
-                  <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>{t(level.description, level.descriptionHt)}</Text>
-
-                  {/* Explorer link */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                    <Text style={[typeScale.bodyMd, { color: colors.azure }]}>
-                      {t('Explorer', 'Eksplore')}
-                    </Text>
-                    <ChevronRight color={colors.azure} size={16} />
-                  </View>
+                {/* Compact horizontal row — icon · title/sublabel · chevron.
+                    Keeps the level cards short so "Par matière" stays above the
+                    fold (was a tall vertical card with a redundant Explorer link). */}
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    backgroundColor: colors.azureSoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <level.Icon color={colors.azure} size={22} />
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
+                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
+                    {t(level.sublabel, level.sublabelHt)}
+                  </Text>
+                </View>
+                <ChevronRight color={colors.faint} size={20} />
               </PressableScale>
 
               {/* Track (filière) chips — only for Terminale */}
