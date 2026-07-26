@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Maximize2, Minimize2, RotateCcw, Send, Sparkles, X } from 'lucide-react';
 import { authedFetch } from '../../services/firebase';
 import useStore from '../../contexts/store';
+import { useTrivia } from '../../hooks/useTrivia';
 import InstructionRenderer from '../InstructionRenderer';
 
 /** sessionStorage key holding the active conversation id — a new browser
@@ -45,6 +46,11 @@ interface SandraPanelProps {
 export default function SandraPanel({ open, onClose }: SandraPanelProps) {
   const { t, i18n } = useTranslation();
   const { user, setShowAuthModal } = useStore();
+  // Grade + filière drive Sandra's grounding; XP level comes from the trivia
+  // profile. Sent as `studentContext` (shape the /api/chat endpoint reads).
+  const grade = useStore((s) => s.grade);
+  const track = useStore((s) => s.track);
+  const { level: triviaLevel } = useTrivia();
   const location = useLocation();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -94,6 +100,11 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
         message,
         lang: i18n.language === 'ht' ? 'ht' : 'fr',
         page: pageContext(),
+        studentContext: {
+          grade: grade ?? null,
+          track: track ?? null,
+          level: typeof triviaLevel?.level === 'number' ? triviaLevel.level : null,
+        },
       };
       const convId = readConvId();
       if (convId) body.conversationId = convId;

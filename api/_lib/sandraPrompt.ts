@@ -32,6 +32,17 @@ export type PageContext = {
   lessonId?: string;
 };
 
+/**
+ * Lightweight learner profile used to tailor Sandra's depth and examples.
+ * All fields optional. CONTRACT: the mobile app and the web app both send this
+ * exact `studentContext` shape to /api/chat — do not rename its fields.
+ */
+export type StudentContext = {
+  grade?: string | null;
+  track?: string | null;
+  level?: number | null;
+};
+
 /** Shared limits contract — the chat endpoint and the widget code against these. */
 export const SANDRA_LIMITS = {
   maxMessageChars: 2000,
@@ -100,6 +111,25 @@ function buildChunksSection(chunks: KbChunk[]): string {
   return [header, ...lines].join('\n');
 }
 
+function buildStudentSection(student: StudentContext | undefined): string {
+  if (!student) return '';
+  const grade = typeof student.grade === 'string' ? student.grade.trim() : '';
+  const track = typeof student.track === 'string' ? student.track.trim() : '';
+  const level = typeof student.level === 'number' && Number.isFinite(student.level) ? student.level : null;
+  if (!grade && !track && level == null) return '';
+
+  const bits: string[] = [];
+  if (grade) bits.push(`en classe ${grade}`);
+  if (track) bits.push(`filière ${track}`);
+  if (level != null) bits.push(`niveau ${level}`);
+  const descr = bits.join(', ');
+
+  return [
+    `Profil de l'élève — l'élève est ${descr}.`,
+    "Adapte la profondeur et les exemples à ce niveau (ne suppose pas qu'il prépare le Bac si ce n'est pas le cas).",
+  ].join('\n');
+}
+
 function buildPageSection(page: PageContext | undefined): string {
   if (!page || (!page.path && !page.courseId && !page.lessonId)) return '';
   const parts: string[] = [];
@@ -116,8 +146,9 @@ export function buildSandraSystemPrompt(args: {
   lang: 'fr' | 'ht';
   page?: PageContext;
   chunks: KbChunk[];
+  student?: StudentContext;
 }): string {
-  const { lang, page, chunks } = args;
+  const { lang, page, chunks, student } = args;
   const hasGraded = chunks.some((c) => c.type === 'quiz' || c.type === 'exam');
 
   const pedagogy = hasGraded ? `${PEDAGOGY_BASE}\n${PEDAGOGY_GRADED_WARNING}` : PEDAGOGY_BASE;
@@ -129,6 +160,7 @@ export function buildSandraSystemPrompt(args: {
     language,
     PLATFORM_FAQ,
     TOOLS_GUIDE,
+    buildStudentSection(student),
     buildChunksSection(chunks),
     buildPageSection(page),
   ];

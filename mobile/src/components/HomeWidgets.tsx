@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ClipboardList, ListChecks, Zap, Trophy, Compass, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { gradeProfile } from '../config/trackConfig';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import PressableScale from './ui/PressableScale';
 import { useColors, useTheme, typeScale } from '../theme/theme';
@@ -107,8 +108,19 @@ export default function HomeWidgets({
   const { isDark } = useTheme();
   const { myRank } = useLeaderboard(25);
   const language = useStore((s) => s.language);
+  const grade = useStore((s) => s.grade);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  // In exams mode the tile leads with the exam that fits the grade — the Bac
+  // label is a mismatch for a 9e or Post-Bac student.
+  const examLevel = gradeProfile(grade).examLevel;
+  const examsLabel =
+    examLevel === 'universite'
+      ? t('Concours', 'Konkou')
+      : examLevel === '9eme_af'
+        ? t('Examen 9e', 'Egzamen 9yèm')
+        : t('Examens Bac', 'Egzamen Bak');
 
   // Per-tile accents. Blue/amber/green come from the theme palette (dark-aware);
   // violet has no palette token, so lift it on dark grounds to stay vivid.
@@ -126,11 +138,11 @@ export default function HomeWidgets({
           icon={practiceMode === 'quiz' ? <ListChecks color={blue} size={ICON} /> : <ClipboardList color={blue} size={ICON} />}
           accent={blue}
           value={t("S'entraîner", 'Antrene')}
-          label={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : t('Examens Bac', 'Egzamen Bak')}
+          label={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : examsLabel}
           accessibilityLabel={
             practiceMode === 'quiz'
               ? t("S'entraîner, Quiz", 'Antrene, Quiz')
-              : t("S'entraîner, Examens Bac", 'Antrene, Egzamen Bak')
+              : `${t("S'entraîner", 'Antrene')}, ${examsLabel}`
           }
           onPress={onNavigateExams}
         />

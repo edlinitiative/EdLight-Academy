@@ -22,6 +22,17 @@ export type SandraResult =
   | { kind: 'auth' }
   | { kind: 'error' };
 
+/**
+ * Lightweight learner profile the server uses to tailor Sandra's depth and
+ * examples. Every field is optional — the caller passes what it knows.
+ * CONTRACT: the web app sends the SAME `studentContext` shape; do not rename.
+ */
+export type StudentContext = {
+  grade?: string | null;
+  track?: string | null;
+  level?: number | null;
+};
+
 export async function readConvId(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(CONV_KEY);
@@ -41,6 +52,7 @@ export async function sendToSandra(
   message: string,
   lang: 'fr' | 'ht',
   page?: { path: string; courseId?: string; lessonId?: string },
+  studentContext?: StudentContext,
   isFullRetry = false,
 ): Promise<SandraResult> {
   const user = auth.currentUser;
@@ -58,6 +70,7 @@ export async function sendToSandra(
     lang,
     page: page || { path: '/mobile' },
   };
+  if (studentContext) body.studentContext = studentContext;
   const convId = await readConvId();
   if (convId) body.conversationId = convId;
 
@@ -89,7 +102,7 @@ export async function sendToSandra(
       // Thread hit the server-side cap — start fresh; transparently re-send
       // the unanswered turn once into the new conversation.
       await writeConvId(null);
-      if (!reply && !isFullRetry) return sendToSandra(message, lang, page, true);
+      if (!reply && !isFullRetry) return sendToSandra(message, lang, page, studentContext, true);
     } else if (typeof data?.conversationId === 'string' && data.conversationId) {
       await writeConvId(data.conversationId);
     }

@@ -21,6 +21,7 @@ import { useStreak } from '../hooks/useStreak';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
+import GradeProgress from '../components/GradeProgress';
 import InviteSheet from '../components/InviteSheet';
 import FollowInstagram from '../components/FollowInstagram';
 import { GRADES, gradeProfile } from '../config/trackConfig';
@@ -446,9 +447,10 @@ export default function ProfileScreen() {
 
         {/* Readiness — the Bac preparation score only makes sense for Bac-track
             students (coefficient-weighted Bac subjects). For prefac / lower
-            grades it's just noise, so hide it there. */}
-        {gradeProfile(grade).examLevel === 'baccalaureat' && (
-          <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+            grades it's just noise, so we show a grade-appropriate progress card
+            in its place (no empty gap). */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+          {gradeProfile(grade).examLevel === 'baccalaureat' ? (
             <ReadinessCard
               onFocusPress={(subject) =>
                 navigation.navigate('Exams', {
@@ -457,8 +459,10 @@ export default function ProfileScreen() {
                 })
               }
             />
-          </View>
-        )}
+          ) : (
+            <GradeProgress />
+          )}
+        </View>
 
         {/* Achievements */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>

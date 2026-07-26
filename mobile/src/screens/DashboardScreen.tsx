@@ -21,6 +21,7 @@ import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
 import SmartSuggestion from '../components/SmartSuggestion';
+import SeasonCountdown from '../components/SeasonCountdown';
 import { gradeProfile } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
@@ -236,6 +237,78 @@ export default function DashboardScreen() {
     });
 
   // ---------------------------------------------------------------------------
+  // Grade-aware rail order
+  // ---------------------------------------------------------------------------
+
+  // Cours-first grades (NS1–NS3 lead with 'cours') surface "Continuer à
+  // apprendre" above the at-a-glance stats; every other grade keeps stats first.
+  const coursFirst = gradeProfile(grade).lead[0] === 'cours';
+  const isBacTrack = gradeProfile(grade).examLevel === 'baccalaureat';
+
+  const atAGlanceBlock = !isFirstRun ? (
+    <View className="px-5 mb-4">
+      <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
+        <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
+        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
+        <StatCol value={enrolledCourses.length} label={t('Cours', 'Kou')} />
+        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
+        <StatCol value={avgScore > 0 ? `${avgScore}%` : '—'} label={t('Moyenne', 'Mwayèn')} />
+      </View>
+    </View>
+  ) : null;
+
+  const continueLearningBlock = displayCourses.length > 0 ? (
+    <View className="px-5 mb-4">
+      <SectionHeader
+        title={t('Continuer à apprendre', 'Kontinye aprann')}
+        actionLabel={t('Voir tout', 'Wè tout')}
+        onAction={() => navigation.navigate('Courses')}
+      />
+      <View className="gap-3">
+        {displayCourses.map((course: any) => {
+          const tint = courseTint(course.color);
+          const totalLessons = countCourseLessons(course);
+          const prog = progressByCourseId.get(course.id);
+          const pct = calculateCompletionPercentage(prog, totalLessons);
+
+          return (
+            <PressableScale
+              key={course.id}
+              onPress={() => goCourse(course)}
+              accessibilityRole="button"
+              accessibilityLabel={course.name}
+              style={{ ...cardSurface, padding: 14 }}
+            >
+              <View className="flex-row items-center gap-3">
+                <View
+                  className="items-center justify-center flex-shrink-0"
+                  style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '18' }}
+                >
+                  <BookOpen color={tint} size={20} />
+                </View>
+                <View className="flex-1">
+                  {/* Single subject tag = the course name itself, which already
+                      carries the level (e.g. "Chimie NS1") — no redundant pills. */}
+                  <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>
+                    {course.name}
+                  </Text>
+                  {totalLessons > 0 && (
+                    <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
+                      {totalLessons} {t('leçons', 'leson')}
+                    </Text>
+                  )}
+                </View>
+                {/* Circular progress ring (conic-style via SVG) */}
+                <ProgressRing value={pct} color={tint} size={46} strokeWidth={5} />
+              </View>
+            </PressableScale>
+          );
+        })}
+      </View>
+    </View>
+  ) : null;
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
@@ -384,83 +457,40 @@ export default function DashboardScreen() {
             Self-hides (and takes its margin with it) when there's nothing. */}
         <SmartSuggestion />
 
-        {/* At-a-glance stats — hidden for a brand-new student (all zeros aren't
-            useful on first run; the first-run nudge above leads instead). */}
-        {!isFirstRun && (
-          <View className="px-5 mb-4">
-            <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
-              <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
-              <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
-              <StatCol value={enrolledCourses.length} label={t('Cours', 'Kou')} />
-              <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
-              <StatCol value={avgScore > 0 ? `${avgScore}%` : '—'} label={t('Moyenne', 'Mwayèn')} />
-            </View>
-          </View>
+        {/* Season/grade countdown — the one date that matters for this grade
+            (Bac / 9ème / Préfac prep). Self-hides for grades with no exam. */}
+        <SeasonCountdown />
+
+        {/* At-a-glance stats + Continue learning. Order flips by grade: cours-first
+            grades (NS1–NS3) surface "Continuer à apprendre" above the stats; all
+            other grades keep the stats card first. Each block self-hides. */}
+        {coursFirst ? (
+          <>
+            {continueLearningBlock}
+            {atAGlanceBlock}
+          </>
+        ) : (
+          <>
+            {atAGlanceBlock}
+            {continueLearningBlock}
+          </>
         )}
 
-        {/* Continue learning */}
-        {displayCourses.length > 0 && (
+        {/* Readiness — Bac-track only. The "Score de préparation" is scored on Bac
+            papers, so it's noise for prefac/lower grades (same gate as Profile).
+            The card renders its own title, so no duplicate heading. */}
+        {isBacTrack && (
           <View className="px-5 mb-4">
-            <SectionHeader
-              title={t('Continuer à apprendre', 'Kontinye aprann')}
-              actionLabel={t('Voir tout', 'Wè tout')}
-              onAction={() => navigation.navigate('Courses')}
+            <ReadinessCard
+              onFocusPress={(subject) =>
+                (navigation as any).navigate('Exams', {
+                  screen: 'ExamBrowser',
+                  params: { level: 'terminale', subject },
+                })
+              }
             />
-            <View className="gap-3">
-              {displayCourses.map((course: any) => {
-                const tint = courseTint(course.color);
-                const totalLessons = countCourseLessons(course);
-                const prog = progressByCourseId.get(course.id);
-                const pct = calculateCompletionPercentage(prog, totalLessons);
-
-                return (
-                  <PressableScale
-                    key={course.id}
-                    onPress={() => goCourse(course)}
-                    accessibilityRole="button"
-                    accessibilityLabel={course.name}
-                    style={{ ...cardSurface, padding: 14 }}
-                  >
-                    <View className="flex-row items-center gap-3">
-                      <View
-                        className="items-center justify-center flex-shrink-0"
-                        style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '18' }}
-                      >
-                        <BookOpen color={tint} size={20} />
-                      </View>
-                      <View className="flex-1">
-                        {/* Single subject tag = the course name itself, which already
-                            carries the level (e.g. "Chimie NS1") — no redundant pills. */}
-                        <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>
-                          {course.name}
-                        </Text>
-                        {totalLessons > 0 && (
-                          <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
-                            {totalLessons} {t('leçons', 'leson')}
-                          </Text>
-                        )}
-                      </View>
-                      {/* Circular progress ring (conic-style via SVG) */}
-                      <ProgressRing value={pct} color={tint} size={46} strokeWidth={5} />
-                    </View>
-                  </PressableScale>
-                );
-              })}
-            </View>
           </View>
         )}
-
-        {/* Readiness — the card renders its own title, so no duplicate heading */}
-        <View className="px-5 mb-4">
-          <ReadinessCard
-            onFocusPress={(subject) =>
-              (navigation as any).navigate('Exams', {
-                screen: 'ExamBrowser',
-                params: { level: 'terminale', subject },
-              })
-            }
-          />
-        </View>
 
         {/* Leaderboard — compact teaser; "Voir tout" (and the card) open the
             dedicated full-page classement on the root stack. */}

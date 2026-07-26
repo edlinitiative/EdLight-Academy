@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Target, Lightbulb, TrendingUp, ClipboardList, ChevronDown } from 'lucide-react';
 import useStore from '../contexts/store';
+import { gradeProfile } from '../config/trackConfig';
 import { useReadiness } from '../hooks/useReadiness';
 import { localizeSubject } from '../utils/localizeSubject';
 import './ReadinessCard.css';
@@ -40,6 +41,7 @@ const subjectCode = (name: string) =>
 export default function ReadinessCard({ collapsedCount = 4 }) {
   const navigate = useNavigate();
   const language = useStore((s) => s.language);
+  const grade = useStore((s) => s.grade);
   const isCreole = language === 'ht';
   const [expanded, setExpanded] = useState(false);
 
@@ -58,6 +60,14 @@ export default function ReadinessCard({ collapsedCount = 4 }) {
   } = useReadiness();
 
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  // The Bac "Score de préparation" is only meaningful for Bac-track students.
+  // For every other grade (7e–8e / NS1–3 / 9e / préfac) it is noise, so the
+  // card self-hides. Grade null → examLevel defaults to 'baccalaureat', so
+  // existing users keep seeing it. This component is rendered by Dashboard &
+  // Profile, so self-hiding is the clean, contained approach. Placed after all
+  // hooks so hook order stays stable across renders.
+  if (gradeProfile(grade).examLevel !== 'baccalaureat') return null;
 
   if (isLoading) {
     return (

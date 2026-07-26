@@ -8,6 +8,7 @@ import {
   SANDRA_LIMITS,
   type KbChunk,
   type PageContext,
+  type StudentContext,
 } from './_lib/sandraPrompt';
 import { SANDRA_TOOL_DEFS, createToolExecutor } from './_lib/sandraTools';
 import { getDb } from './_lib/firebaseAdmin';
@@ -37,6 +38,7 @@ interface ChatBody {
   message?: string;
   lang?: string;
   page?: { path?: string; courseId?: string; lessonId?: string };
+  studentContext?: { grade?: unknown; track?: unknown; level?: unknown };
 }
 
 interface StoredMessage {
@@ -68,6 +70,20 @@ function sanitizePage(raw: ChatBody['page']): PageContext | undefined {
   if (typeof raw.courseId === 'string' && raw.courseId) page.courseId = raw.courseId.slice(0, 100);
   if (typeof raw.lessonId === 'string' && raw.lessonId) page.lessonId = raw.lessonId.slice(0, 100);
   return page.path || page.courseId || page.lessonId ? page : undefined;
+}
+
+/**
+ * Sanitize the client-supplied learner profile. Untrusted input: cap the free
+ * text and only accept a finite numeric level. Returns undefined when nothing
+ * usable is present so the prompt builder simply omits the section.
+ */
+function sanitizeStudent(raw: ChatBody['studentContext']): StudentContext | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const student: StudentContext = {};
+  if (typeof raw.grade === 'string' && raw.grade.trim()) student.grade = raw.grade.trim().slice(0, 40);
+  if (typeof raw.track === 'string' && raw.track.trim()) student.track = raw.track.trim().slice(0, 40);
+  if (typeof raw.level === 'number' && Number.isFinite(raw.level)) student.level = raw.level;
+  return student.grade || student.track || student.level != null ? student : undefined;
 }
 
 /**
@@ -153,6 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
   const lang: 'fr' | 'ht' = body.lang === 'ht' ? 'ht' : 'fr';
   const page = sanitizePage(body.page);
+  const student = sanitizeStudent(body.studentContext);
 
   try {
     const db = getDb();
@@ -193,7 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // created yet — if the LLM call below fails, nothing is persisted, so no
     // empty 0-message shells pollute the admin transcript browser.
     const chunks = await retrieveChunks(db, message, page);
-    const system = buildSandraSystemPrompt({ lang, page, chunks });
+    const system = buildSandraSystemPrompt({ lang, page, chunks, student });
     const llmMessages = [
       ...history.slice(-SANDRA_LIMITS.historyTurns).map((m) => ({
         role: m.role === 'assistant' ? ('assistant' as const) : ('user' as const),

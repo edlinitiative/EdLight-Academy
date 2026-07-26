@@ -24,6 +24,7 @@ import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-
 import Markdown from 'react-native-markdown-display';
 import MathText, { HAS_MATH } from '../components/MathText';
 import useStore from '../contexts/store';
+import { useTrivia } from '../hooks/useTrivia';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
 import { tapLight, tapMedium } from '../utils/haptics';
 import { useColors, typeScale, shadow, type Palette } from '../theme/theme';
@@ -253,12 +254,20 @@ export default function SandraScreen({
   /** Called with an in-app path (e.g. "/study-plan") when a chat link is tapped. */
   onNavigate?: (path: string) => void;
 }) {
-  const { user, language, toggleAuthModal } = useStore();
+  const { user, language, toggleAuthModal, grade, track } = useStore();
+  const { level } = useTrivia();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const lang: 'fr' | 'ht' = language === 'ht' ? 'ht' : 'fr';
+
+  // Learner profile so Sandra tailors depth/examples to this grade (server
+  // appends it to the system prompt). Same shape the web app sends.
+  const studentContext = useMemo(
+    () => ({ grade: grade ?? null, track: track ?? null, level: level?.level ?? null }),
+    [grade, track, level?.level],
+  );
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -329,7 +338,7 @@ export default function SandraScreen({
       setSending(true);
       scrollToEnd();
 
-      const result = await sendToSandra(text, lang, { path: '/mobile' });
+      const result = await sendToSandra(text, lang, { path: '/mobile' }, studentContext);
       setSending(false);
 
       if (result.kind === 'reply') {
@@ -350,7 +359,7 @@ export default function SandraScreen({
       scrollToEnd();
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sending, lang, isCreole],
+    [sending, lang, isCreole, studentContext],
   );
 
   const handleSend = () => {

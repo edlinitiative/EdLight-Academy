@@ -8,6 +8,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import useStore from '../contexts/store';
 import ReadinessCard from '../components/ReadinessCard';
 import SmartSuggestion from '../components/SmartSuggestion';
+import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import Countdown from '../components/Countdown';
 import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
@@ -245,6 +246,8 @@ export default function Dashboard() {
 
   return (
     <section className="section">
+      {/* One-time grade prompt — self-gates on hydrated + signed-in + !gradeChosen */}
+      <WelcomeGradeModal />
       <div className="container dash dash--st">
         <header className="dash__header">
           <div>

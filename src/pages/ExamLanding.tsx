@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
-import { TRACKS } from '../config/trackConfig';
+import { TRACKS, gradeProfile } from '../config/trackConfig';
 import CardCover from '../components/CardCover';
 import './ExamLanding.css';
 
@@ -14,12 +14,30 @@ const LEVELS = [
   { to: '/exams/university', glyph: 'campus', key: 'university', color: '#0891b2' },
 ];
 
+// gradeProfile().examLevel → the level card route, so a student's grade can
+// lead with the relevant path (POSTBAC → université concours, 9e → 9ème,
+// else Bac). Mirrors the mobile ExamLanding ordering.
+const EXAM_LEVEL_TO_PATH = {
+  baccalaureat: '/exams/terminale',
+  universite: '/exams/university',
+  '9eme_af': '/exams/9e',
+};
+
 const ExamLanding = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const userTrack = useStore((s) => s.track);
+  const grade = useStore((s) => s.grade);
   const setTrack = useStore((s) => s.setTrack);
   const setOnboardingCompleted = useStore((s) => s.setOnboardingCompleted);
+
+  // Lead with the level that matches the student's grade so the relevant path
+  // is the top card; everyone else keeps the default order. The Bac (Terminale)
+  // card still carries the filière quick-pick wherever it lands.
+  const myLevelPath = EXAM_LEVEL_TO_PATH[gradeProfile(grade).examLevel ?? ''] ?? null;
+  const orderedLevels = myLevelPath
+    ? [...LEVELS].sort((a, b) => (a.to === myLevelPath ? -1 : b.to === myLevelPath ? 1 : 0))
+    : LEVELS;
 
   const pickTrack = (code) => {
     setTrack(code);
@@ -30,7 +48,7 @@ const ExamLanding = () => {
   return (
     <div className="exam-landing">
       <div className="exam-landing__grid">
-        {LEVELS.map((level) => {
+        {orderedLevels.map((level) => {
           const heading = t(`examLanding.${level.key}Heading`);
           const desc = t(`examLanding.${level.key}Desc`);
           const badge = t(`examLanding.${level.key}Badge`);

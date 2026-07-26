@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Landmark, ClipboardList, Sparkles, ChevronRight, X } from 'lucide-react';
+import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ScrollText, Sparkles, ChevronRight, X } from 'lucide-react';
 import useStore from '../contexts/store';
 import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
 import './SmartSuggestion.css';
@@ -22,16 +22,16 @@ type Copy = {
 export default function SmartSuggestion() {
   const navigate = useNavigate();
   const track = useStore((s) => s.track);
+  const grade = useStore((s) => s.grade);
   const language = useStore((s) => s.language);
   const dismissedSuggestionKey = useStore((s) => s.dismissedSuggestionKey);
   const setDismissedSuggestion = useStore((s) => s.setDismissedSuggestion);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const suggestion = pickHomeSuggestion({ track });
+  const suggestion = pickHomeSuggestion({ track, grade });
   if (!suggestion || suggestion.key === dismissedSuggestionKey) return null;
 
-  // Only the track+season kinds can arise on web (no grade capture yet).
   const COPY: Partial<Record<HomeSuggestionKind, Copy>> = {
     'choose-track': {
       Icon: GraduationCap,
@@ -57,6 +57,39 @@ export default function SmartSuggestion() {
       gradient: 'linear-gradient(135deg, #2E86F0, #1B6FE0, #0857A6)',
       title: t('Le Bac approche', 'Bak la ap pwoche'),
       subtitle: t('Révisez avec les vrais sujets officiels.', 'Revize ak vre sijè ofisyèl yo.'),
+      cta: t("S'entraîner", 'Antrene'),
+      to: '/exams',
+    },
+    'trivia-first': {
+      Icon: Gamepad2,
+      gradient: 'linear-gradient(135deg, #8B5CF6, #7C3AED, #6D28D9)',
+      title: t('Apprends en jouant', 'Aprann pandan w ap jwe'),
+      subtitle: t(
+        'Des jeux et défis pour progresser en douceur.',
+        'Jwèt ak defi pou w pwogrese san strès.',
+      ),
+      cta: t('Jouer', 'Jwe'),
+      to: '/jeux',
+    },
+    'cours-first': {
+      Icon: BookOpen,
+      gradient: 'linear-gradient(135deg, #10B981, #059669, #047857)',
+      title: t('Renforce tes bases', 'Ranfòse baz ou yo'),
+      subtitle: t(
+        'Suis les cours et les quiz pour bâtir des fondations solides.',
+        'Swiv kou ak quiz yo pou bati yon baz solid.',
+      ),
+      cta: t('Voir les cours', 'Wè kou yo'),
+      to: '/courses',
+    },
+    'exam9e-focus': {
+      Icon: ScrollText,
+      gradient: 'linear-gradient(135deg, #2E86F0, #1B6FE0, #0857A6)',
+      title: t('Prépare l’examen de 9ᵉ', 'Prepare egzamen 9yèm nan'),
+      subtitle: t(
+        'Entraîne-toi avec les sujets de l’examen national.',
+        'Antrene ak sijè egzamen nasyonal yo.',
+      ),
       cta: t("S'entraîner", 'Antrene'),
       to: '/exams',
     },

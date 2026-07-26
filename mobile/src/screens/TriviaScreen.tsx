@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Dimensions, FlatList,
 } from 'react-native';
@@ -176,6 +176,32 @@ const TILE_SIZE = Math.floor(
 );
 const ASSET_BASE_URL = 'https://edlight-academy.web.app';
 
+// Grade-relevant ordering: when a student has chosen a filière (track), surface
+// the trivia decks whose subject matches that track FIRST, keeping every other
+// deck afterwards in its original order. Matching is a light keyword test
+// against each category's id / name / description — no fragile id mapping — so
+// new decks are picked up automatically and an unknown/empty track is a no-op.
+const TRACK_TRIVIA_KEYWORDS: Record<string, string[]> = {
+  SVT: ['svt', 'corps', 'bio', 'cellule', 'chim', 'scien', 'nature', 'math', 'géométri', 'geometri'],
+  SMP: ['math', 'chim', 'physi', 'scien', 'formule', 'calcul', 'géométri', 'geometri'],
+  SES: ['écono', 'econo', 'monnaie', 'social', 'gestion'],
+  LET: ['angl', 'langue', 'lettre', 'littér', 'litter', 'proverbe', 'vocab', 'français', 'francais'],
+  ARTS: ['art', 'musique', 'culture', 'cuisine'],
+};
+
+function orderCategoriesForTrack(cats: any[], track: string | null | undefined) {
+  const keywords = track ? TRACK_TRIVIA_KEYWORDS[track] : undefined;
+  if (!keywords || keywords.length === 0) return { list: cats, recommendedId: null as string | null };
+  const relevant: any[] = [];
+  const rest: any[] = [];
+  for (const cat of cats) {
+    const hay = `${cat.id} ${cat.name} ${cat.description ?? ''}`.toLowerCase();
+    (keywords.some((k) => hay.includes(k)) ? relevant : rest).push(cat);
+  }
+  if (relevant.length === 0) return { list: cats, recommendedId: null as string | null };
+  return { list: [...relevant, ...rest], recommendedId: relevant[0].id as string };
+}
+
 function CategoryPicker({
   onSelect,
   isCreole,
@@ -185,12 +211,17 @@ function CategoryPicker({
 }) {
   const colors = useColors();
   const { shadow } = useTheme();
+  const track = useStore((s) => s.track);
+  const { list: orderedCategories, recommendedId } = useMemo(
+    () => orderCategoriesForTrack(TRIVIA_CATEGORIES as any[], track),
+    [track],
+  );
   return (
     <FlatList
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
-      data={TRIVIA_CATEGORIES as any[]}
+      data={orderedCategories}
       keyExtractor={(cat: any) => cat.id}
       numColumns={3}
       // gap → column gutters + side padding; the extra marginBottom + the tile's
@@ -221,6 +252,25 @@ function CategoryPicker({
               ...shadow.md,
             }}
           >
+            {cat.id === recommendedId && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 5,
+                  right: 5,
+                  zIndex: 2,
+                  backgroundColor: colors.azure,
+                  borderRadius: 999,
+                  paddingHorizontal: 6,
+                  paddingVertical: 2,
+                }}
+                pointerEvents="none"
+              >
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>
+                  {isCreole ? 'rekòmande' : 'recommandé'}
+                </Text>
+              </View>
+            )}
             <View
               style={{
                 width: TILE_SIZE,

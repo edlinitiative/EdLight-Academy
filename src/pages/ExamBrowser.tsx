@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
+import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
 import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -117,6 +117,14 @@ const LEVEL_LABELS = {
   'university': 'Université',
 };
 
+/** gradeProfile().examLevel → this browser's level URL keys, so a student's
+ *  grade can pick the default pool (POSTBAC → université concours, 9e → 9ème). */
+const EXAM_LEVEL_TO_ROUTE = {
+  baccalaureat: 'terminale',
+  universite: 'university',
+  '9eme_af': '9e',
+};
+
 const ExamBrowser = () => {
   const { level } = useParams(); // Get level from URL
 
@@ -125,12 +133,35 @@ const ExamBrowser = () => {
 
   // Track state
   const userTrack = useStore((s) => s.track);
+  const grade = useStore((s) => s.grade);
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
-  const isTerminale = level === 'terminale';
+
+  // ── Grade-based curation ───────────────────────────────────────────────────
+  // Map the student's grade to an exam level; when it differs from the browser's
+  // default Bac (terminale) pool, default-filter to it so a post-Bac (or 9e)
+  // student isn't dumped into every Bac paper. Only ever curates *away* from the
+  // default terminale pool — an explicit level (9e / université route) is left
+  // untouched. Dismissible, never locked (see the level chip below). Mirrors the
+  // mobile ExamBrowser behaviour.
+  const curatedLevel = useMemo(() => {
+    const mapped = EXAM_LEVEL_TO_ROUTE[gradeProfile(grade).examLevel ?? ''] ?? null;
+    return level === 'terminale' && mapped && mapped !== 'terminale' ? mapped : null;
+  }, [grade, level]);
+  const [activeLevel, setActiveLevel] = useState(curatedLevel ?? level);
+  const levelTouched = useRef(false);
+  // Late store hydration: snap to the curated level once grade resolves, unless
+  // the student has already chosen a level via the chip.
+  useEffect(() => {
+    if (!levelTouched.current && curatedLevel && activeLevel === level && curatedLevel !== level) {
+      setActiveLevel(curatedLevel);
+    }
+  }, [curatedLevel, level, activeLevel]);
+
+  const isTerminale = activeLevel === 'terminale';
   const [trackFilter, setTrackFilter] = useState('');
   const [showTrackSelector, setShowTrackSelector] = useState(false);
   const [previewExam, setPreviewExam] = useState(null);
@@ -153,9 +184,10 @@ const ExamBrowser = () => {
   const index = useMemo(() => {
     if (!allExams) return null;
     const full = buildExamIndex(allExams);
-    if (!level) return full;
+    // 'all' (level chip escape) or an unmapped value → every level.
+    if (!activeLevel || activeLevel === 'all') return full;
 
-    const rawLevel = URL_LEVEL_TO_RAW[level];
+    const rawLevel = URL_LEVEL_TO_RAW[activeLevel];
     if (!rawLevel) return full;
 
     const filtered = full.exams.filter(
@@ -176,7 +208,7 @@ const ExamBrowser = () => {
       subjects: [...subjectSet].sort(),
       years: [...yearSet].sort((a, b) => b - a),
     };
-  }, [allExams, level]);
+  }, [allExams, activeLevel]);
 
   // Filter state
   const [subjectFilter, setSubjectFilter] = useState('');
@@ -197,6 +229,13 @@ const ExamBrowser = () => {
     setStatusFilter('');
     setDifficultyFilter('');
   }, []);
+
+  // Toggle the level chip between the grade-curated pool and every level.
+  const toggleLevel = useCallback(() => {
+    levelTouched.current = true;
+    clearFilters();
+    setActiveLevel((cur) => (cur === curatedLevel ? 'all' : (curatedLevel ?? level)));
+  }, [curatedLevel, level, clearFilters]);
 
   const examKeyOf = useCallback((e) => String(e.exam_id ?? e._idx), []);
 
@@ -291,7 +330,7 @@ const ExamBrowser = () => {
   // Track which sections the user toggled; reset when the level / filière changes.
   const [openTouched, setOpenTouched] = useState(false);
   const [openSubjects, setOpenSubjects] = useState(() => new Set());
-  useEffect(() => { setOpenTouched(false); }, [level, activeTrack]);
+  useEffect(() => { setOpenTouched(false); }, [activeLevel, activeTrack]);
 
   const openSet = openTouched ? openSubjects : defaultOpen;
   // A subject filter or an active search forces matching sections open so
@@ -376,16 +415,63 @@ const ExamBrowser = () => {
   return (
     <section className="section">
       <div className="container">
-        {/* Header */}
+        {/* Header — reflects the effective (grade-curated) level, not just the URL */}
         <div className="page-header exam-browser__header">
-          <h1 className="page-header__title">{LEVEL_LABELS[level] || t('Examens Nationaux', 'Egzamen Nasyonal')}</h1>
+          <h1 className="page-header__title">
+            {activeLevel === 'all'
+              ? t('Tous les examens', 'Tout egzamen')
+              : (LEVEL_LABELS[activeLevel] || t('Examens Nationaux', 'Egzamen Nasyonal'))}
+          </h1>
           <p className="page-header__subtitle">
-            {t("Banque d'examens officiels du MENFP", 'Bank egzamen ofisyèl MENFP')}{level ? `, ${LEVEL_LABELS[level]}` : ''}
+            {t("Banque d'examens officiels du MENFP", 'Bank egzamen ofisyèl MENFP')}
+            {activeLevel && activeLevel !== 'all' && LEVEL_LABELS[activeLevel] ? `, ${LEVEL_LABELS[activeLevel]}` : ''}
           </p>
           <p className="page-header__count">
             {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
           </p>
         </div>
+
+        {/* Grade-curated level context — shown only when the student's grade
+            implies a different pool than the default Bac papers. Gives a one-tap
+            escape to browse every level, then back to their own. */}
+        {curatedLevel && (
+          <div
+            className="exam-browser__level-note"
+            role="status"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.65rem 0.85rem',
+              margin: '0 0 1rem',
+              borderRadius: 12,
+              background: 'var(--st-accent-soft, rgba(21,88,184,0.08))',
+              border: '1px solid rgba(21,88,184,0.22)',
+            }}
+          >
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <strong style={{ display: 'block', color: 'var(--st-accent, #1558B8)' }}>
+                {activeLevel === curatedLevel
+                  ? (LEVEL_LABELS[curatedLevel] || '')
+                  : t('Tous les niveaux', 'Tout nivo')}
+              </strong>
+              <span className="text-muted" style={{ fontSize: '0.85em' }}>
+                {activeLevel === curatedLevel
+                  ? t('Adapté à ton profil', 'Adapte pou pwofil ou')
+                  : t('Affichage de tous les examens', 'N ap montre tout egzamen')}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="button button--ghost"
+              onClick={toggleLevel}
+            >
+              {activeLevel === curatedLevel
+                ? t('Voir tous les niveaux', 'Wè tout nivo')
+                : t('Mon niveau', 'Nivo mwen')}
+            </button>
+          </div>
+        )}
 
         {/* Sticky filter bar */}
         <div className="exam-browser__filters-sticky">
@@ -625,7 +711,7 @@ const ExamBrowser = () => {
           <ExamPreviewModal
             exam={previewExam}
             attempt={attempts[examKeyOf(previewExam)]}
-            level={level}
+            level={activeLevel && activeLevel !== 'all' ? activeLevel : level}
             onClose={() => setPreviewExam(null)}
           />
         )}

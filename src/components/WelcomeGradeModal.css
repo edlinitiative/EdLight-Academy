@@ -1,0 +1,114 @@
+/* One-time "Quelle classe ?" grade picker (web). Overlay mirrors ExamPreviewModal;
+   surfaces + text use the app's CSS custom properties so it adapts to dark mode. */
+.grade-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	background: rgba(15, 23, 42, 0.55);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+	animation: grade-modal-fade 0.18s ease;
+}
+
+@keyframes grade-modal-fade {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+.grade-modal__panel {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	max-width: 440px;
+	max-height: min(92vh, 720px);
+	overflow-y: auto;
+	padding: 28px 24px 22px;
+	text-align: center;
+	background: var(--surface, #fff);
+	border-radius: var(--radius-lg, 20px);
+	box-shadow: 0 24px 70px rgba(15, 23, 42, 0.32);
+	animation: grade-modal-pop 0.22s cubic-bezier(0.34, 1.3, 0.5, 1);
+}
+
+@keyframes grade-modal-pop {
+	from { opacity: 0; transform: translateY(8px) scale(0.97); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.grade-modal__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 60px;
+	height: 60px;
+	border-radius: 18px;
+	margin-bottom: 14px;
+	color: var(--primary, #1B6FE0);
+	background: var(--primary-50, #EAF2FE);
+}
+
+.grade-modal__title {
+	margin: 0;
+	font-size: var(--text-xl, 1.5rem);
+	font-weight: 800;
+	color: var(--text-900, #0F1E38);
+}
+
+.grade-modal__subtitle {
+	margin: 6px 0 18px;
+	font-size: var(--text-sm, 0.875rem);
+	color: var(--text-500, #5A6B85);
+}
+
+.grade-modal__grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 10px;
+	width: 100%;
+}
+
+.grade-modal__chip {
+	min-height: 52px;
+	padding: 10px 12px;
+	border: 1px solid var(--border, #E3EAF4);
+	border-radius: var(--radius-md, 12px);
+	background: var(--surface-muted, #F1F5FA);
+	color: var(--text-900, #0F1E38);
+	font-size: 0.9rem;
+	font-weight: 700;
+	line-height: 1.2;
+	text-align: center;
+	cursor: pointer;
+	transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+
+.grade-modal__chip:hover {
+	border-color: var(--primary, #1B6FE0);
+	background: var(--primary-50, #EAF2FE);
+}
+
+.grade-modal__chip:active { transform: scale(0.98); }
+
+.grade-modal__skip {
+	margin-top: 18px;
+	padding: 8px 18px;
+	border: none;
+	background: transparent;
+	color: var(--text-400, #64778E);
+	font-size: var(--text-sm, 0.875rem);
+	font-weight: 600;
+	cursor: pointer;
+	border-radius: 999px;
+}
+
+.grade-modal__skip:hover { color: var(--text-700, #31415F); }
+
+@media (max-width: 420px) {
+	.grade-modal__grid { grid-template-columns: 1fr; }
+}
