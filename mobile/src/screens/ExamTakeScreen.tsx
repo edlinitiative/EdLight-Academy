@@ -13,6 +13,7 @@ import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
+import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
@@ -636,6 +637,15 @@ export default function ExamTakeScreen() {
           results: gradedResults,
           answers,
         });
+        // Fold this graded round into the spaced-repetition schedule for its
+        // subject (Adaptive Engine, Slice 2). Fire-and-forget: a failed schedule
+        // write must never block submission or lose the result.
+        if (subject) {
+          recordReview(user.uid, subject, {
+            subject,
+            percentage: graded.summary?.percentage ?? 0,
+          }).catch(() => {});
+        }
       }
 
       navigation.replace('ExamResults', { level, examId });
