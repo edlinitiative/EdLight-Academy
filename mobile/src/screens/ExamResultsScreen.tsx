@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CheckCircle2, XCircle, Trophy, RefreshCw, ArrowLeft, ChevronDown, ChevronRight as ChevronRightIcon, Share2 } from 'lucide-react-native';
 import { loadExamResult } from '../services/examResults';
 import { shareScore } from '../services/scoreShare';
+import { LinearGradient } from 'expo-linear-gradient';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
@@ -40,12 +41,14 @@ function isUnansweredResult(item: any, answer: any): boolean {
   return given == null || given === '';
 }
 
-function ScoreGauge({ percentage }: { percentage: number }) {
+function ScoreGauge({ percentage, onDark = false }: { percentage: number; onDark?: boolean }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const color = percentage >= 70 ? colors.success : percentage >= 50 ? colors.warn : colors.danger;
+  const color = onDark ? '#ffffff' : percentage >= 70 ? colors.success : percentage >= 50 ? colors.warn : colors.danger;
+  const trophyBg = onDark ? 'rgba(255,255,255,0.16)' : colors.azureSoft;
+  const trophyColor = onDark ? '#ffffff' : colors.azure;
   const reduceMotion = useReduceMotion();
 
   // Celebrate a strong result — this is the emotional peak of the exam flow.
@@ -72,12 +75,12 @@ function ScoreGauge({ percentage }: { percentage: number }) {
   return (
     <View className="items-center py-8">
       <PopIn from={0.6}>
-        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-          <Trophy color={colors.azure} size={32} />
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: trophyBg, borderWidth: onDark ? 1 : 0, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Trophy color={trophyColor} size={32} />
         </View>
       </PopIn>
-      <Text className="text-5xl font-bold" style={{ color }}>{display}%</Text>
-      <Text className="text-gray-500 dark:text-slate-400 mt-1">
+      <Text style={{ fontSize: 52, fontWeight: '900', color, letterSpacing: -1 }}>{display}%</Text>
+      <Text style={{ marginTop: 4, color: onDark ? 'rgba(255,255,255,0.82)' : colors.muted }}>
         {percentage >= 70 ? t('Excellent !', 'Ekselan !') : percentage >= 50 ? t('Bien essayé !', 'Byen eseye !') : t('Continue à réviser !', 'Kontinye revize !')}
       </Text>
     </View>
@@ -247,17 +250,18 @@ export default function ExamResultsScreen() {
       {Math.round(percentage) >= 70 && <Confetti />}
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Score */}
-        <View style={[cardSurface, { marginHorizontal: 16, marginTop: 16, overflow: 'hidden' }]}>
-          <ScoreGauge percentage={Math.round(percentage)} />
-          <View className="px-6 pb-6">
-            <ProgressBar
-              value={Math.round(percentage)}
-              color={percentage >= 70 ? colors.success : percentage >= 50 ? colors.warn : colors.danger}
-              height={8}
-              showLabel
-            />
-          </View>
+        {/* Score — Aurora Depth hero */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 22, overflow: 'hidden', shadowColor: '#0A1F52', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 20, elevation: 8 }}>
+          <LinearGradient colors={['#2E6FE6', '#123A86', '#0A1F52']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}>
+            <View pointerEvents="none" style={{ position: 'absolute', top: -50, left: -30, width: 180, height: 180, borderRadius: 90, backgroundColor: '#3B82F6', opacity: 0.3 }} />
+            <View pointerEvents="none" style={{ position: 'absolute', bottom: -40, right: -20, width: 180, height: 180, borderRadius: 90, backgroundColor: '#7C3AED', opacity: 0.28 }} />
+            <ScoreGauge percentage={Math.round(percentage)} onDark />
+            <View style={{ paddingHorizontal: 24, paddingBottom: 22 }}>
+              <View style={{ height: 8, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
+                <View style={{ height: 8, borderRadius: 99, width: `${Math.round(percentage)}%`, backgroundColor: '#ffffff' }} />
+              </View>
+            </View>
+          </LinearGradient>
         </View>
 
         {/* Share the score — doubles as a referral invite. */}
