@@ -24,6 +24,7 @@ export interface AppState {
   language: string;
   hydrated: boolean;
   track: string | null;
+  dismissedSuggestionKey: string | null;
   onboardingCompleted: boolean;
   languageChosen: boolean;
   theme: 'light' | 'dark';
@@ -53,6 +54,7 @@ export interface AppState {
   setAuthConfirmed: () => void;
   setLanguage: (language: string) => void;
   setTrack: (track: string | null) => void;
+  setDismissedSuggestion: (key: string) => void;
   setOnboardingCompleted: (completed: boolean) => void;
   setLanguageChosen: (chosen: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
@@ -88,6 +90,7 @@ const useStore = create<AppState>()(
       language: 'fr', // Langue par défaut : français
       hydrated: false,
       track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
+      dismissedSuggestionKey: null,
       onboardingCompleted: false,
       languageChosen: false, // first-run language picker has been answered
       theme: 'light', // 'light' | 'dark' — Night Shift
@@ -114,6 +117,7 @@ const useStore = create<AppState>()(
       setAuthConfirmed: () => set({ authConfirmed: true }),
       setLanguage: (language) => set({ language }),
       setTrack: (track) => set({ track }),
+      setDismissedSuggestion: (key) => set({ dismissedSuggestionKey: key }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       setLanguageChosen: (chosen) => set({ languageChosen: !!chosen }),
       setTheme: (theme) => set({ theme }),
@@ -200,6 +204,7 @@ const useStore = create<AppState>()(
         isAuthenticated: state.isAuthenticated,
         language: state.language,
         track: state.track,
+        dismissedSuggestionKey: state.dismissedSuggestionKey,
         onboardingCompleted: state.onboardingCompleted,
         languageChosen: state.languageChosen,
         theme: state.theme,

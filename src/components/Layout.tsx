@@ -9,7 +9,6 @@ import NetworkStatus from './NetworkStatus';
 import RouteMeta from './RouteMeta';
 import { AuthModal } from './Auth';
 import { StreakMilestoneModal } from './Streak';
-import { WelcomeLanguageModal } from './WelcomeLanguageModal';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { useNotificationRuntime } from '../hooks/useNotificationRuntime';
 import useStore from '../contexts/store';
@@ -141,7 +140,6 @@ export function Layout() {
       )}
       <SandraWidget />
       <StreakMilestoneModal isCreole={isCreole} />
-      <WelcomeLanguageModal />
     </div>
   );
 }

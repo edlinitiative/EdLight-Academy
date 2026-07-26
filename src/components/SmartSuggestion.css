@@ -1,0 +1,66 @@
+/* "Recommandé pour vous" Home card (web). Gradient set inline per suggestion. */
+.dash-suggestion {
+  border-radius: 18px;
+  padding: 16px 18px;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(8, 87, 166, 0.28);
+  margin-bottom: 20px;
+}
+
+.dash-suggestion__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+.dash-suggestion__eyebrow > span { flex: 1; }
+.dash-suggestion__eyebrow svg:first-child { color: #fde68a; }
+
+.dash-suggestion__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+}
+.dash-suggestion__dismiss:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
+
+.dash-suggestion__body { display: flex; align-items: center; gap: 12px; }
+.dash-suggestion__icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.dash-suggestion__title { font-size: 1.02rem; font-weight: 800; margin: 0; }
+.dash-suggestion__subtitle { font-size: 0.85rem; margin: 3px 0 0; color: rgba(255, 255, 255, 0.9); line-height: 1.35; }
+
+.dash-suggestion__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 8px 12px 8px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.dash-suggestion__cta:hover { background: rgba(255, 255, 255, 0.3); }

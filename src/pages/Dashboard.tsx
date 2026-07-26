@@ -7,6 +7,7 @@ import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgr
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import useStore from '../contexts/store';
 import ReadinessCard from '../components/ReadinessCard';
+import SmartSuggestion from '../components/SmartSuggestion';
 import Countdown from '../components/Countdown';
 import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
@@ -268,6 +269,9 @@ export default function Dashboard() {
           <ReadinessCard />
           <Countdown />
         </div>
+
+        {/* Season-aware recommendation (self-hides when there's nothing to nudge) */}
+        <SmartSuggestion />
 
         {/* Glanceable stat tiles */}
         <div className="dash__tiles">
