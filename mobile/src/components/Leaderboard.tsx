@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring, Easing } from 'react-native-reanimated';
 import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown } from 'lucide-react-native';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
@@ -7,7 +8,9 @@ import { isValidAlias } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useColors, useTheme } from '../theme/theme';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
+import { useReduceMotion } from '../utils/motion';
 import Avatar from './ui/Avatar';
+import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
 
 function rankBadge(rank: number) {
@@ -153,6 +156,86 @@ const PODIUM_META: Record<number, { tint: string; ink: string; ring: string; h: 
   3: { tint: '#CD7F3222', ink: '#A15A1E', ring: '#CD7F32', h: 34, av: 52 },
 };
 
+/** A single animated podium column that rises + fades + scales in on mount. */
+function PodiumColumn({
+  e, delay, isWinner, myUid, t,
+}: {
+  e: any;
+  delay: number;
+  isWinner: boolean;
+  myUid?: string;
+  t: (fr: string, ht: string) => string;
+}) {
+  const colors = useColors();
+  const reduce = useReduceMotion();
+  const rank = Number(e.rank) || 3;
+  const m = PODIUM_META[rank] ?? PODIUM_META[3];
+  const isMe = e.id === myUid;
+
+  // Winner (centre) lands last and strongest — a springier settle + a Crown pop.
+  const opacity = useSharedValue(reduce ? 1 : 0);
+  const translateY = useSharedValue(reduce ? 0 : 28);
+  const scale = useSharedValue(reduce ? 1 : 0.9);
+  const crownOpacity = useSharedValue(reduce ? 1 : 0);
+  const crownScale = useSharedValue(reduce ? 1 : 0);
+
+  useEffect(() => {
+    if (reduce) return;
+    opacity.value = withDelay(delay, withTiming(1, { duration: 300, easing: Easing.out(Easing.cubic) }));
+    translateY.value = withDelay(delay, withSpring(0, { damping: isWinner ? 9 : 13, stiffness: isWinner ? 150 : 130, mass: 0.9 }));
+    scale.value = withDelay(delay, withSpring(1, { damping: isWinner ? 7 : 12, stiffness: isWinner ? 165 : 140, mass: 0.9 }));
+    if (isWinner) {
+      crownOpacity.value = withDelay(delay + 260, withTiming(1, { duration: 200 }));
+      crownScale.value = withDelay(delay + 260, withSpring(1, { damping: 6, stiffness: 190 }));
+    }
+    // Play once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduce]);
+
+  const colStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+  }));
+  const crownStyle = useAnimatedStyle(() => ({
+    opacity: crownOpacity.value,
+    transform: [{ scale: crownScale.value }],
+  }));
+
+  return (
+    <Animated.View style={[{ flex: 1, maxWidth: 110, alignItems: 'center' }, colStyle]}>
+      {rank === 1 ? (
+        <Animated.View style={crownStyle}>
+          <Crown size={18} color="#F5C518" style={{ marginBottom: 2 }} />
+        </Animated.View>
+      ) : (
+        <View style={{ height: 20 }} />
+      )}
+      <View style={{ borderWidth: 2.5, borderColor: m.ring, borderRadius: 999, padding: 2 }}>
+        <Avatar
+          name={e.displayName || ''}
+          uri={e.photoURL || e.picture || null}
+          seed={e.id || e.uid || e.displayName || ''}
+          size={m.av}
+        />
+      </View>
+      <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12.5, fontWeight: '800', color: isMe ? colors.azure : colors.ink, maxWidth: 104 }}>
+        {e.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
+      </Text>
+      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{e.xp ?? 0} XP</Text>
+      <View
+        style={{
+          width: '100%', height: m.h, marginTop: 8,
+          borderTopLeftRadius: 12, borderTopRightRadius: 12,
+          backgroundColor: m.tint, borderWidth: 1, borderColor: m.ring + '66',
+          alignItems: 'center', paddingTop: 6,
+        }}
+      >
+        <Text style={{ fontSize: 19, fontWeight: '900', color: m.ink }}>{rank}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 /** Top-3 podium for the full board — 2nd · 1st · 3rd, tallest in the middle. */
 function Podium({
   top3, myUid, t,
@@ -161,43 +244,23 @@ function Podium({
   myUid?: string;
   t: (fr: string, ht: string) => string;
 }) {
-  const colors = useColors();
-  // Visual order places the winner in the centre.
+  // Visual order places the winner in the centre. It assembles left → right,
+  // but the centre winner is delayed most so it lands last and strongest.
   const order = [top3[1], top3[0], top3[2]].filter(Boolean);
+  // Per-slot entrance delays keyed to the visual order [2nd (left), 1st (centre), 3rd (right)].
+  const DELAYS = [60, 300, 170];
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 10, paddingTop: 4, paddingBottom: 16 }}>
-      {order.map((e) => {
-        const rank = Number(e.rank) || 3;
-        const m = PODIUM_META[rank] ?? PODIUM_META[3];
-        const isMe = e.id === myUid;
-        return (
-          <View key={e.id || e.displayName} style={{ flex: 1, maxWidth: 110, alignItems: 'center' }}>
-            {rank === 1 ? <Crown size={18} color="#F5C518" style={{ marginBottom: 2 }} /> : <View style={{ height: 20 }} />}
-            <View style={{ borderWidth: 2.5, borderColor: m.ring, borderRadius: 999, padding: 2 }}>
-              <Avatar
-                name={e.displayName || ''}
-                uri={e.photoURL || e.picture || null}
-                seed={e.id || e.uid || e.displayName || ''}
-                size={m.av}
-              />
-            </View>
-            <Text numberOfLines={1} style={{ marginTop: 6, fontSize: 12.5, fontWeight: '800', color: isMe ? colors.azure : colors.ink, maxWidth: 104 }}>
-              {e.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
-            </Text>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.azure }}>{e.xp ?? 0} XP</Text>
-            <View
-              style={{
-                width: '100%', height: m.h, marginTop: 8,
-                borderTopLeftRadius: 12, borderTopRightRadius: 12,
-                backgroundColor: m.tint, borderWidth: 1, borderColor: m.ring + '66',
-                alignItems: 'center', paddingTop: 6,
-              }}
-            >
-              <Text style={{ fontSize: 19, fontWeight: '900', color: m.ink }}>{rank}</Text>
-            </View>
-          </View>
-        );
-      })}
+      {order.map((e, i) => (
+        <PodiumColumn
+          key={e.id || e.displayName}
+          e={e}
+          delay={DELAYS[i] ?? 60}
+          isWinner={Number(e.rank) === 1}
+          myUid={myUid}
+          t={t}
+        />
+      ))}
     </View>
   );
 }
@@ -449,9 +512,11 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
           {!compact && displayList.length >= 3 ? (
             <>
               <Podium top3={displayList.slice(0, 3)} myUid={myUid} t={t} />
-              {displayList.slice(3).map((entry: any) => (
-                <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} />
-              ))}
+              <Stagger initialDelay={220} step={55}>
+                {displayList.slice(3).map((entry: any) => (
+                  <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} />
+                ))}
+              </Stagger>
             </>
           ) : (
             displayList.map((entry: any) => (

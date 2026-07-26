@@ -5,8 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Flame, Zap, ChevronRight, CalendarCheck, BookOpen } from 'lucide-react-native';
+import { Zap, ChevronRight, CalendarCheck, BookOpen } from 'lucide-react-native';
 import SandraFab from '../components/SandraFab';
+import StreakFlame from '../components/ui/StreakFlame';
 import useStore from '../contexts/store';
 import { useCourses } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
@@ -302,7 +303,7 @@ export default function DashboardScreen() {
 
             <View className="flex-row items-center gap-2">
               <HeroPill
-                icon={<Flame color="#fecaca" size={14} />}
+                icon={<StreakFlame count={streak?.currentStreak ?? 0} color="#fecaca" size={14} />}
                 value={streak?.currentStreak ?? 0}
               />
               <HeroPill

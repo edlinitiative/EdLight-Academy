@@ -12,6 +12,8 @@ import {
 import * as Notifications from 'expo-notifications';
 import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
+import StreakFlame from '../components/ui/StreakFlame';
+import XpBar from '../components/ui/XpBar';
 import useStore from '../contexts/store';
 import { logoutUser, deleteAccount } from '../services/authService';
 import { useTrivia } from '../hooks/useTrivia';
@@ -362,7 +364,7 @@ export default function ProfileScreen() {
                   borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 6,
                 }}
               >
-                <Flame color="#fecaca" size={14} />
+                <StreakFlame count={streak.currentStreak} color="#fecaca" size={14} />
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#ffffff' }}>{streak.currentStreak}</Text>
               </View>
             ) : null}
@@ -387,9 +389,7 @@ export default function ProfileScreen() {
                 </View>
                 <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
               </View>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.22)', overflow: 'hidden' }}>
-                <View style={{ width: `${Math.min(100, Math.max(0, progressPct))}%`, height: 6, borderRadius: 3, backgroundColor: '#fff' }} />
-              </View>
+              <XpBar pct={progressPct} height={6} />
             </View>
           ) : null}
         </LinearGradient>

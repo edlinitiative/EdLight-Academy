@@ -5,7 +5,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, SvgUri, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, Share2 } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
@@ -393,6 +393,129 @@ function TimerRing({ timeLeft }: { timeLeft: number }) {
   );
 }
 
+// A single answer option. Owns its tonal state (selected = amber, confirmed =
+// green/red) AND its confirmation animation: the correct option pops (~1→1.06→1
+// via a spring settle) and a wrong pick shakes (translateX ±6 over ~350ms). The
+// motion fires once when `confirmed` turns true and is skipped for reduce-motion
+// (colours still apply).
+function AnswerOption({
+  opt,
+  label,
+  isSelected,
+  isCorrectOpt,
+  confirmed,
+  onPress,
+  colors,
+  reduceMotion,
+}: {
+  opt: string;
+  label: string;
+  isSelected: boolean;
+  isCorrectOpt: boolean;
+  confirmed: boolean;
+  onPress: () => void;
+  colors: ReturnType<typeof useColors>;
+  reduceMotion: boolean;
+}) {
+  const scale = useSharedValue(1);
+  const shake = useSharedValue(0);
+
+  useEffect(() => {
+    if (!confirmed || reduceMotion) return;
+    if (isCorrectOpt) {
+      // Quick celebratory pop, then a soft spring settle back to rest.
+      scale.value = withSequence(
+        withTiming(1.06, { duration: 130, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 7, stiffness: 220, mass: 0.6 }),
+      );
+    } else if (isSelected) {
+      // Short horizontal shake for a wrong pick (~350ms total).
+      shake.value = withSequence(
+        withTiming(-6, { duration: 50, easing: Easing.linear }),
+        withRepeat(withTiming(6, { duration: 70, easing: Easing.linear }), 4, true),
+        withTiming(0, { duration: 50, easing: Easing.linear }),
+      );
+    }
+  }, [confirmed, isCorrectOpt, isSelected, reduceMotion, scale, shake]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }, { translateX: shake.value }],
+  }));
+
+  // Tighter tonal states: selected = amber, confirmed = green/red,
+  // each with a filled letter chip so state reads at a glance.
+  let borderColor = colors.border;
+  let bgColor = colors.surface;
+  let labelBg = colors.surfaceAlt;
+  let labelText = colors.muted;
+  const textColor = colors.ink;
+
+  if (confirmed) {
+    if (isCorrectOpt) {
+      borderColor = colors.success;
+      bgColor = colors.successSoft;
+      labelBg = colors.success;
+      labelText = '#ffffff';
+    } else if (isSelected) {
+      borderColor = colors.danger;
+      bgColor = colors.dangerSoft;
+      labelBg = colors.danger;
+      labelText = '#ffffff';
+    }
+  } else if (isSelected) {
+    borderColor = colors.warn;
+    bgColor = colors.warnSoft;
+    labelBg = colors.warn;
+    labelText = '#ffffff';
+  }
+
+  return (
+    <Animated.View style={animStyle}>
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={confirmed}
+        activeOpacity={0.8}
+        className="flex-row items-center overflow-hidden"
+        style={{
+          borderWidth: 1.5,
+          borderColor,
+          backgroundColor: bgColor,
+          borderRadius: 15,
+        }}
+      >
+        {/* Letter chip */}
+        <View
+          className="items-center justify-center m-2"
+          style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: labelBg }}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '800', color: labelText }}>
+            {label}
+          </Text>
+        </View>
+
+        <Text
+          className="flex-1 text-sm font-medium pr-3"
+          style={{ color: textColor, lineHeight: 20, paddingVertical: 10 }}
+        >
+          {opt}
+        </Text>
+
+        {/* Check/X icon when confirmed */}
+        {confirmed && isCorrectOpt && (
+          <View className="pr-3">
+            <Check color={colors.success} size={18} />
+          </View>
+        )}
+        {confirmed && isSelected && !isCorrectOpt && (
+          <View className="pr-3">
+            <X color={colors.danger} size={18} />
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 function QuizPlayer({
   questions,
   category,
@@ -406,6 +529,7 @@ function QuizPlayer({
 }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReduceMotion();
   const [idx, setIdx] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -592,83 +716,19 @@ function QuizPlayer({
 
         {/* Answer options */}
         <View style={{ gap: 10 }}>
-          {q.options.map((opt, i) => {
-            const label = LETTER_LABELS[i] ?? String(i + 1);
-            const isSelected = opt === selected;
-            const isCorrectOpt = opt === q.correctAnswer;
-
-            // Tighter tonal states: selected = amber, confirmed = green/red,
-            // each with a filled letter chip so state reads at a glance.
-            let borderColor = colors.border;
-            let bgColor = colors.surface;
-            let labelBg = colors.surfaceAlt;
-            let labelText = colors.muted;
-            const textColor = colors.ink;
-
-            if (confirmed) {
-              if (isCorrectOpt) {
-                borderColor = colors.success;
-                bgColor = colors.successSoft;
-                labelBg = colors.success;
-                labelText = '#ffffff';
-              } else if (isSelected) {
-                borderColor = colors.danger;
-                bgColor = colors.dangerSoft;
-                labelBg = colors.danger;
-                labelText = '#ffffff';
-              }
-            } else if (isSelected) {
-              borderColor = colors.warn;
-              bgColor = colors.warnSoft;
-              labelBg = colors.warn;
-              labelText = '#ffffff';
-            }
-
-            return (
-              <TouchableOpacity
-                key={i}
-                onPress={() => handleSelect(opt)}
-                disabled={confirmed}
-                activeOpacity={0.8}
-                className="flex-row items-center overflow-hidden"
-                style={{
-                  borderWidth: 1.5,
-                  borderColor,
-                  backgroundColor: bgColor,
-                  borderRadius: 15,
-                }}
-              >
-                {/* Letter chip */}
-                <View
-                  className="items-center justify-center m-2"
-                  style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: labelBg }}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: labelText }}>
-                    {label}
-                  </Text>
-                </View>
-
-                <Text
-                  className="flex-1 text-sm font-medium pr-3"
-                  style={{ color: textColor, lineHeight: 20, paddingVertical: 10 }}
-                >
-                  {opt}
-                </Text>
-
-                {/* Check/X icon when confirmed */}
-                {confirmed && isCorrectOpt && (
-                  <View className="pr-3">
-                    <Check color={colors.success} size={18} />
-                  </View>
-                )}
-                {confirmed && isSelected && !isCorrectOpt && (
-                  <View className="pr-3">
-                    <X color={colors.danger} size={18} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          {q.options.map((opt, i) => (
+            <AnswerOption
+              key={i}
+              opt={opt}
+              label={LETTER_LABELS[i] ?? String(i + 1)}
+              isSelected={opt === selected}
+              isCorrectOpt={opt === q.correctAnswer}
+              confirmed={confirmed}
+              onPress={() => handleSelect(opt)}
+              colors={colors}
+              reduceMotion={reduceMotion}
+            />
+          ))}
         </View>
 
         {/* Feedback — just the verdict word, no box, border or fill */}

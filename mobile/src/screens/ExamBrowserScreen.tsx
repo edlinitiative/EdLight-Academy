@@ -3,6 +3,8 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, Modal, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useReduceMotion } from '../utils/motion';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -188,6 +190,7 @@ export default function ExamBrowserScreen() {
   const { level, subject: initialSubject } = route.params;
   const { user, language } = useStore();
   const colors = useColors();
+  const reduceMotion = useReduceMotion();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -448,12 +451,22 @@ export default function ExamBrowserScreen() {
         }
         renderItem={({ item: exam, index: i }) => {
           const examId = String(exam.exam_id ?? exam.id ?? i);
-          return (
+          const card = (
             <ExamCard
               exam={exam}
               attemptInfo={results[examId] ?? null}
               onPress={() => navigation.navigate('ExamTake', { level, examId })}
             />
+          );
+          if (reduceMotion) return card;
+          // Cascade the visible cards in on mount: fade + rise, staggered by
+          // index but capped at ~12 so long catalogs don't accrue huge delays.
+          return (
+            <Animated.View
+              entering={FadeInDown.duration(360).delay(Math.min(i, 12) * 45)}
+            >
+              {card}
+            </Animated.View>
           );
         }}
       />
