@@ -3,8 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { CheckCircle2, XCircle, Trophy, RefreshCw, ArrowLeft, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react-native';
+import { CheckCircle2, XCircle, Trophy, RefreshCw, ArrowLeft, ChevronDown, ChevronRight as ChevronRightIcon, Share2 } from 'lucide-react-native';
 import { loadExamResult } from '../services/examResults';
+import { shareScore } from '../services/scoreShare';
 import { fetchSingleExam } from '../utils/examCatalog';
 import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
@@ -258,6 +259,24 @@ export default function ExamResultsScreen() {
             />
           </View>
         </View>
+
+        {/* Share the score — doubles as a referral invite. */}
+        <TouchableOpacity
+          onPress={() => shareScore({
+            title: t('Bac blanc', 'Bak blan'),
+            score: Math.round(percentage),
+            asPercent: true,
+            lang: isCreole ? 'ht' : 'fr',
+          })}
+          activeOpacity={0.85}
+          className="flex-row items-center justify-center gap-2 mx-4 mt-4 py-3.5 rounded-2xl"
+          style={{ backgroundColor: '#22C55E' }}
+          accessibilityRole="button"
+          accessibilityLabel={t('Partager mon score', 'Pataje nòt mwen')}
+        >
+          <Share2 color="#fff" size={18} />
+          <Text className="text-white font-bold text-base">{t('Partager mon score', 'Pataje nòt mwen')}</Text>
+        </TouchableOpacity>
 
         {/* Stats */}
         <View className="flex-row gap-3 mx-4 mt-4">

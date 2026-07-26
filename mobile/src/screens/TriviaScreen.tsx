@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedProps, useAnimatedStyle, withTiming, withRepeat, withSequence, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy } from 'lucide-react-native';
+import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, Share2 } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
 import { todayStr } from '../services/streakService';
@@ -25,6 +25,7 @@ import PopIn from '../components/ui/PopIn';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
+import { shareScore } from '../services/scoreShare';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -885,6 +886,26 @@ function TriviaResults({
         <RefreshCw color="#fff" size={18} />
         <Text className="text-white font-bold text-base">
           {isCreole ? 'Jwe ankò' : 'Rejouer'}
+        </Text>
+      </TouchableOpacity>
+
+      {/* Share the score — doubles as a referral invite. */}
+      <TouchableOpacity
+        onPress={() => shareScore({
+          title: isCreole ? (category.nameHt ?? category.name) : category.name,
+          score,
+          total,
+          lang: isCreole ? 'ht' : 'fr',
+        })}
+        activeOpacity={0.85}
+        className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
+        style={{ backgroundColor: '#22C55E' }}
+        accessibilityRole="button"
+        accessibilityLabel={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
+      >
+        <Share2 color="#fff" size={18} />
+        <Text className="text-white font-bold text-base">
+          {isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
         </Text>
       </TouchableOpacity>
 
