@@ -343,18 +343,21 @@ export default function QuizzesScreen() {
   // ── Level 1: subject picker ────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Pushed onto the Courses stack, so it needs its own back affordance to
-          return to the course list (there's no native header). */}
+      {/* When pushed onto the Courses stack (from a course) it needs a back
+          affordance; as a standalone tab root (Quiz-primary grades) there's
+          nowhere to go back to, so the arrow is hidden. */}
       <View className="flex-row items-center px-5 pt-6 pb-3" style={{ gap: 8 }}>
-        <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('CourseList'))}
-          hitSlop={8}
-          className="p-1 -ml-1"
-          accessibilityRole="button"
-          accessibilityLabel={t('Retour', 'Tounen')}
-        >
-          <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
-        </TouchableOpacity>
+        {navigation.canGoBack() ? (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
+            className="p-1 -ml-1"
+            accessibilityRole="button"
+            accessibilityLabel={t('Retour', 'Tounen')}
+          >
+            <ChevronRight color={colors.muted} size={24} style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+        ) : null}
         <View className="flex-1">
           <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>{t('Banque de questions', 'Bank kesyon')}</Text>
           <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>{t('Entraîne-toi par matière et chapitre', 'Antrene w pa matyè ak chapit')}</Text>

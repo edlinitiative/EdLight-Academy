@@ -4,13 +4,15 @@ import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { LayoutDashboard, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react-native';
+import { LayoutDashboard, BookOpen, ClipboardList, ListChecks, Gamepad2, User } from 'lucide-react-native';
 import useStore from '../contexts/store';
+import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import CoursesNavigator from './CoursesNavigator';
 import ExamsNavigator from './ExamsNavigator';
+import QuizNavigator from './QuizNavigator';
 import TriviaScreen from '../screens/TriviaScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -89,6 +91,11 @@ export default function TabNavigator() {
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const focusMode = useStore((s) => s.focusMode);
+  // Adaptive 3rd tab: Quiz-primary grades (7e–8e, NS1–NS3) get a Quiz tab where
+  // Exams would be, so practice leads instead of Bac exams. Route name stays
+  // "Exams" so navigate('Exams') keeps working everywhere.
+  const grade = useStore((s) => s.grade);
+  const quizPrimary = gradeProfile(grade).primaryTab === 'Quiz';
   const insets = useSafeAreaInsets();
   const dark = theme === 'dark';
   const queryClient = useQueryClient();
@@ -197,8 +204,8 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Exams"
-        component={ExamsNavigator}
-        listeners={({ navigation }) => ({
+        component={quizPrimary ? QuizNavigator : ExamsNavigator}
+        listeners={quizPrimary ? undefined : ({ navigation }) => ({
           // Tapping "Examens" should land on the exam home (the level/subject
           // picker) — not resume whatever the nested stack retained (a specific
           // exam list, or the in-progress ExamTake the user just left). Because
@@ -220,9 +227,11 @@ export default function TabNavigator() {
           },
         })}
         options={{
-          tabBarLabel: ({ color }) => <TabLabel label={t('Examens', 'Egzamen')} color={color} />,
+          tabBarLabel: ({ color }) => (
+            <TabLabel label={quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen')} color={color} />
+          ),
           tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={ClipboardList} color={color} size={size} focused={focused} dark={dark} />
+            <TabIcon Icon={quizPrimary ? ListChecks : ClipboardList} color={color} size={size} focused={focused} dark={dark} />
           ),
         }}
       />

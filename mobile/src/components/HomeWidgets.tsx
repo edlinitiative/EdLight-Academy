@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ClipboardList, Zap, Trophy, Compass, ChevronRight } from 'lucide-react-native';
+import { ClipboardList, ListChecks, Zap, Trophy, Compass, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import PressableScale from './ui/PressableScale';
@@ -87,6 +87,8 @@ interface HomeWidgetsProps {
   onNavigateLeaderboard?: () => void;
   enrolledCount?: number;
   recommendedCourse?: any;
+  /** 'quiz' for Quiz-primary grades → the practice tile leads with quizzes. */
+  practiceMode?: 'exams' | 'quiz';
 }
 
 export default function HomeWidgets({
@@ -96,6 +98,7 @@ export default function HomeWidgets({
   onNavigateCourses,
   onNavigateLeaderboard,
   enrolledCount = 0,
+  practiceMode = 'exams',
 }: HomeWidgetsProps) {
   const colors = useColors();
   const { isDark } = useTheme();
@@ -117,11 +120,11 @@ export default function HomeWidgets({
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <Tile
-          icon={<ClipboardList color={blue} size={ICON} />}
+          icon={practiceMode === 'quiz' ? <ListChecks color={blue} size={ICON} /> : <ClipboardList color={blue} size={ICON} />}
           accent={blue}
           value={t("S'entraîner", 'Antrene')}
-          label={t('Examens Bac', 'Egzamen Bak')}
-          accessibilityLabel={t('Examens Bac', 'Egzamen Bak')}
+          label={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : t('Examens Bac', 'Egzamen Bak')}
+          accessibilityLabel={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : t('Examens Bac', 'Egzamen Bak')}
           onPress={onNavigateExams}
         />
         <Tile

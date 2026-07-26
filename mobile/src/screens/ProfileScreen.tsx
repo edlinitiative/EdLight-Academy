@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { setStatusBarStyle } from 'expo-status-bar';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
-  Award, Target, BookOpen, Bell, ChevronRight,
+  Award, Target, BookOpen, Bell, ChevronRight, GraduationCap,
   Sprout, Brain, Gift,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
@@ -20,6 +20,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import InviteSheet from '../components/InviteSheet';
+import { GRADES } from '../config/trackConfig';
 import { useColors, useTheme, radius } from '../theme/theme';
 import {
   areNotificationsEnabled,
@@ -132,6 +133,8 @@ export default function ProfileScreen() {
     quizAttempts,
     enrolledCourses,
     track,
+    grade,
+    setGradeChosen,
     toggleAuthModal,
   } = useStore();
 
@@ -501,6 +504,19 @@ export default function ProfileScreen() {
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
           <SectionTitle>{t('Paramètres', 'Paramèt')}</SectionTitle>
           <View style={{ ...cardSurface }}>
+            <SettingRow
+              icon={<GraduationCap color={colors.azure} size={18} />}
+              iconBg={colors.azureSoft}
+              label={t('Classe', 'Klas')}
+              sublabel={
+                (() => {
+                  const g = GRADES.find((x) => x.code === grade);
+                  return g ? (isCreole ? g.labelHt : g.label) : t('Non définie', 'Pa defini');
+                })()
+              }
+              accessory={<ChevronRight color={colors.faint} size={18} />}
+              onPress={() => setGradeChosen(false)}
+            />
             <SettingRow
               icon={<Languages color={colors.azure} size={18} />}
               iconBg={colors.azureSoft}

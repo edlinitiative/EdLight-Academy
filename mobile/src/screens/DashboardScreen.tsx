@@ -20,6 +20,7 @@ import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
 import SmartSuggestion from '../components/SmartSuggestion';
+import { gradeProfile } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
@@ -158,7 +159,8 @@ function DashboardSkeleton() {
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface, shadow } = useTheme();
-  const { user, language, enrolledCourses, quizAttempts, lastActivity, setPendingDailyChallenge } = useStore();
+  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge } = useStore();
+  const practiceMode = gradeProfile(grade).primaryTab === 'Quiz' ? 'quiz' : 'exams';
   const themeMode = useStore((s) => s.theme);
   const insets = useSafeAreaInsets();
   const scrollRef = React.useRef<any>(null);
@@ -368,6 +370,7 @@ export default function DashboardScreen() {
             onNavigateCourses={() => navigation.navigate('Courses')}
             onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}
             enrolledCount={enrolledCourses.length}
+            practiceMode={practiceMode}
           />
         </View>
 
