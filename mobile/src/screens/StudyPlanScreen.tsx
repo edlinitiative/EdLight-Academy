@@ -46,9 +46,9 @@ import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
 import { TRACKS, currentPlanSeason } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
-import { useColors, useTheme, radius, type Palette } from '../theme/theme';
+import { useColors, useTheme, radius, typeScale, type Palette } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
-import { LoadingState, ErrorState } from '../components/StateViews';
+import { ErrorState, Skeleton } from '../components/StateViews';
 import {
   loadActiveStudyPlan,
   generateStudyPlan,
@@ -302,6 +302,66 @@ function MasteryRow({ subject, pct }: { subject: string; pct: number }) {
   );
 }
 
+/**
+ * Plan-shaped loading skeleton — mirrors the real plan layout (progress card,
+ * stat pills, task rows) so the generating / loading states don't fall back to a
+ * bare spinner and the page doesn't jump when content arrives.
+ */
+function PlanSkeleton({ label }: { label?: string }) {
+  const colors = useColors();
+  return (
+    <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
+      {label ? (
+        <View
+          className="flex-row items-center mb-4"
+          style={{ gap: 8, backgroundColor: colors.azureSoft, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 }}
+        >
+          <Sparkles size={15} color={colors.azure} />
+          <Text style={[typeScale.caption, { flex: 1, color: colors.ink }]}>{label}</Text>
+        </View>
+      ) : null}
+
+      {/* Progress card */}
+      <Card style={{ marginBottom: 14 }}>
+        <View className="flex-row items-center justify-between" style={{ marginBottom: 12 }}>
+          <Skeleton width={120} height={14} />
+          <Skeleton width={44} height={18} />
+        </View>
+        <Skeleton width="100%" height={8} radius={4} />
+      </Card>
+
+      {/* Stat pills */}
+      <View className="flex-row mb-4" style={{ gap: 10 }}>
+        {[0, 1, 2].map((i) => (
+          <View
+            key={i}
+            style={{ flex: 1, alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 14 }}
+          >
+            <Skeleton width={18} height={18} radius={6} />
+            <Skeleton width={30} height={16} />
+            <Skeleton width={44} height={10} />
+          </View>
+        ))}
+      </View>
+
+      {/* Task rows */}
+      <Card style={{ marginBottom: 14 }}>
+        <Skeleton width={150} height={15} style={{ marginBottom: 14 }} />
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} className="flex-row items-center" style={{ gap: 10, paddingVertical: 10 }}>
+            <Skeleton width={20} height={20} radius={10} />
+            <View style={{ flex: 1, gap: 6 }}>
+              <Skeleton width="45%" height={11} />
+              <Skeleton width="80%" height={13} />
+            </View>
+            <Skeleton width={30} height={12} />
+          </View>
+        ))}
+      </Card>
+    </ScrollView>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
@@ -533,7 +593,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
-        <LoadingState message={t('Sandra prépare votre plan…', 'Sandra ap prepare plan ou…')} />
+        <PlanSkeleton label={t('Sandra prépare votre plan…', 'Sandra ap prepare plan ou…')} />
       </SafeAreaView>
     );
   }
@@ -543,7 +603,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
-        <LoadingState />
+        <PlanSkeleton />
       </SafeAreaView>
     );
   }

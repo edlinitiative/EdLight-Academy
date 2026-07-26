@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import Leaderboard from '../components/Leaderboard';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, typeScale } from '../theme/theme';
 
 /**
  * Dedicated, full-page classement — reached from the "Classement" card on the
@@ -40,7 +40,7 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
         >
           <ChevronLeft color={colors.ink} size={26} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink }}>
+        <Text style={[typeScale.h1, { color: colors.ink }]}>
           {t('Classement', 'Klasman')}
         </Text>
       </View>

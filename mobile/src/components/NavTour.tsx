@@ -4,14 +4,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  LayoutDashboard, BookOpen, ClipboardList, Zap, User,
+  LayoutDashboard, BookOpen, ClipboardList, Gamepad2, User,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, typeScale } from '../theme/theme';
 
 // Must mirror TabNavigator's floating-pill geometry so the spotlights line up
-// exactly over the real tabs.
-const BAR_HEIGHT = 62;
+// exactly over the real tabs. These must stay in sync with TabNavigator's
+// BAR_HEIGHT (50) / BAR_MARGIN (16) — a stale 62 here mis-sized the spotlight.
+const BAR_HEIGHT = 50;
 const BAR_MARGIN = 16;
 const TAB_COUNT = 5;
 const PRIMARY = '#1B6FE0';
@@ -57,7 +58,7 @@ const STEPS: Step[] = [
   },
   {
     tab: 3,
-    Icon: Zap,
+    Icon: Gamepad2,
     title: { fr: 'Trivia', ht: 'Trivia' },
     body: {
       fr: 'Joue, gagne des XP et garde ta série.',
@@ -125,7 +126,7 @@ export default function NavTour() {
           style={[styles.skip, { top: insets.top + 8 }]}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.skipText}>{isCreole ? 'Sote' : 'Passer'}</Text>
+          <Text style={[typeScale.titleSm, styles.skipText]}>{isCreole ? 'Sote' : 'Passer'}</Text>
         </TouchableOpacity>
 
         {/* Spotlight over the target tab (re-draws the tab, lit, above the dim) */}
@@ -138,7 +139,7 @@ export default function NavTour() {
             ]}
           >
             <Icon color={colors.azure} size={22} />
-            <Text style={[styles.spotLabel, { color: colors.azure }]} numberOfLines={1}>
+            <Text style={[typeScale.micro, { fontSize: 10, lineHeight: 12 }, styles.spotLabel, { color: colors.azure }]} numberOfLines={1}>
               {isCreole ? step.title.ht : step.title.fr}
             </Text>
           </View>
@@ -159,8 +160,8 @@ export default function NavTour() {
               <Icon color={colors.azure} size={26} />
             </View>
           )}
-          <Text style={[styles.tipTitle, { color: colors.ink }]}>{isCreole ? step.title.ht : step.title.fr}</Text>
-          <Text style={[styles.tipBody, { color: colors.muted }]}>{isCreole ? step.body.ht : step.body.fr}</Text>
+          <Text style={[typeScale.h2, styles.tipTitle, { color: colors.ink }]}>{isCreole ? step.title.ht : step.title.fr}</Text>
+          <Text style={[typeScale.body, styles.tipBody, { color: colors.muted }]}>{isCreole ? step.body.ht : step.body.fr}</Text>
 
           {/* Dots + Next */}
           <View style={styles.tipFooter}>
@@ -170,7 +171,7 @@ export default function NavTour() {
               ))}
             </View>
             <TouchableOpacity style={[styles.nextBtn, { backgroundColor: colors.azure }]} onPress={next} activeOpacity={0.85}>
-              <Text style={styles.nextText}>
+              <Text style={[typeScale.titleSm, styles.nextText]}>
                 {isLast ? (isCreole ? 'Fini' : 'Terminer') : (isCreole ? 'Swivan' : 'Suivant')}
               </Text>
             </TouchableOpacity>
@@ -185,9 +186,9 @@ export default function NavTour() {
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.72)' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' },
   skip: { position: 'absolute', right: 18, zIndex: 10 },
-  skipText: { color: '#e2e8f0', fontSize: 15, fontWeight: '600' },
+  skipText: { color: '#e2e8f0' },
   spotlight: {
     position: 'absolute',
     backgroundColor: '#ffffff',
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  spotLabel: { fontSize: 10, fontWeight: '700', color: PRIMARY },
+  spotLabel: { color: PRIMARY },
   tip: {
     position: 'absolute',
     backgroundColor: '#ffffff',
@@ -212,8 +213,8 @@ const styles = StyleSheet.create({
     width: 52, height: 52, borderRadius: 16, backgroundColor: '#eaf2fb',
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
-  tipTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', marginBottom: 6 },
-  tipBody: { fontSize: 14.5, lineHeight: 21, color: '#475569' },
+  tipTitle: { color: '#0f172a', marginBottom: 6 },
+  tipBody: { color: '#475569' },
   tipFooter: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 16,
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   nextBtn: {
     backgroundColor: PRIMARY, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10,
   },
-  nextText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  nextText: { color: '#ffffff' },
   arrow: {
     position: 'absolute', bottom: -9, width: 0, height: 0,
     borderLeftWidth: 9, borderRightWidth: 9, borderTopWidth: 10,

@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +9,8 @@ import { LayoutDashboard, BookOpen, ClipboardList, ListChecks, Gamepad2, User } 
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
+import { useReduceMotion } from '../utils/motion';
+import { lightColors, darkColors, typeScale, fonts } from '../theme/theme';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import CoursesNavigator from './CoursesNavigator';
@@ -26,8 +29,11 @@ export type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const ACTIVE = '#1B6FE0';
-const INACTIVE = '#111827';
+// Tab tints come straight from the palette so the active/inactive hierarchy
+// matches the rest of the app. The old near-black inactive (#111827) killed the
+// contrast with the active brand color; the muted token restores it.
+const ACTIVE = lightColors.azure; // '#1B6FE0'
+const INACTIVE = lightColors.muted; // '#64748b'
 
 // Floating pill bar (Instagram-style): detached from the screen edge, rounded,
 // elevated. Sized explicitly so labels never clip, whatever the device width.
@@ -42,7 +48,9 @@ const ICON_SIZE = 20;
 const DOUBLE_TAP_MS = 350;
 
 // Rounded highlight behind the focused tab's icon. Themed tint of the brand
-// color — subtle in light mode, a touch stronger in dark so it reads.
+// color — subtle in light mode, a touch stronger in dark so it reads. The pill
+// glides in (opacity + scale) instead of snapping, so switching tabs feels
+// smooth; reduce-motion collapses the transition to an instant state change.
 function TabIcon({
   Icon,
   color,
@@ -56,15 +64,27 @@ function TabIcon({
   focused: boolean;
   dark: boolean;
 }) {
+  const reduceMotion = useReduceMotion();
+  const progress = useSharedValue(focused ? 1 : 0);
+
+  useEffect(() => {
+    const target = focused ? 1 : 0;
+    progress.value = reduceMotion ? target : withTiming(target, { duration: 220 });
+  }, [focused, reduceMotion, progress]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: 0.82 + progress.value * 0.18 }],
+  }));
+
+  const activeBg = dark ? 'rgba(56,132,214,0.24)' : 'rgba(27,111,224,0.12)';
+
   return (
-    <View
-      style={[
-        styles.iconPill,
-        focused && {
-          backgroundColor: dark ? 'rgba(56,132,214,0.24)' : 'rgba(27,111,224,0.12)',
-        },
-      ]}
-    >
+    <View style={styles.iconPill}>
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { borderRadius: 12, backgroundColor: activeBg }, pillStyle]}
+      />
       <Icon color={color} size={ICON_SIZE} />
     </View>
   );
@@ -79,7 +99,7 @@ function TabLabel({ label, color }: { label: string; color: string }) {
       allowFontScaling
       maxFontSizeMultiplier={1.3}
       numberOfLines={1}
-      style={{ fontSize: 10, fontWeight: '600', color }}
+      style={[typeScale.micro, { fontSize: 10, lineHeight: 12, color }]}
     >
       {label}
     </Text>
@@ -133,8 +153,8 @@ export default function TabNavigator() {
       })}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: dark ? '#4C9AF5' : ACTIVE,
-        tabBarInactiveTintColor: dark ? '#9aa8c0' : INACTIVE,
+        tabBarActiveTintColor: dark ? darkColors.azure : ACTIVE,
+        tabBarInactiveTintColor: dark ? darkColors.muted : INACTIVE,
         // Allow Dynamic Type; the per-label maxFontSizeMultiplier caps growth.
         tabBarAllowFontScaling: true,
         // Frosted-glass pill: a translucent BlurView background lets the app
@@ -179,7 +199,7 @@ export default function TabNavigator() {
               elevation: 12,
             },
         tabBarItemStyle: { paddingHorizontal: 0 },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontFamily: fonts.medium },
       }}
     >
       <Tab.Screen

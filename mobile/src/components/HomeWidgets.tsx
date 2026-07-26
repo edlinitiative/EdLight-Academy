@@ -5,7 +5,7 @@ import { ClipboardList, ListChecks, Zap, Trophy, Compass, ChevronRight } from 'l
 import useStore from '../contexts/store';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import PressableScale from './ui/PressableScale';
-import { useColors, useTheme } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
 
 /** Append an 8-bit alpha to a 6-digit hex color (e.g. "#1B6FE0" + 0.12). */
 function tint(hex: string, alpha: number): string {
@@ -22,18 +22,20 @@ interface TileProps {
   label: string;
   accessibilityLabel: string;
   onPress?: () => void;
+  /** Render the value in the muted sublabel style (zero states, e.g. no rank). */
+  valueMuted?: boolean;
 }
 
 /** A tonal action tile — soft gradient tint, icon chip, chevron, value + label. */
-function Tile({ icon, accent, value, label, accessibilityLabel, onPress }: TileProps) {
-  const { colors } = useTheme();
+function Tile({ icon, accent, value, label, accessibilityLabel, onPress, valueMuted }: TileProps) {
+  const { colors, radius } = useTheme();
   return (
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       pressedScale={0.97}
-      style={{ flex: 1, borderRadius: 18, overflow: 'hidden' }}
+      style={{ flex: 1, borderRadius: radius.card, overflow: 'hidden' }}
     >
       <LinearGradient
         colors={[tint(accent, 0.16), tint(accent, 0.05)]}
@@ -42,7 +44,7 @@ function Tile({ icon, accent, value, label, accessibilityLabel, onPress }: TileP
         style={{
           minHeight: 96,
           padding: 13,
-          borderRadius: 18,
+          borderRadius: radius.card,
           borderWidth: 1,
           borderColor: tint(accent, 0.28),
           justifyContent: 'space-between',
@@ -53,7 +55,7 @@ function Tile({ icon, accent, value, label, accessibilityLabel, onPress }: TileP
             style={{
               width: 34,
               height: 34,
-              borderRadius: 11,
+              borderRadius: radius.tile,
               backgroundColor: tint(accent, 0.18),
               alignItems: 'center',
               justifyContent: 'center',
@@ -65,12 +67,12 @@ function Tile({ icon, accent, value, label, accessibilityLabel, onPress }: TileP
         </View>
         <View style={{ marginTop: 8 }}>
           <Text
-            style={{ color: colors.ink, fontSize: 18, fontWeight: '800', letterSpacing: -0.4 }}
+            style={[valueMuted ? typeScale.caption : typeScale.h2, { color: valueMuted ? colors.muted : colors.ink }]}
             numberOfLines={1}
           >
             {value}
           </Text>
-          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>
+          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
             {label}
           </Text>
         </View>
@@ -130,7 +132,8 @@ export default function HomeWidgets({
         <Tile
           icon={<Trophy color={amber} size={ICON} />}
           accent={amber}
-          value={myRank ? `#${myRank}` : '—'}
+          value={myRank ? `#${myRank}` : t('Nouveau', 'Nouvo')}
+          valueMuted={!myRank}
           label={t('Classement', 'Klasman')}
           accessibilityLabel={t('Classement', 'Klasman')}
           onPress={onNavigateLeaderboard ?? onNavigateTrivia}

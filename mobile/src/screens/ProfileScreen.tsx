@@ -23,7 +23,7 @@ import { getFirstName } from '../utils/shared';
 import ReadinessCard from '../components/ReadinessCard';
 import InviteSheet from '../components/InviteSheet';
 import { GRADES } from '../config/trackConfig';
-import { useColors, useTheme, radius } from '../theme/theme';
+import { useColors, useTheme, radius, typeScale, gradients } from '../theme/theme';
 import {
   areNotificationsEnabled,
   setNotificationsEnabled as persistNotificationsEnabled,
@@ -55,8 +55,8 @@ function StatTile({
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 }}>{value}</Text>
-        <Text style={{ fontSize: 11, color: colors.muted, marginTop: 1 }} numberOfLines={1}>{label}</Text>
+        <Text style={[typeScale.h2, { color: colors.ink }]}>{value}</Text>
+        <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>{label}</Text>
       </View>
     </View>
   );
@@ -97,8 +97,8 @@ function SettingRow({
         {icon}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.ink }}>{label}</Text>
-        {sublabel ? <Text style={{ fontSize: 12, color: colors.muted, marginTop: 1 }}>{sublabel}</Text> : null}
+        <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{label}</Text>
+        {sublabel ? <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]}>{sublabel}</Text> : null}
       </View>
       {accessory}
     </View>
@@ -116,7 +116,7 @@ function SettingRow({
 function SectionTitle({ children }: { children: React.ReactNode }) {
   const colors = useColors();
   return (
-    <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink, marginBottom: 12 }}>{children}</Text>
+    <Text style={[typeScale.title, { color: colors.ink, marginBottom: 12 }]}>{children}</Text>
   );
 }
 
@@ -267,10 +267,10 @@ export default function ProfileScreen() {
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         <View className="flex-1 items-center justify-center px-8" style={{ gap: 20 }}>
           <Image source={require('../../assets/logo.png')} style={{ width: 96, height: 96 }} resizeMode="contain" />
-          <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink, textAlign: 'center' }}>
+          <Text style={[typeScale.h1, { color: colors.ink, textAlign: 'center' }]}>
             {t('Votre profil EdLight', 'Pwofil EdLight ou')}
           </Text>
-          <Text style={{ color: colors.muted, textAlign: 'center', fontSize: 14, lineHeight: 20 }}>
+          <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
             {t(
               'Connectez-vous pour suivre votre progression, vos XP et votre série.',
               'Konekte pou swiv pwogrè ou, XP ou ak seri ou.',
@@ -280,10 +280,10 @@ export default function ProfileScreen() {
             onPress={toggleAuthModal}
             style={{ backgroundColor: colors.azure, borderRadius: radius.chip, paddingVertical: 15, paddingHorizontal: 40, marginTop: 4, ...shadow.sm }}
           >
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{t('Créer un compte', 'Kreye yon kont')}</Text>
+            <Text style={[typeScale.title, { color: '#fff' }]}>{t('Créer un compte', 'Kreye yon kont')}</Text>
           </PressableScale>
           <TouchableOpacity onPress={toggleAuthModal} activeOpacity={0.85}>
-            <Text style={{ fontWeight: '700', fontSize: 15, color: colors.azure }}>{t('Se connecter', 'Konekte')}</Text>
+            <Text style={[typeScale.titleSm, { color: colors.azure }]}>{t('Se connecter', 'Konekte')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleLanguageChange(isCreole ? 'fr' : 'ht')}
@@ -292,7 +292,7 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
           >
             <Languages color={colors.azure} size={16} />
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.azure }}>
+            <Text style={[typeScale.bodyMd, { color: colors.azure }]}>
               {isCreole ? 'Français' : 'Kreyòl Ayisyen'}
             </Text>
           </TouchableOpacity>
@@ -304,20 +304,36 @@ export default function ProfileScreen() {
   // ── Authenticated state ──────────────────────────────────────────────────────
   const displayName = user.name || user.displayName || firstName || 'Étudiant';
 
+  // New user — every progress stat is empty. Show one encouraging tile instead
+  // of a 2×2 wall of 0 / — / 0 / 0.
+  const statsAllZero =
+    totalQuizzes === 0 && enrolledCourses.length === 0 && (streak?.currentStreak ?? 0) === 0;
+
+  // One frosted "pill" recipe shared by the streak pill and the "Série {track}"
+  // chip so they sit at the same height (was paddingVertical 6 vs 3).
+  const frostedPill = {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  } as const;
+
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#0A66C2' }} edges={[]}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: gradients.hero[0] }} edges={[]}>
       <ScrollView ref={scrollRef} style={{ backgroundColor: colors.bg }} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* Overscroll filler — when the list is pulled down past the top, iOS
             reveals the ScrollView's own background. Paint that region in the hero
             colour so the pull-down shows blue, not a grey gap above the hero. */}
-        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: '#0A66C2' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: gradients.hero[0] }} />
 
         {/* Compact gradient hero — identity + level/XP as one continuous band,
             matching the Dashboard. Runs under the status bar and rounds off at
             the bottom. Streak sits as a frosted momentum pill. */}
         <LinearGradient
-          colors={['#0A66C2', '#0857A6', '#0b3f7d']}
+          colors={[...gradients.hero]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{
@@ -336,36 +352,22 @@ export default function ProfileScreen() {
               radius={18}
             />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#ffffff', fontSize: 21, fontWeight: '800' }} numberOfLines={1}>
+              <Text style={[typeScale.h1, { color: '#ffffff' }]} numberOfLines={1}>
                 {displayName}
               </Text>
-              <Text style={{ color: '#bfdbfe', fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+              <Text style={[typeScale.label, { color: '#bfdbfe', marginTop: 2 }]} numberOfLines={1}>
                 {user.email}
               </Text>
               {track ? (
-                <View
-                  style={{
-                    alignSelf: 'flex-start', marginTop: 8,
-                    backgroundColor: 'rgba(255,255,255,0.16)',
-                    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
-                    borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 3,
-                  }}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>{t('Série', 'Seri')} {track}</Text>
+                <View style={{ ...frostedPill, alignSelf: 'flex-start', marginTop: 8 }}>
+                  <Text style={[typeScale.caption, { color: '#ffffff' }]}>{t('Série', 'Seri')} {track}</Text>
                 </View>
               ) : null}
             </View>
             {streak?.currentStreak ? (
-              <View
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  backgroundColor: 'rgba(255,255,255,0.16)',
-                  borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
-                  borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 6,
-                }}
-              >
+              <View style={{ ...frostedPill, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <StreakFlame count={streak.currentStreak} color="#fecaca" size={14} />
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#ffffff' }}>{streak.currentStreak}</Text>
+                <Text style={[typeScale.label, { color: '#ffffff' }]}>{streak.currentStreak}</Text>
               </View>
             ) : null}
           </View>
@@ -383,11 +385,11 @@ export default function ProfileScreen() {
               <View className="flex-row items-center justify-between" style={{ marginBottom: 9 }}>
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <Zap color="#fde68a" size={16} />
-                  <Text style={{ color: '#ffffff', fontSize: 15, fontWeight: '800' }}>
+                  <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
                     {t('Niveau', 'Nivo')} {level.level}
                   </Text>
                 </View>
-                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '800' }}>{profile.xp ?? 0} XP</Text>
+                <Text style={[typeScale.bodyMd, { color: '#ffffff' }]}>{profile.xp ?? 0} XP</Text>
               </View>
               <XpBar pct={progressPct} height={6} />
             </View>
@@ -406,8 +408,8 @@ export default function ProfileScreen() {
               <Gift color={colors.coral} size={20} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>{t('Inviter des amis', 'Envite zanmi')}</Text>
-              <Text style={{ fontSize: 12, color: colors.muted, marginTop: 1 }} numberOfLines={1}>
+              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Inviter des amis', 'Envite zanmi')}</Text>
+              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
                 {t('Gagnez un bonus quand ils s’inscrivent', 'Genyen yon bonus lè yo enskri')}
               </Text>
             </View>
@@ -418,16 +420,27 @@ export default function ProfileScreen() {
         {/* Progress stats — 2×2 grid */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
           <SectionTitle>{t('Votre progression', 'Pwogrè ou')}</SectionTitle>
-          <View style={{ gap: 12 }}>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <StatTile icon={<Target color={colors.azure} size={20} />} value={totalQuizzes} label={t('Quiz complétés', 'Quiz fini')} iconBg={colors.azureSoft} />
-              <StatTile icon={<Award color={colors.azure} size={20} />} value={avgScore} label={t('Score moyen', 'Mwayèn')} iconBg={colors.azureSoft} />
+          {statsAllZero ? (
+            <View style={{ ...cardSurface, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 46, height: 46, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
+                <Sprout color={colors.azure} size={22} />
+              </View>
+              <Text style={[typeScale.bodyMd, { flex: 1, color: colors.muted }]}>
+                {t('Fais ton premier quiz pour débloquer tes stats.', 'Fè premye quiz ou pou debloke estatistik ou yo.')}
+              </Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <StatTile icon={<BookOpen color={colors.azure} size={20} />} value={enrolledCourses.length} label={t('Cours suivis', 'Kou swivi')} iconBg={colors.azureSoft} />
-              <StatTile icon={<Flame color={colors.danger} size={20} />} value={streak?.currentStreak ?? 0} label={t('Jours de série', 'Jou seri')} iconBg={colors.dangerSoft} />
+          ) : (
+            <View style={{ gap: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <StatTile icon={<Target color={colors.azure} size={20} />} value={totalQuizzes} label={t('Quiz complétés', 'Quiz fini')} iconBg={colors.azureSoft} />
+                <StatTile icon={<Award color={colors.azure} size={20} />} value={avgScore} label={t('Score moyen', 'Mwayèn')} iconBg={colors.azureSoft} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <StatTile icon={<BookOpen color={colors.azure} size={20} />} value={enrolledCourses.length} label={t('Cours suivis', 'Kou swivi')} iconBg={colors.azureSoft} />
+                <StatTile icon={<Flame color={colors.danger} size={20} />} value={streak?.currentStreak ?? 0} label={t('Jours de série', 'Jou seri')} iconBg={colors.dangerSoft} />
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
         {/* Readiness */}
@@ -465,7 +478,7 @@ export default function ProfileScreen() {
                     >
                       <a.Icon color={unlocked ? colors.azure : colors.faint} size={20} />
                     </View>
-                    <Text style={{ fontSize: 10, textAlign: 'center', fontWeight: '600', color: unlocked ? colors.ink : colors.faint }}>{a.label}</Text>
+                    <Text style={[typeScale.micro, { textAlign: 'center', color: unlocked ? colors.ink : colors.faint }]}>{a.label}</Text>
                   </View>
                 );
               })}
@@ -486,14 +499,14 @@ export default function ProfileScreen() {
               <Trophy color={colors.azure} size={20} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }}>{t('Classement', 'Klasman')}</Text>
-              <Text style={{ fontSize: 12, color: colors.muted, marginTop: 1 }} numberOfLines={1}>
+              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Classement', 'Klasman')}</Text>
+              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
                 {t('Voyez où vous vous situez', 'Wè kote ou ye')}
               </Text>
             </View>
             {myRank ? (
               <View style={{ backgroundColor: colors.azureSoft, borderRadius: radius.chip, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ color: colors.azure, fontSize: 13, fontWeight: '800' }}>#{myRank}</Text>
+                <Text style={[typeScale.label, { color: colors.azure }]}>#{myRank}</Text>
               </View>
             ) : null}
             <ChevronRight color={colors.faint} size={18} />
@@ -561,7 +574,7 @@ export default function ProfileScreen() {
             style={{ gap: 8, paddingVertical: 14, borderRadius: radius.chip, borderWidth: 1.5, borderColor: colors.dangerSoft, backgroundColor: colors.surface }}
           >
             <LogOut color={colors.danger} size={16} />
-            <Text style={{ color: colors.danger, fontWeight: '800', fontSize: 14 }}>{t('Se déconnecter', 'Dekonekte')}</Text>
+            <Text style={[typeScale.bodyMd, { color: colors.danger }]}>{t('Se déconnecter', 'Dekonekte')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -569,7 +582,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={handleDeleteAccount} activeOpacity={0.7} className="items-center" style={{ paddingVertical: 16, marginTop: 4 }}>
           <View className="flex-row items-center" style={{ gap: 6 }}>
             <Trash2 color={colors.faint} size={13} />
-            <Text style={{ color: colors.faint, fontSize: 12 }}>{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
+            <Text style={[typeScale.caption, { color: colors.faint }]}>{t('Supprimer mon compte', 'Efase kont mwen')}</Text>
           </View>
         </TouchableOpacity>
 

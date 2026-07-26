@@ -6,7 +6,7 @@ import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ChevronRigh
 import useStore from '../contexts/store';
 import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
 import PressableScale from './ui/PressableScale';
-import { radius } from '../theme/theme';
+import { radius, useTheme, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 
 /**
@@ -18,6 +18,7 @@ import { tapLight } from '../utils/haptics';
  */
 export default function SmartSuggestion() {
   const navigation = useNavigation<any>();
+  const { shadow } = useTheme();
   const { track, grade, language, dismissedSuggestionKey, setDismissedSuggestion } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -94,13 +95,13 @@ export default function SmartSuggestion() {
       onPress={() => { tapLight(); c.onPress(); }}
       accessibilityRole="button"
       accessibilityLabel={`${c.title}. ${c.cta}`}
-      style={{ marginHorizontal: 20, marginBottom: 16, borderRadius: radius.card, overflow: 'hidden', shadowColor: c.colors[1], shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.24, shadowRadius: 14, elevation: 5 }}
+      style={{ marginHorizontal: 20, marginBottom: 16, borderRadius: radius.card, overflow: 'hidden', ...shadow.lg, shadowColor: c.colors[1] }}
     >
       <LinearGradient colors={c.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 15 }}>
         {/* Eyebrow + dismiss */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
           <Sparkles color="#fde68a" size={13} />
-          <Text style={{ marginLeft: 5, flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          <Text style={[typeScale.overline, { marginLeft: 5, flex: 1, color: 'rgba(255,255,255,0.9)' }]}>
             {t('Recommandé pour toi', 'Rekòmande pou ou')}
           </Text>
           <TouchableOpacity
@@ -118,14 +119,14 @@ export default function SmartSuggestion() {
             <c.Icon color="#ffffff" size={22} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#ffffff', fontSize: 15.5, fontWeight: '800' }}>{c.title}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12.5, marginTop: 2, lineHeight: 17 }}>{c.subtitle}</Text>
+            <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>{c.title}</Text>
+            <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 2 }]}>{c.subtitle}</Text>
           </View>
         </View>
 
         {/* CTA chip */}
         <View style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 2, marginTop: 12, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: radius.chip, paddingLeft: 13, paddingRight: 9, paddingVertical: 7 }}>
-          <Text style={{ color: '#ffffff', fontSize: 13.5, fontWeight: '800' }}>{c.cta}</Text>
+          <Text style={[typeScale.bodyMd, { color: '#ffffff' }]}>{c.cta}</Text>
           <ChevronRight color="#ffffff" size={16} />
         </View>
       </LinearGradient>

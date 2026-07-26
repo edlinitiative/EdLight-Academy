@@ -25,7 +25,7 @@ import { gradeProfile } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
-import { useColors, useTheme, radius, courseTint } from '../theme/theme';
+import { useColors, useTheme, radius, courseTint, typeScale, gradients } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
@@ -82,7 +82,7 @@ function HeroPill({
       }}
     >
       {icon}
-      <Text style={{ fontSize: 13, fontWeight: '800', color: valueColor }}>{value}</Text>
+      <Text style={[typeScale.label, { color: valueColor }]}>{value}</Text>
     </View>
   );
 }
@@ -92,8 +92,8 @@ function StatCol({ value, label }: { value: string | number; label: string }) {
   const colors = useColors();
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 }}>{value}</Text>
-      <Text style={{ fontSize: 11, color: colors.muted, marginTop: 2 }}>{label}</Text>
+      <Text style={[typeScale.h2, { color: colors.ink }]}>{value}</Text>
+      <Text style={[typeScale.micro, { color: colors.muted, marginTop: 2 }]}>{label}</Text>
     </View>
   );
 }
@@ -110,7 +110,7 @@ function SectionHeader({
   const colors = useColors();
   return (
     <View className="flex-row items-center justify-between mb-3">
-      <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>{title}</Text>
+      <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
       {actionLabel && onAction ? (
         <TouchableOpacity
           onPress={() => { tapLight(); onAction(); }}
@@ -119,7 +119,7 @@ function SectionHeader({
           accessibilityRole="button"
           accessibilityLabel={actionLabel}
         >
-          <Text style={{ color: colors.azure, fontSize: 14, fontWeight: '600' }}>{actionLabel}</Text>
+          <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{actionLabel}</Text>
           <ChevronRight color={colors.azure} size={14} />
         </TouchableOpacity>
       ) : null}
@@ -240,7 +240,7 @@ export default function DashboardScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: '#0A66C2' }} edges={[]}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: gradients.hero[0] }} edges={[]}>
       <ScrollView
         ref={scrollRef}
         style={{ backgroundColor: colors.bg }}
@@ -258,13 +258,13 @@ export default function DashboardScreen() {
       >
         {/* Overscroll filler — paint the pull-down-past-top region in the hero
             colour so it never reveals a grey gap above the hero. */}
-        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: '#0A66C2' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: gradients.hero[0] }} />
 
         {/* Compact gradient hero — identity + momentum as one continuous band.
             Runs under the status bar (paddingTop = safe inset) and rounds off at
             the bottom so the resume banner can overlap it just below. */}
         <LinearGradient
-          colors={['#0A66C2', '#0857A6', '#0b3f7d']}
+          colors={gradients.hero}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={{
@@ -293,10 +293,10 @@ export default function DashboardScreen() {
             </TouchableOpacity>
 
             <View className="flex-1 px-3">
-              <Text style={{ fontSize: 19, fontWeight: '800', color: '#ffffff' }} numberOfLines={1}>
+              <Text style={[typeScale.h2, { color: '#ffffff' }]} numberOfLines={1}>
                 {greeting}, {firstName || t('Étudiant', 'Elèv')} 👋
               </Text>
-              <Text style={{ fontSize: 12, color: '#bfdbfe', marginTop: 1 }} numberOfLines={1}>
+              <Text style={[typeScale.caption, { color: '#bfdbfe', marginTop: 1 }]} numberOfLines={1}>
                 {t('Prêt à apprendre ?', 'Ou pare pou aprann ?')}
               </Text>
             </View>
@@ -349,10 +349,10 @@ export default function DashboardScreen() {
                   <Zap color="#fff" size={22} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>
+                  <Text style={[typeScale.titleSm, { color: '#fff' }]}>
                     {t('Commence ton parcours', 'Kòmanse pakou ou')}
                   </Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.88)', fontSize: 12.5, marginTop: 1 }}>
+                  <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 1 }]}>
                     {t('Fais ton premier quiz pour gagner des XP', 'Fè premye quiz ou pou genyen XP')}
                   </Text>
                 </View>
@@ -380,16 +380,19 @@ export default function DashboardScreen() {
             Self-hides (and takes its margin with it) when there's nothing. */}
         <SmartSuggestion />
 
-        {/* At-a-glance stats */}
-        <View className="px-5 mb-4">
-          <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
-            <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
-            <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
-            <StatCol value={enrolledCourses.length} label={t('Cours', 'Kou')} />
-            <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
-            <StatCol value={avgScore > 0 ? `${avgScore}%` : '—'} label={t('Moyenne', 'Mwayèn')} />
+        {/* At-a-glance stats — hidden for a brand-new student (all zeros aren't
+            useful on first run; the first-run nudge above leads instead). */}
+        {!isFirstRun && (
+          <View className="px-5 mb-4">
+            <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
+              <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
+              <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
+              <StatCol value={enrolledCourses.length} label={t('Cours', 'Kou')} />
+              <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
+              <StatCol value={avgScore > 0 ? `${avgScore}%` : '—'} label={t('Moyenne', 'Mwayèn')} />
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Continue learning */}
         {displayCourses.length > 0 && (
@@ -424,11 +427,11 @@ export default function DashboardScreen() {
                       <View className="flex-1">
                         {/* Single subject tag = the course name itself, which already
                             carries the level (e.g. "Chimie NS1") — no redundant pills. */}
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.ink }} numberOfLines={2}>
+                        <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>
                           {course.name}
                         </Text>
                         {totalLessons > 0 && (
-                          <Text style={{ fontSize: 12, color: colors.faint, marginTop: 2 }}>
+                          <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
                             {totalLessons} {t('leçons', 'leson')}
                           </Text>
                         )}
@@ -463,9 +466,13 @@ export default function DashboardScreen() {
             actionLabel={t('Voir tout', 'Wè tout')}
             onAction={() => (navigation as any).navigate('Leaderboard')}
           />
-          <TouchableOpacity activeOpacity={0.9} onPress={() => { tapLight(); (navigation as any).navigate('Leaderboard'); }}>
+          <PressableScale
+            onPress={() => { tapLight(); (navigation as any).navigate('Leaderboard'); }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Classement', 'Klasman')}
+          >
             <Leaderboard compact maxRows={5} />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* Study plan — secondary. De-emphasized now that the Bac is over and
@@ -489,10 +496,10 @@ export default function DashboardScreen() {
               <CalendarCheck color={colors.azure} size={19} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.ink, fontSize: 14, fontWeight: '700' }}>
+              <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
                 {t("Mon plan d'étude", 'Plan etid mwen')}
               </Text>
-              <Text style={{ color: colors.faint, fontSize: 12, marginTop: 1 }}>
+              <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]}>
                 {t('Planifier mes révisions', 'Planifye revizyon mwen')}
               </Text>
             </View>

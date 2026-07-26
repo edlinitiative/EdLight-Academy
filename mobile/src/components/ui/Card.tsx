@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { useTheme } from '../../theme/theme';
-import { tapLight } from '../../utils/haptics';
+import PressableScale from './PressableScale';
 
 interface CardProps {
   children: React.ReactNode;
@@ -9,21 +9,17 @@ interface CardProps {
   className?: string;
 }
 
-// TouchableOpacity (not PressableScale) so NativeWind `className` layout still
-// applies for the many screens that style Card via className.
+// Interactive cards use PressableScale for the premium spring + haptic press
+// feel (it forwards ...rest, incl. NativeWind `className`, so screens that style
+// Card via className keep working). Non-interactive cards stay a plain View.
 export default function Card({ children, onPress, className = '' }: CardProps) {
   const { cardSurface } = useTheme();
   const cardStyle = { ...cardSurface, overflow: 'hidden' as const };
   if (onPress) {
     return (
-      <TouchableOpacity
-        onPress={() => { tapLight(); onPress(); }}
-        activeOpacity={0.85}
-        style={cardStyle}
-        className={className}
-      >
+      <PressableScale onPress={onPress} style={cardStyle} className={className}>
         {children}
-      </TouchableOpacity>
+      </PressableScale>
     );
   }
   return <View style={cardStyle} className={className}>{children}</View>;

@@ -82,10 +82,46 @@ export const colors = lightColors;
 
 export const radius = {
   chip: 999,
+  pill: 999, // explicit alias for fully-rounded
   control: 14, // buttons, inputs
   tile: 16, // icon tiles inside cards
   card: 20, // the standard card corner
   hero: 24, // large hero surfaces
+} as const;
+
+/** Loaded via expo-font in App.tsx. Per-weight files, so fontFamily carries the
+ *  weight (don't also set fontWeight). Falls back to system until fonts load. */
+export const fonts = {
+  regular: 'Satoshi-Regular',
+  medium: 'Satoshi-Medium',
+  bold: 'Satoshi-Bold',
+  black: 'Satoshi-Black',
+} as const;
+
+/**
+ * The type scale — one ramp for the whole app. Each role bundles family (weight),
+ * size, line-height and tracking, so hierarchy is deliberate instead of eyeballed.
+ * Premium type = contrast between weights + optical tracking, not max boldness.
+ */
+export const typeScale = {
+  display:  { fontFamily: fonts.black,   fontSize: 28, lineHeight: 33, letterSpacing: -0.5 },
+  num:      { fontFamily: fonts.black,   fontSize: 30, lineHeight: 34, letterSpacing: -0.7 },
+  h1:       { fontFamily: fonts.bold,    fontSize: 22, lineHeight: 27, letterSpacing: -0.3 },
+  h2:       { fontFamily: fonts.bold,    fontSize: 18, lineHeight: 23, letterSpacing: -0.2 },
+  title:    { fontFamily: fonts.bold,    fontSize: 16, lineHeight: 21, letterSpacing: -0.1 },
+  titleSm:  { fontFamily: fonts.bold,    fontSize: 15, lineHeight: 20, letterSpacing: -0.1 },
+  bodyMd:   { fontFamily: fonts.medium,  fontSize: 14, lineHeight: 20 },
+  body:     { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  label:    { fontFamily: fonts.medium,  fontSize: 13, lineHeight: 17 },
+  caption:  { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16 },
+  micro:    { fontFamily: fonts.medium,  fontSize: 11, lineHeight: 14 },
+  overline: { fontFamily: fonts.bold,    fontSize: 11, lineHeight: 14, letterSpacing: 0.6, textTransform: 'uppercase' },
+} as const;
+
+/** Canonical brand gradients — one hero band + the deep "aurora" for completions. */
+export const gradients = {
+  hero: ['#2E86F0', '#1B6FE0', '#0857A6'] as const,
+  aurora: ['#2E6FE6', '#123A86', '#0A1F52'] as const,
 } as const;
 
 /** One shadow recipe, three depths. Brand-tinted so cards feel warm, not gray. */
@@ -167,6 +203,9 @@ export function useTheme() {
       colors: c,
       radius,
       spacing,
+      typeScale,
+      fonts,
+      gradients,
       shadow: sh,
       cardSurface: {
         backgroundColor: c.surface,

@@ -11,7 +11,8 @@ import Animated, { useSharedValue, useAnimatedProps, withTiming, Easing } from '
 import {
   Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw,
 } from 'lucide-react-native';
-import { useColors } from '../../theme/theme';
+import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
+import PressableScale from '../ui/PressableScale';
 import { success } from '../../utils/haptics';
 import { useReduceMotion } from '../../utils/motion';
 import Confetti from '../ui/Confetti';
@@ -56,6 +57,7 @@ export default function GameOverCard({
   highScore = null,
 }: GameOverCardProps) {
   const colors = useColors();
+  const { shadow } = useTheme();
   const reduceMotion = useReduceMotion();
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
 
@@ -106,14 +108,11 @@ export default function GameOverCard({
     >
       {(pct >= 90 || reward?.leveledUp) && <Confetti />}
       <View
-        className="w-full items-center rounded-3xl px-5 py-8"
+        className="w-full items-center px-5 py-8"
         style={{
+          borderRadius: radius.hero,
           backgroundColor: colors.surface,
-          shadowColor: '#0f172a',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.08,
-          shadowRadius: 16,
-          elevation: 4,
+          ...shadow.md,
         }}
       >
         {/* Result icon */}
@@ -126,7 +125,7 @@ export default function GameOverCard({
           <IconCmp color={accent} size={34} />
         </View>
 
-        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink, marginBottom: 16 }}>
+        <Text style={[typeScale.h1, { color: colors.ink, marginBottom: 16 }]}>
           {isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
         </Text>
 
@@ -148,7 +147,7 @@ export default function GameOverCard({
             />
           </Svg>
           <View className="absolute items-center justify-center">
-            <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink }}>{pct}%</Text>
+            <Text style={[typeScale.display, { color: colors.ink }]}>{pct}%</Text>
           </View>
         </View>
 
@@ -157,10 +156,10 @@ export default function GameOverCard({
           <View className="flex-row justify-center gap-6 mt-5">
             {stats.map((s) => (
               <View key={s.label} className="items-center px-2">
-                <Text style={{ fontSize: 18, fontWeight: '800', color: colors.ink }}>
+                <Text style={[typeScale.h2, { color: colors.ink }]}>
                   {s.value}
                 </Text>
-                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>{s.label}</Text>
+                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>{s.label}</Text>
               </View>
             ))}
           </View>
@@ -170,13 +169,13 @@ export default function GameOverCard({
         {highScore != null && score >= highScore && score > 0 && (
           <View className="flex-row items-center gap-1.5 mt-4">
             <Trophy color={colors.warn} size={14} />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.warn }}>
+            <Text style={[typeScale.label, { color: colors.warn }]}>
               {isCreole ? 'Nouvo rekò pèsonèl !' : 'Nouveau record personnel !'}
             </Text>
           </View>
         )}
 
-        <Text style={{ fontSize: 15, color: colors.muted, textAlign: 'center', marginTop: 14 }}>
+        <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginTop: 14 }]}>
           {isCreole ? messageHt : message}
         </Text>
 
@@ -188,20 +187,20 @@ export default function GameOverCard({
               style={{ backgroundColor: tint }}
             >
               <Sparkles color={accent} size={16} />
-              <Text style={{ fontSize: 14, fontWeight: '800', color: accent }}>
+              <Text style={[typeScale.bodyMd, { color: accent }]}>
                 +{reward.xpEarned} XP
               </Text>
             </View>
             {reward.leveledUp && (
               <View className="flex-row items-center gap-1.5 mt-2">
                 <Crown color={colors.warn} size={14} />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.warn }}>
+                <Text style={[typeScale.label, { color: colors.warn }]}>
                   {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
                 </Text>
               </View>
             )}
             {reward.guest && (
-              <Text style={{ fontSize: 12, color: colors.faint, marginTop: 6, textAlign: 'center' }}>
+              <Text style={[typeScale.caption, { color: colors.faint, marginTop: 6, textAlign: 'center' }]}>
                 {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
               </Text>
             )}
@@ -211,32 +210,28 @@ export default function GameOverCard({
         {/* Actions */}
         <View className="w-full mt-6">
           {onReplay && (
-            <TouchableOpacity
+            <PressableScale
               onPress={onReplay}
               accessibilityRole="button"
               accessibilityLabel={isCreole ? 'Jwe ankò' : 'Rejouer'}
-              activeOpacity={0.85}
-              className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
-              style={{ backgroundColor: accent }}
+              style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, borderRadius: radius.tile, marginBottom: 12, backgroundColor: accent }}
             >
               <RefreshCw color="#fff" size={18} />
-              <Text className="text-white font-bold text-base">
+              <Text style={[typeScale.title, { color: '#fff' }]}>
                 {isCreole ? 'Jwe ankò' : 'Rejouer'}
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
-          <TouchableOpacity
+          <PressableScale
             onPress={onExit}
             accessibilityRole="button"
             accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
-            activeOpacity={0.85}
-            className="w-full items-center justify-center py-4 rounded-2xl border"
-            style={{ borderColor: colors.border, backgroundColor: colors.surface }}
+            style={{ width: '100%', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: radius.tile, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}
           >
-            <Text className="font-semibold text-base" style={{ color: colors.muted }}>
+            <Text style={[typeScale.title, { color: colors.muted }]}>
               ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
     </ScrollView>

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { AlertCircle, Inbox } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, typeScale } from '../theme/theme';
 import LoadingSpinner from './ui/LoadingSpinner';
+import Button from './ui/Button';
 
 /** A single pulsing placeholder block for skeleton screens. */
 export function Skeleton({
@@ -95,7 +96,7 @@ export function LoadingState({ message }: { message?: string }) {
   return (
     <View className="flex-1 items-center justify-center gap-4 py-16" style={{ backgroundColor: colors.bg }}>
       <LoadingSpinner color={colors.azure} />
-      <Text style={{ color: colors.muted, fontSize: 16 }}>{message ?? t('Chargement…', 'Ap chaje…')}</Text>
+      <Text style={[typeScale.bodyMd, { color: colors.muted }]}>{message ?? t('Chargement…', 'Ap chaje…')}</Text>
     </View>
   );
 }
@@ -108,11 +109,9 @@ export function ErrorState({ message, onRetry }: { message?: string; onRetry?: (
   return (
     <View className="flex-1 items-center justify-center gap-4 py-16 px-6" style={{ backgroundColor: colors.bg }}>
       <AlertCircle color={colors.danger} size={40} />
-      <Text style={{ color: colors.ink, fontSize: 16, textAlign: 'center' }}>{message ?? t('Une erreur est survenue.', 'Gen yon erè ki rive.')}</Text>
+      <Text style={[typeScale.title, { color: colors.ink, textAlign: 'center' }]}>{message ?? t('Une erreur est survenue.', 'Gen yon erè ki rive.')}</Text>
       {onRetry && (
-        <TouchableOpacity onPress={onRetry} className="mt-2 px-5 py-2.5 rounded-xl" style={{ backgroundColor: colors.azure }}>
-          <Text style={{ color: '#fff', fontWeight: '600' }}>{t('Réessayer', 'Eseye ankò')}</Text>
-        </TouchableOpacity>
+        <Button label={t('Réessayer', 'Eseye ankò')} onPress={onRetry} style={{ marginTop: 8 }} />
       )}
     </View>
   );
@@ -137,11 +136,9 @@ export function EmptyState({
   return (
     <View className="flex-1 items-center justify-center gap-3 py-16 px-6" style={{ backgroundColor: colors.bg }}>
       {icon ?? <Inbox color={colors.faint} size={40} />}
-      <Text style={{ color: colors.muted, fontSize: 16, textAlign: 'center' }}>{message ?? t('Rien ici pour l\'instant.', 'Pa gen anyen la pou kounye a.')}</Text>
+      <Text style={[typeScale.bodyMd, { color: colors.muted, textAlign: 'center' }]}>{message ?? t('Rien ici pour l\'instant.', 'Pa gen anyen la pou kounye a.')}</Text>
       {ctaLabel && onCta ? (
-        <TouchableOpacity onPress={onCta} className="mt-2 px-5 py-2.5 rounded-full" style={{ backgroundColor: colors.azure }} accessibilityRole="button" accessibilityLabel={ctaLabel}>
-          <Text style={{ color: '#fff', fontWeight: '700' }}>{ctaLabel}</Text>
-        </TouchableOpacity>
+        <Button label={ctaLabel} onPress={onCta} accessibilityLabel={ctaLabel} style={{ marginTop: 8 }} />
       ) : null}
     </View>
   );

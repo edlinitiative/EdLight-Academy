@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { registerRootComponent } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
+import { useFonts } from 'expo-font';
 import { onAuthStateChange, upsertUserDocument } from './src/services/firebase';
 import useStore from './src/contexts/store';
 import AppNavigator, { navigationRef, navigateToTab } from './src/navigation/AppNavigator';
@@ -79,6 +80,14 @@ function AuthGate() {
 
 function App() {
   const { theme } = useStore();
+  // Satoshi (per-weight) is the app's display/body face. Shipped as OTA assets;
+  // expo-font is already in the native build. Falls back to system if it fails.
+  const [fontsLoaded, fontError] = useFonts({
+    'Satoshi-Regular': require('./assets/fonts/Satoshi-Regular.ttf'),
+    'Satoshi-Medium': require('./assets/fonts/Satoshi-Medium.ttf'),
+    'Satoshi-Bold': require('./assets/fonts/Satoshi-Bold.ttf'),
+    'Satoshi-Black': require('./assets/fonts/Satoshi-Black.ttf'),
+  });
   // Drive NativeWind's dark: variants from our store theme (manual toggle, not
   // just the OS setting), so className-based dark styles track the app's theme.
   useEffect(() => {
@@ -176,7 +185,8 @@ function App() {
     return () => sub.remove();
   }, []);
 
-  if (!cacheHydrated) return null;
+  // Wait for the cache and fonts (but don't block forever if fonts error out).
+  if (!cacheHydrated || (!fontsLoaded && !fontError)) return null;
 
   return (
     <SafeAreaProvider>

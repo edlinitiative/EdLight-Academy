@@ -82,7 +82,7 @@ function ExamCard({
 }) {
   const language = useStore((s) => s.language);
   const colors = useColors();
-  const { cardSurface } = useTheme();
+  const { cardSurface, typeScale } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -124,14 +124,14 @@ function ExamCard({
 
         <View className="flex-1" style={{ minWidth: 0 }}>
           {/* Title: "Matière · Année" */}
-          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.ink }} numberOfLines={1}>
+          <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>
             {subject}
             {yearOrSession ? <Text style={{ color }}>{`  ·  ${yearOrSession}`}</Text> : null}
           </Text>
 
           {/* Meta: "Niveau · Session/Topic" */}
           {metaBits.length > 0 ? (
-            <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }} numberOfLines={1}>
+            <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>
               {metaBits.join('  ·  ')}
             </Text>
           ) : null}
@@ -141,20 +141,20 @@ function ExamCard({
             {durationMin > 0 ? (
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <Clock color={colors.faint} size={13} />
-                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>{durationMin} min</Text>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>{durationMin} min</Text>
               </View>
             ) : null}
             {secCount > 0 ? (
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <Layers color={colors.faint} size={13} />
-                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>
                   {secCount} {t(secCount > 1 ? 'exercices' : 'exercice', 'egzèsis')}
                 </Text>
               </View>
             ) : qCount > 0 ? (
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <Layers color={colors.faint} size={13} />
-                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>
                   {qCount} {t(qCount > 1 ? 'questions' : 'question', 'kesyon')}
                 </Text>
               </View>
@@ -162,7 +162,7 @@ function ExamCard({
             {totalPoints > 0 ? (
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <Award color={colors.faint} size={13} />
-                <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>{totalPoints} pts</Text>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>{totalPoints} pts</Text>
               </View>
             ) : null}
           </View>
@@ -173,7 +173,7 @@ function ExamCard({
           <View className="items-center" style={{ gap: 2 }}>
             <CheckCircle2 color={colors.success} size={20} />
             {pct !== null ? (
-              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.success }}>{pct}%</Text>
+              <Text style={[typeScale.micro, { color: colors.success }]}>{pct}%</Text>
             ) : null}
           </View>
         ) : (
@@ -190,6 +190,7 @@ export default function ExamBrowserScreen() {
   const { level, subject: initialSubject } = route.params;
   const { user, language } = useStore();
   const colors = useColors();
+  const { typeScale, radius, shadow } = useTheme();
   const reduceMotion = useReduceMotion();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -306,19 +307,20 @@ export default function ExamBrowserScreen() {
           >
             <ArrowLeft color={colors.muted} size={22} />
           </TouchableOpacity>
-          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{LEVEL_LABEL[level] ?? level}</Text>
+          <Text style={[typeScale.h1, { color: colors.ink }]}>{LEVEL_LABEL[level] ?? level}</Text>
         </View>
         {/* Search bar placeholder */}
         <View className="px-4 pt-3 pb-1">
-          <Skeleton height={44} radius={12} />
+          <Skeleton height={44} radius={radius.control} />
         </View>
-        {/* Exam card skeletons */}
+        {/* Exam card skeletons — match the real ExamCard (radius.card) so cards
+            don't resize when the catalog loads. */}
         <View className="px-4 pt-3" style={{ gap: 12 }}>
           {Array.from({ length: 7 }).map((_, i) => (
             <View
               key={i}
-              className="bg-white dark:bg-[#131c2e] rounded-2xl p-4 border border-gray-100 dark:border-slate-700 flex-row items-center"
-              style={{ gap: 12 }}
+              className="flex-row items-center"
+              style={{ gap: 12, backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadow.sm }}
             >
               <Skeleton width={44} height={44} radius={12} />
               <View className="flex-1" style={{ gap: 8 }}>
@@ -346,9 +348,9 @@ export default function ExamBrowserScreen() {
           <ArrowLeft color={colors.muted} size={22} />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="font-bold text-gray-900 dark:text-slate-100 text-base">{LEVEL_LABEL[level] ?? level}</Text>
+          <Text style={[typeScale.h1, { color: colors.ink }]}>{LEVEL_LABEL[level] ?? level}</Text>
           {exams.length > 0 && (
-            <Text className="text-xs text-gray-400 dark:text-slate-500">
+            <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
               {exams.length} {t('examens', 'egzamen')} · {doneCount} {t('terminé', 'fini')}{doneCount > 1 ? t('s', '') : ''}
             </Text>
           )}
@@ -392,10 +394,12 @@ export default function ExamBrowserScreen() {
                   paddingHorizontal: 14,
                   paddingVertical: 8,
                   borderRadius: 999,
-                  backgroundColor: active ? colors.azure : colors.hairline,
+                  borderWidth: 1,
+                  borderColor: active ? colors.azure : colors.border,
+                  backgroundColor: active ? colors.azure : colors.surface,
                 }}
               >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#ffffff' : colors.muted }}>
+                <Text style={[typeScale.label, { color: active ? '#ffffff' : colors.muted }]}>
                   {s === 'Tout' ? t('Toutes', 'Tout') : s}
                 </Text>
               </TouchableOpacity>
@@ -439,7 +443,7 @@ export default function ExamBrowserScreen() {
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
         ListHeaderComponent={
           filtered.length > 0 ? (
-            <Text className="text-xs text-gray-400 dark:text-slate-500 mb-3">{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
+            <Text style={[typeScale.caption, { color: colors.faint, marginBottom: 12 }]}>{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
           ) : null
         }
         ListEmptyComponent={
@@ -480,14 +484,14 @@ export default function ExamBrowserScreen() {
         />
         <View className="bg-white dark:bg-[#131c2e] rounded-t-3xl px-5 pt-5 pb-10">
           <View className="flex-row items-center justify-between mb-5">
-            <Text className="text-lg font-bold text-gray-900 dark:text-slate-100">{t('Filtres', 'Filt')}</Text>
+            <Text style={[typeScale.h2, { color: colors.ink }]}>{t('Filtres', 'Filt')}</Text>
             <TouchableOpacity onPress={() => setShowFilters(false)}>
               <X color={colors.muted} size={22} />
             </TouchableOpacity>
           </View>
 
           {/* Year filter */}
-          <Text className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">{t('Année', 'Ane')}</Text>
+          <Text style={[typeScale.label, { color: colors.muted, marginBottom: 8 }]}>{t('Année', 'Ane')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} className="mb-5">
             {years.map((y) => (
               <TouchableOpacity
@@ -501,7 +505,7 @@ export default function ExamBrowserScreen() {
           </ScrollView>
 
           {/* Status filter */}
-          <Text className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">{t('Statut', 'Eta')}</Text>
+          <Text style={[typeScale.label, { color: colors.muted, marginBottom: 8 }]}>{t('Statut', 'Eta')}</Text>
           <View className="flex-row gap-3 mb-6">
             {([['all', t('Tous', 'Tout')], ['todo', t('À faire', 'Pou fè')], ['done', t('Terminés', 'Fini')]] as const).map(([val, label]) => (
               <TouchableOpacity

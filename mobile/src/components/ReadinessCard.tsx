@@ -5,18 +5,18 @@ import { Target, ChevronRight } from 'lucide-react-native';
 import { useReadiness } from '../hooks/useReadiness';
 import { getSubjectColor, SUBJECT_COLORS } from '../utils/shared';
 import useStore from '../contexts/store';
-import { useTheme } from '../theme/theme';
+import { useTheme, typeScale, type Palette } from '../theme/theme';
 import { LoadingState } from './StateViews';
 
 const RADIUS = 45;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-function scoreColor(pct: number): string {
-  if (pct < 40) return '#ef4444';
-  if (pct < 60) return '#f97316';
-  if (pct < 75) return '#eab308';
-  if (pct < 90) return '#22c55e';
-  return '#10b981';
+function scoreColor(pct: number, c: Palette): string {
+  if (pct < 40) return c.danger;
+  if (pct < 60) return c.warn;
+  if (pct < 75) return c.warn;
+  if (pct < 90) return c.success;
+  return c.success;
 }
 
 function scoreLabel(pct: number, isCreole: boolean): string {
@@ -28,9 +28,9 @@ function scoreLabel(pct: number, isCreole: boolean): string {
   return t('Excellent !', 'Ekselan !');
 }
 
-function subjectColor(name: string): string {
+function subjectColor(name: string, c: Palette): string {
   const key = String(name || '').toUpperCase();
-  return key in SUBJECT_COLORS ? getSubjectColor(key) : '#64748b';
+  return key in SUBJECT_COLORS ? getSubjectColor(key) : c.muted;
 }
 
 export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subject: string) => void } = {}) {
@@ -50,7 +50,7 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
 
   const pct = Math.round(overall ?? 0);
   // No exam attempts yet → neutral ring with "—" (PWA behaviour), not a red 0%.
-  const stroke = hasData ? scoreColor(pct) : colors.border;
+  const stroke = hasData ? scoreColor(pct, colors) : colors.border;
   const dashArray = hasData ? (pct / 100) * CIRCUMFERENCE : 0;
 
   // Top subjects by coefficient weight, descending
@@ -58,13 +58,13 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
 
   // Weakest subject for focus
   const focusSubject = focus?.subject ?? (topSubjects.length ? topSubjects[topSubjects.length - 1]?.subject : null);
-  const focusColor = focusSubject ? subjectColor(focusSubject) : colors.azure;
+  const focusColor = focusSubject ? subjectColor(focusSubject, colors) : colors.azure;
 
   return (
     <View style={{ ...cardSurface, padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Target color={colors.azure} size={18} />
-        <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16 }}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
+        <Text style={[typeScale.title, { color: colors.ink }]}>{t('Score de préparation', 'Nòt preparasyon')}</Text>
       </View>
 
       <View className="flex-row items-center gap-5">
@@ -94,11 +94,11 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
             )}
           </Svg>
           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: hasData ? colors.ink : colors.faint }}>
+            <Text style={[typeScale.h1, { color: hasData ? colors.ink : colors.faint }]}>
               {hasData ? `${pct}%` : '—'}
             </Text>
             {hasData && (
-              <Text style={{ fontSize: 9, color: colors.muted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <Text style={[typeScale.overline, { color: colors.muted }]}>
                 {scoreLabel(pct, isCreole)}
               </Text>
             )}
@@ -108,7 +108,7 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
         {/* Subject bars */}
         <View className="flex-1 gap-2">
           {topSubjects.length === 0 ? (
-            <Text style={{ fontSize: 13, lineHeight: 19, color: colors.muted, fontWeight: '500' }}>
+            <Text style={[typeScale.label, { color: colors.muted }]}>
               {t(
                 'Passe ton premier examen pour débloquer ton score de préparation 🎯',
                 'Fè premye egzamen ou pou debloke nòt preparasyon ou 🎯',
@@ -117,15 +117,15 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
           ) : (
             topSubjects.map((s: any) => {
               const sPct = Math.round(s.pct ?? 0);
-              const color = subjectColor(s.subject);
-              const label = String(s.subject || '').slice(0, 12);
+              const color = subjectColor(s.subject, colors);
+              const label = String(s.subject || '');
               return (
                 <View key={s.subject}>
                   <View className="flex-row items-center justify-between mb-0.5">
-                    <Text className="text-xs text-gray-600 dark:text-slate-400" numberOfLines={1}>{label}</Text>
-                    <Text className="text-xs font-semibold" style={{ color }}>{sPct}%</Text>
+                    <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+                    <Text style={[typeScale.caption, { color }]}>{sPct}%</Text>
                   </View>
-                  <View className="h-1.5 bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.surfaceAlt }}>
                     <View
                       className="h-1.5 rounded-full"
                       style={{ backgroundColor: color, width: `${sPct}%` }}
@@ -145,10 +145,10 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
         const inner = (
           <>
             <View style={{ flex: 1 }}>
-              <Text className="text-xs font-semibold" style={{ color: focusColor }}>
+              <Text style={[typeScale.caption, { color: focusColor }]}>
                 {t('Focus recommandé', 'Konsantrasyon rekòmande')}
               </Text>
-              <Text className="text-sm font-bold text-gray-800 dark:text-slate-200 mt-0.5" numberOfLines={1}>
+              <Text style={[typeScale.bodyMd, { color: colors.ink }]} className="mt-0.5" numberOfLines={1}>
                 {focusSubject}
               </Text>
             </View>

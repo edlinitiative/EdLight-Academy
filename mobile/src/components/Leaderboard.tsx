@@ -1,30 +1,46 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring, Easing } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown } from 'lucide-react-native';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import useStore from '../contexts/store';
-import { useColors, useTheme } from '../theme/theme';
+import { useColors, useTheme, typeScale } from '../theme/theme';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
 import Avatar from './ui/Avatar';
+import PressableScale from './ui/PressableScale';
 import Stagger from './ui/Stagger';
+import { Skeleton } from './StateViews';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
 
-function rankBadge(rank: number) {
-  if (rank === 1) return { icon: <Crown size={16} color="#FFD700" />, bg: '#FFD70020', text: '#B8860B' };
-  if (rank === 2) return { icon: <Medal size={16} color="#A0A0A0" />, bg: '#C0C0C020', text: '#808080' };
-  if (rank === 3) return { icon: <Medal size={16} color="#CD7F32" />, bg: '#CD7F3220', text: '#8B4513' };
-  return { icon: null, bg: 'transparent', text: '#6b7280' };
+/**
+ * Medal tones per scheme. The light values are the classic gold/silver/bronze;
+ * on a dark navy ground the ink + metal tones are lifted so they still read.
+ */
+function medalPalette(isDark: boolean) {
+  return {
+    gold:   { metal: isDark ? '#FFD966' : '#FFD700', ring: isDark ? '#FFE083' : '#F5C518', ink: isDark ? '#FBD24E' : '#B8860B' },
+    silver: { metal: isDark ? '#D9DEE6' : '#A0A0A0', ring: isDark ? '#D9DEE6' : '#C0C0C0', ink: isDark ? '#CBD3DE' : '#7A7A7A' },
+    bronze: { metal: isDark ? '#E39A5C' : '#CD7F32', ring: isDark ? '#E39A5C' : '#CD7F32', ink: isDark ? '#E0A46A' : '#A15A1E' },
+  };
+}
+
+function rankBadge(rank: number, isDark: boolean) {
+  const m = medalPalette(isDark);
+  if (rank === 1) return { icon: <Crown size={16} color={m.gold.metal} />, bg: m.gold.ring + '20', text: m.gold.ink };
+  if (rank === 2) return { icon: <Medal size={16} color={m.silver.metal} />, bg: m.silver.ring + '20', text: m.silver.ink };
+  if (rank === 3) return { icon: <Medal size={16} color={m.bronze.metal} />, bg: m.bronze.ring + '20', text: m.bronze.ink };
+  return { icon: null, bg: 'transparent', text: isDark ? '#9aa8c0' : '#6b7280' };
 }
 
 function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean; compact?: boolean }) {
-  const colors = useColors();
+  const { colors, isDark } = useTheme();
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
-  const badge = rankBadge(entry.rank);
+  const badge = rankBadge(entry.rank, isDark);
 
   return (
     <View
@@ -39,7 +55,7 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
         style={{ backgroundColor: badge.bg }}
       >
         {badge.icon ?? (
-          <Text className="text-xs font-bold" style={{ color: colors.muted }}>{entry.rank}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted }]}>{entry.rank}</Text>
         )}
       </View>
 
@@ -56,12 +72,12 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
 
       {/* Name + city · school (parity with the web leaderboard) */}
       <View className="flex-1">
-        <Text className={`text-sm font-semibold ${isMe ? 'text-blue-800 dark:text-[#4C9AF5]' : 'text-gray-900 dark:text-slate-100'}`} numberOfLines={1}>
+        <Text style={[typeScale.bodyMd, { color: isMe ? colors.azure : colors.ink }]} numberOfLines={1}>
           {entry.displayName || t('Élève', 'Elèv')}
           {isMe ? t(' (vous)', ' (ou)') : ''}
         </Text>
         {!compact && (entry.city || entry.school) && (
-          <Text className="text-xs text-gray-400 dark:text-slate-500" numberOfLines={1}>
+          <Text style={[typeScale.caption, { color: colors.faint }]} numberOfLines={1}>
             {[entry.city, entry.school].filter(Boolean).join(' · ')}
           </Text>
         )}
@@ -69,8 +85,8 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
 
       {/* XP */}
       <View className="items-end">
-        <Text className="text-sm font-bold" style={{ color: colors.azure }}>{entry.xp ?? 0}</Text>
-        <Text className="text-xs text-gray-400 dark:text-slate-500">XP</Text>
+        <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{entry.xp ?? 0}</Text>
+        <Text style={[typeScale.caption, { color: colors.faint }]}>XP</Text>
       </View>
     </View>
   );
@@ -86,10 +102,10 @@ function GroupRow({
   onToggle: () => void;
   myUid?: string;
 }) {
-  const colors = useColors();
+  const { colors, isDark } = useTheme();
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
-  const badge = rankBadge(group.rank);
+  const badge = rankBadge(group.rank, isDark);
   const memberWord = group.members === 1 ? t('élève', 'elèv') : t('élèves', 'elèv');
 
   return (
@@ -101,23 +117,22 @@ function GroupRow({
     >
       <TouchableOpacity onPress={onToggle} activeOpacity={0.7} className="flex-row items-center py-2.5 px-3">
         <View className="w-7 h-7 rounded-full items-center justify-center mr-3" style={{ backgroundColor: badge.bg }}>
-          {badge.icon ?? <Text className="text-xs font-bold" style={{ color: colors.muted }}>{group.rank}</Text>}
+          {badge.icon ?? <Text style={[typeScale.caption, { color: colors.muted }]}>{group.rank}</Text>}
         </View>
         <View className="flex-1">
           <Text
-            className="text-sm font-semibold"
-            style={{ color: isMine ? colors.azure : colors.ink }}
+            style={[typeScale.bodyMd, { color: isMine ? colors.azure : colors.ink }]}
             numberOfLines={1}
           >
             {group.label}{isMine ? t(' (vous)', ' (ou)') : ''}
           </Text>
-          <Text className="text-xs" style={{ color: colors.muted }} numberOfLines={1}>
+          <Text style={[typeScale.caption, { color: colors.muted }]} numberOfLines={1}>
             {group.members} {memberWord} · {t('moy.', 'mwayèn')} {group.avgXp} XP
           </Text>
         </View>
         <View className="items-end mr-2">
-          <Text className="text-sm font-bold" style={{ color: colors.azure }}>{group.totalXp}</Text>
-          <Text className="text-xs" style={{ color: colors.muted }}>XP</Text>
+          <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{group.totalXp}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted }]}>XP</Text>
         </View>
         <ChevronDown size={16} color={colors.muted} style={{ transform: [{ rotate: open ? '180deg' : '0deg' }] }} />
       </TouchableOpacity>
@@ -131,15 +146,15 @@ function GroupRow({
                 className="flex-row items-center py-1.5 px-2 rounded-lg"
                 style={{ backgroundColor: isMe ? colors.azureSoft : colors.surfaceAlt }}
               >
-                <Text className="text-xs font-bold w-5 text-center mr-2" style={{ color: colors.muted }}>{i + 1}</Text>
+                <Text className="w-5 text-center mr-2" style={[typeScale.caption, { color: colors.muted }]}>{i + 1}</Text>
                 <Text
-                  className="flex-1 text-sm"
-                  style={{ color: isMe ? colors.azure : colors.ink }}
+                  className="flex-1"
+                  style={[typeScale.bodyMd, { color: isMe ? colors.azure : colors.ink }]}
                   numberOfLines={1}
                 >
                   {m.displayName || t('Élève', 'Elèv')}{isMe ? t(' (vous)', ' (ou)') : ''}
                 </Text>
-                <Text className="text-sm font-bold" style={{ color: colors.azure }}>{m.xp}</Text>
+                <Text style={[typeScale.bodyMd, { color: colors.azure }]}>{m.xp}</Text>
               </View>
             );
           })}

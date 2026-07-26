@@ -67,7 +67,7 @@ const SUBJECTS = [
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useColors();
-  const { cardSurface } = useTheme();
+  const { cardSurface, typeScale, shadow } = useTheme();
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -87,10 +87,10 @@ export default function ExamLandingScreen() {
 
         {/* Header */}
         <View className="px-5 pt-6 pb-5">
-          <Text style={{ fontSize: 26, fontWeight: '800', color: colors.ink, letterSpacing: -0.5 }}>
+          <Text style={[typeScale.display, { color: colors.ink }]}>
             {t('Examens', 'Egzamen yo')}
           </Text>
-          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 4 }}>
+          <Text style={[typeScale.body, { color: colors.muted, marginTop: 4 }]}>
             {t('Entraîne-toi avec des sujets officiels réels.', 'Pratike ak vrè sijè ofisyèl.')}
           </Text>
         </View>
@@ -125,13 +125,13 @@ export default function ExamLandingScreen() {
                     <level.Icon color={colors.azure} size={24} />
                   </View>
 
-                  <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16, lineHeight: 22 }}>{t(level.label, level.labelHt)}</Text>
-                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 18 }}>{t(level.sublabel, level.sublabelHt)}</Text>
-                  <Text style={{ color: colors.faint, fontSize: 12, marginTop: 2 }}>{t(level.description, level.descriptionHt)}</Text>
+                  <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
+                  <Text style={[typeScale.label, { color: colors.muted, marginTop: 4 }]}>{t(level.sublabel, level.sublabelHt)}</Text>
+                  <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>{t(level.description, level.descriptionHt)}</Text>
 
                   {/* Explorer link */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 12 }}>
-                    <Text style={{ color: colors.azure, fontSize: 14, fontWeight: '700' }}>
+                    <Text style={[typeScale.bodyMd, { color: colors.azure }]}>
                       {t('Explorer', 'Eksplore')}
                     </Text>
                     <ChevronRight color={colors.azure} size={16} />
@@ -142,7 +142,7 @@ export default function ExamLandingScreen() {
               {/* Track (filière) chips — only for Terminale */}
               {level.id === 'terminale' && (
                 <View style={{ paddingHorizontal: 16, paddingBottom: 14, paddingTop: 2 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.faint, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>
+                  <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 8 }]}>
                     {t('Ma filière', 'Seri mwen')}
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -166,7 +166,7 @@ export default function ExamLandingScreen() {
                           }}
                         >
                           {active && <Check color={colors.azure} size={12} />}
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: active ? colors.azure : colors.muted }}>
+                          <Text style={[typeScale.label, { color: active ? colors.azure : colors.muted }]}>
                             {tr.shortLabel}
                           </Text>
                         </TouchableOpacity>
@@ -181,7 +181,7 @@ export default function ExamLandingScreen() {
 
         {/* Subject quick-links */}
         <View className="px-5 mt-6">
-          <Text style={{ fontWeight: '800', color: colors.ink, fontSize: 16, marginBottom: 12 }}>
+          <Text style={[typeScale.title, { color: colors.ink, marginBottom: 12 }]}>
             {t('Par matière', 'Pa matyè')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -201,17 +201,13 @@ export default function ExamLandingScreen() {
                   borderWidth: 1,
                   borderColor: colors.border,
                   borderRadius: 99,
-                  shadowColor: colors.azureDeep,
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.06,
-                  shadowRadius: 6,
-                  elevation: 1,
+                  ...shadow.sm,
                 }}
               >
                 <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}>
                   <subj.Icon color={colors.azure} size={13} />
                 </View>
-                <Text style={{ fontSize: 13, fontWeight: '500', color: colors.muted }}>{subj.code}</Text>
+                <Text style={[typeScale.label, { color: colors.muted }]}>{subj.code}</Text>
               </PressableScale>
             ))}
           </View>

@@ -9,7 +9,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { HelpCircle } from 'lucide-react-native';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
-import { useColors } from '../../theme/theme';
+import { useColors, typeScale, radius } from '../../theme/theme';
+import PressableScale from '../ui/PressableScale';
 import { success, warn } from '../../utils/haptics';
 
 const ROUNDS = 10;
@@ -90,17 +91,17 @@ export default function SuitesGame({
     <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-4">
-        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.muted }}>
+        <Text style={[typeScale.bodyMd, { color: colors.muted }]}>
           {idx + 1} / {ROUNDS}
         </Text>
-        <Text style={{ fontSize: 14, fontWeight: '800', color: ACCENT }}>
+        <Text style={[typeScale.bodyMd, { color: ACCENT }]}>
           {score} {isCreole ? 'pwen' : 'points'}
         </Text>
       </View>
 
       {/* Quiz block — vertically centered in the remaining space */}
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 32 }}>
-      <Text style={{ fontSize: 17, fontWeight: '700', color: colors.ink, textAlign: 'center', marginBottom: 18 }}>
+      <Text style={[typeScale.title, { color: colors.ink, textAlign: 'center', marginBottom: 18 }]}>
         {isCreole ? 'Ki nimewo ki vini apre ?' : 'Quel nombre vient ensuite ?'}
       </Text>
 
@@ -112,7 +113,7 @@ export default function SuitesGame({
             className="items-center justify-center rounded-xl border"
             style={{ minWidth: 56, height: 52, paddingHorizontal: 10, backgroundColor: colors.surface, borderColor: colors.border }}
           >
-            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.ink }}>{n}</Text>
+            <Text style={[typeScale.h2, { color: colors.ink }]}>{n}</Text>
           </View>
         ))}
         <View
@@ -131,30 +132,32 @@ export default function SuitesGame({
           let color = colors.ink;
           let opacity = 1;
           if (picked != null) {
-            if (opt === round.answer) { bg = '#10b981'; border = '#10b981'; color = '#ffffff'; }
-            else if (opt === picked) { bg = '#ef4444'; border = '#ef4444'; color = '#ffffff'; }
+            if (opt === round.answer) { bg = colors.success; border = colors.success; color = '#ffffff'; }
+            else if (opt === picked) { bg = colors.danger; border = colors.danger; color = '#ffffff'; }
             else { opacity = 0.45; }
           }
           return (
-            <TouchableOpacity
+            <PressableScale
               key={opt}
               onPress={() => pick(opt)}
               disabled={picked != null}
               accessibilityRole="button"
               accessibilityLabel={`${isCreole ? 'Chwazi' : 'Choisir'} ${opt}`}
-              activeOpacity={0.85}
-              className="items-center justify-center rounded-2xl"
+              pressedScale={0.95}
               style={{
+                alignItems: 'center',
+                justifyContent: 'center',
                 width: '46%',
                 height: 64,
+                borderRadius: radius.tile,
                 backgroundColor: bg,
                 borderWidth: 2,
                 borderColor: border,
                 opacity,
               }}
             >
-              <Text style={{ fontSize: 22, fontWeight: '800', color }}>{opt}</Text>
-            </TouchableOpacity>
+              <Text style={[typeScale.h1, { color }]}>{opt}</Text>
+            </PressableScale>
           );
         })}
       </View>

@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { History, Play, X } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useTheme } from '../theme/theme';
+import { useTheme, typeScale } from '../theme/theme';
 import { TabParamList } from '../navigation/TabNavigator';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
@@ -71,7 +71,7 @@ export default function ResumeBanner() {
         style={{
           width: 40,
           height: 40,
-          borderRadius: 12,
+          borderRadius: radius.tile,
           backgroundColor: accent + '18',
           alignItems: 'center',
           justifyContent: 'center',
@@ -84,20 +84,20 @@ export default function ResumeBanner() {
       {/* Text block */}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text
-          style={{ fontSize: 10, fontWeight: '600', color: accent, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 }}
+          style={[typeScale.overline, { color: accent, marginBottom: 1 }]}
           numberOfLines={1}
         >
           {eyebrow}
         </Text>
         <Text
-          style={{ fontSize: 13, fontWeight: '600', color: colors.ink }}
+          style={[typeScale.label, { color: colors.ink }]}
           numberOfLines={1}
         >
           {lastActivity.title}
         </Text>
         {lastActivity.subtitle ? (
           <Text
-            style={{ fontSize: 11, color: colors.muted, marginTop: 1 }}
+            style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]}
             numberOfLines={1}
           >
             {lastActivity.subtitle}
@@ -121,7 +121,7 @@ export default function ResumeBanner() {
         }}
       >
         <Play color="#ffffff" size={12} fill="#ffffff" />
-        <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>{t('Reprendre', 'Kontinye')}</Text>
+        <Text style={[typeScale.caption, { color: '#ffffff' }]}>{t('Reprendre', 'Kontinye')}</Text>
       </TouchableOpacity>
 
       {/* Dismiss button */}
