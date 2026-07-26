@@ -14,6 +14,7 @@ import { useColors, typeScale, radius } from '../theme/theme';
  */
 export default function WelcomeGradeModal() {
   const hydrated = useStore((s) => s.hydrated);
+  const authConfirmed = useStore((s) => s.authConfirmed);
   const gradeChosen = useStore((s) => s.gradeChosen);
   const language = useStore((s) => s.language);
   const setGrade = useStore((s) => s.setGrade);
@@ -22,7 +23,9 @@ export default function WelcomeGradeModal() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const visible = hydrated && !gradeChosen;
+  // Wait for authConfirmed so the prompt appears over the real dashboard, not
+  // the loading splash (whose logo otherwise bleeds faintly behind the sheet).
+  const visible = hydrated && authConfirmed && !gradeChosen;
 
   const choose = (code: string) => {
     setGrade(code);
