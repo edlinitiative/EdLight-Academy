@@ -14,7 +14,6 @@ import { useColors } from '../theme/theme';
  */
 export default function WelcomeGradeModal() {
   const hydrated = useStore((s) => s.hydrated);
-  const languageChosen = useStore((s) => s.languageChosen);
   const gradeChosen = useStore((s) => s.gradeChosen);
   const language = useStore((s) => s.language);
   const setGrade = useStore((s) => s.setGrade);
@@ -23,7 +22,7 @@ export default function WelcomeGradeModal() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const visible = hydrated && languageChosen && !gradeChosen;
+  const visible = hydrated && !gradeChosen;
 
   const choose = (code: string) => {
     setGrade(code);

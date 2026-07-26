@@ -5,7 +5,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
-import WelcomeLanguageModal from '../components/WelcomeLanguageModal';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import NavTour from '../components/NavTour';
 import NetworkStatus from '../components/NetworkStatus';
@@ -152,7 +151,6 @@ export default function AppNavigator() {
           )}
         </Stack.Navigator>
         <AuthModal />
-        <WelcomeLanguageModal />
         <WelcomeGradeModal />
         <NavTour />
       </NavigationContainer>
