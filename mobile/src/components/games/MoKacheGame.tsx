@@ -22,7 +22,9 @@ const KEY_ROWS = ['AZERTYUIOP', 'QSDFGHJKLM', '↵WXCVBN⌫'];
 const ACCENT = '#059669';
 const storageKey = (date: string) => `edlight_mokache_${date}`;
 
-const SCREEN_W = Dimensions.get('window').width;
+// Cap the board/keyboard width so keys don't balloon on iPad (portrait +
+// requireFullScreen → stable width); phones fall under the cap unchanged.
+const SCREEN_W = Math.min(Dimensions.get('window').width, 500);
 const TILE_GAP = 6;
 const TILE_SIZE = Math.min(56, Math.floor((SCREEN_W - 32 - TILE_GAP * (WORD_LENGTH - 1)) / WORD_LENGTH));
 const KEY_GAP = 4;

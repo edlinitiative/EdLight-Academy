@@ -172,8 +172,12 @@ function TriviaHeader() {
 // illustration carries colour — no per-category background tints.
 const GRID_PAD = 12; // grid outer horizontal padding
 const COL_GAP = 10;  // gutter between the three columns
+// Cap the grid width so 3-column tiles don't balloon on iPad (portrait-locked +
+// requireFullScreen → window width is stable per session). Phones fall under the
+// cap and are unchanged; the grid rows are centered on wide screens below.
+const GRID_W = Math.min(Dimensions.get('window').width, 720);
 const TILE_SIZE = Math.floor(
-  (Dimensions.get('window').width - GRID_PAD * 2 - COL_GAP * 2) / 3,
+  (GRID_W - GRID_PAD * 2 - COL_GAP * 2) / 3,
 );
 const ASSET_BASE_URL = 'https://edlight-academy.web.app';
 
@@ -227,7 +231,7 @@ function CategoryPicker({
       numColumns={3}
       // gap → column gutters + side padding; the extra marginBottom + the tile's
       // own marginBottom reproduce the original wrapped grid's row spacing.
-      columnWrapperStyle={{ gap: COL_GAP, paddingHorizontal: GRID_PAD, marginBottom: COL_GAP }}
+      columnWrapperStyle={{ gap: COL_GAP, paddingHorizontal: GRID_PAD, marginBottom: COL_GAP, justifyContent: 'center' }}
       ListHeaderComponent={
         <View className="px-4 pt-4 pb-3">
           <Text style={[typeScale.display, { color: colors.ink }]}>

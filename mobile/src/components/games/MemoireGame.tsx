@@ -18,8 +18,10 @@ const ACCENT = '#7c3aed';
 
 const GRID_PAD = 16;
 const CARD_GAP = 10;
-// 3 columns × 4 rows for the 12-card deck.
-const CARD_W = Math.floor((Dimensions.get('window').width - GRID_PAD * 2 - CARD_GAP * 2) / 3);
+// 3 columns × 4 rows for the 12-card deck. Cap width so cards don't balloon on
+// iPad (portrait + requireFullScreen → stable width); phones unchanged.
+const GRID_W = Math.min(Dimensions.get('window').width, 560);
+const CARD_W = Math.floor((GRID_W - GRID_PAD * 2 - CARD_GAP * 2) / 3);
 const CARD_H = Math.round(CARD_W * 1.0);
 
 interface MemoireGameProps {

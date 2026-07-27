@@ -20,7 +20,10 @@ import PressableScale from '../ui/PressableScale';
 
 const GRID_PAD = 16;
 const TILE_GAP = 12;
-const TILE_W = Math.floor((Dimensions.get('window').width - GRID_PAD * 2 - TILE_GAP) / 2);
+// Cap so 2-col tiles don't balloon on iPad (portrait + requireFullScreen → stable
+// width). Phones fall under the cap unchanged; the grid is centered on tablets.
+const GRID_W = Math.min(Dimensions.get('window').width, 560);
+const TILE_W = Math.floor((GRID_W - GRID_PAD * 2 - TILE_GAP) / 2);
 
 interface GameRecord {
   score: number;
