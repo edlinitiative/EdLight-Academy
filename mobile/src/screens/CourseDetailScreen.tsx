@@ -19,6 +19,7 @@ import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, typeScale, radius } from '../theme/theme';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseDetail'>;
@@ -156,6 +157,7 @@ export default function CourseDetailScreen() {
   const { progress, updateProgress, incrementGuestInteraction, recordActivity, language,
     practiceTipSeen, setPracticeTipSeen } = useStore();
   const colors = useColors();
+  const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -344,7 +346,7 @@ export default function CourseDetailScreen() {
       )}
 
       {/* Module list */}
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
         {/* Per-lesson discussion (shared thread with the web app) */}
         {activeLesson && (
           <LessonComments threadKey={`comments:${course.id}:${activeLesson.id}`} isCreole={isCreole} />

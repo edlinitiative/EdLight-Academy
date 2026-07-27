@@ -27,6 +27,7 @@ import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
 import { useColors, useTheme, radius, courseTint, typeScale, gradients } from '../theme/theme';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
@@ -165,6 +166,7 @@ export default function DashboardScreen() {
   const practiceMode = gradeProfile(grade).primaryTab === 'Quiz' ? 'quiz' : 'exams';
   const themeMode = useStore((s) => s.theme);
   const insets = useSafeAreaInsets();
+  const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const isCreole = language === 'ht';
@@ -318,7 +320,7 @@ export default function DashboardScreen() {
         ref={scrollRef}
         style={{ backgroundColor: colors.bg }}
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

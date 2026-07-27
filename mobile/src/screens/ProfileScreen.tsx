@@ -26,6 +26,7 @@ import InviteSheet from '../components/InviteSheet';
 import FollowInstagram from '../components/FollowInstagram';
 import { GRADES, gradeProfile } from '../config/trackConfig';
 import { useColors, useTheme, radius, typeScale, gradients } from '../theme/theme';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import {
   areNotificationsEnabled,
   setNotificationsEnabled as persistNotificationsEnabled,
@@ -148,6 +149,7 @@ export default function ProfileScreen() {
   useScrollToTop(scrollRef);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
@@ -324,7 +326,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: gradients.hero[0] }} edges={[]}>
-      <ScrollView ref={scrollRef} style={{ backgroundColor: colors.bg }} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} style={{ backgroundColor: colors.bg }} className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]} showsVerticalScrollIndicator={false}>
 
         {/* Overscroll filler — when the list is pulled down past the top, iOS
             reveals the ScrollView's own background. Paint that region in the hero
