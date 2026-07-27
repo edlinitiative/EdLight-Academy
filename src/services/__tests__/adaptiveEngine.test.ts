@@ -6,7 +6,10 @@ import {
   detectStall,
   predictedSuccess,
   selectAdaptiveItems,
+  questionIdFromStem,
+  crowdDifficulty,
   MIN_ATTEMPTS_FOR_SIGNALS,
+  MIN_QUESTION_EXPOSURES,
   DEFAULT_CHALLENGE_BAND,
   type AttemptEvent,
   type ReviewStateEntry,
@@ -240,5 +243,53 @@ describe('selectAdaptiveItems', () => {
     expect(out).toHaveLength(pool.length);
     expect(new Set(out.map((x) => x.id))).toEqual(new Set(pool.map((x) => x.id)));
     expect(pool).toEqual(copy); // input untouched
+  });
+});
+
+describe('questionIdFromStem', () => {
+  it('maps accent/case/punctuation/space variants to the same ID', () => {
+    const a = questionIdFromStem('Quelle est la capitale ?');
+    const b = questionIdFromStem('quelle  est  la  capitale');
+    const c = questionIdFromStem('QUELLE EST LA CAPITALE?!');
+    expect(a).toBe(b);
+    expect(a).toBe(c);
+  });
+
+  it('gives different IDs to different stems', () => {
+    expect(questionIdFromStem('2 + 2 = ?')).not.toBe(questionIdFromStem('3 + 3 = ?'));
+  });
+
+  it('is stable and prefixed', () => {
+    const id = questionIdFromStem('La photosynthèse');
+    expect(id).toMatch(/^q_[a-z0-9]+$/);
+    expect(questionIdFromStem('La photosynthèse')).toBe(id); // deterministic
+  });
+
+  it('returns empty for a blank stem', () => {
+    expect(questionIdFromStem('   ')).toBe('');
+    expect(questionIdFromStem('')).toBe('');
+  });
+});
+
+describe('crowdDifficulty', () => {
+  it('returns the fallback below the exposure floor', () => {
+    expect(crowdDifficulty({ seen: MIN_QUESTION_EXPOSURES - 1, correct: 0 }, 2)).toBe(2);
+    expect(crowdDifficulty(null, 4)).toBe(4);
+  });
+
+  it('is easy (~1) when almost everyone gets it right', () => {
+    const d = crowdDifficulty({ seen: 100, correct: 98 });
+    expect(d).toBeGreaterThanOrEqual(1);
+    expect(d).toBeLessThan(1.5);
+  });
+
+  it('is hard (~5) when almost no one gets it right', () => {
+    const d = crowdDifficulty({ seen: 100, correct: 3 });
+    expect(d).toBeGreaterThan(4.5);
+    expect(d).toBeLessThanOrEqual(5);
+  });
+
+  it('sits mid-scale at ~50% facility', () => {
+    expect(crowdDifficulty({ seen: 100, correct: 50 })).toBeCloseTo(3, 1);
   });
 });

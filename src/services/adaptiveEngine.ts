@@ -366,6 +366,58 @@ export function selectAdaptiveItems<T extends { difficulty?: number }>(
   return scored.map((s) => s.item);
 }
 
+// ─── Pillar A — crowd difficulty (Slice 3b foundation) ──────────────────────
+// Questions carry no authored per-item difficulty and no stable ID, so we derive
+// both: a content-hash ID (stable as long as the stem text is), and a difficulty
+// on the SAME 1–5 scale selectAdaptiveItems already consumes — so swapping
+// authored difficulty for crowd difficulty needs no change to the selector.
+
+/** Minimum crowd exposures before a question's p-value is trusted. */
+export const MIN_QUESTION_EXPOSURES = 20;
+
+/** Normalize a stem so trivially-different renderings collapse to one ID. */
+function normalizeStem(stem: string): string {
+  return String(stem ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip accents
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ') // drop punctuation → space
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Stable, platform-independent question ID from its stem (FNV-1a → base36).
+ * Deterministic across web/RN/Node so every client and the aggregator agree.
+ * Returns '' for an empty stem (caller should skip logging it).
+ */
+export function questionIdFromStem(stem: string): string {
+  const s = normalizeStem(stem);
+  if (!s) return '';
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return 'q_' + (h >>> 0).toString(36);
+}
+
+/**
+ * Convert crowd answer stats into a difficulty on the 1–5 scale. Facility
+ * p = correct/seen; difficulty runs 1 (nearly everyone right) → 5 (almost no
+ * one). Below the exposure floor, returns `fallback` (the authored difficulty)
+ * so thin data can't mislead selection.
+ */
+export function crowdDifficulty(
+  stats: { seen?: number; correct?: number } | null | undefined,
+  fallback = 3,
+): number {
+  const seen = stats?.seen ?? 0;
+  const correct = stats?.correct ?? 0;
+  if (seen < MIN_QUESTION_EXPOSURES) return fallback;
+  const p = Math.max(0, Math.min(1, correct / seen));
+  return Math.max(1, Math.min(5, 1 + (1 - p) * 4));
+}
+
 // ─── Public entry point ─────────────────────────────────────────────────────
 
 /**
