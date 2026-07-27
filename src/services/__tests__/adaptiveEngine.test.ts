@@ -9,6 +9,8 @@ import {
   questionIdFromStem,
   crowdDifficulty,
   attachCrowdDifficulty,
+  crowdDifficultyActive,
+  CROWD_DIFFICULTY_LAUNCH_MS,
   MIN_ATTEMPTS_FOR_SIGNALS,
   MIN_QUESTION_EXPOSURES,
   DEFAULT_CHALLENGE_BAND,
@@ -323,5 +325,13 @@ describe('attachCrowdDifficulty', () => {
     const enriched = attachCrowdDifficulty(pool, stats);
     const ordered = selectAdaptiveItems(enriched, { ability: 90 });
     expect(ordered).toHaveLength(pool.length); // pure reorder, no drops
+  });
+});
+
+describe('crowdDifficultyActive', () => {
+  it('is false before the launch date, true on/after', () => {
+    expect(crowdDifficultyActive(CROWD_DIFFICULTY_LAUNCH_MS - 1)).toBe(false);
+    expect(crowdDifficultyActive(CROWD_DIFFICULTY_LAUNCH_MS)).toBe(true);
+    expect(crowdDifficultyActive(CROWD_DIFFICULTY_LAUNCH_MS + 86_400_000)).toBe(true);
   });
 });

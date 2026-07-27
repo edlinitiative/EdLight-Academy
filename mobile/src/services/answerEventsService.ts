@@ -14,8 +14,36 @@
  * Spec: docs/ADAPTIVE_ENGINE.md §4, §7
  */
 import { db, auth } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { questionIdFromStem } from './adaptiveEngine';
+
+/** Crowd stats for a set of question IDs → { questionId: { seen, correct } }. */
+export type QuestionStatsMap = Record<string, { seen: number; correct: number }>;
+
+/**
+ * Read questionStats for the given IDs (public-read collection, written by the
+ * aggregator). Missing docs are simply absent from the map. Best-effort: a read
+ * failure yields an empty entry rather than throwing, so selection can fall back
+ * to authored difficulty. Deduplicates IDs before fetching.
+ */
+export async function loadQuestionStats(questionIds: string[]): Promise<QuestionStatsMap> {
+  const ids = [...new Set((questionIds || []).filter(Boolean))];
+  const out: QuestionStatsMap = {};
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const snap = await getDoc(doc(db, 'questionStats', id));
+        if (snap.exists()) {
+          const d = snap.data() as { seen?: number; correct?: number };
+          out[id] = { seen: Number(d.seen ?? 0), correct: Number(d.correct ?? 0) };
+        }
+      } catch {
+        /* best-effort — fall back to authored difficulty */
+      }
+    }),
+  );
+  return out;
+}
 
 /**
  * Log one graded answer. `canonicalStem` MUST be the French stem (`q.q` /

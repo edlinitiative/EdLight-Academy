@@ -375,6 +375,21 @@ export function selectAdaptiveItems<T extends { difficulty?: number }>(
 /** Minimum crowd exposures before a question's p-value is trusted. */
 export const MIN_QUESTION_EXPOSURES = 20;
 
+/**
+ * Date backstop for letting crowd difficulty influence selection (~3 months
+ * after the pipeline shipped, 2026-07-27). Before this the log is still
+ * accruing, so we collect but don't act; after it, the per-question
+ * MIN_QUESTION_EXPOSURES floor still gates each item — a question only switches
+ * to crowd difficulty once enough people have actually answered it. So this is a
+ * belt-and-suspenders "not before" date, not the real trigger (the floor is).
+ */
+export const CROWD_DIFFICULTY_LAUNCH_MS = Date.UTC(2026, 9, 27); // 2026-10-27 UTC
+
+/** True once crowd difficulty is allowed to influence selection (see above). */
+export function crowdDifficultyActive(now: number = Date.now()): boolean {
+  return now >= CROWD_DIFFICULTY_LAUNCH_MS;
+}
+
 /** Normalize a stem so trivially-different renderings collapse to one ID. */
 function normalizeStem(stem: string): string {
   return String(stem ?? '')

@@ -13,6 +13,7 @@ import { ChevronRight, BookOpen, RefreshCw, Check, X } from 'lucide-react-native
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { usePracticeQuizzes } from '../hooks/useData';
 import { logAnswerEvent } from '../services/answerEventsService';
+import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import { useColors, useTheme, typeScale, radius } from '../theme/theme';
@@ -226,10 +227,14 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
   const colors = useColors();
   const { shadow } = useTheme();
   const reduceMotion = useReduceMotion();
-  const questions = useMemo(() => {
+  const baseQuestions = useMemo(() => {
     const qs = quiz.questions ?? [];
     return qs.slice(0, 20);
   }, [quiz]);
+  // Crowd-difficulty ordering (Adaptive Engine, Slice 3b). Auto-gated + frozen at
+  // mount — a pure pass-through until the pipeline has enough data (see hook).
+  const canonicalStemOf = useCallback((q: any) => q?.question ?? q?.stem ?? '', []);
+  const questions = useCrowdOrderedQuestions(baseQuestions, canonicalStemOf);
 
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
