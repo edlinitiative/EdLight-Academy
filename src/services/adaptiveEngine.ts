@@ -418,6 +418,22 @@ export function crowdDifficulty(
   return Math.max(1, Math.min(5, 1 + (1 - p) * 4));
 }
 
+/**
+ * Attach crowd difficulty to a question pool (keyed by `questionId`) so the
+ * result feeds straight into selectAdaptiveItems — the selector's shape is
+ * unchanged, only its `difficulty` input sharpens. A question without enough
+ * crowd exposures keeps its authored difficulty as the fallback. Pure.
+ */
+export function attachCrowdDifficulty<T extends { questionId?: string; difficulty?: number }>(
+  pool: T[],
+  stats: Record<string, { seen?: number; correct?: number }>,
+): T[] {
+  return (pool || []).map((item) => ({
+    ...item,
+    difficulty: crowdDifficulty(item.questionId ? stats[item.questionId] : undefined, item.difficulty ?? 3),
+  }));
+}
+
 // ─── Public entry point ─────────────────────────────────────────────────────
 
 /**

@@ -17,6 +17,7 @@ import MoKacheGame from '../components/games/MoKacheGame';
 import CalculGame from '../components/games/CalculGame';
 import SuitesGame from '../components/games/SuitesGame';
 import './TriviaGames.css';
+import { logAnswerEvent } from '../services/answerEventsService';
 
 /* ─── Utility: shuffle an array (Fisher-Yates) ─── */
 function shuffle(arr) {
@@ -163,7 +164,10 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
       clearInterval(timerRef.current);
       setSelected(idx);
       setAnswered(true);
-      if (idx === q.answer) setScore((s) => s + 1);
+      const correct = idx === q.answer;
+      if (correct) setScore((s) => s + 1);
+      // Crowd-difficulty logging (canonical FR stem q.q — Adaptive Engine 3b).
+      if (q?.q) logAnswerEvent(q.q, correct);
     },
     [answered, q]
   );

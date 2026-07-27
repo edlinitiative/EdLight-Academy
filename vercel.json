@@ -6,7 +6,8 @@
   "framework": null,
   "crons": [
     { "path": "/api/send-reminders", "schedule": "*/15 * * * *" },
-    { "path": "/api/leaderboard/aggregate-snapshot", "schedule": "*/15 * * * *" }
+    { "path": "/api/leaderboard/aggregate-snapshot", "schedule": "*/15 * * * *" },
+    { "path": "/api/aggregate-question-stats", "schedule": "*/30 * * * *" }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },

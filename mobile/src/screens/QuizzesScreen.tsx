@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronRight, BookOpen, RefreshCw, Check, X } from 'lucide-react-native';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { usePracticeQuizzes } from '../hooks/useData';
+import { logAnswerEvent } from '../services/answerEventsService';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import { useColors, useTheme, typeScale, radius } from '../theme/theme';
@@ -265,7 +266,10 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
     if (confirmed || !selected) return;
     tapMedium();
     setConfirmed(true);
-    if (isQuizAnswerCorrect(q, selected)) success(); else warn();
+    const correct = isQuizAnswerCorrect(q, selected);
+    if (correct) success(); else warn();
+    // Crowd-difficulty logging (Adaptive Engine, Slice 3b).
+    logAnswerEvent(q.question ?? q.stem, correct);
   }
 
   function handleNext() {

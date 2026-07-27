@@ -3,6 +3,7 @@ import { Check } from 'lucide-react';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
 import { useTranslation } from 'react-i18next';
+import { logAnswerEvent } from '../services/answerEventsService';
 
 export const MAX_ATTEMPTS = 3;
 
@@ -60,6 +61,9 @@ export default function DirectBankQuiz({
       const alt = Array.isArray(item.alternatives) ? item.alternatives.map(norm).filter(Boolean) : [];
       isCorrect = norm(textAns) === target || alt.includes(norm(textAns));
     }
+    // Crowd-difficulty logging — first attempt only, so multi-try retries don't
+    // skew a question's facility (Adaptive Engine, Slice 3b).
+    if (attempts === 0) logAnswerEvent(item.stem, isCorrect);
     if (isCorrect) {
       setSubmitted(true);
       setCorrect(true);

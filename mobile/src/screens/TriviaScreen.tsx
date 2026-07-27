@@ -23,6 +23,7 @@ import { useReduceMotion } from '../utils/motion';
 import PopIn from '../components/ui/PopIn';
 import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import { notifyLeaderboardRank } from '../services/notificationService';
+import { logAnswerEvent } from '../services/answerEventsService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
 import { shareScore } from '../services/scoreShare';
@@ -628,12 +629,15 @@ function QuizPlayer({
       // Read selected via state updater to get latest value
       setSelected((currentSelected) => {
         setConfirmed(true);
-        if (currentSelected !== null && currentSelected === questions[idx]?.correctAnswer) {
+        const wasCorrect = currentSelected !== null && currentSelected === questions[idx]?.correctAnswer;
+        if (wasCorrect) {
           success();
           setScore((s) => s + 1);
         } else {
           warn();
         }
+        // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
+        if (questions[idx]?.q) logAnswerEvent(questions[idx].q, wasCorrect);
         return currentSelected;
       });
       stopTimer();
@@ -652,12 +656,14 @@ function QuizPlayer({
     tapMedium();
     stopTimer();
     setConfirmed(true);
-    if (selected === q.correctAnswer) {
+    const correct = selected === q.correctAnswer;
+    if (correct) {
       success();
       setScore((s) => s + 1);
     } else {
       warn();
     }
+    if (q?.q) logAnswerEvent(q.q, correct);
   };
 
   const handleNext = () => {

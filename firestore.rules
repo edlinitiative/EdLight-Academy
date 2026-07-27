@@ -322,6 +322,34 @@ service cloud.firestore {
     //  rule already exists under the users/{userId} block — owner read/write.
     //  Admin SDK writes bypass rules, so no new rule is needed for it.)
 
+    // ── Adaptive Engine (Slice 3b): crowd difficulty ──────────────────────────
+    // Append-only per-question answer outcomes. Clients CREATE only (their own
+    // uid, shape-bounded); the /api/aggregate-question-stats cron folds them into
+    // questionStats via the Admin SDK (bypasses rules). No client read/update/
+    // delete — the crowd log is neither browsable nor tamperable.
+    match /answerEvents/{eventId} {
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.questionId is string
+                    && request.resource.data.questionId.size() <= 64
+                    && request.resource.data.correct is bool
+                    && request.resource.data.createdMs is number;
+      allow read, update, delete: if false;
+    }
+
+    // Per-question crowd difficulty ({ seen, correct, updatedAtMs }). Public read
+    // (non-sensitive aggregate — clients use it to pick band-appropriate items);
+    // written ONLY by the aggregator via the Admin SDK.
+    match /questionStats/{questionId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Aggregator cursor — server-side only.
+    match /aggregatorState/{docId} {
+      allow read, write: if false;
+    }
+
     // Default: deny all other access
     match /{document=**} {
       allow read, write: if false;

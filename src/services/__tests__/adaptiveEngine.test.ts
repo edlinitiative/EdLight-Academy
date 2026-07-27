@@ -8,6 +8,7 @@ import {
   selectAdaptiveItems,
   questionIdFromStem,
   crowdDifficulty,
+  attachCrowdDifficulty,
   MIN_ATTEMPTS_FOR_SIGNALS,
   MIN_QUESTION_EXPOSURES,
   DEFAULT_CHALLENGE_BAND,
@@ -291,5 +292,36 @@ describe('crowdDifficulty', () => {
 
   it('sits mid-scale at ~50% facility', () => {
     expect(crowdDifficulty({ seen: 100, correct: 50 })).toBeCloseTo(3, 1);
+  });
+});
+
+describe('attachCrowdDifficulty', () => {
+  const pool = [
+    { questionId: 'q_easy', difficulty: 3 },
+    { questionId: 'q_hard', difficulty: 3 },
+    { questionId: 'q_unknown', difficulty: 2 },
+    { difficulty: 4 }, // no questionId
+  ];
+  const stats = {
+    q_easy: { seen: 100, correct: 95 },
+    q_hard: { seen: 100, correct: 5 },
+  };
+
+  it('replaces difficulty with crowd difficulty where data is sufficient', () => {
+    const out = attachCrowdDifficulty(pool, stats);
+    expect(out[0].difficulty).toBeLessThan(2); // q_easy → easy
+    expect(out[1].difficulty).toBeGreaterThan(4); // q_hard → hard
+  });
+
+  it('keeps authored difficulty as the fallback (no stats / no id)', () => {
+    const out = attachCrowdDifficulty(pool, stats);
+    expect(out[2].difficulty).toBe(2); // q_unknown: no crowd data → authored 2
+    expect(out[3].difficulty).toBe(4); // no questionId → authored 4
+  });
+
+  it('feeds selectAdaptiveItems unchanged (shape preserved)', () => {
+    const enriched = attachCrowdDifficulty(pool, stats);
+    const ordered = selectAdaptiveItems(enriched, { ability: 90 });
+    expect(ordered).toHaveLength(pool.length); // pure reorder, no drops
   });
 });
