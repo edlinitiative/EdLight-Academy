@@ -167,6 +167,27 @@ export const spacing = {
   xxl: 28,
 } as const;
 
+/**
+ * Responsive breakpoints (points). A device is "tablet" at ≥ `tablet` in its
+ * shorter/handled dimension. Kept here so screens + the useResponsive hook share
+ * one source of truth. See src/hooks/useResponsive.ts.
+ */
+export const breakpoints = {
+  tablet: 700,   // iPad mini portrait is 744pt wide; 700 catches all iPads
+  wide: 1000,    // large iPad landscape / Split View full
+} as const;
+
+/**
+ * Layout caps for wide screens. On phones content is full-bleed (cap ignored);
+ * on tablets we center a column so cards/text don't stretch edge-to-edge.
+ *  - readable: single-column reading/list width (dashboard, profile, exams list)
+ *  - form: narrow single-input flows (auth, modals)
+ */
+export const layout = {
+  readableMaxWidth: 720,
+  formMaxWidth: 520,
+} as const;
+
 /** Brand-tinted shadow depths for a given palette (softer on dark grounds). */
 export function shadowsFor(scheme: ColorScheme) {
   const c = scheme === 'dark' ? '#000000' : lightColors.azureDeep;
