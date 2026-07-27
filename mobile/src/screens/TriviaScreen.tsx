@@ -26,7 +26,7 @@ import { notifyLeaderboardRank } from '../services/notificationService';
 import { logAnswerEvent } from '../services/answerEventsService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
-import { shareScore } from '../services/scoreShare';
+import ShareCardCapture, { type ShareCardCaptureHandle } from '../components/share/ShareCardCapture';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -891,6 +891,10 @@ function TriviaResults({
   const xpEarned = score * 10;
   const lang = isCreole ? 'ht' : 'fr';
   const categoryName = isCreole ? (category.nameHt ?? category.name) : category.name;
+  const shareRef = useRef<ShareCardCaptureHandle>(null);
+  // Always share by the canonical (FR) category name so the same card reads
+  // consistently; the card component localizes its own chrome via `lang`.
+  const shareSubject = category.name ?? categoryName;
 
   const title = pct >= 80
     ? (isCreole ? 'Ekselan !' : 'Excellent !')
@@ -899,6 +903,8 @@ function TriviaResults({
       : (isCreole ? 'Kontinye pratike !' : 'Continue à pratiquer !');
 
   return (
+    <>
+    <ShareCardCapture ref={shareRef} />
     <QuizResultHero
       score={score}
       total={total}
@@ -919,7 +925,7 @@ function TriviaResults({
             color="#22C55E"
             icon={<Share2 color="#fff" size={18} />}
             label={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
-            onPress={() => shareScore({ title: categoryName, score, total, lang })}
+            onPress={() => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total })}
             style={{ marginBottom: 10 }}
           />
           <HeroButton
@@ -952,6 +958,7 @@ function TriviaResults({
         </View>
       </View>
     </QuizResultHero>
+    </>
   );
 }
 

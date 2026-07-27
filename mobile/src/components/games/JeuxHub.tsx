@@ -5,9 +5,9 @@
  * community Records strip fed by leaderboardService.getGameRecords.
  */
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Dimensions } from 'react-native';
-import { Zap, Flame, Trophy, Clock, Crown, Sparkles } from 'lucide-react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import { Zap, Flame, Trophy, Clock, Crown, Sparkles, Share2 } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
 import useStore from '../../contexts/store';
@@ -17,6 +17,7 @@ import DailyChallengeBanner from './DailyChallengeBanner';
 import { Skeleton } from '../StateViews';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
+import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 
 const GRID_PAD = 16;
 const TILE_GAP = 12;
@@ -41,6 +42,8 @@ interface JeuxHubProps {
 function GameRecords({ isCreole }: { isCreole: boolean }) {
   const colors = useColors();
   const { shadow } = useTheme();
+  const user = useStore((s) => s.user);
+  const shareRef = useRef<ShareCardCaptureHandle>(null);
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
   const [loading, setLoading] = useState(true);
 
@@ -89,6 +92,8 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
   if (!arcade.some((g) => records[g.id])) return null; // loaded, nothing set yet
 
   return (
+    <>
+    <ShareCardCapture ref={shareRef} />
     <View
       className="px-4 py-4 mx-4 mt-5"
       style={{
@@ -109,6 +114,8 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
       {arcade.map((g, i) => {
         const rec = records[g.id];
         const Icon = GAME_ICONS[g.id];
+        // The signed-in student holds this record → offer to share the N°1 card.
+        const isHolder = !!rec?.uid && !!user?.uid && rec.uid === user.uid;
         return (
           <View
             key={g.id}
@@ -122,19 +129,32 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
               </Text>
             </View>
             {rec ? (
-              // Score is the hero (gold chip); the holder is a clear caption so
-              // a bare "L · 12" no longer reads as a mystery — it's "🏆 12, par L".
-              <View style={{ alignItems: 'flex-end' }}>
-                <View
-                  className="flex-row items-center gap-1 rounded-full"
-                  style={{ backgroundColor: colors.warnSoft, paddingHorizontal: 9, paddingVertical: 3 }}
-                >
-                  <Trophy color={colors.warn} size={12} />
-                  <Text style={[typeScale.label, { color: colors.ink }]}>{rec.score}</Text>
+              <View className="flex-row items-center" style={{ gap: 10 }}>
+                {isHolder ? (
+                  <TouchableOpacity
+                    onPress={() => shareRef.current?.share({ mode: 'rank', subject: g.name, scoreLabel: `${rec.score}`, holder: rec.displayName })}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={isCreole ? 'Pataje rang mwen' : 'Partager mon rang'}
+                    style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.azureSoft, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Share2 color={colors.azure} size={15} />
+                  </TouchableOpacity>
+                ) : null}
+                {/* Score is the hero (gold chip); the holder is a clear caption so
+                    a bare "L · 12" no longer reads as a mystery — it's "🏆 12, par L". */}
+                <View style={{ alignItems: 'flex-end' }}>
+                  <View
+                    className="flex-row items-center gap-1 rounded-full"
+                    style={{ backgroundColor: colors.warnSoft, paddingHorizontal: 9, paddingVertical: 3 }}
+                  >
+                    <Trophy color={colors.warn} size={12} />
+                    <Text style={[typeScale.label, { color: colors.ink }]}>{rec.score}</Text>
+                  </View>
+                  <Text style={[typeScale.micro, { color: colors.faint, marginTop: 2 }]} numberOfLines={1}>
+                    {isCreole ? 'pa' : 'par'} {rec.displayName}
+                  </Text>
                 </View>
-                <Text style={[typeScale.micro, { color: colors.faint, marginTop: 2 }]} numberOfLines={1}>
-                  {isCreole ? 'pa' : 'par'} {rec.displayName}
-                </Text>
               </View>
             ) : (
               <View className="rounded-full px-2.5 py-0.5" style={{ backgroundColor: colors.surfaceAlt }}>
@@ -147,6 +167,7 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
         );
       })}
     </View>
+    </>
   );
 }
 
