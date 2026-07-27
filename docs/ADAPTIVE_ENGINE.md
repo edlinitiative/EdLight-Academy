@@ -208,16 +208,48 @@ recomputable from the immutable `quizAttempts` log. Recompute on app foreground 
 
 Each slice is independently valuable and OTA-deliverable on the existing channel.
 
+### Shipped status (as of 2026-07-27)
+
+- ✅ **Slice 1** — pure engine (`deriveSignals`), mirrored web + mobile.
+- ✅ **Slice 2** — spaced-repetition surface (`reviewService`, "À réviser" card),
+  OTA-live both runtimes.
+- ✅ **Slice 3a** — difficulty ordering from authored `difficulty` (1–5), wired
+  into the exam browser (mobile + web), OTA-live.
+- ✅ **Slice 3b** — crowd-difficulty pipeline hosted on **Vercel** (not Firebase
+  Functions — project is on Spark, not Blaze): `answerEvents` logging on all four
+  graded surfaces, `/api/aggregate-question-stats` cron → `questionStats`, and the
+  auto-launching consumer (`useCrowdOrderedQuestions`) wired into mobile + web quiz.
+- ⏳ **Slice 4** — stall detection interventions: engine `detectStall` is built +
+  tested, but not yet wired to any surface. **Not started.**
+
+> ### 🔔 LAUNCH-VERIFICATION CHECKLIST — do this around **2026-10-27**
+> The crowd-difficulty consumer auto-activates on that date (`CROWD_DIFFICULTY_LAUNCH_MS`
+> in `adaptiveEngine.ts`), gated per-question by `MIN_QUESTION_EXPOSURES` (20). Near
+> that date, verify the pipeline actually accrued usable data before trusting it:
+> 1. In Firestore, confirm `questionStats/*` docs exist with `seen` climbing, and
+>    check how many questions have cleared `seen ≥ 20`. If very few, the reorder is
+>    still mostly authored-difficulty — consider lowering the floor or pushing the
+>    date out (edit `CROWD_DIFFICULTY_LAUNCH_MS`).
+> 2. Confirm the Vercel cron `/api/aggregate-question-stats` is running clean
+>    (Vercel → cron logs; the cursor doc `aggregatorState/questionStats` should
+>    advance each run).
+> 3. Spot-check a subject where `seen` is high: do the crowd difficulties look sane
+>    (hard questions → high, easy → low)?
+> 4. Once satisfied, consider the challenge-band upgrade (per-learner ability) over
+>    the current easiest-first scaffolding — see §4.
+
 ---
 
 ## 10. Decisions
 
-- **`questionStats` scope — DECIDED (2026-07-26):** global crowd difficulty via a
-  **Cloud Function aggregator** reading the immutable `quizAttempts` log. Keeps
-  client Firestore rules tight (no write-from-all collection) and reuses the
-  append-only log we already trust. *Infra note:* no `functions/` dir exists yet —
-  this Function is net-new and lands with **Slice 3** (adaptive difficulty), not
-  Slice 1. Until it exists, difficulty falls back to exam `difficulty` (1–5).
+- **`questionStats` scope — DECIDED (2026-07-26), REVISED (2026-07-27):** global
+  crowd difficulty via an aggregator reading an append-only log. Originally speced
+  as a Firebase Cloud Function; **revised to a Vercel cron** (`/api/aggregate-
+  question-stats`) because the Firebase project is on the **Spark plan** (Cloud
+  Functions API disabled — needs Blaze), while the Vercel API already runs
+  `firebase-admin` + crons. Admin-SDK writes bypass rules, so client rules stay
+  tight (`answerEvents` create-only, `questionStats` public-read/server-write).
+  Below `MIN_QUESTION_EXPOSURES` a question falls back to authored `difficulty`.
 - **Intervention tone/frequency — DECIDED (2026-07-26):** ≤ 1 visible nudge/day,
   all dismissible, none before a student has ≥ ~10 attempts (avoid cold-start
   nagging). Encouraging register only — never shame.
