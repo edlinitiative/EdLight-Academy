@@ -70,7 +70,7 @@ export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useColors();
   const { cardSurface, typeScale, shadow } = useTheme();
-  const centerColumn = useContentContainerStyle('readable');
+  const centerColumn = useContentContainerStyle('readable', { fill: true }); // iPad: center short hub content vertically
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);

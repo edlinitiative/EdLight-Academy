@@ -34,10 +34,20 @@ export default function ContentContainer({
  * not a wrapper component). Centers the list column on tablets. Combine with the
  * list's existing padding via an array.
  */
-export function useContentContainerStyle(kind: 'readable' | 'form' = 'readable'): ViewStyle {
+export function useContentContainerStyle(
+  kind: 'readable' | 'form' = 'readable',
+  opts: { fill?: boolean } = {},
+): ViewStyle {
   const { contentMaxWidth } = useResponsive();
   const maxWidth = contentMaxWidth(kind);
-  return maxWidth === Infinity
-    ? {}
-    : { width: '100%', maxWidth, alignSelf: 'center' };
+  if (maxWidth === Infinity) return {}; // phones: full-bleed, completely unchanged
+  const base: ViewStyle = { width: '100%', maxWidth, alignSelf: 'center' };
+  // `fill` (tablet only): let short content grow to the viewport and center
+  // vertically, so a sparse "hub"/picker screen doesn't top-align against a tall
+  // empty iPad. This is the standard RN "center when short, scroll when tall"
+  // idiom — flexGrow fills, and justifyContent has nothing extra to do once the
+  // content overflows, so it's a no-op on tall/scrolling screens.
+  return opts.fill
+    ? { ...base, flexGrow: 1, justifyContent: 'center' }
+    : base;
 }
