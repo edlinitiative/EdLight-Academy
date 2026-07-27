@@ -12,6 +12,7 @@ import { flattenQuestions } from '../utils/examUtils';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
 import { LoadingState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
@@ -212,6 +213,7 @@ export default function ExamResultsScreen() {
   const { user, incrementGuestInteraction, language } = useStore();
   const colors = useColors();
   const { cardSurface, shadow } = useTheme();
+  const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -276,7 +278,7 @@ export default function ExamResultsScreen() {
       {/* Celebration burst for a passing result (skipped under reduce-motion) */}
       {Math.round(percentage) >= 70 && <Confetti />}
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
         {/* Score — Aurora Depth hero */}
         <View style={{ marginHorizontal: 16, marginTop: 16, borderRadius: 22, overflow: 'hidden', shadowColor: '#0A1F52', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.35, shadowRadius: 20, elevation: 8 }}>
           <LinearGradient colors={['#2E6FE6', '#123A86', '#0A1F52']} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}>

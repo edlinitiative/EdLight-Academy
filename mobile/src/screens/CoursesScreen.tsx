@@ -17,6 +17,7 @@ import ProgressBar from '../components/ProgressBar';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, Palette, radius, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
 
@@ -168,6 +169,7 @@ export default function CoursesScreen() {
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const centerColumn = useContentContainerStyle('readable');
 
   const { data: courses, isLoading, isError, refetch, isFetching } = useCourses();
   const [search, setSearch] = useState('');
@@ -312,7 +314,7 @@ export default function CoursesScreen() {
           data={searchResults}
           keyExtractor={(course) => course.id}
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+          contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }, centerColumn]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
           ListHeaderComponent={
@@ -342,7 +344,7 @@ export default function CoursesScreen() {
           ref={scrollRef}
           className="flex-1 px-5 pt-4"
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
           showsVerticalScrollIndicator={false}
         >
           {/* Banque de Questions banner (top-level only) */}
@@ -388,7 +390,7 @@ export default function CoursesScreen() {
           ref={scrollRef}
           className="flex-1 px-5 pt-4"
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
           showsVerticalScrollIndicator={false}
         >
           {subjectsForLevel.length === 0 ? (
@@ -425,7 +427,7 @@ export default function CoursesScreen() {
           data={courseList}
           keyExtractor={(course) => course.id}
           className="flex-1"
-          contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }}
+          contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }, centerColumn]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
           ListHeaderComponent={

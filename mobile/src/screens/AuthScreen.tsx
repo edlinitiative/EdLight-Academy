@@ -21,6 +21,7 @@ import {
 import { redeemReferral, type RedeemResult } from '../services/referralService';
 import Confetti from '../components/ui/Confetti';
 import PopIn from '../components/ui/PopIn';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import * as haptics from '../utils/haptics';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -28,6 +29,7 @@ WebBrowser.maybeCompleteAuthSession();
 export default function AuthScreen() {
   const { setUser, setActiveTab, activeTab, language } = useStore();
   const colors = useColors();
+  const centerColumn = useContentContainerStyle('form');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -243,7 +245,7 @@ export default function AuthScreen() {
       >
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 32 }}
+          contentContainerStyle={[{ flexGrow: 1, justifyContent: 'center', paddingVertical: 32 }, centerColumn]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

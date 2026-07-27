@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import Leaderboard from '../components/Leaderboard';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import useStore from '../contexts/store';
 import { useColors, typeScale } from '../theme/theme';
 
@@ -15,6 +16,7 @@ import { useColors, typeScale } from '../theme/theme';
  */
 export default function LeaderboardScreen({ onClose }: { onClose: () => void }) {
   const colors = useColors();
+  const centerColumn = useContentContainerStyle('readable');
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
@@ -47,7 +49,7 @@ export default function LeaderboardScreen({ onClose }: { onClose: () => void }) 
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: 4 }}
+        contentContainerStyle={[{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: 4 }, centerColumn]}
         showsVerticalScrollIndicator={false}
       >
         <Leaderboard compact={false} maxRows={50} />

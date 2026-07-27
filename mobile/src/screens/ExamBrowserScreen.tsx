@@ -20,6 +20,7 @@ import { deriveSignals, selectAdaptiveItems } from '../services/adaptiveEngine';
 import { useColors, useTheme } from '../theme/theme';
 import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import PressableScale from '../components/ui/PressableScale';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Route = RouteProp<ExamsParamList, 'ExamBrowser'>;
@@ -209,6 +210,7 @@ export default function ExamBrowserScreen() {
   const grade = useStore((s) => s.grade);
   const colors = useColors();
   const { typeScale, radius, shadow } = useTheme();
+  const centerColumn = useContentContainerStyle('readable');
   const reduceMotion = useReduceMotion();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -581,7 +583,7 @@ export default function ExamBrowserScreen() {
         className="flex-1"
         data={displayed}
         keyExtractor={(exam, i) => String(exam.exam_id ?? exam.id ?? i)}
-        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }}
+        contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }, centerColumn]}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
         ListHeaderComponent={
           displayed.length > 0 ? (

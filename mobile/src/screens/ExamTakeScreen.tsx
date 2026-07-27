@@ -17,6 +17,7 @@ import { recordReview } from '../services/reviewService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
 import { select, tapMedium } from '../utils/haptics';
 import { LoadingState, ErrorState } from '../components/StateViews';
@@ -403,6 +404,7 @@ export default function ExamTakeScreen() {
   const { user, recordActivity, clearActivity, setFocusMode, language, track } = useStore();
   const colors = useColors();
   const { shadow, radius } = useTheme();
+  const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -770,7 +772,7 @@ export default function ExamTakeScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32, padding: 16 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={[{ paddingBottom: 32, padding: 16 }, centerColumn]}>
           {/* Section context — full intro on the section's first question,
               compact chip + "Consignes" toggle on the following ones. Keyed by
               question index so the toggle resets when navigating. */}

@@ -11,6 +11,7 @@ import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { useColors, useTheme } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
@@ -69,6 +70,7 @@ export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useColors();
   const { cardSurface, typeScale, shadow } = useTheme();
+  const centerColumn = useContentContainerStyle('readable');
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -92,7 +94,7 @@ export default function ExamLandingScreen() {
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View className="px-5 pt-6 pb-5">

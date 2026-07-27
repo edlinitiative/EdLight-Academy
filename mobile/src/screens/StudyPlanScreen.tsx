@@ -48,6 +48,7 @@ import { TRACKS, currentPlanSeason } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
 import { useColors, useTheme, radius, typeScale, type Palette } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { ErrorState, Skeleton } from '../components/StateViews';
 import {
   loadActiveStudyPlan,
@@ -314,8 +315,9 @@ function MasteryRow({ subject, pct }: { subject: string; pct: number }) {
  */
 function PlanSkeleton({ label }: { label?: string }) {
   const colors = useColors();
+  const centerColumn = useContentContainerStyle('readable');
   return (
-    <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 40 }, centerColumn]}>
       {label ? (
         <View
           className="flex-row items-center mb-4"
@@ -373,6 +375,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   const { user, isAuthenticated, language, track, setTrack, toggleAuthModal } = useStore();
   const colors = useColors();
   const navigation = useNavigation<any>();
+  const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -694,7 +697,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         {header}
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 40 }, centerColumn]}>
           {errorBanner}
 
           <View className="items-center mb-5" style={{ gap: 8 }}>
@@ -804,7 +807,7 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {header}
-      <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 40 }, centerColumn]}>
         {errorBanner}
 
         {/* Progress card */}

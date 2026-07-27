@@ -23,6 +23,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
 import MathText, { HAS_MATH } from '../components/MathText';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { sendToSandra, writeConvId, MAX_CHARS } from '../services/sandraService';
@@ -257,6 +258,7 @@ export default function SandraScreen({
   const { user, language, toggleAuthModal, grade, track } = useStore();
   const { level } = useTrivia();
   const colors = useColors();
+  const centerColumn = useContentContainerStyle('readable');
   const insets = useSafeAreaInsets();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -501,7 +503,7 @@ export default function SandraScreen({
           ref={scrollRef}
           className="flex-1"
           style={{ backgroundColor: colors.bg }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
+          contentContainerStyle={[{ padding: 16, paddingBottom: 8 }, centerColumn]}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           keyboardShouldPersistTaps="handled"
         >

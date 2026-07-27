@@ -22,6 +22,7 @@ import { tapLight, tapMedium, select, success, warn } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import PressableScale from '../components/ui/PressableScale';
 import PopIn from '../components/ui/PopIn';
+import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 
 type Translate = (fr: string, ht: string) => string;
@@ -227,6 +228,7 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
   const colors = useColors();
   const { shadow } = useTheme();
   const reduceMotion = useReduceMotion();
+  const centerColumn = useContentContainerStyle('readable');
   const baseQuestions = useMemo(() => {
     const qs = quiz.questions ?? [];
     return qs.slice(0, 20);
@@ -301,7 +303,7 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
         <QuizProgressBar pct={pct} />
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" contentContainerStyle={[{ padding: 16, paddingBottom: 24 }, centerColumn]} showsVerticalScrollIndicator={false}>
         {/* Lifted question card — subtle top→bottom surface gradient (Trivia feel) */}
         <View style={{ borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 16, ...shadow.md }}>
           <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ padding: 18 }}>
@@ -430,6 +432,7 @@ export default function QuizzesScreen() {
   const { language, recordQuizAttempt, setFocusMode } = useStore();
   const colors = useColors();
   const { shadow } = useTheme();
+  const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -597,7 +600,7 @@ export default function QuizzesScreen() {
             </Text>
           </View>
         </View>
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
           {activeLevel.chapters.map((quiz: any) => (
             <TouchableOpacity
               key={quiz.id}
@@ -636,7 +639,7 @@ export default function QuizzesScreen() {
             <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>{t('Choisis un niveau', 'Chwazi yon nivo')}</Text>
           </View>
         </View>
-        <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView className="flex-1 px-5" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
           {activeBase.levels.map((lvl) => (
             <TouchableOpacity
               key={lvl.code}
@@ -690,7 +693,7 @@ export default function QuizzesScreen() {
       <ScrollView
         className="flex-1 px-5"
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
       >
         {subjectGroups.length === 0 ? (
           <EmptyState
