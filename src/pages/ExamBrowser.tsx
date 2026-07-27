@@ -8,6 +8,7 @@ import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
+import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
 
 const PAGE_SIZE = 24;
@@ -277,6 +278,31 @@ const ExamBrowser = () => {
     return [...list].sort((a, b) => (b._year || 0) - (a._year || 0));
   }, [index, subjectFilter, yearFilter, difficultyFilter, search, trackFilter, isTerminale, statusFilter, attempts, examKeyOf]);
 
+  // Per-subject ability estimate (Adaptive Engine, Slice 3a): fold the student's
+  // past exam results into a 0–100 skill per subject, from data already loaded
+  // here (index → subject, attempts → percentages). Drives within-subject
+  // challenge ordering below. No extra fetch.
+  const ability = useMemo(() => {
+    const exams = index?.exams || [];
+    const subjectByKey = new Map<string, string>();
+    for (const e of exams) subjectByKey.set(examKeyOf(e), e._subject || '');
+    const events: AttemptEvent[] = [];
+    type AttemptInfo = { attempted?: boolean; percentage?: number | null; submittedAtMs?: number | null };
+    for (const [key, info] of Object.entries(attempts) as [string, AttemptInfo][]) {
+      if (!info?.attempted) continue;
+      const subject = subjectByKey.get(key) || '';
+      if (!subject) continue;
+      events.push({
+        subject,
+        quizId: key,
+        percentage: typeof info.percentage === 'number' ? info.percentage : 0,
+        timeSpent: 0,
+        attemptedAtMs: typeof info.submittedAtMs === 'number' ? info.submittedAtMs : 0,
+      });
+    }
+    return deriveSignals(events).ability;
+  }, [index, attempts, examKeyOf]);
+
   // The student's active filière drives both the section ordering and the
   // coefficient note on each subject header (track-first organisation).
   const activeTrack = isTerminale ? (trackFilter || userTrack || '') : '';
@@ -291,12 +317,18 @@ const ExamBrowser = () => {
       if (!bySubject.has(s)) bySubject.set(s, []);
       bySubject.get(s).push(e);
     }
-    const arr = [...bySubject.entries()].map(([subject, exams]) => ({
-      subject,
-      exams,
-      color: subjectColor(subject),
-      coef: activeTrack ? getCoefficient(activeTrack, subject) : null,
-    }));
+    const arr = [...bySubject.entries()].map(([subject, exams]) => {
+      // Within a subject we know the student's level in, order papers by
+      // challenge fit (stretch the strong, on-ramp the rest); else year-desc.
+      const a = ability[subject] ?? 0;
+      return {
+        subject,
+        exams: a > 0 ? selectAdaptiveItems(exams, { ability: a }) : exams,
+        adaptive: a > 0,
+        color: subjectColor(subject),
+        coef: activeTrack ? getCoefficient(activeTrack, subject) : null,
+      };
+    });
     arr.sort((a, b) => {
       if (activeTrack) {
         if ((b.coef || 0) !== (a.coef || 0)) return (b.coef || 0) - (a.coef || 0);
@@ -311,7 +343,7 @@ const ExamBrowser = () => {
       return a.subject.localeCompare(b.subject);
     });
     return arr;
-  }, [filtered, activeTrack]);
+  }, [filtered, activeTrack, ability]);
 
   // Default expansion: open the highest-priority section(s) up to a small card
   // budget, so the page opens as a scannable "table of contents".
@@ -667,6 +699,7 @@ const ExamBrowser = () => {
                     <span className="exam-section__name">{g.subject}</span>
                     <span className="exam-section__count">{g.exams.length}</span>
                     {g.coef != null && <span className="exam-section__coef">{t('Coef.', 'Koef.')} {g.coef}</span>}
+                    {g.adaptive && <span className="exam-section__coef">✨ {t('trié pour ton niveau', 'klase pou nivo ou')}</span>}
                     <svg
                       className={`exam-section__chevron ${open ? 'is-open' : ''}`}
                       width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
