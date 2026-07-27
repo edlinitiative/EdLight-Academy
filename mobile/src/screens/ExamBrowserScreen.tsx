@@ -16,6 +16,7 @@ import { normalizeSubject, normalizeLevel, normalizeExamTitle, examTitleParts, s
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
+import { deriveSignals, selectAdaptiveItems } from '../services/adaptiveEngine';
 import { useColors, useTheme } from '../theme/theme';
 import { ErrorState, EmptyState, Skeleton } from '../components/StateViews';
 import PressableScale from '../components/ui/PressableScale';
@@ -297,6 +298,27 @@ export default function ExamBrowserScreen() {
     });
   }, [catalog, activeLevel]);
 
+  // Per-subject ability estimate (Adaptive Engine, Slice 3a): fold the student's
+  // past exam results into a 0–100 skill per subject, reusing data already loaded
+  // on this screen (catalog → subject, results → percentages). No extra fetch.
+  const ability = useMemo(() => {
+    const subjectById: Record<string, string> = {};
+    catalog.forEach((e: any) => {
+      const id = String(e.exam_id ?? e.id ?? '');
+      if (id) subjectById[id] = normalizeSubject(e.subject ?? '');
+    });
+    const attempts = Object.entries(results)
+      .map(([examId, r]: [string, any]) => ({
+        subject: subjectById[examId] || '',
+        quizId: examId,
+        percentage: typeof r?.percentage === 'number' ? r.percentage : 0,
+        timeSpent: 0,
+        attemptedAtMs: typeof r?.submittedAtMs === 'number' ? r.submittedAtMs : 0,
+      }))
+      .filter((a) => a.attemptedAtMs && a.subject);
+    return deriveSignals(attempts).ability;
+  }, [catalog, results]);
+
   const subjects = useMemo(() => {
     const s = new Set<string>();
     exams.forEach((e) => {
@@ -333,6 +355,16 @@ export default function ExamBrowserScreen() {
       return true;
     });
   }, [exams, subject, yearFilter, statusFilter, search, results]);
+
+  // When a single subject is in focus and we know the student's level in it,
+  // order those papers by challenge fit (stretch the strong, on-ramp the rest);
+  // otherwise keep the year-desc default. Cold start (no ability) → unchanged.
+  const displayed = useMemo(() => {
+    const a = subject !== 'Tout' ? (ability[subject] ?? 0) : 0;
+    if (!(a > 0)) return filtered;
+    return selectAdaptiveItems(filtered, { ability: a });
+  }, [filtered, ability, subject]);
+  const adaptiveActive = subject !== 'Tout' && (ability[subject] ?? 0) > 0;
 
   const doneCount = useMemo(() => exams.filter((e) => !!results[String(e.exam_id ?? e.id ?? '')]).length, [exams, results]);
   const activeFilterCount = [subject !== 'Tout', yearFilter !== 'Tout', statusFilter !== 'all'].filter(Boolean).length;
@@ -547,13 +579,20 @@ export default function ExamBrowserScreen() {
 
       <FlatList
         className="flex-1"
-        data={filtered}
+        data={displayed}
         keyExtractor={(exam, i) => String(exam.exam_id ?? exam.id ?? i)}
         contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
         ListHeaderComponent={
-          filtered.length > 0 ? (
-            <Text style={[typeScale.caption, { color: colors.faint, marginBottom: 12 }]}>{filtered.length} {t('résultat', 'rezilta')}{filtered.length > 1 ? t('s', '') : ''}</Text>
+          displayed.length > 0 ? (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={[typeScale.caption, { color: colors.faint }]}>{displayed.length} {t('résultat', 'rezilta')}{displayed.length > 1 ? t('s', '') : ''}</Text>
+              {adaptiveActive && (
+                <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
+                  ✨ {t('Trié pour ton niveau', 'Klase pou nivo ou')}
+                </Text>
+              )}
+            </View>
           ) : null
         }
         ListEmptyComponent={
