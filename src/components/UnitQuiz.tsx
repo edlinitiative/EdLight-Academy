@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import DirectBankQuiz, { MAX_ATTEMPTS } from './DirectBankQuiz';
+import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';
 import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
@@ -63,10 +64,14 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     return shouldLimit ? base.slice(0, limit) : base;
   }, [quizBank, subjectCode, unitId, chapterNumber, subchapterNumber, shouldShuffle, shouldLimit, limit]);
 
-  const items = useMemo(() => {
+  const baseItems = useMemo(() => {
     if (!rows.length) return [];
     return rows.map((r) => toDirectItemFromRow(r));
   }, [rows]);
+  // Crowd-difficulty ordering (Adaptive Engine, Slice 3b). Auto-gated + frozen on
+  // first non-empty load — a pure pass-through until the pipeline has enough data.
+  const canonicalStemOf = useCallback((it) => it?.stem ?? '', []);
+  const items = useCrowdOrderedQuestions(baseItems, canonicalStemOf);
 
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
