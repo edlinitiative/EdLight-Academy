@@ -58,10 +58,13 @@ export default function AuthScreen() {
 
   // Google OAuth client IDs from the edlight-academy Firebase project.
   // webClientId is the audience Firebase expects for the returned idToken.
-  // androidClientId is pending the Play App Signing SHA-1 (Google sign-in on
-  // Android stays disabled until that client exists — iOS works now).
+  // androidClientId is the OAuth client registered against the Play App
+  // Signing SHA-1 (Play-store installs are re-signed with that key). A second
+  // Android client (...-8h16t4sk) exists for the upload-key cert if a
+  // sideloaded/dev build ever needs it.
   const [, response, promptAsync] = Google.useAuthRequest({
     iosClientId: '618990331083-7snnbt287h2k9b82mkoufloj6um0epl4.apps.googleusercontent.com',
+    androidClientId: '618990331083-mk0sbf8s32qtkm9bisvfht0pps351fh4.apps.googleusercontent.com',
     webClientId: '618990331083-lq461c7uqjr6sk389qi1tarcdrgfcobj.apps.googleusercontent.com',
   });
 
