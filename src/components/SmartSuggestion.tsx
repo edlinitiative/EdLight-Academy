@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ScrollText, Sparkles, ChevronRight, X } from 'lucide-react';
+import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ScrollText, ChevronRight, X } from 'lucide-react';
 import useStore from '../contexts/store';
 import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
 import './SmartSuggestion.css';
@@ -100,28 +100,39 @@ export default function SmartSuggestion() {
   const { Icon } = c;
 
   return (
-    <div className="dash-suggestion" style={{ background: c.gradient }}>
-      <div className="dash-suggestion__eyebrow">
-        <Sparkles size={14} />
-        <span>{t('Recommandé pour vous', 'Rekòmande pou ou')}</span>
-        <button
-          className="dash-suggestion__dismiss"
-          onClick={() => setDismissedSuggestion(suggestion.key)}
-          aria-label={t('Ignorer', 'Inyore')}
-          type="button"
-        >
-          <X size={16} />
-        </button>
-      </div>
-      <div className="dash-suggestion__body">
-        <span className="dash-suggestion__icon"><Icon size={22} /></span>
-        <div>
-          <h3 className="dash-suggestion__title">{c.title}</h3>
-          <p className="dash-suggestion__subtitle">{c.subtitle}</p>
-        </div>
-      </div>
+    // ONE ROW. This was a gradient card with a drop shadow stacking three rows
+    // — an eyebrow, an icon beside a title and subtitle, then a pill CTA —
+    // which made a dismissible nudge the loudest thing on the dashboard.
+    //
+    // Same content, one line, and the surface now matches DashHeroStrip
+    // directly above it: a hairline border on the card surface instead of a
+    // gradient, so a suggestion reads as a note rather than as the
+    // destination. The "Recommandé pour vous" eyebrow is gone — a dismissible
+    // row with an icon and a call to action does not need to announce that it
+    // is a suggestion.
+    <div className="dash-suggestion">
+      <span className="dash-suggestion__icon" style={{ background: c.gradient }}>
+        <Icon size={14} />
+      </span>
+
+      <p className="dash-suggestion__text">
+        <span className="dash-suggestion__title">{c.title}</span>
+        {/* Hidden on narrow screens: the title and the CTA carry the message,
+            and the subtitle is what would wrap this to a second line. */}
+        <span className="dash-suggestion__subtitle">{c.subtitle}</span>
+      </p>
+
       <button className="dash-suggestion__cta" onClick={() => navigate(c.to)} type="button">
-        {c.cta} <ChevronRight size={16} />
+        {c.cta} <ChevronRight size={14} />
+      </button>
+
+      <button
+        className="dash-suggestion__dismiss"
+        onClick={() => setDismissedSuggestion(suggestion.key)}
+        aria-label={t('Ignorer', 'Inyore')}
+        type="button"
+      >
+        <X size={14} />
       </button>
     </div>
   );

@@ -1,66 +1,120 @@
-/* "Recommandé pour vous" Home card (web). Gradient set inline per suggestion. */
-.dash-suggestion {
-  border-radius: 18px;
-  padding: 16px 18px;
-  color: #fff;
-  box-shadow: 0 8px 22px rgba(8, 87, 166, 0.28);
-  margin-bottom: 20px;
-}
+/* "Recommandé pour vous" — one compact row, not a card.
+   See SmartSuggestion.tsx for why. Matches DashHeroStrip, which sits directly
+   above it, so the top of the dashboard reads as two quiet lines rather than
+   two competing gradient blocks. Target height is one line: about 40px,
+   against roughly 120px for the card it replaces. */
 
-.dash-suggestion__eyebrow {
+.dash-suggestion {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
+  gap: 10px;
+  padding: 7px 10px 7px 8px;
+  margin-bottom: 12px;
+  border: 1px solid var(--st-line, rgba(64, 50, 26, 0.12));
+  border-radius: 10px;
+  background: var(--st-surface, #fffefb);
+  color: var(--st-ink, #1b2230);
+  font-size: 13px;
+  line-height: 1.3;
 }
-.dash-suggestion__eyebrow > span { flex: 1; }
-.dash-suggestion__eyebrow svg:first-child { color: #fde68a; }
+
+/* The one place the suggestion's colour survives — a small mark, not a field.
+   The per-suggestion gradient is set inline in the component. */
+.dash-suggestion__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  color: #fff;
+}
+
+.dash-suggestion__text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+.dash-suggestion__title {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dash-suggestion__subtitle {
+  color: var(--st-muted, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A text link with a chevron, not a filled pill. The row already has one
+   coloured element and does not need a second. */
+.dash-suggestion__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--st-accent, #1b6fe0);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dash-suggestion__cta:hover {
+  background: var(--st-accent-soft, rgba(27, 111, 224, 0.08));
+}
 
 .dash-suggestion__dismiss {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.75);
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 6px;
-}
-.dash-suggestion__dismiss:hover { color: #fff; background: rgba(255, 255, 255, 0.15); }
-
-.dash-suggestion__body { display: flex; align-items: center; gap: 12px; }
-.dash-suggestion__icon {
   flex-shrink: 0;
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-}
-.dash-suggestion__title { font-size: 1.02rem; font-weight: 800; margin: 0; }
-.dash-suggestion__subtitle { font-size: 0.85rem; margin: 3px 0 0; color: rgba(255, 255, 255, 0.9); line-height: 1.35; }
-
-.dash-suggestion__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 12px;
-  padding: 8px 12px 8px 14px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 800;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--st-muted, #6b7280);
   cursor: pointer;
 }
-.dash-suggestion__cta:hover { background: rgba(255, 255, 255, 0.3); }
+
+.dash-suggestion__dismiss:hover {
+  color: var(--st-ink, #1b2230);
+  background: var(--st-line, rgba(64, 50, 26, 0.08));
+}
+
+.dash-suggestion__cta:focus-visible,
+.dash-suggestion__dismiss:focus-visible {
+  outline: 2px solid var(--st-accent, #1b6fe0);
+  outline-offset: 1px;
+}
+
+/* On a phone the subtitle is the first thing to go — the title and the CTA
+   carry the message, and keeping it would wrap the row to two lines, which is
+   the whole thing this replaced. */
+@media (max-width: 560px) {
+  .dash-suggestion__subtitle {
+    display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .dash-suggestion {
+    gap: 8px;
+    font-size: 12px;
+  }
+  .dash-suggestion__cta {
+    font-size: 12px;
+  }
+}
