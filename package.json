@@ -82,6 +82,7 @@
     "audit:exams:save": "node scripts/audit_exams.mjs --out artifacts/exam_pipeline/latest/audit",
     "audit:content": "node scripts/audit_content_quality.mjs",
     "kb:sandra": "node scripts/build_sandra_kb.mjs",
+    "kb:sandra:check": "node scripts/build_sandra_kb.mjs --check",
     "pipeline:exams": "bash scripts/run_exam_pipeline.sh",
     "pipeline:exams:gemini": "bash scripts/run_exam_pipeline.sh --gemini",
     "check:bundles": "node scripts/check_exam_bundles.mjs",

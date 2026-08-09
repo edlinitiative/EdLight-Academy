@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   buildSandraSystemPrompt,
   SANDRA_LIMITS,
@@ -162,5 +164,98 @@ describe('buildSandraSystemPrompt', () => {
     const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
     expect(p).toMatch(/sauvegarde réussie[\s\S]*\[\/study-plan\]\(\/study-plan\)/i);
     expect(p).toMatch(/n'invente jamais le résultat d'un outil/i);
+  });
+});
+
+/**
+ * Sandra's declared scope drifted away from the platform once already: the
+ * persona claimed she served "NS1 à NS4" in four subjects while the catalog
+ * carried three levels and seventeen subjects, so a student asking about
+ * philosophie or histoire-géo was talking to a tutor instructed that the
+ * subject was not hers. Nothing failed when that happened — the prompt is
+ * prose, and prose does not typecheck.
+ *
+ * These tests read the real catalog. Add a subject to the catalog without
+ * naming it in the persona and this suite fails, which is the entire point.
+ */
+describe('declared scope tracks the real catalog', () => {
+  const catalog: Array<{ subject?: string; level?: string }> = JSON.parse(
+    readFileSync(join(__dirname, '../../../public/exam_catalog_index.json'), 'utf8'),
+  );
+
+  /** Lowercase + strip accents, so 'Français' and 'francais' compare equal. */
+  const norm = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+  /**
+   * Catalog labels the persona names differently, because it writes prose
+   * rather than reciting database values. Left = catalog, right = the wording
+   * that counts as covering it.
+   */
+  const ALIASES: Record<string, string> = {
+    kreyol: 'creole',
+    'histoire-geo': 'histoire-geographie',
+    economie: 'sciences economiques',
+    'art & musique': 'art et musique',
+  };
+
+  /**
+   * Catalog labels that name no single subject: 'Mixed' and the comma-joined
+   * multi-subject papers. Nothing to declare, so they are exempt.
+   */
+  const NOT_A_SUBJECT = new Set(['mixed', 'mathematiques, chimie, physique, comprehension de texte']);
+
+  const subjects = [...new Set(catalog.map((e) => e.subject || '').filter(Boolean))];
+  const levels = [...new Set(catalog.map((e) => e.level || '').filter(Boolean))];
+
+  it.each(subjects)('names %s among the subjects it covers', (subject) => {
+    const key = norm(subject);
+    if (NOT_A_SUBJECT.has(key)) return;
+    const expected = ALIASES[key] ?? key;
+    const prompt = norm(buildSandraSystemPrompt({ lang: 'fr', chunks: [] }));
+    expect(prompt).toContain(expected);
+  });
+
+  it('covers every exam level in the catalog, not just the Bac', () => {
+    // Guards the specific regression: the persona used to stop at NS4.
+    expect(levels.sort()).toEqual(['9eme_af', 'baccalaureat', 'universite']);
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toMatch(/7e ann[ée]e fondamentale/i); // lower bound
+    expect(p).toMatch(/terminale/i); // the Bac
+    expect(p).toMatch(/universit[ée]|pr[ée]fac/i); // concours
+  });
+
+  it('never tells Sandra a subject is outside her domain', () => {
+    const p = buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+    expect(p).toMatch(/ne réponds jamais qu'une matière sort de ton domaine/i);
+  });
+});
+
+/**
+ * The formatting rule used to say to "avoid" headings, bold and bullets
+ * "sauf quand une liste rend vraiment les étapes plus claires" — a soft verb
+ * with a self-judged exception. Every sampled transcript took the exception
+ * and opened with `* **Mathématiques** :`. These assertions pin the wording on
+ * purpose: for a prompt, the text IS the behaviour, so a reword should have to
+ * be deliberate rather than incidental.
+ */
+describe('formatting rules are unconditional', () => {
+  const p = () => buildSandraSystemPrompt({ lang: 'fr', chunks: [] });
+
+  it('bans headings, bold and bullet lists outright', () => {
+    expect(p()).toMatch(/n'utilise NI titre, NI sous-titre, NI texte en gras, NI liste à puces/i);
+  });
+
+  it('bounds the single permitted exception', () => {
+    expect(p()).toMatch(/quatre étapes au maximum/i);
+  });
+
+  it('does not reintroduce the open-ended list exception', () => {
+    expect(p()).not.toMatch(/sauf quand une liste/i);
+  });
+
+  it('still allows the two markups that carry meaning: links and LaTeX', () => {
+    expect(p()).toMatch(/liens markdown/i);
+    expect(p()).toMatch(/LaTeX/);
   });
 });

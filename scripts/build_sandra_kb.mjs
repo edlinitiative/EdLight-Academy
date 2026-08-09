@@ -11,6 +11,7 @@
  * Usage:
  *   FIREBASE_SERVICE_ACCOUNT_JSON=… GEMINI_API_KEY=… node scripts/build_sandra_kb.mjs
  *   node scripts/build_sandra_kb.mjs --dry-run   # counts only, no embed, no write
+ *   node scripts/build_sandra_kb.mjs --check     # compare live KB vs content; exit 1 on drift
  *
  * Env:
  *   FIREBASE_SERVICE_ACCOUNT_JSON  service-account JSON (same as other scripts)
@@ -26,8 +27,36 @@ import { chunkCourse, chunkQuiz, chunkExamQuestion } from './sandra_kb_chunks.mj
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const RESUME = process.argv.includes('--resume');
+const CHECK = process.argv.includes('--check');
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXAMS_DIR = join(__dirname, '..', 'public', 'exams');
+
+/**
+ * Parse the service account, tolerating the shape stored in .env.local.
+ *
+ * The GitHub secret holds plain JSON, which JSON.parse handles. A local
+ * .env.local commonly holds the same JSON with its structural newlines
+ * escaped, which JSON.parse rejects outright — so the documented local usage
+ * in this file's header did not actually work, and the KB could only be
+ * rebuilt from CI or by hand-editing the credential. Fall back to pulling out
+ * the three fields cert() needs.
+ */
+function parseServiceAccount(rawEnv) {
+  try {
+    return JSON.parse(rawEnv);
+  } catch {
+    const pick = (k) => (rawEnv.match(new RegExp(`"${k}":\\s*"([^"]+)"`)) || [])[1];
+    const sa = {
+      projectId: pick('project_id'),
+      clientEmail: pick('client_email'),
+      privateKey: (pick('private_key') || '').replace(/\\n/g, '\n'),
+    };
+    if (!sa.projectId || !sa.clientEmail || !sa.privateKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is neither valid JSON nor a recognizable service account.');
+    }
+    return sa;
+  }
+}
 
 // ---- Embedding config (mirrors api/_lib/llm.ts embed() — kept in sync by hand) ----
 // gemini-embedding-001 replaces the retired text-embedding-004. Vectors are
@@ -138,7 +167,7 @@ async function main() {
     process.exit(1);
   }
 
-  const cred = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  const cred = parseServiceAccount(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
   const app = initializeApp({ credential: cert(cred) });
   const db = getFirestore(app);
 
@@ -184,6 +213,35 @@ async function main() {
 
   const col = db.collection('sandraKb');
   const keepIds = new Set(unique.map((c) => c.sourceId));
+
+  // ---- Drift check: is the live KB what current content would produce? ----
+  // Sandra answers ungrounded when retrieval finds nothing, and does so
+  // silently, so a KB that has fallen behind the content is invisible from the
+  // outside. This compares sourceId sets and exits non-zero on any difference,
+  // which is what makes it usable as a scheduled alarm. Writes nothing.
+  if (CHECK) {
+    const liveRefs = await col.listDocuments();
+    const live = new Set(liveRefs.map((r) => r.id));
+    const missing = [...keepIds].filter((id) => !live.has(id)); // content added since the last build
+    const orphaned = [...live].filter((id) => !keepIds.has(id)); // content removed since
+
+    console.log('\n=== KB DRIFT CHECK ===');
+    console.log(`  live docs:        ${live.size}`);
+    console.log(`  expected chunks:  ${keepIds.size}`);
+    console.log(`  missing from KB:  ${missing.length}`);
+    console.log(`  orphaned in KB:   ${orphaned.length}`);
+
+    if (missing.length === 0 && orphaned.length === 0) {
+      console.log('\nIn sync. Sandra can retrieve everything current content produces.');
+      return;
+    }
+    for (const id of missing.slice(0, 10)) console.log(`    missing:  ${id}`);
+    for (const id of orphaned.slice(0, 10)) console.log(`    orphaned: ${id}`);
+    console.error(
+      `\nOUT OF SYNC — ${missing.length} missing, ${orphaned.length} orphaned. Run: npm run kb:sandra`,
+    );
+    process.exit(1);
+  }
 
   // ---- Resume support: skip chunks already written on a previous run ----
   // (--resume trusts existing docs; a run without it re-embeds everything.)

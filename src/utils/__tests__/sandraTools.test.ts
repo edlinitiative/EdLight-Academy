@@ -444,6 +444,63 @@ describe('save_study_plan', () => {
     await expect(exec('save_study_plan', { subjects: [], weeks: 4, dailyMinutes: 60 })).rejects.toThrow(/subjects/);
     await expect(exec('save_study_plan', { subjects: ['Chimie'], dailyMinutes: 60 })).rejects.toThrow(/weeks/);
   });
+
+  /**
+   * The plan builder used to match on subject alone while recommend_exams
+   * filtered by level, so a 9e or préfac student got a plan assembled from
+   * Terminale papers. Found by reading a real transcript: a student preparing
+   * university concours asked for a plan and would have been handed Bac exams.
+   */
+  describe('exam level', () => {
+    /** The distinct levels of the exams scheduled into the written plan. */
+    const writtenLevels = (handle: ReturnType<typeof setup>) => {
+      const tasks = handle.sets[0].data.tasks as Array<Record<string, unknown>>;
+      return [...new Set(tasks.map((t) => t.level))];
+    };
+
+    it("uses the student's grade, so a POSTBAC student gets université papers", async () => {
+      const handle = setup({ [`users/${UID}`]: { track: 'SMP' } });
+      const exec = createToolExecutor({ uid: UID, origin: ORIGIN, grade: 'POSTBAC' });
+
+      await exec('save_study_plan', SAVE_ARGS);
+
+      expect(writtenLevels(handle)).toEqual(['universite']);
+    });
+
+    it('keeps a Bac student off université papers', async () => {
+      const handle = setup({ [`users/${UID}`]: { track: 'SMP' } });
+      const exec = createToolExecutor({ uid: UID, origin: ORIGIN, grade: 'NS4' });
+
+      await exec('save_study_plan', SAVE_ARGS);
+
+      expect(writtenLevels(handle)).toEqual(['baccalaureat']);
+      const tasks = handle.sets[0].data.tasks as Array<Record<string, unknown>>;
+      expect(tasks.map((t) => t.examId)).not.toContain('ex-chim-u');
+    });
+
+    it('lets an explicit level argument override the grade', async () => {
+      // A Terminale student may be preparing university concours.
+      const handle = setup({ [`users/${UID}`]: { track: 'SMP' } });
+      const exec = createToolExecutor({ uid: UID, origin: ORIGIN, grade: 'NS4' });
+
+      await exec('save_study_plan', { ...SAVE_ARGS, level: 'universite' });
+
+      expect(writtenLevels(handle)).toEqual(['universite']);
+    });
+
+    it('falls back to the whole catalog when the subject has no papers at that level', async () => {
+      // Mathématiques exists only at baccalaureat in the fixture, exactly as
+      // Culture Générale and Français are thin in the real catalog. An empty
+      // plan would be worse than a slightly off-level one.
+      const handle = setup({ [`users/${UID}`]: { track: 'SMP' } });
+      const exec = createToolExecutor({ uid: UID, origin: ORIGIN, grade: 'POSTBAC' });
+
+      await exec('save_study_plan', { ...SAVE_ARGS, subjects: ['Mathématiques'] });
+
+      const tasks = handle.sets[0].data.tasks as Array<Record<string, unknown>>;
+      expect(tasks.map((t) => t.examId)).toEqual(['ex-math-1']);
+    });
+  });
 });
 
 // ─── email_study_plan ────────────────────────────────────────────────────────
