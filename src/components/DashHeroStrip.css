@@ -1,0 +1,87 @@
+/* One line, not two cards. See DashHeroStrip.tsx for why.
+   Target height is a single row of text plus breathing room — around 44px,
+   against the ~230px the two hero cards occupied. */
+
+.dash-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--st-line, rgba(64, 50, 26, 0.12));
+  border-radius: 10px;
+  background: var(--st-surface, #fffefb);
+  color: var(--st-ink, #1b2230);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dash-strip:hover {
+  border-color: var(--st-ink, #1b2230);
+}
+
+.dash-strip:focus-visible {
+  outline: 2px solid var(--st-accent, #1b6fe0);
+  outline-offset: 2px;
+}
+
+.dash-strip__icon {
+  flex-shrink: 0;
+  color: var(--st-accent, #1b6fe0);
+}
+
+.dash-strip__item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* The number is the only thing here allowed to be loud, and it is still a
+   fraction of the 66px the countdown used. */
+.dash-strip__value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dash-strip__label {
+  color: var(--st-muted, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-strip__sep {
+  width: 1px;
+  height: 14px;
+  flex-shrink: 0;
+  background: var(--st-line, rgba(64, 50, 26, 0.18));
+}
+
+/* Pushed to the far edge so the strip reads as one tappable row. */
+.dash-strip__chevron {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--st-muted, #6b7280);
+}
+
+/* On a phone the session name is the first thing to go — the number and the
+   readiness percentage are what the strip is for. */
+@media (max-width: 480px) {
+  .dash-strip {
+    gap: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .dash-strip__value {
+    font-size: 14px;
+  }
+}

@@ -5,11 +5,10 @@ import { Target, ClipboardList, BookOpen, ChevronRight } from 'lucide-react';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import DashHeroStrip from '../components/DashHeroStrip';
 import useStore from '../contexts/store';
-import ReadinessCard from '../components/ReadinessCard';
 import SmartSuggestion from '../components/SmartSuggestion';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
-import Countdown from '../components/Countdown';
 import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
 import { ErrorState } from '../components/StateViews';
@@ -267,11 +266,10 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* HERO — flagship readiness gauge + Bac countdown */}
-        <div className="dash__hero">
-          <ReadinessCard />
-          <Countdown />
-        </div>
+        {/* Was a two-card hero (ReadinessCard + Countdown) that owned the whole
+            first screen. Both are now one compact line — see DashHeroStrip.
+            ReadinessCard still lives on Profile, where a full breakdown belongs. */}
+        <DashHeroStrip />
 
         {/* Season-aware recommendation (self-hides when there's nothing to nudge) */}
         <SmartSuggestion />
