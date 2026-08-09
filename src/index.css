@@ -91,10 +91,25 @@
 	box-sizing: border-box;
 }
 
-html,
-body {
-	height: 100%;
-}
+/* DO NOT put a height on html or body here. This was `height: 100%`, and it
+   stopped the entire site scrolling.
+
+   `height: 100%` clamps both elements to exactly the viewport. On its own that
+   would only clip, but body also carries `overflow-x: hidden` (mobile-first.css
+   and mobile-fixes.css), and the CSS overflow spec says that when one axis is
+   set to anything other than `visible`, the other axis computes to `auto`. Body
+   therefore became a viewport-height scroll container holding the whole page:
+   measured on the live site at 900px tall around 4591px of content on desktop,
+   and 780px around 6775px on mobile. Roughly 85% of the page was unreachable.
+
+   The knock-on effects are worse than the clipping. `window.scrollY` never
+   moves, so everything that listens to window scroll is dead: `position: sticky`
+   resolves against the wrong container, mobile browsers never collapse their URL
+   bar, and iOS loses momentum scrolling.
+
+   Nothing depends on it. `.app-shell` already owns full height via
+   `min-height: calc(var(--vvh, 1vh) * 100)`, and body's background still paints
+   the whole canvas because body background propagates to the viewport. */
 
 body {
 	font-family: var(--font-sans);
