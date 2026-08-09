@@ -22,6 +22,9 @@ interface ChatMessage {
   role?: string; // 'user' | 'assistant'
   text?: string;
   ts?: any;
+  /** Written by api/chat.ts. Absent on messages predating that change. */
+  kbHits?: number;
+  kbError?: boolean;
 }
 
 interface ChatConversation {
@@ -224,6 +227,25 @@ export default function AdminSandra() {
                     >
                       {isStudent ? 'Élève' : 'Sandra'}
                       {toDate(m.ts) ? ` · ${formatDateTime(m.ts)}` : ''}
+                      {/* Whether the answer was grounded in the knowledge base.
+                          Retrieval degrades silently server-side, so without
+                          this an answer Sandra improvised reads exactly like
+                          one she sourced. Older messages have no kbHits field
+                          at all — show nothing rather than a misleading zero. */}
+                      {!isStudent && typeof m.kbHits === 'number' && (
+                        <span
+                          style={{ marginLeft: 6, color: m.kbHits > 0 ? undefined : 'var(--asb-warn, #b45309)' }}
+                          title={
+                            m.kbError
+                              ? "La recherche dans la base de connaissances a échoué — réponse non sourcée."
+                              : m.kbHits > 0
+                                ? `${m.kbHits} extrait(s) du programme ont servi de source.`
+                                : "Aucun extrait du programme ne correspondait — réponse de culture générale."
+                          }
+                        >
+                          · {m.kbError ? 'KB en erreur' : `${m.kbHits} source${m.kbHits === 1 ? '' : 's'}`}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

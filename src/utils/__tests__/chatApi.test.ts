@@ -393,7 +393,10 @@ describe('api/chat handler', () => {
     const assistantMsg = unioned[1];
     // Firestore rejects undefined fields — the key must be absent, not undefined.
     expect(assistantMsg).not.toHaveProperty('toolCalls');
-    expect(Object.keys(assistantMsg).sort()).toEqual(['role', 'text', 'ts']);
+    // kbError is likewise conditional: retrieval succeeded here, so only the
+    // unconditional kbHits joins the base shape.
+    expect(assistantMsg).not.toHaveProperty('kbError');
+    expect(Object.keys(assistantMsg).sort()).toEqual(['kbHits', 'role', 'text', 'ts']);
   });
 
   it('hands chatWithTools the Sandra tool defs and a per-request executor scoped to uid + origin', async () => {

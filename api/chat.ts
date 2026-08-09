@@ -47,6 +47,16 @@ interface StoredMessage {
   ts: number;
   /** Present only on assistant messages produced with tool executions. */
   toolCalls?: ToolCallRecord[];
+  /**
+   * How many KB chunks grounded this answer. Recorded because retrieval
+   * degrades silently — see retrieveChunks — so an ungrounded answer is
+   * indistinguishable from a grounded one in the admin transcript browser
+   * unless we write the count down at the time. 0 with kbError means
+   * retrieval broke; 0 without means the KB simply had no match.
+   */
+  kbHits?: number;
+  /** Set only when retrieval threw — the KB index or embedding key is broken. */
+  kbError?: true;
 }
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
@@ -96,7 +106,7 @@ async function retrieveChunks(
   db: FirebaseFirestore.Firestore,
   message: string,
   page: PageContext | undefined,
-): Promise<KbChunk[]> {
+): Promise<{ chunks: KbChunk[]; failed: boolean }> {
   try {
     const [qVec] = await embed([message]);
     const queryVector = FieldValue.vector(qVec);
@@ -119,7 +129,7 @@ async function retrieveChunks(
       snap = await nearest(base); // too few same-course hits — widen to the whole KB
     }
 
-    return snap.docs.map((doc) => {
+    const chunks = snap.docs.map((doc) => {
       const data = doc.data() as Partial<KbChunk>;
       return {
         text: data.text || '',
@@ -130,9 +140,10 @@ async function retrieveChunks(
         sourceId: data.sourceId || '',
       };
     });
+    return { chunks, failed: false };
   } catch (error) {
     console.error('chat: KB retrieval failed, answering ungrounded:', error instanceof Error ? error.message : error);
-    return [];
+    return { chunks: [], failed: true };
   }
 }
 
@@ -209,7 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // NOTE: for a first message, the conversation doc is deliberately NOT
     // created yet — if the LLM call below fails, nothing is persisted, so no
     // empty 0-message shells pollute the admin transcript browser.
-    const chunks = await retrieveChunks(db, message, page);
+    const { chunks, failed: kbFailed } = await retrieveChunks(db, message, page);
     const system = buildSandraSystemPrompt({ lang, page, chunks, student });
     const llmMessages = [
       ...history.slice(-SANDRA_LIMITS.historyTurns).map((m) => ({
@@ -275,9 +286,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // ── Persist both turns atomically (one update) ──────────────────────────
     const now = Date.now();
     const userMsg: StoredMessage = { role: 'user', text: message, ts: now };
-    const assistantMsg: StoredMessage = { role: 'assistant', text: reply, ts: now + 1 };
+    const assistantMsg: StoredMessage = {
+      role: 'assistant',
+      text: reply,
+      ts: now + 1,
+      kbHits: chunks.length,
+    };
     // Firestore rejects undefined fields — only attach the key when tools ran.
     if (toolCalls.length > 0) assistantMsg.toolCalls = toolCalls;
+    if (kbFailed) assistantMsg.kbError = true;
     await convRef.update({
       messages: FieldValue.arrayUnion(userMsg, assistantMsg),
       messageCount: FieldValue.increment(2),
