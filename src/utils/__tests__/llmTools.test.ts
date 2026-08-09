@@ -105,7 +105,11 @@ describe('chatWithTools — gemini transport', () => {
     });
 
     expect(out.reply).toBe('Je ne peux pas lire tes progrès pour le moment.');
-    expect(out.toolCalls).toEqual([{ name: 'get_student_progress', ok: false }]);
+    // The reason is persisted with the record, so a transcript shows why a
+    // tool failed rather than only that it did.
+    expect(out.toolCalls).toEqual([
+      { name: 'get_student_progress', ok: false, error: 'firestore down' },
+    ]);
     expect(fetchMock).toHaveBeenCalledTimes(2); // the loop continued after the failure
 
     const payload2 = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
@@ -258,7 +262,9 @@ describe('chatWithTools — openai-compatible transport', () => {
     });
 
     expect(out.reply).toBe('Le catalogue est indisponible.');
-    expect(out.toolCalls).toEqual([{ name: 'recommend_exams', ok: false }]);
+    expect(out.toolCalls).toEqual([
+      { name: 'recommend_exams', ok: false, error: 'catalog fetch failed' },
+    ]);
 
     const payload2 = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string);
     expect(payload2.messages[payload2.messages.length - 1]).toEqual({

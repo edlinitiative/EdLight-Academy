@@ -240,7 +240,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         system,
         messages: llmMessages,
         tools: SANDRA_TOOL_DEFS,
-        executeTool: createToolExecutor({ uid, origin: resolveOrigin(), lang }),
+        // grade flows through so save_study_plan can build the plan from the
+        // student's own exam level instead of defaulting to Terminale papers.
+        executeTool: createToolExecutor({ uid, origin: resolveOrigin(), lang, grade: student?.grade }),
         maxTokens: 1800,
         config: resolveLLMConfig(),
       }));

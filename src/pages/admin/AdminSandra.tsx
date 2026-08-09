@@ -25,6 +25,8 @@ interface ChatMessage {
   /** Written by api/chat.ts. Absent on messages predating that change. */
   kbHits?: number;
   kbError?: boolean;
+  /** Server-side tools Sandra ran for this reply. `error` only when ok is false. */
+  toolCalls?: Array<{ name?: string; ok?: boolean; error?: string }>;
 }
 
 interface ChatConversation {
@@ -218,6 +220,31 @@ export default function AdminSandra() {
                           is reviewed here is what was delivered. */}
                       {isStudent ? (m.text || '') : <InstructionRenderer text={m.text || ''} />}
                     </div>
+                    {/* Tool activity was stored but never shown, so a reply that
+                        apologised for a "souci technique" looked identical to one
+                        that simply chatted — the failure was only visible by
+                        reading Firestore directly. */}
+                    {!isStudent && (m.toolCalls || []).length > 0 && (
+                      <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {(m.toolCalls || []).map((tc, ti) => (
+                          <span
+                            key={ti}
+                            title={tc.error || (tc.ok ? 'Exécuté avec succès.' : 'Échec, sans détail enregistré.')}
+                            style={{
+                              fontSize: 11,
+                              padding: '2px 7px',
+                              borderRadius: 999,
+                              border: '1px solid var(--asb-line)',
+                              color: tc.ok ? 'var(--asb-muted)' : '#b91c1c',
+                              background: tc.ok ? 'transparent' : 'rgba(185, 28, 28, 0.08)',
+                            }}
+                          >
+                            {tc.ok ? '⚙' : '⚠'} {tc.name}
+                            {tc.error ? ` — ${tc.error}` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <div
                       style={{
                         marginTop: 4,

@@ -281,6 +281,14 @@ export interface ToolDef {
 export interface ToolCallRecord {
   name: string;
   ok: boolean;
+  /**
+   * Why the tool failed. Present only when ok is false. The message was always
+   * relayed to the model and then dropped, so a student who asked for a study
+   * plan and did not get one left a transcript reading `ok: false` and nothing
+   * more — no way to tell a provider outage from a bad argument. Truncated
+   * because this is persisted on the conversation document.
+   */
+  error?: string;
 }
 
 export interface ChatWithToolsParams {
@@ -332,8 +340,9 @@ export async function chatWithTools(params: ChatWithToolsParams): Promise<{ repl
       toolCalls.push({ name, ok: true });
       return result;
     } catch (err) {
-      toolCalls.push({ name, ok: false });
-      return { error: err instanceof Error ? err.message : String(err) };
+      const message = err instanceof Error ? err.message : String(err);
+      toolCalls.push({ name, ok: false, error: message.slice(0, 300) });
+      return { error: message };
     }
   };
 

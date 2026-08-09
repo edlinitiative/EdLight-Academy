@@ -23,6 +23,7 @@
  */
 
 import { FieldValue, type CollectionReference } from 'firebase-admin/firestore';
+import { gradeProfile } from '../../shared/trackConfig';
 import { getDb } from './firebaseAdmin';
 import type { ToolDef } from './llm';
 import { generatePlanCore } from './planGeneration';
@@ -81,6 +82,12 @@ export const SANDRA_TOOL_DEFS: ToolDef[] = [
           description:
             "true UNIQUEMENT si l'élève a explicitement confirmé le remplacement de son plan actif existant.",
         },
+        level: {
+          type: 'string',
+          enum: ['baccalaureat', '9eme_af', 'universite'],
+          description:
+            "Niveau des examens à programmer. Omets ce paramètre pour utiliser le niveau réel de l'élève ; ne le précise que s'il demande explicitement un autre niveau (ex. il prépare les concours universitaires).",
+        },
       },
       required: ['subjects', 'weeks', 'dailyMinutes'],
     },
@@ -100,6 +107,12 @@ interface ToolCtx {
   origin: string; // e.g. https://edlightacademy.com — catalog is fetched from here
   /** Interface language of the student — plan emails default to French. */
   lang?: 'fr' | 'ht';
+  /**
+   * Haitian school grade ('7e'…'NS4' | 'POSTBAC'), forwarded from the chat
+   * endpoint's sanitized studentContext. Used to pick the exam level a study
+   * plan should be built from.
+   */
+  grade?: string | null;
 }
 
 export interface CatalogExam {
@@ -512,20 +525,39 @@ async function saveStudyPlan(ctx: ToolCtx, args: Record<string, unknown>): Promi
   }
 
   // Select catalog exams per requested subject, easiest first.
-  const seen = new Set<string>();
-  const selected: CatalogExam[] = [];
-  for (const subj of subjects) {
-    const matches = catalog
-      .filter((e) => subjectMatches(e.subject, subj))
-      .sort((a, b) => (a.difficulty ?? 3) - (b.difficulty ?? 3))
-      .slice(0, EXAMS_PER_SUBJECT);
-    for (const e of matches) {
-      if (!seen.has(e.exam_id)) {
-        seen.add(e.exam_id);
-        selected.push(e);
+  //
+  // Level matters here and used not to be applied at all: recommend_exams
+  // filters by level, save_study_plan did not, so a 9e or préfac student got a
+  // plan built out of Terminale papers. An explicit level argument wins (the
+  // student may be preparing university concours while still in Terminale);
+  // otherwise fall back to the grade the client reported. Unknown grade → no
+  // filter, which is the old behaviour and better than guessing wrong.
+  const requestedLevel = LEVEL_ALIASES[norm(String(args.level ?? ''))];
+  const level = requestedLevel || gradeProfile(ctx.grade).examLevel;
+
+  const selectExams = (forLevel: string | null): CatalogExam[] => {
+    const seen = new Set<string>();
+    const out: CatalogExam[] = [];
+    for (const subj of subjects) {
+      const matches = catalog
+        .filter((e) => (!forLevel || e.level === forLevel) && subjectMatches(e.subject, subj))
+        .sort((a, b) => (a.difficulty ?? 3) - (b.difficulty ?? 3))
+        .slice(0, EXAMS_PER_SUBJECT);
+      for (const e of matches) {
+        if (!seen.has(e.exam_id)) {
+          seen.add(e.exam_id);
+          out.push(e);
+        }
       }
     }
-  }
+    return out;
+  };
+
+  // Some subjects exist at only one level (Culture Générale and Français are a
+  // handful of papers each). Narrowing to nothing would be a worse plan than a
+  // slightly off-level one, so an empty result falls back to the whole catalog.
+  let selected = selectExams(level);
+  if (selected.length === 0 && level) selected = selectExams(null);
 
   const { plan } = await generatePlanCore({
     track,
@@ -646,6 +678,7 @@ export function createToolExecutor(ctx: {
   uid: string;
   origin: string;
   lang?: 'fr' | 'ht';
+  grade?: string | null;
 }): (name: string, args: Record<string, unknown>) => Promise<unknown> {
   let planSaved = false;
 
