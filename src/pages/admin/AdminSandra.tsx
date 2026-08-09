@@ -5,6 +5,7 @@ import {
   type QueryDocumentSnapshot, type DocumentData, type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import InstructionRenderer from '../../components/InstructionRenderer';
 
 /**
  * AdminSandra — read-only browser for Sandra chatbot conversations.
@@ -194,7 +195,8 @@ export default function AdminSandra() {
                         borderRadius: isStudent ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                         fontSize: 14,
                         lineHeight: 1.5,
-                        whiteSpace: 'pre-wrap',
+                        // Students' own text stays plain; Sandra's is markdown.
+                        whiteSpace: isStudent ? 'pre-wrap' : 'normal',
                         overflowWrap: 'anywhere',
                         border: '1px solid var(--asb-line)',
                         background: isStudent
@@ -202,7 +204,16 @@ export default function AdminSandra() {
                           : 'var(--asb-bg)',
                       }}
                     >
-                      {m.text || ''}
+                      {/* Sandra is INSTRUCTED to write markdown — sandraPrompt.ts
+                          tells her to emit links as [Titre](/exams/...) because
+                          "ils sont cliquables dans le chat". That is true in the
+                          student widget, which renders through InstructionRenderer,
+                          but this admin view showed the raw source: literal
+                          asterisks, hashes and bracketed link syntax. Reviewing
+                          Sandra's answers meant reading them in a format no
+                          student ever sees. Same renderer as the widget, so what
+                          is reviewed here is what was delivered. */}
+                      {isStudent ? (m.text || '') : <InstructionRenderer text={m.text || ''} />}
                     </div>
                     <div
                       style={{
