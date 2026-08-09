@@ -9,12 +9,12 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 200px;
+  gap: 8px;
+  min-height: 92px;
   width: 100%;
-  padding: 20px;
+  padding: 12px 14px;
   border: none;
-  border-radius: 24px;
+  border-radius: 14px;
   text-align: left;
   color: #fff;
   /* Limyè: the night sky before the exam — deep marine into azure. */
@@ -30,10 +30,10 @@
 .countdown-cd::after {
   content: "";
   position: absolute;
-  right: -46px;
-  top: -46px;
-  width: 160px;
-  height: 160px;
+  right: -28px;
+  top: -28px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 40%, rgba(255, 211, 126, 0.85), rgba(255, 92, 57, 0.28) 55%, transparent 72%);
   pointer-events: none;
@@ -71,7 +71,7 @@
 
 /* The big number. */
 .countdown-cd__big {
-  font-size: clamp(46px, 7vw, 66px);
+  font-size: clamp(24px, 3.2vw, 32px);
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 0.92;
@@ -79,7 +79,7 @@
 }
 
 .countdown-cd__big--today {
-  font-size: clamp(34px, 5.2vw, 46px);
+  font-size: clamp(19px, 2.4vw, 24px);
   letter-spacing: -0.02em;
 }
 

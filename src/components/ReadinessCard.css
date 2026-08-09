@@ -8,10 +8,10 @@
   background: var(--st-surface, #fffefb);
   border: 1px solid var(--st-line, rgba(64, 50, 26, 0.12));
   border-radius: 6px;
-  padding: 20px 22px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 9px;
   box-shadow: 0 1px 2px rgba(64, 50, 26, 0.05);
 }
 
@@ -50,7 +50,7 @@
 .readiness-card__title { margin: 0; font-size: 1.05rem; color: var(--st-ink, #1b2230); }
 
 /* ── Segmented gauge ── */
-.readiness-gauge { display: flex; flex-direction: column; gap: 10px; }
+.readiness-gauge { display: flex; flex-direction: column; gap: 6px; }
 
 .readiness-gauge__head {
   display: flex;
@@ -60,14 +60,14 @@
 }
 
 .readiness-gauge__value {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
   color: var(--st-ink, #1b2230);
 }
 .readiness-gauge__value small {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--st-muted, #746a59);
   margin-left: 2px;

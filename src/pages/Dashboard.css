@@ -555,7 +555,7 @@ button.dash-activity__tag { cursor: pointer; }
 .dash--st .dash__hero .readiness-card,
 .dash--st .dash__hero .countdown-cd {
   border: none !important;
-  border-radius: 24px !important;
+  border-radius: 14px !important;
   box-shadow: var(--st-shadow-hero) !important;
 }
 .dash--st .stat-tile:hover { transform: translateY(-2px); box-shadow: var(--st-shadow-hero) !important; }
