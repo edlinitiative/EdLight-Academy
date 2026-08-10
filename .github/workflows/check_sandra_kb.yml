@@ -4,12 +4,17 @@ name: Check Sandra KB
 # — api/chat.ts catches every retrieval failure and carries on. A knowledge
 # base that has fallen behind the content is therefore invisible from the
 # outside. This job compares the live sandraKb against what current courses,
-# quizzes and exams would produce, and fails when they differ.
+# quizzes and exams would produce, and REPAIRS it when they differ.
 #
 # It was added after a check found 747 chunks missing and 747 orphaned while
 # the document totals matched exactly, so nothing looked wrong.
 #
-# Repair is `npm run kb:sandra` (add --resume to embed only what is missing).
+# Exit codes from build_sandra_kb.mjs --check:
+#   0  in sync            → done
+#   1  drift              → repair with --resume, then re-verify
+#   2  cannot check       → hard failure, do NOT repair (a missing input is
+#                           not drift, and "repairing" against it would delete
+#                           every exam chunk in the collection)
 
 on:
   # Mondays at 04:00 UTC.
@@ -21,6 +26,9 @@ jobs:
   check-kb:
     name: sandraKb matches current content
     runs-on: ubuntu-latest
+    # Embedding a large repair is slow: the builder backs off on Gemini quota
+    # errors and waits rather than failing.
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repo
@@ -42,9 +50,35 @@ jobs:
       - name: Generate exam files
         run: node scripts/split_exam_catalog.mjs
 
-      # Reads Firestore and public/exams. Writes nothing, and needs no
-      # embedding key — the check compares sourceIds, not vectors.
-      - name: Check for drift
-        run: npm run kb:sandra:check
+      - name: Check, and repair if drifted
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set +e
+          node scripts/build_sandra_kb.mjs --check
+          code=$?
+          set -e
+
+          if [ "$code" -eq 0 ]; then
+            echo "sandraKb is in sync; nothing to do."
+            exit 0
+          fi
+
+          if [ "$code" -eq 2 ]; then
+            echo "::error::Cannot verify the KB — content inputs are missing. Not repairing."
+            exit 1
+          fi
+
+          if [ "$code" -ne 1 ]; then
+            echo "::error::Unexpected exit code $code from the drift check."
+            exit "$code"
+          fi
+
+          echo "::warning::sandraKb has drifted — rebuilding the missing chunks."
+          # --resume embeds only what is absent, then deletes what current
+          # content no longer produces.
+          node scripts/build_sandra_kb.mjs --resume
+
+          echo "Re-verifying after repair…"
+          node scripts/build_sandra_kb.mjs --check
