@@ -129,7 +129,9 @@ async function retrieveChunks(
       snap = await nearest(base); // too few same-course hits — widen to the whole KB
     }
 
-    const chunks = snap.docs.map((doc) => {
+    // Annotated because the result is no longer returned directly: without a
+    // contextual type, `type` widens from KbChunk's literal union to string.
+    const chunks: KbChunk[] = snap.docs.map((doc) => {
       const data = doc.data() as Partial<KbChunk>;
       return {
         text: data.text || '',

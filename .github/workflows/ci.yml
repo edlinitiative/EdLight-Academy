@@ -21,18 +21,17 @@ jobs:
       # Warnings are allowed; errors gate CI.
       - name: Lint web
         run: npm run lint
-      # Web tsc has ~117 pre-existing app-level type errors, down from ~242
-      # after a type-safety pass (2026-07): all TS2882 CSS/asset side-effect
-      # imports are now declared (src/types/assets.d.ts), browser-global
-      # augmentations added (src/global.d.ts), and several loosely-typed
-      # Firestore/service helpers now carry explicit return types. The
-      # remainder are mostly TS2339 property-access on loosely-typed data in
-      # the exam/grading paths. These are unrelated to the build, so we surface
-      # them here but do NOT gate on them yet. Remove continue-on-error once
-      # the count is ~0.
-      - name: Typecheck web (non-blocking)
+      # Web tsc is now at zero errors, down from ~242 before the 2026-07
+      # type-safety pass and ~117 after it, so this gates as that pass
+      # intended. It is not decorative: while non-blocking it silently let a
+      # real TS2322 through on api/chat.ts, where refactoring a return value
+      # widened a literal union to string.
+      #
+      # Note this is broader than the api/tsconfig.json check, which did NOT
+      # catch that error — run `npx tsc --noEmit` from the root when touching
+      # api/, not just the api project.
+      - name: Typecheck web
         run: npx tsc --noEmit
-        continue-on-error: true
       # The jest suite is expected to pass.
       - name: Run web tests
         run: npm test -- --ci
