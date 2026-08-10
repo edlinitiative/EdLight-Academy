@@ -220,6 +220,17 @@ async function main() {
   // outside. This compares sourceId sets and exits non-zero on any difference,
   // which is what makes it usable as a scheduled alarm. Writes nothing.
   if (CHECK) {
+    // public/exams/ is gitignored and generated from public/exam_catalog.json
+    // by scripts/split_exam_catalog.mjs (the build runs it in prebuild). On a
+    // fresh checkout the directory is empty, and without this guard the check
+    // would report all ~9.4k exam chunks as orphaned and "fail" on a KB that
+    // is perfectly in sync. A missing input is not drift.
+    if (examChunks.length === 0) {
+      console.error('\nCANNOT CHECK: no exam chunks — public/exams is empty.');
+      console.error('Run `node scripts/split_exam_catalog.mjs` first, then retry.');
+      process.exit(2);
+    }
+
     const liveRefs = await col.listDocuments();
     const live = new Set(liveRefs.map((r) => r.id));
     const missing = [...keepIds].filter((id) => !live.has(id)); // content added since the last build

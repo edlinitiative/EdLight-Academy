@@ -35,6 +35,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # public/exams/ is gitignored — the individual exam files are generated
+      # from the tracked public/exam_catalog.json, which the build normally
+      # does in prebuild. Without this the checkout has no exam content and
+      # every exam chunk looks orphaned.
+      - name: Generate exam files
+        run: node scripts/split_exam_catalog.mjs
+
       # Reads Firestore and public/exams. Writes nothing, and needs no
       # embedding key — the check compares sourceIds, not vectors.
       - name: Check for drift
