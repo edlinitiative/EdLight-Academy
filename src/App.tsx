@@ -22,6 +22,7 @@ const Help = lazyWithRetry(() => import('./pages/Help'));
 const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
 const DeleteAccount = lazyWithRetry(() => import('./pages/DeleteAccount'));
 const Terms = lazyWithRetry(() => import('./pages/Terms'));
+const Defi = lazyWithRetry(() => import('./pages/Defi'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const CourseManager = lazyWithRetry(() => import('./pages/CourseManager'));
 // Admin console pages
@@ -91,6 +92,7 @@ export default function App() {
                 <Route path="privacy" element={<Privacy />} />
                 <Route path="delete-account" element={<DeleteAccount />} />
                 <Route path="terms" element={<Terms />} />
+                <Route path="defi/:code" element={<Defi />} />
                   <Route path="exams" element={<ExamLanding />} />
                 <Route path="exams/:level" element={<ExamBrowser />} />
                 <Route path="exams/:level/:examId" element={<ExamTake />} />

@@ -283,6 +283,19 @@ service cloud.firestore {
     //                   request.auth.uid == request.resource.data.userId;
     // }
     
+    // "Défi d'un ami" duels ({ code, challengerUid, challengerName, categoryId,
+    // questionIdxs, total, challengerScore, createdAt, expiresAt, opponent,
+    // status }). The doc id IS the shareable code, so a signed-in recipient can
+    // GET the challenge their link points at; there is nothing to browse (no
+    // list) and all writes go through /api/challenges/* via the Admin SDK
+    // (create mints the doc, accept transactionally records the single
+    // opponent attempt — bypassing these rules).
+    match /challenges/{code} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow write: if false;
+    }
+
     // Rate limit counters — server-side only, never client-accessible
     match /_rateLimits/{doc} {
       allow read, write: if false;

@@ -38,6 +38,10 @@ const LIMITS: Record<string, Limit> = {
   // volume — the real anti-double-reward protection is the transactional
   // one-referral-per-user guard inside the endpoint.
   'referrals-redeem': { max: 20, windowSec: 3600 },
+  // "Défi d'un ami" duels (api/challenges/*). Not paid endpoints — fail OPEN.
+  // accept's real one-attempt protection is the transaction in the endpoint.
+  'challenge-create': { max: 30, windowSec: 3600 },
+  'challenge-accept': { max: 30, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't

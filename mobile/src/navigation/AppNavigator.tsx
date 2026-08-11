@@ -11,6 +11,7 @@ import NetworkStatus from '../components/NetworkStatus';
 import SandraScreen from '../screens/SandraScreen';
 import StudyPlanScreen from '../screens/StudyPlanScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
+import ChallengeScreen from '../screens/ChallengeScreen';
 
 export type RootParamList = {
   Loading: undefined;
@@ -18,6 +19,7 @@ export type RootParamList = {
   Sandra: undefined;
   StudyPlan: undefined;
   Leaderboard: undefined;
+  Defi: { code: string };
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
@@ -86,6 +88,22 @@ function StudyPlanModal({ navigation }: any) {
 function LeaderboardModal({ navigation }: any) {
   return <LeaderboardScreen onClose={() => navigation.goBack()} />;
 }
+function ChallengeModal({ navigation, route }: any) {
+  return <ChallengeScreen code={String(route.params?.code ?? '')} onClose={() => navigation.goBack()} />;
+}
+
+// Deep links: duel invites arrive as edlight://defi/<code> (from the share
+// message) or https://academy.edlight.org/defi/<code> (the web landing's
+// "Ouvrir dans l'app" button). Other routes are deliberately unmapped — in-app
+// navigation for them already flows through navigationRef / notifications.
+const linking = {
+  prefixes: ['edlight://', 'https://academy.edlight.org'],
+  config: {
+    screens: {
+      Defi: 'defi/:code',
+    },
+  },
+};
 
 function LoadingScreen() {
   const opacity = useRef(new Animated.Value(0.4)).current;
@@ -121,7 +139,7 @@ export default function AppNavigator() {
   return (
     <>
       <NetworkStatus />
-      <NavigationContainer ref={navigationRef}>
+      <NavigationContainer ref={navigationRef} linking={linking}>
         <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
           {!authConfirmed ? (
             <Stack.Screen name="Loading" component={LoadingScreen} />
@@ -146,6 +164,11 @@ export default function AppNavigator() {
                 name="Leaderboard"
                 component={LeaderboardModal}
                 options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="Defi"
+                component={ChallengeModal}
+                options={{ animation: 'slide_from_bottom' }}
               />
             </>
           )}
