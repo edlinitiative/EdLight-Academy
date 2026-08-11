@@ -21,6 +21,7 @@ import {
   recordGameResult as svcRecordGameResult,
   computeGameXp,
 } from '../services/triviaService';
+import { isWeeklyGame, WEEKLY_GAME_XP_MULTIPLIER } from '../utils/weeklyGame';
 import { success } from '../utils/haptics';
 
 const triviaKey = (uid: string | null) => ['trivia-profile', uid];
@@ -70,12 +71,15 @@ export function useTrivia() {
   const recordGameResult = useCallback(
     async ({ gameId, score, maxScore }: { gameId: string; score: number; maxScore: number }) => {
       if (!uid) {
+        // Guest preview mirrors the signed-in economy, weekly ×2 included.
+        const weeklyFeatured = isWeeklyGame(gameId);
         const reward = {
-          xpEarned: computeGameXp({ score, maxScore }),
+          xpEarned: computeGameXp({ score, maxScore }) * (weeklyFeatured ? WEEKLY_GAME_XP_MULTIPLIER : 1),
           leveledUp: false,
           prevLevel: 1,
           newLevel: 1,
           guest: true,
+          weeklyFeatured,
         };
         setLastReward(reward);
         return reward;

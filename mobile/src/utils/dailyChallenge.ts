@@ -51,17 +51,46 @@ function seededShuffle(arr: any[], rng: () => number): any[] {
  * @param {number} count               — number of questions (default 10)
  * @returns {Array} questions tagged with `__category` for theming
  */
-export function getDailyChallengeQuestions(questionsByCategory: Record<string, any[]> = {}, dateStr: string, count = 10) {
-  const pool = [];
+/**
+ * The auto-generated geography banks (~590 questions of capitals/currencies/
+ * flags) dwarf the hand-written curriculum banks, so a uniform draw makes most
+ * days read as geography homework. Cap their share of the daily set.
+ */
+export const DAILY_GEO_CATEGORIES = new Set(['capitals', 'currencies', 'flags']);
+export const DAILY_GEO_CAP = 3;
+
+export function getDailyChallengeQuestions(
+  questionsByCategory: Record<string, any[]> = {},
+  dateStr: string,
+  count = 10,
+  geoCap = DAILY_GEO_CAP,
+) {
+  const geoPool: any[] = [];
+  const restPool: any[] = [];
   for (const [catId, list] of Object.entries(questionsByCategory)) {
+    const target = DAILY_GEO_CATEGORIES.has(catId) ? geoPool : restPool;
     for (const q of list || []) {
-      pool.push({ ...q, __category: catId });
+      target.push({ ...q, __category: catId });
     }
   }
-  if (pool.length === 0) return [];
+  if (geoPool.length + restPool.length === 0) return [];
 
+  // One rng drives every draw, so the whole set stays deterministic per day.
   const rng = mulberry32(hashSeed(`edlight-daily:${dateStr}`));
-  return seededShuffle(pool, rng).slice(0, Math.min(count, pool.length));
+  const geo = seededShuffle(geoPool, rng);
+  const rest = seededShuffle(restPool, rng);
+
+  const geoTake = Math.min(geoCap, geo.length, count);
+  const picked = [
+    ...rest.slice(0, count - geoTake),
+    ...geo.slice(0, geoTake),
+  ];
+  // Small hand-written pool → top back up from geography beyond the cap rather
+  // than serving a short round.
+  if (picked.length < count) {
+    picked.push(...geo.slice(geoTake, geoTake + (count - picked.length)));
+  }
+  return seededShuffle(picked, rng).slice(0, count);
 }
 
 /** Stable numeric id for a day's challenge (useful for keys / dedupe). */

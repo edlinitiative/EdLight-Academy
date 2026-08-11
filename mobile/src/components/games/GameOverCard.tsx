@@ -6,14 +6,15 @@
  * while the stat rows, XP reward block and replay/exit actions ride on glass.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text } from 'react-native';
 import {
-  Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw,
+  Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw, Share2,
 } from 'lucide-react-native';
 import { typeScale } from '../../theme/theme';
 import { success } from '../../utils/haptics';
 import QuizResultHero, { HeroButton, glass } from '../quiz/QuizResultHero';
+import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 
 export interface GameReward {
   xpEarned: number;
@@ -21,6 +22,8 @@ export interface GameReward {
   newLevel?: number;
   prevLevel?: number;
   guest?: boolean;
+  /** True when this round was the featured "Jeu de la semaine" (×2 XP). */
+  weeklyFeatured?: boolean;
 }
 
 export interface GameStat {
@@ -38,6 +41,12 @@ interface GameOverCardProps {
   isCreole: boolean;
   accent?: string;
   highScore?: number | null;
+  /**
+   * Canonical (FR) game name for the 1080×1920 share card. When set, a
+   * "Partager mon score" button appears — every arcade ending becomes a
+   * shareable moment instead of the card existing only on the trivia results.
+   */
+  shareSubject?: string | null;
 }
 
 export default function GameOverCard({
@@ -50,8 +59,10 @@ export default function GameOverCard({
   isCreole,
   accent = '#1B6FE0',
   highScore = null,
+  shareSubject = null,
 }: GameOverCardProps) {
   const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+  const shareRef = useRef<ShareCardCaptureHandle>(null);
 
   // Celebrate the game-over reveal once on mount (kept here so the haptic fires
   // for every game; the hero's own celebrateHaptic stays off to avoid doubling).
@@ -81,6 +92,8 @@ export default function GameOverCard({
   const isRecord = highScore != null && score >= highScore && score > 0;
 
   return (
+    <>
+    {shareSubject ? <ShareCardCapture ref={shareRef} /> : null}
     <QuizResultHero
       score={score}
       total={maxScore}
@@ -97,6 +110,15 @@ export default function GameOverCard({
               icon={<RefreshCw color="#fff" size={18} />}
               label={isCreole ? 'Jwe ankò' : 'Rejouer'}
               onPress={onReplay}
+              style={{ marginBottom: 10 }}
+            />
+          )}
+          {shareSubject && (
+            <HeroButton
+              variant="glass"
+              icon={<Share2 color="#fff" size={18} />}
+              label={isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
+              onPress={() => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total: maxScore })}
               style={{ marginBottom: 10 }}
             />
           )}
@@ -147,12 +169,21 @@ export default function GameOverCard({
             <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 14, color: '#fde68a' }}>
               +{reward.xpEarned} XP
             </Text>
+            {reward.weeklyFeatured && (
+              <View style={{ backgroundColor: '#fde68a', borderRadius: 999, paddingHorizontal: 7, paddingVertical: 1 }}>
+                <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 11, color: '#3a2c00' }}>
+                  {isCreole ? '×2 semèn nan' : '×2 cette semaine'}
+                </Text>
+              </View>
+            )}
           </View>
           {reward.leveledUp && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
               <Crown color="#fde68a" size={14} />
               <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 13, color: '#fde68a' }}>
-                {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
+                {reward.prevLevel != null && reward.newLevel != null && reward.prevLevel !== reward.newLevel
+                  ? (isCreole ? `Nivo ${reward.prevLevel} → ${reward.newLevel} !` : `Niveau ${reward.prevLevel} → ${reward.newLevel} !`)
+                  : (isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`)}
               </Text>
             </View>
           )}
@@ -164,5 +195,6 @@ export default function GameOverCard({
         </View>
       )}
     </QuizResultHero>
+    </>
   );
 }

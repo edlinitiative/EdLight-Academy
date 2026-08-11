@@ -9,8 +9,10 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Timer, Delete, CornerDownLeft, Flame } from 'lucide-react-native';
 import { nextCalcProblem } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
+import { useRoundTimer, TimeBar } from './RoundTimer';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
+import { success, warn } from '../../utils/haptics';
 
 const ROUND_SECONDS = 60;
 const MIN_DENOMINATOR = 15;
@@ -38,22 +40,16 @@ export default function CalculGame({
   const [problem, setProblem] = useState(() => nextCalcProblem(0));
   const [input, setInput] = useState('');
   const [flash, setFlash] = useState<'right' | 'wrong' | null>(null);
-  const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [over, setOver] = useState(false);
   const [reward, setReward] = useState<GameReward | null>(null);
   const recordedRef = useRef(false);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (over) return;
-    const iv = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(iv); setOver(true); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [over, nonce]);
+  const { timeLeft, urgent } = useRoundTimer(ROUND_SECONDS, {
+    paused: over,
+    resetKey: nonce,
+    onExpire: () => setOver(true),
+  });
 
   useEffect(() => () => {
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
@@ -89,7 +85,10 @@ export default function CalculGame({
 
   const submit = () => {
     if (over || input === '' || input === '-') return;
-    advance(Number(input) === problem.answer);
+    const right = Number(input) === problem.answer;
+    // Haptic on real submissions only — a deliberate "Passer" stays silent.
+    if (right) success(); else warn();
+    advance(right);
   };
 
   const press = (k: string) => {
@@ -104,7 +103,7 @@ export default function CalculGame({
     setNonce((n) => n + 1);
     setSolved(0); setAttempts(0); setStreak(0); setBestStreak(0);
     setProblem(nextCalcProblem(0)); setInput('');
-    setTimeLeft(ROUND_SECONDS); setOver(false); setReward(null); setFlash(null);
+    setOver(false); setReward(null); setFlash(null);
   };
 
   if (over) {
@@ -122,11 +121,11 @@ export default function CalculGame({
         isCreole={isCreole}
         accent={ACCENT}
         highScore={highScore}
+        shareSubject="Calcul éclair"
       />
     );
   }
 
-  const urgent = timeLeft <= 10;
   const problemBorder = flash === 'right' ? colors.success : flash === 'wrong' ? colors.danger : colors.border;
   const okDisabled = input === '' || input === '-';
 
@@ -150,12 +149,7 @@ export default function CalculGame({
       </View>
 
       {/* Time bar */}
-      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
-        <View
-          className="h-1.5 rounded-full"
-          style={{ width: `${(timeLeft / ROUND_SECONDS) * 100}%`, backgroundColor: ACCENT }}
-        />
-      </View>
+      <TimeBar timeLeft={timeLeft} total={ROUND_SECONDS} color={ACCENT} />
 
       {/* Problem */}
       <View

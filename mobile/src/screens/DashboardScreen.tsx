@@ -19,6 +19,7 @@ import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
+import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
 import HomeWidgets from '../components/HomeWidgets';
 import MissionCard from '../components/MissionCard';
 import SmartSuggestion from '../components/SmartSuggestion';
@@ -90,15 +91,6 @@ function HeroPill({
   );
 }
 
-/** Quiz attempts this ISO week (Monday 00:00 local onward). */
-function countQuizzesThisWeek(attempts: any[], now = new Date()): number {
-  const daysSinceMonday = (now.getDay() + 6) % 7; // Mon=0 … Sun=6
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday).getTime();
-  return attempts.filter((a) => typeof a?.date === 'number' && a.date >= monday).length;
-}
-
-/** Weekly quiz target for the goal ring. */
-const WEEKLY_QUIZ_GOAL = 5;
 
 function SectionHeader({
   title,
@@ -239,8 +231,8 @@ export default function DashboardScreen() {
   const goalSublabel = goalReached
     ? t('Objectif atteint — continue sur ta lancée !', 'Ou rive sou objektif la — kontinye konsa !')
     : quizzesThisWeek === 0
-      ? t('Fais ton premier quiz de la semaine', 'Fè premye quiz ou pou semèn nan')
-      : t(`${quizzesThisWeek} quiz sur ${WEEKLY_QUIZ_GOAL} — continue !`, `${quizzesThisWeek} quiz sou ${WEEKLY_QUIZ_GOAL} — kontinye !`);
+      ? t('Fais ton premier quiz — termine et gagne 1 gel 🧊', 'Fè premye quiz ou — fini epi genyen 1 jèl 🧊')
+      : t(`${quizzesThisWeek} quiz sur ${WEEKLY_QUIZ_GOAL} — termine et gagne 1 gel 🧊`, `${quizzesThisWeek} quiz sou ${WEEKLY_QUIZ_GOAL} — fini epi genyen 1 jèl 🧊`);
   const weeklyGoalBlock = (
     <View className="px-5 mb-4">
       <PressableScale

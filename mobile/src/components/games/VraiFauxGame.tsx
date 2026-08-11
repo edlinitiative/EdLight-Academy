@@ -9,6 +9,7 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { X, Check, Timer, Flame } from 'lucide-react-native';
 import { buildVraiFauxItems } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
+import { useRoundTimer, TimeBar } from './RoundTimer';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
 import { success, warn } from '../../utils/haptics';
@@ -39,7 +40,6 @@ export default function VraiFauxGame({
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [feedback, setFeedback] = useState<'right' | 'wrong' | null>(null);
-  const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [over, setOver] = useState(false);
   const [reward, setReward] = useState<GameReward | null>(null);
   const recordedRef = useRef(false);
@@ -47,17 +47,12 @@ export default function VraiFauxGame({
 
   const item = items[idx % Math.max(items.length, 1)];
 
-  useEffect(() => {
-    // Don't run the clock (nor let it end + record a bogus 0) with no questions.
-    if (over || items.length === 0) return;
-    const iv = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(iv); setOver(true); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [over, nonce, items.length]);
+  // Don't run the clock (nor let it end + record a bogus 0) with no questions.
+  const { timeLeft, urgent } = useRoundTimer(ROUND_SECONDS, {
+    paused: over || items.length === 0,
+    resetKey: nonce,
+    onExpire: () => setOver(true),
+  });
 
   // Clear any pending feedback timeout on unmount.
   useEffect(() => () => {
@@ -96,7 +91,7 @@ export default function VraiFauxGame({
     recordedRef.current = false;
     setNonce((n) => n + 1);
     setIdx(0); setCorrect(0); setAnswered(0); setStreak(0); setBestStreak(0);
-    setFeedback(null); setTimeLeft(ROUND_SECONDS); setOver(false); setReward(null);
+    setFeedback(null); setOver(false); setReward(null);
   };
 
   // Thin/empty question bank: show a friendly message instead of the play UI
@@ -141,13 +136,13 @@ export default function VraiFauxGame({
         isCreole={isCreole}
         accent={colors.coral}
         highScore={highScore}
+        shareSubject="Vrai ou Faux"
       />
     );
   }
 
   if (!item) return null;
 
-  const urgent = timeLeft <= 10;
   const cardBorder = feedback === 'right' ? colors.success : feedback === 'wrong' ? colors.danger : colors.border;
 
   return (
@@ -172,12 +167,7 @@ export default function VraiFauxGame({
       </View>
 
       {/* Time bar */}
-      <View className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: colors.border }}>
-        <View
-          className="h-1.5 rounded-full"
-          style={{ width: `${(timeLeft / ROUND_SECONDS) * 100}%`, backgroundColor: colors.coral }}
-        />
-      </View>
+      <TimeBar timeLeft={timeLeft} total={ROUND_SECONDS} color={colors.coral} />
 
       {/* Question card */}
       <View

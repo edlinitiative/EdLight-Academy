@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Dimensions, FlatList,
+  View, Text, ScrollView, TouchableOpacity, Dimensions, FlatList, Alert,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, SvgUri } from 'react-native-svg';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withRepeat, withSequence, withSpring, Easing } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, Share2 } from 'lucide-react-native';
+import { Zap, Flame, Check, X, RefreshCw, ChevronRight, Trophy, Share2, Crown, Snowflake, Swords } from 'lucide-react-native';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
-import { todayStr } from '../services/streakService';
+import { todayStr, awardStreakFreeze } from '../services/streakService';
+import { xpBreakdown } from '../services/triviaService';
+import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
 import { getWeeklyTop } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
@@ -27,6 +30,7 @@ import { logAnswerEvent } from '../services/answerEventsService';
 import JeuxHub from '../components/games/JeuxHub';
 import DailyChallengeBanner from '../components/games/DailyChallengeBanner';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../components/share/ShareCardCapture';
+import { createChallenge, shareChallenge } from '../services/challengeService';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -39,13 +43,24 @@ import SuitesGame from '../components/games/SuitesGame';
 // the remaining phases are the classic trivia flow.
 type TriviaPhase = 'hub' | 'arcade' | 'categories' | 'roundPicker' | 'playing' | 'results';
 
-interface PreparedQuestion {
+export interface PreparedQuestion {
   q: string;
   qHt: string;
   options: string[];
   correctAnswer: string;
   flag?: string;
   explanation?: string;
+  /** Bank index of the source question — lets a category round be reproduced
+      exactly for "Défi d'un ami" (utils/seededDraw). Absent in daily rounds,
+      whose draw spans banks. */
+  idx?: number;
+}
+
+/** A missed question captured during play for the end-of-round review. */
+export interface RoundMistake {
+  q: PreparedQuestion;
+  /** What the player picked — null when the timer ran out with nothing selected. */
+  chosen: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -64,22 +79,38 @@ function shuffle<T>(arr: T[]): T[] {
  * Raw question shape: { q, qHt, options: string[], answer: number (index), flag?, explanation? }
  * count=0 → use all questions.
  */
+/** Map a raw bank question to its playable form (options re-shuffled). */
+function toPrepared(q: any, idx?: number): PreparedQuestion {
+  const correctAnswer: string = q.options[q.answer];
+  const options = shuffle([...q.options]);
+  return {
+    q: q.q,
+    qHt: q.qHt ?? q.q,
+    options,
+    correctAnswer,
+    flag: q.flag ?? null,
+    explanation: q.explanation ?? null,
+    ...(idx != null ? { idx } : {}),
+  };
+}
+
 function prepareQuestions(categoryId: string, count: number): PreparedQuestion[] {
   const raw: any[] = (TRIVIA_QUESTIONS as Record<string, any[]>)[categoryId] ?? [];
-  const pool = shuffle(raw).slice(0, count === 0 ? raw.length : count);
-  return pool.map((q: any) => {
-    const correctAnswer: string = q.options[q.answer];
-    // Re-shuffle options so the correct answer appears at a random position
-    const options = shuffle([...q.options]);
-    return {
-      q: q.q,
-      qHt: q.qHt ?? q.q,
-      options,
-      correctAnswer,
-      flag: q.flag ?? null,
-      explanation: q.explanation ?? null,
-    };
-  });
+  // Shuffle bank INDEXES (not items) so each prepared question keeps its bank
+  // idx — that's what lets a finished round become a shareable challenge.
+  const idxs = shuffle(raw.map((_: any, i: number) => i)).slice(0, count === 0 ? raw.length : count);
+  return idxs.map((i) => toPrepared(raw[i], i));
+}
+
+/**
+ * Reproduce a challenger's exact round from bank indexes ("Défi d'un ami").
+ * Null when any index is out of range — i.e. the two devices run different
+ * bank versions and the duel can't be replayed faithfully.
+ */
+export function prepareChallengeQuestions(categoryId: string, idxs: number[]): PreparedQuestion[] | null {
+  const raw: any[] = (TRIVIA_QUESTIONS as Record<string, any[]>)[categoryId] ?? [];
+  if (!idxs.length || idxs.some((i) => !Number.isInteger(i) || i < 0 || i >= raw.length)) return null;
+  return idxs.map((i) => toPrepared(raw[i], i));
 }
 
 /**
@@ -161,6 +192,19 @@ function TriviaHeader() {
         <Text style={[typeScale.titleSm, { color: colors.danger }]}>{streak?.currentStreak ?? 0}</Text>
         <Text className="ml-0.5" style={[typeScale.caption, { color: colors.faint }]}>{isCreole ? 'jou' : 'jours'}</Text>
       </View>
+
+      {/* Streak freezes — earned by finishing the weekly goal; one bridges a
+          single missed day. Hidden at zero so the header stays calm. */}
+      {(streak?.streakFreezes ?? 0) > 0 && (
+        <View
+          className="flex-row items-center gap-1"
+          accessible
+          accessibilityLabel={isCreole ? `${streak.streakFreezes} jèl seri` : `${streak.streakFreezes} gel de série`}
+        >
+          <Snowflake color={colors.azure} size={14} />
+          <Text style={[typeScale.titleSm, { color: colors.azure }]}>{streak.streakFreezes}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -563,7 +607,7 @@ function AnswerOption({
   );
 }
 
-function QuizPlayer({
+export function QuizPlayer({
   questions,
   category,
   isCreole,
@@ -572,7 +616,7 @@ function QuizPlayer({
   questions: PreparedQuestion[];
   category: any;
   isCreole: boolean;
-  onFinish: (score: number, total: number) => void;
+  onFinish: (score: number, total: number, mistakes: RoundMistake[]) => void;
 }) {
   const colors = useColors();
   const { shadow } = useTheme();
@@ -584,6 +628,11 @@ function QuizPlayer({
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // The current selection, readable from the timeout path without the
+  // set-state-updater side-effect trick; and the round's missed questions,
+  // handed to the results screen for the "Revois tes erreurs" recap.
+  const selectedRef = useRef<string | null>(null);
+  const mistakesRef = useRef<RoundMistake[]>([]);
 
   const q = questions[idx];
   const isCorrect = confirmed && selected === q?.correctAnswer;
@@ -596,21 +645,11 @@ function QuizPlayer({
     }
   }, []);
 
-  const confirmAnswer = useCallback(
-    (currentSelected: string | null, currentScore: number) => {
-      stopTimer();
-      setConfirmed(true);
-      if (currentSelected === questions[idx]?.correctAnswer) {
-        setScore(currentScore + 1);
-      }
-    },
-    [idx, questions, stopTimer],
-  );
-
   // Reset timer whenever the question changes
   useEffect(() => {
     setTimeLeft(15);
     setSelected(null);
+    selectedRef.current = null;
     setConfirmed(false);
 
     timerRef.current = setInterval(() => {
@@ -630,27 +669,26 @@ function QuizPlayer({
   // Watch for timer reaching 0 and auto-confirm
   useEffect(() => {
     if (timeLeft === 0 && !confirmed) {
-      // Read selected via state updater to get latest value
-      setSelected((currentSelected) => {
-        setConfirmed(true);
-        const wasCorrect = currentSelected !== null && currentSelected === questions[idx]?.correctAnswer;
-        if (wasCorrect) {
-          success();
-          setScore((s) => s + 1);
-        } else {
-          warn();
-        }
-        // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
-        if (questions[idx]?.q) logAnswerEvent(questions[idx].q, wasCorrect);
-        return currentSelected;
-      });
       stopTimer();
+      setConfirmed(true);
+      const currentSelected = selectedRef.current;
+      const wasCorrect = currentSelected !== null && currentSelected === questions[idx]?.correctAnswer;
+      if (wasCorrect) {
+        success();
+        setScore((s) => s + 1);
+      } else {
+        warn();
+        if (questions[idx]) mistakesRef.current.push({ q: questions[idx], chosen: currentSelected });
+      }
+      // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
+      if (questions[idx]?.q) logAnswerEvent(questions[idx].q, wasCorrect);
     }
   }, [timeLeft, confirmed, idx, questions, stopTimer]);
 
   const handleSelect = (opt: string) => {
     if (!confirmed) {
       select();
+      selectedRef.current = opt;
       setSelected(opt);
     }
   };
@@ -666,6 +704,7 @@ function QuizPlayer({
       setScore((s) => s + 1);
     } else {
       warn();
+      mistakesRef.current.push({ q, chosen: selected });
     }
     if (q?.q) logAnswerEvent(q.q, correct);
   };
@@ -673,7 +712,7 @@ function QuizPlayer({
   const handleNext = () => {
     tapMedium();
     if (idx + 1 >= questions.length) {
-      onFinish(score, questions.length);
+      onFinish(score, questions.length, mistakesRef.current);
     } else {
       setIdx((i) => i + 1);
     }
@@ -876,20 +915,38 @@ function TriviaResults({
   score,
   total,
   category,
+  reward,
+  dailyReplay,
+  mistakes,
+  freezeEarned,
   onRetry,
   onChooseCategory,
+  onChallenge,
   isCreole,
 }: {
   score: number;
   total: number;
   category: any;
+  /** The real reward from recordResult (arrives async; null while pending). */
+  reward: any | null;
+  /** True when this round replayed an already-completed Daily (earns 0 XP). */
+  dailyReplay: boolean;
+  mistakes: RoundMistake[];
+  freezeEarned: boolean;
   onRetry: () => void;
   onChooseCategory: () => void;
+  /** "Défier un ami" — present only when this round can become a duel
+      (signed-in, reproducible category round). */
+  onChallenge?: (() => Promise<void>) | null;
   isCreole: boolean;
 }) {
+  const [challenging, setChallenging] = useState(false);
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
-  const xpEarned = score * 10;
-  const lang = isCreole ? 'ht' : 'fr';
+  // Show the service's real numbers the moment they land; until then the same
+  // math the service runs (xpBreakdown), so the chip never lies about bonuses.
+  const isDaily = category?.id === 'daily';
+  const breakdown = reward?.breakdown ?? xpBreakdown({ score, total, isDaily, dailyAlreadyDone: dailyReplay });
+  const xpEarned = reward?.xpEarned ?? breakdown.total;
   const categoryName = isCreole ? (category.nameHt ?? category.name) : category.name;
   const shareRef = useRef<ShareCardCaptureHandle>(null);
   // Always share by the canonical (FR) category name so the same card reads
@@ -911,6 +968,7 @@ function TriviaResults({
       isCreole={isCreole}
       title={title}
       celebrateHaptic
+      showConfetti={pct >= 80 || !!reward?.leveledUp}
       footer={
         <>
           <HeroButton
@@ -928,6 +986,27 @@ function TriviaResults({
             onPress={() => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total })}
             style={{ marginBottom: 10 }}
           />
+          {onChallenge && (
+            <HeroButton
+              variant="glass"
+              icon={<Swords color="#fff" size={18} />}
+              label={
+                challenging
+                  ? (isCreole ? 'Ap prepare defi a…' : 'Préparation du défi…')
+                  : (isCreole ? 'Defye yon zanmi' : 'Défier un ami')
+              }
+              onPress={async () => {
+                if (challenging) return;
+                setChallenging(true);
+                try {
+                  await onChallenge();
+                } finally {
+                  setChallenging(false);
+                }
+              }}
+              style={{ marginBottom: 10 }}
+            />
+          )}
           <HeroButton
             variant="ghost"
             label={isCreole ? 'Chwazi yon kategori' : 'Choisir une catégorie'}
@@ -936,13 +1015,67 @@ function TriviaResults({
         </>
       }
     >
-      {/* XP earned — glass chip */}
-      <PopIn delay={400} style={{ marginTop: 12 }}>
+      {/* XP earned — glass chip, with the bonus parts spelled out below */}
+      <PopIn delay={400} style={{ marginTop: 12, alignItems: 'center' }}>
         <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
           <Zap color="#fde68a" size={16} />
           <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#fde68a' }}>+{xpEarned} XP {isCreole ? 'ou genyen' : 'gagnés'}</Text>
         </View>
+        {(breakdown.perfect > 0 || breakdown.dailyBonus > 0) && (
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+            {breakdown.perfect > 0 && (
+              <View style={{ ...glass, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 11.5, color: '#fde68a' }}>
+                  +{breakdown.perfect} {isCreole ? 'san fot !' : 'sans faute !'}
+                </Text>
+              </View>
+            )}
+            {breakdown.dailyBonus > 0 && (
+              <View style={{ ...glass, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ fontFamily: typeScale.label.fontFamily, fontSize: 11.5, color: '#fde68a' }}>
+                  +{breakdown.dailyBonus} {isCreole ? 'defi jodi a' : 'défi du jour'}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+        {dailyReplay && (
+          <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8, textAlign: 'center' }}>
+            {isCreole
+              ? 'Defi a te fèt deja jodi a — antrennman (0 XP).'
+              : "Défi déjà joué aujourd'hui — manche d'entraînement (0 XP)."}
+          </Text>
+        )}
+        {reward?.guest && (
+          <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8, textAlign: 'center' }}>
+            {isCreole ? 'Konekte pou kenbe XP ou' : 'Connecte-toi pour garder tes XP'}
+          </Text>
+        )}
       </PopIn>
+
+      {/* Level-up — the crossing gets its own moment, not just a haptic. */}
+      {reward?.leveledUp && (
+        <PopIn delay={600} style={{ marginTop: 12 }}>
+          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
+            <Crown color="#fde68a" size={16} />
+            <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#fde68a' }}>
+              {isCreole ? `Nivo ${reward.newLevel} !` : `Niveau ${reward.newLevel} !`}
+            </Text>
+          </View>
+        </PopIn>
+      )}
+
+      {/* Weekly-goal reward */}
+      {freezeEarned && (
+        <PopIn delay={700} style={{ marginTop: 12 }}>
+          <View style={{ ...glass, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
+            <Snowflake color="#7EE7FF" size={16} />
+            <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: '#7EE7FF' }}>
+              {isCreole ? 'Jèl seri ou genyen !' : 'Gel de série gagné !'}
+            </Text>
+          </View>
+        </PopIn>
+      )}
 
       {/* Glass stat row */}
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 20, width: '100%' }}>
@@ -957,6 +1090,32 @@ function TriviaResults({
           </Text>
         </View>
       </View>
+
+      {/* Revois tes erreurs — a wrong answer should teach, not just count. */}
+      {mistakes.length > 0 && (
+        <View style={{ width: '100%', marginTop: 22 }}>
+          <Text style={{ fontFamily: typeScale.overline.fontFamily, fontSize: 11, letterSpacing: 1, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>
+            {isCreole ? 'REVIZE ERÈ OU YO' : 'REVOIS TES ERREURS'} ({mistakes.length})
+          </Text>
+          {mistakes.map((m, i) => (
+            <View key={i} style={{ ...glass, borderRadius: 14, padding: 12, marginTop: 8 }}>
+              <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 13.5, lineHeight: 19, color: '#ffffff' }}>
+                {isCreole ? m.q.qHt : m.q.q}
+              </Text>
+              <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6 }}>
+                {isCreole ? 'Ou' : 'Toi'} : {m.chosen ?? (isCreole ? '(tan an fini)' : '(temps écoulé)')}
+                {'   ·   '}
+                <Text style={{ color: '#86efac' }}>✓ {m.q.correctAnswer}</Text>
+              </Text>
+              {m.q.explanation ? (
+                <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.65)', marginTop: 6 }}>
+                  💡 {m.q.explanation}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      )}
     </QuizResultHero>
     </>
   );
@@ -966,12 +1125,13 @@ function TriviaResults({
 
 export default function TriviaScreen() {
   const colors = useColors();
-  const { user, language, incrementGuestInteraction, setFocusMode, pendingDailyChallenge, setPendingDailyChallenge } = useStore();
+  const { user, language, incrementGuestInteraction, setFocusMode, pendingDailyChallenge, setPendingDailyChallenge, quizAttempts, recordQuizAttempt } = useStore();
   const isCreole = language === 'ht';
 
-  const { profile, recordResult, recordGameResult, daily } = useTrivia();
+  const { profile, recordResult, recordGameResult, daily, isAuthed } = useTrivia();
   const { recordActivity } = useStreak();
   const navigation = useNavigation<any>();
+  const qc = useQueryClient();
 
   const [phase, setPhase] = useState<TriviaPhase>('hub');
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
@@ -982,6 +1142,14 @@ export default function TriviaScreen() {
   // True while the active round is today's Daily Challenge (drives the +50 XP
   // bonus + completedToday tracking, via recordResult({ isDaily: true })).
   const [isDailyRound, setIsDailyRound] = useState(false);
+  // Round outcome surfaced by the results screen: the real reward object from
+  // recordResult (async), the review list, and one-shot celebration flags.
+  const [lastReward, setLastReward] = useState<any>(null);
+  const [roundMistakes, setRoundMistakes] = useState<RoundMistake[]>([]);
+  const [wasDailyReplay, setWasDailyReplay] = useState(false);
+  const [freezeEarned, setFreezeEarned] = useState(false);
+  // Transient hub note when the home deep-link lands after the daily is done.
+  const [dailyDoneNote, setDailyDoneNote] = useState(false);
 
   // Hide the floating tab bar during an active game / results so it never
   // covers the answer & confirm buttons. Reset when leaving the Trivia tab.
@@ -1026,16 +1194,56 @@ export default function TriviaScreen() {
   }, [isCreole]);
 
   // Deep-link from the home "Défi du jour" widget: it sets a transient store
-  // flag, then navigates to this tab. Consume it on focus (once), skipping if
-  // today's challenge is already done.
+  // flag, then navigates to this tab. Consume it on focus (once). When today's
+  // challenge is already done, acknowledge it instead of silently landing on
+  // the hub — the tap should never feel like it did nothing.
   useFocusEffect(
     useCallback(() => {
       if (pendingDailyChallenge) {
         setPendingDailyChallenge(false);
         if (!daily?.completedToday) startDaily();
+        else setDailyDoneNote(true);
       }
     }, [pendingDailyChallenge, setPendingDailyChallenge, daily, startDaily]),
   );
+
+  useEffect(() => {
+    if (!dailyDoneNote) return;
+    const tmr = setTimeout(() => setDailyDoneNote(false), 3500);
+    return () => clearTimeout(tmr);
+  }, [dailyDoneNote]);
+
+  // "Défier un ami" — only when the finished round is faithfully reproducible:
+  // a signed-in player, a real category round (daily draws span banks), and
+  // every question still carrying its bank index.
+  const challengeIdxs = useMemo(() => {
+    if (!isAuthed || isDailyRound || !selectedCategory?.id || selectedCategory.id === 'daily') return null;
+    const idxs = questions.map((q) => q.idx);
+    return idxs.length > 0 && idxs.every((i) => i != null) ? (idxs as number[]) : null;
+  }, [isAuthed, isDailyRound, selectedCategory, questions]);
+
+  const handleChallenge = useCallback(async () => {
+    if (!challengeIdxs || !selectedCategory) return;
+    const created = await createChallenge({
+      categoryId: selectedCategory.id,
+      questionIdxs: challengeIdxs,
+      score: finalScore.score,
+    });
+    if (!created) {
+      Alert.alert(
+        isCreole ? 'Defi a pa t pati' : "Le défi n'est pas parti",
+        isCreole ? 'Verifye koneksyon ou epi eseye ankò.' : 'Vérifie ta connexion et réessaie.',
+      );
+      return;
+    }
+    await shareChallenge({
+      categoryLabel: isCreole ? (selectedCategory.nameHt ?? selectedCategory.name) : selectedCategory.name,
+      score: finalScore.score,
+      total: challengeIdxs.length,
+      url: created.url,
+      lang: isCreole ? 'ht' : 'fr',
+    });
+  }, [challengeIdxs, selectedCategory, finalScore, isCreole]);
 
   // Start from category selection
   const handleSelectCategory = useCallback((categoryId: string) => {
@@ -1061,23 +1269,44 @@ export default function TriviaScreen() {
 
   // Called when QuizPlayer completes all questions
   const handleGameFinish = useCallback(
-    (score: number, total: number) => {
+    (score: number, total: number, mistakes: RoundMistake[] = []) => {
+      // Captured BEFORE recording flips completedToday, so the results screen
+      // knows whether this round was a 0-XP replay of a finished daily.
+      const dailyReplay = isDailyRound && !!daily?.completedToday;
       setFinalScore({ score, total });
+      setRoundMistakes(mistakes);
+      setWasDailyReplay(dailyReplay);
+      setLastReward(null);
+      setFreezeEarned(false);
       setPhase('results');
       incrementGuestInteraction();
 
       // Record streak activity
       recordActivity().catch(console.warn);
 
+      // Weekly-goal bookkeeping: a trivia round is a quiz. Crossing the weekly
+      // goal earns a streak freeze (service caps the stash at 2).
+      const before = countQuizzesThisWeek(Object.values(quizAttempts as Record<string, any[]>).flat());
+      recordQuizAttempt(`trivia:${selectedCategory?.id || 'mixed'}`, { score, total, date: Date.now(), source: 'trivia' });
+      if (user?.uid && before < WEEKLY_QUIZ_GOAL && before + 1 >= WEEKLY_QUIZ_GOAL) {
+        awardStreakFreeze(user.uid)
+          .then(() => {
+            setFreezeEarned(true);
+            qc.invalidateQueries({ queryKey: ['global-streak'] });
+          })
+          .catch(() => {});
+      }
+
       // Note: daily-quiz re-engagement nudges are handled centrally by
       // scheduleEngagementReminders (recurring), so no per-round scheduling here.
 
-      // Persist XP/profile via the shared gamification service. Leaderboard
-      // submission happens inside recordResult and ONLY for opted-in players
-      // with their chosen pseudo — never the raw account name (the previous
-      // direct addWeeklyXp call here published first names without opt-in).
+      // Persist XP/profile via the shared gamification service, and hand the
+      // REAL reward (breakdown, level-up, guest flag) to the results screen —
+      // the old local `score * 10` under-reported every bonus. Leaderboard
+      // submission happens inside recordResult.
       recordResult({ category: selectedCategory?.id, score, total, isDaily: isDailyRound })
-        .then(() => {
+        .then((reward) => {
+          setLastReward(reward ?? null);
           if (!user?.uid) return null;
           return getWeeklyTop(50).then((top) => {
             const entry = top.find((e: any) => e.id === user.uid);
@@ -1086,7 +1315,7 @@ export default function TriviaScreen() {
         })
         .catch(console.warn);
     },
-    [recordActivity, user, incrementGuestInteraction, recordResult, selectedCategory, isDailyRound],
+    [recordActivity, user, incrementGuestInteraction, recordResult, selectedCategory, isDailyRound, daily, quizAttempts, recordQuizAttempt, qc],
   );
 
   // Arcade wiring — shared reward contract with the classic flow.
@@ -1136,11 +1365,27 @@ export default function TriviaScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {/* Phase router */}
       {phase === 'hub' && (
-        <JeuxHub
-          onSelectGame={(id) => { setSelectedGame(id); setPhase('arcade'); }}
-          onStartTrivia={() => setPhase('categories')}
-          onStartDaily={startDaily}
-        />
+        <>
+          <JeuxHub
+            onSelectGame={(id) => { setSelectedGame(id); setPhase('arcade'); }}
+            onStartTrivia={() => setPhase('categories')}
+            onStartDaily={startDaily}
+          />
+          {/* Transient ack for the home deep-link when the daily is already
+              done — the tap should read as "seen", not as a dead tap. */}
+          {dailyDoneNote && (
+            <View pointerEvents="none" style={{ position: 'absolute', top: 10, left: 20, right: 20, zIndex: 10, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.ink, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9, opacity: 0.94 }}>
+                <Check color="#4ade80" size={14} />
+                <Text style={[typeScale.label, { color: colors.surface }]} numberOfLines={1}>
+                  {isCreole
+                    ? `Defi jodi a fini deja — ${daily?.score ?? ''}/${daily?.total ?? ''}. Tounen demen !`
+                    : `Défi du jour déjà terminé — ${daily?.score ?? ''}/${daily?.total ?? ''}. Reviens demain !`}
+                </Text>
+              </View>
+            </View>
+          )}
+        </>
       )}
 
       {phase === 'arcade' && selectedGame && (
@@ -1199,7 +1444,25 @@ export default function TriviaScreen() {
           {/* In-game nav bar */}
           <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             <TouchableOpacity
-              onPress={() => setPhase('categories')}
+              onPress={() => {
+                // Mid-round progress is unrecoverable — never discard it on a
+                // single (possibly accidental) tap.
+                Alert.alert(
+                  isCreole ? 'Kite jwèt la ?' : 'Quitter la partie ?',
+                  isCreole ? 'Pwogrè manch sa a ap pèdi.' : 'La progression de cette manche sera perdue.',
+                  [
+                    { text: isCreole ? 'Kontinye jwe' : 'Continuer', style: 'cancel' },
+                    {
+                      text: isCreole ? 'Kite' : 'Quitter',
+                      style: 'destructive',
+                      onPress: () => {
+                        if (isDailyRound) exitToHub();
+                        else setPhase('categories');
+                      },
+                    },
+                  ],
+                );
+              }}
               className="p-1 mr-3"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
@@ -1244,8 +1507,13 @@ export default function TriviaScreen() {
             score={finalScore.score}
             total={finalScore.total}
             category={selectedCategory}
+            reward={lastReward}
+            dailyReplay={wasDailyReplay}
+            mistakes={roundMistakes}
+            freezeEarned={freezeEarned}
             onRetry={handleRetry}
             onChooseCategory={handleChooseCategory}
+            onChallenge={challengeIdxs ? handleChallenge : null}
             isCreole={isCreole}
           />
         </View>

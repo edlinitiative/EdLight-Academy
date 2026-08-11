@@ -12,6 +12,7 @@ import { buildMemoryDeck, MemoryCard } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
 import { useColors, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
+import { success, warn } from '../../utils/haptics';
 
 const PAIRS = 6;
 const ACCENT = '#7c3aed';
@@ -50,10 +51,11 @@ export default function MemoireGame({
   const done = matched.size === deck.length && deck.length > 0;
 
   useEffect(() => {
-    if (done) return;
+    // No clock while finished — or with an empty deck (nothing to match).
+    if (done || deck.length === 0) return;
     const iv = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(iv);
-  }, [done, nonce]);
+  }, [done, nonce, deck.length]);
 
   useEffect(() => () => {
     if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
@@ -78,12 +80,14 @@ export default function MemoireGame({
     setMoves((m) => m + 1);
     const [a, b] = next.map((id) => deck.find((c) => c.id === id)!);
     if (a.pairId === b.pairId && a.side !== b.side) {
+      success();
       flipTimerRef.current = setTimeout(() => {
         setMatched((prev) => new Set([...prev, a.id, b.id]));
         setFlipped([]);
         lockRef.current = false;
       }, 400);
     } else {
+      warn();
       flipTimerRef.current = setTimeout(() => {
         setFlipped([]);
         lockRef.current = false;
@@ -113,7 +117,33 @@ export default function MemoireGame({
         isCreole={isCreole}
         accent={ACCENT}
         highScore={highScore}
+        shareSubject="Mémoire"
       />
+    );
+  }
+
+  // Empty pair bank: friendly message instead of a blank grid with a running
+  // clock (deck.length === 0 previously left exactly that on screen).
+  if (deck.length === 0) {
+    return (
+      <View className="flex-1 items-center justify-center px-8" style={{ backgroundColor: colors.bg }}>
+        <Text style={[typeScale.title, { color: colors.ink, textAlign: 'center', marginBottom: 8 }]}>
+          {isCreole ? 'Poko gen pè kat' : 'Aucune paire disponible'}
+        </Text>
+        <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
+          {isCreole ? 'Tounen pita — n ap ajoute kontni.' : 'Revenez plus tard — du contenu arrive.'}
+        </Text>
+        <PressableScale
+          onPress={onExit}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
+          style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 32, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, borderRadius: radius.tile }}
+        >
+          <Text style={[typeScale.title, { color: colors.muted }]}>
+            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
+          </Text>
+        </PressableScale>
+      </View>
     );
   }
 

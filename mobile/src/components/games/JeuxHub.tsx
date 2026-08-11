@@ -7,9 +7,10 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
-import { Zap, Flame, Trophy, Clock, Crown, Sparkles, Share2 } from 'lucide-react-native';
+import { Zap, Flame, Trophy, Clock, Crown, Sparkles, Share2, Snowflake } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
+import { weeklyGameId, WEEKLY_GAME_XP_MULTIPLIER } from '../../utils/weeklyGame';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
@@ -39,25 +40,13 @@ interface JeuxHubProps {
 }
 
 /* ─── Records strip: best-ever score per arcade game + holder ─── */
-function GameRecords({ isCreole }: { isCreole: boolean }) {
+function GameRecords({
+  isCreole, records, loading,
+}: { isCreole: boolean; records: Record<string, GameRecord>; loading: boolean }) {
   const colors = useColors();
   const { shadow } = useTheme();
   const user = useStore((s) => s.user);
   const shareRef = useRef<ShareCardCaptureHandle>(null);
-  const [records, setRecords] = useState<Record<string, GameRecord>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    getGameRecords()
-      .then((r: Record<string, GameRecord>) => {
-        if (alive) setRecords(r || {});
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
-    return () => { alive = false; };
-  }, []);
 
   const arcade = GAMES.filter((g) => g.id !== 'trivia');
 
@@ -89,8 +78,8 @@ function GameRecords({ isCreole }: { isCreole: boolean }) {
     );
   }
 
-  if (!arcade.some((g) => records[g.id])) return null; // loaded, nothing set yet
-
+  // Even with zero records set, the strip stays visible — five "À prendre !"
+  // rows are an invitation; a vanished section invites nothing.
   return (
     <>
     <ShareCardCapture ref={shareRef} />
@@ -182,6 +171,25 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
 
   const highScores: Record<string, number> = profile?.games?.highScores || {};
   const gamesPlayed: number = profile?.games?.gamesPlayed || 0;
+  const freezes: number = streak?.streakFreezes || 0;
+
+  // One records fetch feeds both the featured card ("record à battre") and the
+  // Records strip below.
+  const [records, setRecords] = useState<Record<string, GameRecord>>({});
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    getGameRecords()
+      .then((r: Record<string, GameRecord>) => { if (alive) setRecords(r || {}); })
+      .finally(() => { if (alive) setRecordsLoading(false); });
+    return () => { alive = false; };
+  }, []);
+
+  // Jeu de la semaine — rotates on the leaderboard's ISO week (Monday reset).
+  const featuredId = weeklyGameId();
+  const featured = GAMES.find((g) => g.id === featuredId) || null;
+  const FeaturedIcon = featured ? GAME_ICONS[featured.id] : null;
+  const featuredRec = records[featuredId];
 
   return (
     <ScrollView
@@ -195,6 +203,68 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
         <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
       </View>
 
+      {/* Jeu de la semaine — the featured arcade game at ×2 XP, with the
+          community record as the target. Gives the Monday reset a second hook. */}
+      {featured && FeaturedIcon && (
+        <View className="px-4 pb-3">
+          <PressableScale
+            onPress={() => onSelectGame(featured.id)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              isCreole
+                ? `Jwèt semèn nan: ${featured.nameHt}, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}`
+                : `Jeu de la semaine : ${featured.name}, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}`
+            }
+            pressedScale={0.97}
+            style={{
+              borderRadius: radius.hero,
+              backgroundColor: featured.color,
+              padding: 14,
+              ...shadow.md,
+              shadowColor: featured.color,
+            }}
+          >
+            <View className="flex-row items-center gap-1.5 mb-2">
+              <Zap color="#fde68a" size={13} />
+              <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.92)' }]}>
+                {isCreole ? 'JWÈT SEMÈN NAN' : 'JEU DE LA SEMAINE'} · XP ×{WEEKLY_GAME_XP_MULTIPLIER}
+              </Text>
+            </View>
+            <View className="flex-row items-center" style={{ gap: 12 }}>
+              <View
+                style={{
+                  width: 44, height: 44, borderRadius: radius.control,
+                  backgroundColor: 'rgba(255,255,255,0.22)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <FeaturedIcon color="#fff" size={24} />
+              </View>
+              <View className="flex-1">
+                <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
+                  {isCreole ? featured.nameHt : featured.name}
+                </Text>
+                <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 1 }]} numberOfLines={1}>
+                  {featuredRec
+                    ? (isCreole
+                        ? `Rekò pou bat: ${featuredRec.score} pa ${featuredRec.displayName}`
+                        : `Record à battre : ${featuredRec.score} par ${featuredRec.displayName}`)
+                    : (isCreole ? 'Rekò a poko pran — pran li !' : 'Record à prendre — à toi de jouer !')}
+                </Text>
+              </View>
+              <View
+                className="rounded-full"
+                style={{ backgroundColor: '#ffffff', paddingHorizontal: 14, paddingVertical: 7 }}
+              >
+                <Text style={[typeScale.label, { color: featured.color }]}>
+                  {isCreole ? 'Jwe' : 'Jouer'}
+                </Text>
+              </View>
+            </View>
+          </PressableScale>
+        </View>
+      )}
+
       {/* Stats row — or, for guests, a friendly prompt instead of an empty band */}
       {isAuthed ? (
         <View className="flex-row px-4 gap-2 mb-4">
@@ -205,12 +275,23 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
               XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}
             </Text>
           </View>
-          <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+          <View
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+            accessible
+            accessibilityLabel={`${isCreole ? 'Seri' : 'Série'} ${streak?.currentStreak || 0}${freezes > 0 ? `, ${freezes} ${isCreole ? 'jèl' : 'gel'}` : ''}`}
+          >
             <Flame color={colors.danger} size={16} />
             <Text style={[typeScale.titleSm, { color: colors.ink }]}>
               {streak?.currentStreak || 0}
             </Text>
             <Text style={[typeScale.caption, { color: colors.muted }]}>{isCreole ? 'Seri' : 'Série'}</Text>
+            {freezes > 0 && (
+              <View className="flex-row items-center" style={{ gap: 2, marginLeft: 2 }}>
+                <Snowflake color={colors.azure} size={12} />
+                <Text style={[typeScale.caption, { color: colors.azure }]}>{freezes}</Text>
+              </View>
+            )}
           </View>
           <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             <Trophy color={colors.warn} size={16} />
@@ -335,6 +416,15 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
                 <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.85)' }]}>
                   ~{g.minutes} min
                 </Text>
+                {g.id === featuredId && (
+                  <View
+                    className="flex-row items-center rounded-full"
+                    style={{ gap: 2, backgroundColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 7, paddingVertical: 2, marginLeft: 6 }}
+                  >
+                    <Zap color="#fff" size={10} />
+                    <Text style={[typeScale.micro, { color: '#fff' }]}>×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
+                  </View>
+                )}
               </View>
             </PressableScale>
           );
@@ -342,7 +432,7 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
       </View>
 
       {/* Community records */}
-      <GameRecords isCreole={isCreole} />
+      <GameRecords isCreole={isCreole} records={records} loading={recordsLoading} />
     </ScrollView>
   );
 }

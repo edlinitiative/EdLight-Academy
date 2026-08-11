@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { HelpCircle } from 'lucide-react-native';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard, { GameReward } from './GameOverCard';
@@ -83,6 +83,7 @@ export default function SuitesGame({
         isCreole={isCreole}
         accent={ACCENT}
         highScore={highScore}
+        shareSubject="Suites logiques"
       />
     );
   }

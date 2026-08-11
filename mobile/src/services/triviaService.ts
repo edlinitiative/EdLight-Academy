@@ -22,6 +22,7 @@ import { db } from './firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity, todayStr } from './streakService';
 import { addWeeklyXp, isValidAlias } from './leaderboardService';
+import { isWeeklyGame, WEEKLY_GAME_XP_MULTIPLIER } from '../utils/weeklyGame';
 
 // ─── XP & levels ────────────────────────────────────────────────────────────
 
@@ -53,15 +54,32 @@ export function levelInfo(xp = 0) {
 }
 
 /**
- * XP for a finished round. Rewards correctness, a perfect-round bonus, and a
- * once-daily bonus for the Daily Challenge.
+ * Base XP counts at most this many correct answers per round, so a 50-question
+ * marathon can't out-earn five focused 10-question rounds at equal accuracy.
  */
-export function computeXpEarned({ score = 0, total = 0, isDaily = false, dailyAlreadyDone = false }) {
+export const XP_BASE_CORRECT_CAP = 20;
+
+/**
+ * XP for a finished round, broken into its parts (the results screen shows the
+ * breakdown so bonuses are visible, not silently folded into one number).
+ * Replaying the Daily after it's done earns nothing — the day's fixed set is
+ * otherwise farmable — but stays playable as practice.
+ */
+export function xpBreakdown({ score = 0, total = 0, isDaily = false, dailyAlreadyDone = false }) {
+  if (isDaily && dailyAlreadyDone) return { base: 0, perfect: 0, dailyBonus: 0, total: 0 };
   const correct = Math.max(0, score);
-  const base = correct * 10;
+  const base = Math.min(correct, XP_BASE_CORRECT_CAP) * 10;
   const perfect = total > 0 && correct === total ? 25 : 0;
-  const dailyBonus = isDaily && !dailyAlreadyDone ? 50 : 0;
-  return base + perfect + dailyBonus;
+  const dailyBonus = isDaily ? 50 : 0;
+  return { base, perfect, dailyBonus, total: base + perfect + dailyBonus };
+}
+
+/**
+ * XP for a finished round. Rewards correctness (capped — see xpBreakdown), a
+ * perfect-round bonus, and a once-daily bonus for the Daily Challenge.
+ */
+export function computeXpEarned(args: { score?: number; total?: number; isDaily?: boolean; dailyAlreadyDone?: boolean }) {
+  return xpBreakdown(args).total;
 }
 
 // ─── Profile shape ──────────────────────────────────────────────────────────
@@ -132,8 +150,8 @@ export function getDailyChallengeState(profile: any, today = todayStr()) {
  */
 export async function recordTriviaResult(uid: string, { category, score = 0, total = 0, isDaily = false, defaultName }: { category: any; score: number; total: number; isDaily?: boolean; defaultName?: string }) {
   if (!uid) {
-    const xpEarned = computeXpEarned({ score, total, isDaily });
-    return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1 };
+    const breakdown = xpBreakdown({ score, total, isDaily });
+    return { profile: defaultTriviaProfile(), xpEarned: breakdown.total, breakdown, dailyReplay: false, leveledUp: false, prevLevel: 1, newLevel: 1 };
   }
 
   const today = todayStr();
@@ -144,7 +162,8 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
     const dailyAlreadyDone =
       isDaily && current.dailyChallenge?.date === today && current.dailyChallenge?.completed;
 
-    const xpEarned = computeXpEarned({ score, total, isDaily, dailyAlreadyDone });
+    const breakdown = xpBreakdown({ score, total, isDaily, dailyAlreadyDone });
+    const xpEarned = breakdown.total;
     const pct = total > 0 ? Math.round((score / total) * 100) : 0;
 
     // Per-category aggregates
@@ -222,14 +241,16 @@ export async function recordTriviaResult(uid: string, { category, score = 0, tot
     return {
       profile: updated,
       xpEarned,
+      breakdown,
+      dailyReplay: !!dailyAlreadyDone,
       leveledUp: newLevelInfo.level > prevLevel,
       prevLevel,
       newLevel: newLevelInfo.level,
     };
   } catch (err) {
     console.error('[Trivia] recordTriviaResult error:', err);
-    const xpEarned = computeXpEarned({ score, total, isDaily });
-    return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1 };
+    const breakdown = xpBreakdown({ score, total, isDaily });
+    return { profile: defaultTriviaProfile(), xpEarned: breakdown.total, breakdown, dailyReplay: false, leveledUp: false, prevLevel: 1, newLevel: 1 };
   }
 }
 
@@ -291,9 +312,13 @@ export function computeGameXp({ score = 0, maxScore = 0 }) {
  * score, streak, and (for opted-in players) the boards + record claims.
  */
 export async function recordGameResult(uid: string, { gameId, score = 0, maxScore = 0 }: { gameId: string; score: number; maxScore: number }) {
-  const xpEarned = computeGameXp({ score, maxScore });
+  // Jeu de la semaine — the featured game pays double for the whole ISO week
+  // (same weekId as the leaderboard, so it flips with the Monday reset).
+  const weeklyFeatured = isWeeklyGame(gameId);
+  const baseXp = computeGameXp({ score, maxScore });
+  const xpEarned = weeklyFeatured ? baseXp * WEEKLY_GAME_XP_MULTIPLIER : baseXp;
   if (!uid) {
-    return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1, guest: true };
+    return { profile: defaultTriviaProfile(), xpEarned, weeklyFeatured, leveledUp: false, prevLevel: 1, newLevel: 1, guest: true };
   }
   try {
     const current = await loadTriviaProfile(uid);
@@ -339,12 +364,13 @@ export async function recordGameResult(uid: string, { gameId, score = 0, maxScor
     return {
       profile: updated,
       xpEarned,
+      weeklyFeatured,
       leveledUp: newLevelInfo.level > prevLevel,
       prevLevel,
       newLevel: newLevelInfo.level,
     };
   } catch (err) {
     console.error('[Trivia] recordGameResult error:', err);
-    return { profile: defaultTriviaProfile(), xpEarned, leveledUp: false, prevLevel: 1, newLevel: 1 };
+    return { profile: defaultTriviaProfile(), xpEarned, weeklyFeatured, leveledUp: false, prevLevel: 1, newLevel: 1 };
   }
 }

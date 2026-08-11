@@ -15,7 +15,9 @@ import { CalendarCheck, Shuffle, Lightbulb, Share2, Delete, CornerDownLeft } fro
 import { MO_KACHE_WORDS, WORD_LENGTH, isPlayableWordShape } from '../../data/moKacheWords';
 import { todayStr } from '../../services/streakService';
 import { useColors, typeScale } from '../../theme/theme';
+import { success, warn } from '../../utils/haptics';
 import PressableScale from '../ui/PressableScale';
+import GameOverCard from './GameOverCard';
 
 const MAX_GUESSES = 6;
 const KEY_ROWS = ['AZERTYUIOP', 'QSDFGHJKLM', '↵WXCVBN⌫'];
@@ -77,7 +79,7 @@ interface MoKacheGameProps {
   highScore?: number | null;
 }
 
-export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameProps) {
+export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = null }: MoKacheGameProps) {
   const colors = useColors();
   // Themed grid tiles — coloured states (correct/present/absent) stay as-is;
   // the filled/empty (white) tiles follow the surface so they read in dark.
@@ -108,6 +110,9 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
   const [showHint, setShowHint] = useState(false);
 
   const shakeX = useRef(new Animated.Value(0)).current;
+  // One record per puzzle (same idempotency pattern as the other games) — the
+  // key changes with the daily date / practice nonce, re-arming the guard.
+  const recordedRef = useRef<string | null>(null);
 
   // Restore today's daily grid (once per day rule). AsyncStorage is async, so
   // gate input on `loaded` to avoid clobbering a restored grid.
@@ -145,10 +150,13 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
   };
 
   const finish = useCallback((won: boolean, guessCount: number) => {
+    const puzzleKey = mode === 'daily' ? `daily:${today}` : `practice:${practiceNonce}`;
+    if (recordedRef.current === puzzleKey) return;
+    recordedRef.current = puzzleKey;
     const score = won ? MAX_GUESSES - guessCount + 1 : 0;
     onRecord({ gameId: 'mo-kache', score, maxScore: MAX_GUESSES })
       .then(setReward).catch(() => setReward(null));
-  }, [onRecord]);
+  }, [onRecord, mode, today, practiceNonce]);
 
   const shake = () => {
     Animated.sequence([
@@ -167,6 +175,9 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
     let nextState: PlayState = 'playing';
     if (current === target) nextState = 'won';
     else if (nextGuesses.length >= MAX_GUESSES) nextState = 'lost';
+    // Guess feedback in the hand, not only the tiles (parity with VraiFaux/Suites).
+    if (nextState === 'won') success();
+    else warn();
     setGuesses(nextGuesses);
     setCurrent('');
     setState(nextState);
@@ -230,6 +241,65 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
             ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
           </Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Game over → the same shared victory surface as every other arcade game
+  // (score ring, stat chips, XP + level-up, personal-record chip). The word
+  // reveal + hint + emoji-grid share ride in a strip above it.
+  if (over) {
+    const finalScore = state === 'won' ? MAX_GUESSES - guesses.length + 1 : 0;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[typeScale.body, { color: colors.muted }]}>
+                {state === 'won'
+                  ? (isCreole ? 'Bravo !' : 'Bravo !')
+                  : (isCreole ? 'Mo a te:' : 'Le mot était :')}{' '}
+                <Text style={[typeScale.title, { color: colors.ink }]}>{entry.display}</Text>
+              </Text>
+              {!!entry.hint && (
+                <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]} numberOfLines={2}>
+                  {isCreole ? entry.hintHt : entry.hint}
+                </Text>
+              )}
+            </View>
+            {state === 'won' && (
+              <TouchableOpacity
+                onPress={share}
+                accessibilityRole="button"
+                accessibilityLabel={isCreole ? 'Pataje rezilta a' : 'Partager le résultat'}
+                activeOpacity={0.85}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: ACCENT, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 }}
+              >
+                <Share2 color="#fff" size={14} />
+                <Text style={[typeScale.label, { color: '#fff' }]}>{isCreole ? 'Pataje' : 'Partager'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {mode === 'daily' && (
+            <Text style={[typeScale.caption, { color: colors.faint, marginTop: 6 }]}>
+              {isCreole ? 'Retounen demen pou yon nouvo mo !' : 'Revenez demain pour un nouveau mot !'}
+            </Text>
+          )}
+        </View>
+        <GameOverCard
+          score={finalScore}
+          maxScore={MAX_GUESSES}
+          accent={ACCENT}
+          isCreole={isCreole}
+          reward={reward}
+          highScore={highScore}
+          stats={[
+            { label: isCreole ? 'Esè' : 'Essais', value: `${state === 'won' ? guesses.length : 'X'}/${MAX_GUESSES}` },
+            { label: isCreole ? 'Mo a' : 'Le mot', value: entry.display },
+          ]}
+          onReplay={mode === 'practice' ? () => setPracticeNonce((n) => n + 1) : null}
+          onExit={onExit}
+        />
       </View>
     );
   }
@@ -329,79 +399,6 @@ export default function MoKacheGame({ isCreole, onExit, onRecord }: MoKacheGameP
             </Text>
           </TouchableOpacity>
         )
-      )}
-
-      {/* End panel */}
-      {over && (
-        <View className="items-center px-6 mt-5 w-full">
-          <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
-            {state === 'won'
-              ? (isCreole ? 'Bravo !' : 'Bravo !')
-              : (isCreole ? 'Mo a te:' : 'Le mot était :')}{' '}
-            <Text style={[typeScale.title, { color: colors.ink }]}>{entry.display}</Text>
-          </Text>
-          {!!entry.hint && (
-            <Text style={[typeScale.label, { color: colors.faint, textAlign: 'center', marginTop: 4 }]}>
-              {isCreole ? entry.hintHt : entry.hint}
-            </Text>
-          )}
-          {reward && reward.xpEarned > 0 && (
-            <Text style={[typeScale.titleSm, { color: ACCENT, marginTop: 10 }]}>
-              +{reward.xpEarned} XP
-              {reward.guest
-                ? (isCreole ? ' — konekte pou sove yo' : ' — connectez-vous pour les garder')
-                : ''}
-            </Text>
-          )}
-
-          <View className="w-full mt-5">
-            {state === 'won' && (
-              <TouchableOpacity
-                onPress={share}
-                accessibilityRole="button"
-                accessibilityLabel={isCreole ? 'Pataje rezilta a' : 'Partager le résultat'}
-                activeOpacity={0.85}
-                className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl mb-3"
-                style={{ backgroundColor: ACCENT }}
-              >
-                <Share2 color="#fff" size={16} />
-                <Text style={[typeScale.title, { color: '#fff' }]}>
-                  {isCreole ? 'Pataje' : 'Partager'}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {mode === 'practice' ? (
-              <TouchableOpacity
-                onPress={() => setPracticeNonce((n) => n + 1)}
-                accessibilityRole="button"
-                accessibilityLabel={isCreole ? 'Yon lòt mo' : 'Un autre mot'}
-                activeOpacity={0.85}
-                className="w-full items-center justify-center py-4 rounded-2xl mb-3"
-                style={{ backgroundColor: state === 'won' ? colors.surface : ACCENT, borderWidth: state === 'won' ? 1 : 0, borderColor: colors.border }}
-              >
-                <Text style={[typeScale.title, { color: state === 'won' ? colors.muted : '#ffffff' }]}>
-                  {isCreole ? 'Yon lòt mo' : 'Un autre mot'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={[typeScale.label, { color: colors.faint, textAlign: 'center', marginBottom: 12 }]}>
-                {isCreole ? 'Retounen demen pou yon nouvo mo !' : 'Revenez demain pour un nouveau mot !'}
-              </Text>
-            )}
-            <TouchableOpacity
-              onPress={onExit}
-              accessibilityRole="button"
-              accessibilityLabel={isCreole ? 'Tounen nan jwèt yo' : 'Retour aux jeux'}
-              activeOpacity={0.85}
-              className="w-full items-center justify-center py-4 rounded-2xl border"
-              style={{ borderColor: colors.border, backgroundColor: colors.surface }}
-            >
-              <Text className="font-semibold text-base" style={{ color: colors.muted }}>
-                ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       )}
 
       {/* On-screen AZERTY keyboard */}
