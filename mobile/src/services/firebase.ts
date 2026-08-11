@@ -153,6 +153,26 @@ export async function upsertUserDocument(user: any, isNewUser = false) {
   }
 }
 
+/**
+ * Persist the student's grade/class on their user doc. Grade previously lived
+ * only in device-local zustand state — a reinstall lost it, and the server
+ * couldn't segment or personalize pushes/emails by class (a top blocker in the
+ * 2026-08 activation analysis). Best-effort: grade selection must never block
+ * on the network, so callers fire-and-forget this.
+ */
+export async function updateUserGrade(uid: string, grade: string | null) {
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      grade: grade ?? null,
+      grade_chosen: true,
+      updated_at: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[firebase] updateUserGrade failed:', err);
+  }
+}
+
 export async function updateUserTrack(uid: string, trackCode: string) {
   const userRef = doc(db, 'users', uid);
   await setDoc(userRef, {

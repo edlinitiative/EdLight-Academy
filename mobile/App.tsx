@@ -8,7 +8,7 @@ import { registerRootComponent } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
-import { onAuthStateChange, upsertUserDocument } from './src/services/firebase';
+import { onAuthStateChange, upsertUserDocument, getUserProfile, updateUserGrade } from './src/services/firebase';
 import useStore from './src/contexts/store';
 import AppNavigator, { navigationRef, navigateToTab } from './src/navigation/AppNavigator';
 import {
@@ -55,6 +55,26 @@ function AuthGate() {
           email: firebaseUser.email || '',
           picture: firebaseUser.photoURL || '',
         });
+        // Sync grade/track with the user doc. Local state was the only home
+        // for these (lost on reinstall, invisible to the server), so:
+        //   server has it, device doesn't → restore (reinstall / new device);
+        //   device has it, server doesn't → backfill (pre-persistence users,
+        //   and guests who picked a grade before signing up).
+        // Best-effort; never blocks auth.
+        getUserProfile(firebaseUser.uid)
+          .then((profile) => {
+            const s = useStore.getState();
+            const serverGrade = typeof profile?.grade === 'string' && profile.grade ? profile.grade : null;
+            if (serverGrade && !s.grade) {
+              s.setGrade(serverGrade);
+              s.setGradeChosen(true);
+            } else if (!serverGrade && s.grade && s.gradeChosen) {
+              updateUserGrade(firebaseUser.uid, s.grade);
+            }
+            const serverTrack = typeof profile?.track === 'string' && profile.track ? profile.track : null;
+            if (serverTrack && !s.track) s.setTrack(serverTrack);
+          })
+          .catch(() => {});
         // Request notification permission after sign-in, then schedule the
         // daily study reminder and register the Expo push token — but only
         // when the user's Notifications toggle allows it. Best-effort — never
