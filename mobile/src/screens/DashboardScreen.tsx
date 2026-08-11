@@ -19,6 +19,7 @@ import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
+import VideoCoursesRail from '../components/VideoCoursesRail';
 import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
 import HomeWidgets from '../components/HomeWidgets';
 import MissionCard from '../components/MissionCard';
@@ -192,14 +193,14 @@ export default function DashboardScreen() {
     return m;
   }, [allProgress]);
 
+  // "Continuer à apprendre" shows only ENROLLED courses now. The old fallback
+  // (first 4 courses as plain text rows for the un-enrolled) never signalled
+  // that these are video courses — the video rail below replaces it.
   const displayCourses = React.useMemo(() => {
-    if (!courses) return [];
-    if (enrolledCourses.length > 0) {
-      return enrolledCourses
-        .slice(0, 4)
-        .map((ec: any) => courses.find((c) => c.id === ec.id) ?? ec);
-    }
-    return courses.slice(0, 4);
+    if (!courses || enrolledCourses.length === 0) return [];
+    return enrolledCourses
+      .slice(0, 4)
+      .map((ec: any) => courses.find((c) => c.id === ec.id) ?? ec);
   }, [courses, enrolledCourses]);
 
   // ---------------------------------------------------------------------------
@@ -223,6 +224,23 @@ export default function DashboardScreen() {
   // apprendre" above the at-a-glance stats; every other grade keeps stats first.
   const coursFirst = gradeProfile(grade).lead[0] === 'cours';
   const isBacTrack = gradeProfile(grade).examLevel === 'baccalaureat';
+
+  // Video-course discovery — real video stills with a play chip, so a new
+  // visitor immediately sees the platform HAS video courses. Leads with
+  // "Cours en vidéo" for the un-enrolled; reads as discovery once enrolled.
+  const videoRailBlock = (
+    <VideoCoursesRail
+      courses={courses}
+      enrolledIds={enrolledCourses.map((c: any) => c.id)}
+      onOpenCourse={goCourse}
+      onSeeAll={() => navigation.navigate('Courses')}
+      title={
+        enrolledCourses.length > 0
+          ? t('Découvrir en vidéo', 'Dekouvri an videyo')
+          : t('Cours en vidéo', 'Kou an videyo')
+      }
+    />
+  );
 
   // Weekly goal — replaces the old Quiz/Cours/Moyenne stats row, which read as
   // a wall of zeros for new students. A target ("2 quiz sur 5") is motivating
@@ -437,18 +455,21 @@ export default function DashboardScreen() {
             (Bac / 9ème / Préfac prep). Self-hides for grades with no exam. */}
         <SeasonCountdown />
 
-        {/* Weekly goal + Continue learning. Order flips by grade: cours-first
-            grades (NS1–NS3) surface "Continuer à apprendre" above the goal; all
-            other grades keep the goal card first. */}
+        {/* Weekly goal + Continue learning + video discovery. Order flips by
+            grade: cours-first grades (NS1–NS3) lead with courses; all other
+            grades keep the goal card first. The video rail always follows the
+            course content it advertises. */}
         {coursFirst ? (
           <>
             {continueLearningBlock}
+            {videoRailBlock}
             {weeklyGoalBlock}
           </>
         ) : (
           <>
             {weeklyGoalBlock}
             {continueLearningBlock}
+            {videoRailBlock}
           </>
         )}
 
