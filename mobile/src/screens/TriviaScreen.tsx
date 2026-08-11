@@ -23,6 +23,7 @@ import PressableScale from '../components/ui/PressableScale';
 import { useColors, useTheme, typeScale, radius } from '../theme/theme';
 import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
+import { shuffleAligned } from '../utils/shuffleAligned';
 import PopIn from '../components/ui/PopIn';
 import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import { notifyLeaderboardRank } from '../services/notificationService';
@@ -48,8 +49,12 @@ export interface PreparedQuestion {
   qHt: string;
   options: string[];
   correctAnswer: string;
+  /** Kreyòl option strings, index-aligned with `options` (same shuffle). */
+  optionsHt?: string[];
+  correctAnswerHt?: string;
   flag?: string;
   explanation?: string;
+  explanationHt?: string;
   /** Bank index of the source question — lets a category round be reproduced
       exactly for "Défi d'un ami" (utils/seededDraw). Absent in daily rounds,
       whose draw spans banks. */
@@ -79,17 +84,22 @@ function shuffle<T>(arr: T[]): T[] {
  * Raw question shape: { q, qHt, options: string[], answer: number (index), flag?, explanation? }
  * count=0 → use all questions.
  */
-/** Map a raw bank question to its playable form (options re-shuffled). */
+/** Map a raw bank question to its playable form (options re-shuffled).
+ *  FR and HT option arrays get the SAME permutation so they stay paired. */
 function toPrepared(q: any, idx?: number): PreparedQuestion {
-  const correctAnswer: string = q.options[q.answer];
-  const options = shuffle([...q.options]);
+  const { primary: options, aligned: optionsHt } = shuffleAligned<string>(
+    q.options,
+    Array.isArray(q.optionsHt) ? q.optionsHt : null,
+  );
   return {
     q: q.q,
     qHt: q.qHt ?? q.q,
     options,
-    correctAnswer,
+    correctAnswer: q.options[q.answer],
+    ...(optionsHt ? { optionsHt, correctAnswerHt: q.optionsHt[q.answer] } : {}),
     flag: q.flag ?? null,
     explanation: q.explanation ?? null,
+    explanationHt: q.explanationHt ?? null,
     ...(idx != null ? { idx } : {}),
   };
 }
@@ -120,18 +130,7 @@ export function prepareChallengeQuestions(categoryId: string, idxs: number[]): P
  */
 function prepareDailyQuestions(count = 10): PreparedQuestion[] {
   const pool = getDailyChallengeQuestions(TRIVIA_QUESTIONS as Record<string, any[]>, todayStr(), count);
-  return pool.map((q: any) => {
-    const correctAnswer: string = q.options[q.answer];
-    const options = shuffle([...q.options]);
-    return {
-      q: q.q,
-      qHt: q.qHt ?? q.q,
-      options,
-      correctAnswer,
-      flag: q.flag ?? null,
-      explanation: q.explanation ?? null,
-    };
-  });
+  return pool.map((q: any) => toPrepared(q));
 }
 
 const LETTER_LABELS = ['A', 'B', 'C', 'D'];
@@ -224,6 +223,25 @@ const TILE_SIZE = Math.floor(
   (GRID_W - GRID_PAD * 2 - COL_GAP * 2) / 3,
 );
 const ASSET_BASE_URL = 'https://edlight-academy.web.app';
+
+/**
+ * Category tile art. The illustration is a REMOTE SVG, so offline (or when
+ * hosting hiccups) it renders nothing — fall back to the category's emoji so
+ * a tile is never blank.
+ */
+function CategoryArt({ image, icon, size }: { image?: string; icon?: string; size: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!image || failed) return <Text style={{ fontSize: 38 }}>{icon ?? '🎯'}</Text>;
+  return (
+    <SvgUri
+      uri={`${ASSET_BASE_URL}${image}`}
+      width={size}
+      height={size}
+      preserveAspectRatio="xMidYMid slice"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 // Grade-relevant ordering: when a student has chosen a filière (track), surface
 // the trivia decks whose subject matches that track FIRST, keeping every other
@@ -333,16 +351,7 @@ function CategoryPicker({
                 borderColor: colors.border,
               }}
             >
-              {cat.image ? (
-                <SvgUri
-                  uri={`${ASSET_BASE_URL}${cat.image}`}
-                  width={TILE_SIZE}
-                  height={TILE_SIZE}
-                  preserveAspectRatio="xMidYMid slice"
-                />
-              ) : (
-                <Text style={{ fontSize: 38 }}>{cat.icon ?? '🎯'}</Text>
-              )}
+              <CategoryArt image={cat.image} icon={cat.icon} size={TILE_SIZE} />
             </View>
           </View>
 
@@ -635,7 +644,18 @@ export function QuizPlayer({
   const mistakesRef = useRef<RoundMistake[]>([]);
 
   const q = questions[idx];
-  const isCorrect = confirmed && selected === q?.correctAnswer;
+  // Language-resolved view: Kreyòl options only when the pair exists (the
+  // aligned shuffle in toPrepared guarantees FR/HT share one permutation).
+  // Selection and correctness both operate on the DISPLAYED strings.
+  const correctFor = useCallback(
+    (question?: PreparedQuestion) =>
+      isCreole && question?.optionsHt && question.correctAnswerHt
+        ? question.correctAnswerHt
+        : question?.correctAnswer,
+    [isCreole],
+  );
+  const displayOptions = isCreole && q?.optionsHt ? q.optionsHt : q?.options ?? [];
+  const isCorrect = confirmed && selected === correctFor(q);
 
   // --- Timer ---
   const stopTimer = useCallback(() => {
@@ -672,7 +692,7 @@ export function QuizPlayer({
       stopTimer();
       setConfirmed(true);
       const currentSelected = selectedRef.current;
-      const wasCorrect = currentSelected !== null && currentSelected === questions[idx]?.correctAnswer;
+      const wasCorrect = currentSelected !== null && currentSelected === correctFor(questions[idx]);
       if (wasCorrect) {
         success();
         setScore((s) => s + 1);
@@ -683,7 +703,7 @@ export function QuizPlayer({
       // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
       if (questions[idx]?.q) logAnswerEvent(questions[idx].q, wasCorrect);
     }
-  }, [timeLeft, confirmed, idx, questions, stopTimer]);
+  }, [timeLeft, confirmed, idx, questions, stopTimer, correctFor]);
 
   const handleSelect = (opt: string) => {
     if (!confirmed) {
@@ -698,7 +718,7 @@ export function QuizPlayer({
     tapMedium();
     stopTimer();
     setConfirmed(true);
-    const correct = selected === q.correctAnswer;
+    const correct = selected === correctFor(q);
     if (correct) {
       success();
       setScore((s) => s + 1);
@@ -802,15 +822,15 @@ export function QuizPlayer({
           </LinearGradient>
         </View>
 
-        {/* Answer options */}
+        {/* Answer options — Kreyòl strings when the bank carries them */}
         <View style={{ gap: 10 }}>
-          {q.options.map((opt, i) => (
+          {displayOptions.map((opt, i) => (
             <AnswerOption
               key={i}
               opt={opt}
               label={LETTER_LABELS[i] ?? String(i + 1)}
               isSelected={opt === selected}
-              isCorrectOpt={opt === q.correctAnswer}
+              isCorrectOpt={opt === correctFor(q)}
               confirmed={confirmed}
               onPress={() => handleSelect(opt)}
               colors={colors}
@@ -838,12 +858,14 @@ export function QuizPlayer({
             {!isCorrect && (
               <Text className="mt-1" style={[typeScale.body, { color: colors.muted }]}>
                 {isCreole ? 'Bon repons :' : 'Bonne réponse :'}{' '}
-                <Text style={[typeScale.bodyMd, { color: colors.success }]}>{q.correctAnswer}</Text>
+                <Text style={[typeScale.bodyMd, { color: colors.success }]}>{correctFor(q)}</Text>
               </Text>
             )}
 
-            {q.explanation ? (
-              <Text className="mt-2" style={[typeScale.body, { color: colors.muted }]}>{q.explanation}</Text>
+            {(isCreole && q.explanationHt) || q.explanation ? (
+              <Text className="mt-2" style={[typeScale.body, { color: colors.muted }]}>
+                {isCreole ? (q.explanationHt ?? q.explanation) : q.explanation}
+              </Text>
             ) : null}
           </PopIn>
         )}
@@ -1097,23 +1119,29 @@ function TriviaResults({
           <Text style={{ fontFamily: typeScale.overline.fontFamily, fontSize: 11, letterSpacing: 1, color: 'rgba(255,255,255,0.65)', marginBottom: 4 }}>
             {isCreole ? 'REVIZE ERÈ OU YO' : 'REVOIS TES ERREURS'} ({mistakes.length})
           </Text>
-          {mistakes.map((m, i) => (
-            <View key={i} style={{ ...glass, borderRadius: 14, padding: 12, marginTop: 8 }}>
-              <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 13.5, lineHeight: 19, color: '#ffffff' }}>
-                {isCreole ? m.q.qHt : m.q.q}
-              </Text>
-              <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6 }}>
-                {isCreole ? 'Ou' : 'Toi'} : {m.chosen ?? (isCreole ? '(tan an fini)' : '(temps écoulé)')}
-                {'   ·   '}
-                <Text style={{ color: '#86efac' }}>✓ {m.q.correctAnswer}</Text>
-              </Text>
-              {m.q.explanation ? (
-                <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.65)', marginTop: 6 }}>
-                  💡 {m.q.explanation}
+          {mistakes.map((m, i) => {
+            // `chosen` was captured as the DISPLAYED string, so the ✓ answer
+            // and 💡 explanation must resolve in the same language.
+            const correct = isCreole && m.q.optionsHt && m.q.correctAnswerHt ? m.q.correctAnswerHt : m.q.correctAnswer;
+            const explanation = isCreole ? (m.q.explanationHt ?? m.q.explanation) : m.q.explanation;
+            return (
+              <View key={i} style={{ ...glass, borderRadius: 14, padding: 12, marginTop: 8 }}>
+                <Text style={{ fontFamily: typeScale.bodyMd.fontFamily, fontSize: 13.5, lineHeight: 19, color: '#ffffff' }}>
+                  {isCreole ? m.q.qHt : m.q.q}
                 </Text>
-              ) : null}
-            </View>
-          ))}
+                <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 6 }}>
+                  {isCreole ? 'Ou' : 'Toi'} : {m.chosen ?? (isCreole ? '(tan an fini)' : '(temps écoulé)')}
+                  {'   ·   '}
+                  <Text style={{ color: '#86efac' }}>✓ {correct}</Text>
+                </Text>
+                {explanation ? (
+                  <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, lineHeight: 17, color: 'rgba(255,255,255,0.65)', marginTop: 6 }}>
+                    💡 {explanation}
+                  </Text>
+                ) : null}
+              </View>
+            );
+          })}
         </View>
       )}
     </QuizResultHero>
