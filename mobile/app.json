@@ -36,14 +36,34 @@
             ]
           }
         ]
-      }
+      },
+      "associatedDomains": [
+        "applinks:academy.edlight.org"
+      ]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.edlightacademy"
+      "package": "com.edlightacademy",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "academy.edlight.org",
+              "pathPrefix": "/defi"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -61,6 +61,10 @@ module.exports = {
         // Allow copying CSVs from both public_original/data (canonical) and public/data (uploaded extras)
         // If duplicates exist, later entries overwrite earlier ones.
         // The 762KB *_FULL_DETAIL_ORIGINAL.csv is never fetched at runtime -> excluded.
+        // Universal/App Links manifests — must ship as real static files so
+        // Vercel's filesystem pass serves them before the SPA catch-all
+        // rewrite (Apple fetches with no redirects, Content-Type flexible).
+        { from: 'public_original/.well-known', to: '.well-known' },
         {
           from: 'public/data',
           to: 'data',
