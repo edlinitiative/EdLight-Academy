@@ -20,6 +20,7 @@ import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
 import ReadinessCard from '../components/ReadinessCard';
 import HomeWidgets from '../components/HomeWidgets';
+import MissionCard from '../components/MissionCard';
 import SmartSuggestion from '../components/SmartSuggestion';
 import SeasonCountdown from '../components/SeasonCountdown';
 import { gradeProfile } from '../config/trackConfig';
@@ -89,16 +90,15 @@ function HeroPill({
   );
 }
 
-/** One column of the at-a-glance stats card. */
-function StatCol({ value, label }: { value: string | number; label: string }) {
-  const colors = useColors();
-  return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={[typeScale.h2, { color: colors.ink }]} maxFontSizeMultiplier={1.3}>{value}</Text>
-      <Text style={[typeScale.micro, { color: colors.muted, marginTop: 2 }]}>{label}</Text>
-    </View>
-  );
+/** Quiz attempts this ISO week (Monday 00:00 local onward). */
+function countQuizzesThisWeek(attempts: any[], now = new Date()): number {
+  const daysSinceMonday = (now.getDay() + 6) % 7; // Mon=0 … Sun=6
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday).getTime();
+  return attempts.filter((a) => typeof a?.date === 'number' && a.date >= monday).length;
 }
+
+/** Weekly quiz target for the goal ring. */
+const WEEKLY_QUIZ_GOAL = 5;
 
 function SectionHeader({
   title,
@@ -161,7 +161,7 @@ function DashboardSkeleton() {
 
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  const { colors, cardSurface, shadow } = useTheme();
+  const { colors, cardSurface } = useTheme();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge } = useStore();
   const practiceMode = gradeProfile(grade).primaryTab === 'Quiz' ? 'quiz' : 'exams';
   const themeMode = useStore((s) => s.theme);
@@ -190,22 +190,7 @@ export default function DashboardScreen() {
   const greeting = isCreole ? 'Bonjou' : 'Bonjour';
   const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
-  const totalQuizzes = allAttemptsList.length;
-  // Each attempt stores { score: correctCount, total: questionCount } — average
-  // the per-attempt percentage (score/total), clamped 0-100. (Matches Profile.)
-  const avgScore = totalQuizzes > 0
-    ? Math.round(
-        allAttemptsList.reduce((sum: number, a: any) => {
-          const pct = typeof a.percentage === 'number'
-            ? a.percentage
-            : (a.total > 0 ? (a.score / a.total) * 100 : 0);
-          return sum + Math.max(0, Math.min(100, pct));
-        }, 0) / totalQuizzes,
-      )
-    : 0;
-
-  // Brand-new student: nothing done yet. Drives the motivating first-run nudge.
-  const isFirstRun = totalQuizzes === 0 && enrolledCourses.length === 0 && (streak?.currentStreak ?? 0) === 0;
+  const quizzesThisWeek = countQuizzesThisWeek(allAttemptsList);
 
   const progressByCourseId = React.useMemo(() => {
     const m = new Map<string, any>();
@@ -247,17 +232,47 @@ export default function DashboardScreen() {
   const coursFirst = gradeProfile(grade).lead[0] === 'cours';
   const isBacTrack = gradeProfile(grade).examLevel === 'baccalaureat';
 
-  const atAGlanceBlock = !isFirstRun ? (
+  // Weekly goal — replaces the old Quiz/Cours/Moyenne stats row, which read as
+  // a wall of zeros for new students. A target ("2 quiz sur 5") is motivating
+  // at zero in a way a report card never is; lifetime stats live on Profile.
+  const goalReached = quizzesThisWeek >= WEEKLY_QUIZ_GOAL;
+  const goalSublabel = goalReached
+    ? t('Objectif atteint — continue sur ta lancée !', 'Ou rive sou objektif la — kontinye konsa !')
+    : quizzesThisWeek === 0
+      ? t('Fais ton premier quiz de la semaine', 'Fè premye quiz ou pou semèn nan')
+      : t(`${quizzesThisWeek} quiz sur ${WEEKLY_QUIZ_GOAL} — continue !`, `${quizzesThisWeek} quiz sou ${WEEKLY_QUIZ_GOAL} — kontinye !`);
+  const weeklyGoalBlock = (
     <View className="px-5 mb-4">
-      <View style={{ ...cardSurface, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}>
-        <StatCol value={totalQuizzes} label={t('Quiz', 'Quiz')} />
-        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
-        <StatCol value={enrolledCourses.length} label={t('Cours', 'Kou')} />
-        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.border, marginVertical: 4 }} />
-        <StatCol value={avgScore > 0 ? `${avgScore}%` : '—'} label={t('Moyenne', 'Mwayèn')} />
-      </View>
+      <PressableScale
+        onPress={() => navigation.navigate('Trivia')}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('Objectif de la semaine', 'Objektif semèn nan')}. ${goalSublabel}`}
+        style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+      >
+        <ProgressRing
+          value={Math.min(100, (quizzesThisWeek / WEEKLY_QUIZ_GOAL) * 100)}
+          color={goalReached ? colors.success : colors.azure}
+          size={46}
+          strokeWidth={5}
+          showLabel={false}
+        />
+        <View style={{ flex: 1 }}>
+          <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
+            {t('Objectif de la semaine', 'Objektif semèn nan')}
+          </Text>
+          <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]} numberOfLines={1}>
+            {goalSublabel}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[typeScale.titleSm, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>
+            {formatXp(weeklyXp)}
+          </Text>
+          <Text style={[typeScale.micro, { color: colors.faint }]}>{t('XP semaine', 'XP semèn')}</Text>
+        </View>
+      </PressableScale>
     </View>
-  ) : null;
+  );
 
   const continueLearningBlock = displayCourses.length > 0 ? (
     <View className="px-5 mb-4">
@@ -402,51 +417,18 @@ export default function DashboardScreen() {
           </View>
         ) : null}
 
-        {/* First-run nudge — a brand-new student (no quiz, course or streak yet)
-            sees an inviting starting point instead of a wall of zeros. */}
-        {!lastActivity && isFirstRun ? (
-          <View className="px-5 mt-4">
-            <PressableScale
-              onPress={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }}
-              accessibilityRole="button"
-              accessibilityLabel={t('Commencer', 'Kòmanse')}
-              style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
-            >
-              <LinearGradient
-                colors={['#2E86F0', '#1B6FE0', '#0857A6']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
-              >
-                <View
-                  style={{
-                    width: 44, height: 44, borderRadius: radius.tile,
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <Zap color="#fff" size={22} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typeScale.titleSm, { color: '#fff' }]}>
-                    {t('Commence ton parcours', 'Kòmanse pakou ou')}
-                  </Text>
-                  <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 1 }]}>
-                    {t('Fais ton premier quiz pour gagner des XP', 'Fè premye quiz ou pou genyen XP')}
-                  </Text>
-                </View>
-                <ChevronRight color="#fff" size={18} />
-              </LinearGradient>
-            </PressableScale>
-          </View>
-        ) : null}
+        {/* Mission du jour — the page's single "do this now" card. Absorbs the
+            old Défi du jour tile and the first-run nudge; flips to a quiet
+            success row once today's challenge is done. */}
+        <View className="px-5 mt-4">
+          <MissionCard onStart={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }} />
+        </View>
 
-        {/* Quick actions */}
+        {/* Quick actions — one compact row (was a 2×2 grid). */}
         <View className="px-5 mt-4 mb-4">
           <HomeWidgets
             onNavigateExams={() => navigation.navigate('Exams')}
             onNavigateTrivia={() => navigation.navigate('Trivia')}
-            onNavigateDaily={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }}
             onNavigateCourses={() => navigation.navigate('Courses')}
             onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}
             enrolledCount={enrolledCourses.length}
@@ -463,17 +445,17 @@ export default function DashboardScreen() {
             (Bac / 9ème / Préfac prep). Self-hides for grades with no exam. */}
         <SeasonCountdown />
 
-        {/* At-a-glance stats + Continue learning. Order flips by grade: cours-first
-            grades (NS1–NS3) surface "Continuer à apprendre" above the stats; all
-            other grades keep the stats card first. Each block self-hides. */}
+        {/* Weekly goal + Continue learning. Order flips by grade: cours-first
+            grades (NS1–NS3) surface "Continuer à apprendre" above the goal; all
+            other grades keep the goal card first. */}
         {coursFirst ? (
           <>
             {continueLearningBlock}
-            {atAGlanceBlock}
+            {weeklyGoalBlock}
           </>
         ) : (
           <>
-            {atAGlanceBlock}
+            {weeklyGoalBlock}
             {continueLearningBlock}
           </>
         )}

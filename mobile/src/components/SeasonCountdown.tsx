@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CalendarClock, Landmark, GraduationCap } from 'lucide-react-native';
+import { CalendarClock, GraduationCap } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile, seasonAnchorYear } from '../config/trackConfig';
 import { useTheme, radius, typeScale } from '../theme/theme';
@@ -70,21 +70,11 @@ export default function SeasonCountdown() {
       accessibilityLabel: t(`Bac dans ${days} jours`, `Bak nan ${days} jou`),
     };
   } else if (level === 'universite') {
-    // Post-Bac concours have no single national date → encourage prep, don't count.
-    content = {
-      Icon: Landmark,
-      colors: ['#0EA5C4', '#0891B2', '#0E7490'],
-      title: t('Prépare les concours', 'Prepare konkou yo'),
-      subtitle: t(
-        'Entraîne-toi pour l’entrée à l’université.',
-        'Antrene ou pou antre inivèsite.',
-      ),
-      days: null,
-      accessibilityLabel: t(
-        'Prépare les concours d’entrée à l’université',
-        'Prepare konkou antre inivèsite yo',
-      ),
-    };
+    // Post-Bac concours have no single national date, and a dateless "Prépare
+    // les concours" card duplicated SmartSuggestion's prefac card right above
+    // it. This component only earns its Home slot with a real countdown, so
+    // université renders nothing.
+    content = null;
   } else if (level === '9eme_af') {
     const now = new Date();
     const nextExam = new Date(seasonAnchorYear(now), 6, 5); // 9ème AF national exam ~ July

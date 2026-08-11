@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ClipboardList, ListChecks, Zap, Trophy, Compass, ChevronRight } from 'lucide-react-native';
+import { ClipboardList, ListChecks, Trophy, Compass, Gamepad2 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -19,66 +18,56 @@ function tint(hex: string, alpha: number): string {
 interface TileProps {
   icon: React.ReactNode;
   accent: string;
-  value: string;
   label: string;
+  /** Tiny secondary line under the label (e.g. "#2" on Classement). */
+  sublabel?: string;
   accessibilityLabel: string;
   onPress?: () => void;
-  /** Render the value in the muted sublabel style (zero states, e.g. no rank). */
-  valueMuted?: boolean;
 }
 
-/** A tonal action tile — soft gradient tint, icon chip, chevron, value + label. */
-function Tile({ icon, accent, value, label, accessibilityLabel, onPress, valueMuted }: TileProps) {
+/** One compact action tile — icon chip over a short label, single row of four. */
+function Tile({ icon, accent, label, sublabel, accessibilityLabel, onPress }: TileProps) {
   const { colors, radius } = useTheme();
   return (
     <PressableScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      pressedScale={0.97}
-      style={{ flex: 1, borderRadius: radius.card, overflow: 'hidden' }}
+      pressedScale={0.96}
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+        borderRadius: radius.card,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+      }}
     >
-      <LinearGradient
-        colors={[tint(accent, 0.16), tint(accent, 0.05)]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
         style={{
-          minHeight: 96,
-          padding: 13,
-          borderRadius: radius.card,
-          borderWidth: 1,
-          borderColor: tint(accent, 0.28),
-          justifyContent: 'space-between',
+          width: 36,
+          height: 36,
+          borderRadius: radius.tile,
+          backgroundColor: tint(accent, 0.16),
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <View
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: radius.tile,
-              backgroundColor: tint(accent, 0.18),
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {icon}
-          </View>
-          {onPress ? <ChevronRight color={tint(accent, 0.55)} size={16} /> : null}
-        </View>
-        <View style={{ marginTop: 8 }}>
-          <Text
-            style={[valueMuted ? typeScale.caption : typeScale.h2, { color: valueMuted ? colors.muted : colors.ink }]}
-            numberOfLines={1}
-            maxFontSizeMultiplier={1.3}
-          >
-            {value}
+        {icon}
+      </View>
+      <View style={{ alignItems: 'center' }}>
+        <Text style={[typeScale.label, { color: colors.ink }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+          {label}
+        </Text>
+        {sublabel ? (
+          <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>
+            {sublabel}
           </Text>
-          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
-            {label}
-          </Text>
-        </View>
-      </LinearGradient>
+        ) : null}
+      </View>
     </PressableScale>
   );
 }
@@ -86,19 +75,21 @@ function Tile({ icon, accent, value, label, accessibilityLabel, onPress, valueMu
 interface HomeWidgetsProps {
   onNavigateExams?: () => void;
   onNavigateTrivia?: () => void;
-  onNavigateDaily?: () => void;
   onNavigateCourses?: () => void;
   onNavigateLeaderboard?: () => void;
   enrolledCount?: number;
-  recommendedCourse?: any;
   /** 'quiz' for Quiz-primary grades → the practice tile leads with quizzes. */
   practiceMode?: 'exams' | 'quiz';
 }
 
+/**
+ * Quick actions — one row of four compact tiles (was a 2×2 grid of hero-sized
+ * cards). The Défi du jour tile moved up into <MissionCard>, so this row is
+ * pure navigation: practice, board, games, catalogue.
+ */
 export default function HomeWidgets({
   onNavigateExams,
   onNavigateTrivia,
-  onNavigateDaily,
   onNavigateCourses,
   onNavigateLeaderboard,
   enrolledCount = 0,
@@ -120,7 +111,7 @@ export default function HomeWidgets({
       ? t('Concours', 'Konkou')
       : examLevel === '9eme_af'
         ? t('Examen 9e', 'Egzamen 9yèm')
-        : t('Examens Bac', 'Egzamen Bak');
+        : t('Examens', 'Egzamen');
 
   // Per-tile accents. Blue/amber/green come from the theme palette (dark-aware);
   // violet has no palette token, so lift it on dark grounds to stay vivid.
@@ -129,59 +120,54 @@ export default function HomeWidgets({
   const violet = isDark ? '#a78bfa' : '#7c3aed';
   const green = colors.success;
 
-  const ICON = 18;
+  const ICON = 17;
 
   return (
-    <View style={{ gap: 12 }}>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Tile
-          icon={practiceMode === 'quiz' ? <ListChecks color={blue} size={ICON} /> : <ClipboardList color={blue} size={ICON} />}
-          accent={blue}
-          value={t("S'entraîner", 'Antrene')}
-          label={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : examsLabel}
-          accessibilityLabel={
-            practiceMode === 'quiz'
-              ? t("S'entraîner, Quiz", 'Antrene, Quiz')
-              : `${t("S'entraîner", 'Antrene')}, ${examsLabel}`
-          }
-          onPress={onNavigateExams}
-        />
-        <Tile
-          icon={<Trophy color={amber} size={ICON} />}
-          accent={amber}
-          value={myRank ? `#${myRank}` : t('Nouveau', 'Nouvo')}
-          valueMuted={!myRank}
-          label={t('Classement', 'Klasman')}
-          accessibilityLabel={
-            myRank
-              ? `${t('Classement', 'Klasman')}, ${t('rang', 'ran')} ${myRank}`
-              : t('Classement, nouveau', 'Klasman, nouvo')
-          }
-          onPress={onNavigateLeaderboard ?? onNavigateTrivia}
-        />
-      </View>
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <Tile
-          icon={<Zap color={violet} size={ICON} />}
-          accent={violet}
-          value={t('+50 XP', '+50 XP')}
-          label={t('Défi du jour', 'Defi jodi a')}
-          accessibilityLabel={t('Défi du jour, gagne 50 XP', 'Defi jodi a, genyen 50 XP')}
-          onPress={onNavigateDaily ?? onNavigateTrivia}
-        />
-        <Tile
-          icon={<Compass color={green} size={ICON} />}
-          accent={green}
-          value={enrolledCount > 0 ? t('Continuer', 'Kontinye') : t('Explorer', 'Eksplore')}
-          label={enrolledCount > 0 ? t('Mes cours', 'Kou mwen yo') : t('Catalogue', 'Katalòg')}
-          accessibilityLabel={
-            enrolledCount > 0
-              ? t('Continuer, mes cours', 'Kontinye, kou mwen yo')
-              : t('Explorer le catalogue', 'Eksplore katalòg')
-          }
-          onPress={onNavigateCourses}
-        />
-      </View>
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <Tile
+        icon={practiceMode === 'quiz' ? <ListChecks color={blue} size={ICON} /> : <ClipboardList color={blue} size={ICON} />}
+        accent={blue}
+        label={t("S'entraîner", 'Antrene')}
+        sublabel={practiceMode === 'quiz' ? t('Quiz', 'Quiz') : examsLabel}
+        accessibilityLabel={
+          practiceMode === 'quiz'
+            ? t("S'entraîner, Quiz", 'Antrene, Quiz')
+            : `${t("S'entraîner", 'Antrene')}, ${examsLabel}`
+        }
+        onPress={onNavigateExams}
+      />
+      <Tile
+        icon={<Trophy color={amber} size={ICON} />}
+        accent={amber}
+        label={t('Classement', 'Klasman')}
+        sublabel={myRank ? `#${myRank}` : t('Nouveau', 'Nouvo')}
+        accessibilityLabel={
+          myRank
+            ? `${t('Classement', 'Klasman')}, ${t('rang', 'ran')} ${myRank}`
+            : t('Classement, nouveau', 'Klasman, nouvo')
+        }
+        onPress={onNavigateLeaderboard ?? onNavigateTrivia}
+      />
+      <Tile
+        icon={<Gamepad2 color={violet} size={ICON} />}
+        accent={violet}
+        label={t('Jeux', 'Jwèt')}
+        sublabel={t('Arcade', 'Akad')}
+        accessibilityLabel={t('Jeux, arcade', 'Jwèt, akad')}
+        onPress={onNavigateTrivia}
+      />
+      <Tile
+        icon={<Compass color={green} size={ICON} />}
+        accent={green}
+        label={enrolledCount > 0 ? t('Mes cours', 'Kou mwen') : t('Explorer', 'Eksplore')}
+        sublabel={t('Catalogue', 'Katalòg')}
+        accessibilityLabel={
+          enrolledCount > 0
+            ? t('Continuer, mes cours', 'Kontinye, kou mwen yo')
+            : t('Explorer le catalogue', 'Eksplore katalòg')
+        }
+        onPress={onNavigateCourses}
+      />
     </View>
   );
 }
