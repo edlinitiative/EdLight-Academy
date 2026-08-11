@@ -5,6 +5,13 @@
 import { isQuizAnswerCorrect } from '../QuizzesScreen';
 
 jest.mock('../../hooks/useData', () => ({ usePracticeQuizzes: () => ({ data: [] }) }));
+// QuizzesScreen also reaches firebase through answerEventsService (imported
+// directly and again via useCrowdOrderedQuestions) — firebase ships
+// untranspiled ESM Jest can't parse, so sever that chain the same way.
+jest.mock('../../services/answerEventsService', () => ({
+  logAnswerEvent: jest.fn(),
+  loadQuestionStats: jest.fn(async () => ({})),
+}));
 
 /**
  * Pins the QuizzesScreen scoring bug: the quiz bank stores the correct answer
