@@ -1,19 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring, Easing } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown } from 'lucide-react-native';
+import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown, Sparkles, Timer } from 'lucide-react-native';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
-import { isValidAlias } from '../services/leaderboardService';
+import { isValidAlias, weekId, weekNumber, timeToWeekEnd } from '../services/leaderboardService';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
 import Avatar from './ui/Avatar';
-import PressableScale from './ui/PressableScale';
 import Stagger from './ui/Stagger';
-import { Skeleton } from './StateViews';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
 
 /**
@@ -36,7 +33,7 @@ function rankBadge(rank: number, isDark: boolean) {
   return { icon: null, bg: 'transparent', text: isDark ? '#9aa8c0' : '#6b7280' };
 }
 
-function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean; compact?: boolean }) {
+function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isMe: boolean; compact?: boolean; delta?: number }) {
   const { colors, isDark } = useTheme();
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
@@ -44,7 +41,12 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
   const name = entry.displayName || t('Élève', 'Elèv');
   // One grouped label so VoiceOver reads "Rang 3, Sandra, 215 XP" as a single
   // unit rather than three disjoint bits (rank chip · name · number · "XP").
-  const rowLabel = `${t('Rang', 'Ran')} ${entry.rank}, ${name}${isMe ? t(' (vous)', ' (ou)') : ''}, ${entry.xp ?? 0} XP`;
+  const deltaLabel = delta > 0
+    ? t(`, en hausse de ${delta}`, `, monte ${delta}`)
+    : delta < 0
+      ? t(`, en baisse de ${-delta}`, `, desann ${-delta}`)
+      : '';
+  const rowLabel = `${t('Rang', 'Ran')} ${entry.rank}, ${name}${isMe ? t(' (vous)', ' (ou)') : ''}, ${entry.xp ?? 0} XP${deltaLabel}`;
 
   return (
     <View
@@ -88,6 +90,16 @@ function EntryRow({ entry, isMe, compact = false }: { entry: any; isMe: boolean;
           </Text>
         )}
       </View>
+
+      {/* Day-over-day movement — colour plus direction glyph, never colour alone. */}
+      {delta !== 0 && (
+        <Text
+          style={{ fontSize: 11, fontWeight: '800', marginRight: 8, color: delta > 0 ? colors.success : colors.danger }}
+          maxFontSizeMultiplier={1.3}
+        >
+          {delta > 0 ? `▲${delta}` : `▼${-delta}`}
+        </Text>
+      )}
 
       {/* XP */}
       <View className="items-end">
@@ -302,21 +314,26 @@ function Podium({
   );
 }
 
+export type BoardPeriod = 'week' | 'all';
+export type BoardScope = 'national' | 'school' | 'city' | 'department';
+
 interface LeaderboardProps {
   compact?: boolean;
   maxRows?: number;
+  /** Notifies the host screen of tab changes (e.g. to show/hide its sticky "you" bar). */
+  onViewChange?: (view: { period: BoardPeriod; scope: BoardScope }) => void;
 }
 
-export default function Leaderboard({ compact = false, maxRows = 10 }: LeaderboardProps) {
+export default function Leaderboard({ compact = false, maxRows = 10, onViewChange }: LeaderboardProps) {
   const { language, toggleAuthModal } = useStore();
   const { colors, cardSurface } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const [period, setPeriod] = useState<'week' | 'all'>('week');
-  const [scope, setScope] = useState<'national' | 'school' | 'city' | 'department'>('national');
+  const [period, setPeriod] = useState<BoardPeriod>('week');
+  const [scope, setScope] = useState<BoardScope>('national');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const { entries, myEntry, myRank, isLoading } = useLeaderboard(maxRows, compact ? 'week' : period);
+  const { entries, myEntry, myRank, isLoading, showingLastWeek, deltas } = useLeaderboard(maxRows, compact ? 'week' : period);
   const { profile, isAuthed } = useTrivia();
   const [showJoin, setShowJoin] = useState(false);
   const myUid = myEntry?.id;
@@ -353,9 +370,15 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
     return mine ? normalizeName(mine) : null;
   }, [collectiveField, mySchool, myCity, myDepartment]);
 
-  const changeScope = (next: 'national' | 'school' | 'city' | 'department') => {
+  const changePeriod = (next: BoardPeriod) => {
+    setPeriod(next);
+    onViewChange?.({ period: next, scope });
+  };
+
+  const changeScope = (next: BoardScope) => {
     setScope(next);
     setExpandedKey(null);
+    onViewChange?.({ period, scope: next });
   };
 
   const cardStyle = { ...cardSurface, padding: 16 };
@@ -434,7 +457,7 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
         {(['week', 'all'] as const).map((p) => (
           <TouchableOpacity
             key={p}
-            onPress={() => setPeriod(p)}
+            onPress={() => changePeriod(p)}
             activeOpacity={0.8}
             accessibilityRole="tab"
             accessibilityState={{ selected: period === p }}
@@ -475,6 +498,47 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
           </TouchableOpacity>
         ))}
       </View>
+      {/* Week chip + reset countdown — makes the Monday reset legible before it
+          happens instead of surprising everyone with a blank board. */}
+      {period === 'week' && !showingLastWeek && (() => {
+        const { days, hours } = timeToWeekEnd();
+        const countdown = days > 0
+          ? t(`Fin dans ${days} j ${hours} h`, `Fini nan ${days} j ${hours} è`)
+          : t(`Fin dans ${hours} h`, `Fini nan ${hours} è`);
+        return (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+              <Text style={{ fontSize: 11.5, fontWeight: '800', color: colors.azure }} maxFontSizeMultiplier={1.3}>
+                {t('Semaine', 'Semèn')} {weekNumber(weekId())}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Timer size={12} color={colors.faint} />
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.faint }} maxFontSizeMultiplier={1.3}>
+                {countdown}
+              </Text>
+            </View>
+          </View>
+        );
+      })()}
+      {/* Monday-reset fallback — the fresh week has no scores yet, so the board
+          below is LAST week's; say so instead of showing a blank card. */}
+      {period === 'week' && showingLastWeek && (
+        <View
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 8,
+            padding: 10, borderRadius: 12, backgroundColor: colors.azureSoft, marginBottom: 12,
+          }}
+        >
+          <Sparkles size={14} color={colors.azure} />
+          <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: colors.azure }}>
+            {t(
+              'Nouvelle semaine ! Voici le classement de la semaine dernière — joue pour prendre la tête.',
+              'Nouvo semèn ! Men klasman semèn pase a — jwe pou pran devan.',
+            )}
+          </Text>
+        </View>
+      )}
     </>
   );
 
@@ -505,6 +569,12 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
   return (
     <View style={cardStyle}>
       {header}
+      {/* The compact widget has no header row, so flag the fallback inline. */}
+      {compact && showingLastWeek && (
+        <Text style={{ fontSize: 11.5, fontWeight: '700', color: colors.muted, marginBottom: 6 }}>
+          {t('Semaine dernière', 'Semèn pase a')}
+        </Text>
+      )}
       {collectiveField ? (
         groups.length > 0 ? (
           <>
@@ -557,18 +627,18 @@ export default function Leaderboard({ compact = false, maxRows = 10 }: Leaderboa
               <Podium top3={displayList.slice(0, 3)} myUid={myUid} t={t} />
               <Stagger initialDelay={220} step={55}>
                 {displayList.slice(3).map((entry: any) => (
-                  <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} />
+                  <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} delta={deltas[entry.id] || 0} />
                 ))}
               </Stagger>
             </>
           ) : (
             displayList.map((entry: any) => (
-              <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} />
+              <EntryRow key={entry.id} entry={entry} isMe={entry.id === myUid} compact={compact} delta={deltas[entry.id] || 0} />
             ))
           )}
           {myEntry && !displayList.find((e: any) => e.id === myUid) && (
             <View className="border-t border-dashed border-gray-200 dark:border-slate-700 mt-1 pt-2">
-              <EntryRow entry={myEntry} isMe compact={compact} />
+              <EntryRow entry={myEntry} isMe compact={compact} delta={deltas[(myEntry as any).id] || 0} />
             </View>
           )}
         </>

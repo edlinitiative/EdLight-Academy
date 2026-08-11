@@ -67,6 +67,29 @@ export function weekId(date = new Date()) {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
+/** Id of the ISO week immediately before `date`'s week (same-day minus 7). */
+export function prevWeekId(date = new Date()) {
+  return weekId(new Date(date.getTime() - 7 * 86_400_000));
+}
+
+/** Human week number from a week id — "2026-W33" → 33 (NaN for "all-time"). */
+export function weekNumber(id: string): number {
+  return Number(id.split('-W')[1]);
+}
+
+/**
+ * Time remaining in the current leaderboard week, i.e. until next Monday
+ * 00:00 LOCAL time (the week flips when the device's date enters a new ISO
+ * week — weekId() reads local date fields). Returned pre-split for display.
+ */
+export function timeToWeekEnd(now = new Date()): { days: number; hours: number } {
+  const daysUntilMonday = (8 - now.getDay()) % 7 || 7; // Sun=0 … Sat=6 → 1..7
+  const nextMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMonday);
+  const ms = Math.max(0, nextMonday.getTime() - now.getTime());
+  const totalHours = Math.floor(ms / 3_600_000);
+  return { days: Math.floor(totalHours / 24), hours: totalHours % 24 };
+}
+
 function entriesRef(id: string) {
   return collection(db, 'leaderboards', id, 'entries');
 }
@@ -165,6 +188,25 @@ export async function updateEntryProfile(uid: string, meta: any = {}) {
     );
   } catch (err) {
     console.error('[Leaderboard] updateEntryProfile error:', err);
+  }
+}
+
+/**
+ * Show or hide the learner on the public board (Profile → "Classement public").
+ * XP keeps accumulating either way — hiding only flags the entries so reads
+ * filter them out, and the award endpoint propagates the all-time flag into
+ * each new week so a hidden learner never resurfaces on Monday.
+ */
+export async function setBoardVisibility(uid: string, visible: boolean) {
+  if (!uid) return;
+  const patch = { hidden: !visible, updatedAt: serverTimestamp() };
+  try {
+    await Promise.all([
+      setDoc(entryRef(weekId(), uid), patch, { merge: true }),
+      setDoc(entryRef(ALL_TIME_ID, uid), patch, { merge: true }),
+    ]);
+  } catch (err) {
+    console.error('[Leaderboard] setBoardVisibility error:', err);
   }
 }
 

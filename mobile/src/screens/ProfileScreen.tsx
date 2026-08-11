@@ -14,8 +14,11 @@ import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
 import StreakFlame from '../components/ui/StreakFlame';
 import XpBar from '../components/ui/XpBar';
+import { useQueryClient } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { logoutUser, deleteAccount } from '../services/authService';
+import { setLeaderboardOptIn } from '../services/triviaService';
+import { setBoardVisibility } from '../services/leaderboardService';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -154,6 +157,24 @@ export default function ProfileScreen() {
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
   const { myRank } = useLeaderboard(25);
+  const queryClient = useQueryClient();
+
+  // Public-board visibility. Everyone appears by default (auto-alias); this
+  // switch is the opt-out. Local override for instant feedback, profile as the
+  // source of truth otherwise.
+  const [boardVisibleOverride, setBoardVisibleOverride] = useState<boolean | null>(null);
+  const boardVisible = boardVisibleOverride ?? (profile?.leaderboard?.optedIn !== false);
+  const handleBoardVisibilityToggle = async (next: boolean) => {
+    setBoardVisibleOverride(next);
+    if (!user?.uid) return;
+    // Profile flag (drives this switch + future awards) and the entry flags
+    // (hide/show the current week + all-time rows immediately).
+    await Promise.all([
+      setLeaderboardOptIn(user.uid, { optedIn: next }),
+      setBoardVisibility(user.uid, next),
+    ]);
+    queryClient.invalidateQueries({ queryKey: ['leaderboard-weekly'] });
+  };
 
   // The gradient hero runs under the status bar, so its glyphs must be light
   // while this screen is focused; restore the theme default on blur.
@@ -568,13 +589,28 @@ export default function ProfileScreen() {
               iconBg={colors.azureSoft}
               label={t('Notifications', 'Notifikasyon')}
               sublabel={t("Rappels d'étude quotidiens", 'Rapèl etid chak jou')}
-              last
               accessory={
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={handleNotificationToggle}
                   trackColor={{ false: colors.border, true: colors.azureBorder }}
                   thumbColor={notificationsEnabled ? colors.azure : colors.faint}
+                  ios_backgroundColor={colors.border}
+                />
+              }
+            />
+            <SettingRow
+              icon={<Trophy color={colors.azure} size={18} />}
+              iconBg={colors.azureSoft}
+              label={t('Classement public', 'Klasman piblik')}
+              sublabel={t('Apparaître dans le classement', 'Parèt nan klasman an')}
+              last
+              accessory={
+                <Switch
+                  value={boardVisible}
+                  onValueChange={handleBoardVisibilityToggle}
+                  trackColor={{ false: colors.border, true: colors.azureBorder }}
+                  thumbColor={boardVisible ? colors.azure : colors.faint}
                   ios_backgroundColor={colors.border}
                 />
               }

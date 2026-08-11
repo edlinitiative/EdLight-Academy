@@ -43,7 +43,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue } from 'firebase-admin/firestore';
-import { requireAuth } from '../_lib/requireAuth';
+import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
 
@@ -85,6 +85,21 @@ function optStr(v: unknown): string | null {
   return s ? s.slice(0, FIELD_MAX) : null;
 }
 
+/**
+ * Privacy-safe default alias from a verified account name: first name plus the
+ * last name's initial — "Ted Olivier Jacquet" → "Ted J.". Many learners are
+ * minors, so the full account name is never published; this keeps everyone on
+ * the board by default without exposing identity. Returns null when the name
+ * can't produce a valid alias (e.g. email-only accounts with no name claim).
+ */
+function defaultAlias(name: string | undefined): string | null {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length || !isValidAlias(parts[0])) return null;
+  const first = parts[0].slice(0, 30);
+  const lastInitial = parts.length > 1 ? ` ${parts[parts.length - 1][0].toUpperCase()}.` : '';
+  return `${first}${lastInitial}`;
+}
+
 interface AwardBody {
   xpDelta?: unknown;
   displayName?: unknown;
@@ -102,9 +117,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // uid comes from the verified token — never from the body.
-  const uid = await requireAuth(req, res);
-  if (!uid) return;
+  // uid comes from the verified token — never from the body. The token's name
+  // claim (also verified) seeds a default alias for first-time players.
+  const decoded = await requireAuthDecoded(req, res);
+  if (!decoded) return;
+  const { uid, name: tokenName } = decoded;
 
   const { allowed, remaining, resetAt } = await checkRateLimit(uid, 'leaderboard-award');
   if (!allowed) {
@@ -129,20 +146,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const school = optStr(body.school);
   const city = optStr(body.city);
   const department = optStr(body.department);
-  const hasAlias = isValidAlias(body.displayName);
-  const displayName = hasAlias ? String(body.displayName).slice(0, 40) : null;
-
-  // Shared profile fields for both entries. Only write displayName when it's a
-  // valid alias, so an XP award never erases a pseudo the learner already set.
-  const profile: Record<string, unknown> = {
-    uid,
-    level,
-    school,
-    city,
-    department,
-    ...(hasAlias ? { displayName } : {}),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
+  let hasAlias = isValidAlias(body.displayName);
+  let displayName = hasAlias ? String(body.displayName).slice(0, 40) : null;
 
   const db = getDb();
   const id = weekId();
@@ -150,6 +155,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const weeklyRef = db.doc(`leaderboards/${id}/entries/${uid}`);
     const allTimeRef = db.doc(`leaderboards/${ALL_TIME_ID}/entries/${uid}`);
+
+    // Everyone appears on the board by default under a privacy-safe alias
+    // ("Ted J."), unless they've hidden themselves in Profile. The all-time
+    // entry is the durable record for both facts: `hidden` must survive the
+    // weekly reset (fresh weekly docs would otherwise resurface an opted-out
+    // learner), and an already-stored alias means no derivation is needed.
+    const existing = (await allTimeRef.get()).data() as Record<string, unknown> | undefined;
+    const hidden = existing?.hidden === true;
+    if (!hasAlias && !hidden && !isValidAlias(existing?.displayName)) {
+      const derived = defaultAlias(tokenName);
+      if (derived) {
+        hasAlias = true;
+        displayName = derived;
+      }
+    }
+
+    // Shared profile fields for both entries. Only write displayName when it's a
+    // valid alias, so an XP award never erases a pseudo the learner already set.
+    const profile: Record<string, unknown> = {
+      uid,
+      level,
+      school,
+      city,
+      department,
+      ...(hasAlias && !hidden ? { displayName } : {}),
+      ...(hidden ? { hidden: true } : {}),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
     await Promise.all([
       weeklyRef.set({ ...profile, weekId: id, xp: FieldValue.increment(xpDelta) }, { merge: true }),
@@ -162,7 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // can hold a record.
     const gameId = typeof body.gameId === 'string' ? body.gameId : '';
     const score = Math.round(Number(body.score));
-    if (gameId && /^[A-Za-z0-9_-]{1,64}$/.test(gameId) && Number.isFinite(score) && score > 0 && score <= MAX_SCORE && hasAlias) {
+    if (gameId && /^[A-Za-z0-9_-]{1,64}$/.test(gameId) && Number.isFinite(score) && score > 0 && score <= MAX_SCORE && hasAlias && !hidden) {
       const recordsRef = db.doc('leaderboards/records');
       await db.runTransaction(async (tx) => {
         const snap = await tx.get(recordsRef);
