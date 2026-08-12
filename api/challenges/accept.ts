@@ -157,6 +157,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       await Promise.all([
         db.doc(`leaderboards/${id}/entries/${toUid}`).set({ ...patch, weekId: id }, { merge: true }),
         db.doc(`leaderboards/all-time/entries/${toUid}`).set(patch, { merge: true }),
+        // Server-only award, so the gamification profile (which drives the
+        // level the student SEES, via levelInfo) must be bumped here too.
+        // Every other XP path writes the profile client-side and only posts
+        // the delta to the board — skipping this write is exactly the
+        // board-vs-profile drift the 2026-08-11 data audit flagged.
+        db.doc(`users/${toUid}/gamification/profile`).set(
+          { xp: FieldValue.increment(xp), updatedAt: FieldValue.serverTimestamp() },
+          { merge: true },
+        ),
       ]);
     };
     let callerXp = 0;
