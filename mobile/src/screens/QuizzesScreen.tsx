@@ -24,6 +24,7 @@ import PressableScale from '../components/ui/PressableScale';
 import PopIn from '../components/ui/PopIn';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
+import DefiHandoffCard from '../components/DefiHandoffCard';
 
 type Translate = (fr: string, ht: string) => string;
 
@@ -421,6 +422,12 @@ function QuizResultScreen({ score, total, onRetry, onBack, t, isCreole }: {
           <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{pct}%</Text>
           <Text style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{t('CORRECT', 'KÒRÈK')}</Text>
         </View>
+      </View>
+
+      {/* Handoff into the XP loop — practice quizzes award no XP, so this is
+          where a content-only user discovers the Défi (hidden once done). */}
+      <View style={{ width: '100%', marginTop: 12 }}>
+        <DefiHandoffCard variant="glass" />
       </View>
     </QuizResultHero>
   );

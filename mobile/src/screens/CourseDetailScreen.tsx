@@ -17,6 +17,7 @@ import ProgressBar from '../components/ProgressBar';
 import LessonPractice from '../components/LessonPractice';
 import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
+import DefiHandoffCard from '../components/DefiHandoffCard';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, typeScale, radius } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
@@ -295,6 +296,14 @@ export default function CourseDetailScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Lesson done → hand off into the XP loop (hidden once today's
+              défi is played; compact so the practice row below stays close). */}
+          {isAlreadyDone && (
+            <View className="mt-3">
+              <DefiHandoffCard compact />
+            </View>
+          )}
 
           {/* Flashcards + Exercices — per-lesson practice (same quiz bank as web) */}
           <View ref={practiceRowRef} collapsable={false} className="flex-row gap-3 mt-3">

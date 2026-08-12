@@ -21,6 +21,7 @@ import PopIn from '../components/ui/PopIn';
 import { useReduceMotion } from '../utils/motion';
 import { success as hapticSuccess, tapMedium, tapLight } from '../utils/haptics';
 import MathText from '../components/MathText';
+import DefiHandoffCard from '../components/DefiHandoffCard';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Route = RouteProp<ExamsParamList, 'ExamResults'>;
@@ -309,6 +310,13 @@ export default function ExamResultsScreen() {
           label={t('Partager mon score', 'Pataje nòt mwen')}
           style={{ marginHorizontal: 16, marginTop: 20 }}
         />
+
+        {/* Handoff into the XP loop — an exam just finished is the moment a
+            content-only user is most likely to try the Défi (falls back to
+            the ×2 weekly game once today's défi is done). */}
+        <View className="mx-4 mt-4">
+          <DefiHandoffCard showWeeklyWhenDone />
+        </View>
 
         {/* Stats */}
         <View className="flex-row gap-3 mx-4 mt-4">

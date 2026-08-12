@@ -12,6 +12,9 @@ jest.mock('../../services/answerEventsService', () => ({
   logAnswerEvent: jest.fn(),
   loadQuestionStats: jest.fn(async () => ({})),
 }));
+// The post-content DefiHandoffCard pulls in useTrivia → triviaService →
+// firebase, and the navigator — sever it too (renders nothing in tests).
+jest.mock('../../components/DefiHandoffCard', () => ({ __esModule: true, default: () => null }));
 
 /**
  * Pins the QuizzesScreen scoring bug: the quiz bank stores the correct answer
