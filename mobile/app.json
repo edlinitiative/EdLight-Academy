@@ -2,10 +2,8 @@
   "expo": {
     "name": "EdLight Academy",
     "slug": "edlight-academy",
-    "version": "1.2.0",
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "version": "1.2.1",
+    "runtimeVersion": "1.2.0",
     "updates": {
       "url": "https://u.expo.dev/84d5c2a1-53bc-443c-8a93-e17a1207322b",
       "fallbackToCacheTimeout": 0
