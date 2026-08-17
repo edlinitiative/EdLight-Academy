@@ -1,0 +1,24 @@
+# Files excluded from the tarball uploaded to EAS Build.
+#
+# IMPORTANT: when this file exists, EAS CLI uses it INSTEAD of .gitignore — not
+# in addition to it. So every exclude that matters has to be repeated here.
+
+# Dependencies / caches (would otherwise be uploaded, since .gitignore is bypassed)
+node_modules/
+.expo/
+.git/
+
+# Secrets — mirrors .gitignore. Never ship these to a build worker.
+google-play-service-account.json
+*-service-account.json
+*.p8
+
+# Local build artifacts
+*.ipa
+*.aab
+
+# Pre-built JS export output (~95 MB of .hbc + source maps). EAS Build runs its
+# own bundler, so these are dead weight in the upload: they took the tarball to
+# 127 MB and the upload died mid-flight with EPIPE. Excluding them is safe —
+# the committed copies stay in git for whatever consumes them.
+dist/
