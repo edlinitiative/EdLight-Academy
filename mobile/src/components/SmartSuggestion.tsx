@@ -170,7 +170,7 @@ export default function SmartSuggestion() {
         title: t('Renforce tes bases', 'Ranfòse baz ou yo'),
         subtitle: t('Suis tes cours et teste-toi avec des quiz ciblés.', 'Swiv kou ou yo epi teste tèt ou ak quiz.'),
         cta: t('Voir les cours', 'Wè kou yo'),
-        onPress: () => navigation.navigate('Courses'),
+        onPress: () => (navigation as any).navigate('Courses', { screen: 'CourseList' }),
       },
       'exam9e-focus': {
         Icon: GraduationCap,

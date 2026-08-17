@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, FlatList,
+  View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, FlatList, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import { getSubjectColor } from '../utils/shared';
+import { courseVideoThumb } from '../utils/videoThumb';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
@@ -76,6 +77,9 @@ function CourseCard({
   const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
   const color = course.color ?? colors.azure;
   const soon = !!course.comingSoon;
+  const thumb = soon ? null : courseVideoThumb(course);
+  // A dead thumbnail URL must degrade to the icon placeholder, not a blank box.
+  const [thumbFailed, setThumbFailed] = useState(false);
 
   return (
     <PressableScale
@@ -87,12 +91,23 @@ function CourseCard({
     >
       <View className="p-4">
         <View className="flex-row items-center gap-3">
-          <View
-            className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-            style={{ backgroundColor: color + '18' }}
-          >
-            <BookOpen color={color} size={20} />
-          </View>
+          {thumb && !thumbFailed ? (
+            // Real video still (16:9) instead of a generic icon tile.
+            <Image
+              source={{ uri: thumb }}
+              resizeMode="cover"
+              onError={() => setThumbFailed(true)}
+              className="rounded-xl flex-shrink-0"
+              style={{ width: 72, height: 44, backgroundColor: color + '18' }}
+            />
+          ) : (
+            <View
+              className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: color + '18' }}
+            >
+              <BookOpen color={color} size={20} />
+            </View>
+          )}
           <View className="flex-1">
             <Text className="leading-snug" numberOfLines={2} style={[typeScale.titleSm, { color: colors.ink }]}>{course.name}</Text>
             <Text className="mt-1" style={[typeScale.caption, { color: colors.muted }]}>{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>

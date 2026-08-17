@@ -6,7 +6,14 @@ import QuizzesScreen from '../screens/QuizzesScreen';
 
 export type CoursesParamList = {
   CourseList: undefined;
-  CourseDetail: { courseId: string; courseName?: string };
+  CourseDetail: {
+    courseId: string;
+    courseName?: string;
+    /** Reopen this exact lesson (Reprendre / notification deep links). */
+    lessonId?: string;
+    /** Auto-open the first unfinished lesson so the tap lands on a playable page. */
+    autoplay?: boolean;
+  };
   Quizzes: { courseId?: string };
 };
 

@@ -153,7 +153,7 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreo
 export default function CourseDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { courseId } = route.params;
+  const { courseId, lessonId, autoplay } = route.params;
   const { data: courses, isLoading, isError } = useCourses();
   const { progress, updateProgress, incrementGuestInteraction, recordActivity, language,
     practiceTipSeen, setPracticeTipSeen } = useStore();
@@ -196,6 +196,25 @@ export default function CourseDetailScreen() {
     return allLessons.findIndex((l: any) => l.id === activeLesson.id);
   }, [allLessons, activeLesson]);
 
+  // Deep-link landing: open the requested lesson (Reprendre), or with autoplay
+  // the first unfinished lesson — so tapping a course card starts the video
+  // page instead of dropping the student on a bare syllabus.
+  useEffect(() => {
+    if (allLessons.length === 0) return;
+    if (lessonId) {
+      // Explicit lesson request wins, including when this screen is already
+      // mounted and only the params changed (a second "Reprendre").
+      const target = allLessons.find((l: any) => l.id === lessonId);
+      if (target && target.id !== activeLesson?.id) setActiveLesson(target);
+      return;
+    }
+    if (!activeLesson && autoplay) {
+      setActiveLesson(allLessons.find((l: any) => !completedIds.has(l.id)) ?? allLessons[0]);
+    }
+    // Intentionally NOT re-running on progress/activeLesson changes: landing only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allLessons, lessonId, autoplay]);
+
   const completedCount = useMemo(() => allLessons.filter((l: any) => completedIds.has(l.id)).length, [allLessons, completedIds]);
   const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
 
@@ -213,6 +232,7 @@ export default function CourseDetailScreen() {
     recordActivity({
       type: 'lesson',
       path: course!.id,
+      lessonId: lesson.id,
       title: lesson.title,
       subtitle: course!.name,
       ts: Date.now(),
@@ -237,7 +257,14 @@ export default function CourseDetailScreen() {
       {/* Back bar — shares the page ground (no seam), like the dashboard */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('CourseList'))}
+          // Stay inside the Courses stack: canGoBack() also counts the parent
+          // tab navigator, which sent deep-linked users "back" to Home. If this
+          // is the only route in the stack, land on the course list instead.
+          onPress={() => {
+            const stackRoutes = navigation.getState()?.routes ?? [];
+            if (stackRoutes.length > 1) navigation.goBack();
+            else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
+          }}
           className="mr-3 p-1"
           accessibilityRole="button"
           accessibilityLabel={t('Retour', 'Retounen')}

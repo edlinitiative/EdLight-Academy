@@ -46,10 +46,13 @@ export default function ResumeBanner() {
         params: { level: a.level ?? '', examId: a.path },
       });
     } else {
-      // lesson (path = courseId) → reopen the course
+      // lesson (path = courseId) → reopen the course AT the lesson left off.
+      // initial:false keeps CourseList mounted beneath, so the back button pops
+      // to the course list instead of bubbling up to the Home tab.
       (navigation as any).navigate('Courses', {
         screen: 'CourseDetail',
-        params: { courseId: a.path, courseName: a.subtitle },
+        initial: false,
+        params: { courseId: a.path, courseName: a.subtitle, lessonId: a.lessonId },
       });
     }
   }

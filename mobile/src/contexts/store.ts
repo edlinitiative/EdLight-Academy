@@ -9,6 +9,8 @@ export interface LastActivity {
   path: string;
   /** For exams: the exam's level, needed to deep-link into ExamTake on resume. */
   level?: string;
+  /** For lessons: the lesson to reopen, so "Reprendre" lands on it, not just the course. */
+  lessonId?: string;
   title: string;
   subtitle?: string;
   ts: number;

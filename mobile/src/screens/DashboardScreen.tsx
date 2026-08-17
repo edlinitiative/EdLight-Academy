@@ -210,11 +210,19 @@ export default function DashboardScreen() {
   if (isLoading) return <DashboardSkeleton />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
+  // initial:false keeps CourseList mounted beneath CourseDetail, so back pops
+  // to the course list (not the Home tab) and the Cours tab's pop-to-top works.
+  // autoplay opens the first unfinished lesson so the tap lands on a playable page.
   const goCourse = (course: any) =>
     (navigation as any).navigate('Courses', {
       screen: 'CourseDetail',
-      params: { courseId: course.id, courseName: course.name },
+      initial: false,
+      params: { courseId: course.id, courseName: course.name, autoplay: true },
     });
+  // "Voir tout" must always land on the course LIST — a bare navigate('Courses')
+  // re-shows whatever the stack retained (e.g. a stale CourseDetail).
+  const goCourseList = () =>
+    (navigation as any).navigate('Courses', { screen: 'CourseList' });
 
   // ---------------------------------------------------------------------------
   // Grade-aware rail order
@@ -233,7 +241,7 @@ export default function DashboardScreen() {
       courses={courses}
       enrolledIds={enrolledCourses.map((c: any) => c.id)}
       onOpenCourse={goCourse}
-      onSeeAll={() => navigation.navigate('Courses')}
+      onSeeAll={goCourseList}
       title={
         enrolledCourses.length > 0
           ? t('Découvrir en vidéo', 'Dekouvri an videyo')
@@ -289,7 +297,7 @@ export default function DashboardScreen() {
       <SectionHeader
         title={t('Continuer à apprendre', 'Kontinye aprann')}
         actionLabel={t('Voir tout', 'Wè tout')}
-        onAction={() => navigation.navigate('Courses')}
+        onAction={goCourseList}
       />
       <View className="gap-3">
         {displayCourses.map((course: any) => {
@@ -439,7 +447,7 @@ export default function DashboardScreen() {
           <HomeWidgets
             onNavigateExams={() => navigation.navigate('Exams')}
             onNavigateTrivia={() => navigation.navigate('Trivia')}
-            onNavigateCourses={() => navigation.navigate('Courses')}
+            onNavigateCourses={goCourseList}
             onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}
             enrolledCount={enrolledCourses.length}
             practiceMode={practiceMode}

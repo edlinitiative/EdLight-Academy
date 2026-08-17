@@ -1,33 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, Image } from 'react-native';
 import { Play, ChevronRight, BookOpen } from 'lucide-react-native';
 import PressableScale from './ui/PressableScale';
 import useStore from '../contexts/store';
-import { useTheme, courseTint, typeScale, radius } from '../theme/theme';
+import { useTheme, courseTint, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
-
-/** First captured group of any of the supported YouTube URL shapes. */
-function extractYouTubeId(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const m =
-    url.match(/youtube\.com\/embed\/([^?&]+)/) ||
-    url.match(/youtu\.be\/([^?&]+)/) ||
-    url.match(/youtube\.com\/watch\?v=([^&]+)/);
-  return m ? m[1] : null;
-}
-
-/** The course's first video lesson → its best available thumbnail URL. */
-function courseVideoThumb(course: any): string | null {
-  for (const unit of course?.modules ?? []) {
-    for (const lesson of unit?.lessons ?? []) {
-      if (lesson?.type !== 'video') continue;
-      if (lesson.thumbnail) return lesson.thumbnail;
-      const yt = extractYouTubeId(lesson.videoUrl);
-      if (yt) return `https://img.youtube.com/vi/${yt}/mqdefault.jpg`;
-    }
-  }
-  return null;
-}
+import { courseVideoThumb } from '../utils/videoThumb';
 
 const CARD_W = 200;
 const THUMB_H = 112;
@@ -38,6 +16,8 @@ function VideoCourseCard({ course, onPress }: { course: any; onPress: () => void
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const tint = courseTint(course.color);
   const thumb = courseVideoThumb(course);
+  // A dead thumbnail URL must degrade to the icon placeholder, not a blank box.
+  const [thumbFailed, setThumbFailed] = useState(false);
 
   return (
     <PressableScale
@@ -48,8 +28,13 @@ function VideoCourseCard({ course, onPress }: { course: any; onPress: () => void
     >
       {/* Video still with a play chip — the "this is video" signal. */}
       <View style={{ width: '100%', height: THUMB_H, backgroundColor: tint + '22' }}>
-        {thumb ? (
-          <Image source={{ uri: thumb }} resizeMode="cover" style={{ width: '100%', height: '100%' }} />
+        {thumb && !thumbFailed ? (
+          <Image
+            source={{ uri: thumb }}
+            resizeMode="cover"
+            onError={() => setThumbFailed(true)}
+            style={{ width: '100%', height: '100%' }}
+          />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <BookOpen color={tint} size={30} />
