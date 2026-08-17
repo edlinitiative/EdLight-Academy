@@ -7,6 +7,7 @@ import useStore from '../contexts/store';
 import { pickHomeSuggestion, gradeProfile, type HomeSuggestionKind } from '../config/trackConfig';
 import { useReviewQueue } from '../hooks/useReviewQueue';
 import PressableScale from './ui/PressableScale';
+import { resetTabToRoot } from '../navigation/navHelpers';
 import { radius, useTheme, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 
@@ -67,7 +68,10 @@ export default function SmartSuggestion() {
           ? t(`Reprends ${topSubject} pour ancrer tes acquis.`, `Reprann ${topSubject} pou konsolide sa w konnen.`)
           : t('Une courte révision pour ancrer tes acquis.', 'Yon ti revizyon pou konsolide sa w konnen.'),
         cta: t('Réviser', 'Revize'),
-        onPress: () => navigation.navigate('Exams', { screen: practiceRoot }),
+        // Reset, don't navigate: React Navigation 7's `navigate` no longer pops
+        // back to a screen already in the stack — it pushes a second copy of the
+        // root over whatever the tab retained (a stale exam). See navHelpers.
+        onPress: () => resetTabToRoot(navigation, 'Exams', practiceRoot),
         dismissKey: `review-${dayStamp}`,
       };
     }
@@ -135,7 +139,7 @@ export default function SmartSuggestion() {
         title: t('Choisis ta filière', 'Chwazi seri ou'),
         subtitle: t('Pour des recommandations sur mesure.', 'Pou rekòmandasyon ki fèt pou ou.'),
         cta: t('Choisir', 'Chwazi'),
-        onPress: () => navigation.navigate('Exams', { screen: practiceRoot }),
+        onPress: () => resetTabToRoot(navigation, 'Exams', practiceRoot),
       },
       'prefac-switch': {
         Icon: Landmark,
@@ -159,7 +163,7 @@ export default function SmartSuggestion() {
         title: t('Le Bac approche', 'Bak la ap pwoche'),
         subtitle: t('Révise avec les vrais sujets officiels.', 'Revize ak vre sijè ofisyèl yo.'),
         cta: t("S'entraîner", 'Antrene'),
-        onPress: () => navigation.navigate('Exams', { screen: practiceRoot }),
+        onPress: () => resetTabToRoot(navigation, 'Exams', practiceRoot),
       },
       'trivia-first': {
         Icon: Gamepad2,
@@ -177,7 +181,7 @@ export default function SmartSuggestion() {
         title: t('Renforce tes bases', 'Ranfòse baz ou yo'),
         subtitle: t('Suis tes cours et teste-toi avec des quiz ciblés.', 'Swiv kou ou yo epi teste tèt ou ak quiz.'),
         cta: t('Voir les cours', 'Wè kou yo'),
-        onPress: () => (navigation as any).navigate('Courses', { screen: 'CourseList' }),
+        onPress: () => resetTabToRoot(navigation, 'Courses', 'CourseList'),
       },
       'exam9e-focus': {
         Icon: GraduationCap,

@@ -2,7 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { CommonActions } from '@react-navigation/native';
+import { Platform } from 'react-native';
+import { popToRootOnTabPress } from './tabPressBehaviour';
+import NativeTabNavigator from './NativeTabNavigator';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -56,44 +58,6 @@ const ICON_SIZE = 23;
 // Two taps on the SAME tab within this window trigger a data refresh.
 const DOUBLE_TAP_MS = 350;
 
-/**
- * Builds a `tabPress` handler that sends a tab back to its stack root.
- *
- * The trap this exists to avoid: `e.preventDefault()` cancels the TAB SWITCH,
- * and a reset dispatched with `target: <nested stack key>` only rewrites that
- * inner stack — it never changes which tab is active. Calling preventDefault
- * unconditionally therefore made the tab look completely dead when pressed from
- * a different tab ("it does nothing when i click on it"). So: only intercept
- * when the tab is ALREADY focused; otherwise let the navigator do the switch and
- * simply clear the stale inner stack on the way in.
- */
-function popToRootOnTabPress(
-  navigation: any,
-  tabName: string,
-  rootName: string,
-  makeParams?: () => object,
-) {
-  return (e: { preventDefault: () => void }) => {
-    const state = navigation.getState();
-    const nested = (state.routes.find((r: any) => r.name === tabName) as any)?.state;
-    // Stack not built yet → the default action lands on its initial route anyway.
-    if (!nested) return;
-    const top = nested.routes[nested.index ?? nested.routes.length - 1]?.name;
-    // Already showing the root: do nothing, so useScrollToTop still fires.
-    if (top === rootName) return;
-    const isFocused = state.routes[state.index]?.name === tabName;
-    // Stay put and pop to the root. When NOT focused we must let the default
-    // run, or the tab never changes.
-    if (isFocused) e.preventDefault();
-    navigation.dispatch({
-      ...CommonActions.reset({
-        index: 0,
-        routes: [{ name: rootName, params: makeParams?.() }],
-      }),
-      target: nested.key,
-    });
-  };
-}
 
 // One tab item: icon + label as a single column, with the focused capsule
 // wrapping BOTH. The capsule is a NEUTRAL fill, not a brand tint — in the
@@ -158,7 +122,7 @@ function TabItem({
   );
 }
 
-export default function TabNavigator() {
+function JsTabNavigator() {
   const theme = useStore((s) => s.theme);
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
@@ -182,9 +146,8 @@ export default function TabNavigator() {
     <Tab.Navigator
       // No paddingBottom here: content scrolls UNDER the translucent floating bar
       // (each screen adds its own bottom padding so nothing is permanently hidden).
-      sceneContainerStyle={{
-        backgroundColor: dark ? '#0b1220' : '#f4f6fb',
-      }}
+      // React Navigation 7 removed the `sceneContainerStyle` prop in favour of the
+      // `sceneStyle` screen option.
       screenListeners={({ route }) => ({
         // Single tap keeps default behavior (navigate / pop-to-top of the stack).
         // A second tap on the same tab within DOUBLE_TAP_MS refreshes all data.
@@ -205,6 +168,7 @@ export default function TabNavigator() {
       })}
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: dark ? '#0b1220' : '#f4f6fb' },
         tabBarActiveTintColor: dark ? darkColors.azure : ACTIVE,
         tabBarInactiveTintColor: dark ? darkColors.muted : INACTIVE,
         // Icon+label are rendered together inside TabItem so the focused lens
@@ -344,3 +308,13 @@ const styles = StyleSheet.create({
     minWidth: 58,
   },
 });
+
+/**
+ * iOS renders the REAL UIKit tab bar (Liquid Glass, drag-to-switch,
+ * minimize-on-scroll — all system behaviour). Android keeps the JS bar above,
+ * because the native Android bar needs bitmap icons and this project has no tab
+ * icon assets; SF Symbols have no Android equivalent.
+ */
+export default function TabNavigator() {
+  return Platform.OS === 'ios' ? <NativeTabNavigator /> : <JsTabNavigator />;
+}
