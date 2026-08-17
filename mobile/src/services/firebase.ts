@@ -188,6 +188,38 @@ export async function getUserProfile(uid: string) {
   return snap.exists() ? snap.data() : null;
 }
 
+/**
+ * Server-side notification preferences, at `users/{uid}/settings/notifications`.
+ *
+ * This is the ONLY thing the backend crons read (api/send-reminders.ts,
+ * api/reengagement.ts, api/daily-nudge.ts). The Profile "Notifications" switch
+ * used to be purely device-local — Expo permissions plus locally scheduled
+ * notifications — so turning it off did not stop server-sent nudges or emails.
+ * Both toggles default to ON server-side when the field is absent, so writing
+ * `false` here is what actually opts a user out.
+ */
+export type NotificationPrefs = {
+  /** Gates server-sent study nudges entirely (push AND email). */
+  studyReminders?: boolean;
+  /** Gates only the email channel. */
+  emailNotifications?: boolean;
+};
+
+export async function saveNotificationPrefs(uid: string, prefs: NotificationPrefs) {
+  const ref = doc(db, 'users', uid, 'settings', 'notifications');
+  await setDoc(ref, { ...prefs, updated_at: serverTimestamp() }, { merge: true });
+}
+
+export async function getNotificationPrefs(uid: string): Promise<NotificationPrefs> {
+  const snap = await getDoc(doc(db, 'users', uid, 'settings', 'notifications'));
+  const d = snap.exists() ? (snap.data() as NotificationPrefs) : {};
+  // Absent means ON — mirror the server defaults so the UI can't misreport.
+  return {
+    studyReminders: d.studyReminders !== false,
+    emailNotifications: d.emailNotifications !== false,
+  };
+}
+
 export async function updateUser(userId: string, userData: any) {
   const userRef = doc(db, 'users', userId);
   await setDoc(userRef, { ...userData, updated_at: serverTimestamp() }, { merge: true });

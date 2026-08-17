@@ -7,7 +7,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, Target, BookOpen, Bell, ChevronRight, GraduationCap,
-  Sprout, Brain, Gift,
+  Sprout, Brain, Gift, Mail,
 } from 'lucide-react-native';
 import * as Notifications from 'expo-notifications';
 import Avatar from '../components/ui/Avatar';
@@ -17,6 +17,7 @@ import XpBar from '../components/ui/XpBar';
 import { useQueryClient } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { logoutUser, deleteAccount } from '../services/authService';
+import { saveNotificationPrefs, getNotificationPrefs } from '../services/firebase';
 import { setLeaderboardOptIn } from '../services/triviaService';
 import { setBoardVisibility } from '../services/leaderboardService';
 import { useTrivia } from '../hooks/useTrivia';
@@ -212,15 +213,40 @@ export default function ProfileScreen() {
   })();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [emailRemindersEnabled, setEmailRemindersEnabled] = useState(true);
   const [inviteOpen, setInviteOpen] = useState(false);
 
   useEffect(() => {
     areNotificationsEnabled().then(setNotificationsEnabled).catch(() => {});
   }, []);
 
+  // Server-side prefs are a separate store from the device toggle above: the
+  // backend crons read only Firestore, so this is what governs emails.
+  useEffect(() => {
+    if (!user?.uid) return;
+    getNotificationPrefs(user.uid)
+      .then((p) => setEmailRemindersEnabled(p.emailNotifications !== false))
+      .catch(() => {});
+  }, [user?.uid]);
+
+  async function handleEmailRemindersToggle(value: boolean) {
+    setEmailRemindersEnabled(value);
+    if (!user?.uid) return;
+    try {
+      await saveNotificationPrefs(user.uid, { emailNotifications: value });
+    } catch {
+      setEmailRemindersEnabled(!value); // put the switch back if the write failed
+    }
+  }
+
   async function handleNotificationToggle(value: boolean) {
     setNotificationsEnabled(value);
     await persistNotificationsEnabled(value);
+    // Also record it server-side. Without this, switching notifications off
+    // silenced only the LOCAL schedule while the backend kept sending nudges.
+    if (user?.uid) {
+      saveNotificationPrefs(user.uid, { studyReminders: value }).catch(() => {});
+    }
     if (value) {
       const granted = await requestPermissions();
       if (!granted) {
@@ -645,6 +671,21 @@ export default function ProfileScreen() {
                   onValueChange={handleNotificationToggle}
                   trackColor={{ false: colors.border, true: colors.azureBorder }}
                   thumbColor={notificationsEnabled ? colors.azure : colors.faint}
+                  ios_backgroundColor={colors.border}
+                />
+              }
+            />
+            <SettingRow
+              icon={<Mail color={colors.azure} size={18} />}
+              iconBg={colors.azureSoft}
+              label={t('Emails de rappel', 'Imèl rapèl')}
+              sublabel={t('Un rappel le matin par email', 'Yon rapèl maten pa imèl')}
+              accessory={
+                <Switch
+                  value={emailRemindersEnabled}
+                  onValueChange={handleEmailRemindersToggle}
+                  trackColor={{ false: colors.border, true: colors.azureBorder }}
+                  thumbColor={emailRemindersEnabled ? colors.azure : colors.faint}
                   ios_backgroundColor={colors.border}
                 />
               }

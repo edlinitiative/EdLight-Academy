@@ -20,6 +20,10 @@
     {
       "path": "/api/reengagement",
       "schedule": "7 16 * * *"
+    },
+    {
+      "path": "/api/daily-nudge",
+      "schedule": "0 10,11 * * *"
     }
   ],
   "rewrites": [
