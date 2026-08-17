@@ -35,6 +35,96 @@ function extractYouTubeId(url: string): string | null {
   return m?.[1] ?? null;
 }
 
+export type DescriptionTopic = { label: string; detail?: string };
+export type ParsedDescription = { intro: string; topics: DescriptionTopic[] };
+
+// Course descriptions share one shape: a lead sentence, then an enumeration
+// clause ("Vous y étudierez A, B (b1, b2), ainsi que C.") listing the topics.
+// Rendered raw that is a six-line grey block nobody reads, so it gets split
+// into a short intro + a scannable topic list.
+const ENUMERATION_MARKERS = [
+  /vous\s+y\s+(?:étudierez|apprendrez|découvrirez|verrez)\s*/i,
+  /vous\s+(?:étudierez|apprendrez|découvrirez|verrez)\s*/i,
+  /(?:w\s+ap|ou\s+pral)\s+(?:etidye|aprann|dekouvri)\s*/i,
+  /au\s+programme\s*:\s*/i,
+];
+
+/** Split on commas that sit outside parentheses, so "(masse, volume)" stays whole. */
+function splitTopLevel(clause: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of clause) {
+    if (ch === '(') depth += 1;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === ',' && depth === 0) {
+      parts.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  parts.push(current);
+  return parts;
+}
+
+function toTopic(raw: string): DescriptionTopic | null {
+  const cleaned = raw
+    .trim()
+    // Connectors that only glue the enumeration together.
+    .replace(/^(?:ainsi\s+qu[e']|et\s+enfin|puis|enfin|et)\s+/i, '')
+    .replace(/^(?:epi|ansanm\s+ak|ak)\s+/i, '')
+    .replace(/[.;]+$/, '')
+    .trim();
+  if (!cleaned) return null;
+  // Parenthetical examples become a quieter second line under the topic.
+  const withDetail = cleaned.match(/^(.*?)\s*\(([^()]*)\)$/);
+  const label = (withDetail?.[1] ?? cleaned).trim();
+  const detail = withDetail?.[2]?.trim();
+  if (!label) return null;
+  return {
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    ...(detail ? { detail } : {}),
+  };
+}
+
+/**
+ * Pure parser: returns the lead sentence plus the enumerated topics. Degrades
+ * to `{ intro: <whole text>, topics: [] }` — i.e. the old plain paragraph —
+ * whenever the shape isn't recognised (no clause, a single item, or prose-long
+ * items), and to empty strings for missing/blank input so nothing renders.
+ */
+export function parseCourseDescription(raw?: string | null): ParsedDescription {
+  const text = typeof raw === 'string' ? raw.trim() : '';
+  if (!text) return { intro: '', topics: [] };
+
+  let markerStart = -1;
+  let markerEnd = -1;
+  for (const marker of ENUMERATION_MARKERS) {
+    const m = text.match(marker);
+    if (m?.index != null) {
+      markerStart = m.index;
+      markerEnd = m.index + m[0].length;
+      break;
+    }
+  }
+  if (markerStart < 0) return { intro: text, topics: [] };
+
+  const clause = text.slice(markerEnd).trim();
+  // A single item is not a list — keep the paragraph instead of a lonely bullet.
+  if (!clause.includes(',')) return { intro: text, topics: [] };
+
+  const topics = splitTopLevel(clause)
+    .map(toTopic)
+    .filter((topic): topic is DescriptionTopic => topic != null);
+  // Very long items mean this is prose that merely contains commas.
+  const looksLikeProse = topics.some((topic) => topic.label.length > 90);
+  if (topics.length < 2 || looksLikeProse) return { intro: text, topics: [] };
+
+  const intro = text.slice(0, markerStart).trim();
+  return { intro, topics };
+}
+
 function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: boolean }) {
   const [failed, setFailed] = useState(false);
   const ytId = extractYouTubeId(videoUrl);
@@ -102,7 +192,22 @@ function UnitAccordion({ unit, index, tint, completedIds, activeLesson, onLesson
   isCreole?: boolean;
 }) {
   const colors = useColors();
-  const [open, setOpen] = useState(true);
+  // Chapters start closed — opening a course used to dump every unit's whole
+  // lesson list at once. The one exception is the unit that owns the lesson
+  // currently being watched: it must stay open so the chapter never collapses
+  // shut around it.
+  const holdsActive = useMemo<boolean>(
+    () => !!activeLesson && (unit.lessons ?? []).some((l: any) => l.id === activeLesson.id),
+    [unit.lessons, activeLesson],
+  );
+  const [open, setOpen] = useState(holdsActive);
+  // `activeLesson` arrives after mount for deep links ("Reprendre" / autoplay)
+  // and changes as the student moves through Suiv./Préc., so opening also has
+  // to happen on transition — not just in the initial state. Only ever opens:
+  // a unit the student closed by hand stays closed once the lesson moves away.
+  useEffect(() => {
+    if (holdsActive) setOpen(true);
+  }, [holdsActive]);
   const unitDone = (unit.lessons ?? []).filter((l: any) => completedIds.has(l.id)).length;
   const unitTotal = (unit.lessons ?? []).length;
   const unitComplete = unitTotal > 0 && unitDone === unitTotal;
@@ -248,6 +353,7 @@ export default function CourseDetailScreen() {
     () => allLessons.find((l: any) => !completedIds.has(l.id)) ?? allLessons[0] ?? null,
     [allLessons, completedIds],
   );
+  const description = useMemo(() => parseCourseDescription(course?.description), [course?.description]);
 
   if (isLoading) {
     return (
@@ -476,9 +582,35 @@ export default function CourseDetailScreen() {
                 )}
               </View>
             </View>
-            {course.description ? (
-              <Text className="leading-relaxed mt-3" style={[typeScale.body, { color: colors.muted }]}>{course.description}</Text>
+            {/* Description, restructured: lead sentence as a short intro, then
+                the enumerated topics as a scannable list (see
+                parseCourseDescription — unrecognised shapes stay a paragraph). */}
+            {description.intro ? (
+              <Text className="leading-relaxed mt-3" style={[typeScale.body, { color: colors.muted }]}>{description.intro}</Text>
             ) : null}
+            {description.topics.length > 0 && (
+              <View className="mt-4">
+                <Text style={[typeScale.overline, { color: colors.faint }]}>
+                  {t('Ce que tu vas apprendre', 'Sa w ap aprann')}
+                </Text>
+                <View className="mt-2 gap-2">
+                  {description.topics.map((topic, topicIndex) => (
+                    <View key={`${topicIndex}-${topic.label}`} className="flex-row gap-2">
+                      <View
+                        className="flex-shrink-0"
+                        style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tint, marginTop: 7 }}
+                      />
+                      <View className="flex-1">
+                        <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{topic.label}</Text>
+                        {topic.detail ? (
+                          <Text className="mt-0.5" style={[typeScale.caption, { color: colors.faint }]}>{topic.detail}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
             {/* One obvious way in — the first unfinished lesson, same target as
                 the Home card's autoplay. A syllabus alone is a dead end. */}
             {nextLesson && (

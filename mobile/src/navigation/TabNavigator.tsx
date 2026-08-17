@@ -6,7 +6,7 @@ import { CommonActions } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { LayoutDashboard, BookOpen, ClipboardList, ListChecks, Gamepad2, User } from 'lucide-react-native';
+import TabIcon, { type TabIconName } from './TabIcon';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
@@ -48,9 +48,9 @@ const INACTIVE = lightColors.ink; // '#0f172a'
 // clear of Apple's 44pt floor on the control every user touches every session.
 const BAR_HEIGHT = 58;
 const BAR_MARGIN = 20;
-// 23, up from 20: the reference uses filled SF Symbols, which carry far more
-// visual weight than a monoline stroke. Size + stroke weight get most of that
-// presence without gambling on `fill` rendering cleanly across five glyphs.
+// 23, up from 20, to match the reference's optical size. The glyphs themselves
+// are now real filled SF Symbols on iOS (see TabIcon.tsx) rather than Lucide
+// outlines, which is what actually closed the gap to the reference.
 const ICON_SIZE = 23;
 
 // Two taps on the SAME tab within this window trigger a data refresh.
@@ -101,13 +101,13 @@ function popToRootOnTabPress(
 // quiet and lets the selected item read as "lifted" rather than "coloured in".
 // It fades/scales in; reduce-motion collapses that to an instant state change.
 function TabItem({
-  Icon,
+  icon,
   label,
   color,
   focused,
   dark,
 }: {
-  Icon: typeof LayoutDashboard;
+  icon: TabIconName;
   label: string;
   color: string;
   focused: boolean;
@@ -142,7 +142,7 @@ function TabItem({
           lensStyle,
         ]}
       />
-      <Icon color={color} size={ICON_SIZE} strokeWidth={focused ? 2.4 : 2} />
+      <TabIcon name={icon} color={color} size={ICON_SIZE} focused={focused} />
       <Text
         allowFontScaling
         maxFontSizeMultiplier={1.3}
@@ -262,7 +262,7 @@ export default function TabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Accueil', 'Akèy'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem Icon={LayoutDashboard} label={t('Accueil', 'Akèy')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="dashboard" label={t('Accueil', 'Akèy')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -280,7 +280,7 @@ export default function TabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Cours', 'Kou'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem Icon={BookOpen} label={t('Cours', 'Kou')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="courses" label={t('Cours', 'Kou')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -301,7 +301,7 @@ export default function TabNavigator() {
           tabBarAccessibilityLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),
           tabBarIcon: ({ color, focused }) => (
             <TabItem
-              Icon={quizPrimary ? ListChecks : ClipboardList}
+              icon={quizPrimary ? 'quiz' : 'exams'}
               label={quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen')}
               color={color}
               focused={focused}
@@ -316,7 +316,7 @@ export default function TabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Jeux', 'Jwèt'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem Icon={Gamepad2} label={t('Jeux', 'Jwèt')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="games" label={t('Jeux', 'Jwèt')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -326,7 +326,7 @@ export default function TabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Profil', 'Pwofil'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem Icon={User} label={t('Profil', 'Pwofil')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="profile" label={t('Profil', 'Pwofil')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />

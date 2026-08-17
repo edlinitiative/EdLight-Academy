@@ -5,7 +5,7 @@ import PressableScale from './ui/PressableScale';
 import useStore from '../contexts/store';
 import { useTheme, courseTint, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
-import { courseVideoThumb } from '../utils/videoThumb';
+import { courseVideoThumbs } from '../utils/videoThumb';
 import { courseSubjectIcon } from '../utils/subjectMeta';
 
 const CARD_W = 200;
@@ -17,9 +17,14 @@ function VideoCourseCard({ course, onPress }: { course: any; onPress: () => void
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const tint = courseTint(course.color);
   const SubjectIcon = courseSubjectIcon(course);
-  const thumb = courseVideoThumb(course);
-  // A dead thumbnail URL must degrade to the icon placeholder, not a blank box.
-  const [thumbFailed, setThumbFailed] = useState(false);
+  // Ordered candidates, sharpest first (hq720 → mqdefault). This card is the one
+  // place the resolution matters: 200×112pt is ~600×336px at 3x, where a 320px
+  // still would visibly soften handwritten whiteboard text. hq720 isn't served
+  // for every upload, so we walk down the list on error and only fall through to
+  // the subject icon once nothing is left.
+  const thumbs = courseVideoThumbs(course);
+  const [attempt, setAttempt] = useState(0);
+  const thumb = thumbs[attempt];
 
   return (
     <PressableScale
@@ -30,11 +35,13 @@ function VideoCourseCard({ course, onPress }: { course: any; onPress: () => void
     >
       {/* Video still with a play chip — the "this is video" signal. */}
       <View style={{ width: '100%', height: THUMB_H, backgroundColor: tint + '22' }}>
-        {thumb && !thumbFailed ? (
+        {thumb ? (
           <Image
             source={{ uri: thumb }}
             resizeMode="cover"
-            onError={() => setThumbFailed(true)}
+            // Step to the next candidate; once the list runs out `thumb` is
+            // undefined and the subject icon below takes over.
+            onError={() => setAttempt((a) => a + 1)}
             style={{ width: '100%', height: '100%' }}
           />
         ) : (

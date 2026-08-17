@@ -9,7 +9,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Zap, Flame, Trophy, Crown, Sparkles, Share2, Snowflake, ChevronRight } from 'lucide-react-native';
+import { Zap, Flame, Trophy, Crown, Sparkles, Share2, Snowflake, ChevronRight, Gift, UserPlus } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
 import { weeklyGameId, WEEKLY_GAME_XP_MULTIPLIER } from '../../utils/weeklyGame';
@@ -23,6 +23,8 @@ import { Skeleton } from '../StateViews';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
+import InviteSheet from '../InviteSheet';
+import { shareScore } from '../../services/scoreShare';
 
 const GRID_PAD = 16;
 // Cap so the 3-col console grid doesn't balloon on iPad (portrait +
@@ -222,10 +224,27 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
   const isCreole = language === 'ht';
 
   const [tab, setTab] = useState<HubTab>('jouer');
+  // Invite/referral sheet — the SAME component ProfileScreen opens (it fetches
+  // the referral code itself, so there's nothing to wire here beyond visibility).
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const highScores: Record<string, number> = profile?.games?.highScores || {};
   const gamesPlayed: number = profile?.games?.gamesPlayed || 0;
   const freezes: number = streak?.streakFreezes || 0;
+
+  // Best personal record across the games — the one number worth bragging about
+  // from the hub (XP/streak aren't a "score" a friend can beat). Null for a
+  // brand-new player, which turns the block into invite-only (never share a 0).
+  const bestPersonal = (() => {
+    let bestId: string | null = null;
+    let bestScore = 0;
+    for (const g of GAMES) {
+      const s = highScores[g.id];
+      if (typeof s === 'number' && s > bestScore) { bestScore = s; bestId = g.id; }
+    }
+    const game = bestId ? GAMES.find((g) => g.id === bestId) : null;
+    return game ? { game, score: bestScore } : null;
+  })();
 
   // One records fetch feeds the weekly strip target and the Records segment.
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
@@ -476,6 +495,109 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
             </View>
             <ChevronRight color={colors.faint} size={16} />
           </TouchableOpacity>
+
+          {/* Amis — fills the old dead space under the rank row: brag about the
+              best record (text share w/ referral code baked in by scoreShare) and
+              open the existing referral sheet. Signed-in only: the referral code
+              endpoint needs an ID token, and guests already get the sign-in nudge
+              above. New players see invite alone — no 0 to share. */}
+          {isAuthed && (
+            <View
+              className="mx-4 mt-3 px-4 py-4 rounded-2xl border"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+            >
+              <View className="flex-row items-center" style={{ gap: 10 }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: radius.control,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.azureSoft,
+                  }}
+                >
+                  <Gift color={colors.azure} size={18} />
+                </View>
+                <View className="flex-1">
+                  <Text style={[typeScale.titleSm, { color: colors.ink }]}>
+                    {isCreole ? 'Jwe ak zanmi w' : 'Joue avec tes amis'}
+                  </Text>
+                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
+                    {bestPersonal
+                      ? (isCreole
+                          ? 'Pataje rekò w oswa envite yo — nou chak ap genyen yon bonus.'
+                          : 'Partage ton record ou invite-les — vous gagnez chacun un bonus.')
+                      : (isCreole
+                          ? 'Envite yo jwe : nou chak ap genyen +1 jèl seri ak XP.'
+                          : 'Invite-les à jouer : vous gagnez chacun +1 gel de série et des XP.')}
+                  </Text>
+                </View>
+              </View>
+
+              <View className="flex-row" style={{ gap: 8, marginTop: 12 }}>
+                {bestPersonal && (
+                  <PressableScale
+                    onPress={() => {
+                      void shareScore({
+                        title: isCreole ? bestPersonal.game.nameHt : bestPersonal.game.name,
+                        score: bestPersonal.score,
+                        lang: isCreole ? 'ht' : 'fr',
+                      });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      isCreole
+                        ? `Pataje nòt mwen : ${bestPersonal.score} nan ${bestPersonal.game.nameHt}`
+                        : `Partager mon score : ${bestPersonal.score} à ${bestPersonal.game.name}`
+                    }
+                    pressedScale={0.96}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      paddingHorizontal: 10,
+                      borderRadius: radius.control,
+                      backgroundColor: colors.azureSoft,
+                      borderWidth: 1,
+                      borderColor: colors.azureBorder,
+                    }}
+                  >
+                    <Share2 color={colors.azure} size={15} />
+                    <Text style={[typeScale.label, { color: colors.azure, flexShrink: 1 }]} numberOfLines={1}>
+                      {isCreole ? 'Pataje nòt mwen' : 'Partager mon score'}
+                    </Text>
+                  </PressableScale>
+                )}
+                <PressableScale
+                  onPress={() => setInviteOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={isCreole ? 'Envite zanmi w yo vin jwe' : 'Inviter des amis à jouer'}
+                  pressedScale={0.96}
+                  style={{
+                    flex: 1,
+                    minHeight: 44,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    paddingHorizontal: 10,
+                    borderRadius: radius.control,
+                    backgroundColor: colors.azure,
+                    ...shadow.sm,
+                  }}
+                >
+                  <UserPlus color="#ffffff" size={15} />
+                  <Text style={[typeScale.label, { color: '#ffffff', flexShrink: 1 }]} numberOfLines={1}>
+                    {isCreole ? 'Envite zanmi' : 'Inviter des amis'}
+                  </Text>
+                </PressableScale>
+              </View>
+            </View>
+          )}
         </ScrollView>
       )}
 
@@ -510,6 +632,9 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
           </TouchableOpacity>
         </ScrollView>
       )}
+
+      {/* Referral sheet (Modal) — mounted once at the root, driven by the Amis block. */}
+      <InviteSheet visible={inviteOpen} onClose={() => setInviteOpen(false)} lang={isCreole ? 'ht' : 'fr'} />
     </View>
   );
 }

@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  GraduationCap, ChevronRight, BookOpen, Landmark, Check,
+  GraduationCap, ChevronRight, BookOpen, Landmark, Check, PlayCircle, X,
   Calculator, Atom, FlaskConical, Leaf, PenLine, Globe, Brain, HeartPulse, Lightbulb,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
@@ -14,7 +15,10 @@ import { useColors, useTheme, radius, gradients } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
+import { fetchCatalogIndex } from '../utils/examCatalog';
+import { normalizeSubject, normalizeLevel, normalizeYear, normalizeExamTitle } from '../utils/examUtils';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
+import type { LastActivity } from '../contexts/store';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
 
@@ -88,6 +92,150 @@ const SUBJECTS_BY_LEVEL: Record<string, Array<{ code: string; Icon: any }>> = {
   ],
 };
 
+// ─── "Continuer" (unfinished exam) ──────────────────────────────────────────
+//
+// WHICH SIGNAL, AND WHY — three candidates exist for "started but not
+// submitted"; we use the local AsyncStorage draft mirror that ExamTakeScreen
+// writes:
+//
+//   1. `edlight-exam-draft-<examId>` (AsyncStorage)  ← CHOSEN
+//      ExamTakeScreen's `flushDraft()` writes this on a 10s timer, on blur /
+//      unmount, and on AppState background — but ONLY while `phase ===
+//      'questions'`, so its mere existence means the student actually started
+//      answering, not just opened the overview. `doSubmit()` removes the key,
+//      so it is also self-clearing on submit. It carries `updated_at_ms`,
+//      which is what makes "the most recent one" answerable, and it is local:
+//      no network, no auth, no flicker, works offline and for guests.
+//
+//   2. `users/{uid}/examAttempts/{examId}.status === 'in_progress'` (Firestore)
+//      Authoritative and cross-device, but finding "the most recent" needs a
+//      whole collection query (no helper exists in services/examAttempts.ts,
+//      which only reads one doc by id), costs a network round-trip on every
+//      tab visit, and is unavailable to signed-out students. ExamTakeScreen
+//      itself already treats the local mirror as the newer/truer copy when the
+//      two disagree (an app kill can lose the debounced Firestore write).
+//
+//   3. `lastActivity` in contexts/store.ts
+//      Wrong shape for this feature: it is a single slot for ANY activity
+//      type, so opening one lesson overwrites the exam — exactly the loss the
+//      feedback is about. It IS a good metadata cache though, so we use it as
+//      the title/level fallback when the catalog lookup can't resolve the id.
+const EXAM_DRAFT_PREFIX = 'edlight-exam-draft-';
+const CONTINUE_DISMISS_KEY = 'edlight-exam-continue-dismissed';
+
+// Raw catalog `level` / `niveau` strings → this stack's ExamTake route level.
+// Mirrors ExamBrowserScreen's LEVEL_FILTER_MAP (module-local there, so it can't
+// be imported); keep the two in sync.
+const LEVEL_FILTER_MAP: Record<string, string[]> = {
+  terminale: ['baccalaureat', 'bac', 'terminale'],
+  '9e': ['9eme', '9ème', '9e', 'neuvieme', 'neuvième'],
+  university: ['universite', 'université', 'university'],
+};
+
+type ResumableExam = {
+  examId: string;
+  /** ExamTake requires a level param, so this is always resolved to something. */
+  level: string;
+  title: string;
+  /** "Bac · Juillet 2022" — enough to recognise which exam this is. */
+  context: string;
+  answered: number;
+  updatedAt: number;
+};
+
+function relativeWhen(ms: number, isCreole: boolean): string {
+  const diff = Date.now() - ms;
+  if (!ms || diff < 0) return '';
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return isCreole ? 'kounye a' : "à l'instant";
+  if (mins < 60) return isCreole ? `${mins} min pase` : `il y a ${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return isCreole ? `${hrs} è pase` : `il y a ${hrs} h`;
+  const days = Math.floor(hrs / 24);
+  return isCreole ? `${days} jou pase` : `il y a ${days} j`;
+}
+
+/**
+ * Newest unfinished exam, or null. Resolves entirely from cached local data in
+ * the common case (draft mirror + AsyncStorage-cached catalog index).
+ */
+async function findResumableExam(
+  fallbackLevel: string,
+  lastActivity: LastActivity | null,
+): Promise<ResumableExam | null> {
+  let keys: readonly string[] = [];
+  try {
+    keys = await AsyncStorage.getAllKeys();
+  } catch {
+    return null;
+  }
+  const draftKeys = keys.filter((k) => k.startsWith(EXAM_DRAFT_PREFIX));
+  if (draftKeys.length === 0) return null;
+
+  let best: { examId: string; answered: number; updatedAt: number } | null = null;
+  try {
+    for (const [key, raw] of await AsyncStorage.multiGet(draftKeys)) {
+      if (!raw) continue;
+      let draft: any;
+      try { draft = JSON.parse(raw); } catch { continue; }
+      // Only `in_progress` counts; a submitted exam belongs on the results screen.
+      if (!draft || draft.status !== 'in_progress') continue;
+      const examId = key.slice(EXAM_DRAFT_PREFIX.length);
+      if (!examId) continue;
+      const updatedAt = Number(draft.updated_at_ms) || 0;
+      if (best && updatedAt <= best.updatedAt) continue;
+      best = {
+        examId,
+        answered: draft.answers && typeof draft.answers === 'object' ? Object.keys(draft.answers).length : 0,
+        updatedAt,
+      };
+    }
+  } catch {
+    return null;
+  }
+  if (!best) return null;
+
+  // Dismissed? Only stays hidden while the draft is unchanged — answering more
+  // questions bumps `updated_at_ms` and brings the card back.
+  try {
+    const raw = await AsyncStorage.getItem(CONTINUE_DISMISS_KEY);
+    if (raw) {
+      const dismissed = JSON.parse(raw);
+      if (dismissed?.examId === best.examId && Number(dismissed.ts) >= best.updatedAt) return null;
+    }
+  } catch { /* ignore corrupt value */ }
+
+  // Metadata. The draft mirror stores answers only, so titles come from the
+  // slim catalog index (AsyncStorage-cached, so usually no network).
+  let title = '';
+  let context = '';
+  let level = fallbackLevel;
+  try {
+    const entry = (await fetchCatalogIndex()).find(
+      (e: any) => String(e?.exam_id ?? e?.id ?? '') === best!.examId,
+    );
+    if (entry) {
+      title = normalizeSubject(entry.subject ?? '') || normalizeExamTitle(entry) || '';
+      const rawLevel = String(entry.level ?? entry.niveau ?? '');
+      const { session, year } = normalizeYear(entry.year);
+      context = [normalizeLevel(rawLevel), session || (year ? String(year) : '')].filter(Boolean).join(' · ');
+      const lvl = rawLevel.toLowerCase();
+      const match = Object.entries(LEVEL_FILTER_MAP).find(([, needles]) => needles.some((n) => lvl.includes(n)));
+      if (match) level = match[0];
+    }
+  } catch { /* offline / cold cache — fall through to lastActivity */ }
+
+  // Fallback metadata: `lastActivity` still holds this exam's title when it was
+  // the most recent thing the student touched.
+  if (lastActivity?.type === 'exam' && lastActivity.path === best.examId) {
+    if (!title) title = lastActivity.title;
+    if (!context && lastActivity.subtitle) context = lastActivity.subtitle;
+    if (lastActivity.level) level = lastActivity.level;
+  }
+
+  return { ...best, level, title: title || 'Examen', context };
+}
+
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
   const colors = useColors();
@@ -96,7 +244,7 @@ export default function ExamLandingScreen() {
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
-  const { language, track, grade, setTrack, setOnboardingCompleted } = useStore();
+  const { language, track, grade, lastActivity, setTrack, setOnboardingCompleted } = useStore();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -114,6 +262,54 @@ export default function ExamLandingScreen() {
     setTrack(code);
     setOnboardingCompleted(true);
     navigation.navigate('ExamBrowser', { level: 'terminale' });
+  }
+
+  // Unfinished exam → the "Continuer" card. `null` covers both "still looking"
+  // and "nothing to resume", so the card only ever appears once we KNOW there
+  // is something (never a placeholder, never a flicker in and out).
+  const [resume, setResume] = React.useState<ResumableExam | null>(null);
+
+  // Re-checked on every focus, so submitting or restarting an exam and coming
+  // back here updates (or clears) the card. Never clears optimistically before
+  // the async read resolves.
+  useFocusEffect(
+    React.useCallback(() => {
+      let active = true;
+      findResumableExam(subjectLevelId, lastActivity)
+        .then((r) => { if (active) setResume(r); })
+        .catch(() => { /* keep whatever is on screen */ });
+      return () => { active = false; };
+    }, [subjectLevelId, lastActivity]),
+  );
+
+  function continueExam(target: ResumableExam) {
+    tapLight();
+    // Plain in-stack push: ExamLanding IS the root of ExamsNavigator, so back
+    // pops to this screen. (`initial: false` is only needed when entering the
+    // Exams stack from ANOTHER tab — see DashboardScreen / ResumeBanner — where
+    // it keeps the stack root mounted underneath instead of exiting the tab.)
+    navigation.navigate('ExamTake', { level: target.level, examId: target.examId });
+  }
+
+  // "Bac · Juillet 2022 · 3 réponses · il y a 2 h" — recognisable at a glance.
+  const resumeMeta = React.useMemo(() => {
+    if (!resume) return '';
+    const answered = resume.answered > 0
+      ? t(
+        `${resume.answered} réponse${resume.answered > 1 ? 's' : ''}`,
+        `${resume.answered} repons`,
+      )
+      : '';
+    return [resume.context, answered, relativeWhen(resume.updatedAt, isCreole)].filter(Boolean).join(' · ');
+  }, [resume, isCreole]);
+
+  function dismissResume(target: ResumableExam) {
+    tapLight();
+    AsyncStorage.setItem(
+      CONTINUE_DISMISS_KEY,
+      JSON.stringify({ examId: target.examId, ts: target.updatedAt }),
+    ).catch(() => {});
+    setResume(null);
   }
 
   // Track (filière) chips — under the Terminale card/hero only.
@@ -172,6 +368,80 @@ export default function ExamLandingScreen() {
             {t('Entraîne-toi avec des sujets officiels réels.', 'Pratike ak vrè sijè ofisyèl.')}
           </Text>
         </View>
+
+        {/* Continuer — an exam started but never submitted. Sits ABOVE the
+            "Ma préparation" hero: it's the one thing on this page the student
+            already committed to, and burying it under a full-bleed gradient is
+            how it got lost in the first place. Coral (not azure) so it reads as
+            "unfinished" instead of competing with the hero. Renders nothing at
+            all when there's no draft. */}
+        {resume && (
+          <View className="px-5 pb-4">
+            <View style={[cardSurface, { overflow: 'hidden' }]}>
+              <PressableScale
+                onPress={() => continueExam(resume)}
+                pressedScale={0.98}
+                accessibilityRole="button"
+                accessibilityLabel={t(
+                  `Continuer l'examen en cours : ${resume.title}`,
+                  `Kontinye egzamen an kou a: ${resume.title}`,
+                )}
+                accessibilityHint={t('Reprend là où tu t\'es arrêté.', 'Repran kote ou te rete.')}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, minHeight: 72 }}
+              >
+                <View
+                  style={{
+                    width: 44, height: 44, borderRadius: radius.tile,
+                    backgroundColor: colors.coralSoft,
+                    alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <PlayCircle color={colors.coral} size={22} />
+                </View>
+                <View style={{ flex: 1, paddingRight: 28 }}>
+                  <Text style={[typeScale.overline, { color: colors.coral }]}>
+                    {t('Examen en cours', 'Egzamen an kou')}
+                  </Text>
+                  <Text style={[typeScale.title, { color: colors.ink, marginTop: 3 }]} numberOfLines={1}>
+                    {resume.title}
+                  </Text>
+                  {!!resumeMeta && (
+                    <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
+                      {resumeMeta}
+                    </Text>
+                  )}
+                  <View
+                    style={{
+                      marginTop: 10, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 3,
+                      backgroundColor: colors.azureSoft, borderRadius: radius.pill,
+                      paddingHorizontal: 14, paddingVertical: 7,
+                    }}
+                  >
+                    <Text style={[typeScale.label, { color: colors.azure }]}>
+                      {t('Continuer', 'Kontinye')}
+                    </Text>
+                    <ChevronRight color={colors.azure} size={14} />
+                  </View>
+                </View>
+              </PressableScale>
+
+              {/* Dismiss — rendered after the card body so it wins the touch in
+                  its own corner. 44×44 target, clear of the Continuer pill. */}
+              <PressableScale
+                onPress={() => dismissResume(resume)}
+                pressedScale={0.9}
+                accessibilityRole="button"
+                accessibilityLabel={t('Ignorer cet examen en cours', 'Inyore egzamen an kou a')}
+                style={{
+                  position: 'absolute', top: 0, right: 0, width: 44, height: 44,
+                  alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X color={colors.faint} size={16} />
+              </PressableScale>
+            </View>
+          </View>
+        )}
 
         {/* My level — the hero, when we know who the student is */}
         {myLevel && (
