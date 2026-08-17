@@ -42,21 +42,33 @@ const GUTTER = 20;
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-/** One stat tile in the 2×2 progress grid. */
+/** One stat tile in the 2×2 progress grid. Tappable — each stat is a shortcut
+ *  into the section it summarises (quizzes, courses, streak…). PressableScale
+ *  already fires the light haptic on press-in. */
 function StatTile({
   icon,
   value,
   label,
   iconBg,
+  onPress,
+  accessibilityHint,
 }: {
   icon: React.ReactNode;
   value: string | number;
   label: string;
   iconBg: string;
+  onPress: () => void;
+  accessibilityHint?: string;
 }) {
   const { colors, cardSurface } = useTheme();
   return (
-    <View style={{ flex: 1, ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label} : ${value}`}
+      accessibilityHint={accessibilityHint}
+      style={{ flex: 1, ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+    >
       <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: iconBg }}>
         {icon}
       </View>
@@ -64,7 +76,7 @@ function StatTile({
         <Text style={[typeScale.h2, { color: colors.ink }]} maxFontSizeMultiplier={1.3}>{value}</Text>
         <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>{label}</Text>
       </View>
-    </View>
+    </PressableScale>
   );
 }
 
@@ -457,12 +469,40 @@ export default function ProfileScreen() {
           ) : (
             <View style={{ gap: 12 }}>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <StatTile icon={<Target color={colors.azure} size={20} />} value={totalQuizzes} label={t('Quiz complétés', 'Quiz fini')} iconBg={colors.azureSoft} />
-                <StatTile icon={<Award color={colors.azure} size={20} />} value={avgScore} label={t('Score moyen', 'Mwayèn')} iconBg={colors.azureSoft} />
+                <StatTile
+                  icon={<Target color={colors.azure} size={20} />}
+                  value={totalQuizzes}
+                  label={t('Quiz complétés', 'Quiz fini')}
+                  iconBg={colors.azureSoft}
+                  onPress={() => navigation.navigate('Exams')}
+                  accessibilityHint={t('Ouvre les quiz et examens', 'Louvri quiz ak egzamen yo')}
+                />
+                <StatTile
+                  icon={<Award color={colors.azure} size={20} />}
+                  value={avgScore}
+                  label={t('Score moyen', 'Mwayèn')}
+                  iconBg={colors.azureSoft}
+                  onPress={() => navigation.navigate('Exams')}
+                  accessibilityHint={t('Ouvre les quiz et examens', 'Louvri quiz ak egzamen yo')}
+                />
               </View>
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <StatTile icon={<BookOpen color={colors.azure} size={20} />} value={enrolledCourses.length} label={t('Cours suivis', 'Kou swivi')} iconBg={colors.azureSoft} />
-                <StatTile icon={<Flame color={colors.danger} size={20} />} value={streak?.currentStreak ?? 0} label={t('Jours de série', 'Jou seri')} iconBg={colors.dangerSoft} />
+                <StatTile
+                  icon={<BookOpen color={colors.azure} size={20} />}
+                  value={enrolledCourses.length}
+                  label={t('Cours suivis', 'Kou swivi')}
+                  iconBg={colors.azureSoft}
+                  onPress={() => navigation.navigate('Courses', { screen: 'CourseList' })}
+                  accessibilityHint={t('Ouvre la liste des cours', 'Louvri lis kou yo')}
+                />
+                <StatTile
+                  icon={<Flame color={colors.danger} size={20} />}
+                  value={streak?.currentStreak ?? 0}
+                  label={t('Jours de série', 'Jou seri')}
+                  iconBg={colors.dangerSoft}
+                  onPress={() => navigation.navigate('Trivia')}
+                  accessibilityHint={t('Ouvre les jeux quotidiens', 'Louvri jwèt chak jou yo')}
+                />
               </View>
             </View>
           )}

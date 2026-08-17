@@ -1337,7 +1337,7 @@ const HAITI_SPORT = [
   { q: "Quel club des Gonaïves porte le nom de Tempête ?", qHt: "Ki klib nan Gonayiv ki pote non Tempête ?", options: ["Le Tempête FC", "Le Cavaly", "L'AS Capoise", "Le Baltimore"], answer: 0 },
   { q: "Quelle confédération regroupe le football d'Amérique du Nord et Caraïbe ?", qHt: "Ki konfederasyon ki rasanble foutbòl Amerik di Nò ak Karayib ?", options: ["La CONCACAF", "La CONMEBOL", "La CAF", "L'UEFA"], answer: 0 },
   { q: "Quelle compétition régionale Haïti a-t-elle gagnée en 2007 ?", qHt: "Ki konpetisyon rejyonal Ayiti te genyen nan 2007 ?", options: ["La Coupe caribéenne", "La Gold Cup", "La Copa", "Le Mondial"], answer: 0 },
-  { q: "À quelle prochaine Coupe du Monde Haïti vise-t-elle à participer ?", qHt: "Nan ki pwochen Koup Dimond Ayiti vize patisipe ?", options: ["2026", "2030", "2034", "2022"], answer: 0 },
+  { q: "En quelle année Haïti a-t-elle disputé sa deuxième Coupe du Monde, après celle de 1974 ?", qHt: "Nan ki ane Ayiti te jwe dezyèm Koup Dimond li, apre sa 1974 la ?", options: ["2026", "2030", "2034", "2022"], answer: 0 },
   { q: "Quel sport collectif américain gagne en popularité chez les jeunes ?", qHt: "Ki spò kolektif ameriken k ap vin popilè nan mitan jenn yo ?", options: ["Le basket-ball", "Le hockey", "Le baseball", "Le rugby"], answer: 0 },
   { q: "Quel joueur a marqué le but historique contre l'Italie en 1974 ?", qHt: "Ki jwè ki te make gòl istorik kont Itali nan 1974 ?", options: ["Emmanuel Sanon", "Joe Gaetjens", "Philippe Vorbe", "Guy François"], answer: 0 },
   { q: "Quel gardien italien encaissa le but de Sanon en 1974 ?", qHt: "Ki gadyen italyen ki te pran gòl Sanon an nan 1974 ?", options: ["Dino Zoff", "Buffon", "Zenga", "Maier"], answer: 0 },

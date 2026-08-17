@@ -255,7 +255,7 @@ export default function SandraScreen({
   /** Called with an in-app path (e.g. "/study-plan") when a chat link is tapped. */
   onNavigate?: (path: string) => void;
 }) {
-  const { user, language, toggleAuthModal, grade, track } = useStore();
+  const { user, language, toggleAuthModal, grade, track, enrolledCourses, lastActivity } = useStore();
   const { level } = useTrivia();
   const colors = useColors();
   const centerColumn = useContentContainerStyle('readable');
@@ -281,11 +281,48 @@ export default function SandraScreen({
     requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
   }, []);
 
-  const suggestions = [
-    t('Explique-moi les fractions', 'Eksplike m fraksyon yo'),
-    t('Comment réviser pour le bac ?', 'Kijan pou m revize pou bak la ?'),
-    t('Aide-moi en économie', 'Ede m nan ekonomi'),
-  ];
+  // Suggestion chips drawn from the student's own context (last lesson, grade,
+  // enrolled courses) so Sandra feels aware of where they are — with the old
+  // generic prompts as fallbacks for fresh profiles. Copy only; the chip visuals
+  // are unchanged.
+  const suggestions = useMemo(() => {
+    // (a) Pick up where they left off — their most recent lesson by title.
+    const lessonChip =
+      lastActivity?.type === 'lesson' && lastActivity.title
+        ? t(`Explique-moi « ${lastActivity.title} »`, `Eksplike m « ${lastActivity.title} »`)
+        : t('Explique-moi les fractions', 'Eksplike m fraksyon yo');
+
+    // (b) Grade-aware: concours prep after the Bac, the official 9e exams, or
+    // their most recent enrolled course by name for NS1–NS3.
+    const latestCourse = enrolledCourses?.length
+      ? enrolledCourses[enrolledCourses.length - 1]
+      : null;
+    let gradeChip: string;
+    if (grade === 'NS4' || grade === 'POSTBAC') {
+      gradeChip = t(
+        'Comment préparer les concours et la préfac ?',
+        'Kijan pou m prepare konkou yo ak prefak la ?',
+      );
+    } else if (grade === '9e') {
+      gradeChip = t(
+        'Aide-moi à préparer les examens de 9ème année',
+        'Ede m prepare egzamen 9yèm ane yo',
+      );
+    } else if (latestCourse?.name) {
+      gradeChip = t(`Aide-moi en ${latestCourse.name}`, `Ede m nan ${latestCourse.name}`);
+    } else {
+      gradeChip = t('Comment réviser pour le bac ?', 'Kijan pou m revize pou bak la ?');
+    }
+
+    // (c) One generic study-method question.
+    const methodChip = t(
+      'Comment mieux mémoriser mes leçons ?',
+      'Kijan pou m memorize leson m yo pi byen ?',
+    );
+
+    return [lessonChip, gradeChip, methodChip];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastActivity, grade, enrolledCourses, isCreole]);
 
   /**
    * Sandra's replies embed markdown links to in-app tools (e.g.
