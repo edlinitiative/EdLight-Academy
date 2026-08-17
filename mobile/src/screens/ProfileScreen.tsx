@@ -29,6 +29,7 @@ import GradeProgress from '../components/GradeProgress';
 import InviteSheet from '../components/InviteSheet';
 import FollowInstagram from '../components/FollowInstagram';
 import { GRADES, gradeProfile } from '../config/trackConfig';
+import { resetTabToRoot } from '../navigation/navHelpers';
 import { useColors, useTheme, radius, typeScale, gradients } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import {
@@ -504,9 +505,11 @@ export default function ProfileScreen() {
                   value={totalQuizzes}
                   label={t('Quiz complétés', 'Quiz fini')}
                   iconBg={colors.azureSoft}
-                  // Name the target screen: a bare tab navigate re-shows
-                  // whatever the Exams stack retained (a stale exam), not its home.
-                  onPress={() => navigation.navigate('Exams', { screen: practiceRoot })}
+                  // Reset the tab's stack: a bare navigate re-shows whatever the
+                  // Exams stack retained (a stale exam), and under React
+                  // Navigation 7 naming the root just pushes a second copy on top
+                  // of it instead of popping back. See navHelpers.
+                  onPress={() => resetTabToRoot(navigation, 'Exams', practiceRoot)}
                   accessibilityHint={t('Ouvre les quiz et examens', 'Louvri quiz ak egzamen yo')}
                 />
                 <StatTile
@@ -514,7 +517,7 @@ export default function ProfileScreen() {
                   value={avgScore}
                   label={t('Score moyen', 'Mwayèn')}
                   iconBg={colors.azureSoft}
-                  onPress={() => navigation.navigate('Exams', { screen: practiceRoot })}
+                  onPress={() => resetTabToRoot(navigation, 'Exams', practiceRoot)}
                   accessibilityHint={t('Ouvre les quiz et examens', 'Louvri quiz ak egzamen yo')}
                 />
               </View>
@@ -524,7 +527,7 @@ export default function ProfileScreen() {
                   value={enrolledCourses.length}
                   label={t('Cours suivis', 'Kou swivi')}
                   iconBg={colors.azureSoft}
-                  onPress={() => navigation.navigate('Courses', { screen: 'CourseList' })}
+                  onPress={() => resetTabToRoot(navigation, 'Courses', 'CourseList')}
                   accessibilityHint={t('Ouvre la liste des cours', 'Louvri lis kou yo')}
                 />
                 <StatTile

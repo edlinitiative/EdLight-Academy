@@ -32,6 +32,7 @@ import { gradeProfile } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import { TabParamList } from '../navigation/TabNavigator';
+import { resetTabToRoot } from '../navigation/navHelpers';
 import { useColors, useTheme, radius, courseTint, typeScale, gradients } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
@@ -230,15 +231,15 @@ export default function DashboardScreen() {
       initial: false,
       params: { courseId: course.id, courseName: course.name, autoplay: true },
     });
-  // "Voir tout" must always land on the course LIST ROOT. Naming the screen pops
-  // a retained CourseDetail, but CourseList also keeps its own level/subject
-  // drill-down in local state, so the nonce tells it to clear that too —
-  // otherwise this re-showed the last sub-list ("voir tout opens the chemistry one").
+  // "Voir tout" must always land on the course LIST ROOT. React Navigation 7's
+  // `navigate` no longer pops back to a screen already in the stack — it pushes
+  // a SECOND CourseList on top of the retained CourseDetail — so we reset the
+  // tab's stack instead (see navHelpers). CourseList also keeps its own
+  // level/subject drill-down in local state, so the nonce tells it to clear that
+  // too — otherwise this re-showed the last sub-list ("voir tout opens the
+  // chemistry one").
   const goCourseList = () =>
-    (navigation as any).navigate('Courses', {
-      screen: 'CourseList',
-      params: { resetAt: Date.now() },
-    });
+    resetTabToRoot(navigation, 'Courses', 'CourseList', { resetAt: Date.now() });
 
   // ---------------------------------------------------------------------------
   // Grade-aware rail order
@@ -467,13 +468,17 @@ export default function DashboardScreen() {
         {/* Quick actions — one compact row (was a 2×2 grid). */}
         <View className="px-5 mt-4 mb-4">
           <HomeWidgets
-            // Name the target screen: a bare navigate('Exams') re-shows whatever
+            // Reset to the tab's root: a bare navigate('Exams') re-shows whatever
             // the stack retained (a paper list, or an abandoned exam). The route
             // name is "Exams" for both cohorts but the stack behind it differs —
             // Quiz-primary grades get QuizNavigator, which has no ExamLanding.
-            onNavigateExams={() => (navigation as any).navigate('Exams', {
-              screen: practiceMode === 'quiz' ? 'Quizzes' : 'ExamLanding',
-            })}
+            onNavigateExams={() =>
+              resetTabToRoot(
+                navigation,
+                'Exams',
+                practiceMode === 'quiz' ? 'Quizzes' : 'ExamLanding',
+              )
+            }
             onNavigateTrivia={() => navigation.navigate('Trivia')}
             onNavigateCourses={goCourseList}
             onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}

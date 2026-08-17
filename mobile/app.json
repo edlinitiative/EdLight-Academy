@@ -75,7 +75,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#0857A6"
         }
-      ]
+      ],
+      "react-native-bottom-tabs"
     ],
     "scheme": "edlight",
     "extra": {

@@ -45,6 +45,7 @@ import {
 import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
 import { TRACKS, currentPlanSeason, gradeProfile } from '../config/trackConfig';
+import { resetTabToRoot } from '../navigation/navHelpers';
 import { subjectColor } from '../utils/examUtils';
 import { useColors, useTheme, radius, typeScale, type Palette } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
@@ -487,23 +488,38 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         onClose?.();
         navigation.navigate('Main', { screen, params });
       };
+      // This screen sits on the ROOT stack, so the tab navigator is one level
+      // down under "Main"; this exposes that navigator to resetTabToRoot.
+      const tabNav = {
+        getState: () =>
+          navigation.getState()?.routes?.find((r: any) => r.name === 'Main')?.state,
+        dispatch: (action: any) => navigation.dispatch(action),
+        // Re-wrap in the "Main" hop the helper doesn't know about. Deliberately
+        // not `go` — that would fire onClose a second time and pop twice.
+        navigate: (screen: string, params?: object) =>
+          navigation.navigate('Main', { screen, params }),
+      };
+      // Going to a tab's ROOT is a reset, not a navigate: React Navigation 7's
+      // `navigate` no longer pops back to a screen already in the stack, it
+      // pushes a second copy over whatever the tab retained. See navHelpers.
+      const goTabRoot = (tab: string, root: string) => {
+        onClose?.();
+        resetTabToRoot(tabNav, tab, root);
+      };
       // `initial: false` keeps the nested stack's root underneath the pushed
       // screen — without it the target becomes the stack's ONLY route, so
       // leaving it exits the tab entirely instead of stepping back one level.
       if (task.type === 'exam' && task.examId && task.level) {
         go('Exams', { screen: 'ExamTake', params: { level: task.level, examId: task.examId }, initial: false });
       } else if (task.type === 'exam') {
-        // Name the target screen: a bare tab navigate re-shows whatever the
-        // stack retained (a stale exam / lesson), not the tab's home. Quiz-primary
-        // grades mount QuizNavigator behind the "Exams" route, which has no
-        // ExamLanding — reachable if a junior grade picked a Bac filière.
-        go('Exams', {
-          screen: gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding',
-        });
+        // Quiz-primary grades mount QuizNavigator behind the "Exams" route,
+        // which has no ExamLanding — reachable if a junior grade picked a Bac
+        // filière.
+        goTabRoot('Exams', gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding');
       } else if (task.type === 'practice') {
         go('Courses', { screen: 'Quizzes', initial: false });
       } else {
-        go('Courses', { screen: 'CourseList' });
+        goTabRoot('Courses', 'CourseList');
       }
     },
     [navigation, onClose],
