@@ -34,6 +34,12 @@
  * Security: same CRON_SECRET bearer scheme as send-reminders / reengagement.
  * `?dryRun=1`      — return the full plan, send nothing, stamp nothing.
  * `?onlyEmail=x`   — restrict the run to one account (used for the first test).
+ *
+ * KILL SWITCH: a broad send requires `DAILY_NUDGE_ENABLED=true` in the
+ * environment. Without it the cron no-ops, so deploying this route can never
+ * start mailing the whole user base on its own — the flag is the deliberate
+ * "go" step. `?onlyEmail=` is exempt so single-account tests work while the
+ * broad send is still switched off.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, getAuthAdmin, isAdminConfigured } from './_lib/firebaseAdmin';
@@ -94,6 +100,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const today = haitiDateKey(now);
   if (!isNudgeHour(now) && !force) {
     return res.status(200).json({ skipped: 'not-nudge-hour', haitiDate: today });
+  }
+
+  // A run that could touch more than one account needs the explicit flag.
+  const enabled = process.env.DAILY_NUDGE_ENABLED === 'true';
+  if (!enabled && !onlyEmail) {
+    return res.status(200).json({
+      skipped: 'disabled',
+      detail: 'Set DAILY_NUDGE_ENABLED=true to allow sending to all users. Single-account tests: pass ?onlyEmail=.',
+      haitiDate: today,
+    });
   }
 
   const db = getDb();
