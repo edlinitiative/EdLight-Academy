@@ -44,7 +44,7 @@ import {
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { auth } from '../services/firebase';
-import { TRACKS, currentPlanSeason } from '../config/trackConfig';
+import { TRACKS, currentPlanSeason, gradeProfile } from '../config/trackConfig';
 import { subjectColor } from '../utils/examUtils';
 import { useColors, useTheme, radius, typeScale, type Palette } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
@@ -372,7 +372,7 @@ function PlanSkeleton({ label }: { label?: string }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
-  const { user, isAuthenticated, language, track, setTrack, toggleAuthModal } = useStore();
+  const { user, isAuthenticated, language, track, grade, setTrack, toggleAuthModal } = useStore();
   const colors = useColors();
   const navigation = useNavigation<any>();
   const centerColumn = useContentContainerStyle('readable');
@@ -487,14 +487,23 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
         onClose?.();
         navigation.navigate('Main', { screen, params });
       };
+      // `initial: false` keeps the nested stack's root underneath the pushed
+      // screen — without it the target becomes the stack's ONLY route, so
+      // leaving it exits the tab entirely instead of stepping back one level.
       if (task.type === 'exam' && task.examId && task.level) {
-        go('Exams', { screen: 'ExamTake', params: { level: task.level, examId: task.examId } });
+        go('Exams', { screen: 'ExamTake', params: { level: task.level, examId: task.examId }, initial: false });
       } else if (task.type === 'exam') {
-        go('Exams');
+        // Name the target screen: a bare tab navigate re-shows whatever the
+        // stack retained (a stale exam / lesson), not the tab's home. Quiz-primary
+        // grades mount QuizNavigator behind the "Exams" route, which has no
+        // ExamLanding — reachable if a junior grade picked a Bac filière.
+        go('Exams', {
+          screen: gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding',
+        });
       } else if (task.type === 'practice') {
-        go('Courses', { screen: 'Quizzes' });
+        go('Courses', { screen: 'Quizzes', initial: false });
       } else {
-        go('Courses');
+        go('Courses', { screen: 'CourseList' });
       }
     },
     [navigation, onClose],

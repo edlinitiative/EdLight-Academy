@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, FlatList, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import { useNavigation, useScrollToTop, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   Search, BookOpen, BookMarked, ChevronRight, ChevronLeft, GraduationCap,
@@ -171,6 +171,7 @@ function DrillCard({
 
 export default function CoursesScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<RouteProp<CoursesParamList, 'CourseList'>>();
   // Tapping the active tab scrolls this screen back to the top.
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -184,6 +185,19 @@ export default function CoursesScreen() {
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState<string | null>(null);
   const [subject, setSubject] = useState<string | null>(null);
+
+  // The drill-down (level → subject) is local state on the tab-stack root, so it
+  // survives leaving the tab. Callers that mean "show me the whole catalog" send
+  // a `resetAt` nonce; without this, Home's "Voir tout" re-showed the last
+  // sub-list the student was in (reported as "voir tout opens the chemistry one").
+  const resetAt = route.params?.resetAt;
+  React.useEffect(() => {
+    if (resetAt) {
+      setLevel(null);
+      setSubject(null);
+      setSearch('');
+    }
+  }, [resetAt]);
 
   const completedIds = useMemo(() => {
     const ids = new Set<string>();

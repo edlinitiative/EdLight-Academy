@@ -53,12 +53,21 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
   const stroke = hasData ? scoreColor(pct, colors) : colors.border;
   const dashArray = hasData ? (pct / 100) * CIRCUMFERENCE : 0;
 
-  // Top subjects by coefficient weight, descending
-  const topSubjects = (subjects || []).slice(0, 5);
+  // Only subjects with a real attempt behind them. `subjects` is seeded from the
+  // track's coefficient table, so as soon as a student picks a filière it holds
+  // ~13 rows at pct:0 — which made this render five 0% bars (and skip the
+  // encouraging empty copy below, since the array wasn't actually empty). That
+  // "wall of zeros" is the exact thing the Home goal card was built to avoid.
+  const withData = (subjects || []).filter((s: any) => s.hasData);
+  const topSubjects = withData.slice(0, 5);
 
-  // Weakest subject for focus
-  const focusSubject = focus?.subject ?? (topSubjects.length ? topSubjects[topSubjects.length - 1]?.subject : null);
+  // Weakest subject for focus — only meaningful once something has been scored.
+  const focusSubject = hasData
+    ? (focus?.subject ?? (topSubjects.length ? topSubjects[topSubjects.length - 1]?.subject : null))
+    : null;
   const focusColor = focusSubject ? subjectColor(focusSubject, colors) : colors.azure;
+  // Highest-coefficient subject — where a first mock exam is worth the most.
+  const suggestedStart = (subjects || [])[0]?.subject ?? null;
 
   return (
     <View style={{ ...cardSurface, padding: 16 }}>
@@ -125,12 +134,32 @@ export default function ReadinessCard({ onFocusPress }: { onFocusPress?: (subjec
         {/* Subject bars */}
         <View className="flex-1 gap-2">
           {topSubjects.length === 0 ? (
-            <Text style={[typeScale.label, { color: colors.muted }]}>
-              {t(
-                'Passe ton premier examen pour débloquer ton score de préparation 🎯',
-                'Fè premye egzamen ou pou debloke nòt preparasyon ou 🎯',
-              )}
-            </Text>
+            <View>
+              <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
+                {t('Pas encore de score', 'Poko gen nòt')}
+              </Text>
+              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
+                {t(
+                  'Fais un examen blanc pour voir où tu en es, matière par matière.',
+                  'Fè yon egzamen blan pou wè kote ou ye, matyè pa matyè.',
+                )}
+              </Text>
+              {onFocusPress && suggestedStart ? (
+                <TouchableOpacity
+                  onPress={() => onFocusPress(suggestedStart)}
+                  activeOpacity={0.8}
+                  className="mt-2 flex-row items-center self-start rounded-full px-3 py-2"
+                  style={{ backgroundColor: colors.azureSoft }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('Commencer un examen blanc', 'Kòmanse yon egzamen blan')}
+                >
+                  <Text style={[typeScale.label, { color: colors.azure }]}>
+                    {t('Commencer un examen blanc', 'Kòmanse yon egzamen blan')}
+                  </Text>
+                  <ChevronRight color={colors.azure} size={15} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : (
             topSubjects.map((s: any) => {
               const sPct = Math.round(s.pct ?? 0);

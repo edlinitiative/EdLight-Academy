@@ -69,6 +69,8 @@ export default function XpBar({
 
   return (
     <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped) }}
       style={[
         { height, borderRadius: radius, backgroundColor: trackColor, overflow: 'hidden' },
         style,

@@ -678,9 +678,13 @@ export default function QuizzesScreen() {
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       {/* When pushed onto the Courses stack (from a course) it needs a back
           affordance; as a standalone tab root (Quiz-primary grades) there's
-          nowhere to go back to, so the arrow is hidden. */}
+          nowhere to go back to, so the arrow is hidden.
+          Gate on THIS stack's depth, not canGoBack(): canGoBack() also counts
+          the parent tab navigator's history, so it stays true even when this
+          screen is its stack's only route — the arrow then threw Quiz-primary
+          students out to Accueil. */}
       <View className="flex-row items-center px-5 pt-6 pb-3" style={{ gap: 8 }}>
-        {navigation.canGoBack() ? (
+        {(navigation.getState()?.routes?.length ?? 1) > 1 ? (
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             hitSlop={8}

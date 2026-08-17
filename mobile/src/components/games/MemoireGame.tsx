@@ -117,7 +117,7 @@ export default function MemoireGame({
         isCreole={isCreole}
         accent={ACCENT}
         highScore={highScore}
-        shareSubject="Mémoire"
+        shareSubject={isCreole ? 'Memwa' : 'Mémoire'}
       />
     );
   }

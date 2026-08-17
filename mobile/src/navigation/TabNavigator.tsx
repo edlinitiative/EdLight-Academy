@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { LayoutDashboard, BookOpen, ClipboardList, ListChecks, Gamepad2, User } from 'lucide-react-native';
@@ -38,7 +39,10 @@ const INACTIVE = lightColors.muted; // '#64748b'
 // Floating "liquid glass" bar (native iOS 26 TabView look): a detached
 // translucent capsule where each item is an icon+label column, and the focused
 // item sits inside its own frosted lens capsule.
-const BAR_HEIGHT = 56;
+// 60, not 56: minus the 7pt vertical padding the bar itself applies, 56 left a
+// 42pt touch height — under Apple's 44pt floor on the one control every user
+// touches every session.
+const BAR_HEIGHT = 60;
 const BAR_MARGIN = 16;
 const ICON_SIZE = 20;
 
@@ -103,7 +107,10 @@ function TabItem({
         allowFontScaling
         maxFontSizeMultiplier={1.3}
         numberOfLines={1}
-        style={[typeScale.micro, { fontSize: 9.5, lineHeight: 11, marginTop: 2, color, fontFamily: focused ? fonts.bold : fonts.medium }]}
+        // 11pt with no fixed lineHeight: 9.5pt sat below the practical legibility
+        // floor, and a hard 11pt lineHeight clipped descenders on "Examens" /
+        // "Egzamen" once Dynamic Type scaled the text up.
+        style={[typeScale.micro, { fontSize: 11, marginTop: 2, color, fontFamily: focused ? fonts.bold : fonts.medium }]}
       >
         {label}
       </Text>
@@ -220,6 +227,28 @@ export default function TabNavigator() {
       <Tab.Screen
         name="Courses"
         component={CoursesNavigator}
+        listeners={({ navigation }) => ({
+          // bottom-tabs dispatches nothing when the tapped tab is already focused,
+          // so re-tapping "Cours" from inside a lesson did nothing at all. Mirror
+          // the Exams behaviour: always return to the catalog root, and send a
+          // fresh `resetAt` so CourseList also clears its level/subject drill-down
+          // (that state is local to the screen and invisible to the navigator).
+          tabPress: (e) => {
+            const coursesRoute = navigation
+              .getState()
+              .routes.find((r: any) => r.name === 'Courses') as any;
+            const nested = coursesRoute?.state;
+            if (!nested) return; // stack not initialized yet → default (CourseList)
+            e.preventDefault();
+            navigation.dispatch({
+              ...CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'CourseList', params: { resetAt: Date.now() } }],
+              }),
+              target: nested.key,
+            });
+          },
+        })}
         options={{
           tabBarAccessibilityLabel: t('Cours', 'Kou'),
           tabBarIcon: ({ color, focused }) => (
@@ -247,7 +276,13 @@ export default function TabNavigator() {
             const topName = nested.routes[nested.index ?? nested.routes.length - 1]?.name;
             if (topName && topName !== 'ExamLanding') {
               e.preventDefault();
-              (navigation as any).navigate('Exams', { screen: 'ExamLanding' });
+              // RESET, don't navigate: navigate() only pops when ExamLanding is
+              // already in the stack, otherwise it PUSHES on top and leaves the
+              // stale screen underneath (Android back then returns to it).
+              navigation.dispatch({
+                ...CommonActions.reset({ index: 0, routes: [{ name: 'ExamLanding' }] }),
+                target: nested.key,
+              });
             }
           },
         })}

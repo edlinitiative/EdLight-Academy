@@ -71,6 +71,15 @@ export function prettifyMath(s: string): string {
 
 const MATH_CHARS = ['²', '³', '√', 'π', '÷', '×', '±', '≤', '≥', '≠', '∞', '/', '(', ')'];
 
+// Screen readers voice bare math glyphs unpredictably (often silently), so each
+// chip gets a spoken name. Shared FR/HT where the term is the same word.
+const MATH_CHAR_LABELS: Record<string, string> = {
+  '²': 'carré', '³': 'cube', '√': 'racine carrée', 'π': 'pi',
+  '÷': 'division', '×': 'multiplication', '±': 'plus ou moins',
+  '≤': 'inférieur ou égal', '≥': 'supérieur ou égal', '≠': 'différent de',
+  '∞': 'infini', '/': 'barre de fraction', '(': 'parenthèse ouvrante', ')': 'parenthèse fermante',
+};
+
 export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
   const colors = useColors();
   return (
@@ -85,17 +94,21 @@ export function MathChips({ onInsert }: { onInsert: (char: string) => void }) {
         <TouchableOpacity
           key={c}
           onPress={() => onInsert(c)}
-          hitSlop={{ top: 6, bottom: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel={MATH_CHAR_LABELS[c] ?? c}
+          // A real 44×44 target rather than horizontal hitSlop: these sit 6pt
+          // apart in a scroller, so slop would overlap the neighbours — and a
+          // mis-tap here inserts the wrong operator into a timed exam answer.
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
+            width: 44,
+            height: 44,
+            borderRadius: 10,
             backgroundColor: colors.surfaceAlt,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Text style={{ fontSize: 15, color: colors.ink }}>{c}</Text>
+          <Text style={{ fontSize: 17, color: colors.ink }}>{c}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>

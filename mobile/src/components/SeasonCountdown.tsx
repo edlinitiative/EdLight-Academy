@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { CalendarClock, GraduationCap } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile, seasonAnchorYear } from '../config/trackConfig';
@@ -19,6 +18,12 @@ import { useReduceMotion } from '../utils/motion';
  * The Bac anchor reuses seasonAnchorYear (the year of the next July-5 Bac session
  * on/after today) so it never drifts from currentPlanSeason. Bilingual FR/HT via
  * the file's t(fr, ht) pattern. A gentle fade-in respects reduce-motion.
+ *
+ * Deliberately QUIET: this is a date, not an action. Gradients on Home are
+ * reserved for the hero and the single "Mission du jour" CTA — stacking a third
+ * saturated card here made four blue blocks compete in one screen and cost real
+ * vertical space (repeat TestFlight feedback: "be intentional about the sizes").
+ * The day count still lands via a large azure numeral on a calm surface.
  */
 
 /** Whole days from `from` until `date`, clamped at 0 (never negative). */
@@ -28,7 +33,7 @@ function daysUntil(date: Date, from: Date): number {
 
 export default function SeasonCountdown() {
   const { language, grade } = useStore();
-  const { shadow } = useTheme();
+  const { colors, cardSurface } = useTheme();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const reduceMotion = useReduceMotion();
@@ -43,13 +48,15 @@ export default function SeasonCountdown() {
     Animated.timing(anim, { toValue: 1, duration: 320, useNativeDriver: true }).start();
   }, [reduceMotion, anim]);
 
-  const level = gradeProfile(grade).examLevel;
+  // Only count down when we actually know the student's year — gradeProfile(null)
+  // defaults to Bac, which showed a "Bac dans N jours" card to 7ᵉ-graders and
+  // anyone who skipped the class question.
+  const level = grade ? gradeProfile(grade).examLevel : null;
 
   // Resolve the card content from the grade's exam level. `null` → render nothing.
   let content:
     | {
         Icon: typeof CalendarClock;
-        colors: [string, string, string];
         title: string;
         subtitle: string;
         days: number | null;
@@ -63,7 +70,6 @@ export default function SeasonCountdown() {
     const days = daysUntil(nextBac, now);
     content = {
       Icon: CalendarClock,
-      colors: ['#2E6FE6', '#123A86', '#0A1F52'], // aurora — deep, focused
       title: t('Bac', 'Bak'),
       subtitle: t('jusqu’à la prochaine session', 'jiska pwochen sesyon an'),
       days,
@@ -81,7 +87,6 @@ export default function SeasonCountdown() {
     const days = daysUntil(nextExam, now);
     content = {
       Icon: GraduationCap,
-      colors: ['#2E86F0', '#1B6FE0', '#0857A6'],
       title: t('Examen de 9ème', 'Egzamen 9yèm'),
       subtitle: t('jusqu’à l’examen national', 'jiska egzamen nasyonal la'),
       days,
@@ -92,7 +97,7 @@ export default function SeasonCountdown() {
   // 7e/8e, NS1–NS3 (examLevel null) — nothing to count down to.
   if (!content) return null;
 
-  const { Icon, colors: grad, title, subtitle, days, accessibilityLabel } = content;
+  const { Icon, title, subtitle, days, accessibilityLabel } = content;
 
   return (
     <Animated.View
@@ -111,51 +116,41 @@ export default function SeasonCountdown() {
         accessible
         accessibilityRole="summary"
         accessibilityLabel={accessibilityLabel}
-        style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+        style={{ ...cardSurface, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}
       >
-        <LinearGradient
-          colors={grad}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+        <View
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: radius.tile,
+            backgroundColor: colors.azureSoft,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: radius.tile,
-              backgroundColor: 'rgba(255,255,255,0.18)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Icon color="#fff" size={22} />
-          </View>
+          <Icon color={colors.azure} size={19} />
+        </View>
 
-          <View style={{ flex: 1 }}>
-            <Text style={[typeScale.titleSm, { color: '#fff' }]} numberOfLines={1}>
-              {title}
+        <View style={{ flex: 1 }}>
+          <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={1}>
+            {title}
+          </Text>
+          <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        </View>
+
+        {/* Countdown badge — only when there's a real date to count toward. */}
+        {days !== null && (
+          <View style={{ alignItems: 'flex-end', minWidth: 52 }}>
+            <Text style={[typeScale.h2, { color: colors.azure }]} maxFontSizeMultiplier={1.3}>
+              {days}
             </Text>
-            <Text
-              style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 1 }]}
-              numberOfLines={2}
-            >
-              {subtitle}
+            <Text style={[typeScale.micro, { color: colors.faint, marginTop: -2 }]}>
+              {days <= 1 ? t('jour', 'jou') : t('jours', 'jou')}
             </Text>
           </View>
-
-          {/* Countdown badge — only when there's a real date to count toward. */}
-          {days !== null && (
-            <View style={{ alignItems: 'flex-end', minWidth: 56 }}>
-              <Text style={[typeScale.h1, { color: '#fff' }]} maxFontSizeMultiplier={1.3}>
-                {days}
-              </Text>
-              <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.88)', marginTop: -2 }]}>
-                {days <= 1 ? t('jour', 'jou') : t('jours', 'jou')}
-              </Text>
-            </View>
-          )}
-        </LinearGradient>
+        )}
       </View>
     </Animated.View>
   );

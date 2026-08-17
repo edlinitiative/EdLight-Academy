@@ -136,7 +136,7 @@ export default function VraiFauxGame({
         isCreole={isCreole}
         accent={colors.coral}
         highScore={highScore}
-        shareSubject="Vrai ou Faux"
+        shareSubject={isCreole ? 'Vre oswa Fo' : 'Vrai ou Faux'}
       />
     );
   }

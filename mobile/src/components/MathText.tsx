@@ -106,6 +106,11 @@ export function MathText({ text, display = false, style }: MathTextProps) {
   return (
     <WebView
       source={{ html }}
+      // `backgroundColor: 'transparent'` alone only clears the surface on iOS —
+      // on Android the native WebView still paints white, which hid every
+      // formula in dark mode (near-white ink on white). `opaque={false}` makes
+      // the Android surface genuinely transparent; it's a no-op on iOS.
+      opaque={false}
       style={{ height, backgroundColor: 'transparent', ...style }}
       onMessage={(e) => {
         const h = Number(e.nativeEvent?.data);

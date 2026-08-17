@@ -53,7 +53,11 @@ export default function ProgressRing({
   }));
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: clamped }}
+      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+    >
       <Svg width={size} height={size} viewBox="0 0 100 100">
         <Circle cx={50} cy={50} r={R} fill="none" stroke={colors.hairline} strokeWidth={strokeWidth} />
         <AnimatedCircle
@@ -71,7 +75,7 @@ export default function ProgressRing({
       </Svg>
       {showLabel && (
         <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: size * 0.26, fontWeight: '800', color: clamped > 0 ? fill : colors.faint, letterSpacing: -0.3 }}>
+          <Text maxFontSizeMultiplier={1.1} style={{ fontSize: size * 0.26, fontWeight: '800', color: clamped > 0 ? fill : colors.faint, letterSpacing: -0.3 }}>
             {clamped}
             <Text style={{ fontSize: size * 0.17, fontWeight: '700' }}>%</Text>
           </Text>

@@ -199,6 +199,10 @@ export default function ProfileScreen() {
 
   const allAttempts = Object.values(quizAttempts).flat() as { score: number; total: number; date: number }[];
   const totalQuizzes = allAttempts.length;
+  // The 3rd tab is always named "Exams", but Quiz-primary grades (7e–8e, NS1–NS3)
+  // mount QuizNavigator behind it, which has no ExamLanding route. These stat
+  // tiles aren't grade-gated, so they must name the root that actually exists.
+  const practiceRoot = gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
   const firstName = getFirstName(user);
 
   const avgScore: string = (() => {
@@ -339,7 +343,7 @@ export default function ProfileScreen() {
   }
 
   // ── Authenticated state ──────────────────────────────────────────────────────
-  const displayName = user.name || user.displayName || firstName || 'Étudiant';
+  const displayName = user.name || user.displayName || firstName || t('Étudiant', 'Elèv');
 
   // New user — every progress stat is empty. Show one encouraging tile instead
   // of a 2×2 wall of 0 / — / 0 / 0.
@@ -474,7 +478,9 @@ export default function ProfileScreen() {
                   value={totalQuizzes}
                   label={t('Quiz complétés', 'Quiz fini')}
                   iconBg={colors.azureSoft}
-                  onPress={() => navigation.navigate('Exams')}
+                  // Name the target screen: a bare tab navigate re-shows
+                  // whatever the Exams stack retained (a stale exam), not its home.
+                  onPress={() => navigation.navigate('Exams', { screen: practiceRoot })}
                   accessibilityHint={t('Ouvre les quiz et examens', 'Louvri quiz ak egzamen yo')}
                 />
                 <StatTile
@@ -482,7 +488,7 @@ export default function ProfileScreen() {
                   value={avgScore}
                   label={t('Score moyen', 'Mwayèn')}
                   iconBg={colors.azureSoft}
-                  onPress={() => navigation.navigate('Exams')}
+                  onPress={() => navigation.navigate('Exams', { screen: practiceRoot })}
                   accessibilityHint={t('Ouvre les quiz et examens', 'Louvri quiz ak egzamen yo')}
                 />
               </View>
@@ -519,6 +525,10 @@ export default function ProfileScreen() {
                 navigation.navigate('Exams', {
                   screen: 'ExamBrowser',
                   params: { level: 'terminale', subject },
+                  // initial:false keeps ExamLanding mounted beneath ExamBrowser,
+                  // so its back arrow pops to the level picker instead of
+                  // leaving the tab (ExamBrowser would otherwise be the only route).
+                  initial: false,
                 })
               }
             />

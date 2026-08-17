@@ -47,12 +47,15 @@ export default function Button({
   // md/lg already exceed this, so minHeight only lifts sm — no layout shift.
   const minHeight = 44;
 
+  // Filled variants use the *Fill grounds, not `azure`/`success`: those two
+  // tokens are tuned for text/icons, so white-on-them fails AA as a button
+  // ground (azure is 2.90:1 in dark; success is 2.28:1 in light).
   const V = {
-    primary: { bg: colors.azure, fg: '#ffffff', border: 'transparent' },
+    primary: { bg: colors.azureFill, fg: '#ffffff', border: 'transparent' },
     secondary: { bg: colors.azureSoft, fg: colors.azure, border: colors.azureBorder },
     ghost: { bg: 'transparent', fg: colors.muted, border: colors.border },
     danger: { bg: colors.danger, fg: '#ffffff', border: 'transparent' },
-    success: { bg: colors.success, fg: '#ffffff', border: 'transparent' },
+    success: { bg: colors.successFill, fg: '#ffffff', border: 'transparent' },
   }[variant];
 
   return (

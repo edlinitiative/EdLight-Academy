@@ -6,7 +6,7 @@ import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias, weekId, weekNumber, timeToWeekEnd } from '../services/leaderboardService';
 import useStore from '../contexts/store';
-import { useColors, useTheme, typeScale } from '../theme/theme';
+import { useTheme, typeScale } from '../theme/theme';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
 import Avatar from './ui/Avatar';
@@ -182,12 +182,21 @@ function GroupRow({
   );
 }
 
-// Medal treatment per podium place: pedestal tint + a darker readable number.
-const PODIUM_META: Record<number, { tint: string; ink: string; ring: string; h: number; av: number }> = {
-  1: { tint: '#FFD70022', ink: '#B8860B', ring: '#F5C518', h: 62, av: 62 },
-  2: { tint: '#C0C0C022', ink: '#7A7A7A', ring: '#C0C0C0', h: 46, av: 52 },
-  3: { tint: '#CD7F3222', ink: '#A15A1E', ring: '#CD7F32', h: 34, av: 52 },
+// Geometry per podium place — pedestal height + avatar size. The medal tones
+// come from `medalPalette(isDark)` (same source as the row badges) so the rank
+// numeral stays readable on a dark card instead of sitting at ~2:1.
+const PODIUM_META: Record<number, { h: number; av: number }> = {
+  1: { h: 62, av: 62 },
+  2: { h: 46, av: 52 },
+  3: { h: 34, av: 52 },
 };
+
+/** Pedestal tint / numeral ink / avatar ring for a podium place, per scheme. */
+function podiumMedal(rank: number, isDark: boolean) {
+  const m = medalPalette(isDark);
+  const tone = rank === 1 ? m.gold : rank === 2 ? m.silver : m.bronze;
+  return { tint: tone.ring + '22', ink: tone.ink, ring: tone.ring };
+}
 
 /** Ordinal place wording for the podium, so the medal state is never conveyed
  *  by colour alone — VoiceOver hears "1re place / 2e place / 3e place". */
@@ -208,10 +217,11 @@ function PodiumColumn({
   myUid?: string;
   t: (fr: string, ht: string) => string;
 }) {
-  const colors = useColors();
+  const { colors, isDark } = useTheme();
   const reduce = useReduceMotion();
   const rank = Number(e.rank) || 3;
   const m = PODIUM_META[rank] ?? PODIUM_META[3];
+  const medal = podiumMedal(rank, isDark);
   const isMe = e.id === myUid;
 
   // Winner (centre) lands last and strongest — a springier settle + a Crown pop.
@@ -259,7 +269,7 @@ function PodiumColumn({
       ) : (
         <View style={{ height: 20 }} />
       )}
-      <View style={{ borderWidth: 2.5, borderColor: m.ring, borderRadius: 999, padding: 2 }}>
+      <View style={{ borderWidth: 2.5, borderColor: medal.ring, borderRadius: 999, padding: 2 }}>
         <Avatar
           name={e.displayName || ''}
           uri={e.photoURL || e.picture || null}
@@ -275,11 +285,11 @@ function PodiumColumn({
         style={{
           width: '100%', height: m.h, marginTop: 8,
           borderTopLeftRadius: 12, borderTopRightRadius: 12,
-          backgroundColor: m.tint, borderWidth: 1, borderColor: m.ring + '66',
+          backgroundColor: medal.tint, borderWidth: 1, borderColor: medal.ring + '66',
           alignItems: 'center', paddingTop: 6,
         }}
       >
-        <Text style={{ fontSize: 19, fontWeight: '900', color: m.ink }} maxFontSizeMultiplier={1.3}>{rank}</Text>
+        <Text style={{ fontSize: 19, fontWeight: '900', color: medal.ink }} maxFontSizeMultiplier={1.3}>{rank}</Text>
       </View>
     </Animated.View>
   );

@@ -13,10 +13,16 @@ import useStore from '../contexts/store';
 export type ColorScheme = 'light' | 'dark';
 export type Palette = {
   azure: string; azureDeep: string; azureSoft: string; azureBorder: string;
+  /** Ground for FILLED buttons carrying white text. Stays deep in both themes:
+   *  `azure` is lifted to #4C9AF5 in dark for text/icons, where white-on-it is
+   *  only 2.90:1. Use this whenever the label is white. */
+  azureFill: string;
   coral: string; coralSoft: string;
   bg: string; surface: string; surfaceAlt: string; border: string; hairline: string;
   ink: string; muted: string; faint: string;
   danger: string; dangerSoft: string; warn: string; warnSoft: string; success: string; successSoft: string;
+  /** Ground for filled SUCCESS buttons with white text (`success` is only 2.28:1). */
+  successFill: string;
 };
 
 export const lightColors: Palette = {
@@ -25,6 +31,7 @@ export const lightColors: Palette = {
   azureDeep: '#0857A6',
   azureSoft: '#eaf2fb', // tinted icon backgrounds / chips
   azureBorder: '#cfdff2',
+  azureFill: '#1B6FE0', // white label = 4.78:1
   coral: '#E0532F',
   coralSoft: '#fdeae4',
   // Surfaces
@@ -33,10 +40,14 @@ export const lightColors: Palette = {
   surfaceAlt: '#f8fafc', // subtly raised inner surfaces
   border: '#e8edf5',
   hairline: '#eef1f6',
-  // Text
+  // Text — both greys carry real content (durations, descriptions, form
+  // placeholders), so both must clear WCAG AA. The old pair was muted #64748b
+  // (4.76:1 on white) over faint #94a3b8, and #94a3b8 was only 2.56:1 on white /
+  // 2.37:1 on `bg` — failing everywhere it was used. Each token moved one step
+  // darker to keep the two-level hierarchy while lifting contrast.
   ink: '#0f172a',
-  muted: '#64748b',
-  faint: '#94a3b8',
+  muted: '#556278', // 6.17:1 on surface, 5.70:1 on bg
+  faint: '#64748b', // 4.76:1 on surface, 4.40:1 on bg
   // Status
   danger: '#ef4444',
   dangerSoft: '#fef2f2',
@@ -44,6 +55,7 @@ export const lightColors: Palette = {
   warnSoft: '#fffbeb',
   success: '#22c55e',
   successSoft: '#ecfdf5',
+  successFill: '#15803d', // white label = 5.02:1
 };
 
 export const darkColors: Palette = {
@@ -52,6 +64,7 @@ export const darkColors: Palette = {
   azureDeep: '#2E86F0',
   azureSoft: 'rgba(76,154,245,0.16)',
   azureBorder: 'rgba(76,154,245,0.35)',
+  azureFill: '#1B6FE0', // deep on purpose: white label = 4.78:1 (on #4C9AF5 it's 2.90:1)
   coral: '#FF7043',
   coralSoft: 'rgba(224,83,47,0.18)',
   // Surfaces — deep navy, not pure black
@@ -60,10 +73,10 @@ export const darkColors: Palette = {
   surfaceAlt: '#1a2436',
   border: 'rgba(148,163,184,0.16)',
   hairline: 'rgba(148,163,184,0.12)',
-  // Text
+  // Text — faint was #6b7a94: only 3.92:1 on `surface` #131c2e. Lifted to clear AA.
   ink: '#eef2f8',
   muted: '#9aa8c0',
-  faint: '#6b7a94',
+  faint: '#8494ad', // 6.08:1 on bg, 5.53:1 on surface
   // Status
   danger: '#f87171',
   dangerSoft: 'rgba(248,113,113,0.16)',
@@ -71,6 +84,7 @@ export const darkColors: Palette = {
   warnSoft: 'rgba(251,191,36,0.16)',
   success: '#34d399',
   successSoft: 'rgba(52,211,153,0.16)',
+  successFill: '#15803d', // white label = 5.02:1
 };
 
 /**
@@ -120,7 +134,10 @@ export const typeScale = {
 
 /** Canonical brand gradients — one hero band + the deep "aurora" for completions. */
 export const gradients = {
-  hero: ['#2E86F0', '#1B6FE0', '#0857A6'] as const,
+  // Every stop must carry white text: the old top stop #2E86F0 was 3.63:1, so
+  // the Dashboard/Profile hero greeting and the user's email sat below AA.
+  // Starting at brand azure makes the lightest stop 4.78:1.
+  hero: ['#1B6FE0', '#1364D2', '#0857A6'] as const,
   aurora: ['#2E6FE6', '#123A86', '#0A1F52'] as const,
 } as const;
 

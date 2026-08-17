@@ -14,7 +14,7 @@ import { useColors, useTheme, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
-import { LoadingState } from '../components/StateViews';
+import { LoadingState, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import Confetti from '../components/ui/Confetti';
 import PopIn from '../components/ui/PopIn';
@@ -211,7 +211,7 @@ export default function ExamResultsScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { level, examId } = route.params;
-  const { user, incrementGuestInteraction, language } = useStore();
+  const { user, incrementGuestInteraction, language, setShowAuthModal } = useStore();
   const colors = useColors();
   const { cardSurface, shadow } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
@@ -221,6 +221,8 @@ export default function ExamResultsScreen() {
   const [result, setResult] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [reviewFilter, setReviewFilter] = useState<'all' | 'wrong' | 'correct'>('all');
 
   useEffect(() => {
@@ -228,19 +230,63 @@ export default function ExamResultsScreen() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setLoadError(false);
     const promises: Promise<any>[] = [
       user?.uid ? loadExamResult(user.uid, examId) : Promise.resolve(null),
       fetchSingleExam(examId),
     ];
     Promise.all(promises)
       .then(([r, exam]) => {
+        if (!alive) return;
         setResult(r);
         if (exam) setQuestions(flattenQuestions(exam) as any[]);
       })
-      .finally(() => setLoading(false));
-  }, [user?.uid, examId]);
+      // Without this, a failed load fell through to percentage = 0 and rendered
+      // a real-looking "0%" — a failure was indistinguishable from a bad score.
+      .catch(() => { if (alive) setLoadError(true); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [user?.uid, examId, reloadKey]);
 
   if (loading) return <LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />;
+  if (loadError) return <ErrorState onRetry={() => setReloadKey((k) => k + 1)} />;
+
+  // Guests never get a persisted result (ExamTakeScreen only saves for signed-in
+  // users), so `result` is null and every derived number below would be 0. Don't
+  // render a fabricated 0% gauge — and never offer to SHARE it. Explain instead.
+  if (!result && !user?.uid) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+          <TouchableOpacity
+            onPress={() => {
+              const stackRoutes = navigation.getState()?.routes ?? [];
+              if (stackRoutes.length > 1) navigation.goBack();
+              else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+            }}
+            className="p-1 mr-3"
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Retour', 'Retounen')}
+          >
+            <ArrowLeft color={colors.muted} size={22} />
+          </TouchableOpacity>
+          <Text style={[typeScale.title, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
+        </View>
+        <EmptyState
+          title={t('Connecte-toi pour voir ton score', 'Konekte pou wè nòt ou')}
+          description={t(
+            'Sans compte, tes réponses ne sont pas enregistrées. Crée un compte gratuit pour garder tes résultats et suivre ta progression.',
+            'San yon kont, repons ou yo pa sove. Kreye yon kont gratis pou kenbe rezilta ou epi swiv pwogrè ou.',
+          )}
+          ctaLabel={t('Créer un compte', 'Kreye yon kont')}
+          onCta={() => setShowAuthModal(true)}
+        />
+      </SafeAreaView>
+    );
+  }
 
   // The grader emits correctCount/incorrectCount/earnedPoints/totalPoints and a
   // per-question `results[]` array (persisted at submit). Read those real field
@@ -265,7 +311,14 @@ export default function ExamResultsScreen() {
       {/* Header — shares the page background (no white-bar seam) */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ExamLanding'))}
+          // canGoBack() also counts the parent TAB navigator, so it was true even
+          // when this is the only route here — goBack() then switched tabs and the
+          // ExamLanding fallback was dead code. Judge this stack's own depth.
+          onPress={() => {
+            const stackRoutes = navigation.getState()?.routes ?? [];
+            if (stackRoutes.length > 1) navigation.goBack();
+            else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+          }}
           className="p-1 mr-3"
           hitSlop={8}
           accessibilityRole="button"

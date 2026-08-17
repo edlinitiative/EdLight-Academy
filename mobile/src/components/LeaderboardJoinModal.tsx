@@ -28,13 +28,15 @@ function OptionSheet({ visible, title, options, onPick, onClose }: {
   onPick: (v: string) => void; onClose: () => void;
 }) {
   const colors = useColors();
+  const { language } = useStore();
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.55)' }} activeOpacity={1} onPress={onClose} accessibilityLabel={title} />
       <View accessibilityViewIsModal style={{ maxHeight: '70%', backgroundColor: colors.surface, borderTopLeftRadius: radius.hero, borderTopRightRadius: radius.hero, paddingBottom: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderColor: colors.border }}>
           <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Fermer">
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Fermer', 'Fèmen')}>
             <X size={20} color={colors.muted} />
           </TouchableOpacity>
         </View>

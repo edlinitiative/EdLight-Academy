@@ -88,7 +88,13 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
   return (
     <View style={{ flex: 1, padding: 20 }}>
       <Text style={styles.counter}>{idx + 1} / {cards.length}</Text>
-      <TouchableOpacity activeOpacity={0.9} onPress={() => setFlipped((f) => !f)} style={styles.card}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => setFlipped((f) => !f)}
+        style={styles.card}
+        accessibilityRole="button"
+        accessibilityHint={isCreole ? 'Tape pou vire kat la' : 'Touchez pour retourner la carte'}
+      >
         <Text style={styles.cardLabel}>{flipped ? (isCreole ? 'Repons' : 'Réponse') : 'Question'}</Text>
         <Text style={styles.cardText}>{flipped ? card.answer : card.question}</Text>
         {flipped && card.explanation ? (
@@ -100,10 +106,22 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
         </View>
       </TouchableOpacity>
       <View style={styles.rowBetween}>
-        <TouchableOpacity onPress={() => go(-1)} disabled={idx === 0} style={[styles.navBtn, idx === 0 && styles.disabled]}>
+        <TouchableOpacity
+          onPress={() => go(-1)}
+          disabled={idx === 0}
+          style={[styles.navBtn, idx === 0 && styles.disabled]}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Kat anvan' : 'Carte précédente'}
+        >
           <ChevronLeft color={colors.muted} size={20} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => go(1)} disabled={idx === cards.length - 1} style={[styles.navBtn, idx === cards.length - 1 && styles.disabled]}>
+        <TouchableOpacity
+          onPress={() => go(1)}
+          disabled={idx === cards.length - 1}
+          style={[styles.navBtn, idx === cards.length - 1 && styles.disabled]}
+          accessibilityRole="button"
+          accessibilityLabel={isCreole ? 'Kat apre' : 'Carte suivante'}
+        >
           <ChevronRight color={colors.muted} size={20} />
         </TouchableOpacity>
       </View>
@@ -239,9 +257,18 @@ export default function LessonPractice({
         <View style={styles.header}>
           <View style={styles.segment}>
             {(['flashcards', 'exercices'] as const).map((m) => (
-              <TouchableOpacity key={m} onPress={() => setMode(m)} style={[styles.segBtn, mode === m && styles.segBtnActive]}>
+              <TouchableOpacity
+                key={m}
+                onPress={() => setMode(m)}
+                hitSlop={8}
+                style={[styles.segBtn, mode === m && styles.segBtnActive]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: mode === m }}
+              >
                 <Text style={[styles.segText, mode === m && styles.segTextActive]}>
-                  {m === 'flashcards' ? 'Flashcards' : (isCreole ? 'Egzèsis' : 'Exercices')}
+                  {m === 'flashcards'
+                    ? (isCreole ? 'Kat etid' : 'Flashcards')
+                    : (isCreole ? 'Egzèsis' : 'Exercices')}
                 </Text>
               </TouchableOpacity>
             ))}

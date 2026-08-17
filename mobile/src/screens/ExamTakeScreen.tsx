@@ -408,21 +408,14 @@ export default function ExamTakeScreen() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  // Hide the floating tab bar while taking an exam so it never covers the
-  // question navigation / submit controls. Restored when leaving the screen.
-  useFocusEffect(
-    useCallback(() => {
-      setFocusMode(true);
-      return () => setFocusMode(false);
-    }, [setFocusMode]),
-  );
-
   const [exam, setExam] = useState<any | null>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<number, Answer>>({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Bumped by the error-state retry button to re-run the fetch effect.
+  const [retryCount, setRetryCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   // 'overview' shows the exam intro; 'questions' is the live question flow
   const [phase, setPhase] = useState<'overview' | 'questions'>('overview');
@@ -439,6 +432,22 @@ export default function ExamTakeScreen() {
   // Set once the exam is submitted so a late autosave can't revert the doc
   // back to `in_progress`.
   const submittedRef = useRef(false);
+
+  // Only a real, playable exam is worth a full-screen takeover.
+  const examReady = !loading && !error && !!exam && questions.length > 0;
+
+  // Hide the floating tab bar while taking an exam so it never covers the
+  // question navigation / submit controls. Restored when leaving the screen.
+  // Gated on `examReady`: entering focus mode unconditionally turned a failed
+  // or empty exam into a hard dead end — no tab bar, no back button, nothing
+  // but an error message. While the exam can't be taken, the tabs stay up.
+  useFocusEffect(
+    useCallback(() => {
+      if (!examReady) return;
+      setFocusMode(true);
+      return () => setFocusMode(false);
+    }, [setFocusMode, examReady]),
+  );
 
   const localDraftKey = `edlight-exam-draft-${examId}`;
 
@@ -533,7 +542,14 @@ export default function ExamTakeScreen() {
       })
       .catch(() => { if (active) { setError(true); setLoading(false); } });
     return () => { active = false; };
-  }, [examId, user?.uid]);
+  }, [examId, user?.uid, retryCount]);
+
+  // Retry from the error/empty state: clear the failure and re-run the fetch.
+  const retryLoad = useCallback(() => {
+    setError(false);
+    setLoading(true);
+    setRetryCount((n) => n + 1);
+  }, []);
 
   // Auto-save draft every 10s (only while actually taking the exam)
   useEffect(() => {
@@ -692,8 +708,8 @@ export default function ExamTakeScreen() {
   }, [exam]);
 
   if (loading) return <LoadingState message={t("Chargement de l'examen…", 'Egzamen an ap chaje…')} />;
-  if (error || !exam) return <ErrorState />;
-  if (questions.length === 0) return <ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} />;
+  if (error || !exam) return <ErrorState onRetry={retryLoad} />;
+  if (questions.length === 0) return <ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} />;
 
   const answeredCount = Object.keys(answers).length;
 

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
-import { ListSkeleton, ErrorState } from '../components/StateViews';
+import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import ProgressBar from '../components/ProgressBar';
 import LessonPractice from '../components/LessonPractice';
 import PracticeSpotlight from '../components/PracticeSpotlight';
@@ -258,6 +258,42 @@ export default function CourseDetailScreen() {
   }
   if (isError || !course) return <ErrorState />;
 
+  // A course that loaded fine but has no lessons (empty `modules` — the
+  // catalog-migration / orphan-video case) otherwise rendered "0/0 leçons", no
+  // player, no start button and an empty accordion: a screen that reads as broken
+  // rather than as "not ready yet".
+  if (allLessons.length === 0) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+          <TouchableOpacity
+            onPress={() => {
+              const stackRoutes = navigation.getState()?.routes ?? [];
+              if (stackRoutes.length > 1) navigation.goBack();
+              else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
+            }}
+            className="mr-3 p-1"
+            accessibilityRole="button"
+            accessibilityLabel={t('Retour', 'Retounen')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ArrowLeft color={colors.muted} size={22} />
+          </TouchableOpacity>
+          <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
+        </View>
+        <EmptyState
+          title={t('Ce cours arrive bientôt', 'Kou sa a ap vini talè')}
+          description={t(
+            'Les leçons vidéo sont en préparation. Essaie un autre cours en attendant.',
+            'Leson videyo yo ap prepare. Eseye yon lòt kou pandan n ap tann.',
+          )}
+          ctaLabel={t('Voir les autres cours', 'Wè lòt kou yo')}
+          onCta={() => navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] })}
+        />
+      </SafeAreaView>
+    );
+  }
+
   function onLessonPress(lesson: any) {
     setActiveLesson(lesson);
     recordActivity({
@@ -370,7 +406,7 @@ export default function CourseDetailScreen() {
               className="flex-1 flex-row items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-[#131c2e]"
             >
               <Sparkles color={colors.azure} size={16} />
-              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Flashcards', 'Flashcards')}</Text>
+              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Flashcards', 'Kat etid')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setPracticeMode('exercices')}

@@ -5,7 +5,10 @@ import CourseDetailScreen from '../screens/CourseDetailScreen';
 import QuizzesScreen from '../screens/QuizzesScreen';
 
 export type CoursesParamList = {
-  CourseList: undefined;
+  /** `resetAt`: a nonce that clears the retained level/subject/search drill-down,
+   *  so entry points like Home's "Voir tout" always land on the catalog root
+   *  instead of whatever sub-list the student left behind. */
+  CourseList: { resetAt?: number } | undefined;
   CourseDetail: {
     courseId: string;
     courseName?: string;

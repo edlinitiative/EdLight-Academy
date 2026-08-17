@@ -41,8 +41,11 @@ export default function ResumeBanner() {
     // only navigated to the tab root ('Exams' / 'Courses'), so tapping Reprendre
     // dropped the user on the exam list instead of reopening what they left off.
     if (a.type === 'exam') {
+      // initial:false for the same reason as the lesson branch below — without it
+      // ExamTake is the stack's only route and leaving the exam exits the tab.
       (navigation as any).navigate('Exams', {
         screen: 'ExamTake',
+        initial: false,
         params: { level: a.level ?? '', examId: a.path },
       });
     } else {

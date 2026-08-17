@@ -43,7 +43,7 @@ export const STREAK_MILESTONES = [
   { id: 'streak_30',  days: 30,  emoji: '💪', label: '1 mois',     labelHt: '1 mwa',     message: 'Un mois entier ! Tu es inarrêtable.',    messageHt: 'Yon mwa antye! Ou pa ka rete!' },
   { id: 'streak_60',  days: 60,  emoji: '👑', label: '60 jours',   labelHt: '60 jou',    message: '60 jours, discipline de champion.',     messageHt: '60 jou, disiplin chanpyon.' },
   { id: 'streak_100', days: 100, emoji: '🏆', label: '100 jours',  labelHt: '100 jou',   message: '100 jours ! Légende EdLight.',           messageHt: '100 jou! Lejand EdLight.' },
-  { id: 'streak_365', days: 365, emoji: '💎', label: '1 an',       labelHt: '1 ane',     message: 'Un an complet, incroyable !',           messageHt: 'Yon ane konplè, encroyab!' },
+  { id: 'streak_365', days: 365, emoji: '💎', label: '1 an',       labelHt: '1 ane',     message: 'Un an complet, incroyable !',           messageHt: 'Yon ane konplè, enkwayab!' },
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { Animated, View } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
+import { useColors } from '../theme/theme';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
@@ -106,6 +107,7 @@ const linking = {
 };
 
 function LoadingScreen() {
+  const colors = useColors();
   const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -118,12 +120,12 @@ function LoadingScreen() {
   }, []);
 
   // Gentle "breathing" — opacity + a subtle scale so the splash feels alive
-  // rather than a flat pulsing logo. White background so the dark-blue logo
-  // reads clearly (matches the native splash background).
+  // rather than a flat pulsing logo. Themed background so a dark-mode user
+  // doesn't get a full-screen white flash on every cold launch.
   const scale = opacity.interpolate({ inputRange: [0.4, 1], outputRange: [0.96, 1.04] });
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.Image
         source={require('../../assets/logo.png')}
         style={{ width: 120, height: 120, opacity, transform: [{ scale }] }}

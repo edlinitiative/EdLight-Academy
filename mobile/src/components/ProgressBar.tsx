@@ -41,7 +41,7 @@ export default function ProgressBar({
   const fillStyle = useAnimatedStyle(() => ({ width: `${width.value}%` }));
 
   return (
-    <View>
+    <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: clamped }}>
       {(showLabel || label) && (
         <View className="flex-row justify-between mb-1">
           {label && <Text className="text-xs text-gray-500 dark:text-slate-400">{label}</Text>}

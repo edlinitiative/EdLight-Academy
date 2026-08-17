@@ -21,6 +21,9 @@ const IG_WEB = `https://instagram.com/${IG_USERNAME}`;
 // Instagram's signature magenta — reads on both light and dark grounds, used
 // only for the glyph + a soft tint tile so the row stays secondary, not loud.
 const IG_MAGENTA = '#E1306C';
+// Deeper brand purple for FILLED buttons: white on IG_MAGENTA is only 4.34:1,
+// under the 4.5:1 AA floor for label-size text; this is 5.11:1.
+const IG_FILL = '#C13584';
 
 /** Open our Instagram profile — app deep-link first, web fallback. */
 export async function openInstagram() {
@@ -63,7 +66,7 @@ export function FollowInstagramPrompt() {
           accessibilityLabel={t('Suivre @edlightacademy', 'Swiv @edlightacademy')}
           style={{
             alignSelf: 'flex-start', marginTop: 8, borderRadius: 999,
-            backgroundColor: IG_MAGENTA, paddingHorizontal: 14, paddingVertical: 7,
+            backgroundColor: IG_FILL, paddingHorizontal: 14, paddingVertical: 7,
           }}
         >
           <Text style={[typeScale.label, { color: '#ffffff' }]}>

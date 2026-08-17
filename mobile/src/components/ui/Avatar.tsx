@@ -48,7 +48,9 @@ function PixelIdenticon({ seed, size }: { seed: string; size: number }) {
   const rows = React.useMemo(() => identiconRows(seed), [seed]);
   const cell = Math.round((size * 0.6) / 5);
   return (
-    <View>
+    // Decorative: the generated identicon carries no information a screen
+    // reader needs — the surrounding row already announces the name.
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {rows.map((row, r) => (
         <View key={r} style={{ flexDirection: 'row' }}>
           {row.map((on, c) => (
@@ -105,7 +107,8 @@ export default function Avatar({ name = '', uri, seed, size = 48, radius }: Avat
           source={{ uri: characterUri }}
           style={{ width: size, height: size }}
           onError={() => setCharacterFailed(true)}
-          accessibilityLabel={name || 'Avatar'}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
         />
       )}
     </View>

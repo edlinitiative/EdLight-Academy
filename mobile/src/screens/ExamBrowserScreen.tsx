@@ -26,10 +26,11 @@ import { ExamsParamList } from '../navigation/ExamsNavigator';
 type Route = RouteProp<ExamsParamList, 'ExamBrowser'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamBrowser'>;
 
-const LEVEL_LABEL: Record<string, string> = {
-  terminale: 'Terminale (Bac)',
-  '9e': '9ème Année',
-  university: 'Université',
+// Screen title per level — [fr, ht], resolved through the screen's `t` helper.
+const LEVEL_LABEL: Record<string, [string, string]> = {
+  terminale: ['Terminale (Bac)', 'Tèminal (Bak)'],
+  '9e': ['9ème Année', '9yèm Ane'],
+  university: ['Université', 'Inivèsite'],
 };
 
 const LEVEL_FILTER_MAP: Record<string, string[]> = {
@@ -180,7 +181,7 @@ function ExamCard({
             {totalPoints > 0 ? (
               <View className="flex-row items-center" style={{ gap: 4 }}>
                 <Award color={colors.faint} size={13} />
-                <Text style={[typeScale.micro, { color: colors.muted }]}>{totalPoints} pts</Text>
+                <Text style={[typeScale.micro, { color: colors.muted }]}>{totalPoints} {t('pts', 'pwen')}</Text>
               </View>
             ) : null}
           </View>
@@ -370,14 +371,26 @@ export default function ExamBrowserScreen() {
 
   const doneCount = useMemo(() => exams.filter((e) => !!results[String(e.exam_id ?? e.id ?? '')]).length, [exams, results]);
   const activeFilterCount = [subject !== 'Tout', yearFilter !== 'Tout', statusFilter !== 'all'].filter(Boolean).length;
+  const levelLabelPair = LEVEL_LABEL[activeLevel] ?? LEVEL_LABEL[level];
   const screenTitle = activeLevel === 'all'
     ? t('Tous les examens', 'Tout egzamen')
-    : (LEVEL_LABEL[activeLevel] ?? LEVEL_LABEL[level] ?? level);
+    : (levelLabelPair ? t(levelLabelPair[0], levelLabelPair[1]) : level);
   const curatedChipLabel = activeLevel === 'all'
     ? t('Tous les niveaux', 'Tout nivo')
     : (CURATED_LEVEL_LABEL[activeLevel]
         ? t(CURATED_LEVEL_LABEL[activeLevel][0], CURATED_LEVEL_LABEL[activeLevel][1])
         : activeLevel);
+
+  // Stay inside the Exams stack: canGoBack() also counts the parent tab
+  // navigator's history, so it's true even when this screen is the stack's
+  // only route (e.g. entered straight from Home's readiness card) — goBack()
+  // then switched TABS and landed the student on Accueil. Only pop when this
+  // stack really has something underneath; otherwise reset to the level picker.
+  const goBackToExams = useCallback(() => {
+    const stackRoutes = navigation.getState()?.routes ?? [];
+    if (stackRoutes.length > 1) navigation.goBack();
+    else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+  }, [navigation]);
 
   // Toggle the level chip between the grade-curated pool and every level.
   function toggleLevel() {
@@ -395,7 +408,7 @@ export default function ExamBrowserScreen() {
         {/* Header (matches the loaded layout so nothing shifts) */}
         <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
           <TouchableOpacity
-            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ExamLanding'))}
+            onPress={goBackToExams}
             className="mr-3 p-1"
             hitSlop={8}
             accessibilityRole="button"
@@ -435,7 +448,7 @@ export default function ExamBrowserScreen() {
       {/* Header — shares the page background (no white-bar seam) */}
       <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
         <TouchableOpacity
-          onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('ExamLanding'))}
+          onPress={goBackToExams}
           className="mr-3 p-1"
           hitSlop={8}
           accessibilityRole="button"
@@ -453,7 +466,7 @@ export default function ExamBrowserScreen() {
         </View>
         <TouchableOpacity
           onPress={() => setShowFilters(true)}
-          className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl ${activeFilterCount > 0 ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
+          className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl ${activeFilterCount > 0 ? 'bg-primary-600 dark:bg-[#4C9AF5]' : 'bg-gray-100 dark:bg-slate-800'}`}
           hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel={t('Filtres', 'Filt')}
@@ -558,7 +571,7 @@ export default function ExamBrowserScreen() {
           {yearFilter !== 'Tout' && (
             <TouchableOpacity
               onPress={() => setYearFilter('Tout')}
-              className="flex-row items-center gap-1 bg-primary-600 px-3 py-1 rounded-full"
+              className="flex-row items-center gap-1 bg-primary-600 dark:bg-[#4C9AF5] px-3 py-1 rounded-full"
             >
               <Text className="text-white text-xs font-semibold">{yearFilter}</Text>
               <X color="#fff" size={12} />
@@ -567,7 +580,7 @@ export default function ExamBrowserScreen() {
           {statusFilter !== 'all' && (
             <TouchableOpacity
               onPress={() => setStatusFilter('all')}
-              className="flex-row items-center gap-1 bg-primary-600 px-3 py-1 rounded-full"
+              className="flex-row items-center gap-1 bg-primary-600 dark:bg-[#4C9AF5] px-3 py-1 rounded-full"
             >
               <Text className="text-white text-xs font-semibold">{statusFilter === 'done' ? t('Terminés', 'Fini') : t('À faire', 'Pou fè')}</Text>
               <X color="#fff" size={12} />
@@ -584,7 +597,14 @@ export default function ExamBrowserScreen() {
         data={displayed}
         keyExtractor={(exam, i) => String(exam.exam_id ?? exam.id ?? i)}
         contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 100 }, centerColumn]}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={() => setRetryCount((n) => n + 1)} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={false}
+            onRefresh={() => setRetryCount((n) => n + 1)}
+            tintColor={colors.azure}
+            colors={[colors.azure]}
+          />
+        }
         ListHeaderComponent={
           displayed.length > 0 ? (
             <View style={{ marginBottom: 12 }}>
@@ -632,11 +652,18 @@ export default function ExamBrowserScreen() {
           className="flex-1 bg-black/40"
           activeOpacity={1}
           onPress={() => setShowFilters(false)}
+          accessibilityRole="button"
+          accessibilityLabel={t('Fermer', 'Fèmen')}
         />
-        <View className="bg-white dark:bg-[#131c2e] rounded-t-3xl px-5 pt-5 pb-10">
+        <View className="bg-white dark:bg-[#131c2e] rounded-t-3xl px-5 pt-5 pb-10" accessibilityViewIsModal>
           <View className="flex-row items-center justify-between mb-5">
             <Text style={[typeScale.h2, { color: colors.ink }]}>{t('Filtres', 'Filt')}</Text>
-            <TouchableOpacity onPress={() => setShowFilters(false)}>
+            <TouchableOpacity
+              onPress={() => setShowFilters(false)}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={t('Fermer', 'Fèmen')}
+            >
               <X color={colors.muted} size={22} />
             </TouchableOpacity>
           </View>
@@ -648,7 +675,7 @@ export default function ExamBrowserScreen() {
               <TouchableOpacity
                 key={y}
                 onPress={() => setYearFilter(y)}
-                className={`px-4 py-2 rounded-full ${yearFilter === y ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
+                className={`px-4 py-2 rounded-full ${yearFilter === y ? 'bg-primary-600 dark:bg-[#4C9AF5]' : 'bg-gray-100 dark:bg-slate-800'}`}
               >
                 <Text className={`text-sm font-semibold ${yearFilter === y ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{y === 'Tout' ? t('Toutes', 'Tout') : y}</Text>
               </TouchableOpacity>
@@ -662,7 +689,7 @@ export default function ExamBrowserScreen() {
               <TouchableOpacity
                 key={val}
                 onPress={() => setStatusFilter(val)}
-                className={`flex-1 py-3 rounded-xl items-center ${statusFilter === val ? 'bg-primary-600' : 'bg-gray-100 dark:bg-slate-800'}`}
+                className={`flex-1 py-3 rounded-xl items-center ${statusFilter === val ? 'bg-primary-600 dark:bg-[#4C9AF5]' : 'bg-gray-100 dark:bg-slate-800'}`}
               >
                 <Text className={`text-sm font-semibold ${statusFilter === val ? 'text-white' : 'text-gray-600 dark:text-slate-400'}`}>{label}</Text>
               </TouchableOpacity>
@@ -671,7 +698,7 @@ export default function ExamBrowserScreen() {
 
           <TouchableOpacity
             onPress={() => setShowFilters(false)}
-            className="bg-primary-600 py-4 rounded-2xl items-center"
+            className="bg-primary-600 dark:bg-[#4C9AF5] py-4 rounded-2xl items-center"
           >
             <Text className="text-white font-bold text-base">{t('Appliquer', 'Aplike')}</Text>
           </TouchableOpacity>

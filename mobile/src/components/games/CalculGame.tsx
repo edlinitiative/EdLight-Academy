@@ -121,7 +121,7 @@ export default function CalculGame({
         isCreole={isCreole}
         accent={ACCENT}
         highScore={highScore}
-        shareSubject="Calcul éclair"
+        shareSubject={isCreole ? 'Kalkil Rapid' : 'Calcul éclair'}
       />
     );
   }

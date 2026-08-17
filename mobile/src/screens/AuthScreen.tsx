@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Image, ActivityIndicator, useColorScheme,
+  KeyboardAvoidingView, Platform, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as WebBrowser from 'expo-web-browser';
@@ -10,7 +10,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { Mail, Lock, User, Eye, EyeOff, Check, AlertCircle, Gift, ChevronDown, ChevronUp } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
+import { useColors, useColorScheme } from '../theme/theme';
 import {
   loginWithEmailPassword,
   registerWithEmailPassword,
@@ -91,6 +91,9 @@ export default function AuthScreen() {
   }
 
   // Sign in with Apple — iOS only, and only when the device supports it.
+  // The scheme comes from the store (the app theme is a manual setting that
+  // deliberately doesn't follow the OS), so the button never ends up white on
+  // a white card because the OS happens to be in dark mode.
   const colorScheme = useColorScheme();
   const [appleAvailable, setAppleAvailable] = useState(false);
   React.useEffect(() => {
@@ -394,7 +397,14 @@ export default function AuthScreen() {
                 onSubmitEditing={handleSubmit}
                 placeholderTextColor={colors.faint}
               />
-              <TouchableOpacity onPress={() => setShowPw((v) => !v)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={() => setShowPw((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={showPw
+                  ? t('Masquer le mot de passe', 'Kache modpas')
+                  : t('Afficher le mot de passe', 'Montre modpas')}
+              >
                 {showPw ? <EyeOff color={colors.faint} size={18} /> : <Eye color={colors.faint} size={18} />}
               </TouchableOpacity>
             </View>

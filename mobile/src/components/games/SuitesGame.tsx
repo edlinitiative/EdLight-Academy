@@ -83,7 +83,7 @@ export default function SuitesGame({
         isCreole={isCreole}
         accent={ACCENT}
         highScore={highScore}
-        shareSubject="Suites logiques"
+        shareSubject={isCreole ? 'Sekans Lojik' : 'Suites logiques'}
       />
     );
   }

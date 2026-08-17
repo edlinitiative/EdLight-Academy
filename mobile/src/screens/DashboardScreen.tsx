@@ -230,10 +230,15 @@ export default function DashboardScreen() {
       initial: false,
       params: { courseId: course.id, courseName: course.name, autoplay: true },
     });
-  // "Voir tout" must always land on the course LIST — a bare navigate('Courses')
-  // re-shows whatever the stack retained (e.g. a stale CourseDetail).
+  // "Voir tout" must always land on the course LIST ROOT. Naming the screen pops
+  // a retained CourseDetail, but CourseList also keeps its own level/subject
+  // drill-down in local state, so the nonce tells it to clear that too —
+  // otherwise this re-showed the last sub-list ("voir tout opens the chemistry one").
   const goCourseList = () =>
-    (navigation as any).navigate('Courses', { screen: 'CourseList' });
+    (navigation as any).navigate('Courses', {
+      screen: 'CourseList',
+      params: { resetAt: Date.now() },
+    });
 
   // ---------------------------------------------------------------------------
   // Grade-aware rail order
@@ -242,7 +247,10 @@ export default function DashboardScreen() {
   // Cours-first grades (NS1–NS3 lead with 'cours') surface "Continuer à
   // apprendre" above the at-a-glance stats; every other grade keeps stats first.
   const coursFirst = gradeProfile(grade).lead[0] === 'cours';
-  const isBacTrack = gradeProfile(grade).examLevel === 'baccalaureat';
+  // Require a KNOWN grade: gradeProfile(null) falls through to the NS4/Bac
+  // default, so a student who tapped "Passer" on the class question was shown
+  // Bac readiness scoring regardless of what year they're actually in.
+  const isBacTrack = !!grade && gradeProfile(grade).examLevel === 'baccalaureat';
 
   // Video-course discovery — real video stills with a play chip, so a new
   // visitor immediately sees the platform HAS video courses. Leads with
@@ -289,7 +297,9 @@ export default function DashboardScreen() {
           <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
             {t('Objectif de la semaine', 'Objektif semèn nan')}
           </Text>
-          <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]} numberOfLines={1}>
+          {/* Two lines: at one line the reward ("gagne 1 gel 🧊") — the whole
+              reason to act — was being truncated away on an iPhone-width card. */}
+          <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]} numberOfLines={2}>
             {goalSublabel}
           </Text>
         </View>
@@ -457,7 +467,13 @@ export default function DashboardScreen() {
         {/* Quick actions — one compact row (was a 2×2 grid). */}
         <View className="px-5 mt-4 mb-4">
           <HomeWidgets
-            onNavigateExams={() => navigation.navigate('Exams')}
+            // Name the target screen: a bare navigate('Exams') re-shows whatever
+            // the stack retained (a paper list, or an abandoned exam). The route
+            // name is "Exams" for both cohorts but the stack behind it differs —
+            // Quiz-primary grades get QuizNavigator, which has no ExamLanding.
+            onNavigateExams={() => (navigation as any).navigate('Exams', {
+              screen: practiceMode === 'quiz' ? 'Quizzes' : 'ExamLanding',
+            })}
             onNavigateTrivia={() => navigation.navigate('Trivia')}
             onNavigateCourses={goCourseList}
             onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}
@@ -508,9 +524,12 @@ export default function DashboardScreen() {
         {isBacTrack && (
           <View className="px-5 mb-4">
             <ReadinessCard
+              // initial:false keeps ExamLanding mounted beneath ExamBrowser, so
+              // Back pops to the level picker instead of exiting to this tab.
               onFocusPress={(subject) =>
                 (navigation as any).navigate('Exams', {
                   screen: 'ExamBrowser',
+                  initial: false,
                   params: { level: 'terminale', subject },
                 })
               }

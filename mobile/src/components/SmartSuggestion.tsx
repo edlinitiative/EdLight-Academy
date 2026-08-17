@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, RefreshCw, ChevronRight, Sparkles, X } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
+import { pickHomeSuggestion, gradeProfile, type HomeSuggestionKind } from '../config/trackConfig';
 import { useReviewQueue } from '../hooks/useReviewQueue';
 import PressableScale from './ui/PressableScale';
 import { radius, useTheme, typeScale } from '../theme/theme';
@@ -39,6 +39,11 @@ export default function SmartSuggestion() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
+  // The 3rd tab is named "Exams" for every grade, but Quiz-primary grades
+  // (7e–8e, NS1–NS3) mount QuizNavigator behind it, which has no ExamLanding
+  // route — naming the wrong screen would make these cards dead for them.
+  const practiceRoot = gradeProfile(grade).primaryTab === 'Quiz' ? 'Quizzes' : 'ExamLanding';
+
   const card = pickCard();
   if (!card || card.dismissKey === dismissedSuggestionKey) return null;
 
@@ -62,7 +67,7 @@ export default function SmartSuggestion() {
           ? t(`Reprends ${topSubject} pour ancrer tes acquis.`, `Reprann ${topSubject} pou konsolide sa w konnen.`)
           : t('Une courte révision pour ancrer tes acquis.', 'Yon ti revizyon pou konsolide sa w konnen.'),
         cta: t('Réviser', 'Revize'),
-        onPress: () => navigation.navigate('Exams'),
+        onPress: () => navigation.navigate('Exams', { screen: practiceRoot }),
         dismissKey: `review-${dayStamp}`,
       };
     }
@@ -130,7 +135,7 @@ export default function SmartSuggestion() {
         title: t('Choisis ta filière', 'Chwazi seri ou'),
         subtitle: t('Pour des recommandations sur mesure.', 'Pou rekòmandasyon ki fèt pou ou.'),
         cta: t('Choisir', 'Chwazi'),
-        onPress: () => navigation.navigate('Exams'),
+        onPress: () => navigation.navigate('Exams', { screen: practiceRoot }),
       },
       'prefac-switch': {
         Icon: Landmark,
@@ -142,8 +147,10 @@ export default function SmartSuggestion() {
           'Pwochen etap: prepare konkou antre inivèsite yo.',
         ),
         cta: t('Explorer la Préfac', 'Eksplore Prefak'),
+        // initial:false keeps ExamLanding under ExamBrowser so Back pops to the
+        // level picker rather than exiting the tab.
         onPress: () =>
-          navigation.navigate('Exams', { screen: 'ExamBrowser', params: { level: 'university' } }),
+          navigation.navigate('Exams', { screen: 'ExamBrowser', initial: false, params: { level: 'university' } }),
       },
       'bac-focus': {
         Icon: ClipboardList,
@@ -152,7 +159,7 @@ export default function SmartSuggestion() {
         title: t('Le Bac approche', 'Bak la ap pwoche'),
         subtitle: t('Révise avec les vrais sujets officiels.', 'Revize ak vre sijè ofisyèl yo.'),
         cta: t("S'entraîner", 'Antrene'),
-        onPress: () => navigation.navigate('Exams'),
+        onPress: () => navigation.navigate('Exams', { screen: practiceRoot }),
       },
       'trivia-first': {
         Icon: Gamepad2,
@@ -179,7 +186,7 @@ export default function SmartSuggestion() {
         title: t("Prépare l'examen de 9ᵉ", 'Prepare egzamen 9yèm'),
         subtitle: t("Entraîne-toi avec les vrais sujets de 9ème année.", 'Antrene ak vre sijè 9yèm ane yo.'),
         cta: t("S'entraîner", 'Antrene'),
-        onPress: () => navigation.navigate('Exams', { screen: 'ExamBrowser', params: { level: '9e' } }),
+        onPress: () => navigation.navigate('Exams', { screen: 'ExamBrowser', initial: false, params: { level: '9e' } }),
       },
     };
   }

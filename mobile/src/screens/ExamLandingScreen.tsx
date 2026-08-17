@@ -9,7 +9,7 @@ import {
   Calculator, Atom, FlaskConical, Leaf, PenLine, Globe, Brain, HeartPulse, Lightbulb,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { gradeProfile } from '../config/trackConfig';
+import { gradeProfile, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
 import { useColors, useTheme, radius, gradients } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
@@ -18,13 +18,13 @@ import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
 
-const TRACKS = [
-  { code: 'SVT', shortLabel: 'SVT' },
-  { code: 'SMP', shortLabel: 'SMP' },
-  { code: 'SES', shortLabel: 'SES' },
-  { code: 'LETT', shortLabel: 'LETT' },
-  { code: 'TEC', shortLabel: 'TEC' },
-];
+// The Bac séries, straight from the canonical cross-platform config. This
+// screen used to declare its own list with codes 'LETT' and 'TEC', which exist
+// nowhere else: setTrack('LETT') then silently broke every consumer
+// (TRACK_COEFFICIENTS['LETT'] is undefined → unweighted readiness, StudyPlan's
+// TRACKS.find returns undefined, parseTrackDirectives never matches).
+// PREFAC is excluded — these chips sit under the Terminale (Bac) card.
+const TRACKS = ALL_TRACKS.filter((tr) => TRACK_LEVEL[tr.code] === 'baccalaureat');
 
 const LEVELS = [
   {
