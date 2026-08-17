@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,29 +29,35 @@ export type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-// Tab tints come straight from the palette so the active/inactive hierarchy
-// matches the rest of the app. The old near-black inactive (#111827) killed the
-// contrast with the active brand color; the muted token restores it.
+// Tab tints. Inactive is near-ink on purpose: this bar follows the Ledger app's
+// tab bar (stock iOS TabView, `.tint(brass)`), where unselected items are heavy
+// dark glyphs and the selected one is separated by BOTH the accent hue and a
+// capsule behind it. An earlier pass here lightened inactive to `muted` to keep
+// it off the active color — with two state signals instead of one, the darker
+// treatment reads better and matches the reference.
 const ACTIVE = lightColors.azure; // '#1B6FE0'
-const INACTIVE = lightColors.muted; // '#64748b'
+const INACTIVE = lightColors.ink; // '#0f172a'
 
-// Floating "liquid glass" bar (native iOS 26 TabView look): a detached
-// translucent capsule where each item is an icon+label column, and the focused
-// item sits inside its own frosted lens capsule.
-// 60, not 56: minus the 7pt vertical padding the bar itself applies, 56 left a
-// 42pt touch height — under Apple's 44pt floor on the one control every user
-// touches every session.
-const BAR_HEIGHT = 60;
-const BAR_MARGIN = 16;
-const ICON_SIZE = 20;
+// Floating bar, Ledger-style: a detached OPAQUE capsule (not glass). The
+// reference bar is solid white — content passes behind it, it doesn't refract
+// through it — which reads calmer and keeps the icons crisp over any content.
+// 58 with 5pt padding leaves a 48pt touch height: tighter than the old 60, still
+// clear of Apple's 44pt floor on the control every user touches every session.
+const BAR_HEIGHT = 58;
+const BAR_MARGIN = 20;
+// 23, up from 20: the reference uses filled SF Symbols, which carry far more
+// visual weight than a monoline stroke. Size + stroke weight get most of that
+// presence without gambling on `fill` rendering cleanly across five glyphs.
+const ICON_SIZE = 23;
 
 // Two taps on the SAME tab within this window trigger a data refresh.
 const DOUBLE_TAP_MS = 350;
 
-// One "liquid glass" tab item: icon + label as a single column, with the
-// focused lens capsule wrapping BOTH (like the native iOS 26 TabView) instead
-// of a highlight behind the icon alone. The lens glides in (opacity + scale);
-// reduce-motion collapses the transition to an instant state change.
+// One tab item: icon + label as a single column, with the focused capsule
+// wrapping BOTH. The capsule is a NEUTRAL fill, not a brand tint — in the
+// reference the accent lives only in the icon and label, which keeps the bar
+// quiet and lets the selected item read as "lifted" rather than "coloured in".
+// It fades/scales in; reduce-motion collapses that to an instant state change.
 function TabItem({
   Icon,
   label,
@@ -76,33 +81,26 @@ function TabItem({
 
   const lensStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scale: 0.86 + progress.value * 0.14 }],
+    transform: [{ scale: 0.9 + progress.value * 0.1 }],
   }));
 
-  // Frosted lens: a light glass tint with a thin edge, not a flat brand fill.
-  const lensBg = dark ? 'rgba(76,154,245,0.22)' : 'rgba(255,255,255,0.85)';
-  const lensEdge = dark ? 'rgba(148,163,184,0.25)' : 'rgba(27,111,224,0.18)';
+  // A neutral step off the bar's own surface — darker in light mode, lighter in
+  // dark. No border and no shadow: the reference capsule is a flat tonal shift.
+  const lensBg = dark ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)';
 
   return (
     <View style={styles.item}>
       <Animated.View
         pointerEvents="none"
         style={[
-          StyleSheet.absoluteFill,
-          {
-            borderRadius: 15,
-            backgroundColor: lensBg,
-            borderWidth: 1,
-            borderColor: lensEdge,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: dark ? 0.3 : 0.08,
-            shadowRadius: 5,
-          },
+          // Inset horizontally so the capsule reads as its own pill and never
+          // crowds the neighbouring tab.
+          { position: 'absolute', top: 0, bottom: 0, left: 4, right: 4 },
+          { borderRadius: 999, backgroundColor: lensBg },
           lensStyle,
         ]}
       />
-      <Icon color={color} size={ICON_SIZE} />
+      <Icon color={color} size={ICON_SIZE} strokeWidth={focused ? 2.4 : 2} />
       <Text
         allowFontScaling
         maxFontSizeMultiplier={1.3}
@@ -170,22 +168,19 @@ export default function TabNavigator() {
         // Icon+label are rendered together inside TabItem so the focused lens
         // capsule can wrap both — hide the navigator's own labels.
         tabBarShowLabel: false,
-        // Liquid glass: a strong BlurView with only a whisper of overlay, so
-        // the content genuinely refracts through the bar like the native
-        // iOS 26 TabView, plus a thin light rim for the glass edge.
+        // Opaque capsule, not glass. The reference bar is a solid white pill on
+        // the page ground: no blur, no translucency, no rim highlight. Dropping
+        // the BlurView also drops a per-frame GPU blur under every scroll.
         tabBarBackground: () => (
-          <BlurView
-            intensity={dark ? 55 : 75}
-            tint={dark ? 'dark' : 'light'}
-            style={[StyleSheet.absoluteFill, { borderRadius: BAR_HEIGHT / 2, overflow: 'hidden' }]}
-          >
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: dark ? 'rgba(17,24,39,0.28)' : 'rgba(255,255,255,0.22)' },
-              ]}
-            />
-          </BlurView>
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                borderRadius: BAR_HEIGHT / 2,
+                backgroundColor: dark ? darkColors.surface : lightColors.surface,
+              },
+            ]}
+          />
         ),
         // Focus mode (exam-taking, trivia gameplay) hides the floating bar so it
         // never overlaps a screen's own bottom actions (e.g. the Submit button).
@@ -200,16 +195,20 @@ export default function TabNavigator() {
               borderRadius: BAR_HEIGHT / 2,
               backgroundColor: 'transparent',
               borderTopWidth: 0,
-              borderWidth: 1,
-              borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.6)',
+              // No rim: the reference pill has no visible border in light mode.
+              // Dark mode keeps a hairline so the pill separates from the ground.
+              borderWidth: dark ? 1 : 0,
+              borderColor: dark ? 'rgba(148,163,184,0.16)' : 'transparent',
               overflow: 'hidden',
-              paddingTop: 7,
-              paddingBottom: 7,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: dark ? 0.5 : 0.14,
-              shadowRadius: 18,
-              elevation: 12,
+              paddingTop: 5,
+              paddingBottom: 5,
+              // Softer and lower than the old glass bar: an opaque pill needs a
+              // diffuse lift, not a hard drop.
+              shadowColor: '#0f172a',
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: dark ? 0.45 : 0.10,
+              shadowRadius: 14,
+              elevation: 10,
             },
         tabBarItemStyle: { paddingHorizontal: 0 },
       }}
@@ -327,9 +326,9 @@ const styles = StyleSheet.create({
   item: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 13,
-    paddingVertical: 4,
-    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
     minWidth: 58,
   },
 });
