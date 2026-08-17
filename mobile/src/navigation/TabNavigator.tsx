@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { CommonActions } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { LayoutDashboard, BookOpen, ClipboardList, ListChecks, Gamepad2, User } from 'lucide-react-native';
@@ -38,9 +39,11 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const ACTIVE = lightColors.azure; // '#1B6FE0'
 const INACTIVE = lightColors.ink; // '#0f172a'
 
-// Floating bar, Ledger-style: a detached OPAQUE capsule (not glass). The
-// reference bar is solid white — content passes behind it, it doesn't refract
-// through it — which reads calmer and keeps the icons crisp over any content.
+// Floating bar, Ledger-style: a detached TRANSLUCENT capsule. A light-mode
+// screenshot of the reference looked solid white, so an earlier pass made this
+// opaque — wrong: it only looked solid because it was blurring a near-white
+// ground. In dark mode the reference is visibly see-through (page text reads
+// through it), so it is glass in both themes.
 // 58 with 5pt padding leaves a 48pt touch height: tighter than the old 60, still
 // clear of Apple's 44pt floor on the control every user touches every session.
 const BAR_HEIGHT = 58;
@@ -52,6 +55,45 @@ const ICON_SIZE = 23;
 
 // Two taps on the SAME tab within this window trigger a data refresh.
 const DOUBLE_TAP_MS = 350;
+
+/**
+ * Builds a `tabPress` handler that sends a tab back to its stack root.
+ *
+ * The trap this exists to avoid: `e.preventDefault()` cancels the TAB SWITCH,
+ * and a reset dispatched with `target: <nested stack key>` only rewrites that
+ * inner stack — it never changes which tab is active. Calling preventDefault
+ * unconditionally therefore made the tab look completely dead when pressed from
+ * a different tab ("it does nothing when i click on it"). So: only intercept
+ * when the tab is ALREADY focused; otherwise let the navigator do the switch and
+ * simply clear the stale inner stack on the way in.
+ */
+function popToRootOnTabPress(
+  navigation: any,
+  tabName: string,
+  rootName: string,
+  makeParams?: () => object,
+) {
+  return (e: { preventDefault: () => void }) => {
+    const state = navigation.getState();
+    const nested = (state.routes.find((r: any) => r.name === tabName) as any)?.state;
+    // Stack not built yet → the default action lands on its initial route anyway.
+    if (!nested) return;
+    const top = nested.routes[nested.index ?? nested.routes.length - 1]?.name;
+    // Already showing the root: do nothing, so useScrollToTop still fires.
+    if (top === rootName) return;
+    const isFocused = state.routes[state.index]?.name === tabName;
+    // Stay put and pop to the root. When NOT focused we must let the default
+    // run, or the tab never changes.
+    if (isFocused) e.preventDefault();
+    navigation.dispatch({
+      ...CommonActions.reset({
+        index: 0,
+        routes: [{ name: rootName, params: makeParams?.() }],
+      }),
+      target: nested.key,
+    });
+  };
+}
 
 // One tab item: icon + label as a single column, with the focused capsule
 // wrapping BOTH. The capsule is a NEUTRAL fill, not a brand tint — in the
@@ -168,19 +210,21 @@ export default function TabNavigator() {
         // Icon+label are rendered together inside TabItem so the focused lens
         // capsule can wrap both — hide the navigator's own labels.
         tabBarShowLabel: false,
-        // Opaque capsule, not glass. The reference bar is a solid white pill on
-        // the page ground: no blur, no translucency, no rim highlight. Dropping
-        // the BlurView also drops a per-frame GPU blur under every scroll.
+        // Translucent capsule: a strong blur with only a whisper of tint, so page
+        // content genuinely shows through the bar the way the reference does.
         tabBarBackground: () => (
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderRadius: BAR_HEIGHT / 2,
-                backgroundColor: dark ? darkColors.surface : lightColors.surface,
-              },
-            ]}
-          />
+          <BlurView
+            intensity={dark ? 60 : 80}
+            tint={dark ? 'dark' : 'light'}
+            style={[StyleSheet.absoluteFill, { borderRadius: BAR_HEIGHT / 2, overflow: 'hidden' }]}
+          >
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: dark ? 'rgba(17,24,39,0.30)' : 'rgba(255,255,255,0.45)' },
+              ]}
+            />
+          </BlurView>
         ),
         // Focus mode (exam-taking, trivia gameplay) hides the floating bar so it
         // never overlaps a screen's own bottom actions (e.g. the Submit button).
@@ -195,10 +239,9 @@ export default function TabNavigator() {
               borderRadius: BAR_HEIGHT / 2,
               backgroundColor: 'transparent',
               borderTopWidth: 0,
-              // No rim: the reference pill has no visible border in light mode.
-              // Dark mode keeps a hairline so the pill separates from the ground.
-              borderWidth: dark ? 1 : 0,
-              borderColor: dark ? 'rgba(148,163,184,0.16)' : 'transparent',
+              // A thin light rim reads as the glass edge on a translucent pill.
+              borderWidth: 1,
+              borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.55)',
               overflow: 'hidden',
               paddingTop: 5,
               paddingBottom: 5,
@@ -227,26 +270,12 @@ export default function TabNavigator() {
         name="Courses"
         component={CoursesNavigator}
         listeners={({ navigation }) => ({
-          // bottom-tabs dispatches nothing when the tapped tab is already focused,
-          // so re-tapping "Cours" from inside a lesson did nothing at all. Mirror
-          // the Exams behaviour: always return to the catalog root, and send a
-          // fresh `resetAt` so CourseList also clears its level/subject drill-down
-          // (that state is local to the screen and invisible to the navigator).
-          tabPress: (e) => {
-            const coursesRoute = navigation
-              .getState()
-              .routes.find((r: any) => r.name === 'Courses') as any;
-            const nested = coursesRoute?.state;
-            if (!nested) return; // stack not initialized yet → default (CourseList)
-            e.preventDefault();
-            navigation.dispatch({
-              ...CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'CourseList', params: { resetAt: Date.now() } }],
-              }),
-              target: nested.key,
-            });
-          },
+          // Tapping "Cours" always lands on the catalog root, never a retained
+          // lesson. The `resetAt` nonce also clears CourseList's own
+          // level/subject drill-down, which is local state the navigator can't see.
+          tabPress: popToRootOnTabPress(navigation, 'Courses', 'CourseList', () => ({
+            resetAt: Date.now(),
+          })),
         })}
         options={{
           tabBarAccessibilityLabel: t('Cours', 'Kou'),
@@ -266,24 +295,7 @@ export default function TabNavigator() {
           // tapping the tab, so the retained top is a stale exam context. Reset
           // the stack to ExamLanding whenever it isn't already there.
           // (In-progress answers aren't lost — the "Reprendre" banner resumes.)
-          tabPress: (e) => {
-            const examsRoute = navigation
-              .getState()
-              .routes.find((r: any) => r.name === 'Exams') as any;
-            const nested = examsRoute?.state;
-            if (!nested) return; // stack not initialized yet → default (ExamLanding)
-            const topName = nested.routes[nested.index ?? nested.routes.length - 1]?.name;
-            if (topName && topName !== 'ExamLanding') {
-              e.preventDefault();
-              // RESET, don't navigate: navigate() only pops when ExamLanding is
-              // already in the stack, otherwise it PUSHES on top and leaves the
-              // stale screen underneath (Android back then returns to it).
-              navigation.dispatch({
-                ...CommonActions.reset({ index: 0, routes: [{ name: 'ExamLanding' }] }),
-                target: nested.key,
-              });
-            }
-          },
+          tabPress: popToRootOnTabPress(navigation, 'Exams', 'ExamLanding'),
         })}
         options={{
           tabBarAccessibilityLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),
