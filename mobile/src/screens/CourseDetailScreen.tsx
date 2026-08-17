@@ -19,8 +19,9 @@ import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
 import DefiHandoffCard from '../components/DefiHandoffCard';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { useColors, typeScale, radius } from '../theme/theme';
+import { useColors, typeScale, radius, courseTint } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
+import { courseSubjectIcon } from '../utils/subjectMeta';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseDetail'>;
@@ -91,8 +92,10 @@ function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: bool
   );
 }
 
-function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreole }: {
+function UnitAccordion({ unit, index, tint, completedIds, activeLesson, onLessonPress, isCreole }: {
   unit: any;
+  index: number;
+  tint: string;
   completedIds: Set<string>;
   activeLesson: any | null;
   onLessonPress: (lesson: any) => void;
@@ -102,16 +105,34 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreo
   const [open, setOpen] = useState(true);
   const unitDone = (unit.lessons ?? []).filter((l: any) => completedIds.has(l.id)).length;
   const unitTotal = (unit.lessons ?? []).length;
+  const unitComplete = unitTotal > 0 && unitDone === unitTotal;
 
   return (
     <View className="mb-2">
       <TouchableOpacity
         onPress={() => setOpen((v) => !v)}
-        className="flex-row items-center bg-gray-100 dark:bg-slate-800 rounded-xl px-4 py-3 gap-2"
+        className="flex-row items-center bg-gray-100 dark:bg-slate-800 rounded-xl px-4 py-3 gap-3"
       >
+        {/* Unit index badge — flips to a check once the unit is finished */}
+        <View
+          className="items-center justify-center flex-shrink-0"
+          style={{
+            width: 30, height: 30, borderRadius: 15,
+            backgroundColor: unitComplete ? colors.success + '1e' : tint + '1e',
+          }}
+        >
+          {unitComplete
+            ? <CheckCircle2 color={colors.success} size={16} />
+            : <Text style={[typeScale.label, { color: tint }]}>{index + 1}</Text>}
+        </View>
         <View className="flex-1">
           <Text style={[typeScale.titleSm, { color: colors.ink }]}>{unit.title}</Text>
           <Text className="mt-0.5" style={[typeScale.caption, { color: colors.muted }]}>{unitDone}/{unitTotal} {isCreole ? 'leson' : 'leçons'}</Text>
+          {unitDone > 0 && !unitComplete && (
+            <View className="mt-2">
+              <ProgressBar value={Math.round((unitDone / unitTotal) * 100)} color={tint} height={3} />
+            </View>
+          )}
         </View>
         {open ? <ChevronDown color={colors.muted} size={18} /> : <ChevronRight color={colors.muted} size={18} />}
       </TouchableOpacity>
@@ -136,11 +157,13 @@ function UnitAccordion({ unit, completedIds, activeLesson, onLessonPress, isCreo
                 >
                   {lesson.title}
                 </Text>
-                {done
-                  ? <CheckCircle2 color={colors.success} size={16} />
-                  : lesson.duration
-                    ? <Text style={[typeScale.caption, { color: colors.faint }]}>{lesson.duration}min</Text>
-                    : null}
+                {done ? (
+                  <CheckCircle2 color={colors.success} size={16} />
+                ) : lesson.duration ? (
+                  <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={[typeScale.micro, { color: colors.faint }]}>{lesson.duration} min</Text>
+                  </View>
+                ) : null}
               </TouchableOpacity>
             );
           })}
@@ -217,6 +240,14 @@ export default function CourseDetailScreen() {
 
   const completedCount = useMemo(() => allLessons.filter((l: any) => completedIds.has(l.id)).length, [allLessons, completedIds]);
   const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
+
+  // Syllabus-state affordances: subject identity + the one lesson to resume on.
+  const tint = courseTint(course?.color);
+  const SubjectIcon = courseSubjectIcon(course);
+  const nextLesson = useMemo(
+    () => allLessons.find((l: any) => !completedIds.has(l.id)) ?? allLessons[0] ?? null,
+    [allLessons, completedIds],
+  );
 
   if (isLoading) {
     return (
@@ -390,16 +421,52 @@ export default function CourseDetailScreen() {
         {!activeLesson && (
           <View style={{ backgroundColor: colors.surface, borderRadius: radius.tile, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, shadowColor: colors.azure, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
             {/* Course name is already in the header bar above — don't repeat it here. */}
+            <View className="flex-row items-center gap-3">
+              <View
+                className="items-center justify-center flex-shrink-0"
+                style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: tint + '18' }}
+              >
+                <SubjectIcon color={tint} size={24} />
+              </View>
+              <View className="flex-1">
+                <Text style={[typeScale.caption, { color: colors.faint }]}>
+                  {allLessons.length} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('unités', 'inite')}
+                  {completedCount > 0 ? ` · ${pct}% ${t('complété', 'fini')}` : ''}
+                </Text>
+                {completedCount > 0 && (
+                  <View className="mt-2">
+                    <ProgressBar value={pct} color={tint} height={4} />
+                  </View>
+                )}
+              </View>
+            </View>
             {course.description ? (
-              <Text className="leading-relaxed" style={[typeScale.body, { color: colors.muted }]}>{course.description}</Text>
+              <Text className="leading-relaxed mt-3" style={[typeScale.body, { color: colors.muted }]}>{course.description}</Text>
             ) : null}
-            <Text className="mt-3" style={[typeScale.caption, { color: colors.faint }]}>{allLessons.length} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('unités', 'inite')}</Text>
+            {/* One obvious way in — the first unfinished lesson, same target as
+                the Home card's autoplay. A syllabus alone is a dead end. */}
+            {nextLesson && (
+              <TouchableOpacity
+                onPress={() => onLessonPress(nextLesson)}
+                className="flex-row items-center justify-center gap-2 mt-4 py-3 rounded-full"
+                style={{ backgroundColor: tint }}
+                accessibilityRole="button"
+                accessibilityLabel={completedCount > 0 ? t('Continuer le cours', 'Kontinye kou a') : t('Commencer le cours', 'Kòmanse kou a')}
+              >
+                <PlayCircle color="#fff" size={18} />
+                <Text style={[typeScale.titleSm, { color: '#fff' }]}>
+                  {completedCount > 0 ? t('Continuer le cours', 'Kontinye kou a') : t('Commencer le cours', 'Kòmanse kou a')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
-        {(course.modules ?? []).map((unit: any) => (
+        {(course.modules ?? []).map((unit: any, unitIndex: number) => (
           <UnitAccordion
             key={unit.id}
             unit={unit}
+            index={unitIndex}
+            tint={tint}
             completedIds={completedIds}
             activeLesson={activeLesson}
             onLessonPress={onLessonPress}

@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, Image } from 'react-native';
-import { Play, ChevronRight, BookOpen } from 'lucide-react-native';
+import { Play, ChevronRight } from 'lucide-react-native';
 import PressableScale from './ui/PressableScale';
 import useStore from '../contexts/store';
 import { useTheme, courseTint, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
 import { courseVideoThumb } from '../utils/videoThumb';
+import { courseSubjectIcon } from '../utils/subjectMeta';
 
 const CARD_W = 200;
 const THUMB_H = 112;
@@ -15,6 +16,7 @@ function VideoCourseCard({ course, onPress }: { course: any; onPress: () => void
   const { language } = useStore();
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const tint = courseTint(course.color);
+  const SubjectIcon = courseSubjectIcon(course);
   const thumb = courseVideoThumb(course);
   // A dead thumbnail URL must degrade to the icon placeholder, not a blank box.
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -37,7 +39,7 @@ function VideoCourseCard({ course, onPress }: { course: any; onPress: () => void
           />
         ) : (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <BookOpen color={tint} size={30} />
+            <SubjectIcon color={tint} size={30} />
           </View>
         )}
         <View

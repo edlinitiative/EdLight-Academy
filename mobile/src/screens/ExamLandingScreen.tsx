@@ -1,17 +1,19 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   GraduationCap, ChevronRight, BookOpen, Landmark, Check,
-  Calculator, Atom, FlaskConical, Leaf, PenLine, Globe,
+  Calculator, Atom, FlaskConical, Leaf, PenLine, Globe, Brain, HeartPulse, Lightbulb,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
-import { useColors, useTheme } from '../theme/theme';
+import { useColors, useTheme, radius, gradients } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
+import { tapLight } from '../utils/haptics';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamLanding'>;
@@ -57,14 +59,34 @@ const LEVELS = [
   },
 ];
 
-const SUBJECTS = [
-  { code: 'Mathématiques', Icon: Calculator },
-  { code: 'Physique', Icon: Atom },
-  { code: 'Chimie', Icon: FlaskConical },
-  { code: 'SVT', Icon: Leaf },
-  { code: 'Français', Icon: PenLine },
-  { code: 'Anglais', Icon: Globe },
-];
+// Subject quick-links per level — a Préfac student gets the concours pool
+// (Culture Générale, Philo, Santé…), not the Bac subject list.
+const SUBJECTS_BY_LEVEL: Record<string, Array<{ code: string; Icon: any }>> = {
+  terminale: [
+    { code: 'Mathématiques', Icon: Calculator },
+    { code: 'Physique', Icon: Atom },
+    { code: 'Chimie', Icon: FlaskConical },
+    { code: 'SVT', Icon: Leaf },
+    { code: 'Français', Icon: PenLine },
+    { code: 'Anglais', Icon: Globe },
+  ],
+  '9e': [
+    { code: 'Mathématiques', Icon: Calculator },
+    { code: 'Physique', Icon: Atom },
+    { code: 'Chimie', Icon: FlaskConical },
+    { code: 'SVT', Icon: Leaf },
+    { code: 'Français', Icon: PenLine },
+    { code: 'Anglais', Icon: Globe },
+  ],
+  university: [
+    { code: 'Mathématiques', Icon: Calculator },
+    { code: 'Culture Générale', Icon: Lightbulb },
+    { code: 'Français', Icon: PenLine },
+    { code: 'Philosophie', Icon: Brain },
+    { code: 'Santé', Icon: HeartPulse },
+    { code: 'Anglais', Icon: Globe },
+  ],
+};
 
 export default function ExamLandingScreen() {
   const navigation = useNavigation<Nav>();
@@ -78,19 +100,64 @@ export default function ExamLandingScreen() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  // Lead with the level that matches the student's grade (prefac → Université
-  // first, 9e → 9ème first, etc.) so the relevant path is the top card.
+  // The student's own exam level leads the page as a hero ("surround them with
+  // THEIR content", per TestFlight feedback) — the other levels drop to a
+  // compact secondary list instead of an undifferentiated stack of three.
   const EXAM_LEVEL_TO_ID: Record<string, string> = { baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' };
   const myLevelId = EXAM_LEVEL_TO_ID[gradeProfile(grade).examLevel ?? ''] ?? null;
-  const orderedLevels = myLevelId
-    ? [...LEVELS].sort((a, b) => (a.id === myLevelId ? -1 : b.id === myLevelId ? 1 : 0))
-    : LEVELS;
+  const myLevel = LEVELS.find((l) => l.id === myLevelId) ?? null;
+  const otherLevels = myLevel ? LEVELS.filter((l) => l.id !== myLevel.id) : LEVELS;
+  const subjectLevelId = myLevelId ?? 'terminale';
+  const subjects = SUBJECTS_BY_LEVEL[subjectLevelId] ?? SUBJECTS_BY_LEVEL.terminale;
 
   function pickTrack(code: string) {
     setTrack(code);
     setOnboardingCompleted(true);
     navigation.navigate('ExamBrowser', { level: 'terminale' });
   }
+
+  // Track (filière) chips — under the Terminale card/hero only.
+  const trackChips = (onHero: boolean) => (
+    <View style={{ paddingTop: onHero ? 14 : 2, paddingBottom: onHero ? 0 : 14, paddingHorizontal: onHero ? 0 : 16 }}>
+      <Text style={[typeScale.overline, { color: onHero ? 'rgba(255,255,255,0.75)' : colors.faint, marginBottom: 8 }]}>
+        {t('Ma filière', 'Seri mwen')}
+      </Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {TRACKS.map((tr) => {
+          const active = track === tr.code;
+          return (
+            <TouchableOpacity
+              key={tr.code}
+              onPress={() => pickTrack(tr.code)}
+              activeOpacity={0.75}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 99,
+                borderWidth: 1,
+                borderColor: onHero
+                  ? (active ? '#ffffff' : 'rgba(255,255,255,0.35)')
+                  : (active ? colors.azure : colors.border),
+                backgroundColor: onHero
+                  ? (active ? '#ffffff' : 'rgba(255,255,255,0.14)')
+                  : (active ? colors.azureSoft : colors.surfaceAlt),
+              }}
+            >
+              {active && <Check color={colors.azure} size={12} />}
+              <Text style={[typeScale.label, {
+                color: onHero ? (active ? colors.azure : '#ffffff') : (active ? colors.azure : colors.muted),
+              }]}>
+                {tr.shortLabel}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
@@ -106,94 +173,71 @@ export default function ExamLandingScreen() {
           </Text>
         </View>
 
-        {/* Level cards */}
-        <View className="px-5 gap-3">
-          {orderedLevels.map((level) => (
-            <View
-              key={level.id}
-              style={[cardSurface, { overflow: 'hidden' }]}
+        {/* My level — the hero, when we know who the student is */}
+        {myLevel && (
+          <View className="px-5">
+            <PressableScale
+              onPress={() => { tapLight(); navigation.navigate('ExamBrowser', { level: myLevel.id }); }}
+              pressedScale={0.98}
+              accessibilityRole="button"
+              accessibilityLabel={t(myLevel.label, myLevel.labelHt)}
             >
-              <PressableScale
-                onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
-                pressedScale={0.98}
-                accessibilityRole="button"
-                accessibilityLabel={t(level.label, level.labelHt)}
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
+              <LinearGradient
+                colors={gradients.hero}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ borderRadius: radius.hero, padding: 18 }}
               >
-                {/* Compact horizontal row — icon · title/sublabel · chevron.
-                    Keeps the level cards short so "Par matière" stays above the
-                    fold (was a tall vertical card with a redundant Explorer link). */}
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    backgroundColor: colors.azureSoft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <level.Icon color={colors.azure} size={22} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
-                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
-                    {t(level.sublabel, level.sublabelHt)}
-                  </Text>
-                </View>
-                <ChevronRight color={colors.faint} size={20} />
-              </PressableScale>
-
-              {/* Track (filière) chips — only for Terminale */}
-              {level.id === 'terminale' && (
-                <View style={{ paddingHorizontal: 16, paddingBottom: 14, paddingTop: 2 }}>
-                  <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 8 }]}>
-                    {t('Ma filière', 'Seri mwen')}
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {TRACKS.map((tr) => {
-                      const active = track === tr.code;
-                      return (
-                        <TouchableOpacity
-                          key={tr.code}
-                          onPress={() => pickTrack(tr.code)}
-                          activeOpacity={0.75}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 4,
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 99,
-                            borderWidth: 1,
-                            borderColor: active ? colors.azure : colors.border,
-                            backgroundColor: active ? colors.azureSoft : colors.surfaceAlt,
-                          }}
-                        >
-                          {active && <Check color={colors.azure} size={12} />}
-                          <Text style={[typeScale.label, { color: active ? colors.azure : colors.muted }]}>
-                            {tr.shortLabel}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.75)' }]}>
+                  {t('Ma préparation', 'Preparasyon mwen')}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                  <View
+                    style={{
+                      width: 52, height: 52, borderRadius: 14,
+                      backgroundColor: 'rgba(255,255,255,0.16)',
+                      borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+                      alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <myLevel.Icon color="#ffffff" size={26} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typeScale.h2, { color: '#ffffff' }]}>{t(myLevel.label, myLevel.labelHt)}</Text>
+                    <Text style={[typeScale.caption, { color: '#bfdbfe', marginTop: 2 }]} numberOfLines={2}>
+                      {t(myLevel.description, myLevel.descriptionHt)}
+                    </Text>
                   </View>
                 </View>
-              )}
-            </View>
-          ))}
-        </View>
 
-        {/* Subject quick-links */}
+                {myLevel.id === 'terminale' && trackChips(true)}
+
+                <View
+                  style={{
+                    marginTop: 16, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4,
+                    backgroundColor: '#ffffff', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9,
+                  }}
+                >
+                  <Text style={[typeScale.titleSm, { color: colors.azure }]}>
+                    {t('Explorer mes sujets', 'Gade sijè mwen yo')}
+                  </Text>
+                  <ChevronRight color={colors.azure} size={16} />
+                </View>
+              </LinearGradient>
+            </PressableScale>
+          </View>
+        )}
+
+        {/* Subject quick-links — scoped to the student's level */}
         <View className="px-5 mt-6">
           <Text style={[typeScale.title, { color: colors.ink, marginBottom: 12 }]}>
             {t('Par matière', 'Pa matyè')}
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {SUBJECTS.map((subj) => (
+            {subjects.map((subj) => (
               <PressableScale
                 key={subj.code}
-                onPress={() => navigation.navigate('ExamBrowser', { level: 'terminale', subject: subj.code })}
+                onPress={() => navigation.navigate('ExamBrowser', { level: subjectLevelId, subject: subj.code })}
                 accessibilityRole="button"
                 accessibilityLabel={subj.code}
                 style={{
@@ -216,6 +260,52 @@ export default function ExamLandingScreen() {
               </PressableScale>
             ))}
           </View>
+        </View>
+
+        {/* Other levels — compact secondary rows (the full stack when no grade) */}
+        <View className="px-5 mt-6 gap-3">
+          {myLevel && (
+            <Text style={[typeScale.overline, { color: colors.faint }]}>
+              {t('Autres niveaux', 'Lòt nivo yo')}
+            </Text>
+          )}
+          {otherLevels.map((level) => (
+            <View
+              key={level.id}
+              style={[cardSurface, { overflow: 'hidden' }]}
+            >
+              <PressableScale
+                onPress={() => navigation.navigate('ExamBrowser', { level: level.id })}
+                pressedScale={0.98}
+                accessibilityRole="button"
+                accessibilityLabel={t(level.label, level.labelHt)}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
+              >
+                <View
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 12,
+                    backgroundColor: colors.azureSoft,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <level.Icon color={colors.azure} size={22} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
+                  <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
+                    {t(level.sublabel, level.sublabelHt)}
+                  </Text>
+                </View>
+                <ChevronRight color={colors.faint} size={20} />
+              </PressableScale>
+
+              {/* Track (filière) chips — only when Terminale renders as a plain card (no grade chosen) */}
+              {!myLevel && level.id === 'terminale' && trackChips(false)}
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>

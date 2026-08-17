@@ -6,11 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  Search, BookOpen, BookMarked, ChevronRight, ChevronLeft,
-  Calculator, Atom, FlaskConical, TrendingUp, GraduationCap,
+  Search, BookOpen, BookMarked, ChevronRight, ChevronLeft, GraduationCap,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import { getSubjectColor } from '../utils/shared';
+import { SUBJECT_META, courseSubjectIcon } from '../utils/subjectMeta';
 import { courseVideoThumb } from '../utils/videoThumb';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
@@ -33,13 +33,6 @@ const LEVELS = [
   { code: 'NSIII', label: 'NS III', sublabel: '3ème année du secondaire', sublabelHt: 'Twazyèm ane segondè' },
   { code: 'NSIV', label: 'NS IV', sublabel: 'Terminale — année du Bac', sublabelHt: 'Tèminal — ane Bak la' },
 ];
-
-const SUBJECT_META: Record<string, { name: string; nameHt: string; Icon: any }> = {
-  MATH: { name: 'Mathématiques', nameHt: 'Matematik', Icon: Calculator },
-  PHYS: { name: 'Physique', nameHt: 'Fizik', Icon: Atom },
-  CHEM: { name: 'Chimie', nameHt: 'Chimi', Icon: FlaskConical },
-  ECON: { name: 'Économie', nameHt: 'Ekonomi', Icon: TrendingUp },
-};
 
 function subjectMeta(code: string) {
   const meta = SUBJECT_META[code] ?? { name: code, nameHt: code, Icon: BookOpen };
@@ -77,6 +70,7 @@ function CourseCard({
   const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
   const color = course.color ?? colors.azure;
   const soon = !!course.comingSoon;
+  const SubjectIcon = courseSubjectIcon(course);
   const thumb = soon ? null : courseVideoThumb(course);
   // A dead thumbnail URL must degrade to the icon placeholder, not a blank box.
   const [thumbFailed, setThumbFailed] = useState(false);
@@ -105,7 +99,7 @@ function CourseCard({
               className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
               style={{ backgroundColor: color + '18' }}
             >
-              <BookOpen color={color} size={20} />
+              <SubjectIcon color={color} size={20} />
             </View>
           )}
           <View className="flex-1">

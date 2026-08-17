@@ -32,6 +32,8 @@ export interface AppState {
   onboardingCompleted: boolean;
   tourCompleted: boolean;
   practiceTipSeen: boolean;
+  /** True once the one-time "follow us on Instagram" Home prompt was shown (followed OR dismissed). */
+  igPromptSeen: boolean;
   languageChosen: boolean;
   theme: 'light' | 'dark';
   enrolledCourses: any[];
@@ -58,6 +60,7 @@ export interface AppState {
   setOnboardingCompleted: (completed: boolean) => void;
   setTourCompleted: (completed: boolean) => void;
   setPracticeTipSeen: (seen: boolean) => void;
+  setIgPromptSeen: (seen: boolean) => void;
   setLanguageChosen: (chosen: boolean) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   toggleTheme: () => void;
@@ -92,6 +95,7 @@ const useStore = create<AppState>()(
       onboardingCompleted: false,
       tourCompleted: false,
       practiceTipSeen: false,
+      igPromptSeen: false,
       languageChosen: false,
       theme: 'light',
       enrolledCourses: [],
@@ -116,6 +120,7 @@ const useStore = create<AppState>()(
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       setTourCompleted: (completed) => set({ tourCompleted: !!completed }),
       setPracticeTipSeen: (seen) => set({ practiceTipSeen: !!seen }),
+      setIgPromptSeen: (seen) => set({ igPromptSeen: !!seen }),
       setLanguageChosen: (chosen) => set({ languageChosen: !!chosen }),
       setTheme: (theme) => set({ theme }),
       toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
@@ -195,6 +200,7 @@ const useStore = create<AppState>()(
         onboardingCompleted: s.onboardingCompleted,
         tourCompleted: s.tourCompleted,
         practiceTipSeen: s.practiceTipSeen,
+        igPromptSeen: s.igPromptSeen,
         languageChosen: s.languageChosen,
         theme: s.theme,
         enrolledCourses: s.enrolledCourses,

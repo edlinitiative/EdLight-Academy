@@ -5,7 +5,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Zap, ChevronRight, CalendarCheck, BookOpen } from 'lucide-react-native';
+import { Zap, ChevronRight, CalendarCheck } from 'lucide-react-native';
+import { courseSubjectIcon } from '../utils/subjectMeta';
+import { FollowInstagramPrompt } from '../components/FollowInstagram';
+import WeeklyGoalSheet from '../components/WeeklyGoalSheet';
 import SandraFab from '../components/SandraFab';
 import StreakFlame from '../components/ui/StreakFlame';
 import useStore from '../contexts/store';
@@ -162,6 +165,7 @@ export default function DashboardScreen() {
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
+  const [goalSheetOpen, setGoalSheetOpen] = React.useState(false);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -184,6 +188,13 @@ export default function DashboardScreen() {
   const weeklyXp = (myEntry as any)?.xp ?? 0;
   const allAttemptsList = Object.values(quizAttempts as Record<string, any[]>).flat();
   const quizzesThisWeek = countQuizzesThisWeek(allAttemptsList);
+
+  // "Has used the app for a while" gate for the one-time Instagram prompt:
+  // a 2-day streak, a few quizzes, or a few finished lessons all qualify.
+  const lessonsDone = (allProgress ?? []).reduce(
+    (sum: number, p: any) => sum + (p?.completedLessons?.length ?? 0), 0);
+  const igPromptEligible =
+    (streak?.currentStreak ?? 0) >= 2 || allAttemptsList.length >= 3 || lessonsDone >= 3;
 
   const progressByCourseId = React.useMemo(() => {
     const m = new Map<string, any>();
@@ -262,7 +273,7 @@ export default function DashboardScreen() {
   const weeklyGoalBlock = (
     <View className="px-5 mb-4">
       <PressableScale
-        onPress={() => navigation.navigate('Trivia')}
+        onPress={() => { tapLight(); setGoalSheetOpen(true); }}
         accessibilityRole="button"
         accessibilityLabel={`${t('Objectif de la semaine', 'Objektif semèn nan')}. ${goalSublabel}`}
         style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
@@ -302,6 +313,7 @@ export default function DashboardScreen() {
       <View className="gap-3">
         {displayCourses.map((course: any) => {
           const tint = courseTint(course.color);
+          const SubjectIcon = courseSubjectIcon(course);
           const totalLessons = countCourseLessons(course);
           const prog = progressByCourseId.get(course.id);
           const pct = calculateCompletionPercentage(prog, totalLessons);
@@ -319,7 +331,7 @@ export default function DashboardScreen() {
                   className="items-center justify-center flex-shrink-0"
                   style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '18' }}
                 >
-                  <BookOpen color={tint} size={20} />
+                  <SubjectIcon color={tint} size={20} />
                 </View>
                 <View className="flex-1">
                   {/* Single subject tag = the course name itself, which already
@@ -481,6 +493,15 @@ export default function DashboardScreen() {
           </>
         )}
 
+        {/* One-time community nudge — only once the student has real usage
+            behind them (streak / quizzes / lessons), never on first open.
+            The component self-hides forever after follow or dismiss. */}
+        {igPromptEligible && (
+          <View className="px-5 mb-4">
+            <FollowInstagramPrompt />
+          </View>
+        )}
+
         {/* Readiness — Bac-track only. The "Score de préparation" is scored on Bac
             papers, so it's noise for prefac/lower grades (same gate as Profile).
             The card renders its own title, so no duplicate heading. */}
@@ -549,6 +570,16 @@ export default function DashboardScreen() {
 
       {/* Sandra — AI tutor, always within thumb's reach */}
       <SandraFab onPress={() => (navigation as any).navigate('Sandra')} />
+
+      {/* Weekly goal detail — explains the goal + reward before acting */}
+      <WeeklyGoalSheet
+        visible={goalSheetOpen}
+        onClose={() => setGoalSheetOpen(false)}
+        quizzesThisWeek={quizzesThisWeek}
+        weeklyXp={weeklyXp}
+        onStartQuiz={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }}
+        onSeeLeaderboard={() => (navigation as any).navigate('Leaderboard')}
+      />
     </SafeAreaView>
   );
 }
