@@ -35,32 +35,30 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const ACTIVE = lightColors.azure; // '#1B6FE0'
 const INACTIVE = lightColors.muted; // '#64748b'
 
-// Floating pill bar (Instagram-style): detached from the screen edge, rounded,
-// elevated. Sized explicitly so labels never clip, whatever the device width.
-// Height trimmed ~20% (was 62) so the bar takes less of the screen and sits
-// further clear of any screen's own bottom actions.
-const BAR_HEIGHT = 50;
+// Floating "liquid glass" bar (native iOS 26 TabView look): a detached
+// translucent capsule where each item is an icon+label column, and the focused
+// item sits inside its own frosted lens capsule.
+const BAR_HEIGHT = 56;
 const BAR_MARGIN = 16;
-// Icons scaled to match the shorter bar so icon + label never clip.
 const ICON_SIZE = 20;
 
 // Two taps on the SAME tab within this window trigger a data refresh.
 const DOUBLE_TAP_MS = 350;
 
-// Rounded highlight behind the focused tab's icon. Themed tint of the brand
-// color — subtle in light mode, a touch stronger in dark so it reads. The pill
-// glides in (opacity + scale) instead of snapping, so switching tabs feels
-// smooth; reduce-motion collapses the transition to an instant state change.
-function TabIcon({
+// One "liquid glass" tab item: icon + label as a single column, with the
+// focused lens capsule wrapping BOTH (like the native iOS 26 TabView) instead
+// of a highlight behind the icon alone. The lens glides in (opacity + scale);
+// reduce-motion collapses the transition to an instant state change.
+function TabItem({
   Icon,
+  label,
   color,
-  size,
   focused,
   dark,
 }: {
   Icon: typeof LayoutDashboard;
+  label: string;
   color: string;
-  size: number;
   focused: boolean;
   dark: boolean;
 }) {
@@ -72,37 +70,44 @@ function TabIcon({
     progress.value = reduceMotion ? target : withTiming(target, { duration: 220 });
   }, [focused, reduceMotion, progress]);
 
-  const pillStyle = useAnimatedStyle(() => ({
+  const lensStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scale: 0.82 + progress.value * 0.18 }],
+    transform: [{ scale: 0.86 + progress.value * 0.14 }],
   }));
 
-  const activeBg = dark ? 'rgba(56,132,214,0.24)' : 'rgba(27,111,224,0.12)';
+  // Frosted lens: a light glass tint with a thin edge, not a flat brand fill.
+  const lensBg = dark ? 'rgba(76,154,245,0.22)' : 'rgba(255,255,255,0.85)';
+  const lensEdge = dark ? 'rgba(148,163,184,0.25)' : 'rgba(27,111,224,0.18)';
 
   return (
-    <View style={styles.iconPill}>
+    <View style={styles.item}>
       <Animated.View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { borderRadius: 12, backgroundColor: activeBg }, pillStyle]}
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 15,
+            backgroundColor: lensBg,
+            borderWidth: 1,
+            borderColor: lensEdge,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: dark ? 0.3 : 0.08,
+            shadowRadius: 5,
+          },
+          lensStyle,
+        ]}
       />
       <Icon color={color} size={ICON_SIZE} />
+      <Text
+        allowFontScaling
+        maxFontSizeMultiplier={1.3}
+        numberOfLines={1}
+        style={[typeScale.micro, { fontSize: 9.5, lineHeight: 11, marginTop: 2, color, fontFamily: focused ? fonts.bold : fonts.medium }]}
+      >
+        {label}
+      </Text>
     </View>
-  );
-}
-
-// Tab label as its own Text so it honors Dynamic Type but stays capped: modest
-// scaling (up to 1.3×) keeps the floating pill from overflowing on large-font
-// devices while no longer opting fully out of accessibility scaling.
-function TabLabel({ label, color }: { label: string; color: string }) {
-  return (
-    <Text
-      allowFontScaling
-      maxFontSizeMultiplier={1.3}
-      numberOfLines={1}
-      style={[typeScale.micro, { fontSize: 10, lineHeight: 12, color }]}
-    >
-      {label}
-    </Text>
   );
 }
 
@@ -155,21 +160,22 @@ export default function TabNavigator() {
         headerShown: false,
         tabBarActiveTintColor: dark ? darkColors.azure : ACTIVE,
         tabBarInactiveTintColor: dark ? darkColors.muted : INACTIVE,
-        // Allow Dynamic Type; the per-label maxFontSizeMultiplier caps growth.
-        tabBarAllowFontScaling: true,
-        // Frosted-glass pill: a translucent BlurView background lets the app
-        // show through, with a thin light rim for the glass edge. The overlay is
-        // kept light so scrolling content stays visible (blurred) behind it.
+        // Icon+label are rendered together inside TabItem so the focused lens
+        // capsule can wrap both — hide the navigator's own labels.
+        tabBarShowLabel: false,
+        // Liquid glass: a strong BlurView with only a whisper of overlay, so
+        // the content genuinely refracts through the bar like the native
+        // iOS 26 TabView, plus a thin light rim for the glass edge.
         tabBarBackground: () => (
           <BlurView
-            intensity={dark ? 40 : 55}
+            intensity={dark ? 55 : 75}
             tint={dark ? 'dark' : 'light'}
             style={[StyleSheet.absoluteFill, { borderRadius: BAR_HEIGHT / 2, overflow: 'hidden' }]}
           >
             <View
               style={[
                 StyleSheet.absoluteFill,
-                { backgroundColor: dark ? 'rgba(17,24,39,0.35)' : 'rgba(255,255,255,0.3)' },
+                { backgroundColor: dark ? 'rgba(17,24,39,0.28)' : 'rgba(255,255,255,0.22)' },
               ]}
             />
           </BlurView>
@@ -190,8 +196,8 @@ export default function TabNavigator() {
               borderWidth: 1,
               borderColor: dark ? 'rgba(148,163,184,0.18)' : 'rgba(255,255,255,0.6)',
               overflow: 'hidden',
-              paddingTop: 6,
-              paddingBottom: 6,
+              paddingTop: 7,
+              paddingBottom: 7,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 8 },
               shadowOpacity: dark ? 0.5 : 0.14,
@@ -199,7 +205,6 @@ export default function TabNavigator() {
               elevation: 12,
             },
         tabBarItemStyle: { paddingHorizontal: 0 },
-        tabBarLabelStyle: { fontSize: 10, fontFamily: fonts.medium },
       }}
     >
       <Tab.Screen
@@ -207,9 +212,8 @@ export default function TabNavigator() {
         component={DashboardScreen}
         options={{
           tabBarAccessibilityLabel: t('Accueil', 'Akèy'),
-          tabBarLabel: ({ color }) => <TabLabel label={t('Accueil', 'Akèy')} color={color} />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={LayoutDashboard} color={color} size={size} focused={focused} dark={dark} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabItem Icon={LayoutDashboard} label={t('Accueil', 'Akèy')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -218,9 +222,8 @@ export default function TabNavigator() {
         component={CoursesNavigator}
         options={{
           tabBarAccessibilityLabel: t('Cours', 'Kou'),
-          tabBarLabel: ({ color }) => <TabLabel label={t('Cours', 'Kou')} color={color} />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={BookOpen} color={color} size={size} focused={focused} dark={dark} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabItem Icon={BookOpen} label={t('Cours', 'Kou')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -250,11 +253,14 @@ export default function TabNavigator() {
         })}
         options={{
           tabBarAccessibilityLabel: quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen'),
-          tabBarLabel: ({ color }) => (
-            <TabLabel label={quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen')} color={color} />
-          ),
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={quizPrimary ? ListChecks : ClipboardList} color={color} size={size} focused={focused} dark={dark} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabItem
+              Icon={quizPrimary ? ListChecks : ClipboardList}
+              label={quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen')}
+              color={color}
+              focused={focused}
+              dark={dark}
+            />
           ),
         }}
       />
@@ -263,9 +269,8 @@ export default function TabNavigator() {
         component={TriviaScreen}
         options={{
           tabBarAccessibilityLabel: t('Jeux', 'Jwèt'),
-          tabBarLabel: ({ color }) => <TabLabel label={t('Jeux', 'Jwèt')} color={color} />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={Gamepad2} color={color} size={size} focused={focused} dark={dark} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabItem Icon={Gamepad2} label={t('Jeux', 'Jwèt')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -274,9 +279,8 @@ export default function TabNavigator() {
         component={ProfileScreen}
         options={{
           tabBarAccessibilityLabel: t('Profil', 'Pwofil'),
-          tabBarLabel: ({ color }) => <TabLabel label={t('Profil', 'Pwofil')} color={color} />,
-          tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon Icon={User} color={color} size={size} focused={focused} dark={dark} />
+          tabBarIcon: ({ color, focused }) => (
+            <TabItem Icon={User} label={t('Profil', 'Pwofil')} color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -285,9 +289,12 @@ export default function TabNavigator() {
 }
 
 const styles = StyleSheet.create({
-  iconPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 2,
-    borderRadius: 12,
+  item: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+    paddingVertical: 4,
+    borderRadius: 15,
+    minWidth: 58,
   },
 });

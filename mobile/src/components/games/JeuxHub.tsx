@@ -1,31 +1,38 @@
 /**
- * JeuxHub — the games arcade landing (RN port of the web /jeux hub, "Limyè
- * Arcade" style): header with XP/streak/parties stats, a grid of 6 solid
- * color game tiles (white icon chip + tilted high-score sticker), and a
- * community Records strip fed by leaderboardService.getGameRecords.
+ * JeuxHub — the games arcade landing, "Ligue + Console" layout (chosen from the
+ * 5-direction design pass, Aug 2026): a segmented hub (Jouer · Records ·
+ * Classement) so the leaderboard lives INSIDE the tab, with the 6 games as
+ * compact round console-style buttons (56px, small icons) instead of the old
+ * 170px tiles. Défi du jour and Jeu de la semaine (×2 XP) stay first-class.
  */
 
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
-import { Zap, Flame, Trophy, Clock, Crown, Sparkles, Share2, Snowflake } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Zap, Flame, Trophy, Crown, Sparkles, Share2, Snowflake, ChevronRight } from 'lucide-react-native';
 import { GAMES, GAME_ICONS } from '../../data/games';
 import { getGameRecords } from '../../services/leaderboardService';
 import { weeklyGameId, WEEKLY_GAME_XP_MULTIPLIER } from '../../utils/weeklyGame';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
+import { useLeaderboard } from '../../hooks/useLeaderboard';
 import DailyChallengeBanner from './DailyChallengeBanner';
+import Leaderboard from '../Leaderboard';
 import { Skeleton } from '../StateViews';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import PressableScale from '../ui/PressableScale';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
 
 const GRID_PAD = 16;
-const TILE_GAP = 12;
-// Cap so 2-col tiles don't balloon on iPad (portrait + requireFullScreen → stable
-// width). Phones fall under the cap unchanged; the grid is centered on tablets.
+// Cap so the 3-col console grid doesn't balloon on iPad (portrait +
+// requireFullScreen → stable width). Phones fall under the cap unchanged.
 const GRID_W = Math.min(Dimensions.get('window').width, 560);
-const TILE_W = Math.floor((GRID_W - GRID_PAD * 2 - TILE_GAP) / 2);
+const COL_W = Math.floor((GRID_W - GRID_PAD * 2) / 3);
+const BTN = 56; // round console button — the whole "smaller tiles" ask
+const BTN_ICON = 24;
+
+type HubTab = 'jouer' | 'records' | 'classement';
 
 interface GameRecord {
   score: number;
@@ -39,7 +46,7 @@ interface JeuxHubProps {
   onStartDaily: () => void;
 }
 
-/* ─── Records strip: best-ever score per arcade game + holder ─── */
+/* ─── Records: best-ever score per arcade game + holder ─── */
 function GameRecords({
   isCreole, records, loading,
 }: { isCreole: boolean; records: Record<string, GameRecord>; loading: boolean }) {
@@ -54,7 +61,7 @@ function GameRecords({
   if (loading) {
     return (
       <View
-        className="px-4 py-4 mx-4 mt-5"
+        className="px-4 py-4 mx-4 mt-4"
         style={{ backgroundColor: colors.surface, borderRadius: radius.hero, ...shadow.md }}
         accessible
         accessibilityLabel={isCreole ? 'Ap chaje' : 'Chargement…'}
@@ -84,7 +91,7 @@ function GameRecords({
     <>
     <ShareCardCapture ref={shareRef} />
     <View
-      className="px-4 py-4 mx-4 mt-5"
+      className="px-4 py-4 mx-4 mt-4"
       style={{
         backgroundColor: colors.surface,
         borderRadius: radius.hero,
@@ -160,21 +167,67 @@ function GameRecords({
   );
 }
 
+/* ─── Segmented control: Jouer · Records · Classement ─── */
+function HubSegments({
+  tab, onChange, isCreole,
+}: { tab: HubTab; onChange: (t: HubTab) => void; isCreole: boolean }) {
+  const colors = useColors();
+  const { shadow } = useTheme();
+  const segs: { id: HubTab; fr: string; ht: string }[] = [
+    { id: 'jouer', fr: 'Jouer', ht: 'Jwe' },
+    { id: 'records', fr: 'Records', ht: 'Rekò' },
+    { id: 'classement', fr: 'Classement', ht: 'Klasman' },
+  ];
+  return (
+    <View
+      className="flex-row mx-4 mb-1"
+      style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, padding: 3, borderWidth: 1, borderColor: colors.border }}
+      accessibilityRole="tablist"
+    >
+      {segs.map((s) => {
+        const on = tab === s.id;
+        return (
+          <TouchableOpacity
+            key={s.id}
+            onPress={() => onChange(s.id)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            accessibilityLabel={isCreole ? s.ht : s.fr}
+            className="flex-1 items-center rounded-full"
+            style={{
+              paddingVertical: 7,
+              backgroundColor: on ? colors.surface : 'transparent',
+              ...(on ? shadow.sm : null),
+            }}
+          >
+            <Text style={[typeScale.label, { color: on ? colors.azure : colors.muted }]}>
+              {isCreole ? s.ht : s.fr}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 /* ─── Hub ─── */
 export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: JeuxHubProps) {
   const { profile, level, isAuthed, daily } = useTrivia();
   const { streak } = useStreak();
+  const { myRank } = useLeaderboard(25);
+  const navigation = useNavigation<any>();
   const colors = useColors();
   const { shadow } = useTheme();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
 
+  const [tab, setTab] = useState<HubTab>('jouer');
+
   const highScores: Record<string, number> = profile?.games?.highScores || {};
   const gamesPlayed: number = profile?.games?.gamesPlayed || 0;
   const freezes: number = streak?.streakFreezes || 0;
 
-  // One records fetch feeds both the featured card ("record à battre") and the
-  // Records strip below.
+  // One records fetch feeds the weekly strip target and the Records segment.
   const [records, setRecords] = useState<Record<string, GameRecord>>({});
   const [recordsLoading, setRecordsLoading] = useState(true);
   useEffect(() => {
@@ -188,251 +241,275 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
   // Jeu de la semaine — rotates on the leaderboard's ISO week (Monday reset).
   const featuredId = weeklyGameId();
   const featured = GAMES.find((g) => g.id === featuredId) || null;
-  const FeaturedIcon = featured ? GAME_ICONS[featured.id] : null;
   const featuredRec = records[featuredId];
 
+  const statChips = (
+    <View className="flex-row" style={{ gap: 6 }}>
+      <View
+        className="flex-row items-center rounded-full border"
+        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surface, borderColor: colors.border }}
+        accessible
+        accessibilityLabel={`${level.xp} XP, ${isCreole ? 'nivo' : 'niveau'} ${level.level}`}
+      >
+        <Zap color={colors.azure} size={12} />
+        <Text style={[typeScale.label, { color: colors.ink }]}>{level.xp}</Text>
+      </View>
+      <View
+        className="flex-row items-center rounded-full border"
+        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surface, borderColor: colors.border }}
+        accessible
+        accessibilityLabel={`${isCreole ? 'Seri' : 'Série'} ${streak?.currentStreak || 0}${freezes > 0 ? `, ${freezes} ${isCreole ? 'jèl' : 'gel'}` : ''}`}
+      >
+        <Flame color={colors.danger} size={12} />
+        <Text style={[typeScale.label, { color: colors.ink }]}>{streak?.currentStreak || 0}</Text>
+        {freezes > 0 && (
+          <>
+            <Snowflake color={colors.azure} size={10} />
+            <Text style={[typeScale.micro, { color: colors.azure }]}>{freezes}</Text>
+          </>
+        )}
+      </View>
+      <View
+        className="flex-row items-center rounded-full border"
+        style={{ gap: 4, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: colors.surface, borderColor: colors.border }}
+        accessible
+        accessibilityLabel={`${gamesPlayed} ${isCreole ? 'pati' : 'parties'}`}
+      >
+        <Trophy color={colors.warn} size={12} />
+        <Text style={[typeScale.label, { color: colors.ink }]}>{gamesPlayed}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Défi du jour — surfaced on the hub so it's visible without opening the
-          Trivia card. */}
-      <View className="px-4 pt-2 pb-3">
-        <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Header: title + compact stat chips (replaces the old 3-card stats band) */}
+      <View className="flex-row items-center justify-between px-4 pt-3 pb-2">
+        <Text style={[typeScale.h1, { color: colors.ink }]}>{isCreole ? 'Jwèt' : 'Jeux'}</Text>
+        {isAuthed ? statChips : null}
       </View>
 
-      {/* Jeu de la semaine — the featured arcade game at ×2 XP, with the
-          community record as the target. Gives the Monday reset a second hook. */}
-      {featured && FeaturedIcon && (
-        <View className="px-4 pb-3">
-          <PressableScale
-            onPress={() => onSelectGame(featured.id)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              isCreole
-                ? `Jwèt semèn nan: ${featured.nameHt}, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}`
-                : `Jeu de la semaine : ${featured.name}, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}`
-            }
-            pressedScale={0.97}
-            style={{
-              borderRadius: radius.hero,
-              backgroundColor: featured.color,
-              padding: 14,
-              ...shadow.md,
-              shadowColor: featured.color,
-            }}
-          >
-            <View className="flex-row items-center gap-1.5 mb-2">
-              <Zap color="#fde68a" size={13} />
-              <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.92)' }]}>
-                {isCreole ? 'JWÈT SEMÈN NAN' : 'JEU DE LA SEMAINE'} · XP ×{WEEKLY_GAME_XP_MULTIPLIER}
-              </Text>
-            </View>
-            <View className="flex-row items-center" style={{ gap: 12 }}>
-              <View
+      <HubSegments tab={tab} onChange={setTab} isCreole={isCreole} />
+
+      {/* ── Jouer ── */}
+      {tab === 'jouer' && (
+        <ScrollView
+          contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Défi du jour — stays first: it's the daily XP + streak protector. */}
+          <View className="px-4 pb-2">
+            <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
+          </View>
+
+          {/* Jeu de la semaine — thin strip (was a tall hero card). */}
+          {featured && (
+            <View className="px-4 pb-3">
+              <PressableScale
+                onPress={() => (featured.id === 'trivia' ? onStartTrivia() : onSelectGame(featured.id))}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isCreole
+                    ? `Jwèt semèn nan: ${featured.nameHt}, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}`
+                    : `Jeu de la semaine : ${featured.name}, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}`
+                }
+                pressedScale={0.97}
                 style={{
-                  width: 44, height: 44, borderRadius: radius.control,
-                  backgroundColor: 'rgba(255,255,255,0.22)',
-                  alignItems: 'center', justifyContent: 'center',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  borderRadius: radius.control,
+                  backgroundColor: featured.color,
+                  paddingHorizontal: 12,
+                  paddingVertical: 9,
+                  ...shadow.sm,
+                  shadowColor: featured.color,
                 }}
               >
-                <FeaturedIcon color="#fff" size={24} />
-              </View>
-              <View className="flex-1">
-                <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
-                  {isCreole ? featured.nameHt : featured.name}
+                <Zap color="#fde68a" size={14} />
+                <Text style={[typeScale.label, { color: '#ffffff', flexShrink: 1 }]} numberOfLines={1}>
+                  {isCreole ? `Jwèt semèn nan : ${featured.nameHt}` : `Jeu de la semaine : ${featured.name}`}
                 </Text>
-                <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 1 }]} numberOfLines={1}>
+                <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.85)', flex: 1 }]} numberOfLines={1}>
                   {featuredRec
-                    ? (isCreole
-                        ? `Rekò pou bat: ${featuredRec.score} pa ${featuredRec.displayName}`
-                        : `Record à battre : ${featuredRec.score} par ${featuredRec.displayName}`)
-                    : (isCreole ? 'Rekò a poko pran — pran li !' : 'Record à prendre — à toi de jouer !')}
+                    ? (isCreole ? `· rekò ${featuredRec.score}` : `· record ${featuredRec.score}`)
+                    : ''}
                 </Text>
-              </View>
-              <View
-                className="rounded-full"
-                style={{ backgroundColor: '#ffffff', paddingHorizontal: 14, paddingVertical: 7 }}
-              >
-                <Text style={[typeScale.label, { color: featured.color }]}>
-                  {isCreole ? 'Jwe' : 'Jouer'}
-                </Text>
-              </View>
+                <View
+                  className="rounded-full"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 8, paddingVertical: 2 }}
+                >
+                  <Text style={[typeScale.micro, { color: '#fff' }]}>XP ×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
+                </View>
+              </PressableScale>
             </View>
-          </PressableScale>
-        </View>
-      )}
+          )}
 
-      {/* Stats row — or, for guests, a friendly prompt instead of an empty band */}
-      {isAuthed ? (
-        <View className="flex-row px-4 gap-2 mb-4">
-          <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-            <Zap color={colors.azure} size={16} />
-            <Text style={[typeScale.titleSm, { color: colors.ink }]}>{level.xp}</Text>
-            <Text style={[typeScale.caption, { color: colors.muted }]}>
-              XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}
-            </Text>
-          </View>
-          <View
-            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-            accessible
-            accessibilityLabel={`${isCreole ? 'Seri' : 'Série'} ${streak?.currentStreak || 0}${freezes > 0 ? `, ${freezes} ${isCreole ? 'jèl' : 'gel'}` : ''}`}
-          >
-            <Flame color={colors.danger} size={16} />
-            <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-              {streak?.currentStreak || 0}
-            </Text>
-            <Text style={[typeScale.caption, { color: colors.muted }]}>{isCreole ? 'Seri' : 'Série'}</Text>
-            {freezes > 0 && (
-              <View className="flex-row items-center" style={{ gap: 2, marginLeft: 2 }}>
-                <Snowflake color={colors.azure} size={12} />
-                <Text style={[typeScale.caption, { color: colors.azure }]}>{freezes}</Text>
-              </View>
-            )}
-          </View>
-          <View className="flex-1 flex-row items-center justify-center gap-1.5 rounded-2xl py-3 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
-            <Trophy color={colors.warn} size={16} />
-            <Text style={[typeScale.titleSm, { color: colors.ink }]}>{gamesPlayed}</Text>
-            <Text style={[typeScale.caption, { color: colors.muted }]}>{isCreole ? 'Pati' : 'Parties'}</Text>
-          </View>
-        </View>
-      ) : (
-        <View
-          className="flex-row items-center mx-4 mb-4 px-4 py-3 rounded-2xl border"
-          style={{ backgroundColor: colors.surface, borderColor: colors.border, gap: 12 }}
-          accessible
-          accessibilityLabel={isCreole
-            ? 'Konekte pou swiv XP, seri ak pati ou yo'
-            : 'Connecte-toi pour suivre tes XP, ta série et tes parties'}
-        >
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: radius.control,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.azureSoft,
-            }}
-          >
-            <Sparkles color={colors.azure} size={20} />
-          </View>
-          <View className="flex-1">
-            <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-              {isCreole ? 'Konekte pou kenbe pwogrè w' : 'Connecte-toi pour suivre tes XP'}
-            </Text>
-            <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-              {isCreole
-                ? 'XP, seri ak pati ap parèt isit la.'
-                : 'Tes XP, ta série et tes parties s\'afficheront ici.'}
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Game tiles */}
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: TILE_GAP,
-          paddingHorizontal: GRID_PAD,
-        }}
-      >
-        {GAMES.map((g) => {
-          const Icon = GAME_ICONS[g.id];
-          const hs = highScores[g.id];
-          return (
-            <PressableScale
-              key={g.id}
-              onPress={() => (g.id === 'trivia' ? onStartTrivia() : onSelectGame(g.id))}
-              accessibilityRole="button"
-              accessibilityLabel={`${isCreole ? g.nameHt : g.name} — ${isCreole ? g.descriptionHt : g.description}`}
-              pressedScale={0.96}
-              style={{
-                width: TILE_W,
-                borderRadius: radius.hero,
-                backgroundColor: g.color,
-                padding: 14,
-                paddingTop: 16,
-                minHeight: 170,
-                overflow: 'visible',
-                shadowColor: g.color,
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.35,
-                shadowRadius: 10,
-                elevation: 5,
-              }}
+          {/* Guest nudge — replaces the stat chips the un-signed-in can't have. */}
+          {!isAuthed && (
+            <View
+              className="flex-row items-center mx-4 mb-3 px-4 py-3 rounded-2xl border"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border, gap: 12 }}
+              accessible
+              accessibilityLabel={isCreole
+                ? 'Konekte pou swiv XP, seri ak pati ou yo'
+                : 'Connecte-toi pour suivre tes XP, ta série et tes parties'}
             >
-              {/* Icon chip */}
               <View
                 style={{
-                  width: 44,
-                  height: 44,
+                  width: 36,
+                  height: 36,
                   borderRadius: radius.control,
-                  backgroundColor: 'rgba(255,255,255,0.22)',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  backgroundColor: colors.azureSoft,
                 }}
               >
-                <Icon color="#fff" size={24} />
+                <Sparkles color={colors.azure} size={18} />
               </View>
-
-              {/* Tilted high-score sticker */}
-              {hs != null && (
-                <View
-                  className="flex-row items-center gap-1"
-                  style={{
-                    position: 'absolute',
-                    top: 10,
-                    right: 10,
-                    backgroundColor: '#ffffff',
-                    borderRadius: 999,
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    transform: [{ rotate: '4deg' }],
-                    ...shadow.sm,
-                  }}
-                >
-                  <Trophy color={g.color} size={11} />
-                  <Text style={[typeScale.micro, { color: g.color }]}>{hs}</Text>
-                </View>
-              )}
-
-              <Text style={[typeScale.h2, { color: '#ffffff', marginTop: 12 }]}>
-                {isCreole ? g.nameHt : g.name}
-              </Text>
-              <Text
-                style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 4, flexGrow: 1 }]}
-                numberOfLines={3}
-              >
-                {isCreole ? g.descriptionHt : g.description}
-              </Text>
-              <View className="flex-row items-center gap-1 mt-2">
-                <Clock color="rgba(255,255,255,0.85)" size={12} />
-                <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.85)' }]}>
-                  ~{g.minutes} min
+              <View className="flex-1">
+                <Text style={[typeScale.titleSm, { color: colors.ink }]}>
+                  {isCreole ? 'Konekte pou kenbe pwogrè w' : 'Connecte-toi pour suivre tes XP'}
                 </Text>
-                {g.id === featuredId && (
-                  <View
-                    className="flex-row items-center rounded-full"
-                    style={{ gap: 2, backgroundColor: 'rgba(255,255,255,0.28)', paddingHorizontal: 7, paddingVertical: 2, marginLeft: 6 }}
-                  >
-                    <Zap color="#fff" size={10} />
-                    <Text style={[typeScale.micro, { color: '#fff' }]}>×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
-                  </View>
-                )}
+                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
+                  {isCreole
+                    ? 'XP, seri ak pati ap parèt isit la.'
+                    : 'Tes XP, ta série et tes parties s\'afficheront ici.'}
+                </Text>
               </View>
-            </PressableScale>
-          );
-        })}
-      </View>
+            </View>
+          )}
 
-      {/* Community records */}
-      <GameRecords isCreole={isCreole} records={records} loading={recordsLoading} />
-    </ScrollView>
+          {/* Console grid — 6 round game buttons, 3 per row. The weekly game
+              wears a gold ring + ×2 chip; personal bests sit under the name. */}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              paddingHorizontal: GRID_PAD,
+              rowGap: 14,
+            }}
+          >
+            {GAMES.map((g) => {
+              const Icon = GAME_ICONS[g.id];
+              const hs = highScores[g.id];
+              const isWeekly = g.id === featuredId;
+              return (
+                <PressableScale
+                  key={g.id}
+                  onPress={() => (g.id === 'trivia' ? onStartTrivia() : onSelectGame(g.id))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isCreole ? g.nameHt : g.name} — ${isCreole ? g.descriptionHt : g.description}${isWeekly ? (isCreole ? `, XP fwa ${WEEKLY_GAME_XP_MULTIPLIER}` : `, XP fois ${WEEKLY_GAME_XP_MULTIPLIER}`) : ''}`}
+                  pressedScale={0.93}
+                  style={{ width: COL_W, alignItems: 'center' }}
+                >
+                  <View
+                    style={{
+                      width: BTN,
+                      height: BTN,
+                      borderRadius: 19,
+                      backgroundColor: g.color,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: g.color,
+                      shadowOffset: { width: 0, height: 5 },
+                      shadowOpacity: 0.32,
+                      shadowRadius: 9,
+                      elevation: 5,
+                      ...(isWeekly
+                        ? { borderWidth: 2.5, borderColor: '#fde68a' }
+                        : null),
+                    }}
+                  >
+                    <Icon color="#fff" size={BTN_ICON} />
+                    {isWeekly && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: -7,
+                          right: -10,
+                          backgroundColor: colors.warn,
+                          borderRadius: 999,
+                          paddingHorizontal: 5,
+                          paddingVertical: 1,
+                        }}
+                      >
+                        <Text style={[typeScale.micro, { color: '#ffffff', fontSize: 9 }]}>×{WEEKLY_GAME_XP_MULTIPLIER}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[typeScale.label, { color: colors.ink, marginTop: 6, textAlign: 'center' }]}
+                    numberOfLines={1}
+                  >
+                    {isCreole ? g.nameHt : g.name}
+                  </Text>
+                  <Text style={[typeScale.micro, { color: colors.faint, marginTop: 1 }]} numberOfLines={1}>
+                    {hs != null ? `🏆 ${hs}` : `~${g.minutes} min`}
+                  </Text>
+                </PressableScale>
+              );
+            })}
+          </View>
+
+          {/* My rank — the tab's built-in door to the Classement. */}
+          <TouchableOpacity
+            onPress={() => setTab('classement')}
+            accessibilityRole="button"
+            accessibilityLabel={isCreole ? 'Wè klasman an' : 'Voir le classement'}
+            className="flex-row items-center mx-4 mt-5 px-4 py-3 rounded-2xl border"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border, gap: 10 }}
+            activeOpacity={0.85}
+          >
+            <Crown color={colors.warn} size={18} />
+            <View className="flex-1">
+              <Text style={[typeScale.label, { color: colors.ink }]}>
+                {myRank
+                  ? (isCreole ? `Ou se ${myRank}ᵉ semèn sa a` : `Tu es ${myRank}ᵉ cette semaine`)
+                  : (isCreole ? 'Klasman semèn nan' : 'Classement de la semaine')}
+              </Text>
+              <Text style={[typeScale.micro, { color: colors.muted, marginTop: 1 }]}>
+                {myRank
+                  ? (isCreole ? 'Wè klasman konplè a' : 'Voir le classement complet')
+                  : (isCreole ? 'Jwe pou parèt nan klasman an !' : 'Joue pour apparaître au classement !')}
+              </Text>
+            </View>
+            <ChevronRight color={colors.faint} size={16} />
+          </TouchableOpacity>
+        </ScrollView>
+      )}
+
+      {/* ── Records ── */}
+      {tab === 'records' && (
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <GameRecords isCreole={isCreole} records={records} loading={recordsLoading} />
+        </ScrollView>
+      )}
+
+      {/* ── Classement — the shared board, full mode, embedded in the tab ── */}
+      {tab === 'classement' && (
+        <ScrollView
+          contentContainerStyle={{ paddingTop: 10, paddingHorizontal: 16, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <Leaderboard compact={false} maxRows={25} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Leaderboard')}
+            accessibilityRole="button"
+            accessibilityLabel={isCreole ? 'Ouvri paj klasman konplè a' : 'Ouvrir la page classement complète'}
+            className="items-center mt-3 py-2.5 rounded-full"
+            style={{ backgroundColor: colors.azureSoft }}
+            activeOpacity={0.85}
+          >
+            <Text style={[typeScale.label, { color: colors.azure }]}>
+              {isCreole ? 'Paj konplè (lekòl, vil…)' : 'Page complète (écoles, villes…)'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
+    </View>
   );
 }
