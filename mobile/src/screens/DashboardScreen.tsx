@@ -21,6 +21,8 @@ import { Skeleton, ErrorState } from '../components/StateViews';
 import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
+import { MasteryMeter } from '../components/MasteryMeter';
+import { summarize, courseLessonIds, type ProgressMap } from '../utils/mastery';
 import ReadinessCard from '../components/ReadinessCard';
 import VideoCoursesRail from '../components/VideoCoursesRail';
 import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
@@ -47,12 +49,6 @@ function countCourseLessons(course: any): number {
   const units = Array.isArray(course?.modules) ? course.modules : [];
   const count = units.reduce((sum: number, u: any) => sum + (u?.lessons?.length || 0), 0);
   return count || units.length || course?.videoCount || 0;
-}
-
-function calculateCompletionPercentage(progress: any, totalLessons: number): number {
-  if (!progress || totalLessons === 0) return 0;
-  const completed = progress?.completedLessons?.length ?? 0;
-  return Math.min(100, Math.round((completed / totalLessons) * 100));
 }
 
 /** Compact XP formatting: 1450 → "1.4k". */
@@ -159,7 +155,7 @@ function DashboardSkeleton() {
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface } = useTheme();
-  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge } = useStore();
+  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge, progress: lessonProgress } = useStore();
   const practiceMode = gradeProfile(grade).primaryTab === 'Quiz' ? 'quiz' : 'exams';
   const themeMode = useStore((s) => s.theme);
   const insets = useSafeAreaInsets();
@@ -196,14 +192,6 @@ export default function DashboardScreen() {
     (sum: number, p: any) => sum + (p?.completedLessons?.length ?? 0), 0);
   const igPromptEligible =
     (streak?.currentStreak ?? 0) >= 2 || allAttemptsList.length >= 3 || lessonsDone >= 3;
-
-  const progressByCourseId = React.useMemo(() => {
-    const m = new Map<string, any>();
-    for (const p of allProgress || []) {
-      if (p?.courseId) m.set(p.courseId, p);
-    }
-    return m;
-  }, [allProgress]);
 
   // "Continuer à apprendre" shows only ENROLLED courses now. The old fallback
   // (first 4 courses as plain text rows for the un-enrolled) never signalled
@@ -326,8 +314,11 @@ export default function DashboardScreen() {
           const tint = courseTint(course.color);
           const SubjectIcon = courseSubjectIcon(course);
           const totalLessons = countCourseLessons(course);
-          const prog = progressByCourseId.get(course.id);
-          const pct = calculateCompletionPercentage(prog, totalLessons);
+          // Same mastery model as the Cours tab. This used to be a completion
+          // ring computed from Firestore's `completedLessons` — a different
+          // source AND a different metric, so Home and Cours disagreed about
+          // the same course.
+          const summary = summarize(courseLessonIds(course), lessonProgress as ProgressMap);
 
           return (
             <PressableScale
@@ -352,12 +343,18 @@ export default function DashboardScreen() {
                   </Text>
                   {totalLessons > 0 && (
                     <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
-                      {totalLessons} {t('leçons', 'leson')}
+                      {summary.mastered > 0
+                        ? `${summary.mastered}/${totalLessons} ${t('maîtrisées', 'metrize')}`
+                        : `${totalLessons} ${t('leçons', 'leson')}`}
                     </Text>
                   )}
                 </View>
-                {/* Circular progress ring (conic-style via SVG) */}
-                <ProgressRing value={pct} color={tint} size={46} strokeWidth={5} />
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <Text style={[typeScale.label, { color: summary.points > 0 ? colors.ink : colors.faint }]}>
+                    {summary.points}
+                  </Text>
+                  <MasteryMeter level={summary.level} size="sm" />
+                </View>
               </View>
             </PressableScale>
           );

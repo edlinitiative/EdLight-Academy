@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, FlatList, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useScrollToTop, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -10,13 +11,16 @@ import {
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import { getSubjectColor } from '../utils/shared';
-import { SUBJECT_META, courseSubjectIcon } from '../utils/subjectMeta';
+import { SUBJECT_META } from '../utils/subjectMeta';
 import { courseVideoThumb } from '../utils/videoThumb';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import ProgressBar from '../components/ProgressBar';
+import { MasteryMeter } from '../components/MasteryMeter';
+import {
+  summarize, courseLessonIds, masteryLabel, type MasterySummary, type ProgressMap,
+} from '../utils/mastery';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { useColors, Palette, radius, typeScale } from '../theme/theme';
+import { useColors, radius, typeScale, gradients } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 
@@ -44,35 +48,32 @@ function countLessons(course: any): number {
   return units.reduce((s: number, u: any) => s + (u?.lessons?.length ?? 0), 0) || course?.videoCount || 0;
 }
 
-const cardShadowFor = (colors: Palette) => ({
-  shadowColor: colors.azure,
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.06,
-  shadowRadius: 6,
-  elevation: 2,
-  borderWidth: 1,
-  borderColor: colors.border,
-} as const);
-
-function CourseCard({
+/**
+ * A course, as a row rather than a card.
+ *
+ * The old version was the template shape: a tinted icon tile, a title, a grey
+ * caption, a chevron, wrapped in a shadowed white rectangle — repeated down the
+ * page until nothing had any weight. What's left here is a real video still
+ * (actual content, not decoration), the course name, and the only number worth
+ * printing: mastery out of 100.
+ */
+function CourseRow({
   course,
-  completedCount,
+  summary,
   onPress,
 }: {
   course: any;
-  completedCount: number;
+  summary: MasterySummary;
   onPress: () => void;
 }) {
   const colors = useColors();
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const totalLessons = countLessons(course);
-  const pct = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
   const color = course.color ?? colors.azure;
   const soon = !!course.comingSoon;
-  const SubjectIcon = courseSubjectIcon(course);
   const thumb = soon ? null : courseVideoThumb(course);
-  // A dead thumbnail URL must degrade to the icon placeholder, not a blank box.
+  // A dead thumbnail URL must degrade to a plain block, not a blank box.
   const [thumbFailed, setThumbFailed] = useState(false);
 
   return (
@@ -80,90 +81,182 @@ function CourseCard({
       onPress={soon ? undefined : onPress}
       disabled={soon}
       accessibilityRole="button"
-      accessibilityLabel={course.name}
-      style={[{ backgroundColor: colors.surface, borderRadius: radius.card, marginBottom: 12 }, cardShadowFor(colors), soon ? { opacity: 0.7 } : null]}
+      // The meter itself is decorative, so the level has to be spoken here.
+      accessibilityLabel={soon
+        ? `${course.name}. ${t('Cours en préparation', 'Kou ap prepare')}`
+        : `${course.name}. ${summary.points} ${t('sur', 'sou')} 100, ${masteryLabel(summary.level, language === 'ht')}`}
+      style={{ borderTopWidth: 1, borderTopColor: colors.hairline, opacity: soon ? 0.55 : 1 }}
     >
-      <View className="p-4">
-        <View className="flex-row items-center gap-3">
-          {thumb && !thumbFailed ? (
-            // Real video still (16:9) instead of a generic icon tile.
-            <Image
-              source={{ uri: thumb }}
-              resizeMode="cover"
-              onError={() => setThumbFailed(true)}
-              className="rounded-xl flex-shrink-0"
-              style={{ width: 72, height: 44, backgroundColor: color + '18' }}
-            />
-          ) : (
-            <View
-              className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: color + '18' }}
-            >
-              <SubjectIcon color={color} size={20} />
-            </View>
-          )}
-          <View className="flex-1">
-            <Text className="leading-snug" numberOfLines={2} style={[typeScale.titleSm, { color: colors.ink }]}>{course.name}</Text>
-            <Text className="mt-1" style={[typeScale.caption, { color: colors.muted }]}>{soon ? t('Cours en préparation', 'Kou ap prepare') : `${totalLessons} ${t('leçons', 'leson')}`}</Text>
-          </View>
-          {soon ? (
-            <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-              <Text style={[typeScale.micro, { color: colors.azure }]}>{t('Bientôt', 'Talè')}</Text>
-            </View>
-          ) : (
-            <View className="items-end flex-shrink-0">
-              <Text style={[typeScale.label, { color: pct > 0 ? color : colors.faint }]}>
-                {pct}%
-              </Text>
-              <ChevronRight color={colors.faint} size={16} className="mt-1" />
-            </View>
-          )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 }}>
+        {thumb && !thumbFailed ? (
+          <Image
+            source={{ uri: thumb }}
+            resizeMode="cover"
+            onError={() => setThumbFailed(true)}
+            style={{ width: 84, height: 52, borderRadius: 10, backgroundColor: colors.surfaceAlt }}
+          />
+        ) : (
+          <View style={{ width: 84, height: 52, borderRadius: 10, backgroundColor: color + '14' }} />
+        )}
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={2} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>
+            {soon
+              ? t('Cours en préparation', 'Kou ap prepare')
+              : summary.mastered > 0
+                ? `${summary.mastered}/${totalLessons} ${t('maîtrisées', 'metrize')}`
+                : `${totalLessons} ${t('leçons', 'leson')}`}
+          </Text>
         </View>
-        {!soon && pct > 0 && (
-          <View className="mt-3">
-            <ProgressBar value={pct} color={color} height={4} />
+        {soon ? (
+          <Text style={[typeScale.micro, { color: colors.faint }]}>{t('Bientôt', 'Talè')}</Text>
+        ) : summary.started > 0 ? (
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <Text style={[typeScale.label, { color: colors.ink }]}>{summary.points}</Text>
+            <MasteryMeter level={summary.level} size="sm" />
           </View>
+        ) : (
+          // Untouched course: a grey "0" over four invisible dashes said nothing
+          // and looked like a failed render.
+          <ChevronRight color={colors.faint} size={16} />
         )}
       </View>
     </PressableScale>
   );
 }
 
-function DrillCard({
-  title, subtitle, badge, color, Icon, onPress, comingSoon = false,
+/**
+ * A grade, as a card in a 2×2 grid.
+ *
+ * This started as a hairline row like everything else, which left this screen —
+ * the entry point to the whole catalogue — as four lines of text above 40% empty
+ * grey. Stripping containers is right for a long dense list and wrong for four
+ * navigation targets; those need enough weight to fill the page they own.
+ */
+function LevelCard({
+  label, sublabel, courseCount, summary, onPress,
 }: {
-  title: string; subtitle: string; badge: string; color: string; Icon: any; onPress: () => void; comingSoon?: boolean;
+  label: string;
+  sublabel: string;
+  courseCount: number;
+  summary: MasterySummary;
+  onPress: () => void;
 }) {
   const colors = useColors();
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  const started = summary.started > 0;
+
+  return (
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={started
+        ? `${label}. ${sublabel}. ${summary.points} ${t('sur', 'sou')} 100`
+        : `${label}. ${sublabel}. ${courseCount} ${t('cours', 'kou')}`}
+      style={{
+        flexGrow: 1, flexBasis: '46%',
+        backgroundColor: colors.surface,
+        borderRadius: radius.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: 16,
+        shadowColor: colors.azureDeep,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 10,
+        elevation: 2,
+      }}
+    >
+      <Text style={[typeScale.display, { color: colors.ink, fontSize: 24, lineHeight: 28 }]}>{label}</Text>
+      <Text
+        numberOfLines={2}
+        style={[typeScale.caption, { color: colors.muted, marginTop: 4, minHeight: 32 }]}
+      >
+        {sublabel}
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+        <Text style={[typeScale.micro, { color: colors.faint }]}>
+          {courseCount} {t('cours', 'kou')}
+        </Text>
+        {/* Nothing started = nothing to report. A "0" over four invisible
+            dashes read as a broken widget, not as a starting point. */}
+        {started ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+            <Text style={[typeScale.label, { color: colors.ink }]}>{summary.points}</Text>
+            <MasteryMeter level={summary.level} size="sm" />
+          </View>
+        ) : (
+          <ChevronRight color={colors.faint} size={16} />
+        )}
+      </View>
+    </PressableScale>
+  );
+}
+
+/**
+ * A subject, in the level → subject step. Keeps a real video still so the row
+ * carries the subject's own content rather than a generic tile.
+ */
+function DrillRow({
+  title, subtitle, badge, summary, thumb, tint, onPress, comingSoon = false,
+}: {
+  title: string;
+  subtitle: string;
+  badge?: string;
+  summary?: MasterySummary;
+  /** A still from one of the subject's videos — real content over a generic tile. */
+  thumb?: string | null;
+  tint?: string;
+  onPress: () => void;
+  comingSoon?: boolean;
+}) {
+  const colors = useColors();
+  const language = useStore((s) => s.language);
+  const started = !comingSoon && !!summary && summary.started > 0;
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const accent = tint ?? colors.azure;
+
   return (
     <PressableScale
       onPress={comingSoon ? undefined : onPress}
       disabled={comingSoon}
       accessibilityRole="button"
-      accessibilityLabel={title}
-      style={[{ backgroundColor: colors.surface, borderRadius: radius.card, marginBottom: 12 }, cardShadowFor(colors), comingSoon ? { opacity: 0.7 } : null]}
+      accessibilityLabel={started
+        ? `${title}. ${subtitle}. ${summary!.points} ${language === 'ht' ? 'sou' : 'sur'} 100`
+        : `${title}. ${subtitle}`}
+      style={{ borderTopWidth: 1, borderTopColor: colors.hairline, opacity: comingSoon ? 0.55 : 1 }}
     >
-      <View className="flex-row items-center p-4 gap-3">
-        <View
-          className="w-12 h-12 rounded-xl items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: color + '16' }}
-        >
-          <Icon color={color} size={22} />
-        </View>
-        <View className="flex-1">
-          <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
-          <Text className="mt-0.5" style={[typeScale.caption, { color: colors.muted }]}>{subtitle}</Text>
-        </View>
-        {comingSoon ? (
-          <View style={{ backgroundColor: colors.azureSoft, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, flexShrink: 0 }}>
-            <Text style={[typeScale.micro, { color: colors.azure }]}>{badge}</Text>
-          </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 }}>
+        {thumb && !thumbFailed ? (
+          <Image
+            source={{ uri: thumb }}
+            resizeMode="cover"
+            onError={() => setThumbFailed(true)}
+            style={{ width: 76, height: 48, borderRadius: 10, backgroundColor: colors.surfaceAlt }}
+          />
         ) : (
-          <View className="items-end flex-shrink-0 flex-row items-center gap-2">
-            <Text style={[typeScale.caption, { color: colors.muted }]}>{badge}</Text>
-            <ChevronRight color={colors.faint} size={18} />
+          // Fallback keeps the subject's colour rather than going blank.
+          <View style={{
+            width: 76, height: 48, borderRadius: 10, backgroundColor: accent + '1a',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: accent, opacity: 0.5 }} />
           </View>
         )}
+        <View style={{ flex: 1 }}>
+          <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>{subtitle}</Text>
+        </View>
+        {started ? (
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <Text style={[typeScale.label, { color: colors.ink }]}>{summary!.points}</Text>
+            <MasteryMeter level={summary!.level} size="sm" />
+          </View>
+        ) : badge ? (
+          <Text style={[typeScale.caption, { color: colors.faint }]}>{badge}</Text>
+        ) : null}
+        <ChevronRight color={colors.faint} size={16} />
       </View>
     </PressableScale>
   );
@@ -199,24 +292,24 @@ export default function CoursesScreen() {
     }
   }, [resetAt]);
 
-  const completedIds = useMemo(() => {
-    const ids = new Set<string>();
-    Object.entries(progress).forEach(([id, p]: [string, any]) => {
-      if (p?.completed) ids.add(id);
-    });
-    return ids;
-  }, [progress]);
+  // Walking every course's modules to collect lesson ids is the expensive part,
+  // and it does not depend on progress — so it is cached against the catalogue
+  // rather than redone for every row on every render. This list is the first
+  // screen of the app on low-end Android phones; the allocation churn showed.
+  const lessonIdsByCourse = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const c of courses ?? []) m.set(c.id, courseLessonIds(c));
+    return m;
+  }, [courses]);
 
-  function completedForCourse(course: any): number {
-    const units = Array.isArray(course?.modules) ? course.modules : [];
-    let count = 0;
-    for (const u of units) {
-      for (const l of u?.lessons ?? []) {
-        if (completedIds.has(l.id)) count++;
-      }
-    }
-    return count;
-  }
+  /** Mastery across any set of courses — one course, a subject, a whole level. */
+  const summaryFor = React.useCallback(
+    (group: any[]) => summarize(
+      group.flatMap((c) => lessonIdsByCourse.get(c.id) ?? []),
+      progress as ProgressMap,
+    ),
+    [lessonIdsByCourse, progress],
+  );
 
   const all = courses ?? [];
   const searching = search.trim().length > 0;
@@ -232,9 +325,9 @@ export default function CoursesScreen() {
     );
   }, [all, search, searching]);
 
-  const levelCounts = useMemo(() => {
-    const m: Record<string, number> = {};
-    all.forEach((c) => { m[c.level] = (m[c.level] ?? 0) + 1; });
+  const coursesByLevel = useMemo(() => {
+    const m: Record<string, any[]> = {};
+    all.forEach((c) => { m[c.level] = [...(m[c.level] ?? []), c]; });
     return m;
   }, [all]);
 
@@ -355,9 +448,9 @@ export default function CoursesScreen() {
             />
           }
           renderItem={({ item: course }) => (
-            <CourseCard
+            <CourseRow
               course={course}
-              completedCount={completedForCourse(course)}
+              summary={summaryFor([course])}
               onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
             />
           )}
@@ -370,43 +463,61 @@ export default function CoursesScreen() {
           contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Banque de Questions banner (top-level only) */}
-          <TouchableOpacity
-            activeOpacity={0.82}
+          {/* Banque de Questions — the one filled block on the page, so it
+              reads as an action rather than another row in the list. */}
+          <PressableScale
             onPress={() => navigation.navigate('Quizzes', {})}
-            className="mb-4"
-            style={[{ backgroundColor: colors.surface, borderRadius: radius.card }, cardShadowFor(colors)]}
+            pressedScale={0.985}
+            style={{
+              borderRadius: radius.card, marginBottom: 26, overflow: 'hidden',
+              shadowColor: colors.azureDeep, shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.22, shadowRadius: 18, elevation: 8,
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Banque de Questions', 'Bank Kesyon')}
           >
-            <View className="flex-row items-center p-4 gap-3">
-              <View
-                className="w-11 h-11 rounded-xl items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: colors.azureSoft }}
-              >
-                <BookMarked color={colors.azure} size={20} />
-              </View>
-              <View className="flex-1">
-                <Text style={[typeScale.titleSm, { color: colors.ink }]}>
-                  {t('Banque de Questions', 'Bank Kesyon')}
-                </Text>
-                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
+            <LinearGradient
+              colors={gradients.hero}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+              style={{ paddingVertical: 18, paddingHorizontal: 18 }}
+            >
+              {/* No glow circle here. These are hard-edged shapes: on the tall
+                  course hero the edge falls outside the frame, but on a short
+                  block it cut a visible arc across the card and read as a
+                  rendering fault. The gradient alone carries this one. */}
+              <BookMarked color="rgba(255,255,255,0.85)" size={20} />
+              <Text style={[typeScale.h2, { color: '#fff', marginTop: 12 }]}>
+                {t('Banque de Questions', 'Bank Kesyon')}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <Text style={[typeScale.body, { color: 'rgba(255,255,255,0.85)' }]}>
                   {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
                 </Text>
+                <ChevronRight color="rgba(255,255,255,0.85)" size={15} />
               </View>
-              <ChevronRight color={colors.azure} size={20} />
-            </View>
-          </TouchableOpacity>
+            </LinearGradient>
+          </PressableScale>
 
-          {LEVELS.filter((l) => (levelCounts[l.code] ?? 0) > 0).map((l) => (
-            <DrillCard
-              key={l.code}
-              title={l.label}
-              subtitle={isCreole ? l.sublabelHt : l.sublabel}
-              badge={`${levelCounts[l.code]} ${t('cours', 'kou')}`}
-              color={colors.azure}
-              Icon={GraduationCap}
-              onPress={() => setLevel(l.code)}
-            />
-          ))}
+          <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 12 }]}>
+            {t('Ton niveau', 'Nivo ou')}
+          </Text>
+
+          {/* A 2×2 grid, not four hairline rows. Four rows of text left the
+              bottom 40% of this screen empty, which read as an unfinished page;
+              the same four items as cards fill it and look deliberate. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            {LEVELS.filter((l) => (coursesByLevel[l.code]?.length ?? 0) > 0).map((l) => (
+              <LevelCard
+                key={l.code}
+                label={l.label}
+                sublabel={isCreole ? l.sublabelHt : l.sublabel}
+                courseCount={coursesByLevel[l.code].length}
+                summary={summaryFor(coursesByLevel[l.code])}
+                onPress={() => setLevel(l.code)}
+              />
+            ))}
+          </View>
         </ScrollView>
       ) : !subject ? (
         <ScrollView
@@ -430,13 +541,14 @@ export default function CoursesScreen() {
               const soon = group.length > 0 && group.every((c: any) => c.comingSoon);
               const lessons = group.reduce((s: number, c: any) => s + countLessons(c), 0);
               return (
-                <DrillCard
+                <DrillRow
                   key={code}
                   title={isCreole ? meta.nameHt : meta.name}
                   subtitle={soon ? t('Cours en préparation', 'Kou ap prepare') : `${lessons} ${t('leçons', 'leson')}`}
-                  badge={soon ? t('Bientôt', 'Talè') : (group.length > 1 ? `${group.length} ${t('cours', 'kou')}` : '')}
-                  color={meta.color}
-                  Icon={meta.Icon}
+                  badge={soon ? t('Bientôt', 'Talè') : (group.length > 1 ? `${group.length} ${t('cours', 'kou')}` : undefined)}
+                  summary={summaryFor(group)}
+                  thumb={soon ? null : courseVideoThumb(group[0])}
+                  tint={meta.color}
                   comingSoon={soon}
                   onPress={() => openSubject(code, group)}
                 />
@@ -468,9 +580,9 @@ export default function CoursesScreen() {
             />
           }
           renderItem={({ item: course }) => (
-            <CourseCard
+            <CourseRow
               course={course}
-              completedCount={completedForCourse(course)}
+              summary={summaryFor([course])}
               onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
             />
           )}

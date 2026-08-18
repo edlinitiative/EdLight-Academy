@@ -17,6 +17,7 @@ import {
   scheduleEngagementReminders,
 } from './src/services/notificationService';
 import { registerForPushNotifications } from './src/services/pushService';
+import { syncMasteryOnLogin, startMasterySync, stopMasterySync, disposeMasterySync } from './src/services/masterySync';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
 
 const queryClient = new QueryClient({
@@ -86,14 +87,26 @@ function AuthGate() {
             await registerForPushNotifications(firebaseUser.uid);
           })
           .catch(() => {});
+        // Mastery lives on the device (AsyncStorage) for offline use, but it is
+        // the app's core signal — losing a term's work to a reinstall is not
+        // acceptable. Pull the server's copy, join it with this device's, and
+        // write back if the device was ahead. Monotonic merge, so it is safe on
+        // every token refresh, not just a fresh sign-in.
+        syncMasteryOnLogin(firebaseUser.uid).catch(() => {});
       } else {
         lastPassiveUpsertUid = null; // re-upsert on next sign-in
+        stopMasterySync();
         logout();
       }
       setAuthConfirmed();
     });
     return unsubscribe;
   }, []);
+
+  // Mirror mastery upward as it changes (debounced, signed-in only). Registered
+  // once for the app's lifetime; it gates itself on the auth state.
+  useEffect(() => disposeMasterySync, []);
+  useEffect(() => { startMasterySync(); }, []);
 
   return <AppNavigator />;
 }

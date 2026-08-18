@@ -1,27 +1,36 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Platform, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import {
-  ArrowLeft, BookOpen, ChevronDown, ChevronRight, PlayCircle, ClipboardList,
-  CheckCircle2, ChevronLeft, Trophy, Sparkles,
+  ArrowLeft, ChevronDown, ChevronRight, PlayCircle, ClipboardList,
+  CheckCircle2, ChevronLeft, Trophy, Sparkles, Target,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import ProgressBar from '../components/ProgressBar';
 import LessonPractice from '../components/LessonPractice';
+import ChapterTest from '../components/ChapterTest';
+import MasteryArc from '../components/MasteryArc';
+import PressableScale from '../components/ui/PressableScale';
+import { MasteryMeter, MasteryBadge } from '../components/MasteryMeter';
+import { glass, DEEP } from '../components/quiz/QuizResultHero';
+import { mixHex, darkenUntilReadable, lightenUntilReadable } from '../utils/contrast';
+import {
+  summarize, lessonMastery, masteryLabel, masteryColor, masteryNextStep,
+  courseLessonIds, type ProgressMap,
+} from '../utils/mastery';
 import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
 import DefiHandoffCard from '../components/DefiHandoffCard';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
 import { useColors, typeScale, radius, courseTint } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
-import { courseSubjectIcon } from '../utils/subjectMeta';
 
 type Route = RouteProp<CoursesParamList, 'CourseDetail'>;
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseDetail'>;
@@ -182,23 +191,40 @@ function VideoPlayer({ videoUrl, isCreole }: { videoUrl: string; isCreole?: bool
   );
 }
 
-function UnitAccordion({ unit, index, tint, completedIds, activeLesson, onLessonPress, isCreole }: {
+/**
+ * One chapter of the syllabus.
+ *
+ * There is deliberately no card here — no tinted icon tile, no shadow, no
+ * chevron column. Chapters are separated by a hairline and told apart by type
+ * weight and their mastery ladder, so a course reads as one continuous document
+ * instead of a stack of identical rounded rectangles.
+ */
+function UnitRow({
+  unit, index, tint, progress, activeLesson, onLessonPress, onChapterTest, isCreole,
+}: {
   unit: any;
   index: number;
   tint: string;
-  completedIds: Set<string>;
+  progress: ProgressMap;
   activeLesson: any | null;
   onLessonPress: (lesson: any) => void;
+  onChapterTest: (unit: any) => void;
   isCreole?: boolean;
 }) {
   const colors = useColors();
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const lessons: any[] = useMemo(
+    () => (Array.isArray(unit?.lessons) ? unit.lessons : []),
+    [unit?.lessons],
+  );
+
   // Chapters start closed — opening a course used to dump every unit's whole
   // lesson list at once. The one exception is the unit that owns the lesson
   // currently being watched: it must stay open so the chapter never collapses
   // shut around it.
   const holdsActive = useMemo<boolean>(
-    () => !!activeLesson && (unit.lessons ?? []).some((l: any) => l.id === activeLesson.id),
-    [unit.lessons, activeLesson],
+    () => !!activeLesson && lessons.some((l: any) => l.id === activeLesson.id),
+    [lessons, activeLesson],
   );
   const [open, setOpen] = useState(holdsActive);
   // `activeLesson` arrives after mount for deep links ("Reprendre" / autoplay)
@@ -208,70 +234,127 @@ function UnitAccordion({ unit, index, tint, completedIds, activeLesson, onLesson
   useEffect(() => {
     if (holdsActive) setOpen(true);
   }, [holdsActive]);
-  const unitDone = (unit.lessons ?? []).filter((l: any) => completedIds.has(l.id)).length;
-  const unitTotal = (unit.lessons ?? []).length;
-  const unitComplete = unitTotal > 0 && unitDone === unitTotal;
+
+  const summary = useMemo(
+    () => summarize(lessons.map((l: any) => l.id).filter(Boolean), progress),
+    [lessons, progress],
+  );
+  // The chapter test is worth offering once anything in the chapter is solid —
+  // before that there is nothing for it to promote.
+  const testReady = summary.counts.proficient > 0 || summary.counts.familiar > 0 || summary.counts.mastered > 0;
 
   return (
-    <View className="mb-2">
+    <View style={{ borderTopWidth: 1, borderTopColor: colors.hairline }}>
       <TouchableOpacity
         onPress={() => setOpen((v) => !v)}
-        className="flex-row items-center bg-gray-100 dark:bg-slate-800 rounded-xl px-4 py-3 gap-3"
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 }}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${unit.title}. ${summary.points}/100`}
       >
-        {/* Unit index badge — flips to a check once the unit is finished */}
-        <View
-          className="items-center justify-center flex-shrink-0"
-          style={{
-            width: 30, height: 30, borderRadius: 15,
-            backgroundColor: unitComplete ? colors.success + '1e' : tint + '1e',
-          }}
-        >
-          {unitComplete
-            ? <CheckCircle2 color={colors.success} size={16} />
-            : <Text style={[typeScale.label, { color: tint }]}>{index + 1}</Text>}
+        <Text style={[typeScale.label, { color: colors.faint, width: 18 }]}>
+          {String(index + 1).padStart(2, '0')}
+        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[typeScale.title, { color: colors.ink }]}>{unit.title}</Text>
+          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>
+            {summary.total} {t('leçons', 'leson')}
+            {summary.mastered > 0 ? ` · ${summary.mastered} ${t('maîtrisée', 'metrize')}${summary.mastered > 1 && !isCreole ? 's' : ''}` : ''}
+          </Text>
         </View>
-        <View className="flex-1">
-          <Text style={[typeScale.titleSm, { color: colors.ink }]}>{unit.title}</Text>
-          <Text className="mt-0.5" style={[typeScale.caption, { color: colors.muted }]}>{unitDone}/{unitTotal} {isCreole ? 'leson' : 'leçons'}</Text>
-          {unitDone > 0 && !unitComplete && (
-            <View className="mt-2">
-              <ProgressBar value={Math.round((unitDone / unitTotal) * 100)} color={tint} height={3} />
-            </View>
-          )}
-        </View>
-        {open ? <ChevronDown color={colors.muted} size={18} /> : <ChevronRight color={colors.muted} size={18} />}
+        {/* Only once there is something to report — five chapters each showing
+            "0" over four invisible dashes read as a wall of failed widgets. */}
+        {summary.started > 0 ? (
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <Text style={[typeScale.label, { color: colors.ink }]}>{summary.points}</Text>
+            <MasteryMeter level={summary.level} size="sm" />
+          </View>
+        ) : null}
+        {open
+          ? <ChevronDown color={colors.faint} size={16} />
+          : <ChevronRight color={colors.faint} size={16} />}
       </TouchableOpacity>
+
       {open && (
-        <View className="mt-1">
-          {(unit.lessons ?? []).map((lesson: any) => {
-            const done = completedIds.has(lesson.id);
+        <View style={{ paddingBottom: 14, paddingLeft: 32 }}>
+          {lessons.map((lesson: any) => {
+            const level = lessonMastery(progress[lesson.id]);
             const active = activeLesson?.id === lesson.id;
             return (
               <TouchableOpacity
                 key={lesson.id}
                 onPress={() => onLessonPress(lesson)}
-                className={`flex-row items-center rounded-xl px-4 py-3 mb-1 gap-3 ${active ? 'bg-blue-50 dark:bg-[#1a2436] border border-blue-200 dark:border-slate-700' : 'bg-white dark:bg-[#131c2e]'}`}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 11,
+                  paddingVertical: 8, paddingRight: 4,
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${lesson.title}. ${masteryLabel(level, isCreole)}${lesson.duration ? `, ${lesson.duration} min` : ''}`}
               >
-                {lesson.type === 'video'
-                  ? <PlayCircle color={done ? colors.success : active ? colors.azure : colors.faint} size={20} />
-                  : <ClipboardList color={done ? colors.success : active ? colors.warn : colors.faint} size={20} />}
+                {/* State first — but the content TYPE still has to be legible.
+                    Dropping the play/quiz glyph and the duration made the list
+                    prettier and less useful: on a metered connection the length
+                    of a video is the thing a student picks on. */}
+                {level === 'none' ? (
+                  lesson.type === 'video'
+                    ? <PlayCircle color={colors.faint} size={17} />
+                    : <ClipboardList color={colors.faint} size={17} />
+                ) : (
+                  <View style={{
+                    width: 17, alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <View style={{
+                      width: 9, height: 9, borderRadius: 5,
+                      backgroundColor: masteryColor(level, colors),
+                    }} />
+                  </View>
+                )}
                 <Text
-                  className="flex-1"
-                  style={[active ? typeScale.bodyMd : typeScale.body, { color: active ? colors.azure : colors.ink }]}
+                  style={[
+                    active ? typeScale.bodyMd : typeScale.body,
+                    { flex: 1, color: active ? tint : colors.ink },
+                  ]}
                   numberOfLines={2}
                 >
                   {lesson.title}
                 </Text>
-                {done ? (
-                  <CheckCircle2 color={colors.success} size={16} />
-                ) : lesson.duration ? (
-                  <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+                {level === 'none' ? (
+                  lesson.duration ? (
                     <Text style={[typeScale.micro, { color: colors.faint }]}>{lesson.duration} min</Text>
-                  </View>
-                ) : null}
+                  ) : null
+                ) : (
+                  <MasteryBadge level={level} isCreole={isCreole} showLabel={false} />
+                )}
               </TouchableOpacity>
             );
           })}
+
+          {/* The chapter test closes the chapter — the only way to "maîtrisé". */}
+          <TouchableOpacity
+            onPress={() => onChapterTest(unit)}
+            disabled={!testReady}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              marginTop: 10, paddingVertical: 13, paddingHorizontal: 14,
+              borderRadius: radius.control, borderWidth: 1,
+              borderColor: testReady ? tint : colors.border,
+              opacity: testReady ? 1 : 0.55,
+            }}
+            accessibilityRole="button"
+          >
+            <Target color={testReady ? tint : colors.faint} size={17} />
+            <View style={{ flex: 1 }}>
+              <Text style={[typeScale.titleSm, { color: testReady ? colors.ink : colors.muted }]}>
+                {t('Test du chapitre', 'Tès chapit la')}
+              </Text>
+              <Text style={[typeScale.micro, { color: colors.faint, marginTop: 2 }]}>
+                {testReady
+                  ? t('Passe tes leçons au niveau maîtrisé', 'Pote leson ou yo nan nivo metrize')
+                  : t('Fais d\'abord les exercices d\'une leçon', 'Fè egzèsis yon leson anvan')}
+              </Text>
+            </View>
+            {testReady ? <ChevronRight color={colors.faint} size={16} /> : null}
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -292,6 +375,7 @@ export default function CourseDetailScreen() {
 
   const [activeLesson, setActiveLesson] = useState<any | null>(null);
   const [practiceMode, setPracticeMode] = useState<'flashcards' | 'exercices' | null>(null);
+  const [testUnit, setTestUnit] = useState<any | null>(null);
   const [showPracticeTip, setShowPracticeTip] = useState(false);
   const practiceRowRef = useRef<View>(null);
 
@@ -343,16 +427,45 @@ export default function CourseDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allLessons, lessonId, autoplay]);
 
-  const completedCount = useMemo(() => allLessons.filter((l: any) => completedIds.has(l.id)).length, [allLessons, completedIds]);
-  const pct = allLessons.length > 0 ? Math.round((completedCount / allLessons.length) * 100) : 0;
-
-  // Syllabus-state affordances: subject identity + the one lesson to resume on.
-  const tint = courseTint(course?.color);
-  const SubjectIcon = courseSubjectIcon(course);
-  const nextLesson = useMemo(
-    () => allLessons.find((l: any) => !completedIds.has(l.id)) ?? allLessons[0] ?? null,
-    [allLessons, completedIds],
+  // Mastery, not consumption: this is what the whole screen is organised around.
+  const summary = useMemo(
+    () => summarize(courseLessonIds(course), progress as ProgressMap),
+    [course, progress],
   );
+
+  const insets = useSafeAreaInsets();
+  const tint = courseTint(course?.color);
+  // The aurora ground, tinted toward this subject's colour — same recipe the
+  // results heroes use, so the learning screens and the victory screens finally
+  // belong to one product.
+  //
+  // `darkenUntilReadable` is not decoration: the tint comes from Firestore, so
+  // a bright course colour produced a hero carrying white text at ~2:1. The top
+  // stop is driven down until white clears AA, whatever colour content sends.
+  const aurora = useMemo(
+    () => [
+      darkenUntilReadable(mixHex(tint, DEEP, 0.16), DEEP, 8),
+      mixHex(tint, DEEP, 0.62),
+      DEEP,
+    ] as const,
+    [tint],
+  );
+  const arcFrom = useMemo(() => mixHex(tint, '#ffffff', 0.55), [tint]);
+  // The level name sits ON the ground, so it has to clear it — the old value
+  // (12% toward white) was 1.75:1 and effectively invisible.
+  const arcLabel = useMemo(
+    () => lightenUntilReadable(tint, aurora[0], 4.5),
+    [tint, aurora],
+  );
+  // "Next" is the first lesson that isn't finished learning — which is not the
+  // same as the first unwatched video. A lesson you watched but never practised
+  // is still the thing to go back to.
+  const nextLesson = useMemo(
+    () => allLessons.find((l: any) => lessonMastery(progress[l.id]) !== 'mastered') ?? allLessons[0] ?? null,
+    [allLessons, progress],
+  );
+  const nextLevel = nextLesson ? lessonMastery(progress[nextLesson.id]) : 'none';
+  const nextStep = masteryNextStep(nextLevel, isCreole);
   const description = useMemo(() => parseCourseDescription(course?.description), [course?.description]);
 
   if (isLoading) {
@@ -424,37 +537,44 @@ export default function CourseDetailScreen() {
 
   const isLastLesson = activeIndex === allLessons.length - 1;
   const isAlreadyDone = activeLesson ? completedIds.has(activeLesson.id) : false;
+  // The syllabus gets the aurora hero; once a lesson is open the video owns the
+  // screen and the chrome goes quiet.
+  const showHero = !activeLesson;
+
+  const goBack = () => {
+    // Stay inside the Courses stack: canGoBack() also counts the parent tab
+    // navigator, which sent deep-linked users "back" to Home. If this is the
+    // only route in the stack, land on the course list instead.
+    const stackRoutes = navigation.getState()?.routes ?? [];
+    if (stackRoutes.length > 1) navigation.goBack();
+    else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
+  };
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Back bar — shares the page ground (no seam), like the dashboard */}
-      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-        <TouchableOpacity
-          // Stay inside the Courses stack: canGoBack() also counts the parent
-          // tab navigator, which sent deep-linked users "back" to Home. If this
-          // is the only route in the stack, land on the course list instead.
-          onPress={() => {
-            const stackRoutes = navigation.getState()?.routes ?? [];
-            if (stackRoutes.length > 1) navigation.goBack();
-            else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
-          }}
-          className="mr-3 p-1"
-          accessibilityRole="button"
-          accessibilityLabel={t('Retour', 'Retounen')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <ArrowLeft color={colors.muted} size={22} />
-        </TouchableOpacity>
-        <View className="flex-1">
-          <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
-          <Text style={[typeScale.caption, { color: colors.faint }]}>{completedCount}/{allLessons.length} {t('leçons', 'leson')}</Text>
-        </View>
-      </View>
-
-      {/* Course progress bar — merges with the header band above (no white seam) */}
-      {allLessons.length > 0 && (
-        <View className="px-4 pb-3" style={{ backgroundColor: colors.bg }}>
-          <ProgressBar value={pct} color={course.color ?? colors.azure} height={4} />
+    <SafeAreaView
+      className="flex-1"
+      style={{ backgroundColor: showHero ? aurora[0] : colors.bg }}
+      edges={showHero ? [] : ['top']}
+    >
+      {/* Back bar — shares the page ground (no seam), like the dashboard.
+          In hero mode the back button lives on the gradient instead. */}
+      {!showHero && (
+        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+          <TouchableOpacity
+            onPress={goBack}
+            className="mr-3 p-1"
+            accessibilityRole="button"
+            accessibilityLabel={t('Retour', 'Retounen')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <ArrowLeft color={colors.muted} size={22} />
+          </TouchableOpacity>
+          <View className="flex-1">
+            <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
+            <Text style={[typeScale.caption, { color: colors.faint }]}>
+              {summary.total} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('chapitres', 'chapit')}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -479,6 +599,32 @@ export default function CourseDetailScreen() {
           {activeLesson.objectives ? (
             <Text className="mt-1 leading-relaxed" style={[typeScale.caption, { color: colors.muted }]}>{activeLesson.objectives}</Text>
           ) : null}
+
+          {/* Where this lesson stands. Hidden until something is earned: at
+              level `none` this was four invisible dashes next to "À découvrir",
+              which read as a stray artifact under the description rather than
+              as status. */}
+          {(() => {
+            const level = lessonMastery(progress[activeLesson.id]);
+            if (level === 'none') return null;
+            const step = masteryNextStep(level, isCreole);
+            return (
+              <View className="flex-row items-center gap-3 mt-3">
+                <MasteryMeter level={level} />
+                <Text style={[typeScale.micro, { color: masteryColor(level, colors) }]}>
+                  {masteryLabel(level, isCreole)}
+                </Text>
+                {step ? (
+                  <>
+                    <Text style={[typeScale.micro, { color: colors.border }]}>·</Text>
+                    <Text style={[typeScale.micro, { color: colors.faint, flex: 1 }]} numberOfLines={1}>
+                      {step}
+                    </Text>
+                  </>
+                ) : null}
+              </View>
+            );
+          })()}
           <View className="flex-row gap-3 mt-3">
             {isAlreadyDone ? (
               <View className="flex-row items-center gap-2 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-950 rounded-xl border border-emerald-200 dark:border-emerald-800">
@@ -555,41 +701,148 @@ export default function CourseDetailScreen() {
       )}
 
       {/* Module list */}
-      <ScrollView className="flex-1 px-4 pt-4" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}>
+      <ScrollView
+        className="flex-1"
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
+      >
+        {/* Overscroll filler — pulling past the top must reveal more aurora,
+            never a grey gap above it. */}
+        {showHero && (
+          <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: aurora[0] }} />
+        )}
+
+        {showHero && (
+          <LinearGradient
+            colors={aurora}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={{
+              paddingTop: insets.top + 4,
+              paddingBottom: 26,
+              paddingHorizontal: 20,
+              borderBottomLeftRadius: 30,
+              borderBottomRightRadius: 30,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Aurora glows — the depth cue that separates a real surface from
+                a flat blue rectangle. Both sit ABOVE the CTA's band: these are
+                hard-edged circles, and one crossing the translucent glass card
+                cut a visible arc through it. */}
+            <View pointerEvents="none" style={{ position: 'absolute', top: -95, left: -80, width: 260, height: 260, borderRadius: 130, backgroundColor: tint, opacity: 0.22 }} />
+            <View pointerEvents="none" style={{ position: 'absolute', top: -90, right: -95, width: 230, height: 230, borderRadius: 115, backgroundColor: arcFrom, opacity: 0.09 }} />
+
+            <View className="flex-row items-center" style={{ marginBottom: 4 }}>
+              <TouchableOpacity
+                onPress={goBack}
+                className="mr-3 -ml-1 p-1"
+                accessibilityRole="button"
+                accessibilityLabel={t('Retour', 'Retounen')}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <ArrowLeft color="rgba(255,255,255,0.9)" size={22} />
+              </TouchableOpacity>
+              <View className="flex-1">
+                <Text numberOfLines={1} style={[typeScale.h2, { color: '#fff' }]}>{course.name}</Text>
+                <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.82)', marginTop: 2 }]}>
+                  {summary.total} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('chapitres', 'chapit')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ alignItems: 'center', marginTop: 10 }}>
+              <MasteryArc
+                level={summary.level}
+                points={summary.points}
+                label={summary.started > 0 ? masteryLabel(summary.level, isCreole) : undefined}
+                caption={summary.started > 0
+                  ? (isCreole
+                    ? `${summary.mastered} sou ${summary.total} metrize`
+                    : `${summary.mastered} / ${summary.total} maîtrisées`)
+                  : t('Ta maîtrise', 'Metriz ou')}
+                from={arcFrom}
+                to={arcLabel}
+              />
+            </View>
+
+            {/* The single focal action, on glass: the next lesson, named, with
+                the exact thing that would move it up a rung. */}
+            {nextLesson && (
+              <PressableScale
+                onPress={() => onLessonPress(nextLesson)}
+                pressedScale={0.98}
+                style={[{
+                  marginTop: 18, borderRadius: 20, padding: 15,
+                  flexDirection: 'row', alignItems: 'center', gap: 13,
+                }, glass]}
+                accessibilityRole="button"
+                accessibilityLabel={`${nextStep ?? t('Continuer', 'Kontinye')} — ${nextLesson.title}`}
+              >
+                <View style={{
+                  width: 42, height: 42, borderRadius: 21,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <PlayCircle color="#fff" size={22} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.86)' }]}>
+                    {summary.started > 0 ? t('Prochaine étape', 'Pwochen etap') : t('Commence ici', 'Kòmanse la')}
+                  </Text>
+                  <Text style={[typeScale.titleSm, { color: '#fff', marginTop: 3 }]} numberOfLines={1}>
+                    {nextLesson.title}
+                  </Text>
+                  <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.82)', marginTop: 2 }]} numberOfLines={1}>
+                    {nextStep ?? t('Revoir la leçon', 'Revizite leson an')}
+                  </Text>
+                </View>
+                <ChevronRight color="rgba(255,255,255,0.88)" size={18} />
+              </PressableScale>
+            )}
+          </LinearGradient>
+        )}
+
+        <View style={{ paddingHorizontal: 16, paddingTop: showHero ? 22 : 16 }}>
         {/* Per-lesson discussion (shared thread with the web app) */}
         {activeLesson && (
           <LessonComments threadKey={`comments:${course.id}:${activeLesson.id}`} isCreole={isCreole} />
         )}
+        {/* Chapters come FIRST. They were sitting below the hero, the ladder
+            legend, the description AND the topic list — two and a half screens
+            of scrolling before a returning student could reach lesson four. All
+            of that is reference material; the lessons are the screen. */}
         {!activeLesson && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: radius.tile, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, shadowColor: colors.azure, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2 }}>
-            {/* Course name is already in the header bar above — don't repeat it here. */}
-            <View className="flex-row items-center gap-3">
-              <View
-                className="items-center justify-center flex-shrink-0"
-                style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: tint + '18' }}
-              >
-                <SubjectIcon color={tint} size={24} />
-              </View>
-              <View className="flex-1">
-                <Text style={[typeScale.caption, { color: colors.faint }]}>
-                  {allLessons.length} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('unités', 'inite')}
-                  {completedCount > 0 ? ` · ${pct}% ${t('complété', 'fini')}` : ''}
-                </Text>
-                {completedCount > 0 && (
-                  <View className="mt-2">
-                    <ProgressBar value={pct} color={tint} height={4} />
-                  </View>
-                )}
-              </View>
-            </View>
-            {/* Description, restructured: lead sentence as a short intro, then
-                the enumerated topics as a scannable list (see
-                parseCourseDescription — unrecognised shapes stay a paragraph). */}
+          <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 2 }]}>
+            {t('Chapitres', 'Chapit yo')} · {course.modules?.length ?? 0}
+          </Text>
+        )}
+        {(course.modules ?? []).map((unit: any, unitIndex: number) => (
+          <UnitRow
+            key={unit.id}
+            unit={unit}
+            index={unitIndex}
+            tint={tint}
+            progress={progress as ProgressMap}
+            activeLesson={activeLesson}
+            onLessonPress={onLessonPress}
+            onChapterTest={setTestUnit}
+            isCreole={isCreole}
+          />
+        ))}
+
+        {/* Reference material, after the lessons: what the course covers, and —
+            on a first visit only — how the four levels are earned. */}
+        {!activeLesson && (description.intro || description.topics.length > 0 || summary.started === 0) && (
+          <View style={{ marginTop: 34, paddingTop: 22, borderTopWidth: 1, borderTopColor: colors.hairline }}>
             {description.intro ? (
-              <Text className="leading-relaxed mt-3" style={[typeScale.body, { color: colors.muted }]}>{description.intro}</Text>
+              <Text style={[typeScale.body, { color: colors.muted, lineHeight: 21 }]}>
+                {description.intro}
+              </Text>
             ) : null}
+
             {description.topics.length > 0 && (
-              <View className="mt-4">
+              <View style={{ marginTop: 20 }}>
                 <Text style={[typeScale.overline, { color: colors.faint }]}>
                   {t('Ce que tu vas apprendre', 'Sa w ap aprann')}
                 </Text>
@@ -598,7 +851,7 @@ export default function CourseDetailScreen() {
                     <View key={`${topicIndex}-${topic.label}`} className="flex-row gap-2">
                       <View
                         className="flex-shrink-0"
-                        style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: tint, marginTop: 7 }}
+                        style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.border, marginTop: 8 }}
                       />
                       <View className="flex-1">
                         <Text style={[typeScale.bodyMd, { color: colors.ink }]}>{topic.label}</Text>
@@ -611,36 +864,31 @@ export default function CourseDetailScreen() {
                 </View>
               </View>
             )}
-            {/* One obvious way in — the first unfinished lesson, same target as
-                the Home card's autoplay. A syllabus alone is a dead end. */}
-            {nextLesson && (
-              <TouchableOpacity
-                onPress={() => onLessonPress(nextLesson)}
-                className="flex-row items-center justify-center gap-2 mt-4 py-3 rounded-full"
-                style={{ backgroundColor: tint }}
-                accessibilityRole="button"
-                accessibilityLabel={completedCount > 0 ? t('Continuer le cours', 'Kontinye kou a') : t('Commencer le cours', 'Kòmanse kou a')}
-              >
-                <PlayCircle color="#fff" size={18} />
-                <Text style={[typeScale.titleSm, { color: '#fff' }]}>
-                  {completedCount > 0 ? t('Continuer le cours', 'Kontinye kou a') : t('Commencer le cours', 'Kòmanse kou a')}
+
+            {summary.started === 0 && (
+              <View style={{ marginTop: 26 }}>
+                <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 12 }]}>
+                  {t('Comment on progresse', 'Kijan ou avanse')}
                 </Text>
-              </TouchableOpacity>
+                {([
+                  ['seen', t('Regarde la leçon', 'Gade leson an')],
+                  ['familiar', t('Réussis 70% des exercices', 'Reyisi 70% egzèsis yo')],
+                  ['proficient', t('Réussis-les à 100%', 'Reyisi yo a 100%')],
+                  ['mastered', t('Confirme-le au test du chapitre', 'Konfime l nan tès chapit la')],
+                ] as const).map(([lvl, how]) => (
+                  <View key={lvl} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: masteryColor(lvl, colors) }} />
+                    <Text style={[typeScale.bodyMd, { color: colors.ink, width: 84 }]}>
+                      {masteryLabel(lvl, isCreole)}
+                    </Text>
+                    <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>{how}</Text>
+                  </View>
+                ))}
+              </View>
             )}
           </View>
         )}
-        {(course.modules ?? []).map((unit: any, unitIndex: number) => (
-          <UnitAccordion
-            key={unit.id}
-            unit={unit}
-            index={unitIndex}
-            tint={tint}
-            completedIds={completedIds}
-            activeLesson={activeLesson}
-            onLessonPress={onLessonPress}
-            isCreole={isCreole}
-          />
-        ))}
+        </View>
       </ScrollView>
 
       {activeLesson && (
@@ -650,10 +898,22 @@ export default function CourseDetailScreen() {
           subjectCode={course.code}
           unitNo={activeLesson.unit_no}
           lessonNo={activeLesson.lesson_no}
+          lessonId={activeLesson.id}
           initialMode={practiceMode ?? 'flashcards'}
           isCreole={isCreole}
         />
       )}
+
+      <ChapterTest
+        visible={testUnit != null}
+        onClose={() => setTestUnit(null)}
+        subjectCode={course.code}
+        unitNo={testUnit?.lessons?.[0]?.unit_no ?? testUnit?.unit_no}
+        unitTitle={testUnit?.title}
+        lessons={testUnit?.lessons ?? []}
+        isCreole={isCreole}
+        tint={tint}
+      />
 
       <PracticeSpotlight
         visible={showPracticeTip && !practiceTipSeen && practiceMode == null}
