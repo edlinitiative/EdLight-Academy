@@ -8,6 +8,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import DashHeroStrip from '../components/DashHeroStrip';
 import useStore from '../contexts/store';
 import SmartSuggestion from '../components/SmartSuggestion';
+import ReviewBanner from '../components/ReviewBanner';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
@@ -273,6 +274,9 @@ export default function Dashboard() {
 
         {/* Season-aware recommendation (self-hides when there's nothing to nudge) */}
         <SmartSuggestion />
+
+        {/* Revizyon — missed questions waiting (self-hides at zero) */}
+        <ReviewBanner />
 
         {/* Glanceable stat tiles */}
         <div className="dash__tiles">

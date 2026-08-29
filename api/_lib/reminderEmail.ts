@@ -201,7 +201,7 @@ export function buildReminderEmailHtml(args: {
       </td></tr>`;
 
   const reviewLine = !isBack && (p.dueReviewCount ?? 0) > 0
-    ? `<div style="margin-top:14px;"><a href="${esc(`${APP_URL}/dashboard`)}" style="font-size:13px;font-weight:600;color:${AZURE};text-decoration:none;">${t.reviewLink(p.dueReviewCount!)}</a></div>`
+    ? `<div style="margin-top:14px;"><a href="${esc(`${APP_URL}/revision`)}" style="font-size:13px;font-weight:600;color:${AZURE};text-decoration:none;">${t.reviewLink(p.dueReviewCount!)}</a></div>`
     : '';
 
   return `<!doctype html>
