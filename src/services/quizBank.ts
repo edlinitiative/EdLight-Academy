@@ -251,6 +251,19 @@ export function toDirectItemFromRow(row) {
 
   const correctRaw = String(pick(row, ['correct_option', 'correctOption', 'answer', 'correct', 'key', 'correct_answer'], '')).trim();
 
+  // Identity meta rides on every item so graders can record per-question
+  // outcomes (Revizyon review map) against the quiz-bank doc id.
+  const metaInt = (v) => {
+    const m = String(v ?? '').match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  };
+  const meta = {
+    id: row?.id || null,
+    subjectCode: String(pick(row, ['subject_code', 'course_code'], '')).trim() || null,
+    unitNo: metaInt(pick(row, ['unit_no', 'Chapter_Number'], '')),
+    lessonNo: metaInt(pick(row, ['lesson_no', 'Subchapter_Number'], '')),
+  };
+
   const asMcq = () => {
     // Determine correct index from A/B/C/D, 1-based numbers, or by matching content
     let correctIndex = -1;
@@ -264,10 +277,10 @@ export function toDirectItemFromRow(row) {
     }
     if (labels.length >= 2 && correctIndex >= 0) {
       const correctLabel = labels[correctIndex];
-      return { kind: 'mcq', stem, context, options: labels, correctIndex, correctLabel, hints, good, wrong };
+      return { ...meta, kind: 'mcq', stem, context, options: labels, correctIndex, correctLabel, hints, good, wrong };
     }
     // If MCQ unusable, fall back to short answer with correctRaw
-    return { kind: 'short', stem, context, correctText: correctRaw, hints, good, wrong };
+    return { ...meta, kind: 'short', stem, context, correctText: correctRaw, hints, good, wrong };
   };
 
   if (qTypeRaw === 'truefalse' || qTypeRaw === 'true/false' || qTypeRaw === 'tf') {
@@ -281,15 +294,15 @@ export function toDirectItemFromRow(row) {
       if (m >= 0) idx = m;
     }
     const correctLabel = tfOptions[idx] ?? 'True';
-    return { kind: 'tf', stem, context, options: tfOptions, correctIndex: idx, correctLabel, hints, good, wrong };
+    return { ...meta, kind: 'tf', stem, context, options: tfOptions, correctIndex: idx, correctLabel, hints, good, wrong };
   }
 
   if (qTypeRaw === 'shortanswer' || qTypeRaw === 'short' || qTypeRaw === 'sa' || (labels.length === 0 && correctRaw)) {
-    return { kind: 'short', stem, context, correctText: correctRaw, alternatives, hints, good, wrong };
+    return { ...meta, kind: 'short', stem, context, correctText: correctRaw, alternatives, hints, good, wrong };
   }
 
   if (qTypeRaw === 'essay' || qTypeRaw === 'long-form' || qTypeRaw === 'long_form') {
-    return { kind: 'essay', stem, context, correctText: correctRaw, hints, good, wrong };
+    return { ...meta, kind: 'essay', stem, context, correctText: correctRaw, hints, good, wrong };
   }
 
   // Default to MCQ flow

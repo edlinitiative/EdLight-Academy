@@ -15,6 +15,7 @@ const Courses = lazyWithRetry(() => import('./pages/Courses'));
 const CourseDetail = lazyWithRetry(() => import('./pages/CourseDetail'));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'));
+const Revision = lazyWithRetry(() => import('./pages/Revision'));
 const About = lazyWithRetry(() => import('./pages/About'));
 const Contact = lazyWithRetry(() => import('./pages/Contact'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
@@ -85,6 +86,7 @@ export default function App() {
                 <Route path="courses/:courseId" element={<CourseDetail />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="quizzes" element={<Quizzes />} />
+                <Route path="revision" element={<Revision />} />
                 <Route path="about" element={<About />} />
                 <Route path="contact" element={<Contact />} />
                 <Route path="faq" element={<FAQ />} />

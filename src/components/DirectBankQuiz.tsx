@@ -4,6 +4,8 @@ import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
 import { useTranslation } from 'react-i18next';
 import { logAnswerEvent } from '../services/answerEventsService';
+import { recordReviewOutcome } from '../services/reviewService';
+import useStore from '../contexts/store';
 
 export const MAX_ATTEMPTS = 3;
 
@@ -61,9 +63,19 @@ export default function DirectBankQuiz({
       const alt = Array.isArray(item.alternatives) ? item.alternatives.map(norm).filter(Boolean) : [];
       isCorrect = norm(textAns) === target || alt.includes(norm(textAns));
     }
-    // Crowd-difficulty logging — first attempt only, so multi-try retries don't
-    // skew a question's facility (Adaptive Engine, Slice 3b).
-    if (attempts === 0) logAnswerEvent(item.stem, isCorrect);
+    // First attempt only, so multi-try retries don't skew the signals:
+    // crowd difficulty (Adaptive Engine) and the Revizyon review map — a
+    // question you needed a hint for is still a question you didn't know.
+    if (attempts === 0) {
+      logAnswerEvent(item.stem, isCorrect);
+      const uid = useStore.getState().user?.uid;
+      if (uid && item.id) {
+        recordReviewOutcome(uid, item.id, isCorrect, {
+          subjectCode: item.subjectCode ?? undefined,
+          unitNo: item.unitNo ?? undefined,
+        });
+      }
+    }
     if (isCorrect) {
       setSubmitted(true);
       setCorrect(true);

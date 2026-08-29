@@ -43,6 +43,8 @@ describe('buildReminderEmailHtml', () => {
     expect(html).toContain("7 jours d'affilée");
     expect(html).toContain('3 questions à revoir');
     expect(html).not.toContain('0 leçon');
+    // The review link lands on the web Revizyon session, not a bare dashboard.
+    expect(html).toContain('https://academy.edlight.org/revision');
   });
 
   it('names the course in the next-step box when given', () => {
