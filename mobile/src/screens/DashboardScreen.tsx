@@ -33,6 +33,11 @@ import SeasonCountdown from '../components/SeasonCountdown';
 import { gradeProfile } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
+import NextStepCard from '../components/NextStepCard';
+import ReviewCard from '../components/ReviewCard';
+import ReviewSession from '../components/ReviewSession';
+import { computeNextStep } from '../utils/nextStep';
+import { dueQuestionIds } from '../utils/review';
 import { TabParamList } from '../navigation/TabNavigator';
 import { resetTabToRoot } from '../navigation/navHelpers';
 import { useColors, useTheme, radius, courseTint, typeScale, gradients } from '../theme/theme';
@@ -155,7 +160,7 @@ function DashboardSkeleton() {
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface } = useTheme();
-  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge, progress: lessonProgress } = useStore();
+  const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge, progress: lessonProgress, review } = useStore();
   const practiceMode = gradeProfile(grade).primaryTab === 'Quiz' ? 'quiz' : 'exams';
   const themeMode = useStore((s) => s.theme);
   const insets = useSafeAreaInsets();
@@ -163,6 +168,7 @@ export default function DashboardScreen() {
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const [goalSheetOpen, setGoalSheetOpen] = React.useState(false);
+  const [reviewOpen, setReviewOpen] = React.useState(false);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -202,6 +208,22 @@ export default function DashboardScreen() {
       .slice(0, 4)
       .map((ec: any) => courses.find((c) => c.id === ec.id) ?? ec);
   }, [courses, enrolledCourses]);
+
+  // The one dominant "what now?" answer — resume, review, or the next rung of
+  // the mastery ladder (utils/nextStep). Recomputed as the inputs change; the
+  // card below the hero renders it.
+  const dueReviewCount = React.useMemo(() => dueQuestionIds(review).length, [review]);
+  const nextStep = React.useMemo(
+    () => computeNextStep({
+      courses,
+      enrolledCourses,
+      progress: lessonProgress as ProgressMap,
+      lastActivity,
+      dueReviewCount,
+      now: Date.now(),
+    }),
+    [courses, enrolledCourses, lessonProgress, lastActivity, dueReviewCount],
+  );
 
   // ---------------------------------------------------------------------------
   // Guards
@@ -304,8 +326,9 @@ export default function DashboardScreen() {
 
   const continueLearningBlock = displayCourses.length > 0 ? (
     <View className="px-5 mb-4">
+      {/* "Continuer" now belongs to the NextStepCard; this list is the shelf. */}
       <SectionHeader
-        title={t('Continuer à apprendre', 'Kontinye aprann')}
+        title={t('Mes cours', 'Kou mwen yo')}
         actionLabel={t('Voir tout', 'Wè tout')}
         onAction={goCourseList}
       />
@@ -447,9 +470,16 @@ export default function DashboardScreen() {
           </View>
         </LinearGradient>
 
-        {/* Resume banner — overlaps just under the hero as a layered card. Its
-            deep-link logic is unchanged; only its placement/elevation here. */}
-        {lastActivity ? (
+        {/* The dominant next-step card — overlaps just under the hero. It
+            answers "what should I do right now?" (resume / review / next rung
+            of the ladder). The old compact ResumeBanner remains only as the
+            fallback for activity the engine doesn't cover (e.g. a quiz resume
+            with no enrolled courses). */}
+        {nextStep ? (
+          <View className="px-5" style={{ marginTop: -12, zIndex: 2 }}>
+            <NextStepCard step={nextStep} onOpenReview={() => setReviewOpen(true)} />
+          </View>
+        ) : lastActivity ? (
           <View className="px-5" style={{ marginTop: -12, zIndex: 2 }}>
             <ResumeBanner />
           </View>
@@ -461,6 +491,13 @@ export default function DashboardScreen() {
         <View className="px-5 mt-4">
           <MissionCard onStart={() => { setPendingDailyChallenge(true); navigation.navigate('Trivia'); }} />
         </View>
+
+        {/* Revizyon — quiet entry to the student's own missed questions. When
+            the pile is big the NextStepCard above already leads with it, so
+            this row steps aside; it self-hides at zero. */}
+        {nextStep?.kind !== 'review' ? (
+          <ReviewCard onOpen={() => setReviewOpen(true)} />
+        ) : null}
 
         {/* Quick actions — one compact row (was a 2×2 grid). */}
         <View className="px-5 mt-4 mb-4">
@@ -591,6 +628,13 @@ export default function DashboardScreen() {
 
       {/* Sandra — AI tutor, always within thumb's reach */}
       <SandraFab onPress={() => (navigation as any).navigate('Sandra')} />
+
+      {/* Revizyon — a quiz built from the student's own missed questions */}
+      <ReviewSession
+        visible={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        isCreole={isCreole}
+      />
 
       {/* Weekly goal detail — explains the goal + reward before acting */}
       <WeeklyGoalSheet

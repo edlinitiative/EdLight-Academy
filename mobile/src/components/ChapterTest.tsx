@@ -63,6 +63,7 @@ export default function ChapterTest({
   const { data } = useAppData();
   const progress = useStore((s) => s.progress);
   const applyChapterTest = useStore((s) => s.applyChapterTest);
+  const recordReviewOutcome = useStore((s) => s.recordReviewOutcome);
   const accent = tint ?? colors.azure;
 
   // Driven to AA against white text — the tint is course data, not a token.
@@ -113,6 +114,13 @@ export default function ChapterTest({
       const ok = finalAnswers[card.id] === card.correctIndex;
       correctByCardId[card.id] = ok;
       if (ok) score += 1;
+      // Feed the review map: a miss here becomes a "Revizyon" question, a hit
+      // resolves one missed elsewhere.
+      recordReviewOutcome(card.id, ok, {
+        subjectCode,
+        unitNo: toInt(unitNo) ?? undefined,
+        lessonId: card.lessonNo != null ? lessonIdByNo[card.lessonNo] : undefined,
+      });
     }
     const verdicts = chapterTestVerdicts(cards, correctByCardId, lessonIdByNo);
     // Snapshot levels BEFORE the store mutates, so the result screen can show
