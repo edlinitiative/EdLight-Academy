@@ -3,74 +3,22 @@ import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'rea
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check, RotateCcw, Lightbulb, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useAppData } from '../hooks/useData';
+import useStore from '../contexts/store';
 import { useColors, type Palette } from '../theme/theme';
+import { selectCards, type PracticeCard as Card } from '../utils/practiceCards';
+import {
+  lessonMastery, masteryLabel, masteryColor, masteryNextStep, applyExerciseScore, type MasteryLevel,
+} from '../utils/mastery';
+import { success } from '../utils/haptics';
+import { MasteryMeter } from './MasteryMeter';
 
-type Card = {
-  id: string;
-  question: string;
-  options: string[];
-  correctIndex: number;
-  answer: string;
-  hint?: string;
-  explanation?: string;
-};
-
-const toInt = (v: any): number | null => {
-  if (v == null || v === '') return null;
-  const m = String(v).match(/\d+/);
-  return m ? parseInt(m[0], 10) : null;
-};
-
-function parseOptions(raw: any): string[] {
-  if (Array.isArray(raw)) return raw.map(String);
-  if (typeof raw === 'string' && raw.trim()) {
-    try { const a = JSON.parse(raw); if (Array.isArray(a)) return a.map(String); } catch { /* not json */ }
-  }
-  return [];
-}
-
-// Build the practice cards for a lesson from the shared quiz bank (Firestore
-// `quizzes`), keyed by subject_code + unit_no + lesson_no — the same source the
-// web flashcards / Exercices read. Falls back to the whole chapter if the
-// lesson has no lesson-level questions.
+// Cards come from the shared quiz bank (Firestore `quizzes`), keyed by
+// subject_code + unit_no + lesson_no — the same source the web flashcards /
+// Exercices read. See utils/practiceCards for the field-shape quirks.
 function useLessonCards(subjectCode?: string, unitNo?: any, lessonNo?: any): Card[] {
   const { data } = useAppData();
   const raw: any[] = data?.quizBank?.raw ?? [];
-  return useMemo(() => {
-    if (!subjectCode || unitNo == null) return [];
-    const u = toInt(unitNo);
-    const chapterRows = raw.filter(
-      (r) => String(r.subject_code) === String(subjectCode) && toInt(r.unit_no ?? r.Chapter_Number) === u,
-    );
-    let rows = chapterRows;
-    const l = toInt(lessonNo);
-    if (l != null) {
-      const lessonRows = chapterRows.filter((r) => toInt(r.lesson_no ?? r.Subchapter_Number) === l);
-      if (lessonRows.length > 0) rows = lessonRows;
-    }
-    return rows
-      .map((r, i): Card | null => {
-        const question = String(r.question ?? '').trim();
-        const options = parseOptions(r.options ?? r.choices);
-        if (!question || options.length < 2) return null;
-        const letter = String(r.correct_answer ?? r.correct_option ?? 'A').trim().toUpperCase();
-        let correctIndex = letter.charCodeAt(0) - 65;
-        if (correctIndex < 0 || correctIndex >= options.length) {
-          const byText = options.findIndex((o) => o === String(r.correct_answer ?? '').trim());
-          correctIndex = byText >= 0 ? byText : 0;
-        }
-        return {
-          id: r.id || `q${i}`,
-          question,
-          options,
-          correctIndex,
-          answer: options[correctIndex] ?? '',
-          hint: r.hint || undefined,
-          explanation: r.good_response || r.explanation || undefined,
-        };
-      })
-      .filter(Boolean) as Card[];
-  }, [raw, subjectCode, unitNo, lessonNo]);
+  return useMemo(() => selectCards(raw, subjectCode, unitNo, lessonNo), [raw, subjectCode, unitNo, lessonNo]);
 }
 
 // ─── Flashcards ───────────────────────────────────────────────────────────────
@@ -131,7 +79,15 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
 
 // ─── Exercices (MCQ) ──────────────────────────────────────────────────────────
 
-function Exercices({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
+function Exercices({
+  cards, isCreole, onFinish, resultLevel,
+}: {
+  cards: Card[];
+  isCreole: boolean;
+  onFinish?: (pct: number) => void;
+  /** The lesson's mastery level after the score was recorded. */
+  resultLevel?: MasteryLevel;
+}) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const [idx, setIdx] = useState(0);
@@ -142,15 +98,31 @@ function Exercices({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
   const card = cards[idx];
 
   if (done) {
+    const nextStep = resultLevel ? masteryNextStep(resultLevel, isCreole) : null;
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Text style={{ fontSize: 40, fontWeight: '800', color: colors.azure }}>{score}/{cards.length}</Text>
-        <Text style={{ fontSize: 15, color: colors.muted, marginTop: 8 }}>
-          {isCreole ? 'Byen fèt !' : 'Bien joué !'}
-        </Text>
+        {/* The score alone says nothing lasting — the level is what was earned. */}
+        {resultLevel ? (
+          <View style={{ alignItems: 'center', marginTop: 14, gap: 8 }}>
+            <MasteryMeter level={resultLevel} />
+            <Text style={{ fontSize: 13, color: masteryColor(resultLevel, colors), fontWeight: '600' }}>
+              {masteryLabel(resultLevel, isCreole)}
+            </Text>
+          </View>
+        ) : null}
+        {nextStep ? (
+          <Text style={{ fontSize: 14, color: colors.muted, marginTop: 10, textAlign: 'center' }}>
+            {isCreole ? 'Pwochen etap' : 'Prochaine étape'} : {nextStep}
+          </Text>
+        ) : (
+          <Text style={{ fontSize: 15, color: colors.muted, marginTop: 8 }}>
+            {isCreole ? 'Byen fèt !' : 'Bien joué !'}
+          </Text>
+        )}
         <TouchableOpacity
           onPress={() => { setIdx(0); setSelected(null); setChecked(false); setScore(0); setDone(false); }}
-          style={[styles.primaryBtn, { marginTop: 20 }]}
+          style={[styles.primaryBtn, { marginTop: 20, paddingHorizontal: 28 }]}
         >
           <Text style={styles.primaryBtnText}>{isCreole ? 'Rekòmanse' : 'Recommencer'}</Text>
         </TouchableOpacity>
@@ -165,7 +137,11 @@ function Exercices({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
     if (selected === card.correctIndex) setScore((s) => s + 1);
   };
   const nextQ = () => {
-    if (idx + 1 >= cards.length) return setDone(true);
+    if (idx + 1 >= cards.length) {
+      // `score` already includes this question — check() ran on the previous tap.
+      onFinish?.(cards.length > 0 ? (score / cards.length) * 100 : 0);
+      return setDone(true);
+    }
     setIdx((i) => i + 1); setSelected(null); setChecked(false);
   };
 
@@ -230,13 +206,16 @@ function Exercices({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
 // ─── Modal shell ──────────────────────────────────────────────────────────────
 
 export default function LessonPractice({
-  visible, onClose, subjectCode, unitNo, lessonNo, initialMode = 'flashcards', isCreole = false,
+  visible, onClose, subjectCode, unitNo, lessonNo, lessonId,
+  initialMode = 'flashcards', isCreole = false,
 }: {
   visible: boolean;
   onClose: () => void;
   subjectCode?: string;
   unitNo?: any;
   lessonNo?: any;
+  /** Which lesson these exercises count towards. Omit and nothing is recorded. */
+  lessonId?: string;
   initialMode?: 'flashcards' | 'exercices';
   isCreole?: boolean;
 }) {
@@ -244,6 +223,9 @@ export default function LessonPractice({
   const styles = makeStyles(colors);
   const [mode, setMode] = useState<'flashcards' | 'exercices'>(initialMode);
   const cards = useLessonCards(subjectCode, unitNo, lessonNo);
+  const recordLessonScore = useStore((s) => s.recordLessonScore);
+  const lessonProgress = useStore((s) => (lessonId ? s.progress[lessonId] : undefined));
+  const level = lessonMastery(lessonProgress);
 
   // Keep the tab in sync with whichever button opened the sheet.
   React.useEffect(() => { if (visible) setMode(initialMode); }, [visible, initialMode]);
@@ -287,7 +269,22 @@ export default function LessonPractice({
         ) : mode === 'flashcards' ? (
           <Flashcards cards={cards} isCreole={isCreole} />
         ) : (
-          <Exercices cards={cards} isCreole={isCreole} />
+          <Exercices
+            cards={cards}
+            isCreole={isCreole}
+            resultLevel={lessonId ? level : undefined}
+            onFinish={(pct) => {
+              if (!lessonId) return;
+              const before = lessonMastery(lessonProgress);
+              recordLessonScore(lessonId, pct);
+              // Earning a rung is the moment worth feeling. Compare against the
+              // level the record WOULD reach, not the (stale) render-time one.
+              const after = lessonMastery(
+                applyExerciseScore(lessonProgress, pct, Date.now()) ?? lessonProgress,
+              );
+              if (after !== before) success();
+            }}
+          />
         )}
       </SafeAreaView>
       </SafeAreaProvider>

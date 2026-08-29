@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { applyExerciseScore, applyChapterTestResult } from '../utils/mastery';
 
 export const FREE_VIDEO_LIMIT = 3;
 
@@ -66,6 +67,12 @@ export interface AppState {
   toggleTheme: () => void;
   enrollInCourse: (course: any) => void;
   updateProgress: (videoId: string, progress: any) => void;
+  /** Best-score bookkeeping for a lesson's exercises (drives mastery). */
+  recordLessonScore: (lessonId: string, pct: number) => void;
+  /** Chapter-test outcome: lessonId → were ALL its drawn questions correct. */
+  applyChapterTest: (perLesson: Record<string, boolean>) => void;
+  /** Replace the progress map with one already merged against the server. */
+  mergeRemoteProgress: (progress: Record<string, any>) => void;
   recordQuizAttempt: (quizId: string, attempt: any) => void;
   recordFreeVideoView: (videoId: string) => void;
   recordActivity: (activity: LastActivity) => void;
@@ -135,6 +142,32 @@ const useStore = create<AppState>()(
         set((s) => ({
           progress: { ...s.progress, [videoId]: { ...s.progress[videoId], ...progress } },
         })),
+
+      recordLessonScore: (lessonId, pct) =>
+        set((s) => {
+          if (!lessonId) return s;
+          const next = applyExerciseScore(s.progress[lessonId], pct, Date.now());
+          // `null` = the student didn't beat their record; leave the store alone
+          // so a bad round can't overwrite a good one.
+          if (!next) return s;
+          return { progress: { ...s.progress, [lessonId]: next } };
+        }),
+
+      applyChapterTest: (perLesson) =>
+        set((s) => {
+          const now = Date.now();
+          let changed = false;
+          const progress = { ...s.progress };
+          for (const [lessonId, allCorrect] of Object.entries(perLesson ?? {})) {
+            const next = applyChapterTestResult(progress[lessonId], allCorrect, now);
+            if (next) { progress[lessonId] = next; changed = true; }
+          }
+          return changed ? { progress } : s;
+        }),
+
+      // The caller (services/masterySync) has already joined this with local
+      // state, so it can be taken wholesale.
+      mergeRemoteProgress: (progress) => set({ progress: progress ?? {} }),
 
       recordQuizAttempt: (quizId, attempt) =>
         set((s) => ({
