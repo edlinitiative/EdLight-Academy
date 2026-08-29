@@ -25,7 +25,48 @@ describe('buildReminderEmailHtml', () => {
     expect(html).toContain('EdLight Academy');
     expect(html).toContain('Continue ta révision de Chimie');
     expect(html).toContain('en attente');
-    expect(html).toContain('Continuer à réviser'); // fr CTA
+    expect(html).toContain('Continuer à apprendre'); // fr CTA
+  });
+
+  it('greets the student by first name when known, and namelessly when not', () => {
+    const withName = buildReminderEmailHtml({ ...BASE, personalization: { firstName: 'Ted' } });
+    expect(withName).toContain('Bonjour, Ted 👋');
+    const without = buildReminderEmailHtml(BASE);
+    expect(without).toContain('Bonjour 👋');
+  });
+
+  it('shows progress chips only for non-zero values — absence, never a zero', () => {
+    const html = buildReminderEmailHtml({
+      ...BASE,
+      personalization: { streakDays: 7, masteredCount: 0, dueReviewCount: 3 },
+    });
+    expect(html).toContain("7 jours d'affilée");
+    expect(html).toContain('3 questions à revoir');
+    expect(html).not.toContain('0 leçon');
+  });
+
+  it('names the course in the next-step box when given', () => {
+    const html = buildReminderEmailHtml({ ...BASE, personalization: { courseName: 'Chimie NS1' } });
+    expect(html).toContain('Ta prochaine étape · Chimie NS1');
+  });
+
+  it('reengagement variant leads with earned mastery and its own CTA', () => {
+    const html = buildReminderEmailHtml({
+      ...BASE,
+      variant: 'reengagement',
+      personalization: { firstName: 'Ted', masteredCount: 12 },
+    });
+    expect(html).toContain('Tu nous manques, Ted 👋');
+    expect(html).toContain('12 leçons');
+    expect(html).toContain("Reprendre l'apprentissage");
+    // The win-back never shows the reminder chips row.
+    expect(html).not.toContain('à revoir');
+  });
+
+  it('escapes HTML in the first name', () => {
+    const html = buildReminderEmailHtml({ ...BASE, personalization: { firstName: '<img onerror=x>' } });
+    expect(html).not.toContain('<img onerror');
+    expect(html).toContain('&lt;img');
   });
 
   it('absolutizes a relative url to the academy origin', () => {
@@ -40,7 +81,7 @@ describe('buildReminderEmailHtml', () => {
 
   it('uses Haitian Creole copy when lang = ht', () => {
     const html = buildReminderEmailHtml({ ...BASE, lang: 'ht' });
-    expect(html).toContain('Kontinye revize'); // ht CTA
+    expect(html).toContain('Kontinye aprann'); // ht CTA
     expect(html).toContain('rapèl etid'); // ht footer
   });
 
@@ -96,7 +137,7 @@ describe('sendReminderEmail', () => {
     expect(body.to).toBe('student@example.com');
     expect(body.from).toBe('EdLight <sandra@edlight.org>');
     expect(body.subject).toContain('EdLight Academy');
-    expect(body.html).toContain('Continuer à réviser');
+    expect(body.html).toContain('Continuer à apprendre');
   });
 
   it('returns an error (never throws) on a non-ok Resend response', async () => {

@@ -22,7 +22,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getDb, getAuthAdmin, isAdminConfigured } from './_lib/firebaseAdmin';
 import { sendPushToUser, isPushConfigured } from './_lib/push';
-import { sendReminderEmail, isEmailConfigured, type ReminderEmailLang } from './_lib/reminderEmail';
+import { sendReminderEmail, isEmailConfigured, type ReminderEmailLang, type ReminderPersonalization } from './_lib/reminderEmail';
+import { loadEmailPersonalization } from './_lib/emailPersonalization';
 import type { Query } from 'firebase-admin/firestore';
 
 // Safety cap so a backlog can never blow the function timeout. Cron runs often
@@ -114,19 +115,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const summary = { scanned: due.size, sent: 0, delivered: 0, emailed: 0, pruned: 0, rescheduled: 0, errors: 0 };
 
-  // Cache uid→email lookups so a user with several due reminders in one run
-  // costs a single Auth read. `undefined` = not yet looked up; `null` = no email.
-  const emailCache = new Map<string, string | null>();
-  async function emailFor(uid: string): Promise<string | null> {
-    if (emailCache.has(uid)) return emailCache.get(uid) as string | null;
-    let email: string | null = null;
+  // Cache uid→identity lookups so a user with several due reminders in one run
+  // costs a single Auth read. `null` = looked up, no email.
+  const identityCache = new Map<string, { email: string; displayName: string | null } | null>();
+  async function identityFor(uid: string): Promise<{ email: string; displayName: string | null } | null> {
+    if (identityCache.has(uid)) return identityCache.get(uid) ?? null;
+    let identity: { email: string; displayName: string | null } | null = null;
     try {
-      email = (await getAuthAdmin().getUser(uid)).email || null;
+      const u = await getAuthAdmin().getUser(uid);
+      identity = u.email ? { email: u.email, displayName: u.displayName || null } : null;
     } catch {
-      email = null;
+      identity = null;
     }
-    emailCache.set(uid, email);
-    return email;
+    identityCache.set(uid, identity);
+    return identity;
+  }
+
+  // Per-user personalization (streak, mastery, review) and courseId→name are
+  // loaded once per run and only for users who actually get an email.
+  const personalizationCache = new Map<string, ReminderPersonalization>();
+  const courseNameCache = new Map<string, string | null>();
+  async function courseNameFor(courseId: string): Promise<string | null> {
+    if (courseNameCache.has(courseId)) return courseNameCache.get(courseId) ?? null;
+    let name: string | null = null;
+    try {
+      const snap = await db.collection('courses').doc(courseId).get();
+      name = snap.exists ? (snap.data()?.name as string) || null : null;
+    } catch {
+      name = null;
+    }
+    courseNameCache.set(courseId, name);
+    return name;
   }
 
   for (const docSnap of due.docs) {
@@ -174,10 +193,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           summary.pruned += result.pruned;
         }
         // Email channel — reaches users without push (iOS Safari, no PWA).
+        // Personalized: name, streak, mastery, review count, course name.
         if (emailOn && wantsEmail) {
-          const to = await emailFor(userId);
-          if (to) {
-            const r = await sendReminderEmail({ to, title, message, url, lang });
+          const identity = await identityFor(userId);
+          if (identity) {
+            let personalization = personalizationCache.get(userId);
+            if (!personalization) {
+              personalization = await loadEmailPersonalization(db, userId, identity.displayName);
+              personalizationCache.set(userId, personalization);
+            }
+            const courseName = reminder.courseId ? await courseNameFor(reminder.courseId) : null;
+            const r = await sendReminderEmail({
+              to: identity.email,
+              title,
+              message,
+              url,
+              lang,
+              variant: 'reminder',
+              personalization: { ...personalization, courseName },
+            });
             if ('sent' in r) summary.emailed += 1;
           }
         }

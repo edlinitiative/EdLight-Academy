@@ -31,6 +31,7 @@ import { getDb, getAuthAdmin, isAdminConfigured } from './_lib/firebaseAdmin';
 import { sendPushToUser, isPushConfigured } from './_lib/push';
 import { sendExpoPushToUser } from './_lib/expoPush';
 import { sendReminderEmail, isEmailConfigured, type ReminderEmailLang } from './_lib/reminderEmail';
+import { loadEmailPersonalization } from './_lib/emailPersonalization';
 
 const DAY_MS = 86_400_000;
 /** Gentle nudge once someone has been quiet this long… */
@@ -223,9 +224,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           summary.skippedPrefs += 1;
           continue;
         }
-        const email = (await getAuthAdmin().getUser(entry.uid).catch(() => null))?.email;
+        const authUser = await getAuthAdmin().getUser(entry.uid).catch(() => null);
+        const email = authUser?.email;
         if (!email) continue;
-        const r = await sendReminderEmail({ to: email, title: copy.title, message: copy.body, url: '/dashboard', lang });
+        // The win-back email leads with the student's name and what they've
+        // already earned (mastered lessons) — the template owns that copy;
+        // `title` still drives the subject line.
+        const personalization = await loadEmailPersonalization(db, entry.uid, authUser?.displayName);
+        const r = await sendReminderEmail({
+          to: email,
+          title: copy.title,
+          message: copy.body,
+          url: '/dashboard',
+          lang,
+          variant: 'reengagement',
+          personalization,
+        });
         if ('sent' in r) {
           summary.emailed += 1;
           await db.collection('users').doc(entry.uid)
