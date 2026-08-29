@@ -3,6 +3,7 @@ import { db } from './firebase';
 import useStore from '../contexts/store';
 import type { ProgressMap } from '../utils/mastery';
 import { mergeProgress, sameProgress, toWireFormat } from '../utils/masteryMerge';
+import { mergeReview, sameReview, toReviewWire, type ReviewMap } from '../utils/review';
 
 /**
  * Mastery sync.
@@ -28,6 +29,15 @@ const PUSH_DEBOUNCE_MS = 4000;
 
 function masteryDoc(uid: string) {
   return doc(db, 'users', uid, 'mastery', 'lessons');
+}
+
+/**
+ * Missed-question review lives beside mastery under the same rules block:
+ * `users/{uid}/mastery/review`, one doc, same monotonic-merge discipline
+ * (see utils/review — timestamps only move forward).
+ */
+function reviewDoc(uid: string) {
+  return doc(db, 'users', uid, 'mastery', 'review');
 }
 
 /** Read the server's copy. Returns `{}` when absent or unreachable. */
@@ -56,6 +66,32 @@ export async function pushMastery(uid: string, progress: ProgressMap): Promise<v
   }
 }
 
+/** Read the server's review copy. Returns `{}` when absent or unreachable. */
+export async function fetchRemoteReview(uid: string): Promise<ReviewMap> {
+  try {
+    const snap = await getDoc(reviewDoc(uid));
+    if (!snap.exists()) return {};
+    const questions = snap.data()?.questions;
+    return questions && typeof questions === 'object' ? (questions as ReviewMap) : {};
+  } catch (error) {
+    console.warn('[Review] fetch failed:', error);
+    return {};
+  }
+}
+
+/** Overwrite the server's review copy with `review` (already merged by the caller). */
+export async function pushReview(uid: string, review: ReviewMap): Promise<void> {
+  try {
+    await setDoc(
+      reviewDoc(uid),
+      { questions: toReviewWire(review), updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+  } catch (error) {
+    console.warn('[Review] push failed:', error);
+  }
+}
+
 /**
  * Sign-in reconciliation: pull the server's copy, join it with what's on the
  * device, keep the result locally, and write it back when the device knew
@@ -74,13 +110,22 @@ export async function syncMasteryOnLogin(uid: string): Promise<void> {
   // Only write when the device is genuinely ahead — a fresh install with
   // nothing local must not clear the server.
   if (!sameProgress(remote, merged)) await pushMastery(uid, merged);
+
+  // Same dance for the review map — independent doc, independent verdicts.
+  const localReview = useStore.getState().review as ReviewMap;
+  const remoteReview = await fetchRemoteReview(uid);
+  const mergedReview = mergeReview(localReview, remoteReview);
+  if (!sameReview(localReview, mergedReview)) useStore.getState().mergeRemoteReview(mergedReview);
+  if (!sameReview(remoteReview, mergedReview)) await pushReview(uid, mergedReview);
 }
 
 // ── Debounced background push ────────────────────────────────────────────────
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null;
+let reviewPushTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribe: (() => void) | null = null;
 let lastPushed: ProgressMap | null = null;
+let lastPushedReview: ReviewMap | null = null;
 
 /**
  * Watch the store and mirror mastery upward as it changes. Debounced, because
@@ -91,22 +136,40 @@ export function startMasterySync(): () => void {
   if (unsubscribe) return unsubscribe;
 
   unsubscribe = useStore.subscribe((state, prev) => {
-    if (state.progress === prev.progress) return;
     const uid = state.user?.uid;
-    if (!uid || !state.isAuthenticated) return;
     // Signed-in only: a guest has nowhere to sync to, and their work is carried
     // forward by the sign-in reconciliation above once they create an account.
-    if (lastPushed && sameProgress(lastPushed, state.progress as ProgressMap)) return;
+    if (!uid || !state.isAuthenticated) return;
 
-    if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(() => {
-      pushTimer = null;
-      const s = useStore.getState();
-      const currentUid = s.user?.uid;
-      if (!currentUid || !s.isAuthenticated) return;
-      lastPushed = s.progress as ProgressMap;
-      pushMastery(currentUid, lastPushed);
-    }, PUSH_DEBOUNCE_MS);
+    if (
+      state.progress !== prev.progress
+      && !(lastPushed && sameProgress(lastPushed, state.progress as ProgressMap))
+    ) {
+      if (pushTimer) clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        pushTimer = null;
+        const s = useStore.getState();
+        const currentUid = s.user?.uid;
+        if (!currentUid || !s.isAuthenticated) return;
+        lastPushed = s.progress as ProgressMap;
+        pushMastery(currentUid, lastPushed);
+      }, PUSH_DEBOUNCE_MS);
+    }
+
+    if (
+      state.review !== prev.review
+      && !(lastPushedReview && sameReview(lastPushedReview, state.review as ReviewMap))
+    ) {
+      if (reviewPushTimer) clearTimeout(reviewPushTimer);
+      reviewPushTimer = setTimeout(() => {
+        reviewPushTimer = null;
+        const s = useStore.getState();
+        const currentUid = s.user?.uid;
+        if (!currentUid || !s.isAuthenticated) return;
+        lastPushedReview = s.review as ReviewMap;
+        pushReview(currentUid, lastPushedReview);
+      }, PUSH_DEBOUNCE_MS);
+    }
   });
 
   return unsubscribe;
@@ -125,7 +188,9 @@ export function startMasterySync(): () => void {
  */
 export function stopMasterySync(): void {
   if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+  if (reviewPushTimer) { clearTimeout(reviewPushTimer); reviewPushTimer = null; }
   lastPushed = null;
+  lastPushedReview = null;
 }
 
 /** Full teardown — for tests and hot-reload, not for sign-out. */

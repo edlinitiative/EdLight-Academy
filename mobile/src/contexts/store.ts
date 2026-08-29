@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { applyExerciseScore, applyChapterTestResult } from '../utils/mastery';
+import { applyReviewOutcome, pruneReview, type ReviewMap, type ReviewMeta } from '../utils/review';
 
 export const FREE_VIDEO_LIMIT = 3;
 
@@ -39,6 +40,8 @@ export interface AppState {
   theme: 'light' | 'dark';
   enrolledCourses: any[];
   progress: Record<string, any>;
+  /** Missed quiz-bank questions, kept until answered right (drives "Revizyon"). */
+  review: ReviewMap;
   quizAttempts: Record<string, any[]>;
   freeVideoIds: string[];
   lastActivity: LastActivity | null;
@@ -73,6 +76,10 @@ export interface AppState {
   applyChapterTest: (perLesson: Record<string, boolean>) => void;
   /** Replace the progress map with one already merged against the server. */
   mergeRemoteProgress: (progress: Record<string, any>) => void;
+  /** One answered quiz-bank question — wrong makes it due for review, right resolves it. */
+  recordReviewOutcome: (questionId: string, correct: boolean, meta?: ReviewMeta) => void;
+  /** Replace the review map with one already merged against the server. */
+  mergeRemoteReview: (review: ReviewMap) => void;
   recordQuizAttempt: (quizId: string, attempt: any) => void;
   recordFreeVideoView: (videoId: string) => void;
   recordActivity: (activity: LastActivity) => void;
@@ -93,7 +100,11 @@ const useStore = create<AppState>()(
       user: null,
       isAuthenticated: false,
       authConfirmed: false,
-      language: 'fr',
+      // Kreyòl-first: the UI opens in the language students actually speak.
+      // Academic terms stay French inside the content; navigation is Creole.
+      // Existing installs keep whatever language they had (persisted), and
+      // Profile's switch still offers Français.
+      language: 'ht',
       hydrated: false,
       track: null,
       grade: null,
@@ -107,6 +118,7 @@ const useStore = create<AppState>()(
       theme: 'light',
       enrolledCourses: [],
       progress: {},
+      review: {},
       quizAttempts: {},
       freeVideoIds: [],
       lastActivity: null,
@@ -169,6 +181,20 @@ const useStore = create<AppState>()(
       // state, so it can be taken wholesale.
       mergeRemoteProgress: (progress) => set({ progress: progress ?? {} }),
 
+      recordReviewOutcome: (questionId, correct, meta) =>
+        set((s) => {
+          // Skip the parser's synthetic `q${index}` fallback ids — they're
+          // positional, so "q3" today is a different question tomorrow.
+          if (!questionId || /^q\d+$/.test(questionId)) return s;
+          const now = Date.now();
+          const next = applyReviewOutcome(s.review[questionId], correct, now, meta);
+          // `null` = nothing changed (a right answer on a never-missed question).
+          if (!next) return s;
+          return { review: pruneReview({ ...s.review, [questionId]: next }, now) };
+        }),
+
+      mergeRemoteReview: (review) => set({ review: review ?? {} }),
+
       recordQuizAttempt: (quizId, attempt) =>
         set((s) => ({
           quizAttempts: { ...s.quizAttempts, [quizId]: [...(s.quizAttempts[quizId] || []), attempt] },
@@ -214,6 +240,7 @@ const useStore = create<AppState>()(
           currentCourse: null,
           enrolledCourses: [],
           progress: {},
+          review: {},
           quizAttempts: {},
           lastActivity: null,
           showAuthModal: false,
@@ -238,6 +265,7 @@ const useStore = create<AppState>()(
         theme: s.theme,
         enrolledCourses: s.enrolledCourses,
         progress: s.progress,
+        review: s.review,
         quizAttempts: s.quizAttempts,
         freeVideoIds: s.freeVideoIds,
         lastActivity: s.lastActivity,

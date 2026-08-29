@@ -5,7 +5,7 @@ import { X, Check, RotateCcw, Lightbulb, ChevronLeft, ChevronRight } from 'lucid
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { useColors, type Palette } from '../theme/theme';
-import { selectCards, type PracticeCard as Card } from '../utils/practiceCards';
+import { selectCards, toInt, type PracticeCard as Card } from '../utils/practiceCards';
 import {
   lessonMastery, masteryLabel, masteryColor, masteryNextStep, applyExerciseScore, type MasteryLevel,
 } from '../utils/mastery';
@@ -79,12 +79,14 @@ function Flashcards({ cards, isCreole }: { cards: Card[]; isCreole: boolean }) {
 
 // ─── Exercices (MCQ) ──────────────────────────────────────────────────────────
 
-function Exercices({
-  cards, isCreole, onFinish, resultLevel,
+export function Exercices({
+  cards, isCreole, onFinish, onAnswer, resultLevel,
 }: {
   cards: Card[];
   isCreole: boolean;
   onFinish?: (pct: number) => void;
+  /** Fired as each answer is checked — feeds the missed-question review map. */
+  onAnswer?: (card: Card, correct: boolean) => void;
   /** The lesson's mastery level after the score was recorded. */
   resultLevel?: MasteryLevel;
 }) {
@@ -134,7 +136,9 @@ function Exercices({
   const check = () => {
     if (selected == null) return;
     setChecked(true);
-    if (selected === card.correctIndex) setScore((s) => s + 1);
+    const ok = selected === card.correctIndex;
+    if (ok) setScore((s) => s + 1);
+    onAnswer?.(card, ok);
   };
   const nextQ = () => {
     if (idx + 1 >= cards.length) {
@@ -224,6 +228,7 @@ export default function LessonPractice({
   const [mode, setMode] = useState<'flashcards' | 'exercices'>(initialMode);
   const cards = useLessonCards(subjectCode, unitNo, lessonNo);
   const recordLessonScore = useStore((s) => s.recordLessonScore);
+  const recordReviewOutcome = useStore((s) => s.recordReviewOutcome);
   const lessonProgress = useStore((s) => (lessonId ? s.progress[lessonId] : undefined));
   const level = lessonMastery(lessonProgress);
 
@@ -273,6 +278,13 @@ export default function LessonPractice({
             cards={cards}
             isCreole={isCreole}
             resultLevel={lessonId ? level : undefined}
+            onAnswer={(card, ok) =>
+              recordReviewOutcome(card.id, ok, {
+                subjectCode,
+                unitNo: toInt(unitNo) ?? undefined,
+                lessonId,
+              })
+            }
             onFinish={(pct) => {
               if (!lessonId) return;
               const before = lessonMastery(lessonProgress);
