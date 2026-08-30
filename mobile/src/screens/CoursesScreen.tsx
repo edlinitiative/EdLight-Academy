@@ -3,11 +3,10 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput, RefreshControl, FlatList, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useScrollToTop, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
-  Search, BookOpen, BookMarked, ChevronRight, ChevronLeft, GraduationCap,
+  Search, X, BookOpen, BookMarked, ClipboardCheck, ChevronRight,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import { getSubjectColor } from '../utils/shared';
@@ -20,23 +19,35 @@ import {
   summarize, courseLessonIds, masteryLabel, type MasterySummary, type ProgressMap,
 } from '../utils/mastery';
 import { CoursesParamList } from '../navigation/CoursesNavigator';
-import { useColors, radius, typeScale, gradients } from '../theme/theme';
+import { useColors, radius, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 
 type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
 
 /**
- * Browse flow: pick your grade (NS I–IV) → pick a subject → see only those
- * courses. An NSI student never has to scroll past NSIV material. Search stays
- * global (searches every course, whatever step you're on).
+ * The class is a FILTER, not a destination (TestFlight, 17 août: "maybe class
+ * should be a filter, then different sections for the student's class").
+ * One flat page: level chips on top (your class preselected), the selected
+ * level's courses and practice entries beneath, and every other level browsable
+ * as one shelf per subject — no drill-down to walk back out of.
  */
 const LEVELS = [
-  { code: 'NSI', label: 'NS I', sublabel: '1ère année du secondaire', sublabelHt: 'Premye ane segondè' },
-  { code: 'NSII', label: 'NS II', sublabel: '2ème année du secondaire', sublabelHt: 'Dezyèm ane segondè' },
-  { code: 'NSIII', label: 'NS III', sublabel: '3ème année du secondaire', sublabelHt: 'Twazyèm ane segondè' },
-  { code: 'NSIV', label: 'NS IV', sublabel: 'Terminale — année du Bac', sublabelHt: 'Tèminal — ane Bak la' },
+  { code: 'NSI', label: 'NS I' },
+  { code: 'NSII', label: 'NS II' },
+  { code: 'NSIII', label: 'NS III' },
+  { code: 'NSIV', label: 'NS IV' },
 ];
+
+/** The student's grade (store) → the catalogue level that is "their" class. */
+const GRADE_TO_LEVEL: Record<string, string> = {
+  NS1: 'NSI', NS2: 'NSII', NS3: 'NSIII', NS4: 'NSIV',
+  // Post-Bac students revise Terminale material.
+  POSTBAC: 'NSIV',
+};
+
+/** Shelf order: sciences the app is strongest in first, languages last. */
+const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'SVT', 'ECON', 'FR', 'EN'];
 
 function subjectMeta(code: string) {
   const meta = SUBJECT_META[code] ?? { name: code, nameHt: code, Icon: BookOpen };
@@ -125,139 +136,151 @@ function CourseRow({
   );
 }
 
-/**
- * A grade, as a card in a 2×2 grid.
- *
- * This started as a hairline row like everything else, which left this screen —
- * the entry point to the whole catalogue — as four lines of text above 40% empty
- * grey. Stripping containers is right for a long dense list and wrong for four
- * navigation targets; those need enough weight to fill the page they own.
- */
-function LevelCard({
-  label, sublabel, courseCount, summary, onPress,
+/** One level pill. The student's own class carries the "Klas mwen" tag. */
+function LevelChip({
+  label, mine, active, onPress,
 }: {
   label: string;
-  sublabel: string;
-  courseCount: number;
+  mine: boolean;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  const text = mine ? `${label} · ${t('Ma classe', 'Klas mwen')}` : label;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={mine ? `${label}, ${t('ma classe', 'klas mwen')}` : label}
+      style={{
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: active ? colors.azure : colors.surface,
+        borderWidth: 1,
+        borderColor: active ? colors.azure : colors.border,
+      }}
+    >
+      <Text style={[typeScale.label, { color: active ? '#fff' : colors.muted }]}>{text}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * A course in a subject shelf: a small card with the real video still on top
+ * and the level worn as a badge. When the student browses another level, their
+ * own class's card keeps an azure "klas mwen" badge so home is always visible.
+ */
+function ShelfCard({
+  course, levelLabel, mine, summary, onPress,
+}: {
+  course: any;
+  levelLabel: string;
+  mine: boolean;
   summary: MasterySummary;
   onPress: () => void;
 }) {
   const colors = useColors();
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
-  const started = summary.started > 0;
+  const soon = !!course.comingSoon;
+  const thumb = soon ? null : courseVideoThumb(course);
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const tint = getSubjectColor(course.subject);
+  const started = !soon && summary.started > 0;
+  const lessons = countLessons(course);
 
   return (
     <PressableScale
-      onPress={onPress}
+      onPress={soon ? undefined : onPress}
+      disabled={soon}
       accessibilityRole="button"
-      accessibilityLabel={started
-        ? `${label}. ${sublabel}. ${summary.points} ${t('sur', 'sou')} 100`
-        : `${label}. ${sublabel}. ${courseCount} ${t('cours', 'kou')}`}
+      accessibilityLabel={soon
+        ? `${course.name}. ${t('Cours en préparation', 'Kou ap prepare')}`
+        : started
+          ? `${course.name}. ${summary.points} ${t('sur', 'sou')} 100`
+          : `${course.name}. ${lessons} ${t('leçons', 'leson')}`}
       style={{
-        flexGrow: 1, flexBasis: '46%',
+        width: 172,
         backgroundColor: colors.surface,
         borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: 16,
-        shadowColor: colors.azureDeep,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 10,
-        elevation: 2,
+        borderWidth: mine ? 1.5 : 1,
+        borderColor: mine ? colors.azure : colors.border,
+        overflow: 'hidden',
+        opacity: soon ? 0.55 : 1,
       }}
     >
-      <Text style={[typeScale.display, { color: colors.ink, fontSize: 24, lineHeight: 28 }]}>{label}</Text>
-      <Text
-        numberOfLines={2}
-        style={[typeScale.caption, { color: colors.muted, marginTop: 4, minHeight: 32 }]}
-      >
-        {sublabel}
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
-        <Text style={[typeScale.micro, { color: colors.faint }]}>
-          {courseCount} {t('cours', 'kou')}
-        </Text>
-        {/* Nothing started = nothing to report. A "0" over four invisible
-            dashes read as a broken widget, not as a starting point. */}
-        {started ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-            <Text style={[typeScale.label, { color: colors.ink }]}>{summary.points}</Text>
-            <MasteryMeter level={summary.level} size="sm" />
-          </View>
-        ) : (
-          <ChevronRight color={colors.faint} size={16} />
-        )}
-      </View>
-    </PressableScale>
-  );
-}
-
-/**
- * A subject, in the level → subject step. Keeps a real video still so the row
- * carries the subject's own content rather than a generic tile.
- */
-function DrillRow({
-  title, subtitle, badge, summary, thumb, tint, onPress, comingSoon = false,
-}: {
-  title: string;
-  subtitle: string;
-  badge?: string;
-  summary?: MasterySummary;
-  /** A still from one of the subject's videos — real content over a generic tile. */
-  thumb?: string | null;
-  tint?: string;
-  onPress: () => void;
-  comingSoon?: boolean;
-}) {
-  const colors = useColors();
-  const language = useStore((s) => s.language);
-  const started = !comingSoon && !!summary && summary.started > 0;
-  const [thumbFailed, setThumbFailed] = useState(false);
-  const accent = tint ?? colors.azure;
-
-  return (
-    <PressableScale
-      onPress={comingSoon ? undefined : onPress}
-      disabled={comingSoon}
-      accessibilityRole="button"
-      accessibilityLabel={started
-        ? `${title}. ${subtitle}. ${summary!.points} ${language === 'ht' ? 'sou' : 'sur'} 100`
-        : `${title}. ${subtitle}`}
-      style={{ borderTopWidth: 1, borderTopColor: colors.hairline, opacity: comingSoon ? 0.55 : 1 }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 }}>
+      <View style={{ height: 72, backgroundColor: tint + '1a' }}>
         {thumb && !thumbFailed ? (
           <Image
             source={{ uri: thumb }}
             resizeMode="cover"
             onError={() => setThumbFailed(true)}
-            style={{ width: 76, height: 48, borderRadius: 10, backgroundColor: colors.surfaceAlt }}
+            style={{ width: '100%', height: '100%' }}
           />
-        ) : (
-          // Fallback keeps the subject's colour rather than going blank.
-          <View style={{
-            width: 76, height: 48, borderRadius: 10, backgroundColor: accent + '1a',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: accent, opacity: 0.5 }} />
-          </View>
-        )}
-        <View style={{ flex: 1 }}>
-          <Text style={[typeScale.title, { color: colors.ink }]}>{title}</Text>
-          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>{subtitle}</Text>
-        </View>
-        {started ? (
-          <View style={{ alignItems: 'flex-end', gap: 6 }}>
-            <Text style={[typeScale.label, { color: colors.ink }]}>{summary!.points}</Text>
-            <MasteryMeter level={summary!.level} size="sm" />
-          </View>
-        ) : badge ? (
-          <Text style={[typeScale.caption, { color: colors.faint }]}>{badge}</Text>
         ) : null}
-        <ChevronRight color={colors.faint} size={16} />
+        <View
+          style={{
+            position: 'absolute', top: 8, left: 8,
+            backgroundColor: mine ? colors.azure : 'rgba(15,30,56,0.62)',
+            borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2,
+          }}
+        >
+          <Text style={[typeScale.micro, { color: '#fff' }]}>
+            {mine ? `${levelLabel} · ${t('ma classe', 'klas mwen')}` : levelLabel}
+          </Text>
+        </View>
       </View>
+      <View style={{ padding: 11 }}>
+        <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink, fontSize: 14 }]}>{course.name}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, minHeight: 16 }}>
+          {soon ? (
+            <Text style={[typeScale.caption, { color: colors.faint }]}>{t('Bientôt', 'Talè')}</Text>
+          ) : started ? (
+            <>
+              <Text style={[typeScale.caption, { color: colors.muted }]}>{summary.points}/100</Text>
+              <MasteryMeter level={summary.level} size="sm" />
+            </>
+          ) : (
+            <Text style={[typeScale.caption, { color: colors.muted }]}>{lessons} {t('leçons', 'leson')}</Text>
+          )}
+        </View>
+      </View>
+    </PressableScale>
+  );
+}
+
+/** One of the two "Egzèse w" entry tiles (question bank / chapter tests). */
+function PracticeTile({
+  icon, title, subtitle, onPress,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${subtitle}`}
+      style={{
+        flex: 1,
+        backgroundColor: colors.surface,
+        borderRadius: radius.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: 14,
+      }}
+    >
+      {icon}
+      <Text style={[typeScale.title, { color: colors.ink, marginTop: 8 }]}>{title}</Text>
+      <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>{subtitle}</Text>
     </PressableScale>
   );
 }
@@ -269,6 +292,7 @@ export default function CoursesScreen() {
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const { language, progress } = useStore();
+  const grade = useStore((s) => s.grade);
   const colors = useColors();
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -276,19 +300,20 @@ export default function CoursesScreen() {
 
   const { data: courses, isLoading, isError, refetch, isFetching } = useCourses();
   const [search, setSearch] = useState('');
-  const [level, setLevel] = useState<string | null>(null);
-  const [subject, setSubject] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // null = "auto": follow the student's class (or the first level that has
+  // courses). Set only by an explicit chip tap, so a grade change in Profile
+  // re-anchors the tab without fighting a stale choice.
+  const [levelChoice, setLevelChoice] = useState<string | null>(null);
 
-  // The drill-down (level → subject) is local state on the tab-stack root, so it
-  // survives leaving the tab. Callers that mean "show me the whole catalog" send
-  // a `resetAt` nonce; without this, Home's "Voir tout" re-showed the last
-  // sub-list the student was in (reported as "voir tout opens the chemistry one").
+  // Entry points that mean "show me the whole catalog" (Home's "Voir tout")
+  // send a `resetAt` nonce: back to the student's own class, search cleared.
   const resetAt = route.params?.resetAt;
   React.useEffect(() => {
     if (resetAt) {
-      setLevel(null);
-      setSubject(null);
+      setLevelChoice(null);
       setSearch('');
+      setSearchOpen(false);
     }
   }, [resetAt]);
 
@@ -325,37 +350,78 @@ export default function CoursesScreen() {
     );
   }, [all, search, searching]);
 
-  const coursesByLevel = useMemo(() => {
-    const m: Record<string, any[]> = {};
-    all.forEach((c) => { m[c.level] = [...(m[c.level] ?? []), c]; });
-    return m;
-  }, [all]);
+  const availableLevels = useMemo(
+    () => LEVELS.filter((l) => all.some((c) => c.level === l.code)),
+    [all],
+  );
 
-  const subjectsForLevel = useMemo(() => {
-    if (!level) return [];
-    const m = new Map<string, any[]>();
-    all.forEach((c) => {
-      if (c.level === level) m.set(c.subject, [...(m.get(c.subject) ?? []), c]);
-    });
-    return Array.from(m.entries()).sort((a, b) =>
-      subjectMeta(a[0]).name.localeCompare(subjectMeta(b[0]).name, 'fr'));
-  }, [all, level]);
+  const myLevel = GRADE_TO_LEVEL[grade ?? ''] ?? null;
+  const myLevelAvailable = myLevel !== null && availableLevels.some((l) => l.code === myLevel);
+  // 7e–9e students have no NS class yet: NS I (what they're headed into) leads.
+  const selectedLevel = levelChoice
+    ?? (myLevelAvailable ? myLevel : availableLevels[0]?.code ?? null);
+  const selectedInfo = LEVELS.find((l) => l.code === selectedLevel);
 
-  // One course in the subject (the common case) → open it directly instead of
-  // showing a redundant single-card list.
-  const openSubject = (code: string, group: any[]) => {
-    if (group.length === 1) {
-      const course = group[0];
-      navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name });
-      return;
-    }
-    setSubject(code);
+  // The student's class chip always comes first; the rest keep catalogue order.
+  const chipLevels = useMemo(() => {
+    if (!myLevelAvailable) return availableLevels;
+    return [
+      ...availableLevels.filter((l) => l.code === myLevel),
+      ...availableLevels.filter((l) => l.code !== myLevel),
+    ];
+  }, [availableLevels, myLevel, myLevelAvailable]);
+
+  /** Subjects in shelf order — sciences first, unknown codes last. */
+  const subjectRank = (code: string) => {
+    const i = SUBJECT_ORDER.indexOf(code);
+    return i === -1 ? SUBJECT_ORDER.length : i;
   };
 
-  const courseList = useMemo(() => {
-    if (!level || !subject) return [];
-    return all.filter((c) => c.level === level && c.subject === subject);
-  }, [all, level, subject]);
+  const selectedCourses = useMemo(
+    () => all
+      .filter((c) => c.level === selectedLevel)
+      .sort((a, b) => subjectRank(a.subject) - subjectRank(b.subject)),
+    [all, selectedLevel],
+  );
+
+  // "Lòt nivo yo": every other level's courses, one shelf per subject (option D
+  // — students think in subjects; NS3 revision sits naturally under NS4). Cards
+  // are ordered levels-below-first (revision before preview), nearest first.
+  const shelves = useMemo(() => {
+    if (!selectedLevel) return [];
+    const selectedIdx = LEVELS.findIndex((l) => l.code === selectedLevel);
+    const cardRank = (levelCode: string) => {
+      const i = LEVELS.findIndex((l) => l.code === levelCode);
+      return i < selectedIdx ? selectedIdx - i : 100 + (i - selectedIdx);
+    };
+    const bySubject = new Map<string, any[]>();
+    for (const c of all) {
+      if (c.level === selectedLevel) continue;
+      bySubject.set(c.subject, [...(bySubject.get(c.subject) ?? []), c]);
+    }
+    return Array.from(bySubject.entries())
+      .map(([code, group]) => ({
+        code,
+        meta: subjectMeta(code),
+        courses: group.sort((a, b) => cardRank(a.level) - cardRank(b.level)),
+      }))
+      .sort((a, b) => subjectRank(a.code) - subjectRank(b.code));
+  }, [all, selectedLevel]);
+
+  // "Tès chapit" lands on the syllabus that owns the tests: the selected
+  // level's most-advanced course, or its first open course when nothing is
+  // started yet.
+  const chapterTestTarget = useMemo(() => {
+    const open = selectedCourses.filter((c) => !c.comingSoon);
+    if (open.length === 0) return null;
+    let best = open[0];
+    let bestPoints = -1;
+    for (const c of open) {
+      const s = summaryFor([c]);
+      if (s.started > 0 && s.points > bestPoints) { best = c; bestPoints = s.points; }
+    }
+    return best;
+  }, [selectedCourses, summaryFor]);
 
   if (isLoading) {
     return (
@@ -366,62 +432,49 @@ export default function CoursesScreen() {
   }
   if (isError) return <ErrorState onRetry={() => refetch()} />;
 
-  const levelInfo = LEVELS.find((l) => l.code === level);
-  const subjInfo = subject ? subjectMeta(subject) : null;
-
-  // Contextual header: title + back affordance per drill step.
-  const headerTitle = searching
-    ? t('Recherche', 'Rechèch')
-    : !level
-      ? t('Cours', 'Kou yo')
-      : !subject
-        ? (levelInfo?.label ?? level)
-        : (isCreole ? subjInfo?.nameHt : subjInfo?.name) ?? subject;
-
-  const headerSubtitle = searching
-    ? null
-    : !level
-      ? t('Choisis ton niveau pour commencer', 'Chwazi nivo ou pou kòmanse')
-      : !subject
-        ? t('Choisis une matière', 'Chwazi yon matyè')
-        : (levelInfo?.label ?? level);
-
-  const canGoBack = !searching && (level !== null);
-  const goBack = () => {
-    if (subject) setSubject(null);
-    else setLevel(null);
-  };
+  const openCourse = (course: any) =>
+    navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name });
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-      {/* Header + search — shares the page ground (no seam), like the dashboard */}
-      <View className="px-5 pt-5 pb-3" style={{ backgroundColor: colors.bg }}>
-        <View className="flex-row items-center mb-3">
-          {canGoBack && (
-            <TouchableOpacity onPress={goBack} className="mr-2 -ml-1 p-1" hitSlop={8} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
-              <ChevronLeft color={colors.muted} size={24} />
-            </TouchableOpacity>
-          )}
-          <View className="flex-1">
-            <Text style={[typeScale.display, { color: colors.ink }]}>
-              {headerTitle}
-            </Text>
-            {headerSubtitle ? (
-              <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>{headerSubtitle}</Text>
-            ) : null}
+      {/* Header — title + a search toggle. The permanent search field gave the
+          page two competing entry points; a magnifier that expands on demand
+          keeps the chips (the real navigation) on the first screen. */}
+      <View className="px-5 pt-5 pb-1" style={{ backgroundColor: colors.bg }}>
+        <View className="flex-row items-center justify-between">
+          <Text style={[typeScale.display, { color: colors.ink }]}>{t('Cours', 'Kou')}</Text>
+          <TouchableOpacity
+            onPress={() => {
+              if (searchOpen) setSearch('');
+              setSearchOpen(!searchOpen);
+            }}
+            hitSlop={8}
+            className="p-1"
+            accessibilityRole="button"
+            accessibilityLabel={searchOpen ? t('Fermer la recherche', 'Fèmen rechèch la') : t('Rechercher', 'Chèche')}
+          >
+            {searchOpen
+              ? <X color={colors.muted} size={22} />
+              : <Search color={colors.muted} size={20} />}
+          </TouchableOpacity>
+        </View>
+        {searchOpen && (
+          <View
+            className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3 mt-3"
+            style={{ borderColor: colors.border }}
+          >
+            <Search color={colors.faint} size={18} />
+            <TextInput
+              className="flex-1 py-3 ml-2"
+              style={[typeScale.body, { color: colors.ink }]}
+              placeholder={t('Rechercher un cours…', 'Chèche kou…')}
+              value={search}
+              onChangeText={setSearch}
+              autoFocus
+              placeholderTextColor={colors.faint}
+            />
           </View>
-        </View>
-        <View className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3" style={{ borderColor: colors.border }}>
-          <Search color={colors.faint} size={18} />
-          <TextInput
-            className="flex-1 py-3 ml-2"
-            style={[typeScale.body, { color: colors.ink }]}
-            placeholder={t('Rechercher un cours…', 'Chèche kou…')}
-            value={search}
-            onChangeText={setSearch}
-            placeholderTextColor={colors.faint}
-          />
-        </View>
+        )}
       </View>
 
       {searching ? (
@@ -451,142 +504,124 @@ export default function CoursesScreen() {
             <CourseRow
               course={course}
               summary={summaryFor([course])}
-              onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
+              onPress={() => openCourse(course)}
             />
           )}
         />
-      ) : !level ? (
-        <ScrollView
-          ref={scrollRef}
-          className="flex-1 px-5 pt-4"
-          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
-          contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Banque de Questions — the one filled block on the page, so it
-              reads as an action rather than another row in the list. */}
-          <PressableScale
-            onPress={() => navigation.navigate('Quizzes', {})}
-            pressedScale={0.985}
-            style={{
-              borderRadius: radius.card, marginBottom: 26, overflow: 'hidden',
-              shadowColor: colors.azureDeep, shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.22, shadowRadius: 18, elevation: 8,
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('Banque de Questions', 'Bank Kesyon')}
-          >
-            <LinearGradient
-              colors={gradients.hero}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={{ paddingVertical: 18, paddingHorizontal: 18 }}
-            >
-              {/* No glow circle here. These are hard-edged shapes: on the tall
-                  course hero the edge falls outside the frame, but on a short
-                  block it cut a visible arc across the card and read as a
-                  rendering fault. The gradient alone carries this one. */}
-              <BookMarked color="rgba(255,255,255,0.85)" size={20} />
-              <Text style={[typeScale.h2, { color: '#fff', marginTop: 12 }]}>
-                {t('Banque de Questions', 'Bank Kesyon')}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <Text style={[typeScale.body, { color: 'rgba(255,255,255,0.85)' }]}>
-                  {t('Entraîne-toi par matière et chapitre', 'Pratike pa matyè ak chapit')}
-                </Text>
-                <ChevronRight color="rgba(255,255,255,0.85)" size={15} />
-              </View>
-            </LinearGradient>
-          </PressableScale>
-
-          <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 12 }]}>
-            {t('Ton niveau', 'Nivo ou')}
-          </Text>
-
-          {/* A 2×2 grid, not four hairline rows. Four rows of text left the
-              bottom 40% of this screen empty, which read as an unfinished page;
-              the same four items as cards fill it and look deliberate. */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            {LEVELS.filter((l) => (coursesByLevel[l.code]?.length ?? 0) > 0).map((l) => (
-              <LevelCard
-                key={l.code}
-                label={l.label}
-                sublabel={isCreole ? l.sublabelHt : l.sublabel}
-                courseCount={coursesByLevel[l.code].length}
-                summary={summaryFor(coursesByLevel[l.code])}
-                onPress={() => setLevel(l.code)}
-              />
-            ))}
-          </View>
-        </ScrollView>
-      ) : !subject ? (
-        <ScrollView
-          ref={scrollRef}
-          className="flex-1 px-5 pt-4"
-          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
-          contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
-          showsVerticalScrollIndicator={false}
-        >
-          {subjectsForLevel.length === 0 ? (
-            <EmptyState
-              icon={<GraduationCap color={colors.azure} size={34} strokeWidth={1.75} />}
-              message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
-              description={t('Ce niveau n\'a pas encore de matières. Reviens bientôt !', 'Nivo sa a poko gen matyè. Tounen talè !')}
-              ctaLabel={t('Retour', 'Retounen')}
-              onCta={goBack}
-            />
-          ) : (
-            subjectsForLevel.map(([code, group]) => {
-              const meta = subjectMeta(code);
-              const soon = group.length > 0 && group.every((c: any) => c.comingSoon);
-              const lessons = group.reduce((s: number, c: any) => s + countLessons(c), 0);
-              return (
-                <DrillRow
-                  key={code}
-                  title={isCreole ? meta.nameHt : meta.name}
-                  subtitle={soon ? t('Cours en préparation', 'Kou ap prepare') : `${lessons} ${t('leçons', 'leson')}`}
-                  badge={soon ? t('Bientôt', 'Talè') : (group.length > 1 ? `${group.length} ${t('cours', 'kou')}` : undefined)}
-                  summary={summaryFor(group)}
-                  thumb={soon ? null : courseVideoThumb(group[0])}
-                  tint={meta.color}
-                  comingSoon={soon}
-                  onPress={() => openSubject(code, group)}
-                />
-              );
-            })
-          )}
-        </ScrollView>
       ) : (
-        <FlatList
+        <ScrollView
           ref={scrollRef}
-          data={courseList}
-          keyExtractor={(course) => course.id}
           className="flex-1"
-          contentContainerStyle={[{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 }, centerColumn]}
-          showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.azure} />}
-          ListHeaderComponent={
-            courseList.length > 0 ? (
-              <Text className="mb-3" style={[typeScale.caption, { color: colors.muted }]}>{courseList.length} {t('cours', 'kou')}</Text>
-            ) : null
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon={<BookOpen color={colors.azure} size={34} strokeWidth={1.75} />}
-              message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
-              description={t('Aucun cours dans cette matière pour l\'instant.', 'Pa gen kou nan matyè sa a pou kounye a.')}
-              ctaLabel={t('Retour', 'Retounen')}
-              onCta={goBack}
-            />
-          }
-          renderItem={({ item: course }) => (
-            <CourseRow
-              course={course}
-              summary={summaryFor([course])}
-              onPress={() => navigation.navigate('CourseDetail', { courseId: course.id, courseName: course.name })}
-            />
-          )}
-        />
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          stickyHeaderIndices={[0]}
+        >
+          {/* Level chips — sticky, so the filter stays reachable down the page. */}
+          <View style={{ backgroundColor: colors.bg, paddingVertical: 10 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
+            >
+              {chipLevels.map((l) => (
+                <LevelChip
+                  key={l.code}
+                  label={l.label}
+                  mine={l.code === myLevel}
+                  active={l.code === selectedLevel}
+                  onPress={() => setLevelChoice(l.code)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={[{ paddingHorizontal: 20 }, centerColumn]}>
+            {/* The selected level's courses */}
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 10 }}>
+              <Text style={[typeScale.h2, { color: colors.ink }]}>
+                {t(`Cours ${selectedInfo?.label ?? ''}`, `Kou ${selectedInfo?.label ?? ''} yo`)}
+              </Text>
+              <Text style={[typeScale.caption, { color: colors.muted }]}>
+                {selectedCourses.length} {t('cours', 'kou')}
+              </Text>
+            </View>
+            <View style={{ marginTop: 4 }}>
+              {selectedCourses.length === 0 ? (
+                <EmptyState
+                  icon={<BookOpen color={colors.azure} size={34} strokeWidth={1.75} />}
+                  message={t('Aucun cours trouvé.', 'Nou pa jwenn okenn kou.')}
+                  description={t("Ce niveau n'a pas encore de cours. Reviens bientôt !", 'Nivo sa a poko gen kou. Tounen talè !')}
+                />
+              ) : (
+                selectedCourses.map((course) => (
+                  <CourseRow
+                    key={course.id}
+                    course={course}
+                    summary={summaryFor([course])}
+                    onPress={() => openCourse(course)}
+                  />
+                ))
+              )}
+            </View>
+
+            {/* Practice for the selected level */}
+            {selectedCourses.length > 0 && (
+              <>
+                <Text style={[typeScale.h2, { color: colors.ink, marginTop: 24 }]}>
+                  {t(`Entraîne-toi · ${selectedInfo?.label ?? ''}`, `Egzèse w · ${selectedInfo?.label ?? ''}`)}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                  <PracticeTile
+                    icon={<BookMarked color={colors.azure} size={20} />}
+                    title={t('Banque de questions', 'Bank kesyon')}
+                    subtitle={t('Par matière et chapitre', 'Pa matyè ak chapit')}
+                    onPress={() => navigation.navigate('Quizzes', {})}
+                  />
+                  {chapterTestTarget && (
+                    <PracticeTile
+                      icon={<ClipboardCheck color={colors.azure} size={20} />}
+                      title={t('Tests de chapitre', 'Tès chapit')}
+                      subtitle={t('Vise la maîtrise', 'Vize metriz la')}
+                      onPress={() => openCourse(chapterTestTarget)}
+                    />
+                  )}
+                </View>
+              </>
+            )}
+
+            {/* Other levels, shelved by subject — revision below, preview above */}
+            {shelves.length > 0 && (
+              <Text style={[typeScale.overline, { color: colors.faint, marginTop: 28 }]}>
+                {t('Autres niveaux', 'Lòt nivo yo')}
+              </Text>
+            )}
+          </View>
+
+          {shelves.map(({ code, meta, courses: group }) => (
+            <View key={code} style={{ marginTop: 18 }}>
+              <Text style={[typeScale.h2, { color: colors.ink, paddingHorizontal: 20 }, centerColumn]}>
+                {isCreole ? meta.nameHt : meta.name}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingTop: 10 }}
+              >
+                {group.map((course) => (
+                  <ShelfCard
+                    key={course.id}
+                    course={course}
+                    levelLabel={LEVELS.find((l) => l.code === course.level)?.label ?? course.level}
+                    mine={course.level === myLevel}
+                    summary={summaryFor([course])}
+                    onPress={() => openCourse(course)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ))}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
