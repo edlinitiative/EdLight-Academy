@@ -319,6 +319,7 @@ export function groupQuestionsIntoQuizzes(rows: any[]): any[] {
       };
       groups.set(key, group);
     }
+    const unitNoMatch = String(row.unit_no ?? row.Chapter_Number ?? '').match(/\d+/);
     group.questions.push({
       id: row.id,
       question,
@@ -326,6 +327,9 @@ export function groupQuestionsIntoQuizzes(rows: any[]): any[] {
       answer: String(row.correct_answer ?? row.good_response ?? ''),
       hint: row.hint || row.hint1 || '',
       explanation: row.explanation || '',
+      // Identity meta so the runner can record per-question review outcomes.
+      subjectCode: subjectCode !== 'Divers' ? subjectCode : undefined,
+      unitNo: unitNoMatch ? parseInt(unitNoMatch[0], 10) : undefined,
     });
   }
   return Array.from(groups.values())

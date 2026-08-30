@@ -278,6 +278,14 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
     if (correct) success(); else warn();
     // Crowd-difficulty logging (Adaptive Engine, Slice 3b).
     logAnswerEvent(q.question ?? q.stem, correct);
+    // Revizyon: a miss here becomes a review question; a hit resolves one
+    // missed anywhere (lesson exercises, chapter test, web).
+    if (q.id) {
+      useStore.getState().recordReviewOutcome(q.id, correct, {
+        subjectCode: q.subjectCode,
+        unitNo: q.unitNo,
+      });
+    }
   }
 
   function handleNext() {
