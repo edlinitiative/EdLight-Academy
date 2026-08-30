@@ -20,7 +20,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sparkles, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
+import { Sparkles, GraduationCap, RotateCcw, X, Send, Lock, AlertTriangle } from 'lucide-react-native';
 import Markdown from 'react-native-markdown-display';
 import MathText, { HAS_MATH } from '../components/MathText';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
@@ -423,7 +423,7 @@ export default function SandraScreen({
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }}>
         <View className="flex-row items-center justify-between px-4 py-3">
           <View className="flex-row items-center gap-2">
-            <Sparkles size={20} color={colors.coral} />
+            <GraduationCap size={20} color={colors.coral} />
             <Text style={[typeScale.h2, { color: colors.ink }]}>Sandra</Text>
           </View>
           {onClose ? (
@@ -486,7 +486,10 @@ export default function SandraScreen({
   // ── chat ────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.bg }}>
+    // surface, not bg: the safe-area strip above the header must be the SAME
+    // colour as the header band (TestFlight 2026-08-29 — "the top part should
+    // be the same color as the banner"). The chat area below sets its own bg.
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.surface }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -502,7 +505,9 @@ export default function SandraScreen({
               className="w-10 h-10 rounded-full items-center justify-center"
               style={{ backgroundColor: colors.coralSoft }}
             >
-              <Sparkles size={20} color={colors.coral} />
+              {/* GraduationCap, not Sparkles — she's a tutor, not a magic wand
+                  (and the FAB already owns the chat-bubble glyph). */}
+              <GraduationCap size={20} color={colors.coral} />
             </View>
             <View>
               <Text maxFontSizeMultiplier={1.3} style={[typeScale.h2, { color: colors.ink }]}>Sandra</Text>

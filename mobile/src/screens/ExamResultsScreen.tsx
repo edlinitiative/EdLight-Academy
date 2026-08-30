@@ -20,6 +20,7 @@ import Confetti from '../components/ui/Confetti';
 import PopIn from '../components/ui/PopIn';
 import { useReduceMotion } from '../utils/motion';
 import { success as hapticSuccess, tapMedium, tapLight } from '../utils/haptics';
+import { mathToText } from '../utils/mathText';
 import MathText from '../components/MathText';
 import DefiHandoffCard from '../components/DefiHandoffCard';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
@@ -121,7 +122,7 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
   const isCorrect = !isUnanswered && isCorrectResult(result, answer, question);
   // Correctness must not rely on the icon colour alone — state it in the label.
   const statusLabel = isUnanswered ? t('sans réponse', 'san repons') : isCorrect ? t('correcte', 'kòrèk') : t('incorrecte', 'pa kòrèk');
-  const questionText = String(question._displayText ?? question.question ?? '');
+  const questionText = mathToText(String(question._displayText ?? question.question ?? ''));
 
   return (
     <PressableScale
@@ -141,7 +142,7 @@ function QuestionReviewItem({ question, index, answer, result }: { question: any
             : <XCircle color={colors.danger} size={20} />}
         <Text style={[typeScale.caption, { width: 24, color: colors.muted, fontFamily: 'Satoshi-Bold' }]}>Q{index + 1}</Text>
         <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink }]} numberOfLines={expanded ? undefined : 2}>
-          {question._displayText ?? question.question ?? ''}
+          {questionText}
         </Text>
         {expanded
           ? <ChevronDown color={colors.faint} size={16} />

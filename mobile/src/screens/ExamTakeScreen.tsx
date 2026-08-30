@@ -20,6 +20,7 @@ import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
 import { select, tapMedium } from '../utils/haptics';
+import { mathToText } from '../utils/mathText';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
@@ -175,8 +176,10 @@ function normalizeOptions(raw: any): { key: string; label: string; value: string
     return raw
       .filter((opt) => opt != null)
       .map((opt, i) => {
-        const label = typeof opt === 'string' ? opt : String(opt?.text ?? opt?.label ?? opt);
-        return { key: letters[i] ?? String(i + 1), label, value: label };
+        // mathToText: quiz content carries LaTeX ("\frac{2}{7}") that RN can't
+        // typeset — render the readable Unicode form, grade on the raw value.
+        const raw = typeof opt === 'string' ? opt : String(opt?.text ?? opt?.label ?? opt);
+        return { key: letters[i] ?? String(i + 1), label: mathToText(raw), value: raw };
       });
   }
   if (raw && typeof raw === 'object') {
@@ -184,7 +187,7 @@ function normalizeOptions(raw: any): { key: string; label: string; value: string
       .filter(([, v]) => v != null)
       .map(([k, v]) => {
         const label = typeof v === 'string' ? v : String(v);
-        return { key: String(k), label, value: String(k) };
+        return { key: String(k), label: mathToText(label), value: String(k) };
       });
   }
   return [];
@@ -738,7 +741,7 @@ export default function ExamTakeScreen() {
   const isLast = safeIdx === questions.length - 1;
   const progress = Math.round((answeredCount / questions.length) * 100);
   const points = Number(q?.points) || 0;
-  const questionText = String(q?._displayText ?? q?.question ?? '');
+  const questionText = mathToText(String(q?._displayText ?? q?.question ?? ''));
   const rawAnswer = answers[safeIdx];
   const answerText = Array.isArray(rawAnswer) ? rawAnswer.join(', ') : String(rawAnswer ?? '');
 

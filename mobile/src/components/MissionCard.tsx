@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Zap, Check, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
@@ -79,12 +79,11 @@ export default function MissionCard({ onStart }: { onStart: () => void }) {
         end={{ x: 1, y: 1 }}
         style={{ padding: 15 }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 8 }}>
-          <Zap color="#fde68a" size={13} />
-          <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.9)' }]}>
-            {t('Mission du jour · +50 XP', 'Misyon jodi a · +50 XP')}
-          </Text>
-        </View>
+        {/* Text-only eyebrow — the little ⚡ glyph read as clutter next to an
+            overline (TestFlight 2026-08-17: "remove icons"). */}
+        <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.9)', marginBottom: 8 }]}>
+          {t('Mission du jour · +50 XP', 'Misyon jodi a · +50 XP')}
+        </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1 }}>
             <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>

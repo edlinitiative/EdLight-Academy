@@ -46,4 +46,16 @@ describe('mathToText', () => {
   it('handles a mixed markdown + math line', () => {
     expect(mathToText('Le **numérateur** est $\\frac{1}{4}$.')).toBe('Le **numérateur** est 1/4.');
   });
+
+  it('resolves NESTED constructs innermost-first (the exam-options bug)', () => {
+    // The TestFlight "formatting issues" screenshot: raw \frac inside \sqrt.
+    expect(mathToText('$\\sqrt{\\frac{2}{7}}$')).toBe('√(2/7)');
+    expect(mathToText('$36\\sqrt{\\frac{2}{7}} - 50\\sqrt{\\frac{2}{7}}$')).toBe('36√(2/7) - 50√(2/7)');
+    expect(mathToText('$\\frac{18\\sqrt{2}}{7}$')).toBe('(18√(2))/7');
+  });
+
+  it('normalizes the pre-mixed Unicode form "√{…}" from the quiz bank', () => {
+    expect(mathToText('36√{\\frac{2}{7}}')).toBe('36√(2/7)');
+    expect(mathToText('17√{\\frac{2}{49}}')).toBe('17√(2/49)');
+  });
 });

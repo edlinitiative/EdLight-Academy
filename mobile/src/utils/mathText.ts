@@ -41,7 +41,10 @@ function toScript(s: string, map: Record<string, string>): string | null {
 const looksMath = (inner: string) => /[\\^_{}]/.test(inner);
 
 export function mathToText(input: string): string {
-  if (!input || (!input.includes('$') && !input.includes('\\'))) return input;
+  if (!input) return input;
+  // Quiz-bank content sometimes mixes Unicode with LaTeX ("√{\frac{2}{7}}"),
+  // so braces alone are reason enough to run — not just $ and backslashes.
+  if (!input.includes('$') && !input.includes('\\') && !/√\s*\{/.test(input)) return input;
   let s = input;
 
   // Strip math delimiters, keeping inner content (but leave literal "$5" prose).
@@ -49,19 +52,33 @@ export function mathToText(input: string): string {
   s = s.replace(/\$([^$\n]*?)\$/g, (m, inner) => (looksMath(inner) ? inner : m));
   s = s.replace(/\\\(([\s\S]*?)\\\)/g, '$1').replace(/\\\[([\s\S]*?)\\\]/g, '$1');
 
-  // \frac{a}{b} / \dfrac / \tfrac -> a/b (parenthesize multi-char parts)
-  const wrap = (x: string) => (x.length > 1 ? `(${x})` : x);
-  s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_, a, b) => `${wrap(a)}/${wrap(b)}`);
-  // \sqrt{x} -> √(x)
-  s = s.replace(/\\sqrt\s*\{([^{}]*)\}/g, (_, x) => `√(${x})`);
-  // text-ish wrappers keep their content
-  s = s.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}/g, '$1');
+  // Parenthesize multi-char parts, but a bare number needs no parentheses
+  // ("2/49" reads fine; "2/(49)" reads like a mistake).
+  const wrap = (x: string) => (x.length > 1 && !/^\d+(?:[.,]\d+)?$/.test(x) ? `(${x})` : x);
 
-  // super/subscripts
-  s = s.replace(/\^\{([^{}]*)\}/g, (_, x) => toScript(x, SUP) ?? `^(${x})`);
-  s = s.replace(/\^(\w)/g, (_, x) => toScript(x, SUP) ?? `^${x}`);
-  s = s.replace(/_\{([^{}]*)\}/g, (_, x) => toScript(x, SUB) ?? `_(${x})`);
-  s = s.replace(/_(\w)/g, (_, x) => toScript(x, SUB) ?? `_${x}`);
+  // The structural rules only match brace groups with NO nested braces, so a
+  // construct inside another ("\sqrt{\frac{2}{7}}") needs the inner one
+  // rewritten first. Loop until stable — innermost resolves each pass.
+  // (This was the "formatting issues" TestFlight bug: exam options showed
+  // raw "36√{\frac{2}{7}}".)
+  for (let pass = 0; pass < 8; pass += 1) {
+    const before = s;
+
+    // \frac{a}{b} / \dfrac / \tfrac -> a/b (parenthesize multi-char parts)
+    s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_, a, b) => `${wrap(a)}/${wrap(b)}`);
+    // \sqrt{x} -> √(x) — also the pre-mixed Unicode form "√{x}"
+    s = s.replace(/(?:\\sqrt|√)\s*\{([^{}]*)\}/g, (_, x) => `√(${x})`);
+    // text-ish wrappers keep their content
+    s = s.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}/g, '$1');
+
+    // super/subscripts
+    s = s.replace(/\^\{([^{}]*)\}/g, (_, x) => toScript(x, SUP) ?? `^(${x})`);
+    s = s.replace(/\^(\w)/g, (_, x) => toScript(x, SUP) ?? `^${x}`);
+    s = s.replace(/_\{([^{}]*)\}/g, (_, x) => toScript(x, SUB) ?? `_(${x})`);
+    s = s.replace(/_(\w)/g, (_, x) => toScript(x, SUB) ?? `_${x}`);
+
+    if (s === before) break;
+  }
 
   // \left( \right) sizing wrappers are noise in plain text
   s = s.replace(/\\left\s*/g, '').replace(/\\right\s*/g, '');
