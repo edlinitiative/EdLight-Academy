@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform } from 'react-native';
@@ -13,7 +13,7 @@ import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
-import { lightColors, darkColors, typeScale, fonts } from '../theme/theme';
+import { lightColors, darkColors } from '../theme/theme';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import CoursesNavigator from './CoursesNavigator';
@@ -59,20 +59,20 @@ const ICON_SIZE = 23;
 const DOUBLE_TAP_MS = 350;
 
 
-// One tab item: icon + label as a single column, with the focused capsule
-// wrapping BOTH. The capsule is a NEUTRAL fill, not a brand tint — in the
-// reference the accent lives only in the icon and label, which keeps the bar
+// One tab item, wrapped by the focused capsule. The capsule is a NEUTRAL fill,
+// not a brand tint — the accent lives only in the icon, which keeps the bar
 // quiet and lets the selected item read as "lifted" rather than "coloured in".
 // It fades/scales in; reduce-motion collapses that to an instant state change.
+// Icons only (Ted, 2026-08-31): the glyphs are unambiguous and the bar reads
+// calmer without five captions. Accessibility keeps the names via each
+// screen's tabBarAccessibilityLabel.
 function TabItem({
   icon,
-  label,
   color,
   focused,
   dark,
 }: {
   icon: TabIconName;
-  label: string;
   color: string;
   focused: boolean;
   dark: boolean;
@@ -107,17 +107,6 @@ function TabItem({
         ]}
       />
       <TabIcon name={icon} color={color} size={ICON_SIZE} focused={focused} />
-      <Text
-        allowFontScaling
-        maxFontSizeMultiplier={1.3}
-        numberOfLines={1}
-        // 11pt with no fixed lineHeight: 9.5pt sat below the practical legibility
-        // floor, and a hard 11pt lineHeight clipped descenders on "Examens" /
-        // "Egzamen" once Dynamic Type scaled the text up.
-        style={[typeScale.micro, { fontSize: 11, marginTop: 2, color, fontFamily: focused ? fonts.bold : fonts.medium }]}
-      >
-        {label}
-      </Text>
     </View>
   );
 }
@@ -226,7 +215,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Accueil', 'Akèy'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="dashboard" label={t('Accueil', 'Akèy')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="dashboard" color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -244,7 +233,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Cours', 'Kou'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="courses" label={t('Cours', 'Kou')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="courses" color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -266,7 +255,6 @@ function JsTabNavigator() {
           tabBarIcon: ({ color, focused }) => (
             <TabItem
               icon={quizPrimary ? 'quiz' : 'exams'}
-              label={quizPrimary ? t('Quiz', 'Quiz') : t('Examens', 'Egzamen')}
               color={color}
               focused={focused}
               dark={dark}
@@ -280,7 +268,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Jeux', 'Jwèt'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="games" label={t('Jeux', 'Jwèt')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="games" color={color} focused={focused} dark={dark} />
           ),
         }}
       />
@@ -290,7 +278,7 @@ function JsTabNavigator() {
         options={{
           tabBarAccessibilityLabel: t('Profil', 'Pwofil'),
           tabBarIcon: ({ color, focused }) => (
-            <TabItem icon="profile" label={t('Profil', 'Pwofil')} color={color} focused={focused} dark={dark} />
+            <TabItem icon="profile" color={color} focused={focused} dark={dark} />
           ),
         }}
       />

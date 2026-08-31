@@ -65,6 +65,10 @@ export default function NativeTabNavigator() {
       // The system bar tints exactly like SwiftUI's `.tint()`.
       tabBarActiveTintColor={dark ? darkColors.azure : lightColors.azure}
       tabBarInactiveTintColor={dark ? darkColors.muted : lightColors.muted}
+      // Icons only (Ted, 2026-08-31) — the SF glyphs are unambiguous and the
+      // bar reads calmer without five captions. tabBarLabel stays set below:
+      // it still feeds accessibility and the iPad sidebar.
+      labeled={false}
       // iOS 26: the bar shrinks away as content scrolls down and returns on the
       // way back up — the "can you make it disappear on scrolling?" ask, done by
       // the OS rather than by us animating a View.
