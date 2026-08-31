@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -11,7 +10,7 @@ import {
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
-import { useColors, useTheme, radius, gradients } from '../theme/theme';
+import { useColors, useTheme, radius } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
@@ -315,7 +314,7 @@ export default function ExamLandingScreen() {
   // Track (filière) chips — under the Terminale card/hero only.
   const trackChips = (onHero: boolean) => (
     <View style={{ paddingTop: onHero ? 14 : 2, paddingBottom: onHero ? 0 : 14, paddingHorizontal: onHero ? 0 : 16 }}>
-      <Text style={[typeScale.overline, { color: onHero ? 'rgba(255,255,255,0.75)' : colors.faint, marginBottom: 8 }]}>
+      <Text style={[typeScale.overline, { color: colors.faint, marginBottom: 8 }]}>
         {t('Ma filière', 'Seri mwen')}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -334,17 +333,13 @@ export default function ExamLandingScreen() {
                 paddingVertical: 6,
                 borderRadius: 99,
                 borderWidth: 1,
-                borderColor: onHero
-                  ? (active ? '#ffffff' : 'rgba(255,255,255,0.35)')
-                  : (active ? colors.azure : colors.border),
-                backgroundColor: onHero
-                  ? (active ? '#ffffff' : 'rgba(255,255,255,0.14)')
-                  : (active ? colors.azureSoft : colors.surfaceAlt),
+                borderColor: active ? colors.azure : colors.border,
+                backgroundColor: active ? colors.azureSoft : colors.surface,
               }}
             >
               {active && <Check color={colors.azure} size={12} />}
               <Text style={[typeScale.label, {
-                color: onHero ? (active ? colors.azure : '#ffffff') : (active ? colors.azure : colors.muted),
+                color: active ? colors.azure : colors.muted,
               }]}>
                 {tr.shortLabel}
               </Text>
@@ -452,29 +447,31 @@ export default function ExamLandingScreen() {
               accessibilityRole="button"
               accessibilityLabel={t(myLevel.label, myLevel.labelHt)}
             >
-              <LinearGradient
-                colors={gradients.hero}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ borderRadius: radius.hero, padding: 18 }}
+              {/* Estil Klè: the "my level" hero is a white hairline card — the
+                  one filled element is the azure CTA pill. */}
+              <View
+                style={{
+                  borderRadius: radius.card, padding: 18,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1, borderColor: colors.border,
+                }}
               >
-                <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.75)' }]}>
+                <Text style={[typeScale.overline, { color: colors.azure }]}>
                   {t('Ma préparation', 'Preparasyon mwen')}
                 </Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 }}>
                   <View
                     style={{
                       width: 52, height: 52, borderRadius: 14,
-                      backgroundColor: 'rgba(255,255,255,0.16)',
-                      borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+                      backgroundColor: colors.azureSoft,
                       alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <myLevel.Icon color="#ffffff" size={26} />
+                    <myLevel.Icon color={colors.azure} size={26} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[typeScale.h2, { color: '#ffffff' }]}>{t(myLevel.label, myLevel.labelHt)}</Text>
-                    <Text style={[typeScale.caption, { color: '#bfdbfe', marginTop: 2 }]} numberOfLines={2}>
+                    <Text style={[typeScale.h2, { color: colors.ink }]}>{t(myLevel.label, myLevel.labelHt)}</Text>
+                    <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]} numberOfLines={2}>
                       {t(myLevel.description, myLevel.descriptionHt)}
                     </Text>
                   </View>
@@ -485,15 +482,15 @@ export default function ExamLandingScreen() {
                 <View
                   style={{
                     marginTop: 16, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: '#ffffff', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9,
+                    backgroundColor: colors.azureFill, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9,
                   }}
                 >
-                  <Text style={[typeScale.titleSm, { color: colors.azure }]}>
+                  <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
                     {t('Explorer mes sujets', 'Gade sijè mwen yo')}
                   </Text>
-                  <ChevronRight color={colors.azure} size={16} />
+                  <ChevronRight color="#ffffff" size={16} />
                 </View>
-              </LinearGradient>
+              </View>
             </PressableScale>
           </View>
         )}

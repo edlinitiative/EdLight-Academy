@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useScrollToTop, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useScrollToTop, useNavigation } from '@react-navigation/native';
 import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, Image } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { setStatusBarStyle } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Flame, Trophy, Zap, LogOut, Moon, Sun, Languages, Trash2,
   Award, Target, BookOpen, Bell, ChevronRight, GraduationCap,
@@ -30,7 +28,7 @@ import InviteSheet from '../components/InviteSheet';
 import FollowInstagram from '../components/FollowInstagram';
 import { GRADES, gradeProfile } from '../config/trackConfig';
 import { resetTabToRoot } from '../navigation/navHelpers';
-import { useColors, useTheme, radius, typeScale, gradients } from '../theme/theme';
+import { useColors, useTheme, radius, typeScale } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import {
   areNotificationsEnabled,
@@ -165,7 +163,6 @@ export default function ProfileScreen() {
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
 
   const { level, profile } = useTrivia();
@@ -189,15 +186,6 @@ export default function ProfileScreen() {
     ]);
     queryClient.invalidateQueries({ queryKey: ['leaderboard-weekly'] });
   };
-
-  // The gradient hero runs under the status bar, so its glyphs must be light
-  // while this screen is focused; restore the theme default on blur.
-  useFocusEffect(
-    React.useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle(theme === 'dark' ? 'light' : 'dark');
-    }, [theme]),
-  );
 
   const allAttempts = Object.values(quizAttempts).flat() as { score: number; total: number; date: number }[];
   const totalQuizzes = allAttempts.length;
@@ -377,92 +365,69 @@ export default function ProfileScreen() {
   const statsAllZero =
     totalQuizzes === 0 && enrolledCourses.length === 0 && (streak?.currentStreak ?? 0) === 0;
 
-  // One frosted "pill" recipe shared by the streak pill and the "Série {track}"
-  // chip so they sit at the same height (was paddingVertical 6 vs 3).
-  const frostedPill = {
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  } as const;
-
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: gradients.hero[0] }} edges={[]}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView ref={scrollRef} style={{ backgroundColor: colors.bg }} className="flex-1" contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]} showsVerticalScrollIndicator={false}>
 
-        {/* Overscroll filler — when the list is pulled down past the top, iOS
-            reveals the ScrollView's own background. Paint that region in the hero
-            colour so the pull-down shows blue, not a grey gap above the hero. */}
-        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: gradients.hero[0] }} />
-
-        {/* Compact gradient hero — identity + level/XP as one continuous band,
-            matching the Dashboard. Runs under the status bar and rounds off at
-            the bottom. Streak sits as a frosted momentum pill. */}
-        <LinearGradient
-          colors={[...gradients.hero]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={{
-            paddingTop: insets.top + 14,
-            paddingHorizontal: GUTTER,
-            paddingBottom: 20,
-            borderBottomLeftRadius: 26,
-            borderBottomRightRadius: 26,
-          }}
-        >
+        {/* Estil Klè header — identity on the page's own white ground, like the
+            Dashboard. The streak chip and Série tag go quiet; level/XP is a
+            hairline card instead of a frosted panel on a gradient. */}
+        <View style={{ paddingHorizontal: GUTTER, paddingTop: 20 }}>
           <View className="flex-row items-center" style={{ gap: 14 }}>
             <Avatar
               name={user?.name || user?.displayName || ''}
               seed={user?.uid || ''}
-              size={60}
-              radius={18}
+              size={56}
+              radius={28}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[typeScale.h1, { color: '#ffffff' }]} numberOfLines={1}>
+              <Text style={[typeScale.h1, { color: colors.ink }]} numberOfLines={1}>
                 {displayName}
               </Text>
-              <Text style={[typeScale.label, { color: '#bfdbfe', marginTop: 2 }]} numberOfLines={1}>
+              <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>
                 {user.email}
               </Text>
               {track ? (
-                <View style={{ ...frostedPill, alignSelf: 'flex-start', marginTop: 8 }}>
-                  <Text style={[typeScale.caption, { color: '#ffffff' }]}>{t('Série', 'Seri')} {track}</Text>
+                <View style={{
+                  alignSelf: 'flex-start', marginTop: 8,
+                  backgroundColor: colors.azureSoft, borderRadius: radius.pill,
+                  paddingHorizontal: 10, paddingVertical: 4,
+                }}>
+                  <Text style={[typeScale.caption, { color: colors.azure }]}>{t('Série', 'Seri')} {track}</Text>
                 </View>
               ) : null}
             </View>
             {streak?.currentStreak ? (
-              <View style={{ ...frostedPill, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <StreakFlame count={streak.currentStreak} color="#fecaca" size={14} />
-                <Text style={[typeScale.label, { color: '#ffffff' }]}>{streak.currentStreak}</Text>
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill,
+                paddingHorizontal: 10, paddingVertical: 6,
+              }}>
+                <StreakFlame count={streak.currentStreak} color={colors.coral} size={14} />
+                <Text style={[typeScale.label, { color: colors.ink }]}>{streak.currentStreak}</Text>
               </View>
             ) : null}
           </View>
 
-          {/* Level / XP — frosted panel inside the hero */}
+          {/* Level / XP — one quiet hairline card */}
           {profile && level ? (
             <View
               style={{
                 marginTop: 16,
-                backgroundColor: 'rgba(255,255,255,0.12)',
-                borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+                borderWidth: 1, borderColor: colors.border,
                 borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12,
               }}
             >
               <View className="flex-row items-center justify-between" style={{ marginBottom: 9 }}>
-                <View className="flex-row items-center" style={{ gap: 8 }}>
-                  <Zap color="#fde68a" size={16} />
-                  <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
-                    {t('Niveau', 'Nivo')} {level.level}
-                  </Text>
-                </View>
-                <Text style={[typeScale.bodyMd, { color: '#ffffff' }]} maxFontSizeMultiplier={1.3}>{profile.xp ?? 0} XP</Text>
+                <Text style={[typeScale.titleSm, { color: colors.ink }]}>
+                  {t('Niveau', 'Nivo')} {level.level}
+                </Text>
+                <Text style={[typeScale.bodyMd, { color: colors.muted }]} maxFontSizeMultiplier={1.3}>{profile.xp ?? 0} XP</Text>
               </View>
-              <XpBar pct={progressPct} height={6} />
+              <XpBar pct={progressPct} height={5} />
             </View>
           ) : null}
-        </LinearGradient>
+        </View>
 
         {/* Invite friends — two-sided referral CTA */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
