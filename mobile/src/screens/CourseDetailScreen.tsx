@@ -1,26 +1,23 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { WebView } from 'react-native-webview';
 import {
   ArrowLeft, ChevronDown, ChevronRight, PlayCircle, ClipboardList,
-  CheckCircle2, ChevronLeft, Trophy, Sparkles, Target,
+  CheckCircle2, ChevronLeft, Trophy, Sparkles, Target, Circle,
 } from 'lucide-react-native';
 import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import LessonPractice from '../components/LessonPractice';
 import ChapterTest from '../components/ChapterTest';
-import MasteryArc from '../components/MasteryArc';
 import PressableScale from '../components/ui/PressableScale';
-import { MasteryMeter, MasteryBadge } from '../components/MasteryMeter';
-import { glass, DEEP } from '../components/quiz/QuizResultHero';
-import { mixHex, darkenUntilReadable, lightenUntilReadable } from '../utils/contrast';
+import { MasteryMeter } from '../components/MasteryMeter';
+import { courseVideoThumb } from '../utils/videoThumb';
 import {
   summarize, lessonMastery, masteryLabel, masteryColor, masteryNextStep,
   courseLessonIds, type ProgressMap,
@@ -239,6 +236,15 @@ function UnitRow({
     () => summarize(lessons.map((l: any) => l.id).filter(Boolean), progress),
     [lessons, progress],
   );
+  // The simple statement the restyle leads with: lessons finished / total.
+  const done = useMemo(
+    () => lessons.filter((l: any) => {
+      const p = progress[l.id];
+      return !!p && (p.completed || !!p.masteredAt);
+    }).length,
+    [lessons, progress],
+  );
+  const finished = summary.total > 0 && done >= summary.total;
   // The chapter test is worth offering once anything in the chapter is solid —
   // before that there is nothing for it to promote.
   const testReady = summary.counts.proficient > 0 || summary.counts.familiar > 0 || summary.counts.mastered > 0;
@@ -250,81 +256,81 @@ function UnitRow({
         style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 }}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${unit.title}. ${summary.points}/100`}
+        accessibilityLabel={`${unit.title}. ${done} ${t('sur', 'sou')} ${summary.total} ${t('leçons', 'leson')}`}
       >
-        <Text style={[typeScale.label, { color: colors.faint, width: 18 }]}>
-          {String(index + 1).padStart(2, '0')}
-        </Text>
+        {/* Chapter state at a glance: finished / in progress / untouched. */}
+        {finished ? (
+          <CheckCircle2 color="#ffffff" fill={colors.azure} size={24} />
+        ) : done > 0 || holdsActive ? (
+          <PlayCircle color={colors.azure} size={24} strokeWidth={1.8} />
+        ) : (
+          <Circle color={colors.border} size={24} strokeWidth={1.8} />
+        )}
         <View style={{ flex: 1 }}>
-          <Text style={[typeScale.title, { color: colors.ink }]}>{unit.title}</Text>
+          <Text style={[typeScale.overline, { color: done > 0 && !finished ? colors.azure : colors.faint }]}>
+            {t('Chapitre', 'Chapit')} {index + 1}{done > 0 && !finished ? ` · ${t('En cours', 'An kou')}` : ''}
+          </Text>
+          <Text style={[typeScale.title, { color: colors.ink, marginTop: 3 }]}>{unit.title}</Text>
           <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>
-            {summary.total} {t('leçons', 'leson')}
+            {finished
+              ? `${summary.total} ${t('leçons', 'leson')} · ${t('Terminé', 'Fini')}`
+              : done > 0
+                ? `${done}/${summary.total} ${t('leçons', 'leson')}`
+                : `${summary.total} ${t('leçons', 'leson')}`}
             {summary.mastered > 0 ? ` · ${summary.mastered} ${t('maîtrisée', 'metrize')}${summary.mastered > 1 && !isCreole ? 's' : ''}` : ''}
           </Text>
         </View>
-        {/* Only once there is something to report — five chapters each showing
-            "0" over four invisible dashes read as a wall of failed widgets. */}
-        {summary.started > 0 ? (
-          <View style={{ alignItems: 'flex-end', gap: 6 }}>
-            <Text style={[typeScale.label, { color: colors.ink }]}>{summary.points}</Text>
-            <MasteryMeter level={summary.level} size="sm" />
-          </View>
-        ) : null}
         {open
           ? <ChevronDown color={colors.faint} size={16} />
           : <ChevronRight color={colors.faint} size={16} />}
       </TouchableOpacity>
 
       {open && (
-        <View style={{ paddingBottom: 14, paddingLeft: 32 }}>
+        <View style={{ paddingBottom: 14, paddingLeft: 38 }}>
           {lessons.map((lesson: any) => {
             const level = lessonMastery(progress[lesson.id]);
+            const p = progress[lesson.id];
+            const isDone = !!p && (p.completed || !!p.masteredAt);
             const active = activeLesson?.id === lesson.id;
             return (
               <TouchableOpacity
                 key={lesson.id}
                 onPress={() => onLessonPress(lesson)}
                 style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 11,
-                  paddingVertical: 8, paddingRight: 4,
+                  flexDirection: 'row', alignItems: 'center', gap: 12,
+                  paddingVertical: 10, paddingRight: 8, paddingLeft: active ? 10 : 0,
+                  marginLeft: active ? -10 : 0,
+                  borderRadius: active ? radius.tile : 0,
+                  backgroundColor: active ? colors.azureSoft : 'transparent',
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={`${lesson.title}. ${masteryLabel(level, isCreole)}${lesson.duration ? `, ${lesson.duration} min` : ''}`}
               >
-                {/* State first — but the content TYPE still has to be legible.
-                    Dropping the play/quiz glyph and the duration made the list
-                    prettier and less useful: on a metered connection the length
-                    of a video is the thing a student picks on. */}
-                {level === 'none' ? (
-                  lesson.type === 'video'
-                    ? <PlayCircle color={colors.faint} size={17} />
-                    : <ClipboardList color={colors.faint} size={17} />
+                {/* The checklist: done = filled check, current = play, to do =
+                    an empty circle. The content TYPE stays legible for the
+                    untouched ones — on a metered connection video vs quiz (and
+                    the duration) is what a student picks on. */}
+                {isDone ? (
+                  <CheckCircle2 color="#ffffff" fill={colors.azure} size={19} />
+                ) : active ? (
+                  <PlayCircle color={colors.azure} size={19} />
+                ) : lesson.type === 'video' ? (
+                  <PlayCircle color={colors.faint} size={19} strokeWidth={1.8} />
                 ) : (
-                  <View style={{
-                    width: 17, alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <View style={{
-                      width: 9, height: 9, borderRadius: 5,
-                      backgroundColor: masteryColor(level, colors),
-                    }} />
-                  </View>
+                  <ClipboardList color={colors.faint} size={19} strokeWidth={1.8} />
                 )}
                 <Text
                   style={[
-                    active ? typeScale.bodyMd : typeScale.body,
-                    { flex: 1, color: active ? tint : colors.ink },
+                    active || isDone ? typeScale.bodyMd : typeScale.body,
+                    { flex: 1, color: active ? colors.azure : isDone ? colors.muted : colors.ink },
                   ]}
                   numberOfLines={2}
                 >
                   {lesson.title}
                 </Text>
-                {level === 'none' ? (
-                  lesson.duration ? (
-                    <Text style={[typeScale.micro, { color: colors.faint }]}>{lesson.duration} min</Text>
-                  ) : null
-                ) : (
-                  <MasteryBadge level={level} isCreole={isCreole} showLabel={false} />
-                )}
+                {lesson.duration ? (
+                  <Text style={[typeScale.micro, { color: colors.faint }]}>{lesson.duration} min</Text>
+                ) : null}
               </TouchableOpacity>
             );
           })}
@@ -432,31 +438,18 @@ export default function CourseDetailScreen() {
     () => summarize(courseLessonIds(course), progress as ProgressMap),
     [course, progress],
   );
+  // The hero's one simple number: lessons finished across the course.
+  const courseDone = useMemo(
+    () => allLessons.filter((l: any) => {
+      const p = (progress as ProgressMap)[l.id];
+      return !!p && (p.completed || !!p.masteredAt);
+    }).length,
+    [allLessons, progress],
+  );
+  const heroThumb = useMemo(() => (course ? courseVideoThumb(course) : null), [course]);
+  const [heroThumbFailed, setHeroThumbFailed] = useState(false);
 
-  const insets = useSafeAreaInsets();
   const tint = courseTint(course?.color);
-  // The aurora ground, tinted toward this subject's colour — same recipe the
-  // results heroes use, so the learning screens and the victory screens finally
-  // belong to one product.
-  //
-  // `darkenUntilReadable` is not decoration: the tint comes from Firestore, so
-  // a bright course colour produced a hero carrying white text at ~2:1. The top
-  // stop is driven down until white clears AA, whatever colour content sends.
-  const aurora = useMemo(
-    () => [
-      darkenUntilReadable(mixHex(tint, DEEP, 0.16), DEEP, 8),
-      mixHex(tint, DEEP, 0.62),
-      DEEP,
-    ] as const,
-    [tint],
-  );
-  const arcFrom = useMemo(() => mixHex(tint, '#ffffff', 0.55), [tint]);
-  // The level name sits ON the ground, so it has to clear it — the old value
-  // (12% toward white) was 1.75:1 and effectively invisible.
-  const arcLabel = useMemo(
-    () => lightenUntilReadable(tint, aurora[0], 4.5),
-    [tint, aurora],
-  );
   // "Next" is the first lesson that isn't finished learning — which is not the
   // same as the first unwatched video. A lesson you watched but never practised
   // is still the thing to go back to.
@@ -551,32 +544,31 @@ export default function CourseDetailScreen() {
   };
 
   return (
-    <SafeAreaView
-      className="flex-1"
-      style={{ backgroundColor: showHero ? aurora[0] : colors.bg }}
-      edges={showHero ? [] : ['top']}
-    >
-      {/* Back bar — shares the page ground (no seam), like the dashboard.
-          In hero mode the back button lives on the gradient instead. */}
-      {!showHero && (
-        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
-          <TouchableOpacity
-            onPress={goBack}
-            className="mr-3 p-1"
-            accessibilityRole="button"
-            accessibilityLabel={t('Retour', 'Retounen')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <ArrowLeft color={colors.muted} size={22} />
-          </TouchableOpacity>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+      {/* Back bar — shares the page ground (no seam). On the syllabus it stays
+          minimal (the hero below owns the identity); with a lesson open it
+          carries the course name. */}
+      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+        <TouchableOpacity
+          onPress={goBack}
+          className="mr-3 p-1"
+          accessibilityRole="button"
+          accessibilityLabel={t('Retour', 'Retounen')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <ArrowLeft color={colors.ink} size={22} />
+        </TouchableOpacity>
+        {showHero ? (
+          <Text style={[typeScale.titleSm, { color: colors.muted }]}>{t('Cours', 'Kou')}</Text>
+        ) : (
           <View className="flex-1">
             <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
             <Text style={[typeScale.caption, { color: colors.faint }]}>
               {summary.total} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('chapitres', 'chapit')}
             </Text>
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Video player (no decorative banner when nothing is playing) */}
       {activeLesson?.videoUrl ? (
@@ -706,101 +698,76 @@ export default function CourseDetailScreen() {
         style={{ backgroundColor: colors.bg }}
         contentContainerStyle={[{ paddingBottom: 100 }, centerColumn]}
       >
-        {/* Overscroll filler — pulling past the top must reveal more aurora,
-            never a grey gap above it. */}
+        {/* Estil Klè hero: the course's own imagery, the name, ONE simple
+            progress statement and ONE action. Identity comes from the real
+            video still — no gradient ground, no arc. */}
         {showHero && (
-          <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: aurora[0] }} />
-        )}
+          <View style={{ paddingHorizontal: 16 }}>
+            {heroThumb && !heroThumbFailed ? (
+              <Image
+                source={{ uri: heroThumb }}
+                resizeMode="cover"
+                onError={() => setHeroThumbFailed(true)}
+                style={{ width: '100%', height: 180, borderRadius: radius.card, backgroundColor: colors.surfaceAlt }}
+              />
+            ) : (
+              <View style={{ width: '100%', height: 180, borderRadius: radius.card, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 52, height: 4, borderRadius: 2, backgroundColor: tint, opacity: 0.5 }} />
+              </View>
+            )}
+            <Text style={[typeScale.h1, { color: colors.ink, marginTop: 18 }]}>{course.name}</Text>
+            <Text style={[typeScale.label, { color: colors.muted, marginTop: 4 }]}>
+              {course.modules?.length ?? 0} {t('chapitres', 'chapit')} · {summary.total} {t('leçons', 'leson')}
+            </Text>
 
-        {showHero && (
-          <LinearGradient
-            colors={aurora}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-            style={{
-              paddingTop: insets.top + 4,
-              paddingBottom: 26,
-              paddingHorizontal: 20,
-              borderBottomLeftRadius: 30,
-              borderBottomRightRadius: 30,
-              overflow: 'hidden',
-            }}
-          >
-            {/* Aurora glows — the depth cue that separates a real surface from
-                a flat blue rectangle. Both sit ABOVE the CTA's band: these are
-                hard-edged circles, and one crossing the translucent glass card
-                cut a visible arc through it. */}
-            <View pointerEvents="none" style={{ position: 'absolute', top: -95, left: -80, width: 260, height: 260, borderRadius: 130, backgroundColor: tint, opacity: 0.22 }} />
-            <View pointerEvents="none" style={{ position: 'absolute', top: -90, right: -95, width: 230, height: 230, borderRadius: 115, backgroundColor: arcFrom, opacity: 0.09 }} />
-
-            <View className="flex-row items-center" style={{ marginBottom: 4 }}>
-              <TouchableOpacity
-                onPress={goBack}
-                className="mr-3 -ml-1 p-1"
-                accessibilityRole="button"
-                accessibilityLabel={t('Retour', 'Retounen')}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <ArrowLeft color="rgba(255,255,255,0.9)" size={22} />
-              </TouchableOpacity>
-              <View className="flex-1">
-                <Text numberOfLines={1} style={[typeScale.h2, { color: '#fff' }]}>{course.name}</Text>
-                <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.82)', marginTop: 2 }]}>
-                  {summary.total} {t('leçons', 'leson')} · {course.modules?.length ?? 0} {t('chapitres', 'chapit')}
+            {courseDone > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 }}>
+                <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
+                  <View style={{ width: `${Math.min(100, Math.round((courseDone / Math.max(1, summary.total)) * 100))}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
+                </View>
+                <Text style={[typeScale.label, { color: colors.muted }]}>
+                  {courseDone}/{summary.total} {t('leçons', 'leson')}
                 </Text>
               </View>
-            </View>
+            )}
 
-            <View style={{ alignItems: 'center', marginTop: 10 }}>
-              <MasteryArc
-                level={summary.level}
-                points={summary.points}
-                label={summary.started > 0 ? masteryLabel(summary.level, isCreole) : undefined}
-                caption={summary.started > 0
-                  ? (isCreole
-                    ? `${summary.mastered} sou ${summary.total} metrize`
-                    : `${summary.mastered} / ${summary.total} maîtrisées`)
-                  : t('Ta maîtrise', 'Metriz ou')}
-                from={arcFrom}
-                to={arcLabel}
-              />
-            </View>
-
-            {/* The single focal action, on glass: the next lesson, named, with
-                the exact thing that would move it up a rung. */}
             {nextLesson && (
               <PressableScale
                 onPress={() => onLessonPress(nextLesson)}
                 pressedScale={0.98}
-                style={[{
-                  marginTop: 18, borderRadius: 20, padding: 15,
-                  flexDirection: 'row', alignItems: 'center', gap: 13,
-                }, glass]}
-                accessibilityRole="button"
-                accessibilityLabel={`${nextStep ?? t('Continuer', 'Kontinye')} — ${nextLesson.title}`}
-              >
-                <View style={{
-                  width: 42, height: 42, borderRadius: 21,
-                  backgroundColor: 'rgba(255,255,255,0.18)',
+                style={{
+                  marginTop: 16, height: 46, borderRadius: radius.control,
+                  backgroundColor: colors.azureFill,
                   alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <PlayCircle color="#fff" size={22} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.86)' }]}>
-                    {summary.started > 0 ? t('Prochaine étape', 'Pwochen etap') : t('Commence ici', 'Kòmanse la')}
-                  </Text>
-                  <Text style={[typeScale.titleSm, { color: '#fff', marginTop: 3 }]} numberOfLines={1}>
-                    {nextLesson.title}
-                  </Text>
-                  <Text style={[typeScale.micro, { color: 'rgba(255,255,255,0.82)', marginTop: 2 }]} numberOfLines={1}>
-                    {nextStep ?? t('Revoir la leçon', 'Revizite leson an')}
-                  </Text>
-                </View>
-                <ChevronRight color="rgba(255,255,255,0.88)" size={18} />
+                  flexDirection: 'row', gap: 8,
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${summary.started > 0 ? t('Reprendre', 'Kontinye') : t('Commencer', 'Kòmanse')} — ${nextLesson.title}`}
+              >
+                <PlayCircle color="#ffffff" size={18} />
+                <Text numberOfLines={1} style={[typeScale.titleSm, { color: '#ffffff', maxWidth: '85%' }]}>
+                  {summary.started > 0
+                    ? `${t('Reprendre', 'Kontinye')} — ${nextLesson.title}`
+                    : t('Commencer le cours', 'Kòmanse kou a')}
+                </Text>
               </PressableScale>
             )}
-          </LinearGradient>
+
+            {/* Mastery stays — as a quiet statement, not a monument. */}
+            {summary.started > 0 && (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14,
+                borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
+                paddingVertical: 12, paddingHorizontal: 14,
+              }}>
+                <MasteryMeter level={summary.level} size="sm" />
+                <Text style={[typeScale.label, { color: colors.muted, flex: 1 }]}>
+                  {t('Maîtrise', 'Metriz')} · {summary.points}/100
+                  {nextStep ? ` — ${nextStep}` : ''}
+                </Text>
+              </View>
+            )}
+          </View>
         )}
 
         <View style={{ paddingHorizontal: 16, paddingTop: showHero ? 22 : 16 }}>

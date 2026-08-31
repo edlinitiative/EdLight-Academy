@@ -14,7 +14,6 @@ import { SUBJECT_META } from '../utils/subjectMeta';
 import { courseVideoThumb } from '../utils/videoThumb';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import { MasteryMeter } from '../components/MasteryMeter';
 import {
   summarize, courseLessonIds, masteryLabel, type MasterySummary, type ProgressMap,
 } from '../utils/mastery';
@@ -31,6 +30,10 @@ type Nav = NativeStackNavigationProp<CoursesParamList, 'CourseList'>;
  * One flat page: level chips on top (your class preselected), the selected
  * level's courses and practice entries beneath, and every other level browsable
  * as one shelf per subject — no drill-down to walk back out of.
+ *
+ * Estil Klè restyle: white ground, one accent, imagery-forward cards for the
+ * student's own class, hairline rows for everything utilitarian, and ONE simple
+ * progress statement (lessons done / total) instead of meters on every row.
  */
 const LEVELS = [
   { code: 'NSI', label: 'NS I' },
@@ -59,19 +62,119 @@ function countLessons(course: any): number {
   return units.reduce((s: number, u: any) => s + (u?.lessons?.length ?? 0), 0) || course?.videoCount || 0;
 }
 
+function countUnits(course: any): number {
+  return Array.isArray(course?.modules) ? course.modules.length : 0;
+}
+
+/** One thin bar + a fraction — the whole progress language of the restyle. */
+function ProgressBar({ done, total }: { done: number; total: number }) {
+  const colors = useColors();
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
+        <View style={{ width: `${pct}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
+      </View>
+      <Text style={[typeScale.label, { color: colors.muted }]}>{done}/{total}</Text>
+    </View>
+  );
+}
+
 /**
- * A course, as a row rather than a card.
- *
- * The old version was the template shape: a tinted icon tile, a title, a grey
- * caption, a chevron, wrapped in a shadowed white rectangle — repeated down the
- * page until nothing had any weight. What's left here is a real video still
- * (actual content, not decoration), the course name, and the only number worth
- * printing: mastery out of 100.
+ * A course of the student's OWN class: a full-width card led by real imagery
+ * (the course's video still), one byline, one progress bar, one next action.
  */
+function CourseCard({
+  course, summary, lessonsDone, onPress,
+}: {
+  course: any;
+  summary: MasterySummary;
+  lessonsDone: number;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  const totalLessons = countLessons(course);
+  const units = countUnits(course);
+  const tint = getSubjectColor(course.subject);
+  const thumb = courseVideoThumb(course);
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const started = lessonsDone > 0 || summary.started > 0;
+
+  return (
+    <PressableScale
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={started
+        ? `${course.name}. ${lessonsDone} ${t('sur', 'sou')} ${totalLessons} ${t('leçons', 'leson')}, ${masteryLabel(summary.level, language === 'ht')}`
+        : `${course.name}. ${totalLessons} ${t('leçons', 'leson')}`}
+      style={{
+        backgroundColor: colors.surface,
+        borderRadius: radius.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        overflow: 'hidden',
+      }}
+    >
+      {thumb && !thumbFailed ? (
+        <Image
+          source={{ uri: thumb }}
+          resizeMode="cover"
+          onError={() => setThumbFailed(true)}
+          style={{ width: '100%', height: 150, backgroundColor: colors.surfaceAlt }}
+        />
+      ) : (
+        <View style={{ width: '100%', height: 150, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: tint, opacity: 0.5 }} />
+        </View>
+      )}
+      <View style={{ padding: 16 }}>
+        <Text numberOfLines={2} style={[typeScale.title, { color: colors.ink, fontSize: 17, lineHeight: 22 }]}>{course.name}</Text>
+        <Text style={[typeScale.label, { color: colors.muted, marginTop: 3 }]}>
+          {units > 0
+            ? `${units} ${t('chapitres', 'chapit')} · ${totalLessons} ${t('leçons', 'leson')}`
+            : `${totalLessons} ${t('leçons', 'leson')}`}
+        </Text>
+        {started ? (
+          <View style={{ marginTop: 12 }}>
+            <ProgressBar done={lessonsDone} total={totalLessons} />
+          </View>
+        ) : null}
+        <Text style={[typeScale.bodyMd, { color: colors.azure, marginTop: started ? 10 : 12 }]}>
+          {started ? t('Continuer', 'Kontinye') : t('Commencer', 'Kòmanse')}
+        </Text>
+      </View>
+    </PressableScale>
+  );
+}
+
+/** A coming-soon course: no imagery, no promises — one quiet row. */
+function ComingSoonRow({ course }: { course: any }) {
+  const colors = useColors();
+  const language = useStore((s) => s.language);
+  const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
+  return (
+    <View
+      accessibilityLabel={`${course.name}. ${t('Cours en préparation', 'Kou ap prepare')}`}
+      style={{
+        borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
+        paddingVertical: 14, paddingHorizontal: 16,
+        flexDirection: 'row', alignItems: 'center', gap: 12, opacity: 0.6,
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={[typeScale.titleSm, { color: colors.ink }]}>{course.name}</Text>
+        <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>{t('Cours en préparation', 'Kou ap prepare')}</Text>
+      </View>
+      <Text style={[typeScale.label, { color: colors.faint }]}>{t('Bientôt', 'Talè')}</Text>
+    </View>
+  );
+}
+
+/** Search results keep the compact row shape (a list is a list). */
 function CourseRow({
-  course,
-  summary,
-  onPress,
+  course, summary, onPress,
 }: {
   course: any;
   summary: MasterySummary;
@@ -81,10 +184,9 @@ function CourseRow({
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const totalLessons = countLessons(course);
-  const color = course.color ?? colors.azure;
+  const tint = getSubjectColor(course.subject);
   const soon = !!course.comingSoon;
   const thumb = soon ? null : courseVideoThumb(course);
-  // A dead thumbnail URL must degrade to a plain block, not a blank box.
   const [thumbFailed, setThumbFailed] = useState(false);
 
   return (
@@ -92,10 +194,9 @@ function CourseRow({
       onPress={soon ? undefined : onPress}
       disabled={soon}
       accessibilityRole="button"
-      // The meter itself is decorative, so the level has to be spoken here.
       accessibilityLabel={soon
         ? `${course.name}. ${t('Cours en préparation', 'Kou ap prepare')}`
-        : `${course.name}. ${summary.points} ${t('sur', 'sou')} 100, ${masteryLabel(summary.level, language === 'ht')}`}
+        : `${course.name}. ${totalLessons} ${t('leçons', 'leson')}`}
       style={{ borderTopWidth: 1, borderTopColor: colors.hairline, opacity: soon ? 0.55 : 1 }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 }}>
@@ -104,39 +205,31 @@ function CourseRow({
             source={{ uri: thumb }}
             resizeMode="cover"
             onError={() => setThumbFailed(true)}
-            style={{ width: 84, height: 52, borderRadius: 10, backgroundColor: colors.surfaceAlt }}
+            style={{ width: 84, height: 48, borderRadius: 8, backgroundColor: colors.surfaceAlt }}
           />
         ) : (
-          <View style={{ width: 84, height: 52, borderRadius: 10, backgroundColor: color + '14' }} />
+          <View style={{ width: 84, height: 48, borderRadius: 8, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: tint, opacity: 0.5 }} />
+          </View>
         )}
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={2} style={[typeScale.title, { color: colors.ink }]}>{course.name}</Text>
-          <Text style={[typeScale.caption, { color: colors.muted, marginTop: 3 }]}>
+          <Text numberOfLines={2} style={[typeScale.titleSm, { color: colors.ink }]}>{course.name}</Text>
+          <Text style={[typeScale.label, { color: colors.muted, marginTop: 3 }]}>
             {soon
               ? t('Cours en préparation', 'Kou ap prepare')
-              : summary.mastered > 0
-                ? `${summary.mastered}/${totalLessons} ${t('maîtrisées', 'metrize')}`
-                : `${totalLessons} ${t('leçons', 'leson')}`}
+              : `${LEVELS.find((l) => l.code === course.level)?.label ?? course.level} · ${totalLessons} ${t('leçons', 'leson')}`}
           </Text>
         </View>
-        {soon ? (
-          <Text style={[typeScale.micro, { color: colors.faint }]}>{t('Bientôt', 'Talè')}</Text>
-        ) : summary.started > 0 ? (
-          <View style={{ alignItems: 'flex-end', gap: 6 }}>
-            <Text style={[typeScale.label, { color: colors.ink }]}>{summary.points}</Text>
-            <MasteryMeter level={summary.level} size="sm" />
-          </View>
-        ) : (
-          // Untouched course: a grey "0" over four invisible dashes said nothing
-          // and looked like a failed render.
-          <ChevronRight color={colors.faint} size={16} />
-        )}
+        {soon
+          ? <Text style={[typeScale.micro, { color: colors.faint }]}>{t('Bientôt', 'Talè')}</Text>
+          : <ChevronRight color={colors.faint} size={16} />}
       </View>
     </PressableScale>
   );
 }
 
-/** One level pill. The student's own class carries the "Klas mwen" tag. */
+/** One level pill. The student's own class carries the "Ma classe" tag.
+ *  Selected is a tinted outline, not a filled block — the calm variant. */
 function LevelChip({
   label, mine, active, onPress,
 }: {
@@ -159,29 +252,28 @@ function LevelChip({
       style={{
         paddingHorizontal: 16,
         paddingVertical: 8,
-        borderRadius: 999,
-        backgroundColor: active ? colors.azure : colors.surface,
-        borderWidth: 1,
+        borderRadius: radius.pill,
+        backgroundColor: active ? colors.azureSoft : colors.surface,
+        borderWidth: active ? 1.5 : 1,
         borderColor: active ? colors.azure : colors.border,
       }}
     >
-      <Text style={[typeScale.label, { color: active ? '#fff' : colors.muted }]}>{text}</Text>
+      <Text style={[typeScale.label, { color: active ? colors.azure : colors.muted }]}>{text}</Text>
     </TouchableOpacity>
   );
 }
 
 /**
- * A course in a subject shelf: a small card with the real video still on top
- * and the level worn as a badge. When the student browses another level, their
- * own class's card keeps an azure "klas mwen" badge so home is always visible.
+ * A course in a subject shelf: a small quiet card, the level named in the
+ * caption. The student's own class keeps an azure border when it shows up
+ * while they browse another level.
  */
 function ShelfCard({
-  course, levelLabel, mine, summary, onPress,
+  course, levelLabel, mine, onPress,
 }: {
   course: any;
   levelLabel: string;
   mine: boolean;
-  summary: MasterySummary;
   onPress: () => void;
 }) {
   const colors = useColors();
@@ -191,7 +283,6 @@ function ShelfCard({
   const thumb = soon ? null : courseVideoThumb(course);
   const [thumbFailed, setThumbFailed] = useState(false);
   const tint = getSubjectColor(course.subject);
-  const started = !soon && summary.started > 0;
   const lessons = countLessons(course);
 
   return (
@@ -201,11 +292,9 @@ function ShelfCard({
       accessibilityRole="button"
       accessibilityLabel={soon
         ? `${course.name}. ${t('Cours en préparation', 'Kou ap prepare')}`
-        : started
-          ? `${course.name}. ${summary.points} ${t('sur', 'sou')} 100`
-          : `${course.name}. ${lessons} ${t('leçons', 'leson')}`}
+        : `${course.name}. ${levelLabel}, ${lessons} ${t('leçons', 'leson')}`}
       style={{
-        width: 172,
+        width: 150,
         backgroundColor: colors.surface,
         borderRadius: radius.card,
         borderWidth: mine ? 1.5 : 1,
@@ -214,48 +303,34 @@ function ShelfCard({
         opacity: soon ? 0.55 : 1,
       }}
     >
-      <View style={{ height: 72, backgroundColor: tint + '1a' }}>
-        {thumb && !thumbFailed ? (
-          <Image
-            source={{ uri: thumb }}
-            resizeMode="cover"
-            onError={() => setThumbFailed(true)}
-            style={{ width: '100%', height: '100%' }}
-          />
-        ) : null}
-        <View
-          style={{
-            position: 'absolute', top: 8, left: 8,
-            backgroundColor: mine ? colors.azure : 'rgba(15,30,56,0.62)',
-            borderRadius: 999, paddingHorizontal: 9, paddingVertical: 2,
-          }}
-        >
-          <Text style={[typeScale.micro, { color: '#fff' }]}>
-            {mine ? `${levelLabel} · ${t('ma classe', 'klas mwen')}` : levelLabel}
-          </Text>
+      {thumb && !thumbFailed ? (
+        <Image
+          source={{ uri: thumb }}
+          resizeMode="cover"
+          onError={() => setThumbFailed(true)}
+          style={{ width: '100%', height: 84, backgroundColor: colors.surfaceAlt }}
+        />
+      ) : (
+        <View style={{ width: '100%', height: 84, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 28, height: 3, borderRadius: 2, backgroundColor: tint, opacity: 0.5 }} />
         </View>
-      </View>
+      )}
       <View style={{ padding: 11 }}>
-        <Text numberOfLines={1} style={[typeScale.title, { color: colors.ink, fontSize: 14 }]}>{course.name}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, minHeight: 16 }}>
-          {soon ? (
-            <Text style={[typeScale.caption, { color: colors.faint }]}>{t('Bientôt', 'Talè')}</Text>
-          ) : started ? (
-            <>
-              <Text style={[typeScale.caption, { color: colors.muted }]}>{summary.points}/100</Text>
-              <MasteryMeter level={summary.level} size="sm" />
-            </>
-          ) : (
-            <Text style={[typeScale.caption, { color: colors.muted }]}>{lessons} {t('leçons', 'leson')}</Text>
-          )}
-        </View>
+        <Text numberOfLines={1} style={[typeScale.label, { color: colors.ink, fontFamily: typeScale.titleSm.fontFamily }]}>{course.name}</Text>
+        <Text style={[typeScale.caption, { color: soon ? colors.faint : colors.muted, marginTop: 2 }]}>
+          {soon
+            ? t('Bientôt', 'Talè')
+            : mine
+              ? `${levelLabel} · ${t('ma classe', 'klas mwen')}`
+              : `${levelLabel} · ${lessons} ${t('leçons', 'leson')}`}
+        </Text>
       </View>
     </PressableScale>
   );
 }
 
-/** One of the two "Egzèse w" entry tiles (question bank / chapter tests). */
-function PracticeTile({
+/** One of the two "S'entraîner" entries — a plain hairline row. */
+function PracticeRow({
   icon, title, subtitle, onPress,
 }: {
   icon: React.ReactNode;
@@ -269,18 +344,16 @@ function PracticeTile({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${subtitle}`}
-      style={{
-        flex: 1,
-        backgroundColor: colors.surface,
-        borderRadius: radius.card,
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: 14,
-      }}
+      style={{ borderBottomWidth: 1, borderBottomColor: colors.hairline }}
     >
-      {icon}
-      <Text style={[typeScale.title, { color: colors.ink, marginTop: 8 }]}>{title}</Text>
-      <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>{subtitle}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 15 }}>
+        {icon}
+        <View style={{ flex: 1 }}>
+          <Text style={[typeScale.titleSm, { color: colors.ink }]}>{title}</Text>
+          <Text style={[typeScale.label, { color: colors.muted, marginTop: 1 }]}>{subtitle}</Text>
+        </View>
+        <ChevronRight color={colors.faint} size={16} />
+      </View>
     </PressableScale>
   );
 }
@@ -336,6 +409,16 @@ export default function CoursesScreen() {
     [lessonIdsByCourse, progress],
   );
 
+  /** Lessons finished in a course — the simple number the progress bar states. */
+  const lessonsDoneIn = React.useCallback(
+    (course: any) => (lessonIdsByCourse.get(course.id) ?? [])
+      .filter((id) => {
+        const p = (progress as ProgressMap)[id];
+        return !!p && (p.completed || !!p.masteredAt);
+      }).length,
+    [lessonIdsByCourse, progress],
+  );
+
   const all = courses ?? [];
   const searching = search.trim().length > 0;
 
@@ -384,9 +467,9 @@ export default function CoursesScreen() {
     [all, selectedLevel],
   );
 
-  // "Lòt nivo yo": every other level's courses, one shelf per subject (option D
-  // — students think in subjects; NS3 revision sits naturally under NS4). Cards
-  // are ordered levels-below-first (revision before preview), nearest first.
+  // "Autres niveaux": every other level's courses, one shelf per subject (option
+  // D — students think in subjects; NS3 revision sits naturally under NS4).
+  // Cards are ordered levels-below-first (revision before preview), nearest first.
   const shelves = useMemo(() => {
     if (!selectedLevel) return [];
     const selectedIdx = LEVELS.findIndex((l) => l.code === selectedLevel);
@@ -408,7 +491,7 @@ export default function CoursesScreen() {
       .sort((a, b) => subjectRank(a.code) - subjectRank(b.code));
   }, [all, selectedLevel]);
 
-  // "Tès chapit" lands on the syllabus that owns the tests: the selected
+  // "Tests de chapitre" lands on the syllabus that owns the tests: the selected
   // level's most-advanced course, or its first open course when nothing is
   // started yet.
   const chapterTestTarget = useMemo(() => {
@@ -460,8 +543,8 @@ export default function CoursesScreen() {
         </View>
         {searchOpen && (
           <View
-            className="flex-row items-center bg-gray-50 dark:bg-slate-800 border rounded-xl px-3 mt-3"
-            style={{ borderColor: colors.border }}
+            className="flex-row items-center border rounded-xl px-3 mt-3"
+            style={{ borderColor: colors.border, backgroundColor: colors.surfaceAlt }}
           >
             <Search color={colors.faint} size={18} />
             <TextInput
@@ -538,15 +621,15 @@ export default function CoursesScreen() {
 
           <View style={[{ paddingHorizontal: 20 }, centerColumn]}>
             {/* The selected level's courses */}
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 14 }}>
               <Text style={[typeScale.h2, { color: colors.ink }]}>
-                {t(`Cours ${selectedInfo?.label ?? ''}`, `Kou ${selectedInfo?.label ?? ''} yo`)}
+                {t(`Tes cours · ${selectedInfo?.label ?? ''}`, `Kou ou · ${selectedInfo?.label ?? ''}`)}
               </Text>
-              <Text style={[typeScale.caption, { color: colors.muted }]}>
+              <Text style={[typeScale.caption, { color: colors.faint }]}>
                 {selectedCourses.length} {t('cours', 'kou')}
               </Text>
             </View>
-            <View style={{ marginTop: 4 }}>
+            <View style={{ gap: 14, marginTop: 14 }}>
               {selectedCourses.length === 0 ? (
                 <EmptyState
                   icon={<BookOpen color={colors.azure} size={34} strokeWidth={1.75} />}
@@ -555,12 +638,17 @@ export default function CoursesScreen() {
                 />
               ) : (
                 selectedCourses.map((course) => (
-                  <CourseRow
-                    key={course.id}
-                    course={course}
-                    summary={summaryFor([course])}
-                    onPress={() => openCourse(course)}
-                  />
+                  course.comingSoon ? (
+                    <ComingSoonRow key={course.id} course={course} />
+                  ) : (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      summary={summaryFor([course])}
+                      lessonsDone={lessonsDoneIn(course)}
+                      onPress={() => openCourse(course)}
+                    />
+                  )
                 ))
               )}
             </View>
@@ -568,19 +656,19 @@ export default function CoursesScreen() {
             {/* Practice for the selected level */}
             {selectedCourses.length > 0 && (
               <>
-                <Text style={[typeScale.h2, { color: colors.ink, marginTop: 24 }]}>
-                  {t(`Entraîne-toi · ${selectedInfo?.label ?? ''}`, `Egzèse w · ${selectedInfo?.label ?? ''}`)}
+                <Text style={[typeScale.h2, { color: colors.ink, marginTop: 30 }]}>
+                  {t("S'entraîner", 'Egzèse w')}
                 </Text>
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                  <PracticeTile
-                    icon={<BookMarked color={colors.azure} size={20} />}
+                <View style={{ marginTop: 4 }}>
+                  <PracticeRow
+                    icon={<BookMarked color={colors.azure} size={22} strokeWidth={2} />}
                     title={t('Banque de questions', 'Bank kesyon')}
                     subtitle={t('Par matière et chapitre', 'Pa matyè ak chapit')}
                     onPress={() => navigation.navigate('Quizzes', {})}
                   />
                   {chapterTestTarget && (
-                    <PracticeTile
-                      icon={<ClipboardCheck color={colors.azure} size={20} />}
+                    <PracticeRow
+                      icon={<ClipboardCheck color={colors.azure} size={22} strokeWidth={2} />}
                       title={t('Tests de chapitre', 'Tès chapit')}
                       subtitle={t('Vise la maîtrise', 'Vize metriz la')}
                       onPress={() => openCourse(chapterTestTarget)}
@@ -592,7 +680,7 @@ export default function CoursesScreen() {
 
             {/* Other levels, shelved by subject — revision below, preview above */}
             {shelves.length > 0 && (
-              <Text style={[typeScale.overline, { color: colors.faint, marginTop: 28 }]}>
+              <Text style={[typeScale.h2, { color: colors.ink, marginTop: 30 }]}>
                 {t('Autres niveaux', 'Lòt nivo yo')}
               </Text>
             )}
@@ -600,13 +688,13 @@ export default function CoursesScreen() {
 
           {shelves.map(({ code, meta, courses: group }) => (
             <View key={code} style={{ marginTop: 18 }}>
-              <Text style={[typeScale.h2, { color: colors.ink, paddingHorizontal: 20 }, centerColumn]}>
+              <Text style={[[typeScale.titleSm, { color: colors.ink, paddingHorizontal: 20 }], centerColumn]}>
                 {isCreole ? meta.nameHt : meta.name}
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20, gap: 10, paddingTop: 10 }}
+                contentContainerStyle={{ paddingHorizontal: 20, gap: 12, paddingTop: 10 }}
               >
                 {group.map((course) => (
                   <ShelfCard
@@ -614,7 +702,6 @@ export default function CoursesScreen() {
                     course={course}
                     levelLabel={LEVELS.find((l) => l.code === course.level)?.label ?? course.level}
                     mine={course.level === myLevel}
-                    summary={summaryFor([course])}
                     onPress={() => openCourse(course)}
                   />
                 ))}

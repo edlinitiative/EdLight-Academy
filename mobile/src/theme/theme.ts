@@ -29,25 +29,26 @@ export const lightColors: Palette = {
   // Brand
   azure: '#1B6FE0',
   azureDeep: '#0857A6',
-  azureSoft: '#eaf2fb', // tinted icon backgrounds / chips
-  azureBorder: '#cfdff2',
+  azureSoft: '#EFF5FE', // tinted icon backgrounds / chips
+  azureBorder: '#D3E3FA',
   azureFill: '#1B6FE0', // white label = 4.78:1
   coral: '#E0532F',
   coralSoft: '#fdeae4',
-  // Surfaces
-  bg: '#f4f6fb',
+  // Surfaces — Estil Klè: the page ground IS white. Cards separate from the
+  // page with a hairline border, not a grey ground + shadow.
+  bg: '#ffffff',
   surface: '#ffffff',
-  surfaceAlt: '#f8fafc', // subtly raised inner surfaces
-  border: '#e8edf5',
-  hairline: '#eef1f6',
+  surfaceAlt: '#F6F7F9', // subtly raised inner surfaces (thumb fallbacks, inputs)
+  border: '#E7EBF0',
+  hairline: '#EEF1F5',
   // Text — both greys carry real content (durations, descriptions, form
   // placeholders), so both must clear WCAG AA. The old pair was muted #64748b
   // (4.76:1 on white) over faint #94a3b8, and #94a3b8 was only 2.56:1 on white /
   // 2.37:1 on `bg` — failing everywhere it was used. Each token moved one step
   // darker to keep the two-level hierarchy while lifting contrast.
-  ink: '#0f172a',
-  muted: '#556278', // 6.17:1 on surface, 5.70:1 on bg
-  faint: '#64748b', // 4.76:1 on surface, 4.40:1 on bg
+  ink: '#14171F',
+  muted: '#5F6B7A', // 5.32:1 on white
+  faint: '#64748b', // 4.76:1 on white
   // Status
   danger: '#ef4444',
   dangerSoft: '#fef2f2',
@@ -97,19 +98,21 @@ export const colors = lightColors;
 export const radius = {
   chip: 999,
   pill: 999, // explicit alias for fully-rounded
-  control: 14, // buttons, inputs
-  tile: 16, // icon tiles inside cards
-  card: 20, // the standard card corner
-  hero: 24, // large hero surfaces
+  control: 10, // buttons, inputs
+  tile: 10, // icon tiles inside cards
+  card: 12, // the standard card corner
+  hero: 16, // large hero surfaces
 } as const;
 
 /** Loaded via expo-font in App.tsx. Per-weight files, so fontFamily carries the
  *  weight (don't also set fontWeight). Falls back to system until fonts load. */
 export const fonts = {
-  regular: 'Satoshi-Regular',
-  medium: 'Satoshi-Medium',
-  bold: 'Satoshi-Bold',
-  black: 'Satoshi-Black',
+  regular: 'SourceSans3-Regular',
+  medium: 'SourceSans3-SemiBold',
+  bold: 'SourceSans3-Bold',
+  // No 900 on purpose: Estil Klè's calm comes from stopping at 700 —
+  // hierarchy is carried by size and space, not maximum boldness.
+  black: 'SourceSans3-Bold',
 } as const;
 
 /**
@@ -118,7 +121,7 @@ export const fonts = {
  * Premium type = contrast between weights + optical tracking, not max boldness.
  */
 export const typeScale = {
-  display:  { fontFamily: fonts.black,   fontSize: 28, lineHeight: 33, letterSpacing: -0.5 },
+  display:  { fontFamily: fonts.black,   fontSize: 24, lineHeight: 29, letterSpacing: -0.2 },
   num:      { fontFamily: fonts.black,   fontSize: 30, lineHeight: 34, letterSpacing: -0.7 },
   h1:       { fontFamily: fonts.bold,    fontSize: 22, lineHeight: 27, letterSpacing: -0.3 },
   h2:       { fontFamily: fonts.bold,    fontSize: 18, lineHeight: 23, letterSpacing: -0.2 },
@@ -146,21 +149,21 @@ export const shadow = {
   sm: {
     shadowColor: colors.azureDeep,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
   },
   md: {
     shadowColor: colors.azureDeep,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 3,
   },
   lg: {
     shadowColor: colors.azureDeep,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.10,
     shadowRadius: 18,
     elevation: 10,
   },
@@ -210,9 +213,9 @@ export function shadowsFor(scheme: ColorScheme) {
   const c = scheme === 'dark' ? '#000000' : lightColors.azureDeep;
   const o = scheme === 'dark' ? 1.6 : 1; // dark shadows need more opacity to read
   return {
-    sm: { shadowColor: c, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06 * o, shadowRadius: 6, elevation: 1 },
-    md: { shadowColor: c, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08 * o, shadowRadius: 10, elevation: 3 },
-    lg: { shadowColor: c, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.14 * o, shadowRadius: 18, elevation: 10 },
+    sm: { shadowColor: c, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04 * o, shadowRadius: 6, elevation: 1 },
+    md: { shadowColor: c, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05 * o, shadowRadius: 10, elevation: 3 },
+    lg: { shadowColor: c, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.10 * o, shadowRadius: 18, elevation: 10 },
   } as const;
 }
 

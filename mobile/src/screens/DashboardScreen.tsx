@@ -1,16 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { setStatusBarStyle } from 'expo-status-bar';
-import { useNavigation, useScrollToTop, useFocusEffect } from '@react-navigation/native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Zap, ChevronRight, CalendarCheck } from 'lucide-react-native';
-import { courseSubjectIcon } from '../utils/subjectMeta';
+import { ChevronRight, CalendarCheck } from 'lucide-react-native';
+import { courseVideoThumb } from '../utils/videoThumb';
 import { FollowInstagramPrompt } from '../components/FollowInstagram';
 import WeeklyGoalSheet from '../components/WeeklyGoalSheet';
 import SandraFab from '../components/SandraFab';
-import StreakFlame from '../components/ui/StreakFlame';
 import useStore from '../contexts/store';
 import { useCourses } from '../hooks/useData';
 import { useStreak } from '../hooks/useStreak';
@@ -21,16 +18,13 @@ import { Skeleton, ErrorState } from '../components/StateViews';
 import Avatar from '../components/ui/Avatar';
 import PressableScale from '../components/ui/PressableScale';
 import ProgressRing from '../components/ui/ProgressRing';
-import { MasteryMeter } from '../components/MasteryMeter';
-import { summarize, courseLessonIds, type ProgressMap } from '../utils/mastery';
+import { type ProgressMap } from '../utils/mastery';
+import { courseLessonIds } from '../utils/mastery';
 import ReadinessCard from '../components/ReadinessCard';
 import VideoCoursesRail from '../components/VideoCoursesRail';
 import { countQuizzesThisWeek, WEEKLY_QUIZ_GOAL } from '../utils/weeklyActivity';
-import HomeWidgets from '../components/HomeWidgets';
 import MissionCard from '../components/MissionCard';
-import SmartSuggestion from '../components/SmartSuggestion';
-import SeasonCountdown from '../components/SeasonCountdown';
-import { gradeProfile } from '../config/trackConfig';
+import { gradeProfile, seasonAnchorYear } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import NextStepCard from '../components/NextStepCard';
@@ -67,36 +61,16 @@ function formatXp(n: number): string {
 // Sub-components
 // ---------------------------------------------------------------------------
 
-/** A frosted momentum pill on the blue hero (streak, XP). */
-function HeroPill({
-  icon,
-  value,
-  valueColor = '#ffffff',
-}: {
-  icon: React.ReactNode;
-  value: string | number;
-  valueColor?: string;
-}) {
+/** One cell of the quiet stats strip at the bottom of the page. */
+function StatCell({ value, label }: { value: string | number; label: string }) {
+  const colors = useColors();
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: 'rgba(255,255,255,0.16)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.22)',
-        borderRadius: radius.chip,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-      }}
-    >
-      {icon}
-      <Text style={[typeScale.label, { color: valueColor }]} maxFontSizeMultiplier={1.3}>{value}</Text>
+    <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+      <Text style={[typeScale.titleSm, { color: colors.ink, fontSize: 17 }]} maxFontSizeMultiplier={1.3}>{value}</Text>
+      <Text style={[typeScale.caption, { color: colors.faint }]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
-
 
 function SectionHeader({
   title,
@@ -161,9 +135,6 @@ export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface } = useTheme();
   const { user, language, enrolledCourses, quizAttempts, lastActivity, grade, setPendingDailyChallenge, progress: lessonProgress, review } = useStore();
-  const practiceMode = gradeProfile(grade).primaryTab === 'Quiz' ? 'quiz' : 'exams';
-  const themeMode = useStore((s) => s.theme);
-  const insets = useSafeAreaInsets();
   const centerColumn = useContentContainerStyle('readable'); // iPad: center a capped column
   const scrollRef = React.useRef<any>(null);
   useScrollToTop(scrollRef);
@@ -171,15 +142,6 @@ export default function DashboardScreen() {
   const [reviewOpen, setReviewOpen] = React.useState(false);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-
-  // The compact hero is deep blue and runs under the status bar, so its icons
-  // must be light while this screen is focused; restore the app default on blur.
-  useFocusEffect(
-    React.useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle(themeMode === 'dark' ? 'light' : 'dark');
-    }, [themeMode]),
-  );
 
   const { data: courses, isLoading, isError, refetch, isFetching } = useCourses();
   const { streak } = useStreak();
@@ -224,6 +186,19 @@ export default function DashboardScreen() {
     }),
     [courses, enrolledCourses, lessonProgress, lastActivity, dueReviewCount],
   );
+
+  // The next-step card leads with the course's own video still when it points
+  // at a course (a lesson, or a welcome-back resume of one).
+  const nextStepThumb = React.useMemo(() => {
+    if (!nextStep || !courses) return null;
+    const courseId = nextStep.kind === 'lesson'
+      ? nextStep.courseId
+      : nextStep.kind === 'welcome-back' && nextStep.resume.type !== 'exam'
+        ? nextStep.resume.path
+        : null;
+    const c = courseId ? courses.find((x) => x.id === courseId) : null;
+    return c ? courseVideoThumb(c) : null;
+  }, [nextStep, courses]);
 
   // ---------------------------------------------------------------------------
   // Guards
@@ -332,52 +307,61 @@ export default function DashboardScreen() {
         actionLabel={t('Voir tout', 'Wè tout')}
         onAction={goCourseList}
       />
-      <View className="gap-3">
+      <View>
         {displayCourses.map((course: any) => {
           const tint = courseTint(course.color);
-          const SubjectIcon = courseSubjectIcon(course);
           const totalLessons = countCourseLessons(course);
-          // Same mastery model as the Cours tab. This used to be a completion
-          // ring computed from Firestore's `completedLessons` — a different
-          // source AND a different metric, so Home and Cours disagreed about
-          // the same course.
-          const summary = summarize(courseLessonIds(course), lessonProgress as ProgressMap);
+          // Same source as the Cours tab: lessons finished, one thin bar.
+          const done = courseLessonIds(course).filter((id: string) => {
+            const p = (lessonProgress as ProgressMap)[id];
+            return !!p && (p.completed || !!p.masteredAt);
+          }).length;
+          const thumb = courseVideoThumb(course);
 
           return (
             <PressableScale
               key={course.id}
               onPress={() => goCourse(course)}
               accessibilityRole="button"
-              accessibilityLabel={course.name}
-              style={{ ...cardSurface, padding: 14 }}
+              accessibilityLabel={done > 0
+                ? `${course.name}. ${done} ${t('sur', 'sou')} ${totalLessons} ${t('leçons', 'leson')}`
+                : course.name}
+              style={{ borderTopWidth: 1, borderTopColor: colors.hairline }}
             >
-              <View className="flex-row items-center gap-3">
-                <View
-                  className="items-center justify-center flex-shrink-0"
-                  style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '18' }}
-                >
-                  <SubjectIcon color={tint} size={20} />
-                </View>
+              <View className="flex-row items-center gap-3" style={{ paddingVertical: 13 }}>
+                {thumb ? (
+                  <Image
+                    source={{ uri: thumb }}
+                    resizeMode="cover"
+                    style={{ width: 84, height: 48, borderRadius: 8, backgroundColor: colors.surfaceAlt }}
+                  />
+                ) : (
+                  <View style={{ width: 84, height: 48, borderRadius: 8, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: tint, opacity: 0.5 }} />
+                  </View>
+                )}
                 <View className="flex-1">
                   {/* Single subject tag = the course name itself, which already
                       carries the level (e.g. "Chimie NS1") — no redundant pills. */}
-                  <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={2}>
+                  <Text style={[typeScale.bodyMd, { color: colors.ink }]} numberOfLines={1}>
                     {course.name}
                   </Text>
-                  {totalLessons > 0 && (
-                    <Text style={[typeScale.caption, { color: colors.faint, marginTop: 2 }]}>
-                      {summary.mastered > 0
-                        ? `${summary.mastered}/${totalLessons} ${t('maîtrisées', 'metrize')}`
-                        : `${totalLessons} ${t('leçons', 'leson')}`}
+                  {done > 0 && totalLessons > 0 ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 7 }}>
+                      <View style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.hairline }}>
+                        <View style={{ width: `${Math.min(100, Math.round((done / totalLessons) * 100))}%`, height: 4, borderRadius: 2, backgroundColor: colors.azure }} />
+                      </View>
+                      <Text style={[typeScale.caption, { color: colors.faint }]}>{done}/{totalLessons}</Text>
+                    </View>
+                  ) : (
+                    <Text style={[typeScale.caption, { color: colors.faint, marginTop: 4 }]}>
+                      {totalLessons > 0
+                        ? `${totalLessons} ${t('leçons', 'leson')}`
+                        : t('Pas encore commencé', 'Poko kòmanse')}
                     </Text>
                   )}
                 </View>
-                <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                  <Text style={[typeScale.label, { color: summary.points > 0 ? colors.ink : colors.faint }]}>
-                    {summary.points}
-                  </Text>
-                  <MasteryMeter level={summary.level} size="sm" />
-                </View>
+                <ChevronRight color={colors.faint} size={16} />
               </View>
             </PressableScale>
           );
@@ -386,12 +370,40 @@ export default function DashboardScreen() {
     </View>
   ) : null;
 
+  // The quiet stats strip: momentum without a report card. The third cell is
+  // the one date that matters for the grade (Bac countdown) — or this week's
+  // quiz count for grades with no exam on the horizon.
+  const bacDays = Math.max(0, Math.ceil((new Date(seasonAnchorYear(new Date()), 6, 5).getTime() - Date.now()) / 86_400_000));
+  const statsBlock = (
+    <View className="px-5 mb-4">
+      <View
+        accessible
+        accessibilityLabel={`${t('Série', 'Seri')} ${streak?.currentStreak ?? 0} ${t('jours', 'jou')}, ${weeklyXp} XP ${t('cette semaine', 'semèn sa a')}`}
+        style={{
+          flexDirection: 'row', alignItems: 'center',
+          borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
+          paddingVertical: 14,
+        }}
+      >
+        <StatCell value={streak?.currentStreak ?? 0} label={t('Jours de série', 'Jou seri')} />
+        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.hairline }} />
+        <StatCell value={formatXp(weeklyXp)} label={t('XP semaine', 'XP semèn')} />
+        <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.hairline }} />
+        {isBacTrack ? (
+          <StatCell value={bacDays} label={t('Jours avant le Bac', 'Jou anvan Bak')} />
+        ) : (
+          <StatCell value={quizzesThisWeek} label={t('Quiz semaine', 'Quiz semèn')} />
+        )}
+      </View>
+    </View>
+  );
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: gradients.hero[0] }} edges={[]}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
       <ScrollView
         ref={scrollRef}
         style={{ backgroundColor: colors.bg }}
@@ -407,80 +419,45 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Overscroll filler — paint the pull-down-past-top region in the hero
-            colour so it never reveals a grey gap above the hero. */}
-        <View pointerEvents="none" style={{ position: 'absolute', top: -400, left: 0, right: 0, height: 400, backgroundColor: gradients.hero[0] }} />
-
-        {/* Compact gradient hero — identity + momentum as one continuous band.
-            Runs under the status bar (paddingTop = safe inset) and rounds off at
-            the bottom so the resume banner can overlap it just below. */}
-        <LinearGradient
-          colors={gradients.hero}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={{
-            paddingTop: insets.top + 10,
-            paddingHorizontal: 20,
-            paddingBottom: 22,
-            borderBottomLeftRadius: 26,
-            borderBottomRightRadius: 26,
-          }}
-        >
-          <View className="flex-row items-center">
-            {/* Real-photo avatar (seeded by uid) — tap to open the profile. */}
-            <TouchableOpacity
-              onPress={() => { tapLight(); navigation.navigate('Profile'); }}
-              activeOpacity={0.8}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('Ouvrir le profil', 'Louvri pwofil la')}
-            >
-              <Avatar
-                name={user?.name || user?.displayName || ''}
-                seed={user?.uid || ''}
-                size={44}
-                radius={14}
-              />
-            </TouchableOpacity>
-
-            <View className="flex-1 px-3">
-              <Text style={[typeScale.h2, { color: '#ffffff' }]} numberOfLines={1}>
-                {greeting}, {firstName || t('Étudiant', 'Elèv')} 👋
-              </Text>
-              <Text style={[typeScale.caption, { color: '#bfdbfe', marginTop: 1 }]} numberOfLines={1}>
-                {t('Prêt à apprendre ?', 'Ou pare pou aprann ?')}
-              </Text>
-            </View>
-
-            <View
-              className="flex-row items-center gap-2"
-              accessible
-              accessibilityLabel={`${t('Série', 'Seri')} ${streak?.currentStreak ?? 0} ${t('jours', 'jou')}, ${weeklyXp} XP ${t('cette semaine', 'semèn sa a')}`}
-            >
-              <HeroPill
-                icon={<StreakFlame count={streak?.currentStreak ?? 0} color="#fecaca" size={14} />}
-                value={streak?.currentStreak ?? 0}
-              />
-              <HeroPill
-                icon={<Zap color="#fde68a" size={14} />}
-                value={formatXp(weeklyXp)}
-                valueColor="#fde68a"
-              />
-            </View>
+        {/* Estil Klè header — a plain greeting on the page's own white ground.
+            The momentum numbers moved to the quiet stats strip at the bottom;
+            the top of the page belongs to the ONE next action. */}
+        <View className="px-5 pt-5 flex-row items-center justify-between">
+          <View className="flex-1 pr-3">
+            <Text style={[typeScale.display, { color: colors.ink }]} numberOfLines={1}>
+              {greeting}, {firstName || t('Étudiant', 'Elèv')}
+            </Text>
+            <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>
+              {t('Prêt à continuer ?', 'Ou pare pou kontinye ?')}
+            </Text>
           </View>
-        </LinearGradient>
+          <TouchableOpacity
+            onPress={() => { tapLight(); navigation.navigate('Profile'); }}
+            activeOpacity={0.8}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Ouvrir le profil', 'Louvri pwofil la')}
+          >
+            <Avatar
+              name={user?.name || user?.displayName || ''}
+              seed={user?.uid || ''}
+              size={40}
+              radius={20}
+            />
+          </TouchableOpacity>
+        </View>
 
-        {/* The dominant next-step card — overlaps just under the hero. It
-            answers "what should I do right now?" (resume / review / next rung
-            of the ladder). The old compact ResumeBanner remains only as the
+        {/* The dominant next-step card — answers "what should I do right now?"
+            (resume / review / next rung of the ladder), led by the course's
+            real imagery. The old compact ResumeBanner remains only as the
             fallback for activity the engine doesn't cover (e.g. a quiz resume
             with no enrolled courses). */}
         {nextStep ? (
-          <View className="px-5" style={{ marginTop: -12, zIndex: 2 }}>
-            <NextStepCard step={nextStep} onOpenReview={() => setReviewOpen(true)} />
+          <View className="px-5" style={{ marginTop: 18 }}>
+            <NextStepCard step={nextStep} thumb={nextStepThumb} onOpenReview={() => setReviewOpen(true)} />
           </View>
         ) : lastActivity ? (
-          <View className="px-5" style={{ marginTop: -12, zIndex: 2 }}>
+          <View className="px-5" style={{ marginTop: 18 }}>
             <ResumeBanner />
           </View>
         ) : null}
@@ -499,36 +476,11 @@ export default function DashboardScreen() {
           <ReviewCard onOpen={() => setReviewOpen(true)} />
         ) : null}
 
-        {/* Quick actions — one compact row (was a 2×2 grid). */}
-        <View className="px-5 mt-4 mb-4">
-          <HomeWidgets
-            // Reset to the tab's root: a bare navigate('Exams') re-shows whatever
-            // the stack retained (a paper list, or an abandoned exam). The route
-            // name is "Exams" for both cohorts but the stack behind it differs —
-            // Quiz-primary grades get QuizNavigator, which has no ExamLanding.
-            onNavigateExams={() =>
-              resetTabToRoot(
-                navigation,
-                'Exams',
-                practiceMode === 'quiz' ? 'Quizzes' : 'ExamLanding',
-              )
-            }
-            onNavigateTrivia={() => navigation.navigate('Trivia')}
-            onNavigateCourses={goCourseList}
-            onNavigateLeaderboard={() => (navigation as any).navigate('Leaderboard')}
-            enrolledCount={enrolledCourses.length}
-            practiceMode={practiceMode}
-          />
-        </View>
-
-        {/* Season-aware recommendation — pushes the next step (choose filière,
-            switch to Préfac once the Bac is over, or revise for the Bac).
-            Self-hides (and takes its margin with it) when there's nothing. */}
-        <SmartSuggestion />
-
-        {/* Season/grade countdown — the one date that matters for this grade
-            (Bac / 9ème / Préfac prep). Self-hides for grades with no exam. */}
-        <SeasonCountdown />
+        {/* The shortcut grid, the season recommendation card and the countdown
+            banner are gone (Estil Klè): the tab bar already carries the
+            destinations, and the one date that matters lives in the stats
+            strip below. One screen, one job. */}
+        <View className="mt-4" />
 
         {/* Weekly goal + Continue learning + video discovery. Order flips by
             grade: cours-first grades (NS1–NS3) lead with courses; all other
@@ -547,6 +499,10 @@ export default function DashboardScreen() {
             {videoRailBlock}
           </>
         )}
+
+        {/* Momentum, in one quiet strip — streak, weekly XP, and the one date
+            that matters for this grade. */}
+        {statsBlock}
 
         {/* One-time community nudge — only once the student has real usage
             behind them (streak / quizzes / lessons), never on first open.
