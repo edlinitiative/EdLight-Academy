@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Check, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronRight, Timer } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
@@ -63,6 +62,8 @@ export default function MissionCard({ onStart }: { onStart: () => void }) {
     );
   }
 
+  // Estil Klè: the mission is a quiet row, not a gradient monument — the page's
+  // one dominant element is the Reprendre card above it.
   return (
     <PressableScale
       onPress={press}
@@ -71,42 +72,28 @@ export default function MissionCard({ onStart }: { onStart: () => void }) {
         'Mission du jour : quiz éclair, gagne 50 XP. Commencer',
         'Misyon jodi a: quiz rapid, genyen 50 XP. Kòmanse',
       )}
-      style={{ borderRadius: radius.card, overflow: 'hidden', ...shadow.md }}
+      style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
     >
-      <LinearGradient
-        colors={['#2E86F0', '#1B6FE0', '#0857A6']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ padding: 15 }}
+      <View
+        style={{
+          width: 40, height: 40, borderRadius: radius.tile,
+          backgroundColor: colors.azureSoft,
+          alignItems: 'center', justifyContent: 'center',
+        }}
       >
-        {/* Text-only eyebrow — the little ⚡ glyph read as clutter next to an
-            overline (TestFlight 2026-08-17: "remove icons"). */}
-        <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.9)', marginBottom: 8 }]}>
+        <Timer color={colors.azure} size={20} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[typeScale.bodyMd, { color: colors.ink }]}>
           {t('Mission du jour · +50 XP', 'Misyon jodi a · +50 XP')}
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={[typeScale.titleSm, { color: '#ffffff' }]}>
-              {t('Quiz éclair du jour', 'Quiz rapid jodi a')}
-            </Text>
-            <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.88)', marginTop: 2 }]}>
-              {streakCount > 0
-                ? t(`2 min · protège ta série 🔥${streakCount}`, `2 min · pwoteje seri ou 🔥${streakCount}`)
-                : t('2 min · commence ta série 🔥', '2 min · kòmanse seri ou 🔥')}
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: 'row', alignItems: 'center', gap: 2,
-              backgroundColor: '#ffffff', borderRadius: radius.chip,
-              paddingLeft: 13, paddingRight: 9, paddingVertical: 8,
-            }}
-          >
-            <Text style={[typeScale.bodyMd, { color: '#1B6FE0' }]}>{t('Commencer', 'Kòmanse')}</Text>
-            <ChevronRight color="#1B6FE0" size={16} />
-          </View>
-        </View>
-      </LinearGradient>
+        <Text style={[typeScale.caption, { color: colors.faint, marginTop: 1 }]}>
+          {streakCount > 0
+            ? t(`Quiz éclair · 2 min · protège ta série 🔥${streakCount}`, `Quiz rapid · 2 min · pwoteje seri ou 🔥${streakCount}`)
+            : t('Quiz éclair · 2 min · commence ta série', 'Quiz rapid · 2 min · kòmanse seri ou')}
+        </Text>
+      </View>
+      <ChevronRight color={colors.faint} size={18} />
     </PressableScale>
   );
 }

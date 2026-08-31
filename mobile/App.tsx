@@ -113,13 +113,12 @@ function AuthGate() {
 
 function App() {
   const { theme } = useStore();
-  // Satoshi (per-weight) is the app's display/body face. Shipped as OTA assets;
-  // expo-font is already in the native build. Falls back to system if it fails.
+  // Source Sans 3 (per-weight) is the app's display/body face — the Estil Klè
+  // restyle. Falls back to system if it fails.
   const [fontsLoaded, fontError] = useFonts({
-    'Satoshi-Regular': require('./assets/fonts/Satoshi-Regular.ttf'),
-    'Satoshi-Medium': require('./assets/fonts/Satoshi-Medium.ttf'),
-    'Satoshi-Bold': require('./assets/fonts/Satoshi-Bold.ttf'),
-    'Satoshi-Black': require('./assets/fonts/Satoshi-Black.ttf'),
+    'SourceSans3-Regular': require('@expo-google-fonts/source-sans-3/400Regular/SourceSans3_400Regular.ttf'),
+    'SourceSans3-SemiBold': require('@expo-google-fonts/source-sans-3/600SemiBold/SourceSans3_600SemiBold.ttf'),
+    'SourceSans3-Bold': require('@expo-google-fonts/source-sans-3/700Bold/SourceSans3_700Bold.ttf'),
   });
   // Drive NativeWind's dark: variants from our store theme (manual toggle, not
   // just the OS setting), so className-based dark styles track the app's theme.

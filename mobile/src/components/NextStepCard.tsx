@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Play, Zap, Target, Brain, History, ArrowRight } from 'lucide-react-native';
@@ -22,13 +22,16 @@ type Nav = BottomTabNavigationProp<TabParamList>;
  * their next step from a list; this card IS the next step.
  */
 export default function NextStepCard({
-  step, onOpenReview,
+  step, onOpenReview, thumb,
 }: {
   step: NonNullable<NextStep>;
   onOpenReview: () => void;
+  /** The course's video still — the card leads with real imagery when it has some. */
+  thumb?: string | null;
 }) {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface, shadow, radius } = useTheme();
+  const [thumbFailed, setThumbFailed] = React.useState(false);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -104,18 +107,32 @@ export default function NextStepCard({
     }
   }
 
+  const showThumb = !!thumb && !thumbFailed;
+
   return (
-    <View style={{ ...cardSurface, ...shadow.md, padding: 16 }}>
+    <View style={{ ...cardSurface, ...shadow.md, padding: 0, overflow: 'hidden' }}>
+      {showThumb && (
+        <Image
+          source={{ uri: thumb! }}
+          resizeMode="cover"
+          onError={() => setThumbFailed(true)}
+          style={{ width: '100%', height: 150, backgroundColor: colors.surfaceAlt }}
+        />
+      )}
+      <View style={{ padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View
-          style={{
-            width: 44, height: 44, borderRadius: radius.tile,
-            backgroundColor: accent + '18',
-            alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}
-        >
-          <Icon color={accent} size={20} />
-        </View>
+        {/* With real imagery above, a tinted icon tile is just clutter. */}
+        {!showThumb && (
+          <View
+            style={{
+              width: 44, height: 44, borderRadius: radius.tile,
+              backgroundColor: accent + '18',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <Icon color={accent} size={20} />
+          </View>
+        )}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[typeScale.overline, { color: accent, marginBottom: 2 }]} numberOfLines={1}>
             {eyebrow}
@@ -137,7 +154,8 @@ export default function NextStepCard({
         accessibilityLabel={`${cta}. ${title}`}
         style={{
           marginTop: 14,
-          backgroundColor: accent,
+          // One blue for every action — subject tints stay on eyebrows/icons.
+          backgroundColor: colors.azureFill,
           borderRadius: radius.control,
           paddingVertical: 13,
           flexDirection: 'row',
@@ -149,6 +167,7 @@ export default function NextStepCard({
         <Text style={[typeScale.bodyMd, { color: '#ffffff' }]}>{cta}</Text>
         <ArrowRight color="#ffffff" size={16} />
       </PressableScale>
+      </View>
     </View>
   );
 }
