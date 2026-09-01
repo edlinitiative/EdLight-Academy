@@ -466,7 +466,7 @@ export default function ExamResultsScreen() {
         {/* Actions */}
         <View className="px-4 mt-6 gap-3">
           <Button
-            onPress={() => { tapMedium(); navigation.replace('ExamTake', { level, examId }); }}
+            onPress={() => { tapMedium(); navigation.replace('ExamTake', { level, examId, autostart: true }); }}
             variant="primary"
             size="lg"
             fullWidth

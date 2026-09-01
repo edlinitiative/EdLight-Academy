@@ -82,3 +82,4 @@ __pycache__/
 # Firebase admin keys — never commit
 *firebase-adminsdk*.json
 *serviceaccount*.json
+/mobile/dist

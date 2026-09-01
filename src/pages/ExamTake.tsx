@@ -253,7 +253,7 @@ const ExamTake = () => {
   useEffect(() => {
     if (!exam || !exam?.exam_id) return;
     if (!isNumericId(examId)) return;
-    navigate(`/exams/${level}/${exam.exam_id}`, { replace: true });
+    navigate(`/exams/${level}/${exam.exam_id}/take`, { replace: true });
   }, [exam, examId, level, navigate]);
 
   const subject = useMemo(() => normalizeSubject(exam?.subject), [exam?.subject]);
@@ -1085,8 +1085,8 @@ const ExamTake = () => {
       <section className="section exam-take exam-take--preview" aria-busy="true">
         <div className="container">
           <div className="exam-take__topbar exam-take__topbar--preview">
-            <button className="exam-take__back-btn" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← {t('Examens', 'Egzamen')}
+            <button className="exam-take__back-btn" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button">
+              ← {t('Examen', 'Egzamen')}
             </button>
             <div className="exam-take__topbar-center">
               <Skeleton width={180} height={16} />
@@ -1153,8 +1153,8 @@ const ExamTake = () => {
         <div className="container">
           {/* Top bar — mobile-first compact */}
           <div className="exam-take__topbar exam-take__topbar--preview">
-            <button className="exam-take__back-btn" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← {t('Examens', 'Egzamen')}
+            <button className="exam-take__back-btn" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button">
+              ← {t('Examen', 'Egzamen')}
             </button>
             <div className="exam-take__topbar-center">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>
@@ -1486,8 +1486,8 @@ const ExamTake = () => {
         {/* Top bar */}
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
-            <button className="button button--ghost button--sm" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← {t('Examens', 'Egzamen')}
+            <button className="button button--ghost button--sm" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button">
+              ← {t('Examen', 'Egzamen')}
             </button>
             <div className="exam-take__exam-info">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>

@@ -11,6 +11,7 @@
 
 import { getCachedCourses, loadCoursesData } from './dataService';
 import { GAMES } from '../data/games';
+import { levelToSlug } from '../utils/examLevels';
 
 export type SearchItemType = 'course' | 'lesson' | 'exam' | 'game' | 'page' | 'action';
 
@@ -168,7 +169,7 @@ async function examItems(lang: Lang): Promise<SearchItem[]> {
           type: 'exam' as const,
           title: `${e.subject || e.exam_title || 'Examen'} — ${levelLabel} ${e.year || ''}`.trim(),
           subtitle: e.exam_title && e.exam_title !== e.subject ? e.exam_title : undefined,
-          to: `/exams/${encodeURIComponent(e.level)}/${encodeURIComponent(e.exam_id)}`,
+          to: `/exams/${levelToSlug(e.level)}/${encodeURIComponent(e.exam_id)}`,
           keywords: `examen egzamen ${e.subject || ''} ${e.year || ''} ${levelLabel}`,
         };
       });

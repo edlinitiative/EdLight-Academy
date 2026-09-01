@@ -1,12 +1,11 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
-import ExamPreviewModal from '../components/ExamPreviewModal';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { loadAllExamResultSummaries } from '../services/examResults';
+import { useExamAttempts } from '../hooks/useExamAttempts';
 import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
 import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
@@ -51,59 +50,6 @@ function useExamCatalog() {
   });
 }
 
-/**
- * Build a map of `examId -> { percentage, attempted }` from two sources:
- *   1. Firestore (signed-in users, cross-device)
- *   2. sessionStorage (works for everyone in the current session)
- * Used to surface "already done / best score" badges on exam cards.
- */
-function useExamAttempts() {
-  const userId = useStore((s) => s.user?.uid);
-
-  // Remote summaries for authenticated users
-  const { data: remote } = useQuery({
-    queryKey: ['exam-attempts', userId],
-    queryFn: () => loadAllExamResultSummaries(userId),
-    enabled: !!userId,
-    staleTime: 60_000,
-  });
-
-  return useMemo(() => {
-    const map = {};
-    const add = (id, percentage, ms) => {
-      if (id == null) return;
-      const key = String(id);
-      const pct = typeof percentage === 'number' ? percentage : null;
-      const prev = map[key];
-      // Keep the best score seen across sources
-      if (!prev || (pct != null && (prev.percentage == null || pct > prev.percentage))) {
-        map[key] = { percentage: pct, attempted: true, submittedAtMs: ms ?? prev?.submittedAtMs ?? null };
-      }
-    };
-
-    // 1. Firestore summaries
-    if (remote) {
-      for (const [id, info] of Object.entries(remote) as [string, ExamAttemptSummary][]) {
-        add(id, info?.percentage, info?.submittedAtMs);
-      }
-    }
-
-    // 2. sessionStorage scan (exam-result-<id>)
-    try {
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const k = sessionStorage.key(i);
-        if (!k || !k.startsWith('exam-result-')) continue;
-        const raw = sessionStorage.getItem(k);
-        if (!raw) continue;
-        const parsed = JSON.parse(raw);
-        add(parsed.examId ?? k.slice('exam-result-'.length), parsed.result?.summary?.percentage, parsed.timestamp);
-      }
-    } catch { /* sessionStorage may be unavailable */ }
-
-    return map;
-  }, [remote]);
-}
-
 /** Map URL path segments to the raw level values used in exam_catalog.json */
 const URL_LEVEL_TO_RAW = {
   '9e': '9eme_af',
@@ -128,6 +74,7 @@ const EXAM_LEVEL_TO_ROUTE = {
 
 const ExamBrowser = () => {
   const { level } = useParams(); // Get level from URL
+  const navigate = useNavigate();
 
   const { data: allExams, isPending: isLoading, error } = useExamCatalog();
   const attempts = useExamAttempts();
@@ -165,7 +112,6 @@ const ExamBrowser = () => {
   const isTerminale = activeLevel === 'terminale';
   const [trackFilter, setTrackFilter] = useState('');
   const [showTrackSelector, setShowTrackSelector] = useState(false);
-  const [previewExam, setPreviewExam] = useState(null);
 
   // Auto-default track filter to user's track on first load
   useEffect(() => {
@@ -715,7 +661,7 @@ const ExamBrowser = () => {
                           key={exam.exam_id || exam._idx}
                           exam={exam}
                           attempt={attempts[examKeyOf(exam)]}
-                          onClick={() => setPreviewExam(exam)}
+                          onClick={() => navigate(`/exams/${level}/${examKeyOf(exam)}`)}
                         />
                       ))}
                     </div>
@@ -739,15 +685,6 @@ const ExamBrowser = () => {
           />
         )}
 
-        {/* Quick-look preview modal */}
-        {previewExam && (
-          <ExamPreviewModal
-            exam={previewExam}
-            attempt={attempts[examKeyOf(previewExam)]}
-            level={activeLevel && activeLevel !== 'all' ? activeLevel : level}
-            onClose={() => setPreviewExam(null)}
-          />
-        )}
       </div>
     </section>
   );
@@ -815,7 +752,7 @@ function ExamCard({ exam, onClick, attempt }) {
         <p className="exam-card__tracks">{t('Filière', 'Filyè')} : {tracks.join(' · ')}</p>
       )}
 
-      <span className="exam-card__cta">{t('Aperçu', 'Apèsi')} →</span>
+      <span className="exam-card__cta">{t('Voir l’examen', 'Gade egzamen an')} →</span>
     </button>
   );
 }

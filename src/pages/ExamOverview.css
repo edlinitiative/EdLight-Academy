@@ -1,0 +1,289 @@
+/* /exams/:level/:examId — exam overview subpage. Tokens only; the subject
+   accent arrives via --exam-accent set inline. */
+
+.exam-overview__container {
+  max-width: 980px;
+}
+
+.exam-overview__crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--text-400);
+  margin-bottom: 1.1rem;
+}
+
+.exam-overview__crumbs a {
+  color: var(--text-500);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.exam-overview__crumbs a:hover {
+  color: var(--primary-500);
+}
+
+.exam-overview__head {
+  margin-bottom: 1.5rem;
+}
+
+.exam-overview__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.exam-overview__subject {
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.exam-overview__tag {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-600);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.exam-overview__tag--easy { background: var(--success-50); color: var(--success-500); }
+.exam-overview__tag--medium { background: var(--warning-50); color: var(--warning-500); }
+.exam-overview__tag--hard { background: var(--danger-50); color: var(--danger-500); }
+
+.exam-overview__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.4vw, 2rem);
+  line-height: 1.2;
+  color: var(--text-900);
+}
+
+.exam-overview__attempt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.exam-overview__attempt { background: var(--surface-muted); color: var(--text-600); }
+.exam-overview__attempt--good { background: var(--success-50); color: var(--success-500); }
+.exam-overview__attempt--mid { background: var(--warning-50); color: var(--warning-500); }
+.exam-overview__attempt--low { background: var(--danger-50); color: var(--danger-500); }
+
+.exam-overview__attempt-link {
+  font-weight: 700;
+}
+
+.exam-overview__resume-note {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.7rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-500);
+}
+
+.exam-overview__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.exam-overview__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.exam-overview__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.exam-overview__stat svg { color: var(--exam-accent, var(--primary-500)); }
+.exam-overview__stat strong { font-size: var(--text-lg); color: var(--text-900); }
+.exam-overview__stat span { font-size: var(--text-xs); color: var(--text-500); }
+
+.exam-overview__autograde {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  font-size: var(--text-sm);
+  color: var(--success-500);
+}
+
+.exam-overview__block {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.exam-overview__block h2 {
+  margin: 0 0 0.9rem;
+  font-size: var(--text-base);
+  color: var(--text-900);
+}
+
+.exam-overview__sections {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.exam-overview__sections li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: var(--text-sm);
+  color: var(--text-700);
+}
+
+.exam-overview__section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.exam-overview__section-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.exam-overview__section-qty {
+  color: var(--text-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-overview__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.exam-overview__chip {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-600);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.exam-overview__chip strong { color: var(--text-900); }
+
+.exam-overview__chip--track {
+  background: var(--primary-50);
+  color: var(--primary-600);
+}
+
+.exam-overview__sample {
+  position: relative;
+  max-height: 180px;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-700);
+}
+
+.exam-overview__sample-fade {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 70px;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+}
+
+.exam-overview__sample-note {
+  margin: 0.6rem 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-400);
+}
+
+/* Action rail */
+.exam-overview__rail {
+  position: sticky;
+  top: calc(var(--navbar-height) + 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.exam-overview__cta-card {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-md);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exam-overview__cta {
+  width: 100%;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.exam-overview__cta-hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+  text-align: center;
+}
+
+.exam-overview__cta-secondary {
+  width: 100%;
+  justify-content: center;
+  gap: 0.45rem;
+  text-decoration: none;
+}
+
+.exam-overview__back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: none;
+  color: var(--text-500);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.exam-overview__back-link:hover { color: var(--primary-500); }
+
+@media (max-width: 860px) {
+  .exam-overview__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .exam-overview__rail {
+    position: static;
+    order: -1;
+  }
+}

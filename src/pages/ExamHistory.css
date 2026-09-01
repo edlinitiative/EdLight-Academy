@@ -1,0 +1,76 @@
+/* /exams/resultats — exam results history. Tokens only. */
+
+.exam-history__container {
+  max-width: 780px;
+}
+
+.exam-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exam-history__row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.95rem 1.1rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--text-900);
+  transition: box-shadow 140ms ease;
+}
+
+.exam-history__row:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.exam-history__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.exam-history__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.exam-history__title {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-history__meta {
+  font-size: var(--text-xs);
+  color: var(--text-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-history__score {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.exam-history__score--good { background: var(--success-50); color: var(--success-500); }
+.exam-history__score--mid { background: var(--warning-50); color: var(--warning-500); }
+.exam-history__score--low { background: var(--danger-50); color: var(--danger-500); }
+
+.exam-history__chevron {
+  color: var(--text-300);
+  flex: none;
+}

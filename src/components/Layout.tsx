@@ -39,8 +39,9 @@ export function Layout() {
   // A course LESSON is also immersive, but the same /courses/:id route first
   // shows a (non-immersive) overview, so that screen drives focus mode itself
   // via the `focusMode` store flag rather than this URL test.
-  const isExamTaking =
-    /^\/exams\/[^/]+\/[^/]+$/.test(pathname) && !pathname.endsWith('/results');
+  // Only the actual paper is immersive; the exam OVERVIEW page (same URL
+  // minus /take) keeps the normal chrome.
+  const isExamTaking = /^\/exams\/[^/]+\/[^/]+\/take$/.test(pathname);
   // Trivia is a single-route, app-like game flow (landing -> round picker ->
   // quiz -> results). It keeps the bottom tab bar for navigation, but the
   // marketing footer (Contact/Confidentialité/Conditions) is out of place in a

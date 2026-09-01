@@ -1,10 +1,34 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { History, PlayCircle } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRACKS, gradeProfile } from '../config/trackConfig';
 import CardCover from '../components/CardCover';
+import { levelToSlug } from '../utils/examLevels';
 import './ExamLanding.css';
+
+/** Newest local in-progress exam draft (ExamTake's synchronous mirror keys). */
+function newestLocalDraft(): { examId: string; draft: any } | null {
+  let best: { examId: string; draft: any } | null = null;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith('edlight-exam-draft-')) continue;
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const draft = JSON.parse(raw);
+      const hasProgress =
+        (draft?.answers && Object.keys(draft.answers).length > 0) || (draft?.currentQ ?? 0) > 0;
+      if (!hasProgress || draft?.status === 'submitted') continue;
+      const ms = draft?.updated_at_ms ?? draft?.started_at_ms ?? 0;
+      if (!best || ms > (best.draft?.updated_at_ms ?? best.draft?.started_at_ms ?? 0)) {
+        best = { examId: k.slice('edlight-exam-draft-'.length), draft };
+      }
+    }
+  } catch { /* localStorage unavailable */ }
+  return best;
+}
 
 // Level cards are data-driven; the visible strings (heading/description/badge)
 // are resolved from i18n via `key` so the whole page localizes cleanly.
@@ -45,8 +69,38 @@ const ExamLanding = () => {
     navigate('/exams/terminale');
   };
 
+  // "Continue where you left off" — read once on mount (local mirror only;
+  // the Dashboard already surfaces cross-device Firestore drafts).
+  const [resume, setResume] = useState<{ examId: string; draft: any } | null>(null);
+  useEffect(() => { setResume(newestLocalDraft()); }, []);
+  const answered = resume?.draft?.answers ? Object.keys(resume.draft.answers).length : 0;
+
   return (
     <div className="exam-landing">
+      <div className="exam-landing__toolbar">
+        {resume ? (
+          <button
+            type="button"
+            className="exam-landing__resume"
+            onClick={() =>
+              navigate(`/exams/${levelToSlug(resume.draft?.level)}/${resume.examId}/take`, { state: { autostart: true } })
+            }
+          >
+            <PlayCircle size={18} aria-hidden />
+            <span className="exam-landing__resume-text">
+              <strong>{t('examLanding.resume')}</strong>
+              <span>
+                {resume.draft?.exam_title || resume.draft?.subject || ''}
+                {answered > 0 ? ` · ${t('examLanding.resumeAnswered', { count: answered })}` : ''}
+              </span>
+            </span>
+            <span aria-hidden>→</span>
+          </button>
+        ) : <span />}
+        <Link to="/exams/resultats" className="exam-landing__history">
+          <History size={16} aria-hidden /> {t('examLanding.myResults')}
+        </Link>
+      </div>
       <div className="exam-landing__grid">
         {orderedLevels.map((level) => {
           const heading = t(`examLanding.${level.key}Heading`);

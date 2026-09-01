@@ -420,8 +420,12 @@ export default function ExamTakeScreen() {
   // Bumped by the error-state retry button to re-run the fetch effect.
   const [retryCount, setRetryCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  // 'overview' shows the exam intro; 'questions' is the live question flow
-  const [phase, setPhase] = useState<'overview' | 'questions'>('overview');
+  // 'overview' shows the exam intro; 'questions' is the live question flow.
+  // Coming from ExamOverviewScreen (or a resume card) sets `autostart` — that
+  // intro was already shown as a real page, so we drop straight in.
+  const [phase, setPhase] = useState<'overview' | 'questions'>(
+    route.params?.autostart ? 'questions' : 'overview',
+  );
   const [hasDraft, setHasDraft] = useState(false);
   const draftIdxRef = useRef<number | null>(null);
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -529,7 +533,13 @@ export default function ExamTakeScreen() {
                 }
               }
             } catch { /* ignore corrupt mirror */ }
-            if (!active || phaseRef.current !== 'overview') return;
+            if (!active) return;
+            // Restore only into a pristine session: the overview phase, or an
+            // autostarted question phase where nothing has been touched yet.
+            // Never clobber answers the student typed while the read resolved.
+            const pristine = phaseRef.current === 'overview'
+              || (Object.keys(answersRef.current).length === 0 && currentIdxRef.current === 0);
+            if (!pristine) return;
             if (draft && draft.status !== 'submitted') {
               const answerCount = draft.answers ? Object.keys(draft.answers).length : 0;
               if (answerCount > 0) { setAnswers(draft.answers); setHasDraft(true); }
@@ -538,6 +548,11 @@ export default function ExamTakeScreen() {
               if (Number.isFinite(draft.currentIdx) && draft.currentIdx > 0) {
                 draftIdxRef.current = draft.currentIdx;
                 setHasDraft(true);
+                // With autostart we're already past handleStart (which normally
+                // applies the saved position) — jump there directly.
+                if (phaseRef.current === 'questions' && draft.currentIdx < qs.length) {
+                  setCurrentIdx(draft.currentIdx);
+                }
               }
             }
           })();

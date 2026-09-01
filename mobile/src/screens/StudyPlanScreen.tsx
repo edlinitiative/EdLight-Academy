@@ -510,7 +510,9 @@ export default function StudyPlanScreen({ onClose }: { onClose?: () => void }) {
       // screen — without it the target becomes the stack's ONLY route, so
       // leaving it exits the tab entirely instead of stepping back one level.
       if (task.type === 'exam' && task.examId && task.level) {
-        go('Exams', { screen: 'ExamTake', params: { level: task.level, examId: task.examId }, initial: false });
+        // Land on the exam's overview page (stats, attempts, one clear CTA)
+        // rather than dropping straight into the paper.
+        go('Exams', { screen: 'ExamOverview', params: { level: task.level, examId: task.examId }, initial: false });
       } else if (task.type === 'exam') {
         // Quiz-primary grades mount QuizNavigator behind the "Exams" route,
         // which has no ExamLanding — reachable if a junior grade picked a Bac

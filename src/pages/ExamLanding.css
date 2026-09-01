@@ -428,3 +428,61 @@
     padding: 1.1rem 1.25rem 0.4rem;
   }
 }
+
+/* ── Toolbar: resume strip + results link (Coursera-style hub additions) ── */
+.exam-landing__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.exam-landing__resume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: 0;
+  cursor: pointer;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--primary-50);
+  color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  min-width: 0;
+}
+
+.exam-landing__resume-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.exam-landing__resume-text strong {
+  font-weight: 800;
+}
+
+.exam-landing__resume-text span {
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-landing__history {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-500);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  flex: none;
+}
+
+.exam-landing__history:hover {
+  color: var(--primary-500);
+}
