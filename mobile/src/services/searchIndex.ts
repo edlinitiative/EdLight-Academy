@@ -120,7 +120,7 @@ async function courseItems(): Promise<SearchItem[]> {
   }
   const items: SearchItem[] = [];
   for (const c of courses || []) {
-    if (!c?.id || c.hidden) continue;
+    if (!c?.id || c.hidden || c.comingSoon) continue;
     const level = c.level ? String(c.level).toUpperCase() : '';
     items.push({
       type: 'course',

@@ -372,3 +372,36 @@ for (const [route, { title, description, body }] of Object.entries(ROUTES)) {
   console.log(`prerendered /${route} (${words} words)`);
 }
 console.log(`Done: ${Object.keys(ROUTES).length} routes prerendered.`);
+
+// ─── Sitemap: expand the static base with course + exam-level URLs ──────────
+// Content-depth signal for crawlers: every visible course page and each exam
+// level get real sitemap entries (sourced from the committed catalog snapshot
+// and the exam index — no network at build time).
+try {
+  const baseSitemap = readFileSync(join(root, 'pwa', 'sitemap.xml'), 'utf8');
+  const urls = [];
+  try {
+    const catalog = JSON.parse(readFileSync(join(root, 'public', 'catalog.json'), 'utf8'));
+    const seen = new Set();
+    for (const c of catalog.courses || []) {
+      if (!c?.id || c.hidden || c.coming_soon || seen.has(c.id)) continue;
+      seen.add(c.id);
+      urls.push(`/courses/${encodeURIComponent(c.id)}`);
+    }
+  } catch { /* no catalog snapshot — skip course URLs */ }
+  try {
+    const idx = JSON.parse(readFileSync(join(root, 'public', 'exam_catalog_index.json'), 'utf8'));
+    for (const level of new Set(idx.map((e) => e?.level).filter(Boolean))) {
+      urls.push(`/exams/${encodeURIComponent(level)}`);
+    }
+  } catch { /* no exam index — skip level URLs */ }
+
+  const extra = urls
+    .map((u) => `  <url>\n    <loc>${ORIGIN}${u}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`)
+    .join('\n');
+  const expanded = baseSitemap.replace('</urlset>', `${extra}\n</urlset>`);
+  writeFileSync(join(root, 'dist', 'sitemap.xml'), expanded);
+  console.log(`sitemap: +${urls.length} course/exam URLs`);
+} catch (err) {
+  console.warn('sitemap expansion skipped:', err?.message || err);
+}

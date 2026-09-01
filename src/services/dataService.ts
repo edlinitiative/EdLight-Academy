@@ -317,12 +317,48 @@ const writeCachedCourses = (data) => {
  * @returns {Promise<Object[]>} Array of transformed course objects
  */
 export const loadCoursesData = async () => {
+  // Static-first: /catalog.json is a committed CDN snapshot of the courses
+  // collection (scripts/export_catalog.mjs), so a FIRST visit on a slow
+  // network paints the catalog without a Firestore round-trip. Firestore
+  // stays the source of truth: a background revalidate refreshes the
+  // localStorage cache, so a stale snapshot self-heals on the next visit.
+  try {
+    const res = await fetch('/catalog.json');
+    if (res.ok) {
+      const snap = await res.json();
+      if (Array.isArray(snap?.courses) && snap.courses.length > 0) {
+        const courses = transformFirestoreCourses(snap.courses);
+        if (courses.length > 0) {
+          writeCachedCourses(courses);
+          revalidateCoursesInBackground();
+          return courses;
+        }
+      }
+    }
+  } catch {
+    /* snapshot unavailable (dev server, older deploy) — use Firestore */
+  }
+
   const firestoreCourses = await fetchCoursesFromFirestore();
   const courses = transformFirestoreCourses(firestoreCourses);
   // Only cache a non-empty catalog. Caching [] (e.g. after a transient error)
   // would persist an empty listing for returning visitors.
   if (courses.length > 0) writeCachedCourses(courses);
   return courses;
+};
+
+let coursesRevalidateInFlight = false;
+/** Silently refresh the cached catalog from Firestore (fire-and-forget). */
+const revalidateCoursesInBackground = () => {
+  if (coursesRevalidateInFlight) return;
+  coursesRevalidateInFlight = true;
+  fetchCoursesFromFirestore()
+    .then((raw) => {
+      const fresh = transformFirestoreCourses(raw);
+      if (fresh.length > 0) writeCachedCourses(fresh);
+    })
+    .catch(() => { /* offline — keep the snapshot-derived cache */ })
+    .finally(() => { coursesRevalidateInFlight = false; });
 };
 
 /**
