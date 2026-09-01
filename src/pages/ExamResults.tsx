@@ -657,7 +657,7 @@ const ExamResults = () => {
       <div className="exam-results__actions">
         <button
           className="button button--primary"
-          onClick={() => navigate(`/exams/${level}/${examId}`)}
+          onClick={() => navigate(`/exams/${level}/${examId}/take`, { state: { autostart: true } })}
           type="button"
         >
           <RefreshCw size={16} /> {t('Recommencer cet examen', 'Rekòmanse egzamen sa a')}

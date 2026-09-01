@@ -286,7 +286,10 @@ const resources = {
         universityBadge: 'Higher Ed',
         chooseTrack: 'Choose your track',
         chooseTrackAria: 'Choose your Baccalaureate track',
-        explore: 'Explore'
+        explore: 'Explore',
+        resume: 'Resume',
+        resumeAnswered: '{{count}} answers saved',
+        myResults: 'My results'
       }
     }
   },
@@ -593,7 +596,10 @@ const resources = {
         universityBadge: 'Supérieur',
         chooseTrack: 'Choisissez votre filière',
         chooseTrackAria: 'Choisir votre filière du Baccalauréat',
-        explore: 'Explorer'
+        explore: 'Explorer',
+        resume: 'Reprendre',
+        resumeAnswered: '{{count}} réponses enregistrées',
+        myResults: 'Mes résultats'
       }
     }
   },
@@ -900,7 +906,10 @@ const resources = {
         universityBadge: 'Siperyè',
         chooseTrack: 'Chwazi filyè ou',
         chooseTrackAria: 'Chwazi filyè Bakaloreya ou',
-        explore: 'Eksplore'
+        explore: 'Eksplore',
+        resume: 'Kontinye',
+        resumeAnswered: '{{count}} repons anrejistre',
+        myResults: 'Rezilta mwen'
       }
     }
   }
