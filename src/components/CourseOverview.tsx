@@ -11,6 +11,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Clock, Layers, PlayCircle, Target, ChevronRight, ArrowLeft, Check } from 'lucide-react';
+import CourseInstructors from './CourseInstructors';
 
 function getLessons(module) {
   return Array.isArray(module?.lessons) ? module.lessons : [];
@@ -130,6 +131,8 @@ export default function CourseOverview({
           </button>
         </div>
       </header>
+
+      <CourseInstructors courseId={course.id} />
 
       {totalModules > 0 && (
         <section className="course-overview__content">

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { GraduationCap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   collection, getDocs, query, orderBy, limit as fbLimit, startAfter,
-  doc, updateDoc, serverTimestamp,
+  doc, updateDoc, addDoc, serverTimestamp,
   type QueryDocumentSnapshot, type DocumentData, type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -51,6 +52,8 @@ interface InstructorApplication {
   source?: string;
   status?: AppStatus;
   createdAt?: any;
+  /** Written back when the profile is created from this application. */
+  instructorId?: string;
   [k: string]: any;
 }
 
@@ -127,6 +130,40 @@ export default function AdminInstructors() {
       setApps((prev) => prev.map((a) => (a.id === app.id ? { ...a, status } : a)));
     } catch (err) {
       console.error('[AdminInstructors] status update failed:', err);
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  /** Approved application -> public instructor profile (instructors doc),
+   *  prefilled from the application; the profile id is written back so the
+   *  button can't create duplicates. Bio/photo/courses are edited afterwards
+   *  (admin console / data browser). */
+  async function createProfile(app: InstructorApplication) {
+    if (app.instructorId) return;
+    setSavingId(app.id);
+    try {
+      const ref = await addDoc(collection(db, 'instructors'), {
+        name: app.name || '',
+        photoUrl: '',
+        bio_fr: '',
+        bio_ht: '',
+        subjects: app.subjects || [],
+        levels: app.levels || [],
+        school: app.school || '',
+        credentials: '',
+        courseIds: [],
+        visible: true,
+        applicationId: app.id,
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'instructorApplications', app.id), {
+        instructorId: ref.id,
+        updatedAt: serverTimestamp(),
+      });
+      setApps((prev) => prev.map((a) => (a.id === app.id ? { ...a, instructorId: ref.id } : a)));
+    } catch (err) {
+      console.error('[AdminInstructors] profile creation failed:', err);
     } finally {
       setSavingId(null);
     }
@@ -237,6 +274,29 @@ export default function AdminInstructors() {
                               <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>
                                 <strong>Motivation :</strong> {a.motivation || '—'}
                               </div>
+                              {(a.status === 'approved') && (
+                                <div style={{ marginTop: 10 }}>
+                                  {a.instructorId ? (
+                                    <Link
+                                      className="admin-btn admin-btn--ghost"
+                                      to={`/enseignants/${a.instructorId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      Voir le profil enseignant ↗
+                                    </Link>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="admin-btn admin-btn--ghost"
+                                      disabled={savingId === a.id}
+                                      onClick={() => createProfile(a)}
+                                    >
+                                      {savingId === a.id ? 'Création…' : 'Créer le profil enseignant'}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </td>
                         </tr>

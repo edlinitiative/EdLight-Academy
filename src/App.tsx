@@ -19,6 +19,7 @@ const Revision = lazyWithRetry(() => import('./pages/Revision'));
 const About = lazyWithRetry(() => import('./pages/About'));
 const Contact = lazyWithRetry(() => import('./pages/Contact'));
 const Teach = lazyWithRetry(() => import('./pages/Teach'));
+const InstructorProfile = lazyWithRetry(() => import('./pages/InstructorProfile'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
 const Help = lazyWithRetry(() => import('./pages/Help'));
 const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
@@ -92,6 +93,7 @@ export default function App() {
                 <Route path="about" element={<About />} />
                 <Route path="contact" element={<Contact />} />
                 <Route path="enseigner" element={<Teach />} />
+                <Route path="enseignants/:instructorId" element={<InstructorProfile />} />
                 <Route path="faq" element={<FAQ />} />
                 <Route path="help" element={<Help />} />
                 <Route path="privacy" element={<Privacy />} />
