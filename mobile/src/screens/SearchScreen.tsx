@@ -115,18 +115,22 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
           },
         });
         break;
-      case 'exam':
-        // Younger grades' "Exams" tab hosts the QuizNavigator (no ExamTake
-        // route) — send them to the tab root instead of a crashing deep link.
+      case 'exam': {
+        // Younger grades' "Exams" tab hosts the QuizNavigator (no exam
+        // routes) — send them to the tab root instead of a crashing deep link.
         if (gradeProfile(grade).primaryTab === 'Quiz') {
           navigation.navigate('Main', { screen: 'Exams' });
         } else {
+          // The index stores the raw catalog level; the Exams stack routes on
+          // slugs — map it so back-navigation lands on a working browser.
+          const slug = ({ baccalaureat: 'terminale', universite: 'university', '9eme_af': '9e' } as Record<string, string>)[nav.level] || nav.level;
           navigation.navigate('Main', {
             screen: 'Exams',
-            params: { screen: 'ExamTake', params: { level: nav.level, examId: nav.examId } },
+            params: { screen: 'ExamOverview', params: { level: slug, examId: nav.examId } },
           });
         }
         break;
+      }
       case 'games':
         navigation.navigate('Main', { screen: 'Trivia' });
         break;

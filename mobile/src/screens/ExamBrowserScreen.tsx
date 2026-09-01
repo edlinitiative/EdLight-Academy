@@ -630,7 +630,7 @@ export default function ExamBrowserScreen() {
             <ExamCard
               exam={exam}
               attemptInfo={results[examId] ?? null}
-              onPress={() => navigation.navigate('ExamTake', { level: activeLevel !== 'all' ? activeLevel : level, examId })}
+              onPress={() => navigation.navigate('ExamOverview', { level: activeLevel !== 'all' ? activeLevel : level, examId })}
             />
           );
           if (reduceMotion) return card;

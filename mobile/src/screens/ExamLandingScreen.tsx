@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   GraduationCap, ChevronRight, BookOpen, Landmark, Check, PlayCircle, X,
   Calculator, Atom, FlaskConical, Leaf, PenLine, Globe, Brain, HeartPulse, Lightbulb,
+  History,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { gradeProfile, TRACKS as ALL_TRACKS, TRACK_LEVEL } from '../config/trackConfig';
@@ -287,7 +288,8 @@ export default function ExamLandingScreen() {
     // pops to this screen. (`initial: false` is only needed when entering the
     // Exams stack from ANOTHER tab — see DashboardScreen / ResumeBanner — where
     // it keeps the stack root mounted underneath instead of exiting the tab.)
-    navigation.navigate('ExamTake', { level: target.level, examId: target.examId });
+    // autostart: the student is resuming — no need to re-read the intro page.
+    navigation.navigate('ExamTake', { level: target.level, examId: target.examId, autostart: true });
   }
 
   // "Bac · Juillet 2022 · 3 réponses · il y a 2 h" — recognisable at a glance.
@@ -573,6 +575,37 @@ export default function ExamLandingScreen() {
               {!myLevel && level.id === 'terminale' && trackChips(false)}
             </View>
           ))}
+
+          {/* Mes résultats — quiet entry to the full submitted-exams history. */}
+          <View style={[cardSurface, { overflow: 'hidden', marginTop: 4 }]}>
+            <PressableScale
+              onPress={() => { tapLight(); navigation.navigate('ExamHistory'); }}
+              pressedScale={0.98}
+              accessibilityRole="button"
+              accessibilityLabel={t('Mes résultats', 'Rezilta mwen yo')}
+              style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
+            >
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  backgroundColor: colors.azureSoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <History color={colors.azure} size={22} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[typeScale.title, { color: colors.ink }]}>{t('Mes résultats', 'Rezilta mwen yo')}</Text>
+                <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
+                  {t('Tous vos examens terminés', 'Tout egzamen ou fini yo')}
+                </Text>
+              </View>
+              <ChevronRight color={colors.faint} size={20} />
+            </PressableScale>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
