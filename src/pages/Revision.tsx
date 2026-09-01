@@ -15,6 +15,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, Check } from 'lucide-react';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
+import { Skeleton, SkeletonText } from '../components/Skeleton';
+import { EmptyState } from '../components/StateViews';
 import { useAppData } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { toDirectItemFromRow } from '../services/quizBank';
@@ -117,39 +119,50 @@ export default function Revision() {
 
   if (!user?.uid) {
     return shell(
-      <div className="card">
-        <p className="text-muted" style={{ margin: 0 }}>
-          {t('Connecte-toi pour retrouver les questions que tu as ratées.',
-            'Konekte pou w jwenn kesyon ou te rate yo.')}
-        </p>
-      </div>,
+      <EmptyState
+        title={t('Connecte-toi pour réviser', 'Konekte pou revize')}
+        message={t('Connecte-toi pour retrouver les questions que tu as ratées.',
+          'Konekte pou w jwenn kesyon ou te rate yo.')}
+        action={{
+          label: t('Se connecter', 'Konekte'),
+          onClick: () => useStore.getState().toggleAuthModal(),
+        }}
+      />,
     );
   }
 
   if (dataLoading || items === null) {
+    // Question-card-shaped skeleton (label + heading + question + options) so
+    // the layout doesn't jump when the deck arrives.
     return shell(
-      <div className="card" aria-busy="true">
-        <p className="text-muted" style={{ margin: 0 }}>{t('Chargement…', 'Chajman…')}</p>
+      <div className="card unit-quiz" aria-busy="true">
+        <div className="unit-quiz__header">
+          <div className="unit-quiz__heading" style={{ display: 'grid', gap: '0.4rem' }}>
+            <Skeleton variant="text" width={90} />
+            <Skeleton variant="text" width={150} height="1.2rem" />
+          </div>
+          <Skeleton width={64} height={26} radius={999} />
+        </div>
+        <SkeletonText lines={2} lastWidth="45%" />
+        <div style={{ display: 'grid', gap: '0.6rem', marginTop: '1.1rem' }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} height={48} radius={12} />
+          ))}
+        </div>
       </div>,
     );
   }
 
   if (items.length === 0) {
     return shell(
-      <div className="card" style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }} aria-hidden>🎉</div>
-        <p style={{ margin: 0, fontWeight: 600 }}>
-          {t('Rien à réviser — tu as corrigé toutes tes erreurs !',
-            'Anyen pou revize — ou korije tout erè ou yo !')}
-        </p>
-        <p className="text-muted" style={{ margin: '0.5rem 0 1rem' }}>
-          {t('Les questions ratées dans les exercices apparaîtront ici.',
-            'Kesyon ou rate nan egzèsis yo ap parèt isit la.')}
-        </p>
-        <Link className="button button--primary button--sm" to="/quizzes">
-          {t('Faire des exercices', 'Fè egzèsis')}
-        </Link>
-      </div>,
+      <EmptyState
+        icon={<span style={{ fontSize: '1.6rem' }} aria-hidden>🎉</span>}
+        title={t('Rien à réviser — tu as corrigé toutes tes erreurs !',
+          'Anyen pou revize — ou korije tout erè ou yo !')}
+        message={t('Les questions ratées dans les exercices apparaîtront ici.',
+          'Kesyon ou rate nan egzèsis yo ap parèt isit la.')}
+        action={{ label: t('Faire des exercices', 'Fè egzèsis'), href: '/quizzes' }}
+      />,
     );
   }
 

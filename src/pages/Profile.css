@@ -29,9 +29,10 @@
 /* ── Hero card: identity + level ── */
 .profile-area--hero {
   background: var(--surface);
-  border: 1px solid var(--border-color, #e6e8eb);
-  border-radius: 16px;
-  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--primary-50);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: clamp(1.4rem, 3vw, 1.8rem);
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -61,14 +62,14 @@
 
 .profile-header__name {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: var(--text-lg);
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .profile-header__email {
   margin: 0.1rem 0 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -99,7 +100,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 0.85rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   margin-bottom: 0.5rem;
 }
@@ -107,7 +108,7 @@
 .profile-level__bar {
   height: 9px;
   border-radius: 999px;
-  background: var(--surface-alt, #f2f4f7);
+  background: var(--surface-alt);
   overflow: hidden;
 }
 
@@ -124,9 +125,10 @@
 /* ── Generic profile card ── */
 .profile-card {
   background: var(--surface);
-  border: 1px solid var(--border-color, #e6e8eb);
-  border-radius: 16px;
-  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--primary-50);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: clamp(1.2rem, 2.5vw, 1.5rem);
   position: relative;
 }
 
@@ -140,7 +142,7 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0 0 0.9rem;
-  font-size: 1rem;
+  font-size: var(--text-base);
 }
 
 /* Card header row (title + inline actions) */
@@ -168,14 +170,14 @@
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
-  background: var(--surface-alt, #f7f8fa);
+  background: var(--surface-alt);
   border-radius: 12px;
   padding: 0.7rem 0.4rem;
   text-align: center;
 }
 
 .profile-stat__value {
-  font-size: 1.2rem;
+  font-size: var(--text-lg);
   font-weight: 800;
   color: var(--text);
   font-variant-numeric: tabular-nums;
@@ -200,7 +202,7 @@
   gap: 0.3rem;
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
-  background: var(--surface-alt, #f2f4f7);
+  background: var(--surface-alt);
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--text-muted, var(--text-400));
@@ -218,7 +220,7 @@
 .profile-milestone__check { color: var(--success-500); }
 
 /* ── Certificates (soon) ── */
-.profile-card--soon { border-style: dashed; }
+.profile-card--soon { border: 1px dashed var(--border-strong); box-shadow: none; }
 
 .profile-soon-badge {
   position: absolute;
@@ -246,17 +248,16 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  border: 1px solid var(--border-color, #e6e8eb);
-  background: var(--surface-alt, #f2f4f7);
+  border: none;
+  background: var(--surface-alt);
   color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 
 .profile-toggle-btn:hover {
-  background: var(--primary-50, #e8f1fb);
+  background: var(--primary-50);
   color: var(--primary-600);
-  border-color: var(--primary-100, #cfe2f7);
 }
 
 /* ── Mon espace: icon tile grid ── */
@@ -275,10 +276,10 @@
   gap: 0.4rem;
   padding: 0.85rem 0.5rem;
   border-radius: 12px;
-  background: var(--surface-muted, #f6f5f4);
-  border: 1px solid var(--border-color, #e6e8eb);
-  color: var(--text-800, #37352f);
-  font-size: 0.71rem;
+  background: var(--surface-muted);
+  border: none;
+  color: var(--text-800);
+  font-size: var(--text-xs);
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -287,9 +288,8 @@
 }
 
 .profile-espace-tile:hover {
-  background: var(--primary-50, #e8f1fb);
+  background: var(--primary-50);
   color: var(--primary-600);
-  border-color: var(--primary-100, #cfe2f7);
   transform: translateY(-1px);
 }
 
@@ -316,14 +316,14 @@
   cursor: pointer;
   padding: 0.7rem 0.4rem;
   border-radius: 10px;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text);
   text-decoration: none;
   transition: background 0.15s ease;
 }
 
-.profile-link:hover { background: var(--surface-alt, #f2f4f7); }
+.profile-link:hover { background: var(--surface-alt); }
 
 .profile-link svg:first-child { color: var(--text-muted); flex: 0 0 auto; }
 
@@ -345,8 +345,9 @@
 
 .profile-guest__card {
   background: var(--surface);
-  border: 1px solid var(--border-color, #e6e8eb);
-  border-radius: 18px;
+  border: 1px solid var(--primary-50);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
   padding: 1.6rem;
   text-align: center;
   display: flex;
@@ -378,8 +379,9 @@
 
 .profile-links--guest {
   background: var(--surface);
-  border: 1px solid var(--border-color, #e6e8eb);
-  border-radius: 16px;
+  border: 1px solid var(--primary-50);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
   padding: 0.6rem 0.8rem;
 }
 
@@ -431,16 +433,17 @@
   gap: 0.85rem;
   width: 100%;
   padding: 0.9rem 1rem;
-  border-radius: 14px;
-  background: var(--surface, #ffffff);
-  border: 1px solid var(--border-color, #e6e8eb);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--primary-50);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   text-align: left;
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
 .profile-leaderboard-link:hover {
-  background: var(--primary-50, #e8f1fb);
-  border-color: var(--primary-100, #cfe2f7);
+  background: var(--primary-50);
+  border-color: var(--primary-100);
   transform: translateY(-1px);
 }
 .profile-leaderboard-link__icon {
@@ -450,7 +453,7 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: var(--primary-50, #e8f1fb);
+  background: var(--primary-50);
   color: var(--primary-600);
   flex-shrink: 0;
 }
@@ -461,9 +464,9 @@
   min-width: 0;
 }
 .profile-leaderboard-link__title {
-  font-size: 0.95rem;
+  font-size: var(--text-base);
   font-weight: 800;
-  color: var(--text, #37352f);
+  color: var(--text);
 }
 .profile-leaderboard-link__sub {
   font-size: 0.78rem;
@@ -474,7 +477,7 @@
   font-size: 0.85rem;
   font-weight: 800;
   color: var(--primary-600);
-  background: var(--primary-50, #e8f1fb);
+  background: var(--primary-50);
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   flex-shrink: 0;
