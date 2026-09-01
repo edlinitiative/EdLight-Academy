@@ -50,6 +50,10 @@ export interface AppState {
   // a lesson — asks the Layout to shed distracting chrome (the mobile bottom tab
   // bar + footer) so the task owns the screen.
   focusMode: boolean;
+  /** Global search overlay (navbar icon / Cmd+K) */
+  searchOpen: boolean;
+  /** Query handed from search to Sandra ("Ask Sandra" row); consumed by SandraWidget */
+  sandraAsk: string | null;
 
   // Actions
   setUser: (user: any) => void;
@@ -81,6 +85,8 @@ export interface AppState {
   toggleNotifications: () => void;
   setShowNotifications: (show: boolean) => void;
   setFocusMode: (focus: boolean) => void;
+  setSearchOpen: (open: boolean) => void;
+  setSandraAsk: (query: string | null) => void;
   logout: () => void;
 }
 
@@ -117,6 +123,8 @@ const useStore = create<AppState>()(
       showNotifications: false,
       activeTab: 'signin',
       focusMode: false, // transient: set by useFocusMode while a task is active
+      searchOpen: false,
+      sandraAsk: null,
       
       // Actions
       setUser: (user) => set({ user, isAuthenticated: !!user }),
@@ -187,6 +195,8 @@ const useStore = create<AppState>()(
       toggleNotifications: () => set((state) => ({ showNotifications: !state.showNotifications })),
       setShowNotifications: (show) => set({ showNotifications: !!show }),
       setFocusMode: (focus) => set({ focusMode: !!focus }),
+      setSearchOpen: (open) => set({ searchOpen: !!open }),
+      setSandraAsk: (query) => set({ sandraAsk: query }),
       
       logout: () => set({
         user: null,

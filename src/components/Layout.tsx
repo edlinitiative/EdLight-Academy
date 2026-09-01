@@ -13,6 +13,7 @@ import { lazyWithRetry } from '../utils/lazyWithRetry';
 import { useNotificationRuntime } from '../hooks/useNotificationRuntime';
 import useStore from '../contexts/store';
 import { SandraWidget } from './SandraWidget';
+import SearchOverlay from './SearchOverlay';
 import DownloadAppBanner from './DownloadAppBanner';
 
 // Notification panel is only shown on demand — keep it (and its Firebase use)
@@ -139,6 +140,7 @@ export function Layout() {
         </Suspense>
       )}
       <SandraWidget />
+      <SearchOverlay />
       <StreakMilestoneModal isCreole={isCreole} />
     </div>
   );

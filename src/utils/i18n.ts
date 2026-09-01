@@ -58,6 +58,7 @@ const resources = {
       },
       nav: {
         home: 'Home',
+        search: 'Search',
         courses: 'Courses',
         exams: 'Exams',
         games: 'Games',
@@ -345,6 +346,7 @@ const resources = {
       },
       nav: {
         home: 'Accueil',
+        search: 'Rechercher',
         courses: 'Cours',
         exams: 'Examens',
         games: 'Jeux',
@@ -651,6 +653,7 @@ const resources = {
       },
       nav: {
         home: 'Akèy',
+        search: 'Chèche',
         courses: 'Kou',
         exams: 'Egzamen',
         games: 'Jwèt',

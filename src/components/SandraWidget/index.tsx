@@ -1,7 +1,8 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageCircle, X } from 'lucide-react';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
+import useStore from '../../contexts/store';
 import './SandraWidget.css';
 
 // The chat panel (message list, composer, network logic) is only needed once
@@ -20,6 +21,16 @@ export function SandraWidget() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
+
+  // "Ask Sandra" handoff from the search overlay: a pending query opens the
+  // panel; SandraPanel consumes (and clears) it once mounted.
+  const sandraAsk = useStore((s) => s.sandraAsk);
+  useEffect(() => {
+    if (sandraAsk) {
+      setOpen(true);
+      setEverOpened(true);
+    }
+  }, [sandraAsk]);
 
   const toggle = () => {
     setOpen((v) => !v);
