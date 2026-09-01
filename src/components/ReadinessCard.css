@@ -5,7 +5,7 @@
    Dark = opt-in night mode via [data-theme="dark"]. */
 
 .readiness-card {
-  background: var(--st-surface, #fffefb);
+  background: var(--st-surface, var(--surface));
   border: 1px solid var(--st-line, rgba(64, 50, 26, 0.12));
   border-radius: 6px;
   padding: 12px 14px;
@@ -32,9 +32,9 @@
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
-.readiness-card__eyebrow svg { color: var(--st-accent, #1558B8); }
+.readiness-card__eyebrow svg { color: var(--st-accent, var(--primary-600)); }
 
 .readiness-card__strong {
   display: inline-flex;
@@ -47,7 +47,7 @@
   color: var(--st-good, #157f43);
 }
 
-.readiness-card__title { margin: 0; font-size: 1.05rem; color: var(--st-ink, #1b2230); }
+.readiness-card__title { margin: 0; font-size: 1.05rem; color: var(--st-ink, var(--text-900)); }
 
 /* ── Segmented gauge ── */
 .readiness-gauge { display: flex; flex-direction: column; gap: 6px; }
@@ -64,12 +64,12 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1;
-  color: var(--st-ink, #1b2230);
+  color: var(--st-ink, var(--text-900));
 }
 .readiness-gauge__value small {
   font-size: 13px;
   font-weight: 600;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
   margin-left: 2px;
 }
 
@@ -111,14 +111,14 @@
   font-size: 10.5px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
 
 .readiness-card__caption {
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.4;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
 
 /* ── Per-subject rows ── */
@@ -141,7 +141,7 @@
   background: none; border: none; cursor: pointer;
   font-family: var(--st-mono, ui-monospace, "Geist Mono", Menlo, monospace);
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--st-accent, #1558B8); font-weight: 500;
+  color: var(--st-accent, var(--primary-600)); font-weight: 500;
 }
 .readiness-subjects__toggle:hover { text-decoration: underline; }
 
@@ -159,14 +159,14 @@
   padding: 2px 6px;
   border-radius: 3px;
   border: 1px solid var(--st-line-strong, rgba(64, 50, 26, 0.22));
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
   flex: 0 0 auto;
 }
 
 .readiness-subject__name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--st-ink, #1b2230);
+  color: var(--st-ink, var(--text-900));
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -177,7 +177,7 @@
   font-family: var(--st-mono, ui-monospace, "Geist Mono", Menlo, monospace);
   font-size: 0.68rem;
   font-weight: 500;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
   flex: 0 0 auto;
 }
 
@@ -212,8 +212,8 @@
   gap: 0.6rem;
   width: 100%;
   text-align: left;
-  background: var(--st-accent-tint, rgba(8, 87, 166, 0.08));
-  border: 1px solid color-mix(in srgb, var(--st-accent, #1558B8) 22%, transparent);
+  background: var(--st-accent-tint, var(--primary-50));
+  border: 1px solid color-mix(in srgb, var(--st-accent, var(--primary-600)) 22%, transparent);
   border-radius: 6px;
   padding: 0.7rem 0.85rem;
   cursor: pointer;
@@ -221,24 +221,24 @@
 }
 .readiness-focus:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--st-accent, #1558B8) 30%, transparent);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--st-accent, var(--primary-600)) 30%, transparent);
 }
 .readiness-focus__icon {
   display: grid;
   place-items: center;
   width: 30px; height: 30px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--st-accent, #1558B8) 15%, transparent);
-  color: var(--st-accent, #1558B8);
+  background: color-mix(in srgb, var(--st-accent, var(--primary-600)) 15%, transparent);
+  color: var(--st-accent, var(--primary-600));
   flex: 0 0 auto;
 }
 .readiness-focus__text {
   flex: 1 1 auto;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--st-ink, #1b2230);
+  color: var(--st-ink, var(--text-900));
 }
-.readiness-focus__cta { font-weight: 800; color: var(--st-accent, #1558B8); flex: 0 0 auto; }
+.readiness-focus__cta { font-weight: 800; color: var(--st-accent, var(--primary-600)); flex: 0 0 auto; }
 
 .readiness-card__cta { align-self: flex-start; border-radius: 6px; }
 
@@ -248,8 +248,8 @@
   display: grid; place-items: center;
   width: 56px; height: 56px;
   border-radius: 8px;
-  background: var(--st-accent-tint, rgba(8, 87, 166, 0.08));
-  color: var(--st-accent, #1558B8);
+  background: var(--st-accent-tint, var(--primary-50));
+  color: var(--st-accent, var(--primary-600));
   flex: 0 0 auto;
 }
 .readiness-card__empty-body { display: flex; flex-direction: column; gap: 0.4rem; }
@@ -267,13 +267,13 @@
    the card itself so it is correct in both mount points. Values mirror the
    `[data-theme="dark"] .dash--st` block. */
 [data-theme="dark"] .readiness-card {
-  --st-surface: #131F38;
-  --st-ink: #E9F0FA;
-  --st-ink-2: #CBD8EC;
-  --st-muted: #8DA2C6;
-  --st-line: rgba(255, 255, 255, 0.08);
-  --st-line-strong: rgba(255, 255, 255, 0.16);
-  --st-accent: #4D8FF0;
+  --st-surface: var(--surface);
+  --st-ink: var(--text-900);
+  --st-ink-2: var(--text-800);
+  --st-muted: var(--text-600);
+  --st-line: var(--border);
+  --st-line-strong: var(--border-strong);
+  --st-accent: var(--primary-500);
   --st-accent-tint: rgba(77, 143, 240, 0.15);
   --st-good: #34c470;
   --st-warn: #f0a03e;

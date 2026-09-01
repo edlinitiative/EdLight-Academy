@@ -14,7 +14,7 @@
   overflow: hidden;
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
   background:
-    radial-gradient(circle at 20% 15%, rgba(27, 111, 224, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 20% 15%, var(--primary-50) 0%, transparent 45%),
     radial-gradient(circle at 80% 80%, rgba(74, 147, 221, 0.07) 0%, transparent 40%),
     var(--background);
 }
@@ -100,7 +100,7 @@
 /* Category tiles share the Limyè Arcade language of the /jeux hub cards:
    dot texture, frosted icon chip, tilted count sticker, colored glow. */
 .trivia-cat {
-  --cat: #1B6FE0;
+  --cat: var(--primary-500);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -148,7 +148,7 @@
 
 .trivia-cat__name {
   margin-top: auto;
-  font-family: var(--ed-editorial, "Space Grotesk", system-ui, sans-serif);
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: clamp(0.92rem, 2.4vw, 1.05rem);
   letter-spacing: -0.01em;
@@ -230,7 +230,7 @@
 }
 
 .trivia-round-picker__badge {
-  --cat: #1B6FE0;
+  --cat: var(--primary-500);
   display: grid;
   place-items: center;
   width: 88px;
@@ -330,7 +330,7 @@
   border: none;
   border-radius: 50%;
   background: var(--surface-alt, #eef1f6);
-  color: var(--text-500, #667085);
+  color: var(--text-500);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -353,7 +353,7 @@
 .trivia-quiz__progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--cat-color, #1B6FE0), color-mix(in srgb, var(--cat-color, #1B6FE0) 65%, #fff));
+  background: linear-gradient(90deg, var(--cat-color, var(--primary-500)), color-mix(in srgb, var(--cat-color, var(--primary-500)) 65%, #fff));
   transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -364,11 +364,11 @@
   transform: translateY(-50%);
   padding: 0 0.45rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface, #fff) 85%, transparent);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
   font-size: 0.66rem;
   font-weight: 800;
   line-height: 1.5;
-  color: var(--text-600, #475467);
+  color: var(--text-600);
   font-variant-numeric: tabular-nums;
 }
 
@@ -380,7 +380,7 @@
   gap: 0.3rem;
   padding: 0.3rem 0.7rem;
   border-radius: 999px;
-  background: var(--surface, #fff);
+  background: var(--surface);
   color: var(--text-800, #1d2939);
   font-size: 0.85rem;
   font-weight: 800;
@@ -391,8 +391,8 @@
 }
 
 .trivia-quiz__score-badge svg {
-  color: var(--cat-color, #1B6FE0);
-  fill: var(--cat-color, #1B6FE0);
+  color: var(--cat-color, var(--primary-500));
+  fill: var(--cat-color, var(--primary-500));
 }
 
 /* Timer ring */
@@ -421,7 +421,7 @@
 @keyframes timer-pulse {
   to {
     transform: scale(1.08);
-    box-shadow: 0 0 18px rgba(239, 68, 68, 0.25);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--danger-500) 25%, transparent);
   }
 }
 
@@ -506,7 +506,7 @@
 
 .trivia-option--wrong {
   border-color: var(--danger-500) !important;
-  background: rgba(239, 68, 68, 0.08) !important;
+  background: var(--danger-50) !important;
   color: #991b1b;
 }
 
@@ -521,7 +521,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(27, 111, 224, 0.08);
+  background: var(--primary-50);
   color: var(--primary-600);
   font-size: 0.78rem;
   font-weight: 700;
@@ -534,7 +534,7 @@
 }
 
 .trivia-option--wrong .trivia-option__letter {
-  background: rgba(239, 68, 68, 0.2);
+  background: color-mix(in srgb, var(--danger-500) 20%, transparent);
   color: #991b1b;
 }
 
@@ -571,7 +571,7 @@
 
 .trivia-next-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(27, 111, 224, 0.3);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--primary-500) 30%, transparent);
 }
 
 @keyframes trivia-fadeUp {
@@ -705,7 +705,7 @@
 
 .trivia-results__ring-bg {
   fill: none;
-  stroke: rgba(27, 111, 224, 0.08);
+  stroke: var(--primary-50);
   stroke-width: 8;
 }
 
@@ -775,16 +775,16 @@
   gap: 0.35rem;
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
-  background: rgba(8, 87, 166, 0.12);
-  color: #1558B8;
+  background: var(--primary-50);
+  color: var(--primary-600);
   font-weight: 800;
   font-size: 0.8rem;
   white-space: nowrap;
 }
 
 .trivia-header__stat--streak {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  background: var(--danger-50);
+  color: var(--danger-500);
 }
 
 .trivia-header__xpbar {
@@ -792,7 +792,7 @@
   flex: 1;
   height: 24px;
   border-radius: 999px;
-  background: var(--surface-alt, rgba(27, 111, 224, 0.08));
+  background: var(--surface-alt, var(--primary-50));
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -802,7 +802,7 @@
   inset: 0 auto 0 0;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #1558B8, #4a93dd);
+  background: var(--primary-500);
   transition: width 0.6s ease;
 }
 
@@ -847,7 +847,7 @@
 
 .trivia-daily--done {
   cursor: default;
-  border-color: color-mix(in srgb, #10b981 35%, var(--border));
+  border-color: color-mix(in srgb, var(--success-500) 35%, var(--border));
   background: var(--surface);
 }
 
@@ -857,14 +857,14 @@
   width: 44px;
   height: 44px;
   border-radius: 12px;
-  background: rgba(8, 87, 166, 0.18);
-  color: #1558B8;
+  background: var(--primary-100);
+  color: var(--primary-600);
   flex: 0 0 auto;
 }
 
 .trivia-daily--done .trivia-daily__icon {
-  background: rgba(16, 185, 129, 0.18);
-  color: #059669;
+  background: color-mix(in srgb, var(--success-500) 18%, transparent);
+  color: var(--success-500);
 }
 
 .trivia-daily__body {
@@ -888,7 +888,7 @@
 
 .trivia-daily__cta {
   font-weight: 800;
-  color: #1558B8;
+  color: var(--primary-600);
   flex: 0 0 auto;
 }
 
@@ -907,8 +907,8 @@
   gap: 0.35rem;
   font-weight: 800;
   font-size: 1rem;
-  color: #1558B8;
-  background: rgba(8, 87, 166, 0.14);
+  color: var(--primary-600);
+  background: var(--primary-50);
   padding: 0.35rem 0.85rem;
   border-radius: 999px;
 }
@@ -919,8 +919,8 @@
   gap: 0.3rem;
   font-weight: 800;
   font-size: 0.85rem;
-  color: #1558B8;
-  background: rgba(8, 87, 166, 0.12);
+  color: var(--primary-600);
+  background: var(--primary-50);
   padding: 0.25rem 0.7rem;
   border-radius: 999px;
   animation: trivia-fadeUp 0.4s ease;
@@ -961,7 +961,7 @@
 
 .games-hub__subtitle {
   margin: 0.15rem 0 0;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   font-size: 0.88rem;
 }
 
@@ -978,17 +978,17 @@
   min-width: 74px;
   padding: 0.6rem 0.75rem;
   border-radius: 14px;
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
-.games-hub__stat svg { color: var(--primary-500, #1B6FE0); }
+.games-hub__stat svg { color: var(--primary-500); }
 .games-hub__stat strong { font-size: 1.05rem; }
 .games-hub__stat span {
   font-size: 0.68rem;
   font-weight: 600;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   text-align: center;
 }
 
@@ -1104,7 +1104,7 @@
   margin: 0;
   max-width: none;
   border: none;
-  background: linear-gradient(120deg, #1b6fe0, #4a93dd);
+  background: var(--primary-500);
   color: #fff;
   box-shadow: 0 12px 24px -12px rgba(27, 111, 224, 0.6);
 }
@@ -1124,19 +1124,19 @@
 }
 
 .games-hub .trivia-daily--done {
-  background: var(--surface, #fff);
+  background: var(--surface);
   color: inherit;
   border: 1px solid var(--border-color, #e6e8eb);
   box-shadow: none;
 }
 .games-hub .trivia-daily--done .trivia-daily__title,
 .games-hub .trivia-daily--done .trivia-daily__sub { color: inherit; }
-.games-hub .trivia-daily--done .trivia-daily__icon { background: rgba(16, 185, 129, 0.14); color: #059669; }
+.games-hub .trivia-daily--done .trivia-daily__icon { background: var(--success-50); color: var(--success-500); }
 
 /* ─── Records strip (hub sidebar) ─── */
 .game-records {
   margin-top: 1rem;
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 18px;
   padding: 0.85rem 1rem;
@@ -1151,7 +1151,7 @@
   font-weight: 800;
 }
 
-.game-records__title svg { color: #d97706; }
+.game-records__title svg { color: var(--warning-500); }
 
 .game-records__list { list-style: none; margin: 0; padding: 0; }
 
@@ -1174,13 +1174,13 @@
   font-weight: 700;
 }
 
-.game-records__holder { color: var(--text-muted, #667085); }
+.game-records__holder { color: var(--text-muted); }
 .game-records__holder strong { color: inherit; font-weight: 800; }
 
 .game-records__open {
   font-size: 0.72rem;
   font-weight: 700;
-  color: #d97706;
+  color: var(--warning-500);
   background: rgba(217, 119, 6, 0.1);
   border-radius: 999px;
   padding: 0.1rem 0.5rem;
@@ -1222,7 +1222,7 @@
 }
 
 .vf-game__timer { color: var(--cat-color, #e0532f); }
-.vf-game__timer.is-urgent { color: #dc2626; animation: vf-pulse 1s infinite; }
+.vf-game__timer.is-urgent { color: var(--danger-500); animation: vf-pulse 1s infinite; }
 
 .vf-game__timebar {
   height: 7px;
@@ -1257,7 +1257,7 @@
 .vf-game__card {
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 22px;
-  background: var(--surface, #fff);
+  background: var(--surface);
   padding: 1.6rem 1.2rem;
   text-align: center;
   min-height: 240px;
@@ -1269,8 +1269,8 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.vf-game__card--right { border-color: #10b981; background: rgba(16, 185, 129, 0.07); }
-.vf-game__card--wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.07); }
+.vf-game__card--right { border-color: var(--success-500); background: var(--success-50); }
+.vf-game__card--wrong { border-color: var(--danger-500); background: var(--danger-50); }
 
 .vf-game__flag { display: flex; justify-content: center; }
 
@@ -1282,7 +1282,7 @@
 
 .vf-game__flag-emoji { font-size: 3rem; line-height: 1; }
 
-.vf-game__question { margin: 0; font-size: 0.95rem; color: var(--text-600, #475467); }
+.vf-game__question { margin: 0; font-size: 0.95rem; color: var(--text-600); }
 
 .vf-game__proposed {
   margin: 0;
@@ -1291,7 +1291,7 @@
   color: var(--cat-color, #e0532f);
 }
 
-.vf-game__correction { margin: 0; font-size: 0.85rem; color: #b91c1c; }
+.vf-game__correction { margin: 0; font-size: 0.85rem; color: var(--danger-500); }
 
 .vf-game__actions {
   display: grid;
@@ -1321,8 +1321,8 @@
 .vf-game__btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(10, 20, 40, 0.22); }
 .vf-game__btn:disabled { opacity: 0.6; cursor: default; }
 
-.vf-game__btn--vrai { background: #10b981; }
-.vf-game__btn--faux { background: #ef4444; }
+.vf-game__btn--vrai { background: var(--success-500); }
+.vf-game__btn--faux { background: var(--danger-500); }
 
 .vf-game__help {
   text-align: center;
@@ -1341,7 +1341,7 @@
 }
 
 .mem-game__hud > span { display: inline-flex; align-items: center; gap: 0.35rem; }
-.mem-game__hint { color: var(--text-muted, #667085); font-weight: 600; }
+.mem-game__hint { color: var(--text-muted); font-weight: 600; }
 
 .mem-game__grid {
   display: grid;
@@ -1373,16 +1373,16 @@
 .mem-card:hover { transform: translateY(-1px); }
 
 .mem-card.is-up {
-  background: var(--surface, #fff);
+  background: var(--surface);
   color: var(--text-800, #1d2939);
   font-size: 0.8rem;
   font-weight: 700;
 }
 
 .mem-card.is-matched {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: #10b981;
-  color: #047857;
+  background: var(--success-50);
+  border-color: var(--success-500);
+  color: var(--success-500);
   cursor: default;
 }
 
@@ -1425,14 +1425,14 @@
   font-weight: 800;
   border-radius: 8px;
   border: 2px solid var(--border-color, #d0d5dd);
-  background: var(--surface, #fff);
+  background: var(--surface);
   color: var(--text-800, #1d2939);
   text-transform: uppercase;
 }
 
-.mk-tile--filled { border-color: var(--text-400, #98a2b3); }
-.mk-tile--correct { background: #10b981; border-color: #10b981; color: #fff; }
-.mk-tile--present { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.mk-tile--filled { border-color: var(--text-400, var(--text-400)); }
+.mk-tile--correct { background: var(--success-500); border-color: var(--success-500); color: #fff; }
+.mk-tile--present { background: var(--warning-500); border-color: var(--warning-500); color: #fff; }
 .mk-tile--absent { background: #9aa4b2; border-color: #9aa4b2; color: #fff; }
 
 .mk-game__hint,
@@ -1448,9 +1448,9 @@
 .mk-game__hint { color: #b45309; }
 
 .mk-game__hint-btn {
-  border: 1px dashed #f59e0b;
+  border: 1px dashed var(--warning-500);
   color: #b45309;
-  background: rgba(245, 158, 11, 0.08);
+  background: var(--warning-50);
   border-radius: 999px;
   padding: 0.35rem 0.9rem;
   cursor: pointer;
@@ -1475,14 +1475,14 @@
 }
 
 .mk-key--wide { max-width: 62px; flex: 1.5; }
-.mk-key--correct { background: #10b981; color: #fff; }
-.mk-key--present { background: #f59e0b; color: #fff; }
+.mk-key--correct { background: var(--success-500); color: #fff; }
+.mk-key--present { background: var(--warning-500); color: #fff; }
 .mk-key--absent { background: #9aa4b2; color: #fff; }
 
 .mk-game__end { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; }
 .mk-game__answer { margin: 0; font-size: 0.95rem; }
 .mk-game__answer strong { text-transform: capitalize; }
-.mk-game__xp { margin: 0; font-weight: 800; color: #1558B8; }
+.mk-game__xp { margin: 0; font-weight: 800; color: var(--primary-600); }
 .mk-game__end-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; justify-content: center; margin-top: 0.3rem; }
 .mk-game__tomorrow { margin: 0; font-size: 0.85rem; }
 
@@ -1494,24 +1494,24 @@
   gap: 0.7rem;
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
-  background: var(--surface, #fff);
+  background: var(--surface);
   padding: 1.5rem 1rem;
   margin-bottom: 1rem;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.calc-game__problem--right { border-color: #10b981; background: rgba(16, 185, 129, 0.07); }
-.calc-game__problem--wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.07); }
+.calc-game__problem--right { border-color: var(--success-500); background: var(--success-50); }
+.calc-game__problem--wrong { border-color: var(--danger-500); background: var(--danger-50); }
 
 .calc-game__expr { font-size: 1.7rem; font-weight: 800; }
 
 .calc-game__input {
   min-width: 76px;
-  border-bottom: 3px solid var(--cat-color, #d97706);
+  border-bottom: 3px solid var(--cat-color, var(--warning-500));
   font-size: 1.7rem;
   font-weight: 800;
   text-align: center;
-  color: var(--cat-color, #d97706);
+  color: var(--cat-color, var(--warning-500));
   white-space: pre;
 }
 
@@ -1527,7 +1527,7 @@
   height: 56px;
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
-  background: var(--surface, #fff);
+  background: var(--surface);
   font-size: 1.25rem;
   font-weight: 800;
   cursor: pointer;
@@ -1579,7 +1579,7 @@
   padding: 0.7rem 0.5rem;
   border-radius: 12px;
   border: 1px solid var(--border-color, #e6e8eb);
-  background: var(--surface, #fff);
+  background: var(--surface);
   font-size: 1.15rem;
   font-weight: 800;
   text-align: center;
@@ -1605,7 +1605,7 @@
   padding: 0.95rem;
   border-radius: 18px;
   border: 1.5px solid var(--border-color, #e6e8eb);
-  background: var(--surface, #fff);
+  background: var(--surface);
   font-size: 1.2rem;
   font-weight: 800;
   cursor: pointer;
@@ -1616,8 +1616,8 @@
 .seq-game__option:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--border-color, #e6e8eb); }
 
 .seq-game__option:hover:not(:disabled) { border-color: var(--cat-color, #0e7490); transform: translateY(-1px); }
-.seq-game__option.is-correct { border-color: #10b981; background: rgba(16, 185, 129, 0.12); color: #047857; }
-.seq-game__option.is-wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.seq-game__option.is-correct { border-color: var(--success-500); background: var(--success-50); color: var(--success-500); }
+.seq-game__option.is-wrong { border-color: var(--danger-500); background: var(--danger-50); color: var(--danger-500); }
 .seq-game__option.is-dimmed { opacity: 0.5; }
 
 /* ─── Game-over extras (shared) ─── */
@@ -1630,7 +1630,7 @@
 
 .game-over__stat { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; }
 .game-over__stat-value { font-size: 1.15rem; font-weight: 800; }
-.game-over__stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted, #667085); }
+.game-over__stat-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
 
 .game-over__record {
   display: inline-flex;

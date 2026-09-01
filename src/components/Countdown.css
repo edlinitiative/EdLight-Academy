@@ -18,7 +18,7 @@
   text-align: left;
   color: #fff;
   /* Limyè: the night sky before the exam — deep marine into azure. */
-  background: linear-gradient(150deg, #0F2E63 0%, #1B6FE0 100%);
+  background: var(--primary-500);
   font-family: inherit;
   cursor: pointer;
   -webkit-appearance: none;

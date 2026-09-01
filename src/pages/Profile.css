@@ -28,7 +28,7 @@
 
 /* ── Hero card: identity + level ── */
 .profile-area--hero {
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
   padding: 1.2rem 1.4rem;
@@ -50,7 +50,7 @@
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #1558B8, #4a93dd);
+  background: var(--primary-500);
   color: #fff;
   font-weight: 800;
   font-size: 1.4rem;
@@ -69,7 +69,7 @@
 .profile-header__email {
   margin: 0.1rem 0 0.5rem;
   font-size: 0.85rem;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -90,9 +90,9 @@
   border-radius: 999px;
 }
 
-.profile-chip--level { background: rgba(8, 87, 166, 0.12); color: #1558B8; }
-.profile-chip--xp    { background: rgba(8, 87, 166, 0.12); color: #1558B8; }
-.profile-chip--streak { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.profile-chip--level { background: var(--primary-50); color: var(--primary-600); }
+.profile-chip--xp    { background: var(--primary-50); color: var(--primary-600); }
+.profile-chip--streak { background: var(--danger-50); color: var(--danger-500); }
 
 /* ── Level progress (inside hero) ── */
 .profile-level__top {
@@ -115,7 +115,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #1558B8, #4a93dd);
+  background: var(--primary-500);
   transition: width 0.6s ease;
   /* width set via --level-pct custom property */
   width: var(--level-pct, 0%);
@@ -123,7 +123,7 @@
 
 /* ── Generic profile card ── */
 .profile-card {
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
   padding: 1.1rem 1.2rem;
@@ -177,13 +177,13 @@
 .profile-stat__value {
   font-size: 1.2rem;
   font-weight: 800;
-  color: var(--text, #101828);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
 
 .profile-stat__label {
   font-size: 0.7rem;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   line-height: 1.2;
 }
 
@@ -203,7 +203,7 @@
   background: var(--surface-alt, #f2f4f7);
   font-size: 0.74rem;
   font-weight: 700;
-  color: var(--text-muted, #98a2b3);
+  color: var(--text-muted, var(--text-400));
   filter: grayscale(1);
   opacity: 0.6;
 }
@@ -211,11 +211,11 @@
 .profile-milestone.is-unlocked {
   filter: none;
   opacity: 1;
-  color: var(--text, #101828);
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--text);
+  background: var(--success-50);
 }
 
-.profile-milestone__check { color: #10b981; }
+.profile-milestone__check { color: var(--success-500); }
 
 /* ── Certificates (soon) ── */
 .profile-card--soon { border-style: dashed; }
@@ -228,8 +228,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #1558B8;
-  background: rgba(8, 87, 166, 0.12);
+  color: var(--primary-600);
+  background: var(--primary-50);
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
 }
@@ -248,14 +248,14 @@
   border-radius: 8px;
   border: 1px solid var(--border-color, #e6e8eb);
   background: var(--surface-alt, #f2f4f7);
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
 
 .profile-toggle-btn:hover {
   background: var(--primary-50, #e8f1fb);
-  color: var(--primary-600, #1558B8);
+  color: var(--primary-600);
   border-color: var(--primary-100, #cfe2f7);
 }
 
@@ -288,13 +288,13 @@
 
 .profile-espace-tile:hover {
   background: var(--primary-50, #e8f1fb);
-  color: var(--primary-600, #1558B8);
+  color: var(--primary-600);
   border-color: var(--primary-100, #cfe2f7);
   transform: translateY(-1px);
 }
 
 .profile-espace-tile svg {
-  color: var(--primary-500, #1B6FE0);
+  color: var(--primary-500);
   flex-shrink: 0;
 }
 
@@ -318,22 +318,22 @@
   border-radius: 10px;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text, #101828);
+  color: var(--text);
   text-decoration: none;
   transition: background 0.15s ease;
 }
 
 .profile-link:hover { background: var(--surface-alt, #f2f4f7); }
 
-.profile-link svg:first-child { color: var(--text-muted, #667085); flex: 0 0 auto; }
+.profile-link svg:first-child { color: var(--text-muted); flex: 0 0 auto; }
 
 .profile-link > :last-child {
   margin-left: auto;
-  color: var(--text-muted, #98a2b3);
+  color: var(--text-muted, var(--text-400));
 }
 
-.profile-link--danger { color: #ef4444; }
-.profile-link--danger svg:first-child { color: #ef4444; }
+.profile-link--danger { color: var(--danger-500); }
+.profile-link--danger svg:first-child { color: var(--danger-500); }
 
 /* ── Guest view ── */
 .profile-guest {
@@ -344,7 +344,7 @@
 }
 
 .profile-guest__card {
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 18px;
   padding: 1.6rem;
@@ -361,7 +361,7 @@
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #1558B8, #4a93dd);
+  background: var(--primary-500);
   color: #fff;
 }
 
@@ -377,7 +377,7 @@
 }
 
 .profile-links--guest {
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
   padding: 0.6rem 0.8rem;
@@ -407,7 +407,7 @@
 }
 
 /* ── Dark ── The brand chips/badge use a very dark navy tint (rgba(8,87,166,…))
-   with #1558B8 text that all but disappears on the night canvas. Swap to the
+   with deep-azure text that all but disappears on the night canvas. Swap to the
    dark-mode primary tint + a light-blue label so they meet contrast. Surfaces,
    borders, and body/muted text already adapt through the token aliases. */
 [data-theme="dark"] .profile-chip--level,
@@ -417,7 +417,7 @@
   color: var(--primary-400);
 }
 [data-theme="dark"] .profile-chip--streak {
-  background: rgba(239, 68, 68, 0.18);
+  background: color-mix(in srgb, var(--danger-500) 18%, transparent);
   color: #fca5a5;
 }
 [data-theme="dark"] .profile-milestone.is-unlocked {
@@ -451,7 +451,7 @@
   height: 42px;
   border-radius: 12px;
   background: var(--primary-50, #e8f1fb);
-  color: var(--primary-600, #1558B8);
+  color: var(--primary-600);
   flex-shrink: 0;
 }
 .profile-leaderboard-link__body {
@@ -467,19 +467,19 @@
 }
 .profile-leaderboard-link__sub {
   font-size: 0.78rem;
-  color: var(--text-muted, #746a59);
+  color: var(--text-muted);
   margin-top: 1px;
 }
 .profile-leaderboard-link__rank {
   font-size: 0.85rem;
   font-weight: 800;
-  color: var(--primary-600, #1558B8);
+  color: var(--primary-600);
   background: var(--primary-50, #e8f1fb);
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   flex-shrink: 0;
 }
 .profile-leaderboard-link__chev {
-  color: var(--text-muted, #746a59);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
