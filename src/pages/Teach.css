@@ -1,0 +1,152 @@
+/* /enseigner — volunteer-instructor application. Reuses the global card/field
+   primitives; only the page-specific pieces live here. All colors come from
+   tokens so dark mode works for free. */
+
+.teach-container {
+  max-width: 860px;
+}
+
+.teach-eyebrow {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary-500);
+  margin-bottom: 0.5rem;
+}
+
+.teach-lede {
+  max-width: 56ch;
+}
+
+.teach-steps {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 0;
+  margin: 1.5rem 0 2rem;
+}
+
+.teach-step h3 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: var(--text-base);
+}
+
+.teach-step p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.teach-step svg {
+  color: var(--primary-500);
+}
+
+.teach-form h2 {
+  margin: 0 0 1rem;
+  font-size: var(--text-lg);
+}
+
+.teach-row-gap {
+  margin-top: 1rem;
+}
+
+.teach-fieldset {
+  border: 0;
+  padding: 0;
+  margin-inline: 0;
+}
+
+.teach-fieldset legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+}
+
+.teach-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.teach-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-700);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.teach-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.teach-chip--on {
+  background: var(--primary-50);
+  border-color: var(--primary-500);
+  color: var(--primary-600);
+}
+
+.teach-chip:focus-within {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Honeypot: off-screen for humans (never display:none — some bots skip
+   hidden inputs), still fillable by naive form bots. */
+.teach-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.teach-error {
+  margin: 1rem 0 0;
+  color: var(--danger-500);
+  font-size: var(--text-sm);
+}
+
+.teach-disclaimer {
+  display: block;
+  margin-top: 0.75rem;
+}
+
+.teach-success {
+  text-align: center;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.teach-success svg {
+  color: var(--success-500);
+}
+
+.teach-success h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.teach-success p {
+  max-width: 48ch;
+  margin: 0 0 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .teach-steps {
+    grid-template-columns: 1fr;
+  }
+}

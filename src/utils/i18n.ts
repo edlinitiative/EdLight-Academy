@@ -81,6 +81,7 @@ const resources = {
         brandCopy: 'A community platform helping Haitian students master STEM subjects with modern, bilingual resources.',
         about: 'About',
         contact: 'Contact',
+        teach: 'Become an instructor',
         privacy: 'Privacy',
         terms: 'Terms',
         rights: 'All rights reserved.',
@@ -99,6 +100,7 @@ const resources = {
         help: 'Help',
         privacy: 'Privacy Policy',
         terms: 'Terms of Use',
+        teach: 'Become an instructor',
         studyPlan: 'Study plan',
         trivia: 'Trivia games',
         notFound: 'Page not found'
@@ -366,6 +368,7 @@ const resources = {
         brandCopy: 'Une plateforme communautaire pour aider les élèves haïtiens à maîtriser les matières STEM grâce à des ressources modernes et bilingues.',
         about: 'À propos',
         contact: 'Contact',
+        teach: 'Devenir enseignant',
         privacy: 'Confidentialité',
         terms: 'Conditions',
         rights: 'Tous droits réservés.',
@@ -403,6 +406,7 @@ const resources = {
         help: 'Aide',
         privacy: 'Politique de confidentialité',
         terms: 'Conditions d’utilisation',
+        teach: 'Devenir enseignant',
         studyPlan: 'Plan d’étude',
         trivia: 'Jeux-questionnaires',
         notFound: 'Page introuvable'
@@ -670,6 +674,7 @@ const resources = {
         brandCopy: 'Yon platfòm kominotè pou ede elèv ayisyen metrize matyè STEM ak resous modèn ki nan de lang.',
         about: 'Sou nou',
         contact: 'Kontak',
+        teach: 'Vin yon pwofesè',
         privacy: 'Konfidansyalite',
         terms: 'Kondisyon',
         rights: 'Tout dwa rezève.',
@@ -707,6 +712,7 @@ const resources = {
         help: 'Èd',
         privacy: 'Règleman sou enfòmasyon prive',
         terms: 'Kondisyon itilizasyon',
+        teach: 'Vin yon pwofesè',
         studyPlan: 'Plan etid',
         trivia: 'Jwèt kesyon',
         notFound: 'Nou pa jwenn paj la'

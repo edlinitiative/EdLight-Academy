@@ -57,6 +57,10 @@ const DESCRIPTIONS: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Contactez l’équipe EdLight Academy pour toute question, suggestion ou signalement.',
     ht: 'Kontakte ekip EdLight Academy pou nenpòt kesyon, sijesyon oswa siyalman.',
   },
+  teach: {
+    fr: 'Devenez enseignant bénévole sur EdLight Academy : partagez votre matière avec des milliers d’élèves haïtiens, sur le site et l’application.',
+    ht: 'Vin yon pwofesè volontè sou EdLight Academy : pataje matyè ou ak plizyè milye elèv ayisyen, sou sit la ak nan aplikasyon an.',
+  },
   faq: {
     fr: 'Questions fréquentes sur EdLight Academy : comment commencer, trouver des quiz et préparer le Bac.',
     ht: 'Kesyon moun poze souvan sou EdLight Academy : kijan pou kòmanse, jwenn quiz ak prepare Bak la.',
@@ -91,6 +95,7 @@ function metaKeyForPath(pathname: string): string | null {
     [/^\/(jeux|trivia)(\/|$)/, 'trivia'],
     [/^\/about(\/|$)/, 'about'],
     [/^\/contact(\/|$)/, 'contact'],
+    [/^\/enseigner(\/|$)/, 'teach'],
     [/^\/faq(\/|$)/, 'faq'],
     [/^\/help(\/|$)/, 'help'],
     [/^\/privacy(\/|$)/, 'privacy'],

@@ -42,6 +42,10 @@ const LIMITS: Record<string, Limit> = {
   // accept's real one-attempt protection is the transaction in the endpoint.
   'challenge-create': { max: 30, windowSec: 3600 },
   'challenge-accept': { max: 30, windowSec: 3600 },
+  // Public volunteer-instructor application intake (api/instructor-apply),
+  // keyed by IP rather than uid (no auth wall). Not paid — fails OPEN; the
+  // honeypot in the endpoint is the first line against bots.
+  'instructor-apply': { max: 5, windowSec: 86400 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't

@@ -48,6 +48,10 @@
       "destination": "/contact/index.html"
     },
     {
+      "source": "/enseigner",
+      "destination": "/enseigner/index.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/privacy/index.html"
     },

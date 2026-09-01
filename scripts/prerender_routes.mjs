@@ -168,6 +168,28 @@ const ROUTES = {
       ${p('Utilisez la page <a href="/contact" style="color:#1B6FE0">Contact</a> pour nous envoyer un message. Indiquez le cours, l’unité et une brève description de ce dont vous avez besoin.')}`),
   },
 
+  enseigner: {
+    title: 'Devenir enseignant bénévole — EdLight Academy',
+    description:
+      'Enseignez votre matière à des milliers d’élèves haïtiens : EdLight Academy recrute des enseignants bénévoles en mathématiques, physique, chimie et économie. Postulez en ligne.',
+    body: wrap(`
+      ${h1('Enseignez à des milliers d’élèves, où que vous soyez')}
+      ${p('EdLight Academy recrute des enseignants bénévoles pour créer des leçons vidéo et des exercices dans leur matière — mathématiques, physique, chimie, économie — du fondamental (9e AF) au Baccalauréat (NS IV). Votre salle de classe devient tout le pays : le contenu est diffusé gratuitement sur le site et sur l’application mobile.')}
+      ${h2('Comment ça marche')}
+      ${ul([
+        '<strong>Postulez</strong> — indiquez votre matière, vos niveaux, votre expérience et l’école où vous enseignez actuellement.',
+        '<strong>On vous contacte</strong> — notre équipe échange avec vous sur WhatsApp pour faire connaissance.',
+        '<strong>Vous enseignez</strong> — vous créez des leçons et obtenez votre profil d’enseignant public sur la plateforme.',
+      ])}
+      ${h2('Pourquoi enseigner sur EdLight')}
+      ${ul([
+        'Un impact national : vos leçons servent des élèves de tous les départements d’Haïti et de la diaspora.',
+        'Un profil d’enseignant public qui met en valeur votre parcours et vos cours.',
+        'Une communauté d’enseignants, d’éducateurs et d’ingénieurs haïtiens engagés.',
+      ])}
+      ${p('Prêt(e) ? <a href="/enseigner" style="color:#1B6FE0">Remplissez le formulaire de candidature</a> — l’enseignement sur EdLight est bénévole et chaque candidature est examinée par notre équipe.')}`),
+  },
+
   contact: {
     title: 'Contact — EdLight Academy',
     description:

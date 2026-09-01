@@ -18,6 +18,7 @@ const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'));
 const Revision = lazyWithRetry(() => import('./pages/Revision'));
 const About = lazyWithRetry(() => import('./pages/About'));
 const Contact = lazyWithRetry(() => import('./pages/Contact'));
+const Teach = lazyWithRetry(() => import('./pages/Teach'));
 const FAQ = lazyWithRetry(() => import('./pages/FAQ'));
 const Help = lazyWithRetry(() => import('./pages/Help'));
 const Privacy = lazyWithRetry(() => import('./pages/Privacy'));
@@ -33,6 +34,7 @@ const AdminUsers = lazyWithRetry(() => import('./pages/admin/AdminUsers'));
 const AdminUserDetail = lazyWithRetry(() => import('./pages/admin/AdminUserDetail'));
 const AdminModeration = lazyWithRetry(() => import('./pages/admin/AdminModeration'));
 const AdminSandra = lazyWithRetry(() => import('./pages/admin/AdminSandra'));
+const AdminInstructors = lazyWithRetry(() => import('./pages/admin/AdminInstructors'));
 const AdminSiteStats = lazyWithRetry(() => import('./pages/admin/AdminSiteStats'));
 const AdminVideos = lazyWithRetry(() => import('./pages/admin/AdminVideos'));
 const AdminQuizzes = lazyWithRetry(() => import('./pages/admin/AdminQuizzes'));
@@ -89,6 +91,7 @@ export default function App() {
                 <Route path="revision" element={<Revision />} />
                 <Route path="about" element={<About />} />
                 <Route path="contact" element={<Contact />} />
+                <Route path="enseigner" element={<Teach />} />
                 <Route path="faq" element={<FAQ />} />
                 <Route path="help" element={<Help />} />
                 <Route path="privacy" element={<Privacy />} />
@@ -132,6 +135,8 @@ export default function App() {
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="users/moderation" element={<AdminModeration />} />
                 <Route path="users/sandra" element={<AdminSandra />} />
+                {/* Must precede users/:uid — "instructors" would otherwise match as a uid */}
+                <Route path="users/instructors" element={<AdminInstructors />} />
                 <Route path="users/:uid" element={<AdminUserDetail />} />
                 {/* Data */}
                 <Route path="data/collections" element={<Admin />} />
