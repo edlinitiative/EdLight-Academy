@@ -43,6 +43,18 @@
   color: var(--primary-500);
 }
 
+/* Don't alarm the whole form on load: the global :invalid tint applies to
+   untouched empty required fields. Only flag a field the user actually
+   left invalid. */
+.teach-form .input-field:invalid {
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+.teach-form .input-field:user-invalid {
+  border-color: var(--danger-500);
+}
+
 .teach-form h2 {
   margin: 0 0 1rem;
   font-size: var(--text-lg);

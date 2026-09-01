@@ -41,14 +41,16 @@ export default function HeroSection({ t }: { t: TFn }) {
               </button>
             </div>
 
+            {/* Trust line: verifiable facts only — invented counts and
+                decorative star ratings read as the opposite of premium. */}
             <div className="lp-hero__trust">
-              <span className="lp-hero__avatars" aria-hidden="true">
-                <span>A</span><span>M</span><span>J</span><span>+</span>
-              </span>
               <span>
-                <span className="lp-hero__stars" aria-hidden="true">★★★★★</span>
-                <br />
-                <strong>12 000+</strong> {t('élèves haïtiens accompagnés', 'elèv ayisyen akonpaye')}
+                {t('Un programme d’', 'Yon pwogram ')}
+                <strong>EdLight Initiative</strong>
+                {t(
+                  ', organisation à but non lucratif · Disponible sur le web, iOS et Android',
+                  ', yon òganizasyon san bi likratif · Disponib sou wèb, iOS ak Android'
+                )}
               </span>
             </div>
           </div>

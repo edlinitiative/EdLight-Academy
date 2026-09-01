@@ -35,7 +35,15 @@ module.exports = {
         test: /\.css$/,
         use: [
           MiniCssExtractPlugin.loader,
-          'css-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              // Leave root-absolute url(/assets/…) references (self-hosted
+              // fonts) untouched — they're served verbatim from public/,
+              // which CopyPlugin mirrors into dist/.
+              url: { filter: (url) => !url.startsWith('/assets/') },
+            },
+          },
           'postcss-loader'
         ]
       },

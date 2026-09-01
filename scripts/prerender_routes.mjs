@@ -42,7 +42,7 @@ const FOOTER = `
   </footer>`;
 
 const wrap = (body) => `
-  <div style="max-width:760px;margin:0 auto;padding:40px 20px;font-family:Inter,system-ui,-apple-system,sans-serif;color:#232322;line-height:1.6">
+  <div style="max-width:760px;margin:0 auto;padding:40px 20px;font-family:'Source Sans 3',system-ui,-apple-system,sans-serif;color:#232322;line-height:1.6">
     ${NAV}
     ${body}
     ${FOOTER}
