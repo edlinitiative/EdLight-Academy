@@ -71,6 +71,19 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
     if (open && user) inputRef.current?.focus();
   }, [open, user]);
 
+  // Search-overlay handoff: an explicit "Ask Sandra" tap auto-sends the query
+  // (signed in) or parks it in the composer behind the sign-in prompt.
+  const sandraAsk = useStore((s) => s.sandraAsk);
+  const setSandraAsk = useStore((s) => s.setSandraAsk);
+  useEffect(() => {
+    if (!open || !sandraAsk) return;
+    const ask = sandraAsk;
+    setSandraAsk(null);
+    if (user) void send(ask);
+    else setInput(ask);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, sandraAsk, user]);
+
   /** What the student is currently looking at — sent with every message so
    *  Sandra can ground her answer (`/courses/:courseId` pattern). */
   const pageContext = (): PageContext => {

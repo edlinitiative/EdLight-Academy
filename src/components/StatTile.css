@@ -24,8 +24,8 @@
   flex-direction: column;
   gap: 7px;
   padding: 15px 16px 13px;
-  background: var(--st-surface, #fffefb);
-  color: var(--st-ink, #1b2230);
+  background: var(--st-surface, var(--surface));
+  color: var(--st-ink, var(--text-900));
   border: 1px solid var(--st-line, rgba(64, 50, 26, 0.12));
   border-radius: 6px;
   box-shadow: 0 1px 2px rgba(64, 50, 26, 0.05);
@@ -58,12 +58,12 @@
   letter-spacing: 0.1em;
   font-size: 11px;
   font-weight: 500;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
 .stat-tile__icon {
   display: inline-flex;
   align-items: center;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
 
 /* Value row */
@@ -79,14 +79,14 @@
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  color: var(--st-ink, #1b2230);
+  color: var(--st-ink, var(--text-900));
 }
 .stat-tile__unit {
   margin-left: 2px;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
 
 /* Delta / caption line — mono, colored by tone */
@@ -94,15 +94,15 @@
   font-family: var(--st-mono, ui-monospace, "Geist Mono", Menlo, monospace);
   font-size: 10.5px;
   letter-spacing: 0.04em;
-  color: var(--st-muted, #746a59);
+  color: var(--st-muted, var(--text-500));
 }
 .stat-tile__delta-marker {
   font-size: 9px;
 }
 .stat-tile__delta--good { color: var(--st-good, #157f43); }
-.stat-tile__delta--accent { color: var(--st-accent, #1558B8); }
+.stat-tile__delta--accent { color: var(--st-accent, var(--primary-600)); }
 .stat-tile__delta--warn { color: var(--st-warn, #bd6f0f); }
-.stat-tile__delta--muted { color: var(--st-muted, #746a59); }
+.stat-tile__delta--muted { color: var(--st-muted, var(--text-500)); }
 
 /* ── Dark mode ──────────────────────────────────────────────────────────
    Inside .dash--st the --st-* tokens already flip, so var() resolves to the
@@ -124,5 +124,5 @@
 [data-theme="dark"] .stat-tile__delta--muted { color: var(--st-muted, #8291a6); }
 [data-theme="dark"] .stat-tile__value { color: var(--st-ink, #e6ecf5); }
 [data-theme="dark"] .stat-tile__delta--good { color: var(--st-good, #2fbf6b); }
-[data-theme="dark"] .stat-tile__delta--accent { color: var(--st-accent, #4a93dd); }
+[data-theme="dark"] .stat-tile__delta--accent { color: var(--st-accent, var(--primary-400)); }
 [data-theme="dark"] .stat-tile__delta--warn { color: var(--st-warn, #f0a03e); }

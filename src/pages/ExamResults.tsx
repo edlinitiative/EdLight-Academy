@@ -9,6 +9,8 @@ import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { checkWithCAS } from '../utils/mathCAS';
 import ReviewSession from '../components/ReviewSession';
+import { Skeleton, SkeletonText } from '../components/Skeleton';
+import { EmptyState } from '../components/StateViews';
 import Celebration from '../components/Celebration';
 import { CountUp } from '../hooks/useCountUp';
 import { TRACK_BY_CODE } from '../config/trackConfig';
@@ -241,17 +243,44 @@ const ExamResults = () => {
   }, [examId, examKey, idx, userId, exam]);
 
   if (!stored) {
+    if (remoteLoading) {
+      // Results-shaped skeleton: score ring + summary stats + detail rows, so
+      // the page doesn't flash a spinner then reflow.
+      return (
+        <section className="section">
+          <div className="container" aria-busy="true">
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1.4rem', flexWrap: 'wrap' }}>
+              <Skeleton variant="circle" width={132} height={132} />
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <SkeletonText lines={2} lastWidth="40%" />
+                <div style={{ display: 'flex', gap: '0.6rem', marginTop: '1rem' }}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} width={96} height={56} radius={12} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: '0.6rem', marginTop: '1rem' }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} height={64} radius={14} />
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
     return (
       <section className="section">
         <div className="container">
-          <div className="card card--message">
-            <p>
-              {remoteLoading ? t('Chargement des résultats…', 'Ap chaje rezilta yo…') : t('Aucun résultat trouvé pour cet examen.', 'Nou pa jwenn okenn rezilta pou egzamen sa a.')}
-            </p>
-            <button className="button button--primary" onClick={() => navigate(`/exams/${level || ''}`)} type="button">
-              ← {t('Retour aux examens', 'Retounen nan egzamen yo')}
-            </button>
-          </div>
+          <EmptyState
+            title={t('Aucun résultat trouvé', 'Nou pa jwenn okenn rezilta')}
+            message={t('Aucun résultat trouvé pour cet examen. Passez-le pour voir votre correction détaillée ici.',
+              'Nou pa jwenn okenn rezilta pou egzamen sa a. Pase li pou wè koreksyon detaye ou isit la.')}
+            action={{
+              label: t('Retour aux examens', 'Retounen nan egzamen yo'),
+              onClick: () => navigate(`/exams/${level || ''}`),
+            }}
+          />
         </div>
       </section>
     );

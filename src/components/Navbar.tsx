@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Bell,
   X,
+  Search,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
@@ -255,6 +256,15 @@ export function Navbar() {
         )}
 
         <div className="nav-actions">
+          <button
+            type="button"
+            className="nav-search-btn"
+            aria-label={t('nav.search')}
+            title={`${t('nav.search')} (⌘K)`}
+            onClick={() => useStore.getState().setSearchOpen(true)}
+          >
+            <Search size={19} strokeWidth={2} aria-hidden="true" />
+          </button>
           <ThemeToggle />
           {isAuthenticated ? (
             <>

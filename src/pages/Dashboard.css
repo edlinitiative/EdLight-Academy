@@ -285,7 +285,7 @@
 }
 button.dash-activity__tag { cursor: pointer; }
 .dash-activity__tag--success { background: color-mix(in srgb, var(--success-500) 14%, transparent); color: var(--success-500); }
-.dash-activity__tag--error { background: rgba(239, 68, 68, 0.12); color: var(--danger-500); }
+.dash-activity__tag--error { background: var(--danger-50); color: var(--danger-500); }
 .dash-activity__tag--neutral { background: color-mix(in srgb, var(--primary-500) 12%, transparent); color: var(--primary-600); }
 
 /* ---------- Empty states (compact) ---------- */
@@ -359,30 +359,30 @@ button.dash-activity__tag { cursor: pointer; }
 .dash--st {
   --st-ground: #F4F7FB;
   --st-band: #E9F0F9;
-  --st-surface: #ffffff;
+  --st-surface: var(--surface);
   --st-surface-2: #F7FAFE;
-  --st-ink: #0F1E38;
-  --st-ink-2: #31415F;
-  --st-muted: #5A6B85;
+  --st-ink: var(--text-900);
+  --st-ink-2: var(--text-700);
+  --st-muted: var(--text-500);
   --st-faint: #8496B0;
-  --st-line: #E3EAF4;
-  --st-line-strong: #C6D4E8;
-  --st-accent: #1B6FE0;
-  --st-accent-600: #1558B8;
-  --st-accent-tint: rgba(27, 111, 224, 0.08);
-  --st-good: #17A75C;
-  --st-warn: #E8930C;
-  --st-crit: #E23D3D;
-  --st-dot: rgba(27, 111, 224, 0.08);
+  --st-line: var(--border);
+  --st-line-strong: var(--border-strong);
+  --st-accent: var(--primary-500);
+  --st-accent-600: var(--primary-600);
+  --st-accent-tint: var(--primary-50);
+  --st-good: var(--success-500);
+  --st-warn: var(--warning-500);
+  --st-crit: var(--danger-500);
+  --st-dot: var(--primary-50);
   --st-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --st-editorial: var(--font-display, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
   /* Limyè: no ink borders — surfaces are held by soft light. */
   --st-border: transparent;
   --st-shadow-hard: 0 1px 2px rgba(15, 30, 56, 0.05), 0 8px 24px -12px rgba(15, 30, 56, 0.14);
   --st-shadow-hero: 0 2px 4px rgba(15, 30, 56, 0.05), 0 24px 56px -24px rgba(15, 30, 56, 0.22);
-  --st-shadow-btn: 0 3px 0 #114A99;
+  --st-shadow-btn: 0 3px 0 var(--primary-700);
   --st-highlight: rgba(27, 111, 224, 0.14); /* soft azure wash behind the name */
-  --st-highlight-ink: #114A99;
+  --st-highlight-ink: var(--primary-700);
 }
 /* Night mode — the light dims, it doesn't die. */
 [data-theme="dark"] .dash--st {

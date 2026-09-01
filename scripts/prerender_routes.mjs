@@ -22,27 +22,27 @@ const ORIGIN = 'https://academy.edlight.org';
 
 const NAV = `
   <nav aria-label="Sections principales" style="display:flex;flex-wrap:wrap;gap:12px;margin:0 0 28px">
-    <a href="/" style="color:#0A66C2;text-decoration:none">Accueil</a>
-    <a href="/courses" style="color:#0A66C2;text-decoration:none">Cours</a>
-    <a href="/exams" style="color:#0A66C2;text-decoration:none">Examens blancs</a>
-    <a href="/quizzes" style="color:#0A66C2;text-decoration:none">Quiz</a>
-    <a href="/about" style="color:#0A66C2;text-decoration:none">À propos</a>
-    <a href="/faq" style="color:#0A66C2;text-decoration:none">FAQ</a>
-    <a href="/contact" style="color:#0A66C2;text-decoration:none">Contact</a>
+    <a href="/" style="color:#1B6FE0;text-decoration:none">Accueil</a>
+    <a href="/courses" style="color:#1B6FE0;text-decoration:none">Cours</a>
+    <a href="/exams" style="color:#1B6FE0;text-decoration:none">Examens blancs</a>
+    <a href="/quizzes" style="color:#1B6FE0;text-decoration:none">Quiz</a>
+    <a href="/about" style="color:#1B6FE0;text-decoration:none">À propos</a>
+    <a href="/faq" style="color:#1B6FE0;text-decoration:none">FAQ</a>
+    <a href="/contact" style="color:#1B6FE0;text-decoration:none">Contact</a>
   </nav>`;
 
 const FOOTER = `
   <footer style="margin-top:40px;padding-top:20px;border-top:1px solid #e5e5e2;color:#8a8a86;font-size:0.85rem">
-    <p style="margin:0 0 6px">EdLight Academy est un programme d’<a href="https://edlight.org" style="color:#0A66C2">EdLight Initiative</a>,
+    <p style="margin:0 0 6px">EdLight Academy est un programme d’<a href="https://edlight.org" style="color:#1B6FE0">EdLight Initiative</a>,
     organisation à but non lucratif enregistrée au Canada (n° de société 1376443-5), basée à Montréal (Québec).</p>
-    <p style="margin:0"><a href="/privacy" style="color:#0A66C2">Politique de confidentialité</a> ·
-    <a href="/terms" style="color:#0A66C2">Conditions d’utilisation</a> ·
-    <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a></p>
+    <p style="margin:0"><a href="/privacy" style="color:#1B6FE0">Politique de confidentialité</a> ·
+    <a href="/terms" style="color:#1B6FE0">Conditions d’utilisation</a> ·
+    <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a></p>
     <p style="margin:12px 0 0">Chargement de l’application…</p>
   </footer>`;
 
 const wrap = (body) => `
-  <div style="max-width:760px;margin:0 auto;padding:40px 20px;font-family:Inter,system-ui,-apple-system,sans-serif;color:#232322;line-height:1.6">
+  <div style="max-width:760px;margin:0 auto;padding:40px 20px;font-family:'Source Sans 3',system-ui,-apple-system,sans-serif;color:#232322;line-height:1.6">
     ${NAV}
     ${body}
     ${FOOTER}
@@ -104,7 +104,7 @@ function examsBody() {
       'Recevez une correction automatique, question par question, avec des explications complètes.',
       'Suivez vos résultats pour savoir exactement quoi réviser ensuite.',
     ])}
-    ${p('<a href="/quizzes" style="color:#0A66C2">Continuez avec les quiz par unité</a> ou <a href="/courses" style="color:#0A66C2">explorez les cours</a> pour revoir les notions.')}`);
+    ${p('<a href="/quizzes" style="color:#1B6FE0">Continuez avec les quiz par unité</a> ou <a href="/courses" style="color:#1B6FE0">explorez les cours</a> pour revoir les notions.')}`);
 }
 
 // ─── Route content (French text sourced from src/pages/*) ────────────────────
@@ -125,9 +125,9 @@ const ROUTES = {
       ])}
       ${h2('Ce que vous obtenez')}
       ${ul([
-        '<a href="/courses" style="color:#0A66C2"><strong>Cours structurés</strong></a> — des parcours complets en sciences et mathématiques, du fondamental au supérieur.',
-        '<a href="/exams" style="color:#0A66C2"><strong>Examens officiels</strong></a> — la banque d’annales MENFP (9e, Baccalauréat, université) avec corrections détaillées.',
-        '<a href="/quizzes" style="color:#0A66C2"><strong>Exercices et quiz</strong></a> — entraînez-vous par unité avec des indices, trois essais et des explications complètes.',
+        '<a href="/courses" style="color:#1B6FE0"><strong>Cours structurés</strong></a> — des parcours complets en sciences et mathématiques, du fondamental au supérieur.',
+        '<a href="/exams" style="color:#1B6FE0"><strong>Examens officiels</strong></a> — la banque d’annales MENFP (9e, Baccalauréat, université) avec corrections détaillées.',
+        '<a href="/quizzes" style="color:#1B6FE0"><strong>Exercices et quiz</strong></a> — entraînez-vous par unité avec des indices, trois essais et des explications complètes.',
       ])}
       ${h2('Notre approche pédagogique')}
       ${ul([
@@ -144,7 +144,7 @@ const ROUTES = {
       ])}
       ${h2('Notre équipe')}
       ${p('Nous sommes une équipe engagée d’enseignants, d’éducateurs et d’ingénieurs haïtiens, unis par une conviction : chaque élève mérite une expérience d’apprentissage de classe mondiale, quel que soit son lieu de vie.')}
-      ${p('<a href="/courses" style="color:#0A66C2">Explorer les cours</a> · <a href="/exams" style="color:#0A66C2">Voir les examens</a>')}`),
+      ${p('<a href="/courses" style="color:#1B6FE0">Explorer les cours</a> · <a href="/exams" style="color:#1B6FE0">Voir les examens</a>')}`),
   },
 
   faq: {
@@ -165,7 +165,29 @@ const ROUTES = {
       ${h3('EdLight Academy est-il vraiment gratuit ?')}
       ${p('Oui. Tous les cours, vidéos, quiz et examens blancs sont entièrement gratuits pour tous les élèves. EdLight Academy est un programme de l’organisation à but non lucratif EdLight Initiative.')}
       ${h3('Comment signaler un problème ou suggérer du contenu ?')}
-      ${p('Utilisez la page <a href="/contact" style="color:#0A66C2">Contact</a> pour nous envoyer un message. Indiquez le cours, l’unité et une brève description de ce dont vous avez besoin.')}`),
+      ${p('Utilisez la page <a href="/contact" style="color:#1B6FE0">Contact</a> pour nous envoyer un message. Indiquez le cours, l’unité et une brève description de ce dont vous avez besoin.')}`),
+  },
+
+  enseigner: {
+    title: 'Devenir enseignant bénévole — EdLight Academy',
+    description:
+      'Enseignez votre matière à des milliers d’élèves haïtiens : EdLight Academy recrute des enseignants bénévoles en mathématiques, physique, chimie et économie. Postulez en ligne.',
+    body: wrap(`
+      ${h1('Enseignez à des milliers d’élèves, où que vous soyez')}
+      ${p('EdLight Academy recrute des enseignants bénévoles pour créer des leçons vidéo et des exercices dans leur matière — mathématiques, physique, chimie, économie — du fondamental (9e AF) au Baccalauréat (NS IV). Votre salle de classe devient tout le pays : le contenu est diffusé gratuitement sur le site et sur l’application mobile.')}
+      ${h2('Comment ça marche')}
+      ${ul([
+        '<strong>Postulez</strong> — indiquez votre matière, vos niveaux, votre expérience et l’école où vous enseignez actuellement.',
+        '<strong>On vous contacte</strong> — notre équipe échange avec vous sur WhatsApp pour faire connaissance.',
+        '<strong>Vous enseignez</strong> — vous créez des leçons et obtenez votre profil d’enseignant public sur la plateforme.',
+      ])}
+      ${h2('Pourquoi enseigner sur EdLight')}
+      ${ul([
+        'Un impact national : vos leçons servent des élèves de tous les départements d’Haïti et de la diaspora.',
+        'Un profil d’enseignant public qui met en valeur votre parcours et vos cours.',
+        'Une communauté d’enseignants, d’éducateurs et d’ingénieurs haïtiens engagés.',
+      ])}
+      ${p('Prêt(e) ? <a href="/enseigner" style="color:#1B6FE0">Remplissez le formulaire de candidature</a> — l’enseignement sur EdLight est bénévole et chaque candidature est examinée par notre équipe.')}`),
   },
 
   contact: {
@@ -176,11 +198,11 @@ const ROUTES = {
       ${h1('Contactez-nous')}
       ${p('Une question, une idée de partenariat ou un retour ? Envoyez-nous un message, nous vous répondrons. En général, nous répondons en 1 à 2 jours ouvrables.')}
       ${h2('Par e-mail')}
-      ${p('Écrivez-nous à <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a>. Si votre question concerne un cours ou un quiz, indiquez la matière, le niveau (NS I–IV) et l’unité concernée pour une réponse plus rapide.')}
+      ${p('Écrivez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>. Si votre question concerne un cours ou un quiz, indiquez la matière, le niveau (NS I–IV) et l’unité concernée pour une réponse plus rapide.')}
       ${h2('Dans l’application')}
       ${p('Connectez-vous et ouvrez la page Contact pour utiliser le formulaire intégré : choisissez votre profil (élève, futur élève, enseignant, partenaire), posez votre question, et nous vous répondrons par e-mail.')}
       ${h2('Avant d’écrire')}
-      ${p('Consultez la <a href="/faq" style="color:#0A66C2">Foire aux questions</a> — la réponse s’y trouve peut-être déjà.')}`),
+      ${p('Consultez la <a href="/faq" style="color:#1B6FE0">Foire aux questions</a> — la réponse s’y trouve peut-être déjà.')}`),
   },
 
   privacy: {
@@ -192,7 +214,7 @@ const ROUTES = {
       ${p('Nous respectons votre vie privée. Cette page explique quelles données EdLight Academy collecte, comment elles sont utilisées, avec qui elles sont partagées et quels sont vos droits.')}
       ${p('<em>Date d’entrée en vigueur : 7 juillet 2026</em>')}
       ${h2('Qui sommes-nous')}
-      ${p('EdLight Academy est une plateforme éducative gratuite qui aide les élèves haïtiens à préparer le Baccalauréat, avec des cours, des vidéos, des quiz et des examens en français et en créole haïtien (Kreyòl). Pour toute question relative à cette politique ou à vos données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a> ou consultez <a href="https://edlight.org" style="color:#0A66C2">edlight.org</a>.')}
+      ${p('EdLight Academy est une plateforme éducative gratuite qui aide les élèves haïtiens à préparer le Baccalauréat, avec des cours, des vidéos, des quiz et des examens en français et en créole haïtien (Kreyòl). Pour toute question relative à cette politique ou à vos données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a> ou consultez <a href="https://edlight.org" style="color:#1B6FE0">edlight.org</a>.')}
       ${h2('Données que nous collectons')}
       ${ul([
         '<strong>Informations de compte :</strong> votre adresse e-mail et votre nom, fournis lors de l’inscription ou de la connexion. La connexion est gérée par Firebase Authentication, y compris la connexion avec Google (Google Sign-In).',
@@ -213,13 +235,13 @@ const ROUTES = {
       ${h2('Sécurité')}
       ${p('Vos données sont transmises de manière chiffrée (chiffrement en transit, HTTPS/TLS). Aucun système n’étant totalement infaillible, nous ne pouvons garantir une sécurité absolue, mais nous prenons des mesures raisonnables pour protéger vos informations.')}
       ${h2('Élèves et mineurs')}
-      ${p('EdLight Academy s’adresse principalement à des élèves du secondaire, dont certains sont mineurs. Nous ne collectons que les données nécessaires à l’apprentissage et nous n’utilisons pas les données des élèves à des fins publicitaires. Si vous êtes le parent ou le tuteur d’un mineur et souhaitez consulter ou supprimer ses données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a>.')}
+      ${p('EdLight Academy s’adresse principalement à des élèves du secondaire, dont certains sont mineurs. Nous ne collectons que les données nécessaires à l’apprentissage et nous n’utilisons pas les données des élèves à des fins publicitaires. Si vous êtes le parent ou le tuteur d’un mineur et souhaitez consulter ou supprimer ses données, contactez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>.')}
       ${h2('Conservation et suppression des données')}
-      ${p('Nous conservons vos données tant que votre compte est actif. Vous pouvez à tout moment demander la suppression de votre compte et des données associées en écrivant à <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a>. Nous traiterons votre demande dans un délai raisonnable.')}
+      ${p('Nous conservons vos données tant que votre compte est actif. Vous pouvez à tout moment demander la suppression de votre compte et des données associées en écrivant à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>. Nous traiterons votre demande dans un délai raisonnable.')}
       ${h2('Modifications de cette politique')}
       ${p('Nous pouvons mettre à jour cette politique de temps à autre. En cas de changement important, nous actualiserons la date d’entrée en vigueur indiquée ci-dessus.')}
       ${h2('Nous contacter')}
-      ${p('Pour toute question concernant vos données ou cette politique de confidentialité, écrivez-nous à <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a>.')}`),
+      ${p('Pour toute question concernant vos données ou cette politique de confidentialité, écrivez-nous à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>.')}`),
   },
 
   terms: {
@@ -230,7 +252,7 @@ const ROUTES = {
       ${h1('Conditions d’utilisation')}
       ${p('Ces conditions régissent votre utilisation d’EdLight Academy. En utilisant le site, vous les acceptez.')}
       ${h2('1. Acceptation des conditions')}
-      ${p('En accédant à la plateforme ou en l’utilisant, vous acceptez ces Conditions d’utilisation et notre <a href="/privacy" style="color:#0A66C2">Politique de confidentialité</a>.')}
+      ${p('En accédant à la plateforme ou en l’utilisant, vous acceptez ces Conditions d’utilisation et notre <a href="/privacy" style="color:#1B6FE0">Politique de confidentialité</a>.')}
       ${h2('2. Comptes et accès')}
       ${p('Vous êtes responsable de la confidentialité de votre compte et de toutes les activités qui s’y déroulent. Prévenez-nous de toute utilisation non autorisée.')}
       ${h2('3. Utilisations autorisées')}
@@ -246,7 +268,7 @@ const ROUTES = {
       ${h2('6. Modifications et résiliation')}
       ${p('Nous pouvons mettre à jour la plateforme ou ces conditions de temps à autre. Nous pouvons suspendre ou résilier l’accès en cas de violation ou pour des raisons de sécurité.')}
       ${h2('7. Contact')}
-      ${p('Des questions sur ces conditions ? Écrivez à <a href="mailto:info@edlight.org" style="color:#0A66C2">info@edlight.org</a>.')}`),
+      ${p('Des questions sur ces conditions ? Écrivez à <a href="mailto:info@edlight.org" style="color:#1B6FE0">info@edlight.org</a>.')}`),
   },
 
   courses: {
@@ -270,7 +292,7 @@ const ROUTES = {
         'Un « Quiz d’unité » de 10 questions clôt chaque unité.',
         'Votre progression est suivie par leçon, unité et matière.',
       ])}
-      ${p('Le contenu est disponible en français et en créole haïtien (Kreyòl), et tout est gratuit. <a href="/exams" style="color:#0A66C2">Préparez ensuite les examens officiels</a> ou <a href="/quizzes" style="color:#0A66C2">entraînez-vous avec les quiz</a>.')}`),
+      ${p('Le contenu est disponible en français et en créole haïtien (Kreyòl), et tout est gratuit. <a href="/exams" style="color:#1B6FE0">Préparez ensuite les examens officiels</a> ou <a href="/quizzes" style="color:#1B6FE0">entraînez-vous avec les quiz</a>.')}`),
   },
 
   quizzes: {
@@ -287,7 +309,7 @@ const ROUTES = {
         'Lisez l’explication complète après chaque question pour comprendre la démarche.',
         'Terminez chaque unité avec un « Quiz d’unité » de 10 questions.',
       ])}
-      ${p('De nouvelles questions sont ajoutées régulièrement. <a href="/courses" style="color:#0A66C2">Revoyez d’abord les leçons</a> ou <a href="/exams" style="color:#0A66C2">passez à un examen blanc</a> quand vous êtes prêt.')}`),
+      ${p('De nouvelles questions sont ajoutées régulièrement. <a href="/courses" style="color:#1B6FE0">Revoyez d’abord les leçons</a> ou <a href="/exams" style="color:#1B6FE0">passez à un examen blanc</a> quand vous êtes prêt.')}`),
   },
 };
 
@@ -350,3 +372,36 @@ for (const [route, { title, description, body }] of Object.entries(ROUTES)) {
   console.log(`prerendered /${route} (${words} words)`);
 }
 console.log(`Done: ${Object.keys(ROUTES).length} routes prerendered.`);
+
+// ─── Sitemap: expand the static base with course + exam-level URLs ──────────
+// Content-depth signal for crawlers: every visible course page and each exam
+// level get real sitemap entries (sourced from the committed catalog snapshot
+// and the exam index — no network at build time).
+try {
+  const baseSitemap = readFileSync(join(root, 'pwa', 'sitemap.xml'), 'utf8');
+  const urls = [];
+  try {
+    const catalog = JSON.parse(readFileSync(join(root, 'public', 'catalog.json'), 'utf8'));
+    const seen = new Set();
+    for (const c of catalog.courses || []) {
+      if (!c?.id || c.hidden || c.coming_soon || seen.has(c.id)) continue;
+      seen.add(c.id);
+      urls.push(`/courses/${encodeURIComponent(c.id)}`);
+    }
+  } catch { /* no catalog snapshot — skip course URLs */ }
+  try {
+    const idx = JSON.parse(readFileSync(join(root, 'public', 'exam_catalog_index.json'), 'utf8'));
+    for (const level of new Set(idx.map((e) => e?.level).filter(Boolean))) {
+      urls.push(`/exams/${encodeURIComponent(level)}`);
+    }
+  } catch { /* no exam index — skip level URLs */ }
+
+  const extra = urls
+    .map((u) => `  <url>\n    <loc>${ORIGIN}${u}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>0.7</priority>\n  </url>`)
+    .join('\n');
+  const expanded = baseSitemap.replace('</urlset>', `${extra}\n</urlset>`);
+  writeFileSync(join(root, 'dist', 'sitemap.xml'), expanded);
+  console.log(`sitemap: +${urls.length} course/exam URLs`);
+} catch (err) {
+  console.warn('sitemap expansion skipped:', err?.message || err);
+}

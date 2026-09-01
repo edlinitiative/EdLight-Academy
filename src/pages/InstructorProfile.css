@@ -1,0 +1,105 @@
+/* /enseignants/:id — public teacher profile. Tokens only. */
+
+.instructor-container {
+  max-width: 760px;
+}
+
+.instructor-card {
+  margin-top: 1rem;
+}
+
+.instructor-head {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.instructor-photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex: none;
+}
+
+.instructor-photo--initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-weight: 800;
+  font-size: var(--text-xl);
+}
+
+.instructor-name {
+  margin: 0 0 0.3rem;
+  font-size: var(--text-xl);
+}
+
+.instructor-role,
+.instructor-school {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.15rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-500);
+}
+
+.instructor-role svg,
+.instructor-school svg {
+  color: var(--primary-500);
+  flex: none;
+}
+
+.instructor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.25rem 0 1rem;
+}
+
+.instructor-chip {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.instructor-chip--level {
+  background: var(--surface-muted);
+  color: var(--text-600);
+}
+
+.instructor-bio {
+  margin: 0;
+  color: var(--text-700);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.instructor-courses {
+  margin-top: 2rem;
+}
+
+.instructor-join {
+  margin: 2rem 0 0;
+  font-size: var(--text-sm);
+}
+
+.instructor-join a {
+  color: var(--primary-500);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .instructor-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.9rem;
+  }
+}

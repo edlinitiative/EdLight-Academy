@@ -9,7 +9,7 @@
   overflow: hidden;
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
   background:
-    radial-gradient(circle at 20% 15%, rgba(27, 111, 224, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 20% 15%, var(--primary-50) 0%, transparent 45%),
     radial-gradient(circle at 80% 80%, rgba(139, 124, 232, 0.07) 0%, transparent 40%),
     var(--background);
 }

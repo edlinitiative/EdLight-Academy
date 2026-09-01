@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0A66C2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1B6FE0" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#232322" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
@@ -19,30 +19,27 @@
   <meta property="og:site_name" content="EdLight Academy">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:url" content="https://academy.edlight.org/">
-  <meta property="og:image" content="/assets/logo.png">
-  <meta property="og:image:alt" content="EdLight Academy">
-  <meta name="twitter:card" content="summary">
+  <!-- og:image MUST be an absolute URL: WhatsApp/Facebook resolve nothing relative. -->
+  <meta property="og:image" content="https://academy.edlight.org/assets/social-card.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="EdLight Academy — Maîtrisez le Bac, gratuitement">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="EdLight Academy">
   <meta name="twitter:description" content="Des cours de qualité, des exercices pratiques et des quiz interactifs — conçus pour les élèves haïtiens.">
-  <meta name="twitter:image" content="/assets/logo.png">
+  <meta name="twitter:image" content="https://academy.edlight.org/assets/social-card.jpg">
   <link rel="canonical" href="https://academy.edlight.org/">
   <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-  <!-- Fonts: loaded asynchronously (preload + swap) so they never block the
-       critical render path on slow connections. The page paints immediately
-       with system fonts and swaps to the brand fonts when they arrive. -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="style"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Geist+Mono:wght@400..600&display=swap"
-    onload="this.onload=null;this.rel='stylesheet'">
-  <noscript>
-    <link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Geist+Mono:wght@400..600&display=swap">
-  </noscript>
+  <!-- Fonts: self-hosted (Estil Klè — Source Sans 3 variable, same family as
+       the mobile app). No third-party round-trip on slow connections; the
+       page paints with system fonts and swaps when the ~29KB woff2 arrives.
+       @font-face lives in index.css; this preload just starts the fetch early. -->
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+    href="/assets/fonts/SourceSans3-latin.woff2">
   <title>EdLight Academy</title>
   <!-- Firebase config at runtime (replace with your real project values) -->
   <script>
@@ -109,7 +106,7 @@
     Inline styles keep it presentable before the CSS bundle loads.
   -->
   <div id="root">
-    <div style="max-width:720px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,-apple-system,sans-serif;color:#232322;text-align:center">
+    <div style="max-width:720px;margin:0 auto;padding:48px 20px;font-family:'Source Sans 3',system-ui,-apple-system,sans-serif;color:#232322;text-align:center">
       <h1 style="font-size:1.9rem;line-height:1.2;margin:0 0 12px">EdLight Academy</h1>
       <p style="font-size:1.05rem;line-height:1.5;color:#4a4a48;margin:0 0 24px">
         Cours de physique, chimie, mathématiques et économie pour les élèves haïtiens.
@@ -117,12 +114,12 @@
         gratuit, en français et en créole haïtien (Kreyòl).
       </p>
       <nav aria-label="Sections principales" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
-        <a href="/courses" style="color:#0A66C2;text-decoration:none">Cours</a>
-        <a href="/exams" style="color:#0A66C2;text-decoration:none">Examens blancs</a>
-        <a href="/quizzes" style="color:#0A66C2;text-decoration:none">Quiz</a>
-        <a href="/about" style="color:#0A66C2;text-decoration:none">À propos</a>
-        <a href="/faq" style="color:#0A66C2;text-decoration:none">FAQ</a>
-        <a href="/contact" style="color:#0A66C2;text-decoration:none">Contact</a>
+        <a href="/courses" style="color:#1B6FE0;text-decoration:none">Cours</a>
+        <a href="/exams" style="color:#1B6FE0;text-decoration:none">Examens blancs</a>
+        <a href="/quizzes" style="color:#1B6FE0;text-decoration:none">Quiz</a>
+        <a href="/about" style="color:#1B6FE0;text-decoration:none">À propos</a>
+        <a href="/faq" style="color:#1B6FE0;text-decoration:none">FAQ</a>
+        <a href="/contact" style="color:#1B6FE0;text-decoration:none">Contact</a>
       </nav>
       <p style="margin-top:28px;color:#8a8a86;font-size:0.9rem">Chargement de l’application…</p>
     </div>

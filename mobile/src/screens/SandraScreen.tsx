@@ -250,10 +250,14 @@ const bubbleStylesFor = (colors: Palette) => ({
 export default function SandraScreen({
   onClose,
   onNavigate,
+  initialAsk,
 }: {
   onClose?: () => void;
   /** Called with an in-app path (e.g. "/study-plan") when a chat link is tapped. */
   onNavigate?: (path: string) => void;
+  /** Query handed over from SearchScreen's "Mande Sandra" row — auto-sent
+   *  when signed in, parked in the composer otherwise. */
+  initialAsk?: string;
 }) {
   const { user, language, toggleAuthModal, grade, track, enrolledCourses, lastActivity } = useStore();
   const { level } = useTrivia();
@@ -415,6 +419,17 @@ export default function SandraScreen({
     setNotice(null);
     writeConvId(null);
   };
+
+  // Search handoff: consume the query once on mount. Guests see it parked in
+  // the composer behind the sign-in gate instead of losing it.
+  const consumedAskRef = useRef(false);
+  useEffect(() => {
+    if (!initialAsk || consumedAskRef.current) return;
+    consumedAskRef.current = true;
+    if (user) deliver(initialAsk, true);
+    else setInput(initialAsk);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAsk, user]);
 
   // ── guest gate ──────────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
    ──────────────────────────────────── */
 
 .leaderboard {
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
   padding: 1.1rem 1.2rem;
@@ -24,11 +24,11 @@
   gap: 0.45rem;
   margin: 0;
   font-size: 1rem;
-  color: var(--text, #101828);
+  color: var(--text);
 }
 
 .leaderboard__title svg {
-  color: #1558B8;
+  color: var(--primary-600);
 }
 
 .leaderboard__more {
@@ -40,7 +40,7 @@
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--primary, #1B6FE0);
+  color: var(--primary);
 }
 
 /* Scope tabs */
@@ -60,15 +60,15 @@
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   padding: 0.3rem 0.7rem;
   border-radius: 7px;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .leaderboard__scope.is-active {
-  background: var(--surface, #fff);
-  color: var(--text, #101828);
+  background: var(--surface);
+  color: var(--text);
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
 }
 
@@ -99,8 +99,8 @@
 
 .leaderboard__self {
   margin-top: 0.2rem;
-  background: rgba(27, 111, 224, 0.08);
-  border: 1px dashed rgba(27, 111, 224, 0.3);
+  background: var(--primary-50);
+  border: 1px dashed color-mix(in srgb, var(--primary-500) 30%, transparent);
 }
 
 .lb-rank {
@@ -111,8 +111,8 @@
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 800;
-  color: var(--text-muted, #667085);
-  background: var(--surface, #fff);
+  color: var(--text-muted);
+  background: var(--surface);
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
 }
@@ -126,7 +126,7 @@
   min-width: 0;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text, #101828);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -140,8 +140,8 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--primary, #1B6FE0);
-  background: rgba(27, 111, 224, 0.12);
+  color: var(--primary);
+  background: var(--primary-50);
   padding: 0.05rem 0.35rem;
   border-radius: 999px;
 }
@@ -149,7 +149,7 @@
 .leaderboard__level {
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   flex: 0 0 auto;
 }
 
@@ -159,7 +159,7 @@
   gap: 0.2rem;
   font-size: 0.82rem;
   font-weight: 800;
-  color: #1558B8;
+  color: var(--primary-600);
   flex: 0 0 auto;
   min-width: 48px;
   justify-content: flex-end;
@@ -192,7 +192,7 @@
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 700;
-  color: var(--primary, #1B6FE0);
+  color: var(--primary);
 }
 
 .leaderboard__edit:hover {
@@ -231,13 +231,13 @@
 .leaderboard__group-meta {
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   flex: 0 0 auto;
   white-space: nowrap;
 }
 
 .leaderboard__chevron {
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   flex: 0 0 auto;
   transition: transform 0.15s ease;
 }
@@ -262,11 +262,11 @@
   gap: 0.55rem;
   padding: 0.35rem 0.5rem 0.35rem 0.4rem;
   border-radius: 8px;
-  background: var(--surface, #fff);
+  background: var(--surface);
 }
 
 .leaderboard__member.is-me {
-  background: rgba(27, 111, 224, 0.12);
+  background: var(--primary-50);
 }
 
 .leaderboard__member-rank {
@@ -275,7 +275,7 @@
   text-align: center;
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -316,12 +316,12 @@
   gap: 0.45rem;
   margin: 0;
   font-size: 0.82rem;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
 }
 
-.leaderboard__join-pitch svg { color: #10b981; flex: 0 0 auto; }
+.leaderboard__join-pitch svg { color: var(--success-500); flex: 0 0 auto; }
 
-.leaderboard__join-pitch--warn svg { color: #f59e0b; }
+.leaderboard__join-pitch--warn svg { color: var(--warning-500); }
 
 .leaderboard__field-error {
   font-size: 0.72rem;
@@ -341,7 +341,7 @@
   gap: 0.25rem;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
 }
 
 /* Département/ville selects reuse .input-field but need native-select resets */
@@ -369,11 +369,16 @@
   gap: 0.6rem;
 }
 
-/* ── Dark ── The #1558B8 accent (trophy glyph + XP tally) is too dark on the
+/* ── Dark ── The deep-azure accent (trophy glyph + XP tally) is too dark on the
    night surface; lift it to the dark-mode primary. Surfaces/rows/muted text
-   adapt through the token aliases. Medal tints stay as-is — they read on both
-   grounds. */
+   adapt through the token aliases. */
 [data-theme="dark"] .leaderboard__title svg,
 [data-theme="dark"] .leaderboard__xp {
   color: var(--primary-400);
 }
+
+/* Medal chips can't come from the token system; give them night equivalents
+   (translucent metal washes + lifted text) so they don't glare on dark rows. */
+[data-theme="dark"] .lb-rank--gold { background: rgba(251, 191, 36, 0.16); color: #FBD38D; }
+[data-theme="dark"] .lb-rank--silver { background: rgba(226, 232, 240, 0.14); color: #CBD5E1; }
+[data-theme="dark"] .lb-rank--bronze { background: rgba(234, 130, 62, 0.16); color: #F4B08C; }

@@ -1,0 +1,86 @@
+/* CourseInstructors — instructor card(s) on the course overview, and the
+   shared avatar treatment reused by the public profile page. Tokens only. */
+
+.course-instructors {
+  margin: 1.75rem 0 0;
+}
+
+.course-instructors__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-lg);
+  margin: 0 0 0.9rem;
+  color: var(--text-900);
+}
+
+.course-instructors__title svg {
+  color: var(--primary-500);
+}
+
+.course-instructors__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.course-instructor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--text-900);
+  transition: box-shadow 140ms ease, transform 140ms ease;
+}
+
+.course-instructor:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.course-instructor__photo,
+.course-instructor__initials {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  flex: none;
+  object-fit: cover;
+}
+
+.course-instructor__initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-weight: 800;
+  font-size: var(--text-base);
+}
+
+.course-instructor__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.course-instructor__name {
+  font-weight: 700;
+  font-size: var(--text-base);
+}
+
+.course-instructor__sub {
+  font-size: var(--text-sm);
+  color: var(--text-500);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-instructor__chevron {
+  margin-left: auto;
+  color: var(--text-300);
+  flex: none;
+}

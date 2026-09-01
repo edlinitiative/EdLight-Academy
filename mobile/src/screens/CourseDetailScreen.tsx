@@ -14,6 +14,7 @@ import { useCourses } from '../hooks/useData';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import LessonPractice from '../components/LessonPractice';
+import CourseInstructorCard from '../components/CourseInstructorCard';
 import ChapterTest from '../components/ChapterTest';
 import PressableScale from '../components/ui/PressableScale';
 import { MasteryMeter } from '../components/MasteryMeter';
@@ -797,6 +798,9 @@ export default function CourseDetailScreen() {
             isCreole={isCreole}
           />
         ))}
+
+        {/* The person behind the course — real, bound instructors only. */}
+        {!activeLesson && <CourseInstructorCard courseId={courseId} />}
 
         {/* Reference material, after the lessons: what the course covers, and —
             on a first visit only — how the four levels are earned. */}

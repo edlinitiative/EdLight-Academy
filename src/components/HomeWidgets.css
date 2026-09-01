@@ -13,7 +13,7 @@
   flex-direction: column;
   gap: 0.15rem;
   text-align: left;
-  background: var(--surface, #fff);
+  background: var(--surface);
   border: 1px solid var(--border-color, #e6e8eb);
   border-radius: 16px;
   padding: 1rem 1.05rem;
@@ -28,7 +28,7 @@
 }
 
 .home-widget:focus-visible {
-  outline: 2px solid var(--primary, #1B6FE0);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
@@ -46,14 +46,14 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
 }
 
 .home-widget__value {
   font-size: 1.25rem;
   font-weight: 800;
   line-height: 1.15;
-  color: var(--text, #101828);
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -61,7 +61,7 @@
 
 .home-widget__caption {
   font-size: 0.76rem;
-  color: var(--text-muted, #667085);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -71,15 +71,15 @@
   position: absolute;
   top: 1rem;
   right: 0.85rem;
-  color: var(--text-muted, #98a2b3);
+  color: var(--text-muted, var(--text-400));
   opacity: 0.6;
 }
 
 /* Tonal accents (icon only — no top border bar) */
-.home-widget[data-tone='indigo'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #1558B8; }
-.home-widget[data-tone='violet'] .home-widget__icon { background: rgba(8, 87, 166, 0.12); color: #1558B8; }
-.home-widget[data-tone='amber'] .home-widget__icon { background: rgba(8, 87, 166, 0.14); color: #1558B8; }
-.home-widget[data-tone='emerald'] .home-widget__icon { background: rgba(16, 185, 129, 0.13); color: #059669; }
+.home-widget[data-tone='indigo'] .home-widget__icon { background: var(--primary-50); color: var(--primary-600); }
+.home-widget[data-tone='violet'] .home-widget__icon { background: var(--primary-50); color: var(--primary-600); }
+.home-widget[data-tone='amber'] .home-widget__icon { background: var(--primary-50); color: var(--primary-600); }
+.home-widget[data-tone='emerald'] .home-widget__icon { background: var(--success-50); color: var(--success-500); }
 
 /* Responsive: 2×2 on tablet, single column on small phones */
 @media (max-width: 900px) {
@@ -102,7 +102,7 @@
 }
 
 /* ── Dark ── The tonal icon chips use a near-black navy tint (rgba(8,87,166,…))
-   with a #1558B8 glyph — both vanish on the night surface. Use the dark-mode
+   with a deep-azure glyph — both vanish on the night surface. Use the dark-mode
    primary tint + a light-blue glyph (and a readable emerald) instead. */
 [data-theme="dark"] .home-widget[data-tone='indigo'] .home-widget__icon,
 [data-theme="dark"] .home-widget[data-tone='violet'] .home-widget__icon,
