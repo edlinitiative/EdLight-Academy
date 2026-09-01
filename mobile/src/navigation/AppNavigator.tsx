@@ -14,11 +14,13 @@ import StudyPlanScreen from '../screens/StudyPlanScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ChallengeScreen from '../screens/ChallengeScreen';
 import TeachScreen from '../screens/TeachScreen';
+import SearchScreen from '../screens/SearchScreen';
 
 export type RootParamList = {
   Loading: undefined;
   Main: undefined;
-  Sandra: undefined;
+  Search: undefined;
+  Sandra: { ask?: string } | undefined;
   StudyPlan: undefined;
   Leaderboard: undefined;
   Teach: undefined;
@@ -77,13 +79,17 @@ function navigateFromSandra(navigation: any, path: string) {
   }
 }
 
-function SandraModal({ navigation }: any) {
+function SandraModal({ navigation, route }: any) {
   return (
     <SandraScreen
       onClose={() => navigation.goBack()}
       onNavigate={(path) => navigateFromSandra(navigation, path)}
+      initialAsk={route.params?.ask}
     />
   );
+}
+function SearchModal({ navigation }: any) {
+  return <SearchScreen navigation={navigation} onClose={() => navigation.goBack()} />;
 }
 function StudyPlanModal({ navigation }: any) {
   return <StudyPlanScreen onClose={() => navigation.goBack()} />;
@@ -153,6 +159,11 @@ export default function AppNavigator() {
           ) : (
             <>
               <Stack.Screen name="Main" component={TabNavigator} />
+              <Stack.Screen
+                name="Search"
+                component={SearchModal}
+                options={{ animation: 'fade', animationDuration: 120 }}
+              />
               <Stack.Screen
                 name="Sandra"
                 component={SandraModal}

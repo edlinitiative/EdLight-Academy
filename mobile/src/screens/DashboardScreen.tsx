@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Image } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { ChevronRight, CalendarCheck } from 'lucide-react-native';
+import { ChevronRight, CalendarCheck, Search as SearchIcon } from 'lucide-react-native';
 import { courseVideoThumb } from '../utils/videoThumb';
 import { FollowInstagramPrompt } from '../components/FollowInstagram';
 import WeeklyGoalSheet from '../components/WeeklyGoalSheet';
@@ -431,6 +431,19 @@ export default function DashboardScreen() {
               {t('Prêt à continuer ?', 'Ou pare pou kontinye ?')}
             </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => { tapLight(); navigation.getParent()?.navigate('Search'); }}
+            activeOpacity={0.8}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Rechercher', 'Chèche')}
+            style={{
+              width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+              backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, marginRight: 10,
+            }}
+          >
+            <SearchIcon size={19} color={colors.muted} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { tapLight(); navigation.navigate('Profile'); }}
             activeOpacity={0.8}
