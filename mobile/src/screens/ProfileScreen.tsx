@@ -589,6 +589,29 @@ export default function ProfileScreen() {
           </PressableScale>
         </View>
 
+        {/* Devenir enseignant — recruiting funnel for volunteer instructors.
+            Lives on Profil (teachers exploring the app land here), opens the
+            Teach application modal. */}
+        <View style={{ paddingHorizontal: GUTTER, marginTop: 12 }}>
+          <PressableScale
+            onPress={() => navigation.navigate('Teach')}
+            style={{ ...cardSurface, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('Devenir enseignant bénévole', 'Vin yon pwofesè volontè')}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: radius.tile, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.azureSoft }}>
+              <GraduationCap color={colors.azure} size={20} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[typeScale.titleSm, { color: colors.ink }]}>{t('Devenir enseignant', 'Vin yon pwofesè')}</Text>
+              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
+                {t('Enseignez votre matière à tout le pays', 'Anseye matyè ou bay tout peyi a')}
+              </Text>
+            </View>
+            <ChevronRight color={colors.faint} size={18} />
+          </PressableScale>
+        </View>
+
         {/* Follow on Instagram — a quiet, secondary social touchpoint. One row,
             near the settings area; deep-links into the app with a web fallback. */}
         <View style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>

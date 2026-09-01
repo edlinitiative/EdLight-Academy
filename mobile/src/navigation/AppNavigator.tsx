@@ -13,6 +13,7 @@ import SandraScreen from '../screens/SandraScreen';
 import StudyPlanScreen from '../screens/StudyPlanScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ChallengeScreen from '../screens/ChallengeScreen';
+import TeachScreen from '../screens/TeachScreen';
 
 export type RootParamList = {
   Loading: undefined;
@@ -20,6 +21,7 @@ export type RootParamList = {
   Sandra: undefined;
   StudyPlan: undefined;
   Leaderboard: undefined;
+  Teach: undefined;
   Defi: { code: string };
 };
 
@@ -88,6 +90,9 @@ function StudyPlanModal({ navigation }: any) {
 }
 function LeaderboardModal({ navigation }: any) {
   return <LeaderboardScreen onClose={() => navigation.goBack()} />;
+}
+function TeachModal({ navigation }: any) {
+  return <TeachScreen onClose={() => navigation.goBack()} />;
 }
 function ChallengeModal({ navigation, route }: any) {
   return <ChallengeScreen code={String(route.params?.code ?? '')} onClose={() => navigation.goBack()} />;
@@ -166,6 +171,11 @@ export default function AppNavigator() {
                 name="Leaderboard"
                 component={LeaderboardModal}
                 options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="Teach"
+                component={TeachModal}
+                options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
               />
               <Stack.Screen
                 name="Defi"
