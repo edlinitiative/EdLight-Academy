@@ -107,6 +107,13 @@ module.exports = {
           to: 'exam_catalog_index.json',
           noErrorOnMissing: true
         },
+        // Course-catalog snapshot (scripts/export_catalog.mjs): /courses paints
+        // from this CDN file first, then revalidates against Firestore.
+        {
+          from: 'public/catalog.json',
+          to: 'catalog.json',
+          noErrorOnMissing: true
+        },
         // Per-exam files: opening one exam now downloads ~30KB instead of 27MB.
         {
           from: 'public/exams',
