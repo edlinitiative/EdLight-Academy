@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { History, PlayCircle, ChevronRight, Sparkles, TrendingDown } from 'lucide-react';
+import { History, PlayCircle, ChevronRight } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRACKS, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import CardCover from '../components/CardCover';
@@ -277,7 +277,6 @@ const ExamLanding = () => {
                   <CardCover className="exam-mini-card__cover" glyph={SUBJECT_GLYPHS[subject] || 'book'} color={subjectColor(subject)} />
                   <span className="exam-mini-card__body">
                     <span className={`exam-mini-card__reason exam-mini-card__reason--${weak ? 'weak' : 'new'}`}>
-                      {weak ? <TrendingDown size={11} aria-hidden="true" /> : <Sparkles size={11} aria-hidden="true" />}
                       {weak ? t('examLanding.reasonWeak') : t('examLanding.reasonNew')}
                     </span>
                     <span className="exam-mini-card__title">{name.title}</span>
