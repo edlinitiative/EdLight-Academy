@@ -15370,10 +15370,7 @@ textarea:focus-visible,
 }
 
 [data-theme="dark"] body {
-	background:
-		radial-gradient(circle at 15% 18%, rgba(77, 143, 240, 0.10) 0%, transparent 44%),
-		radial-gradient(circle at 85% 8%, rgba(255, 122, 92, 0.05) 0%, transparent 40%),
-		var(--background);
+	background: var(--background);
 	color: var(--text-900);
 }
 
@@ -15840,20 +15837,16 @@ body,
 	--lp-accent-2: var(--primary-500);
 }
 
-/* Page background — subtle premium gradient instead of flat */
+/* Page background — FLAT. This rule used to re-apply two big radial
+   gradients, quietly overriding the flat canvas set on body at the top of
+   this file (later rule, same specificity). A learning platform's ground
+   should be plain; the cards carry the structure. */
 body {
-	background:
-		radial-gradient(1100px 600px at 8% -5%, color-mix(in srgb, var(--lp-accent) 12%, transparent) 0%, transparent 60%),
-		radial-gradient(900px 500px at 95% 5%, color-mix(in srgb, var(--lp-accent-2) 10%, transparent) 0%, transparent 55%),
-		var(--background);
+	background: var(--background);
 }
 
 [data-theme="dark"] body {
-	background:
-		radial-gradient(1100px 600px at 8% -5%, rgba(27, 111, 224, 0.20) 0%, transparent 60%),
-		radial-gradient(900px 500px at 95% 5%, rgba(8, 87, 166, 0.10) 0%, transparent 55%),
-		radial-gradient(800px 500px at 50% 95%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
-		var(--background);
+	background: var(--background);
 }
 
 /* Navbar — refined glass */
@@ -16070,15 +16063,7 @@ h1, h2, h3 { font-family: var(--font-serif); letter-spacing: -0.02em; }
 
 /* ---------- Exam Landing ---------- */
 .exam-landing {
-	background:
-		radial-gradient(900px 500px at 8% -5%, color-mix(in srgb, var(--lp-accent) 12%, transparent), transparent 60%),
-		radial-gradient(800px 500px at 95% 8%, color-mix(in srgb, var(--lp-accent-2) 10%, transparent), transparent 55%),
-		var(--background) !important;
-}
-.exam-landing::before {
-	background-image:
-		linear-gradient(color-mix(in srgb, var(--lp-accent) 8%, transparent) 1px, transparent 1px),
-		linear-gradient(90deg, color-mix(in srgb, var(--lp-accent) 8%, transparent) 1px, transparent 1px) !important;
+	background: var(--background) !important;
 }
 
 .exam-landing__eyebrow {
@@ -16241,37 +16226,11 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	position: relative;
 	isolation: isolate;
 }
-.section::before,
-.exam-landing::before,
-.trivia-page::before,
-.quiz-page::before {
-	content: '';
-	position: absolute;
-	inset: 0 0 auto 0;
-	height: 520px;
-	z-index: -1;
-	pointer-events: none;
-	background:
-		radial-gradient(900px 460px at 12% -5%, color-mix(in srgb, var(--lp-accent) 14%, transparent), transparent 60%),
-		radial-gradient(720px 420px at 92% 4%, color-mix(in srgb, var(--lp-accent-2) 12%, transparent), transparent 60%);
-	mask-image: linear-gradient(to bottom, #000 65%, transparent);
-	-webkit-mask-image: linear-gradient(to bottom, #000 65%, transparent);
-}
-.section::after {
-	content: '';
-	position: absolute;
-	inset: 0 0 auto 0;
-	height: 320px;
-	z-index: -1;
-	pointer-events: none;
-	background-image:
-		linear-gradient(color-mix(in srgb, var(--lp-accent) 7%, transparent) 1px, transparent 1px),
-		linear-gradient(90deg, color-mix(in srgb, var(--lp-accent) 7%, transparent) 1px, transparent 1px);
-	background-size: 44px 44px;
-	mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 30%, transparent 70%);
-	-webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, #000 30%, transparent 70%);
-	opacity: 0.55;
-}
+/* The 520px radial gradient band that used to sit at the top of every
+   .section is gone — a flat canvas is what makes a learning platform read
+   as a product rather than a landing page. Kept as a no-op-free removal
+   (the rule is deleted, not overridden). */
+/* ...and so is the dotted-grid overlay that sat on top of it. */
 
 /* ---------- Page header (Cours / Quiz) ---------- */
 .page-header {
@@ -16827,18 +16786,14 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 	--lp-accent-3: #34d399;
 }
 
+/* The FOURTH place body's background was declared (this one with
+   !important, so it was the actual winner). Flat in both themes. */
 body {
-	background:
-		radial-gradient(900px 520px at 12% -8%, color-mix(in srgb, var(--primary-500) 7%, transparent) 0%, transparent 62%),
-		radial-gradient(700px 420px at 96% 2%, color-mix(in srgb, var(--primary-100) 45%, transparent) 0%, transparent 58%),
-		var(--background) !important;
+	background: var(--background) !important;
 }
 
 [data-theme="dark"] body {
-	background:
-		radial-gradient(900px 520px at 12% -8%, color-mix(in srgb, var(--primary-500) 12%, transparent) 0%, transparent 62%),
-		radial-gradient(700px 420px at 96% 2%, color-mix(in srgb, var(--primary-100) 14%, transparent) 0%, transparent 58%),
-		var(--background) !important;
+	background: var(--background) !important;
 }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
@@ -17016,14 +16971,7 @@ textarea:focus {
 
 .exam-landing,
 .trivia-landing {
-	background:
-		radial-gradient(760px 420px at 12% -5%, color-mix(in srgb, var(--primary-500) 7%, transparent), transparent 64%),
-		var(--background) !important;
-}
-
-.exam-landing::before,
-.trivia-landing::before {
-	opacity: 0.55;
+	background: var(--background) !important;
 }
 
 .level-card__accent {

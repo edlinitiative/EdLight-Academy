@@ -1,32 +1,17 @@
 /* ─── Exam Landing Page ─────────────────────────────────────────────────────── */
 
+/* Flat canvas. The radial gradients and the decorative grid overlay that
+   used to sit here are gone: they made the page read as a marketing landing
+   rather than a learning surface, and Coursera's own browse pages are a
+   plain near-white ground with the cards carrying all the structure. */
 .exam-landing {
   position: relative;
   min-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height));
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: hidden;
   padding: clamp(1rem, 3vw, 1.5rem) 1rem clamp(1rem, 3vw, 1.5rem);
-  background:
-    radial-gradient(circle at 20% 15%, var(--primary-50) 0%, transparent 45%),
-    radial-gradient(circle at 80% 80%, rgba(139, 124, 232, 0.07) 0%, transparent 40%),
-    var(--background);
-}
-
-/* Decorative grid overlay */
-.exam-landing::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(27, 111, 224, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(27, 111, 224, 0.032) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 22%, black 0%, transparent 100%);
-  pointer-events: none;
-  z-index: 0;
+  background: var(--background);
 }
 
 /* ── Page header ── */
@@ -474,8 +459,9 @@
 
 .exam-landing__section-title {
   margin: 0 0 0.9rem;
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text-900);
 }
 
