@@ -22,6 +22,15 @@ import { useLocation } from 'react-router-dom';
  * • Temporarily disables CSS `scroll-behavior: smooth` so the reset is an
  *   instant jump rather than a slow animated scroll on low-end devices.
  */
+// The browser's own scroll restoration re-applies a PREVIOUS visit's offset
+// on reload/fresh open — but it fires after the lazy route + data land, so a
+// direct open of e.g. /courses/math-ns1 jumped to the middle of the page.
+// This component owns scroll (top on every route change), so the native
+// restoration only ever re-applies stale positions: turn it off.
+if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual';
+}
+
 export default function ScrollToTop() {
   const { pathname, hash } = useLocation();
 
