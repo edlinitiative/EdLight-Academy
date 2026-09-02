@@ -1,5 +1,316 @@
-/* ExamBrowser — the Coursera-style subject-entity grid (clean browse state).
-   The detailed per-exam results keep their existing index.css styles. */
+/* ExamBrowser — the Coursera-style subject-entity grid (clean browse state)
+   and the browse toolbar. The detailed per-exam results keep their existing
+   index.css styles.
+
+   NOTE ON SPECIFICITY: the old toolbar styles live in index.css (~5942-6270)
+   at (0,1,0). Every override here is scoped under `.exam-browser__toolbar`
+   (0,2,0) rather than using `!important`, because a same-specificity
+   !important tie between this file and index.css would be resolved by
+   webpack's CSS-extraction order — not by intent. Leaf class names
+   (`__search`, `__select`, `__status-chip`, `__track-chip`) are deliberately
+   KEPT so the mobile sheets' iOS-zoom guards (mobile-fixes.css) and 44px
+   touch targets (mobile-first.css, mobile-premium.css `pointer: coarse`)
+   keep applying — which is also why nothing here sets `min-height` on the
+   chips or the input below the desktop breakpoint. */
+
+/* ── Browse toolbar ─────────────────────────────────────────────────────── */
+.exam-browser__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0 0 1.35rem;
+}
+
+.exam-browser__toolbar-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* Search — a constrained field that reads as ONE control in the row, not a
+   full-bleed banner spanning the viewport. */
+.exam-browser__toolbar .exam-browser__search-wrap {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 380px;
+  min-width: 0;
+}
+
+.exam-browser__search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-400);
+  pointer-events: none;
+}
+
+.exam-browser__toolbar .exam-browser__search {
+  width: 100%;
+  /* left pad clears the magnifier, right pad clears the × */
+  padding: 0.6rem 2.1rem 0.6rem 2.3rem;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-900);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Our own × is the only clear affordance — hide the native one. */
+.exam-browser__toolbar .exam-browser__search::-webkit-search-cancel-button,
+.exam-browser__toolbar .exam-browser__search::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.exam-browser__toolbar .exam-browser__search::placeholder {
+  color: var(--text-400);
+}
+
+.exam-browser__toolbar .exam-browser__search:hover {
+  border-color: var(--border-strong);
+}
+
+.exam-browser__toolbar .exam-browser__search:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-50);
+}
+
+.exam-browser__search-clear {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-400);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.exam-browser__search-clear:hover {
+  background: var(--surface-muted);
+  color: var(--text-900);
+}
+
+/* Status segment — one bordered group with a filled active option, rather
+   than three separate outlined chips floating apart. */
+.exam-browser__toolbar .exam-browser__status-filter {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-muted);
+  border-radius: var(--r-btn);
+}
+
+.exam-browser__toolbar .exam-browser__status-chip {
+  border: 0;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-600);
+  padding: 0.4rem 0.8rem;
+  border-radius: calc(var(--r-btn) - 3px);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.exam-browser__toolbar .exam-browser__status-chip:hover:not(:disabled) {
+  color: var(--text-900);
+}
+
+.exam-browser__toolbar .exam-browser__status-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.exam-browser__toolbar .exam-browser__status-chip--active {
+  background: var(--surface);
+  color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Filters toggle — labelled control with an active-count badge */
+.exam-browser__toolbar .exam-browser__filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-700);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.exam-browser__toolbar .exam-browser__filter-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--text-900);
+}
+
+.exam-browser__toolbar .exam-browser__filter-toggle--open {
+  border-color: var(--primary-500);
+  background: var(--primary-50);
+  color: var(--primary-600);
+}
+
+.exam-browser__toolbar .exam-browser__filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--primary-500);
+  /* No --on-primary token exists; #fff is the codebase convention for text
+     on the azure fill (see .button--primary). */
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Live result count — Coursera puts "N results" beside the filters that
+   change it, so it sits at the end of the row (was floating in the page
+   header, far above the controls). */
+.exam-browser__toolbar-count {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--text-500);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-browser__toolbar .exam-browser__clear-btn {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-sm);
+  border-radius: var(--r-btn);
+}
+
+/* Collapsible select row — real inputs, not unstyled native dropdowns
+   (index.css had these at font-size: 0.5rem = 8px). */
+.exam-browser__toolbar .exam-browser__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 210px));
+  gap: 0.5rem;
+}
+
+.exam-browser__toolbar .exam-browser__select {
+  appearance: none;
+  width: 100%;
+  padding: 0.55rem 2rem 0.55rem 0.75rem;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--border);
+  /* Same chevron data-URI already used by index.css for these selects. */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
+    no-repeat right 0.7rem center / 12px,
+    var(--surface);
+  color: var(--text-800);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-overflow: ellipsis;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.exam-browser__toolbar .exam-browser__select:hover {
+  border-color: var(--border-strong);
+}
+
+.exam-browser__toolbar .exam-browser__select:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px var(--primary-50);
+}
+
+/* Filière chips — readable label + chip text (index.css had them at 0.74rem) */
+.exam-browser__toolbar .exam-browser__track-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.exam-browser__toolbar .exam-browser__track-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-500);
+  margin-right: 0.15rem;
+}
+
+.exam-browser__toolbar .exam-browser__track-chip {
+  font-size: var(--text-xs);
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--r-btn);
+}
+
+.exam-browser__toolbar .exam-browser__track-chip--set {
+  border-style: dashed;
+  color: var(--primary-600);
+}
+
+/* Only one child left in this row now (the count moved to the toolbar), so
+   keep the expand/collapse control on the right where it has always sat. */
+.exam-browser__results .exam-browser__results-head {
+  justify-content: flex-end;
+}
+
+/* Desktop: give search / toggle / selects one shared control height. Kept
+   inside a min-width query so the mobile sheets' 44px touch targets and
+   iOS-zoom font guards are never overridden on small screens. */
+@media (min-width: 768px) {
+  .exam-browser__toolbar .exam-browser__search,
+  .exam-browser__toolbar .exam-browser__filter-toggle,
+  .exam-browser__toolbar .exam-browser__select {
+    min-height: 42px;
+  }
+}
+
+/* Narrow screens: the search field takes the full row, the count drops its
+   auto-margin so the row wraps tidily instead of stranding it. */
+@media (max-width: 560px) {
+  .exam-browser__toolbar .exam-browser__search-wrap {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .exam-browser__toolbar .exam-browser__status-filter {
+    flex: 1 1 auto;
+  }
+
+  .exam-browser__toolbar .exam-browser__status-chip {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 0.4rem 0.5rem;
+  }
+
+  .exam-browser__toolbar-count {
+    margin-left: 0;
+    order: 9;
+  }
+}
+
+/* ── Subject-entity grid (clean browse state) ───────────────────────────── */
 
 .exam-subjects-grid {
   display: grid;

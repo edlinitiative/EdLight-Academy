@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Search, X, SlidersHorizontal } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
@@ -412,9 +413,8 @@ const ExamBrowser = () => {
             {t("Banque d'examens officiels du MENFP", 'Bank egzamen ofisyèl MENFP')}
             {activeLevel && activeLevel !== 'all' && LEVEL_LABELS[activeLevel] ? `, ${LEVEL_LABELS[activeLevel]}` : ''}
           </p>
-          <p className="page-header__count">
-            {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
-          </p>
+          {/* The count moved into the toolbar, next to the filters that change
+              it (it used to float here, far above the controls). */}
         </div>
 
         {/* Grade-curated level context — shown only when the student's grade
@@ -459,38 +459,100 @@ const ExamBrowser = () => {
           </div>
         )}
 
-        {/* Sticky filter bar */}
-        <div className="exam-browser__filters-sticky">
-          <div className="exam-browser__filters-card">
-            {/* Search + filter toggle */}
-            <div className="exam-browser__search-row">
-              <div className="exam-browser__search-wrap">
-                <input
-                  className="exam-browser__search"
-                  type="search"
-                  placeholder={t('Rechercher…', 'Chèche…')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  aria-label={t('Rechercher un examen', 'Chèche yon egzamen')}
-                  enterKeyHint="search"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                />
-              </div>
+        {/* ── Browse toolbar ──────────────────────────────────────────────────
+            One horizontal row (Coursera's browse pattern): a constrained
+            search field, the status segment, the filters toggle, and the live
+            result count — instead of a full-bleed search banner with a bare
+            icon button bolted on. The three selects and the filière chips
+            drop below on their own rows when opened / relevant. */}
+        <div className="exam-browser__toolbar">
+          <div className="exam-browser__toolbar-row">
+            {/* Search — leading magnifier inside the field, clear affordance
+                on the right once there's a query. */}
+            <div className="exam-browser__search-wrap">
+              <Search className="exam-browser__search-icon" size={17} aria-hidden="true" />
+              <input
+                className="exam-browser__search"
+                type="search"
+                placeholder={t('Rechercher une épreuve…', 'Chèche yon egzamen…')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label={t('Rechercher un examen', 'Chèche yon egzamen')}
+                enterKeyHint="search"
+                autoCapitalize="none"
+                autoCorrect="off"
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="exam-browser__search-clear"
+                  onClick={() => setSearch('')}
+                  aria-label={t('Effacer la recherche', 'Efase rechèch la')}
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            {/* Status segment (Tous / À faire / Terminés) */}
+            <div className="exam-browser__status-filter" role="group" aria-label={t('Filtrer par statut', 'Filtre dapre eta')}>
               <button
                 type="button"
-                className={`exam-browser__filter-toggle ${showFilters ? 'exam-browser__filter-toggle--open' : ''}`}
-                onClick={() => setShowFilters((v) => !v)}
-                aria-expanded={showFilters}
-                aria-label={t('Filtres', 'Filt')}
+                className={`exam-browser__status-chip ${!statusFilter ? 'exam-browser__status-chip--active' : ''}`}
+                onClick={() => setStatusFilter('')}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-                {dropdownCount > 0 && <span className="exam-browser__filter-badge">{dropdownCount}</span>}
+                {t('Tous', 'Tout')}
+              </button>
+              <button
+                type="button"
+                className={`exam-browser__status-chip ${statusFilter === 'todo' ? 'exam-browser__status-chip--active' : ''}`}
+                onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
+              >
+                {t('À faire', 'Pou fè')}
+              </button>
+              <button
+                type="button"
+                className={`exam-browser__status-chip ${statusFilter === 'done' ? 'exam-browser__status-chip--active' : ''}`}
+                onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
+                disabled={summary.done === 0 && statusFilter !== 'done'}
+              >
+                {t('Terminés', 'Fini')}
               </button>
             </div>
 
-            {/* Filter dropdowns (collapsible) */}
-            {showFilters && (
+            {/* Filters toggle — a labelled control, not a bare glyph */}
+            <button
+              type="button"
+              className={`exam-browser__filter-toggle ${showFilters ? 'exam-browser__filter-toggle--open' : ''}`}
+              onClick={() => setShowFilters((v) => !v)}
+              aria-expanded={showFilters}
+            >
+              <SlidersHorizontal size={15} aria-hidden="true" />
+              {t('Filtres', 'Filt')}
+              {dropdownCount > 0 && <span className="exam-browser__filter-badge">{dropdownCount}</span>}
+            </button>
+
+            {/* Live count of what the filters currently match */}
+            <span className="exam-browser__toolbar-count">
+              {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
+              {summary.done > 0 && <> · {summary.done} {t('terminé', 'fini')}{summary.done !== 1 ? t('s', '') : ''}</>}
+            </span>
+
+            {hasActiveFilters && (
+              <button
+                className="exam-browser__clear-btn"
+                onClick={clearFilters}
+                type="button"
+                aria-label={t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}
+              >
+                <X size={14} aria-hidden="true" />
+                {t('Effacer', 'Efase')}
+              </button>
+            )}
+          </div>
+
+          {/* Filter dropdowns (collapsible) */}
+          {showFilters && (
             <div className="exam-browser__filters">
               <select
                 className="exam-browser__select"
@@ -498,7 +560,7 @@ const ExamBrowser = () => {
                 onChange={(e) => setSubjectFilter(e.target.value)}
                 aria-label={t('Filtrer par matière', 'Filtre dapre matyè')}
               >
-                <option value="">{t('Matière', 'Matyè')}</option>
+                <option value="">{t('Toutes les matières', 'Tout matyè')}</option>
                 {subjects.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -510,7 +572,7 @@ const ExamBrowser = () => {
                 onChange={(e) => setYearFilter(e.target.value)}
                 aria-label={t('Filtrer par année', 'Filtre dapre ane')}
               >
-                <option value="">{t('Année', 'Ane')}</option>
+                <option value="">{t('Toutes les années', 'Tout ane')}</option>
                 {years.map((y) => (
                   <option key={y} value={y}>{y}</option>
                 ))}
@@ -522,88 +584,47 @@ const ExamBrowser = () => {
                 onChange={(e) => setDifficultyFilter(e.target.value)}
                 aria-label={t('Filtrer par difficulté', 'Filtre dapre difikilte')}
               >
-                <option value="">{t('Difficulté', 'Difikilte')}</option>
+                <option value="">{t('Toute difficulté', 'Tout difikilte')}</option>
                 <option value="easy">{t('Facile', 'Fasil')}</option>
                 <option value="medium">{t('Moyen', 'Mwayen')}</option>
                 <option value="hard">{t('Difficile', 'Difisil')}</option>
               </select>
             </div>
-            )}
+          )}
 
-            {/* Track filter chips — only for Terminale/Baccalauréat */}
-            {isTerminale && (
-              <div className="exam-browser__track-bar">
+          {/* Track filter chips — only for Terminale/Baccalauréat */}
+          {isTerminale && (
+            <div className="exam-browser__track-bar">
+              <span className="exam-browser__track-label">{t('Filière', 'Filyè')}</span>
+              <button
+                className={`exam-browser__track-chip ${!trackFilter ? 'exam-browser__track-chip--active' : ''}`}
+                onClick={() => setTrackFilter('')}
+                type="button"
+              >
+                {t('Toutes', 'Tout')}
+              </button>
+              {TRACKS.map((tr) => (
                 <button
-                  className={`exam-browser__track-chip ${!trackFilter ? 'exam-browser__track-chip--active' : ''}`}
-                  onClick={() => setTrackFilter('')}
+                  key={tr.code}
+                  className={`exam-browser__track-chip ${trackFilter === tr.code ? 'exam-browser__track-chip--active' : ''}`}
+                  style={{ '--track-color': tr.color } as React.CSSProperties}
+                  onClick={() => setTrackFilter(trackFilter === tr.code ? '' : tr.code)}
                   type="button"
                 >
-                  {t('Toutes', 'Tout')}
+                  {tr.shortLabel}
                 </button>
-                {TRACKS.map((t) => (
-                  <button
-                    key={t.code}
-                    className={`exam-browser__track-chip ${trackFilter === t.code ? 'exam-browser__track-chip--active' : ''}`}
-                    style={{ '--track-color': t.color }}
-                    onClick={() => setTrackFilter(trackFilter === t.code ? '' : t.code)}
-                    type="button"
-                  >
-                    {t.shortLabel}
-                  </button>
-                ))}
-                {!userTrack && isAuthenticated && (
-                  <button
-                    className="exam-browser__track-chip"
-                    style={{ '--track-color': '#6366f1' }}
-                    onClick={() => setShowTrackSelector(true)}
-                    type="button"
-                  >
-                    {t('Définir ma filière', 'Chwazi filyè m')}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Status filter + reset */}
-            <div className="exam-browser__summary">
-              <div className="exam-browser__status-filter" role="group" aria-label={t('Filtrer par statut', 'Filtre dapre eta')}>
+              ))}
+              {!userTrack && isAuthenticated && (
                 <button
+                  className="exam-browser__track-chip exam-browser__track-chip--set"
+                  onClick={() => setShowTrackSelector(true)}
                   type="button"
-                  className={`exam-browser__status-chip ${!statusFilter ? 'exam-browser__status-chip--active' : ''}`}
-                  onClick={() => setStatusFilter('')}
                 >
-                  {t('Tous', 'Tout')}
-                </button>
-                <button
-                  type="button"
-                  className={`exam-browser__status-chip ${statusFilter === 'todo' ? 'exam-browser__status-chip--active' : ''}`}
-                  onClick={() => setStatusFilter(statusFilter === 'todo' ? '' : 'todo')}
-                >
-                  {t('À faire', 'Pou fè')}
-                </button>
-                <button
-                  type="button"
-                  className={`exam-browser__status-chip ${statusFilter === 'done' ? 'exam-browser__status-chip--active' : ''}`}
-                  onClick={() => setStatusFilter(statusFilter === 'done' ? '' : 'done')}
-                  disabled={summary.done === 0 && statusFilter !== 'done'}
-                >
-                  {t('Terminés', 'Fini')}
-                </button>
-              </div>
-
-              {hasActiveFilters && (
-                <button
-                  className="exam-browser__clear-btn"
-                  onClick={clearFilters}
-                  type="button"
-                  aria-label={t('Réinitialiser les filtres', 'Reyinisyalize filt yo')}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  {t('Effacer', 'Efase')}
+                  {t('Définir ma filière', 'Chwazi filyè m')}
                 </button>
               )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Clean browse: one card per subject (Coursera-style entities) */}
@@ -665,11 +686,9 @@ const ExamBrowser = () => {
           </div>
         ) : (
           <div className="exam-browser__results">
+            {/* The count lives in the toolbar now; this row keeps only the
+                expand/collapse control. */}
             <div className="exam-browser__results-head">
-              <p className="exam-browser__results-count">
-                {summary.exams} {t('examen', 'egzamen')}{summary.exams !== 1 ? t('s', '') : ''}
-                {summary.done > 0 && <> · {summary.done} {t('terminé', 'fini')}{summary.done !== 1 ? t('s', '') : ''}</>}
-              </p>
               {groups.length > 1 && !forceOpen && (
                 <button
                   type="button"
