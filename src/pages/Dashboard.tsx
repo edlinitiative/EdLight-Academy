@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle } from 'lucide-react';
 import { subjectCover } from '../utils/subjectCovers';
+import { normalizeExamCatalog } from '../utils/examCatalog';
+import { buildExamIndex } from '../utils/examUtils';
+import { sessionRowName } from '../utils/examNaming';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -132,6 +135,27 @@ export default function Dashboard() {
     enabled: !!user?.uid,
     staleTime: 60 * 1000,
   });
+
+  // Attempt docs don't always carry exam_title — three of four rows rendered as
+  // a bare "Examen". The slim catalog index (same react-query key the exam
+  // pages use, so this is a cache hit) gives every attempt a real name.
+  const { data: examCatalog } = useQuery({
+    queryKey: ['exam-catalog-index'],
+    queryFn: async () => {
+      const res = await fetch('/exam_catalog_index.json');
+      if (!res.ok) throw new Error('catalog index unavailable');
+      return normalizeExamCatalog(await res.json());
+    },
+    staleTime: Infinity,
+  });
+
+  const examByKey = React.useMemo(() => {
+    const m = new Map();
+    for (const e of examCatalog ? buildExamIndex(examCatalog).exams : []) {
+      m.set(String(e.exam_id ?? e._idx), e);
+    }
+    return m;
+  }, [examCatalog]);
 
   const { data: recentExamAttempts = [], isPending: examLoading } = useQuery({
     queryKey: ['dashboard-exam-attempts', user?.uid],
@@ -472,7 +496,11 @@ export default function Dashboard() {
                       const status = a?.status || '';
                       const isSubmitted = status === 'submitted';
                       const tagClass = isSubmitted ? 'dash-activity__tag--success' : 'dash-activity__tag--neutral';
-                      const title = a?.exam_title || a?.examTitle || a?.exam_id || (isCreole ? 'Egzamen' : 'Examen');
+                      const catalogExam = a?.exam_id ? examByKey.get(String(a.exam_id)) : null;
+                      const named = catalogExam ? sessionRowName(catalogExam, isCreole ? 'ht' : 'fr') : null;
+                      const title = named
+                        ? `${catalogExam._subject ? `${catalogExam._subject} · ` : ''}${named.title}`
+                        : (a?.exam_title || a?.examTitle || (isCreole ? 'Egzamen' : 'Examen'));
                       const dateMs = a?.updated_at_ms || a?.submitted_at_ms || a?.started_at_ms || Date.now();
                       const urlLevel = levelToUrl(a?.level);
                       const ctaLabel = isSubmitted ? (isCreole ? 'Rezilta' : 'Résultats') : (isCreole ? 'Kontinye' : 'Reprendre');
