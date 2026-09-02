@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, ClipboardList, BookOpen, ChevronRight } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle } from 'lucide-react';
+import { subjectCover } from '../utils/subjectCovers';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -94,20 +95,35 @@ export default function Dashboard() {
   }, [allProgress]);
 
   // Surface the most useful "next" course: the least-complete enrolled course,
-  // falling back to the first catalog entry for brand-new learners.
-  const recommendedCourse = React.useMemo(() => {
+  // falling back to the first catalog entry for brand-new learners. This was
+  // computed and then never rendered — it now drives the resume hero, which
+  // is the page's lead action (Coursera's "Continue learning").
+  const resume = React.useMemo(() => {
+    let course = null;
     if (enrolledCourses.length) {
-      let best = null;
       let bestPct = Infinity;
       for (const c of enrolledCourses) {
         const total = countCourseLessons(c);
         const p = progressByCourseId.get(c.id) || null;
         const pct = calculateCompletionPercentage(p, total || 0);
-        if (pct < bestPct) { bestPct = pct; best = c; }
+        if (pct < bestPct) { bestPct = pct; course = c; }
       }
-      if (best) return best;
     }
-    return (courses && courses[0]) || null;
+    const isEnrolled = !!course;
+    if (!course) course = (courses && courses[0]) || null;
+    if (!course) return null;
+
+    const total = countCourseLessons(course);
+    const p = progressByCourseId.get(course.id) || null;
+    const done = p?.completedLessons?.length || 0;
+    return {
+      course,
+      isEnrolled,
+      total,
+      done,
+      percent: calculateCompletionPercentage(p, total || 0),
+      remaining: Math.max(0, (total || 0) - done),
+    };
   }, [enrolledCourses, progressByCourseId, courses]);
 
   const { data: recentQuizAttempts = [], isPending: quizLoading } = useQuery({
@@ -249,65 +265,78 @@ export default function Dashboard() {
       {/* One-time grade prompt — self-gates on hydrated + signed-in + !gradeChosen */}
       <WelcomeGradeModal />
       <div className="container dash dash--st">
+        {/* Greeting — one quiet line. The action below is the headline, not
+            this; the old version paired it with an "Explorer le catalogue"
+            button that duplicated the courses panel's own "Tous les cours". */}
         <header className="dash__header">
-          <div>
-            <h1 className="dash__title">
-              {isCreole ? 'Bonjou, ' : 'Bonjour, '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>.
-            </h1>
-            <p className="dash__subtitle">
-              {isCreole
-                ? 'Kontinye yon kou, gade seri quiz ou, oswa dekouvri yon nouvo matyè.'
-                : 'Reprenez un cours, consultez votre série de quiz ou explorez une nouvelle matière.'}
-            </p>
-          </div>
-          <div className="dash__header-actions">
-            <button className="button button--ghost" onClick={() => navigate('/courses')}>
-              {isCreole ? 'Gade katalòg la' : 'Explorer le catalogue'}
-            </button>
-          </div>
+          <h1 className="dash__title">
+            {isCreole ? 'Bonjou, ' : 'Bonjour, '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>.
+          </h1>
         </header>
 
-        {/* Was a two-card hero (ReadinessCard + Countdown) that owned the whole
-            first screen. Both are now one compact line — see DashHeroStrip.
-            ReadinessCard still lives on Profile, where a full breakdown belongs. */}
-        <DashHeroStrip />
+        {/* ── Lead action: resume where you left off (Coursera's pattern) ──
+            Five separate blocks used to sit between the greeting and anything
+            a student could act on. This is now the first thing on the page. */}
+        {resume && (
+          <section className="dash-resume" aria-label={isCreole ? 'Kontinye' : 'Reprendre'}>
+            {subjectCover(resume.course.subject) ? (
+              <img
+                className="dash-resume__cover"
+                src={subjectCover(resume.course.subject)}
+                alt=""
+                loading="lazy"
+              />
+            ) : (
+              <span className="dash-resume__cover dash-resume__cover--glyph" aria-hidden="true">
+                <BookOpen size={28} strokeWidth={1.7} />
+              </span>
+            )}
+            <div className="dash-resume__body">
+              <span className="dash-resume__eyebrow">
+                {resume.isEnrolled
+                  ? (isCreole ? 'Kontinye kote ou te ye a' : 'Reprenez où vous en étiez')
+                  : (isCreole ? 'Kòmanse aprann' : 'Commencez à apprendre')}
+              </span>
+              <h2 className="dash-resume__title">{resume.course.name || resume.course.title}</h2>
+              {resume.isEnrolled && resume.total > 0 && (
+                <>
+                  <span className="dash-resume__bar" aria-hidden="true">
+                    <span style={{ width: `${resume.percent}%` }} />
+                  </span>
+                  <span className="dash-resume__meta">
+                    {progressLoading
+                      ? (isCreole ? 'Ap chaje…' : 'Chargement…')
+                      : (isCreole
+                        ? `${resume.percent}% · ${resume.remaining} leson rete`
+                        : `${resume.percent}% · ${resume.remaining} leçon${resume.remaining === 1 ? '' : 's'} restante${resume.remaining === 1 ? '' : 's'}`)}
+                  </span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              className="button button--primary dash-resume__cta"
+              onClick={() => navigate(`/courses/${resume.course.id}`)}
+            >
+              <PlayCircle size={17} aria-hidden="true" />
+              {resume.isEnrolled
+                ? (isCreole ? 'Kontinye' : 'Continuer')
+                : (isCreole ? 'Kòmanse' : 'Commencer')}
+            </button>
+          </section>
+        )}
 
-        {/* Season-aware recommendation (self-hides when there's nothing to nudge) */}
-        <SmartSuggestion />
-
-        {/* Revizyon — missed questions waiting (self-hides at zero) */}
-        <ReviewBanner />
-
-        {/* Glanceable stat tiles */}
-        <div className="dash__tiles">
-          <StatTileRow>
-            <StatTile
-              label={isCreole ? 'Seri' : 'Série'}
-              value={currentStreak}
-              unit={isCreole ? 'jou' : 'j'}
-              tone={currentStreak > 0 ? 'good' : 'muted'}
-              delta={isCreole ? 'jou youn dèyè lòt' : 'jours consécutifs'}
-            />
-            <StatTile
-              label={isCreole ? 'Quiz fini' : 'Quiz faits'}
-              value={quizzesTaken}
-              tone="accent"
-              delta={isCreole ? 'total' : 'au total'}
-            />
-            <StatTile
-              label={isCreole ? 'Mwayèn' : 'Score moyen'}
-              value={quizzesTaken ? `${avgScore}` : '—'}
-              unit={quizzesTaken ? '%' : undefined}
-              tone={avgScore >= 70 ? 'good' : avgScore >= 50 ? 'warn' : 'muted'}
-              delta={isCreole ? 'sou tout quiz yo' : 'sur tous les quiz'}
-            />
-            <StatTile
-              label={isCreole ? 'Klasman' : 'Rang · classe'}
-              value={myRank ? `#${myRank}` : '—'}
-              tone="accent"
-              delta={isCreole ? 'semèn sa a' : 'cette semaine'}
-            />
-          </StatTileRow>
+        {/* ── "What's next" region ──
+            Three components that all answer the same question used to stack as
+            three unrelated banners. They still self-hide independently (each
+            returns null), so this wrapper carries no chrome of its own — it
+            collapses to nothing when they all opt out. Ordered most-concrete
+            first: questions actually waiting, then a contextual nudge, then
+            ambient countdown/readiness. */}
+        <div className="dash__next">
+          <ReviewBanner />
+          <SmartSuggestion />
+          <DashHeroStrip />
         </div>
 
         <div className="dash__body">
@@ -500,6 +529,42 @@ export default function Dashboard() {
             </section>
           </aside>
         </div>
+
+        {/* ── Your numbers, last ──
+            Four stat tiles used to sit above the fold, so the page opened as a
+            status report you couldn't act on. Stats are for looking back;
+            they belong after the learning content. */}
+        <section className="dash__tiles" aria-label={isCreole ? 'Pwogrè ou' : 'Votre progression'}>
+          <h2 className="dash__tiles-title">{isCreole ? 'Pwogrè ou' : 'Votre progression'}</h2>
+          <StatTileRow>
+            <StatTile
+              label={isCreole ? 'Seri' : 'Série'}
+              value={currentStreak}
+              unit={isCreole ? 'jou' : 'j'}
+              tone={currentStreak > 0 ? 'good' : 'muted'}
+              delta={isCreole ? 'jou youn dèyè lòt' : 'jours consécutifs'}
+            />
+            <StatTile
+              label={isCreole ? 'Quiz fini' : 'Quiz faits'}
+              value={quizzesTaken}
+              tone="accent"
+              delta={isCreole ? 'total' : 'au total'}
+            />
+            <StatTile
+              label={isCreole ? 'Mwayèn' : 'Score moyen'}
+              value={quizzesTaken ? `${avgScore}` : '—'}
+              unit={quizzesTaken ? '%' : undefined}
+              tone={avgScore >= 70 ? 'good' : avgScore >= 50 ? 'warn' : 'muted'}
+              delta={isCreole ? 'sou tout quiz yo' : 'sur tous les quiz'}
+            />
+            <StatTile
+              label={isCreole ? 'Klasman' : 'Rang · classe'}
+              value={myRank ? `#${myRank}` : '—'}
+              tone="accent"
+              delta={isCreole ? 'semèn sa a' : 'cette semaine'}
+            />
+          </StatTileRow>
+        </section>
       </div>
     </section>
   );

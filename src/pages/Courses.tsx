@@ -9,6 +9,7 @@ import { EmptyState, ErrorState } from '../components/StateViews';
 import { Skeleton } from '../components/Skeleton';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
+import { SUBJECT_COVERS } from '../utils/subjectCovers';
 import './Courses.css';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
@@ -17,14 +18,8 @@ const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
 // Friendly glyph per subject — gives each card an identity beyond its name.
 const SUBJECT_ICONS = { MATH: Sigma, PHYS: Atom, CHEM: FlaskConical, ECON: LineChart };
 
-// Cover artwork per subject (already shipped in /assets) — the Coursera-style
-// card leads with an image; subjects without one get an accent glyph block.
-const SUBJECT_COVERS = {
-  MATH: '/assets/math-thumb.webp',
-  PHYS: '/assets/physics-thumb.webp',
-  CHEM: '/assets/chemistry-thumb.jpg',
-  ECON: '/assets/economy-thumb.webp',
-};
+// Cover artwork per subject lives in utils/subjectCovers so the dashboard's
+// resume hero leads with the same image as these cards.
 
 /** Cover block shared by subject + course cards: artwork, glyph fallback. */
 function CardCoverImage({ code, label }) {
