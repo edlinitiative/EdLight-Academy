@@ -205,7 +205,6 @@ export default function ExamOverview() {
             <span className="exam-overview__subject" style={{ background: `${color}1f`, color }}>
               {exam._subject || exam.subject}
             </span>
-            {exam.year && <span className="exam-overview__tag">{exam.year}</span>}
             {diff && <span className={`exam-overview__tag exam-overview__tag--${diff.tier}`}>{ht ? diff.ht : diff.fr}</span>}
             {exam.language && <span className="exam-overview__tag">{LANG_LABEL[exam.language] || String(exam.language).toUpperCase()}</span>}
           </div>

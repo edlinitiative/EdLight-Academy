@@ -327,7 +327,6 @@ const ExamLanding = () => {
           {orderedLevels.map((level) => {
             const heading = t(`examLanding.${level.key}Heading`);
             const desc = t(`examLanding.${level.key}Desc`);
-            const badge = t(`examLanding.${level.key}Badge`);
 
             // The Terminale (Baccalauréat) card embeds the filière quick-pick so the
             // whole "choose your level / choose your série" flow fits one screen
@@ -371,7 +370,6 @@ const ExamLanding = () => {
 
                   <div className="level-card__footer">
                     <Link to={level.to} className="level-card__cta">{t('examLanding.explore')} →</Link>
-                    <span className="level-card__badge">{badge}</span>
                   </div>
                 </div>
               );
@@ -391,7 +389,6 @@ const ExamLanding = () => {
                 </div>
                 <div className="level-card__footer">
                   <span className="level-card__cta">{t('examLanding.explore')} →</span>
-                  <span className="level-card__badge">{badge}</span>
                 </div>
               </Link>
             );

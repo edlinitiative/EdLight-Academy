@@ -184,17 +184,9 @@
   gap: 0.65rem;
 }
 
-.level-card__badge {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.035em;
-  color: var(--text-400);
-  background: rgba(148, 163, 184, 0.14);
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
+/* .level-card__badge removed — it restated the card's own heading
+   ("Terminale" badged "Baccalauréat", "9e Année" badged "Fondamental",
+   "Université" badged "Supérieur"). The footer is just the CTA now. */
 
 /* ── Terminale card: embedded Baccalauréat filière quick-pick ──
    The Terminale level card carries the "choose your série" chips inline, so the
@@ -410,13 +402,6 @@
 
   .level-card__footer {
     padding: 0.9rem 1.75rem;
-  }
-
-  .level-card__cta {
-  }
-
-  .level-card__badge {
-    font-size: 0.7rem;
   }
 
   /* Embedded Baccalauréat filière chips — keep them compact so the three

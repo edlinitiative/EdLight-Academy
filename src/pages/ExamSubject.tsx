@@ -172,7 +172,6 @@ export default function ExamSubject() {
             return (
               <li key={key}>
                 <Link className="exam-session" to={`/exams/${level}/${key}`}>
-                  <span className="exam-session__year" aria-hidden>{e.year || '—'}</span>
                   <span className="exam-session__body">
                     <span className="exam-session__title">{name.title}</span>
                     <span className="exam-session__meta">
