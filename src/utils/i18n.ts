@@ -289,7 +289,14 @@ const resources = {
         explore: 'Explore',
         resume: 'Resume',
         resumeAnswered: '{{count}} answers saved',
-        myResults: 'My results'
+        myResults: 'My results',
+        sectionInProgress: 'Continue where you left off',
+        sectionRecommended: 'Recommended for you',
+        sectionRecentResults: 'Recent results',
+        seeAll: 'See all',
+        reasonWeak: 'To reinforce',
+        reasonNew: 'New',
+        browseByLevel: 'Browse by level'
       }
     }
   },
@@ -599,7 +606,14 @@ const resources = {
         explore: 'Explorer',
         resume: 'Reprendre',
         resumeAnswered: '{{count}} réponses enregistrées',
-        myResults: 'Mes résultats'
+        myResults: 'Mes résultats',
+        sectionInProgress: 'Reprendre là où vous en étiez',
+        sectionRecommended: 'Recommandé pour vous',
+        sectionRecentResults: 'Derniers résultats',
+        seeAll: 'Tout voir',
+        reasonWeak: 'À renforcer',
+        reasonNew: 'Nouveau',
+        browseByLevel: 'Parcourir par niveau'
       }
     }
   },
@@ -909,7 +923,14 @@ const resources = {
         explore: 'Eksplore',
         resume: 'Kontinye',
         resumeAnswered: '{{count}} repons anrejistre',
-        myResults: 'Rezilta mwen'
+        myResults: 'Rezilta mwen',
+        sectionInProgress: 'Kontinye kote ou te ye a',
+        sectionRecommended: 'Rekòmande pou ou',
+        sectionRecentResults: 'Dènye rezilta',
+        seeAll: 'Wè tout',
+        reasonWeak: 'Pou ranfòse',
+        reasonNew: 'Nouvo',
+        browseByLevel: 'Navige pa nivo'
       }
     }
   }
