@@ -32,8 +32,6 @@ export default function CourseOverview({
   const isFrench = i18n.language === 'fr';
   const isCreole = i18n.language === 'ht';
 
-  const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject || '' });
-  const levelLabel = course.level ? course.level.replace(/^NS([IVX]+)$/i, 'NS $1') : 'NS I';
 
   const totalModules = modules.length;
   const totalLessons = modules.reduce((sum, m) => sum + getLessons(m).length, 0) || course.videoCount || 0;
@@ -81,16 +79,8 @@ export default function CourseOverview({
       </button>
 
       <header className="course-overview__hero">
-        <div className="course-overview__badges">
-          <span
-            className="course-card__badge"
-            style={{ background: (course.color || '#1B6FE0') + '1f', color: course.color || 'var(--primary-600)' }}
-          >
-            {subjectLabel}
-          </span>
-          <span className="course-card__badge course-card__badge--level">{levelLabel}</span>
-        </div>
-
+        {/* No badge pills: the title already carries subject + level
+            ("Mathématiques NS1") — repeating them as chips was noise. */}
         <h1 className="course-overview__title">{course.name || course.title}</h1>
         {description && <p className="course-overview__desc">{description}</p>}
 
