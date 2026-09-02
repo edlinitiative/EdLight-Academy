@@ -296,7 +296,19 @@ const resources = {
         seeAll: 'See all',
         reasonWeak: 'To reinforce',
         reasonNew: 'New',
-        browseByLevel: 'Browse by level'
+        browseByLevel: 'Browse by level',
+        myLevelEyebrow: 'Your level',
+        sectionPreparation: 'Your preparation',
+        sectionReview: 'To review',
+        sectionSubjects: 'Your subjects',
+        otherLevels: 'Preparing something else?',
+        otherLevelsOpen: 'Browse other levels',
+        otherLevelsClose: 'Hide other levels',
+        readinessOverall: 'Readiness',
+        weakestSubjects: 'Where to focus',
+        noPerfYet: 'Take a mock exam to see your readiness by subject.',
+        subjectExams_one: '{{count}} exam',
+        subjectExams_other: '{{count}} exams'
       }
     }
   },
@@ -613,7 +625,19 @@ const resources = {
         seeAll: 'Tout voir',
         reasonWeak: 'À renforcer',
         reasonNew: 'Nouveau',
-        browseByLevel: 'Parcourir par niveau'
+        browseByLevel: 'Parcourir par niveau',
+        myLevelEyebrow: 'Votre niveau',
+        sectionPreparation: 'Votre préparation',
+        sectionReview: 'À revoir',
+        sectionSubjects: 'Vos matières',
+        otherLevels: 'Vous préparez autre chose ?',
+        otherLevelsOpen: 'Voir les autres niveaux',
+        otherLevelsClose: 'Masquer les autres niveaux',
+        readinessOverall: 'Préparation',
+        weakestSubjects: 'Où concentrer vos efforts',
+        noPerfYet: 'Passez un examen blanc pour voir votre préparation par matière.',
+        subjectExams_one: '{{count}} épreuve',
+        subjectExams_other: '{{count}} épreuves'
       }
     }
   },
@@ -930,7 +954,19 @@ const resources = {
         seeAll: 'Wè tout',
         reasonWeak: 'Pou ranfòse',
         reasonNew: 'Nouvo',
-        browseByLevel: 'Navige pa nivo'
+        browseByLevel: 'Navige pa nivo',
+        myLevelEyebrow: 'Nivo ou',
+        sectionPreparation: 'Preparasyon ou',
+        sectionReview: 'Pou revize',
+        sectionSubjects: 'Matyè ou yo',
+        otherLevels: 'W ap prepare yon lòt bagay ?',
+        otherLevelsOpen: 'Wè lòt nivo yo',
+        otherLevelsClose: 'Kache lòt nivo yo',
+        readinessOverall: 'Preparasyon',
+        weakestSubjects: 'Kote pou konsantre',
+        noPerfYet: 'Fè yon egzamen blan pou wè preparasyon ou pa matyè.',
+        subjectExams_one: '{{count}} egzamen',
+        subjectExams_other: '{{count}} egzamen'
       }
     }
   }

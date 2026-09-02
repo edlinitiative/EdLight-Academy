@@ -72,6 +72,13 @@
 }
 
 /* ── Level cards grid ── */
+/* `hidden` alone can't hide this: [hidden]{display:none} comes from the UA
+   stylesheet, and ANY author `display` declaration outranks it. The other-
+   levels disclosure relies on this rule to actually collapse. */
+.exam-landing__grid[hidden] {
+  display: none;
+}
+
 .exam-landing__grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -628,3 +635,212 @@
 .exam-landing__result-score--good { background: var(--success-50); color: var(--success-500); }
 .exam-landing__result-score--mid { background: var(--warning-50); color: var(--warning-500); }
 .exam-landing__result-score--low { background: var(--danger-50); color: var(--danger-500); }
+
+/* ── Level context (toolbar left) ───────────────────────────────────────── */
+.exam-landing__level-context {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.exam-landing__level-eyebrow {
+  font-size: var(--text-xs);
+  color: var(--text-400);
+}
+
+.exam-landing__level-context strong {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-900);
+}
+
+/* ── Votre préparation (performance) ────────────────────────────────────── */
+.exam-landing__perf {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.1rem 1.25rem;
+}
+
+.exam-landing__perf-score {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.exam-landing__perf-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-landing__perf-band {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.exam-landing__perf-label {
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+
+.exam-landing__perf-focus {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.exam-landing__perf-focus-title {
+  font-size: var(--text-xs);
+  color: var(--text-500);
+  margin-bottom: 0.1rem;
+}
+
+.exam-landing__perf-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 130px) minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 0.7rem;
+  text-decoration: none;
+  color: var(--text-800);
+  padding: 0.15rem 0;
+}
+
+.exam-landing__perf-row:hover .exam-landing__perf-subject {
+  color: var(--primary-600);
+}
+
+.exam-landing__perf-subject {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-landing__perf-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.exam-landing__perf-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.exam-landing__perf-pct {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-600);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── À revoir wrapper (ReviewBanner self-hides) ─────────────────────────── */
+.exam-landing__review {
+  width: 100%;
+  max-width: 1000px;
+}
+
+.exam-landing__review:not(:empty) {
+  margin: 1.25rem 0;
+}
+
+/* ── Vos matières ───────────────────────────────────────────────────────── */
+.exam-landing__subjects {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.8rem;
+}
+
+.exam-subject-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--text-900);
+  transition: box-shadow 140ms ease, transform 140ms ease;
+}
+
+.exam-subject-tile:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.exam-subject-tile__cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+}
+
+.exam-subject-tile__name {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.exam-subject-tile__count {
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+
+/* ── Other-levels disclosure ────────────────────────────────────────────── */
+.exam-landing__levels-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  margin-bottom: 0.6rem;
+  font-size: var(--text-sm);
+  color: var(--text-500);
+}
+
+.exam-landing__levels-toggle-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+  color: var(--primary-500);
+  white-space: nowrap;
+}
+
+.exam-landing__levels-toggle-cta svg {
+  transition: transform 160ms ease;
+}
+
+.exam-landing__levels-toggle-cta svg.is-open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-subject-tile:hover { transform: none; }
+  .exam-landing__levels-toggle-cta svg { transition: none; }
+}
+
+@media (max-width: 620px) {
+  .exam-landing__perf {
+    grid-template-columns: 1fr;
+  }
+  .exam-landing__perf-row {
+    grid-template-columns: minmax(80px, 110px) minmax(0, 1fr) 38px;
+  }
+}

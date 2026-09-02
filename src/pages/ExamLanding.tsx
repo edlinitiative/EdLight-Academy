@@ -2,17 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { History, PlayCircle, ChevronRight } from 'lucide-react';
+import { History, PlayCircle, ChevronRight, ChevronDown } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRACKS, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import CardCover from '../components/CardCover';
 import { useExamAttempts } from '../hooks/useExamAttempts';
-import { levelToSlug } from '../utils/examLevels';
+import { levelToSlug, RAW_LEVEL_TO_URL, LEVEL_SLUG_LABELS } from '../utils/examLevels';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, subjectColor } from '../utils/examUtils';
 import { sessionRowName } from '../utils/examNaming';
 import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { listRecentExamAttempts } from '../services/userActivity';
+import { useReadiness } from '../hooks/useReadiness';
+import { readinessBand } from '../services/readinessService';
+import ReviewBanner from '../components/ReviewBanner';
 import './ExamLanding.css';
 
 // Level cards are data-driven; the visible strings (heading/description/badge)
@@ -205,6 +208,48 @@ const ExamLanding = () => {
     }).filter((r) => !!r.exam);
   }, [enriched, attempts, grade, userTrack]);
 
+  // ── My level ──────────────────────────────────────────────────────────────
+  // An NS4 student has no business browsing 9e papers by default. When we know
+  // the grade, the page scopes to that level and the others move behind a
+  // disclosure; with no grade set (signed out, or never asked) we still show
+  // the picker, because we genuinely don't know what they're preparing.
+  const myLevelRaw = gradeProfile(grade).examLevel || null;
+  const knowsLevel = !!grade && !!myLevelRaw;
+  const mySlug = myLevelRaw ? (RAW_LEVEL_TO_URL[myLevelRaw] || 'terminale') : null;
+  const myLevelLabel = mySlug ? (LEVEL_SLUG_LABELS[mySlug]?.[ht ? 'ht' : 'fr'] || mySlug) : '';
+  const [showOtherLevels, setShowOtherLevels] = useState(false);
+
+  // Subjects available at MY level, with how many papers each holds.
+  const mySubjects = useMemo(() => {
+    if (!myLevelRaw || enriched.length === 0) return [];
+    const bySubject = new Map<string, number>();
+    for (const e of enriched) {
+      if (e.level !== myLevelRaw) continue;
+      const subj = e._subject || 'Autre';
+      bySubject.set(subj, (bySubject.get(subj) || 0) + 1);
+    }
+    const order = userTrack
+      ? (a: string, b: string) => (getCoefficient(userTrack, b) || 0) - (getCoefficient(userTrack, a) || 0)
+      : (a: string, b: string) => {
+          const ia = DEFAULT_SUBJECT_ORDER.indexOf(a);
+          const ib = DEFAULT_SUBJECT_ORDER.indexOf(b);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        };
+    return [...bySubject.entries()]
+      .map(([subject, count]) => ({ subject, count }))
+      .sort((a, b) => order(a.subject, b.subject));
+  }, [enriched, myLevelRaw, userTrack]);
+
+  // ── Performance: readiness overall + where to focus ───────────────────────
+  const readiness = useReadiness();
+  const focusSubjects = useMemo(
+    () => (readiness.subjects || [])
+      .filter((sub: any) => sub.hasData)
+      .sort((a: any, b: any) => a.pct - b.pct)
+      .slice(0, 3),
+    [readiness.subjects],
+  );
+
   // ── "Derniers résultats" — up to 3, newest first ──────────────────────────
   const recentResults = useMemo(() => {
     if (byKey.size === 0) return [];
@@ -225,7 +270,12 @@ const ExamLanding = () => {
   return (
     <div className="exam-landing">
       <div className="exam-landing__toolbar">
-        <span />
+        {knowsLevel ? (
+          <span className="exam-landing__level-context">
+            <span className="exam-landing__level-eyebrow">{t('examLanding.myLevelEyebrow')}</span>
+            <strong>{myLevelLabel}</strong>
+          </span>
+        ) : <span />}
         <Link to="/exams/resultats" className="exam-landing__history">
           <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
         </Link>
@@ -262,6 +312,46 @@ const ExamLanding = () => {
           </div>
         </section>
       )}
+
+      {/* ── Votre préparation (performance) ──────────────────────────────── */}
+      {readiness.hasData && (
+        <section className="exam-landing__section">
+          <div className="exam-landing__section-head">
+            <h2 className="exam-landing__section-title">{t('examLanding.sectionPreparation')}</h2>
+            <Link to="/study-plan" className="exam-landing__see-all">{t('examLanding.seeAll')} →</Link>
+          </div>
+          <div className="exam-landing__perf">
+            <div className="exam-landing__perf-score">
+              <span className="exam-landing__perf-value">{readiness.overall}%</span>
+              <span className="exam-landing__perf-band" style={{ color: readinessBand(readiness.overall).color }}>
+                {ht ? readinessBand(readiness.overall).labelHt : readinessBand(readiness.overall).label}
+              </span>
+              <span className="exam-landing__perf-label">{t('examLanding.readinessOverall')}</span>
+            </div>
+            {focusSubjects.length > 0 && (
+              <div className="exam-landing__perf-focus">
+                <span className="exam-landing__perf-focus-title">{t('examLanding.weakestSubjects')}</span>
+                {focusSubjects.map((sub: any) => (
+                  <Link
+                    key={sub.subject}
+                    className="exam-landing__perf-row"
+                    to={mySlug ? `/exams/${mySlug}/matiere/${encodeURIComponent(sub.subject)}` : '/exams'}
+                  >
+                    <span className="exam-landing__perf-subject">{sub.subject}</span>
+                    <span className="exam-landing__perf-bar" aria-hidden="true">
+                      <span style={{ width: `${sub.pct}%`, background: subjectColor(sub.subject) }} />
+                    </span>
+                    <span className="exam-landing__perf-pct">{sub.pct}%</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── À revoir — self-hides when nothing is due ─────────────────────── */}
+      <div className="exam-landing__review"><ReviewBanner /></div>
 
       {/* ── Recommandé pour vous ─────────────────────────────────────────── */}
       {recommendations.length > 0 && (
@@ -320,10 +410,55 @@ const ExamLanding = () => {
         </section>
       )}
 
-      {/* ── Parcourir par niveau ─────────────────────────────────────────── */}
+      {/* ── Vos matières — the subjects of MY level, not a level picker ───── */}
+      {knowsLevel && mySubjects.length > 0 && (
+        <section className="exam-landing__section">
+          <div className="exam-landing__section-head">
+            <h2 className="exam-landing__section-title">{t('examLanding.sectionSubjects')}</h2>
+            <Link to={`/exams/${mySlug}`} className="exam-landing__see-all">{t('examLanding.seeAll')} →</Link>
+          </div>
+          <div className="exam-landing__subjects">
+            {mySubjects.map(({ subject, count }) => (
+              <Link
+                key={subject}
+                to={`/exams/${mySlug}/matiere/${encodeURIComponent(subject)}`}
+                className="exam-subject-tile"
+              >
+                <CardCover
+                  className="exam-subject-tile__cover"
+                  glyph={SUBJECT_GLYPHS[subject] || 'book'}
+                  color={subjectColor(subject)}
+                />
+                <span className="exam-subject-tile__name">{subject}</span>
+                <span className="exam-subject-tile__count">{t('examLanding.subjectExams', { count })}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Other levels ──────────────────────────────────────────────────────
+          When we know the student's class this is a deliberate detour, not the
+          default view — an NS4 shouldn't have to scroll past 9e papers. With no
+          grade set it stays open, because then the picker IS the page. */}
       <section className="exam-landing__section">
-        {hasPersonalData && <h2 className="exam-landing__section-title">{t('examLanding.browseByLevel')}</h2>}
-        <div className="exam-landing__grid">
+        {knowsLevel ? (
+          <button
+            type="button"
+            className="exam-landing__levels-toggle"
+            onClick={() => setShowOtherLevels((v) => !v)}
+            aria-expanded={showOtherLevels}
+          >
+            <span>{t('examLanding.otherLevels')}</span>
+            <span className="exam-landing__levels-toggle-cta">
+              {showOtherLevels ? t('examLanding.otherLevelsClose') : t('examLanding.otherLevelsOpen')}
+              <ChevronDown size={15} aria-hidden="true" className={showOtherLevels ? 'is-open' : ''} />
+            </span>
+          </button>
+        ) : (
+          hasPersonalData && <h2 className="exam-landing__section-title">{t('examLanding.browseByLevel')}</h2>
+        )}
+        <div className="exam-landing__grid" hidden={knowsLevel && !showOtherLevels}>
           {orderedLevels.map((level) => {
             const heading = t(`examLanding.${level.key}Heading`);
             const desc = t(`examLanding.${level.key}Desc`);
