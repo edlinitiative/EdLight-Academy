@@ -13,7 +13,12 @@
  * offline on slow connections), so without a version bump a returning learner
  * would see the old copy for one load before the background refresh lands.
  */
-const CACHE_VERSION = 'v30';
+// The literal here is a fallback — the postbuild step (prerender_routes.mjs)
+// stamps a per-build value into dist/sw.js, so EVERY deploy ships a
+// byte-different worker. That's what makes installed clients detect the
+// update, skip-wait, drop old caches and self-reload; a hand-bumped constant
+// only did that when someone remembered to bump it.
+const CACHE_VERSION = 'v31';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;

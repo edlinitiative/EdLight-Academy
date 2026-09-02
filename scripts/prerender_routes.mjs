@@ -373,6 +373,33 @@ for (const [route, { title, description, body }] of Object.entries(ROUTES)) {
 }
 console.log(`Done: ${Object.keys(ROUTES).length} routes prerendered.`);
 
+// ─── Service worker: stamp a per-build cache version ────────────────────────
+// sw.js is copied verbatim from pwa/, so without this every deploy shipped a
+// byte-identical worker: installed clients never fired `updatefound`, never
+// skip-waited, and kept serving the previous build's cached shell + bundles
+// indefinitely. Deriving the version from the built index.html makes each
+// deploy self-invalidating — clients detect the new worker on their next
+// visit, drop the old caches (names embed the version) and auto-reload once.
+try {
+  const { createHash } = await import('node:crypto');
+  const swPath = join(root, 'dist', 'sw.js');
+  const sw = readFileSync(swPath, 'utf8');
+  // Webpack minifies the copied worker and INLINES the constant into the
+  // cache names — so read the version literal from the source file and
+  // global-replace it in the built output.
+  const srcVersion = readFileSync(join(root, 'pwa', 'sw.js'), 'utf8')
+    .match(/const CACHE_VERSION = '([^']+)';/)?.[1];
+  const buildTag = createHash('md5').update(readFileSync(distIndex, 'utf8')).digest('hex').slice(0, 8);
+  if (!srcVersion || !sw.includes(srcVersion)) {
+    console.warn('sw.js: source CACHE_VERSION literal not found in build — worker NOT stamped');
+  } else {
+    writeFileSync(swPath, sw.split(srcVersion).join(`${srcVersion}-${buildTag}`));
+    console.log(`sw.js: CACHE_VERSION stamped ${srcVersion}-${buildTag}`);
+  }
+} catch (err) {
+  console.warn('sw.js stamping skipped:', err?.message || err);
+}
+
 // ─── Sitemap: expand the static base with course + exam-level URLs ──────────
 // Content-depth signal for crawlers: every visible course page and each exam
 // level get real sitemap entries (sourced from the committed catalog snapshot
