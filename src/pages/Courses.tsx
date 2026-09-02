@@ -5,17 +5,123 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCourses } from '../hooks/useData';
 import { loadAppData } from '../services/dataService';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
-import { CourseCard } from '../components/Course';
 import { EmptyState, ErrorState } from '../components/StateViews';
 import { Skeleton } from '../components/Skeleton';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
+import './Courses.css';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
 
 // Friendly glyph per subject — gives each card an identity beyond its name.
 const SUBJECT_ICONS = { MATH: Sigma, PHYS: Atom, CHEM: FlaskConical, ECON: LineChart };
+
+// Cover artwork per subject (already shipped in /assets) — the Coursera-style
+// card leads with an image; subjects without one get an accent glyph block.
+const SUBJECT_COVERS = {
+  MATH: '/assets/math-thumb.webp',
+  PHYS: '/assets/physics-thumb.webp',
+  CHEM: '/assets/chemistry-thumb.jpg',
+  ECON: '/assets/economy-thumb.webp',
+};
+
+/** Cover block shared by subject + course cards: artwork, glyph fallback. */
+function CardCoverImage({ code, label }) {
+  const [broken, setBroken] = useState(false);
+  const src = SUBJECT_COVERS[code];
+  const Icon = SUBJECT_ICONS[code] || BookOpen;
+  return (
+    <span className="ccat-card__cover" aria-hidden="true">
+      {src && !broken ? (
+        <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />
+      ) : (
+        <span className="ccat-card__cover-glyph"><Icon size={44} strokeWidth={1.6} /></span>
+      )}
+    </span>
+  );
+}
+
+/**
+ * CatalogCourseCard — Coursera-anatomy course card for the level view.
+ * Same behavior contract as components/Course.tsx's CourseCard (click /
+ * Enter / Space → course detail, enrolled chip, local-or-store progress);
+ * only the chrome changed, so that file keeps serving the other surfaces.
+ */
+function CatalogCourseCard({ course }) {
+  const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
+  const enrolledCourses = useStore((st) => st.enrolledCourses);
+  const progress = useStore((st) => st.progress);
+  const isEnrolled = enrolledCourses.some((c) => c.id === course.id);
+  const isFrench = i18n.language === 'fr';
+  const isCreole = i18n.language === 'ht';
+
+  const units = course.modules || [];
+  const lessonsCount = units.reduce((sum, u) => sum + (u.lessons?.length || 0), 0);
+  const fallbackTotal = lessonsCount || units.length || course.videoCount || 1;
+  const courseProgress = progress[course.id] || { completed: 0, total: fallbackTotal };
+  const total = courseProgress.total || fallbackTotal || 1;
+  const pct = Math.min(100, Math.max(0, Math.round(((courseProgress.completed || 0) / total) * 100)) || 0);
+
+  const formatDuration = (minutes) => {
+    const totalMinutes = parseInt(minutes, 10) || 0;
+    if (!totalMinutes) return t('courses.selfPaced');
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    const hourLabel = isFrench ? 'h' : (isCreole ? 'èdtan' : `hr${hours > 1 ? 's' : ''}`);
+    const minuteLabel = isFrench ? 'min' : (isCreole ? 'minit' : 'min');
+    if (hours && mins) return `${hours} ${hourLabel} ${mins} ${minuteLabel}`;
+    if (hours) return `${hours} ${hourLabel}`;
+    return `${mins} ${minuteLabel}`;
+  };
+
+  const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
+  const lvl = levelLabel(course.level);
+  const title = `${subjectLabel} ${lvl}`.trim();
+  const description = (course.description || '').trim();
+
+  const goToCourse = () => navigate(`/courses/${course.id}`);
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToCourse(); }
+  };
+
+  return (
+    <article
+      className="ccat-card"
+      style={{ '--accent': course.color || 'var(--primary-500)' } as React.CSSProperties}
+      role="button"
+      tabIndex={0}
+      onClick={goToCourse}
+      onKeyDown={handleKeyDown}
+      aria-label={`${subjectLabel} · ${lvl} — ${course.name}`}
+    >
+      <span style={{ position: 'relative', display: 'block' }}>
+        <CardCoverImage code={course.subject} label={subjectLabel} />
+        {isEnrolled && <span className="ccat-card__enrolled-chip">{t('courses.enrolled')}</span>}
+      </span>
+      <span className="ccat-card__body">
+        <span className="ccat-card__provider">
+          <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
+        </span>
+        <h3 className="ccat-card__title">{title}</h3>
+        {description && <p className="ccat-card__desc">{description}</p>}
+        <span className="ccat-card__meta">
+          {units.length} {t('courses.modules')} · {lessonsCount || course.videoCount} {t('courses.lessons')} · {formatDuration(course.duration)}
+        </span>
+        {isEnrolled && (
+          <span className="ccat-card__progress">
+            <span className="progress-bar"><span className="progress-bar__fill" style={{ width: `${pct}%` }} /></span>
+            <span className="ccat-card__pct">{pct}%</span>
+          </span>
+        )}
+        <span className="ccat-card__cta">
+          {isEnrolled ? t('courses.continue') : t('courses.startCourse')} <ArrowRight size={15} />
+        </span>
+      </span>
+    </article>
+  );
+}
 
 function countCourseLessons(course) {
   const units = Array.isArray(course?.modules) ? course.modules : [];
@@ -299,8 +405,8 @@ export default function Courses() {
         {/* Content */}
         {activeGroup ? (
           levelViewCourses.length > 0 ? (
-            <div className="grid grid--courses">
-              {levelViewCourses.map((course) => <CourseCard key={course.id} course={course} />)}
+            <div className="ccat-grid">
+              {levelViewCourses.map((course) => <CatalogCourseCard key={course.id} course={course} />)}
             </div>
           ) : (
             <EmptyState
@@ -325,6 +431,14 @@ export default function Courses() {
                         style={{ '--course-accent': course.color || 'var(--primary-500)' } as React.CSSProperties}
                         onClick={() => navigate(`/courses/${course.id}`)}
                       >
+                        {SUBJECT_COVERS[course.subject] && (
+                          <img
+                            className="resume-course__thumb"
+                            src={SUBJECT_COVERS[course.subject]}
+                            alt=""
+                            loading="lazy"
+                          />
+                        )}
                         <span className="resume-course__info">
                           <span className="resume-course__name">{course.name || course.title}</span>
                           <span className="resume-course__meta">{sLabel} · {levelLabel(course.level)}</span>
@@ -340,27 +454,39 @@ export default function Courses() {
               </div>
             )}
 
-            <div className="subjects-grid">
+            <div className="ccat-grid">
               {subjectGroups.map((g) => {
                 const label = t(`subjects.${g.code}`, { defaultValue: g.code });
-                const Icon = SUBJECT_ICONS[g.code] || BookOpen;
                 const accentStyle = { '--accent': g.accent } as React.CSSProperties;
+                const totalLessons = g.items.reduce((sum, c) => sum + countCourseLessons(c), 0);
+                const metaLine = [
+                  t('courses.levelCount', { count: g.items.length }),
+                  totalLessons > 0 ? `${totalLessons} ${t('courses.lessons')}` : '',
+                  g.enrolledCount > 0 ? `${g.enrolledCount} ${t('courses.enrolledShort')}` : '',
+                ].filter(Boolean).join(' · ');
 
-                // Coming-soon subject: friendly dashed placeholder (auto-flips
-                // to a live card once the course data is migrated).
+                // Coming-soon subject: same cover treatment, muted, badged —
+                // auto-flips to a live card once the course data is migrated.
                 if (g.comingSoon) {
                   return (
                     <div
                       key={g.code}
-                      className="subject-card subject-card--soon"
+                      className="ccat-card ccat-card--soon"
                       style={accentStyle}
                       aria-disabled="true"
                       aria-label={`${label} — ${t('courses.comingSoon', 'Bientôt disponible')}`}
                     >
-                      <span className="subject-card__icon"><Icon size={22} strokeWidth={2.2} /></span>
-                      <span className="subject-card__name">{label}</span>
-                      <span className="subject-card__meta">{t('courses.comingSoonSub', 'Cours en préparation')}</span>
-                      <span className="subject-card__soon">{t('courses.comingSoon', 'Bientôt disponible')}</span>
+                      <span style={{ position: 'relative', display: 'block' }}>
+                        <CardCoverImage code={g.code} label={label} />
+                        <span className="ccat-card__soon-badge">{t('courses.comingSoon', 'Bientôt disponible')}</span>
+                      </span>
+                      <span className="ccat-card__body">
+                        <span className="ccat-card__provider">
+                          <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
+                        </span>
+                        <h3 className="ccat-card__title">{label}</h3>
+                        <span className="ccat-card__meta">{t('courses.comingSoonSub', 'Cours en préparation')}</span>
+                      </span>
                     </div>
                   );
                 }
@@ -369,30 +495,32 @@ export default function Courses() {
                   <button
                     key={g.code}
                     type="button"
-                    className="subject-card"
+                    className="ccat-card"
                     style={accentStyle}
                     onClick={() => { setSubject(g.code); setFilter('all'); }}
                     aria-label={label}
                   >
-                    <span className="subject-card__icon"><Icon size={22} strokeWidth={2.2} /></span>
-                    <span className="subject-card__name">{label}</span>
-                    <span className="subject-card__meta">
-                      {t('courses.levelCount', { count: g.items.length })}
-                      {g.enrolledCount > 0 && <> · {g.enrolledCount} {t('courses.enrolledShort')}</>}
-                    </span>
-                    {g.enrolledCount > 0 && (
-                      <span className="subject-card__progress">
-                        <span className="progress-bar">
-                          <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
-                        </span>
-                        <span className="subject-card__pct">{g.pct}%</span>
+                    <CardCoverImage code={g.code} label={label} />
+                    <span className="ccat-card__body">
+                      <span className="ccat-card__provider">
+                        <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
                       </span>
-                    )}
-                    <span className="subject-card__cta">
-                      {g.enrolledCount > 0
-                        ? t('courses.continue', 'Continuer')
-                        : t('courses.start', 'Commencer')}
-                      <ChevronRight size={16} />
+                      <h3 className="ccat-card__title">{label}</h3>
+                      <span className="ccat-card__meta">{metaLine}</span>
+                      {g.enrolledCount > 0 && (
+                        <span className="ccat-card__progress">
+                          <span className="progress-bar">
+                            <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
+                          </span>
+                          <span className="ccat-card__pct">{g.pct}%</span>
+                        </span>
+                      )}
+                      <span className="ccat-card__cta">
+                        {g.enrolledCount > 0
+                          ? t('courses.continue', 'Continuer')
+                          : t('courses.start', 'Commencer')}
+                        <ChevronRight size={16} />
+                      </span>
                     </span>
                   </button>
                 );

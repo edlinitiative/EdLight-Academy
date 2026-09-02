@@ -43,6 +43,7 @@ const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
 const AdminTrivia = lazyWithRetry(() => import('./pages/admin/AdminTrivia'));
 const ExamLanding = lazyWithRetry(() => import('./pages/ExamLanding'));
 const ExamOverview = lazyWithRetry(() => import('./pages/ExamOverview'));
+const ExamSubject = lazyWithRetry(() => import('./pages/ExamSubject'));
 const ExamHistory = lazyWithRetry(() => import('./pages/ExamHistory'));
 const ExamBrowser = lazyWithRetry(() => import('./pages/ExamBrowser'));
 const ExamTake = lazyWithRetry(() => import('./pages/ExamTake'));
@@ -106,6 +107,7 @@ export default function App() {
                 {/* Static segment must be declared before :level (router ranks it higher anyway) */}
                 <Route path="exams/resultats" element={<ExamHistory />} />
                 <Route path="exams/:level" element={<ExamBrowser />} />
+                <Route path="exams/:level/matiere/:subject" element={<ExamSubject />} />
                 {/* Coursera-style: the exam URL is its overview page; taking lives on /take */}
                 <Route path="exams/:level/:examId" element={<ExamOverview />} />
                 <Route path="exams/:level/:examId/take" element={<ExamTake />} />

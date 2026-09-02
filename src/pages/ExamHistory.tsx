@@ -9,6 +9,7 @@ import { subjectColor } from '../utils/examUtils';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
 import { EmptyState } from '../components/StateViews';
 import { Skeleton } from '../components/Skeleton';
+import './ExamOverview.css'; // shared .exam-overview__crumbs
 import './ExamHistory.css';
 
 /**

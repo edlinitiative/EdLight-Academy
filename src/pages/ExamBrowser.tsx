@@ -7,6 +7,10 @@ import TrackSelector from '../components/TrackSelector';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
+import CardCover from '../components/CardCover';
+import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
+import { yearRange } from '../utils/examNaming';
+import './ExamBrowser.css';
 import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
 
@@ -166,6 +170,10 @@ const ExamBrowser = () => {
   const [showFilters, setShowFilters] = useState(false); // collapsible dropdown panel
 
   const hasActiveFilters = subjectFilter || yearFilter || search.trim() || trackFilter || statusFilter || difficultyFilter;
+  // Coursera-style browsing: the clean state sells SUBJECTS (one card each);
+  // any search/filter switches to the detailed per-exam results below. The
+  // track chip alone stays in card view — it only re-ranks subjects by coef.
+  const subjectCardView = !(subjectFilter || yearFilter || search.trim() || statusFilter || difficultyFilter);
   const dropdownCount = [subjectFilter, yearFilter, difficultyFilter].filter(Boolean).length;
 
   const clearFilters = useCallback(() => {
@@ -598,8 +606,51 @@ const ExamBrowser = () => {
           </div>
         </div>
 
-        {/* Results */}
-        {filtered.length === 0 ? (
+        {/* Clean browse: one card per subject (Coursera-style entities) */}
+        {subjectCardView && groups.length > 0 && (
+          <div className="exam-subjects-grid">
+            {groups.map((g) => {
+              const done = g.exams.reduce((n, e) => n + (attempts[examKeyOf(e)] ? 1 : 0), 0);
+              const best = g.exams.reduce((mx, e) => {
+                const p = attempts[examKeyOf(e)]?.percentage;
+                return typeof p === 'number' && p > mx ? p : mx;
+              }, -1);
+              return (
+                <button
+                  key={g.subject}
+                  type="button"
+                  className="exam-subject-card"
+                  onClick={() => navigate(`/exams/${level}/matiere/${encodeURIComponent(g.subject)}`)}
+                >
+                  <CardCover className="exam-subject-card__cover" glyph={SUBJECT_GLYPHS[g.subject] || 'book'} color={g.color} />
+                  <span className="exam-subject-card__body">
+                    <span className="exam-subject-card__provider">
+                      <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
+                    </span>
+                    <span className="exam-subject-card__name">{g.subject}</span>
+                    <span className="exam-subject-card__meta">
+                      {g.exams.length} {g.exams.length === 1 ? t('épreuve officielle', 'egzamen ofisyèl') : t('épreuves officielles', 'egzamen ofisyèl')}
+                      {yearRange(g.exams) ? ` · ${yearRange(g.exams)}` : ''}
+                    </span>
+                    <span className="exam-subject-card__foot">
+                      {done > 0 ? (
+                        <span className="exam-subject-card__done">
+                          {done}/{g.exams.length} {t('terminées', 'fini')}{best >= 0 ? ` · ${best}%` : ''}
+                        </span>
+                      ) : (
+                        <span className="exam-subject-card__new">{t('Commencer', 'Kòmanse')} →</span>
+                      )}
+                      {g.coef != null && <span className="exam-subject-card__coef">{t('Coef.', 'Koef.')} {g.coef}</span>}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Detailed results — active search / filters */}
+        {!subjectCardView && (filtered.length === 0 ? (
           <div className="card card--message exam-browser__empty">
             <p>{t('Aucun examen trouvé. Essayez de modifier vos filtres.', 'Nou pa jwenn okenn egzamen. Eseye chanje filt ou yo.')}</p>
             {hasActiveFilters && (
@@ -670,7 +721,7 @@ const ExamBrowser = () => {
               );
             })}
           </div>
-        )}
+        ))}
 
         {/* Track selector modal (onboarding) */}
         {showTrackSelector && (
