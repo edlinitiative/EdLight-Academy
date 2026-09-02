@@ -191,6 +191,14 @@
   gap: 0.3rem;
 }
 
+/* Lesson counts under the bar ("3/19 leçons") — the bar shows the shape of
+   the progress, this says how much is actually left to do. */
+.ccat-card__progress-label {
+  font-size: var(--text-xs);
+  color: var(--text-500);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Resume strip: align chrome with the new cards (cover thumb left) ── */
 .resume-course__thumb {
   width: 76px;
@@ -198,4 +206,103 @@
   border-radius: var(--radius-sm);
   object-fit: cover;
   flex: none;
+}
+
+/* ── "Continue learning" lead block ───────────────────────────────────────
+   This is the first thing a returning student sees, so it carries the card
+   system's chrome instead of the older bordered row.
+
+   SPECIFICITY: index.css styles .resume-course / __cta at (0,1,0). Every rule
+   below is scoped under .courses-resume--lead (0,2,0) so it wins on
+   specificity rather than on which stylesheet the bundler happens to emit
+   last — this file ships in a lazy route chunk whose order against main.css
+   is not guaranteed, so a same-specificity !important tie would be decided by
+   build order, not intent. */
+.courses-resume--lead {
+  margin-bottom: 2rem;
+}
+
+.courses-resume--lead .courses-resume__list {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 0.85rem;
+}
+
+.courses-resume--lead .resume-course {
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.courses-resume--lead .resume-course:hover,
+.courses-resume--lead .resume-course:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.courses-resume--lead .resume-course:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.courses-resume--lead .resume-course__thumb {
+  width: 88px;
+  height: 60px;
+}
+
+.courses-resume--lead .resume-course__info {
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.courses-resume--lead .resume-course__name {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.resume-course__remaining {
+  font-size: var(--text-xs);
+  color: var(--text-500);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The row itself is the button, so this reads as the primary action without
+   being a nested interactive element. */
+.courses-resume--lead .resume-course__cta {
+  flex: none;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--r-btn);
+  background: var(--primary-500);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.courses-resume--lead .resume-course:hover .resume-course__cta {
+  background: var(--primary-700);
+}
+
+@media (max-width: 420px) {
+  .courses-resume--lead .resume-course {
+    flex-wrap: wrap;
+  }
+
+  .courses-resume--lead .resume-course__cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ccat-card:hover,
+  .ccat-card:focus-visible,
+  .courses-resume--lead .resume-course:hover,
+  .courses-resume--lead .resume-course:focus-visible {
+    transform: none;
+  }
 }

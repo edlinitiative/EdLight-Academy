@@ -43,21 +43,22 @@ function CardCoverImage({ code, label }) {
  * Enter / Space → course detail, enrolled chip, local-or-store progress);
  * only the chrome changed, so that file keeps serving the other surfaces.
  */
-function CatalogCourseCard({ course }) {
+function CatalogCourseCard({ course, stats = null }) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const enrolledCourses = useStore((st) => st.enrolledCourses);
-  const progress = useStore((st) => st.progress);
   const isEnrolled = enrolledCourses.some((c) => c.id === course.id);
   const isFrench = i18n.language === 'fr';
   const isCreole = i18n.language === 'ht';
 
   const units = course.modules || [];
   const lessonsCount = units.reduce((sum, u) => sum + (u.lessons?.length || 0), 0);
-  const fallbackTotal = lessonsCount || units.length || course.videoCount || 1;
-  const courseProgress = progress[course.id] || { completed: 0, total: fallbackTotal };
-  const total = courseProgress.total || fallbackTotal || 1;
-  const pct = Math.min(100, Math.max(0, Math.round(((courseProgress.completed || 0) / total) * 100)) || 0);
+  // Progress comes from the parent, which prefers cross-device Firestore
+  // progress over the local store (this card used to read the local store
+  // only, so a student's real progress went missing on a fresh device).
+  const pct = stats?.pct ?? 0;
+  const doneLessons = stats?.completed ?? 0;
+  const totalLessons = stats?.total || lessonsCount || units.length || course.videoCount || 0;
 
   const formatDuration = (minutes) => {
     const totalMinutes = parseInt(minutes, 10) || 0;
@@ -104,14 +105,21 @@ function CatalogCourseCard({ course }) {
         <span className="ccat-card__meta">
           {units.length} {t('courses.modules')} · {lessonsCount || course.videoCount} {t('courses.lessons')} · {formatDuration(course.duration)}
         </span>
-        {isEnrolled && (
+        {/* Progress appears once there IS progress. A 0% bar on every card
+            reads as failure, so an untouched course just looks neutral. */}
+        {pct > 0 && (
           <span className="ccat-card__progress">
             <span className="progress-bar"><span className="progress-bar__fill" style={{ width: `${pct}%` }} /></span>
             <span className="ccat-card__pct">{pct}%</span>
           </span>
         )}
+        {pct > 0 && totalLessons > 0 && (
+          <span className="ccat-card__progress-label">
+            {doneLessons}/{t('courses.lessonsCount', { count: totalLessons })}
+          </span>
+        )}
         <span className="ccat-card__cta">
-          {isEnrolled ? t('courses.continue') : t('courses.startCourse')} <ArrowRight size={15} />
+          {pct > 0 || isEnrolled ? t('courses.continue') : t('courses.startCourse')} <ArrowRight size={15} />
         </span>
       </span>
     </article>
@@ -236,16 +244,37 @@ export default function Courses() {
     return m;
   }, [allProgress]);
 
-  // Best-effort completion %: prefer cross-device Firestore progress, fall back
-  // to the local store so the figure still works while signed out / offline.
-  const coursePercent = useCallback((course) => {
+  // Best-effort progress: prefer cross-device Firestore progress, fall back to
+  // the local store so the figures still work while signed out / offline.
+  // Returns lesson counts too — the cards show "3/19 leçons" and the resume
+  // rows "N% · X leçons restantes", which a bare percentage can't express.
+  const courseStats = useCallback((course) => {
     const total = countCourseLessons(course);
     const fp = progressByCourseId.get(course.id);
-    if (fp) return calculateCompletionPercentage(fp, total || 0);
+    if (fp) {
+      const completed = Math.min(fp.completedLessons?.length || 0, total || 0);
+      return {
+        pct: calculateCompletionPercentage(fp, total || 0),
+        completed,
+        total,
+        remaining: Math.max(0, (total || 0) - completed),
+      };
+    }
     const sp = storeProgress?.[course.id];
-    if (sp && sp.total) return Math.min(100, Math.round(((sp.completed || 0) / sp.total) * 100));
-    return 0;
+    if (sp && sp.total) {
+      const spTotal = sp.total;
+      const completed = Math.min(sp.completed || 0, spTotal);
+      return {
+        pct: Math.min(100, Math.round((completed / spTotal) * 100)),
+        completed,
+        total: spTotal,
+        remaining: Math.max(0, spTotal - completed),
+      };
+    }
+    return { pct: 0, completed: 0, total, remaining: total };
   }, [progressByCourseId, storeProgress]);
+
+  const coursePercent = useCallback((course) => courseStats(course).pct, [courseStats]);
 
   const isEnrolled = useCallback(
     (course) => enrolledCourses.some((c) => c.id === course.id),
@@ -265,9 +294,17 @@ export default function Courses() {
         (a, b) => LEVEL_ORDER.indexOf(a.level) - LEVEL_ORDER.indexOf(b.level),
       );
       const enrolledItems = sorted.filter(isEnrolled);
-      const pct = enrolledItems.length
-        ? Math.round(enrolledItems.reduce((s, c) => s + coursePercent(c), 0) / enrolledItems.length)
-        : 0;
+      // Aggregate over the whole subject by LESSONS, not by averaging the
+      // per-course percentages — 100% of a 4-lesson course and 0% of a
+      // 40-lesson one is not "50% of the subject".
+      let doneLessons = 0;
+      let totalLessons = 0;
+      for (const c of sorted) {
+        const st = courseStats(c);
+        doneLessons += st.completed;
+        totalLessons += st.total;
+      }
+      const pct = totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0;
       const resume = sorted.find((c) => { const p = coursePercent(c); return p > 0 && p < 100; }) || null;
       return {
         code,
@@ -275,6 +312,8 @@ export default function Courses() {
         accent: sorted[0]?.color || 'var(--primary-500)',
         enrolledCount: enrolledItems.length,
         pct,
+        doneLessons,
+        totalLessons,
         resume,
         // Whole subject not yet migrated — show a disabled "coming soon" tile.
         comingSoon: sorted.length > 0 && sorted.every((c) => c.comingSoon),
@@ -285,7 +324,7 @@ export default function Courses() {
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
     return list;
-  }, [courses, isEnrolled, coursePercent]);
+  }, [courses, isEnrolled, coursePercent, courseStats]);
 
   const goToSubjects = () => { setSubject('all'); setFilter('all'); };
 
@@ -347,12 +386,13 @@ export default function Courses() {
       })
     : [];
 
-  // In-progress courses for the "Reprendre" strip on the subject picker.
+  // In-progress courses leading the subject picker. Self-hides when empty, so
+  // a brand-new student meets the subject grid first with no empty header.
   const resumeCourses = enrolledCourses
     .map((c) => courses.find((x) => x.id === c.id) || c)
-    .map((c) => ({ course: c, pct: coursePercent(c) }))
-    .filter(({ pct }) => pct > 0 && pct < 100)
-    .sort((a, b) => b.pct - a.pct)
+    .map((c) => ({ course: c, stats: courseStats(c) }))
+    .filter(({ stats }) => stats.pct > 0 && stats.pct < 100)
+    .sort((a, b) => b.stats.pct - a.stats.pct)
     .slice(0, 3);
 
   return (
@@ -401,7 +441,9 @@ export default function Courses() {
         {activeGroup ? (
           levelViewCourses.length > 0 ? (
             <div className="ccat-grid">
-              {levelViewCourses.map((course) => <CatalogCourseCard key={course.id} course={course} />)}
+              {levelViewCourses.map((course) => (
+                <CatalogCourseCard key={course.id} course={course} stats={courseStats(course)} />
+              ))}
             </div>
           ) : (
             <EmptyState
@@ -413,12 +455,17 @@ export default function Courses() {
         ) : (
           <>
             {resumeCourses.length > 0 && (
-              <div className="courses-resume" data-reveal>
+              <div className="courses-resume courses-resume--lead" data-reveal>
                 <h2 className="courses-resume__title">{t('courses.resumeTitle')}</h2>
                 <div className="courses-resume__list">
-                  {resumeCourses.map(({ course, pct }) => {
+                  {resumeCourses.map(({ course, stats }) => {
                     const sLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
                     return (
+                      /* The whole row stays the click target (it always was),
+                         so the CTA is a styled span rather than a nested
+                         <button> — nesting interactive elements here would be
+                         invalid markup and give screen readers two controls
+                         for one destination. */
                       <button
                         key={course.id}
                         type="button"
@@ -438,10 +485,18 @@ export default function Courses() {
                           <span className="resume-course__name">{course.name || course.title}</span>
                           <span className="resume-course__meta">{sLabel} · {levelLabel(course.level)}</span>
                           <span className="progress-bar resume-course__bar">
-                            <span className="progress-bar__fill" style={{ width: `${pct}%` }} />
+                            <span className="progress-bar__fill" style={{ width: `${stats.pct}%` }} />
+                          </span>
+                          <span className="resume-course__remaining">
+                            {stats.pct}%
+                            {stats.remaining > 0
+                              ? ` · ${t('courses.lessonsRemaining', { count: stats.remaining })}`
+                              : ''}
                           </span>
                         </span>
-                        <span className="resume-course__cta">{pct}% <ArrowRight size={16} /></span>
+                        <span className="resume-course__cta">
+                          {t('courses.continue')} <ArrowRight size={16} />
+                        </span>
                       </button>
                     );
                   })}
@@ -502,16 +557,23 @@ export default function Courses() {
                       </span>
                       <h3 className="ccat-card__title">{label}</h3>
                       <span className="ccat-card__meta">{metaLine}</span>
-                      {g.enrolledCount > 0 && (
-                        <span className="ccat-card__progress">
-                          <span className="progress-bar">
-                            <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
+                      {/* Only once there IS progress — a 0% bar on every
+                          subject would read as failure, not as tracking. */}
+                      {g.pct > 0 && (
+                        <>
+                          <span className="ccat-card__progress">
+                            <span className="progress-bar">
+                              <span className="progress-bar__fill" style={{ width: `${g.pct}%` }} />
+                            </span>
+                            <span className="ccat-card__pct">{g.pct}%</span>
                           </span>
-                          <span className="ccat-card__pct">{g.pct}%</span>
-                        </span>
+                          <span className="ccat-card__progress-label">
+                            {g.doneLessons}/{t('courses.lessonsCount', { count: g.totalLessons })}
+                          </span>
+                        </>
                       )}
                       <span className="ccat-card__cta">
-                        {g.enrolledCount > 0
+                        {g.pct > 0 || g.enrolledCount > 0
                           ? t('courses.continue', 'Continuer')
                           : t('courses.start', 'Commencer')}
                         <ChevronRight size={16} />
