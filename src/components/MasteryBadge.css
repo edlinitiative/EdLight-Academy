@@ -1,0 +1,55 @@
+/* MasteryBadge — see MasteryBadge.tsx for why this is so restrained.
+ *
+ * No background, no border, no border-radius on the wrapper: those three are
+ * what would make it a pill, and pills are exactly what we removed from these
+ * pages. Only the 6px dot is coloured; the word stays in body text colour so a
+ * long lesson list still reads as a list.
+ *
+ * Every rule is scoped under .mastery-badge rather than using !important.
+ * index.css is ~17.5k lines and this component's stylesheet rides in a lazy
+ * route chunk whose order against main.css is not guaranteed, so specificity
+ * is the only thing that reliably wins. */
+
+.mastery-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  /* Own line-height so a badge can sit inside a heading or a meta row without
+     changing either one's rhythm. */
+  line-height: 1.2;
+  white-space: nowrap;
+  /* --mastery-color is set per role below and read by the dot, so a variant
+     only has to declare the colour once. */
+  color: inherit;
+}
+
+.mastery-badge__dot {
+  width: 6px;
+  height: 6px;
+  /* A dot is the one place a full radius is right — it is not a container. */
+  border-radius: 50%;
+  background: var(--mastery-color, var(--text-muted));
+  flex: 0 0 auto;
+}
+
+.mastery-badge__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  /* Not the dot's colour: five differently-coloured words down a lesson list
+     is noise. The dot carries the state, the word just names it. */
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* `mastered` is the one state allowed to speak up — it's the only rung that
+   can't be reached by grinding, so it's the only one worth colouring the word
+   for. */
+.mastery-badge--success .mastery-badge__label {
+  color: var(--mastery-color);
+}
+
+.mastery-badge--faint   { --mastery-color: var(--border-strong); }
+.mastery-badge--muted   { --mastery-color: var(--text-muted); }
+.mastery-badge--warning { --mastery-color: var(--warning-500); }
+.mastery-badge--accent  { --mastery-color: var(--primary-500); }
+.mastery-badge--success { --mastery-color: var(--success-500); }

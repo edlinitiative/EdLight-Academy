@@ -14,6 +14,10 @@ import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useFocusMode } from '../hooks/useFocusMode';
 import useStore, { FREE_VIDEO_LIMIT } from '../contexts/store';
+import { chapterTestLessonMap, lessonMastery, masteryNextStep, summarize } from '../../shared/mastery';
+import { useCourseMastery } from '../hooks/useMastery';
+import MasteryBadge from '../components/MasteryBadge';
+import ChapterTestCard from '../components/ChapterTestCard';
 import { useTranslation } from 'react-i18next';
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
@@ -59,7 +63,8 @@ function getResumeSeconds(key) {
 }
 
 export default function CourseDetail() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isCreole = i18n.language === 'ht';
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, isError, isFetching, refetch } = useAppData();
@@ -122,6 +127,67 @@ export default function CourseDetail() {
   // Curriculum practice is always available (subject to data availability),
   // so enable Practice regardless of legacy per-video quizzes.
   const hasQuiz = true;
+
+  // lesson_no -> lessonId for the lessons of the ACTIVE unit. This is what lets
+  // a chapter test promote the lessons it drew from: the quiz bank tags every
+  // question with a Subchapter_Number, and this map turns that number back into
+  // the lesson it belongs to. Without it `mastered` is unreachable.
+  //
+  // lesson_no is only populated on lessons enrichment matched to a video row, so
+  // fall back to the `-L<n>` suffix of the lesson id exactly as dataService does
+  // — otherwise a course whose videos haven't been enriched yet would yield an
+  // empty map and silently never promote anything.
+  // Null rather than an empty map, so UnitQuiz can tell "this isn't a chapter
+  // test" from "this unit has no attributable lessons" and skip the write.
+  const chapterTestLessons = useMemo(() => {
+    const map = chapterTestLessonMap(lessonBreakdown);
+    return Object.keys(map).length > 0 ? map : null;
+  }, [lessonBreakdown]);
+
+  // ── The next step for THIS lesson ──────────────────────────────────────────
+  // Mastery comes from users/{uid}/mastery/lessons — the document the MOBILE
+  // app writes too — NOT from this course's progress doc. Reading it off
+  // `progress` would look free and would cap every lesson at `seen`, since
+  // completedLessons is the only rung that array can prove. One read here,
+  // handed down to the sidebar and the overview.
+  const { mastery, refresh: refreshMastery } = useCourseMastery(courseId);
+  const activeLessonLevel = lessonMastery(mastery[activeLessonData?.id]);
+
+  // Mastery across the ACTIVE unit — the chapter test's gate and its scope.
+  const unitLessonIds = useMemo(
+    () => lessonBreakdown.map((l) => l?.id).filter(Boolean),
+    [lessonBreakdown],
+  );
+  const unitMastery = useMemo(() => summarize(unitLessonIds, mastery), [unitLessonIds, mastery]);
+
+  // Some units have a chapter test authored as a `type: 'quiz'` lesson (only
+  // phys-ns2/3/4 do). Where one exists we send the student to it rather than
+  // opening a second, parallel test — one entry point per unit either way.
+  const chapterTestLessonIndex = useMemo(
+    () => lessonBreakdown.findIndex((l) => l?.type === 'quiz'),
+    [lessonBreakdown],
+  );
+  const [showChapterTest, setShowChapterTest] = useState(false);
+
+  const startChapterTest = () => {
+    setShowQuiz(false);
+    setShowFlashcards(false);
+    if (chapterTestLessonIndex >= 0) {
+      // Authored test: it IS a lesson, so just go to it.
+      setActiveLesson(chapterTestLessonIndex);
+      setShowChapterTest(false);
+    } else {
+      // No authored test — draw one from the bank for this unit. Every subject
+      // has unit-wide questions, so this is available everywhere.
+      setShowChapterTest(true);
+    }
+  };
+
+  // Close the test whenever the student moves to another unit, so it can't
+  // stay open over a unit it wasn't drawn from.
+  useEffect(() => { setShowChapterTest(false); }, [activeModule]);
+
+  const nextStepLabel = masteryNextStep(activeLessonLevel, isCreole);
 
   // Stable thread key per visible video (falls back to module id when needed)
   const threadKey = `comments:${courseId}:${activeLessonData?.id || activeModuleData?.id || 'module'}`;
@@ -405,6 +471,7 @@ export default function CourseDetail() {
             course={course}
             modules={modules}
             progress={progress}
+            mastery={mastery}
             isEnrolled={isEnrolled}
             resumeTarget={resumeTarget}
             hasProgress={hasProgress}
@@ -482,6 +549,12 @@ export default function CourseDetail() {
                   </div>
                 ) : activeLessonData?.type === 'quiz' ? (
                   <div className="lesson-card__quizwrap">
+                    {/* THE CHAPTER TEST. A quiz-type lesson draws from the whole
+                        unit (no subchapterNumber), which is exactly the
+                        condition the top rung asks for: passing chapterTestLessons
+                        lets every lesson the test happened to draw from be
+                        promoted, so `mastered` means the student still knew it
+                        when it wasn't the only thing in front of them. */}
                     <UnitQuiz
                       subjectCode={course?.code}
                       unitId={undefined}
@@ -489,6 +562,7 @@ export default function CourseDetail() {
                       subchapterNumber={undefined}
                       courseId={courseId}
                       lessonId={activeLessonData?.id}
+                      chapterTestLessons={chapterTestLessons}
                       onClose={undefined}
                     />
                   </div>
@@ -578,6 +652,42 @@ export default function CourseDetail() {
                   </div>
                 )}
 
+                {/* The next step for this lesson. Sits directly above the
+                    actions so the guidance and the button that satisfies it are
+                    read together. Hidden entirely at `none` — telling someone
+                    who just opened a lesson to "regarde la leçon" is noise, the
+                    video is already playing in front of them. */}
+                {isEnrolled && activeLessonData?.type !== 'quiz' && activeLessonLevel !== 'none' && (
+                  <div className="lesson-card__mastery">
+                    <MasteryBadge level={activeLessonLevel} isCreole={isCreole} />
+                    <span className="lesson-card__mastery-next">
+                      {nextStepLabel || t('courses.masteryDone', 'Rien à revoir ici.')}
+                    </span>
+                    {activeLessonLevel === 'proficient' && (
+                      <button
+                        type="button"
+                        className="lesson-card__mastery-cta"
+                        onClick={startChapterTest}
+                      >
+                        {t('courses.goToChapterTest', 'Test du chapitre')}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* The chapter test for this unit — the only route to
+                    `mastered`. A unit-level action rather than a row in the
+                    lesson list: adding a lesson would inflate every course's
+                    lesson denominator and drop existing students' progress
+                    percentages, and a test isn't a lesson anyway. */}
+                {isEnrolled && activeLessonData?.type !== 'quiz' && !showChapterTest && (
+                  <ChapterTestCard
+                    summary={unitMastery}
+                    unitTitle={activeModuleData?.title}
+                    onStart={startChapterTest}
+                  />
+                )}
+
                 {/* Action Buttons */}
                 <div className="lesson-card__nav-group lesson-card__nav-group--actions">
                   {activeLessonData?.type !== 'quiz' && isEnrolled && (
@@ -611,16 +721,37 @@ export default function CourseDetail() {
               </div>
             </article>
 
+            {showChapterTest && (
+              <UnitQuiz
+                subjectCode={course?.code}
+                unitId={undefined}
+                chapterNumber={activeModuleData?.unit_no}
+                /* No subchapterNumber: the test draws from the WHOLE unit,
+                   which is what makes passing it worth the top rung. */
+                subchapterNumber={undefined}
+                courseId={courseId}
+                /* Not a lesson, so it scores no lesson of its own. */
+                lessonId={undefined}
+                chapterTestLessons={chapterTestLessons}
+                limit={12}
+                onClose={() => { setShowChapterTest(false); refreshMastery(); }}
+              />
+            )}
+
             {showQuiz && hasQuiz && (
               <>
+                {/* The exercises for THIS lesson. lessonId is what attributes
+                    the score to the lesson, so it can climb the mastery
+                    ladder — it used to be undefined, which is why the score
+                    was computed and then dropped. */}
                 <UnitQuiz
                   subjectCode={course?.code}
                   unitId={undefined}
                   chapterNumber={activeModuleData?.unit_no}
                   subchapterNumber={activeLessonData?.lesson_no}
                   courseId={courseId}
-                  lessonId={undefined}
-                  onClose={() => setShowQuiz(false)}
+                  lessonId={activeLessonData?.id}
+                  onClose={() => { setShowQuiz(false); refreshMastery(); }}
                 />
               </>
             )}
@@ -668,6 +799,7 @@ export default function CourseDetail() {
             activeModule={activeModule}
             activeLesson={activeLesson}
             progress={progress}
+            mastery={mastery}
             isEnrolled={isEnrolled}
             isOpen={showSidebar}
             onOpenChange={setShowSidebar}

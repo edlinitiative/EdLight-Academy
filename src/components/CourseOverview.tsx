@@ -7,11 +7,13 @@
  * "Commencer / Reprendre" action that enters the right lesson.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Clock, Layers, PlayCircle, Target, ChevronRight, ArrowLeft, Check } from 'lucide-react';
 import CourseInstructors from './CourseInstructors';
+import MasteryBadge from './MasteryBadge';
+import { summarize } from '../../shared/mastery';
 
 function getLessons(module) {
   return Array.isArray(module?.lessons) ? module.lessons : [];
@@ -26,6 +28,7 @@ export default function CourseOverview({
   hasProgress = false,
   onStart,
   onSelectModule,
+  mastery = null,
 }) {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -38,6 +41,18 @@ export default function CourseOverview({
 
   const completedCount = progress?.completedLessons?.length || 0;
   const percent = totalLessons > 0 ? Math.min(100, Math.round((completedCount / totalLessons) * 100)) : 0;
+
+  // Handed down from CourseDetail, which owns the single read. Mastery is NOT
+  // on the progress doc — it lives in users/{uid}/mastery/lessons, shared with
+  // the mobile app. It answers a different question from the bar above it:
+  // "Progression" is how much of the course you've been through, mastery is
+  // how well you actually know it.
+  const masteryMap = mastery || {};
+  const allLessonIds = useMemo(
+    () => modules.flatMap((m) => getLessons(m).map((l) => l?.id).filter(Boolean)),
+    [modules],
+  );
+  const courseMastery = useMemo(() => summarize(allLessonIds, masteryMap), [allLessonIds, masteryMap]);
 
   // Estimated time: prefer the course total, else sum module/lesson durations.
   const totalMinutes = parseInt(course.duration, 10)
@@ -102,6 +117,31 @@ export default function CourseOverview({
             <span className="course-overview__progress-meta text-muted">
               {completedCount}/{totalLessons} {t('courses.completedLower', 'terminés')}
             </span>
+            {/* Mastery, not consumption. Hidden until something has actually
+                been earned — a 0% mastery line under a progress bar you just
+                moved reads as being told off. */}
+            {courseMastery.points > 0 && (
+              <div className="course-overview__mastery">
+                <span className="course-overview__mastery-label">
+                  {t('courses.masteryLabel', 'Maîtrise')}
+                </span>
+                <span className="course-overview__mastery-track" aria-hidden="true">
+                  <span
+                    className="course-overview__mastery-fill"
+                    style={{ width: `${courseMastery.points}%` }}
+                  />
+                </span>
+                <strong className="course-overview__mastery-pct">{courseMastery.points}%</strong>
+                {courseMastery.mastered > 0 && (
+                  <span className="course-overview__mastery-count text-muted">
+                    {t('courses.masteredCount', {
+                      count: courseMastery.mastered,
+                      defaultValue: `${courseMastery.mastered} maîtrisées`,
+                    })}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -135,6 +175,10 @@ export default function CourseOverview({
               const moduleLessonIds = lessons.map((l) => l.id);
               const doneInModule = moduleLessonIds.filter((id) => progress?.completedLessons?.includes(id)).length;
               const moduleDone = lessons.length > 0 && doneInModule >= lessons.length;
+              // The chapter's own mastery. `summarize` takes a group's level to
+              // be its WEAKEST lesson's, so a green chapter means nothing in it
+              // is still shaky — which is what makes one worth earning.
+              const unit = summarize(moduleLessonIds.filter(Boolean), masteryMap);
               return (
                 <li key={module.id || idx}>
                   <button
@@ -146,12 +190,25 @@ export default function CourseOverview({
                       {moduleDone ? <Check size={16} /> : String(idx + 1).padStart(2, '0')}
                     </span>
                     <span className="course-overview__module-body">
-                      <span className="course-overview__module-title">{module.title}</span>
+                      <span className="course-overview__module-title">
+                        {module.title}
+                        {/* Renders nothing at `none`, so an untouched course
+                            shows a clean list rather than a column of markers. */}
+                        <MasteryBadge level={unit.level} isCreole={isCreole} />
+                      </span>
                       <span className="course-overview__module-meta">
                         {t('courses.lessonsCount', { count: lessons.length, defaultValue: `${lessons.length} leçons` })}
                         {module.duration ? ` · ${formatDuration(module.duration)}` : ''}
                         {isEnrolled && lessons.length > 0 ? ` · ${doneInModule}/${lessons.length}` : ''}
                       </span>
+                      {unit.points > 0 && (
+                        <span className="course-overview__module-mastery" aria-hidden="true">
+                          <span
+                            className="course-overview__module-mastery-fill"
+                            style={{ width: `${unit.points}%` }}
+                          />
+                        </span>
+                      )}
                     </span>
                     <ChevronRight size={18} className="course-overview__module-chevron" aria-hidden="true" />
                   </button>

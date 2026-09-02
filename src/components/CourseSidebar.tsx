@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Check, BookOpen } from 'lucide-react';
+import MasteryBadge from './MasteryBadge';
+import { lessonMastery, summarize } from '../../shared/mastery';
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -41,8 +43,15 @@ export default function CourseSidebar({
   isOpen,
   onOpenChange,
   onSelectLesson,
+  mastery,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isCreole = i18n.language === 'ht';
+  // Handed down from CourseDetail, which owns the single read. Mastery lives in
+  // its own document (shared with the mobile app), not on this course's
+  // progress doc — deriving it from `progress` would cap every lesson at
+  // `seen` and the earned rungs would never show.
+  const masteryMap = mastery || {};
   const [expandedModules, setExpandedModules] = useState(() => loadExpanded(courseId));
   const activeLessonRef = useRef(null);
   const listRef = useRef(null);
@@ -174,6 +183,18 @@ export default function CourseSidebar({
                     <span className="lesson-list__meta">
                       <span className="lesson-list__title">{module.title}</span>
                     </span>
+                    {/* Dot only: the sidebar is narrow and this is a scan
+                        column, not a place to read five different words.
+                        Renders nothing until the chapter has been started. */}
+                    <MasteryBadge
+                      level={summarize(
+                        (Array.isArray(module.lessons) ? module.lessons : []).map((l) => l?.id).filter(Boolean),
+                        masteryMap,
+                      ).level}
+                      dotOnly
+                      isCreole={isCreole}
+                      className="lesson-list__mastery"
+                    />
                   </button>
 
                   {lessonsToShow && (
@@ -205,6 +226,12 @@ export default function CourseSidebar({
                               ) : null}
                               <span className="lesson-list__title">{lsn.title}</span>
                             </span>
+                            <MasteryBadge
+                              level={lessonMastery(masteryMap[lsn.id])}
+                              dotOnly
+                              isCreole={isCreole}
+                              className="lesson-list__mastery"
+                            />
                           </button>
                         );
                       })}

@@ -2010,6 +2010,45 @@ textarea.input-field {
 	align-items: center;
 }
 
+/* ── "What now?" for the current lesson ──────────────────────────────────────
+   One quiet line: where this lesson sits on the mastery ladder and the single
+   thing that would move it. Sits directly above the action row, so it reads as
+   a caption for those buttons rather than as a banner of its own. No card, no
+   fill, no border — the lesson card already is the container. */
+.lesson-card__mastery {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	flex-wrap: wrap;
+	margin: 0 0 0.75rem;
+	font-size: 0.8rem;
+}
+
+.lesson-card__mastery-next {
+	color: var(--text-500);
+}
+
+/* A text button, not a filled one: the real action for most rungs is the
+   "Exercices" button immediately below, and two competing primaries would just
+   split the click. This only appears for `proficient`, where the next step
+   genuinely lives on another lesson. */
+.lesson-card__mastery-cta {
+	appearance: none;
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	font-weight: 700;
+	color: var(--primary-500);
+	cursor: pointer;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.lesson-card__mastery-cta:hover {
+	color: var(--primary-600, var(--primary-500));
+}
+
 .lesson-card__nav-group--navigation {
 	flex: 0 0 auto;
 }
@@ -4968,11 +5007,85 @@ textarea:focus-visible,
 .course-overview__module-title {
 	font-weight: 600;
 	font-size: 0.94rem;
+	/* Row rather than plain text so the mastery badge sits on the baseline
+	   beside the title instead of pushing it around. Wraps on narrow screens. */
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
 }
 
 .course-overview__module-meta {
 	font-size: 0.79rem;
 	color: var(--text-500);
+}
+
+/* ── Mastery on the course overview ───────────────────────────────────────────
+   Two different questions get two different bars. "Progression" (above) is how
+   much of the course you have been through; mastery is how well you know it.
+   Both are deliberately thin and unsaturated — the module titles are the thing
+   being read here, and a chapter list is not a dashboard. */
+
+/* The per-chapter mastery bar. Only rendered once a chapter has been started,
+   so it never appears as a row of empty troughs. */
+.course-overview__module-mastery {
+	display: block;
+	height: 3px;
+	margin-top: 0.35rem;
+	border-radius: 2px;
+	background: var(--border);
+	overflow: hidden;
+}
+
+.course-overview__module-mastery-fill {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	/* Green, matching the course-level mastery bar below. Across this page blue
+	   means "how much you've been through" and green means "how well you know
+	   it" — the per-chapter bar is the second of those, so it must not borrow
+	   the course accent the completion bar uses. */
+	background: var(--success-500);
+	transition: width 0.3s ease;
+}
+
+.course-overview__mastery {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+	font-size: 0.79rem;
+	flex-wrap: wrap;
+}
+
+.course-overview__mastery-label {
+	font-weight: 600;
+	color: var(--text-600, var(--text-500));
+}
+
+.course-overview__mastery-track {
+	flex: 1 1 90px;
+	height: 4px;
+	min-width: 60px;
+	border-radius: 2px;
+	background: var(--border);
+	overflow: hidden;
+}
+
+.course-overview__mastery-fill {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	/* Mastery is the earned measure, so it gets the success colour rather than
+	   the course accent that the consumption bar uses — the two bars sit close
+	   together and must not read as the same number twice. */
+	background: var(--success-500);
+	transition: width 0.3s ease;
+}
+
+.course-overview__mastery-pct {
+	font-weight: 700;
+	color: var(--success-500);
 }
 
 .course-overview__module-chevron {

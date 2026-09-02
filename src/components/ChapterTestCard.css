@@ -1,0 +1,116 @@
+/*
+ * The chapter-test entry point at the end of a unit's lesson list.
+ *
+ * Reads as the gate at the end of a chapter, not as another lesson: a full
+ * hairline box rather than a list row, and the unit's one accent moment.
+ *
+ * Every selector is scoped under .chapter-test rather than reaching for
+ * !important. This stylesheet ships in a lazy route chunk whose order against
+ * main.css is not guaranteed, so a same-specificity rule in index.css could
+ * win depending on which chunk loaded last — specificity is the only thing
+ * that holds either way.
+ */
+
+.chapter-test {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	margin-top: 10px;
+	padding: 13px 14px;
+	text-align: left;
+	font: inherit;
+	cursor: pointer;
+	background: var(--surface);
+	color: var(--text-900);
+	border: 1px solid var(--primary-500);
+	border-radius: var(--r-btn);
+	transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.chapter-test:hover:not(:disabled) {
+	background: var(--primary-50);
+}
+
+.chapter-test:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.chapter-test:focus-visible {
+	outline: 2px solid var(--primary-500);
+	outline-offset: 2px;
+}
+
+/* Locked: still legible, and still says why (the subtitle carries the reason),
+   so it reads as "not yet" rather than as a broken control. */
+.chapter-test.chapter-test--locked {
+	cursor: not-allowed;
+	background: var(--surface-muted);
+	border-color: var(--border);
+	color: var(--text-500);
+}
+
+.chapter-test.chapter-test--done {
+	border-color: var(--success-500);
+	background: var(--success-50);
+}
+
+.chapter-test .chapter-test__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: var(--primary-50);
+	color: var(--primary-600);
+}
+
+.chapter-test.chapter-test--locked .chapter-test__icon {
+	background: var(--surface);
+	color: var(--text-400);
+}
+
+.chapter-test.chapter-test--done .chapter-test__icon {
+	background: var(--surface);
+	color: var(--success-500);
+}
+
+.chapter-test .chapter-test__body {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.chapter-test .chapter-test__title {
+	font-size: var(--text-base, 1rem);
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.chapter-test .chapter-test__sub {
+	font-size: var(--text-xs, 0.75rem);
+	color: var(--text-500);
+	line-height: 1.35;
+}
+
+.chapter-test.chapter-test--locked .chapter-test__sub {
+	color: var(--text-400);
+}
+
+.chapter-test .chapter-test__chevron {
+	flex: 0 0 auto;
+	color: var(--text-400);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.chapter-test {
+		transition: none;
+	}
+	.chapter-test:active:not(:disabled) {
+		transform: none;
+	}
+}

@@ -21,7 +21,7 @@ import { MasteryMeter } from '../components/MasteryMeter';
 import { courseVideoThumb } from '../utils/videoThumb';
 import {
   summarize, lessonMastery, masteryLabel, masteryColor, masteryNextStep,
-  courseLessonIds, type ProgressMap,
+  courseLessonIds, chapterTestReady, type ProgressMap,
 } from '../utils/mastery';
 import PracticeSpotlight from '../components/PracticeSpotlight';
 import LessonComments from '../components/LessonComments';
@@ -248,7 +248,7 @@ function UnitRow({
   const finished = summary.total > 0 && done >= summary.total;
   // The chapter test is worth offering once anything in the chapter is solid —
   // before that there is nothing for it to promote.
-  const testReady = summary.counts.proficient > 0 || summary.counts.familiar > 0 || summary.counts.mastered > 0;
+  const testReady = chapterTestReady(summary);
 
   return (
     <View style={{ borderTopWidth: 1, borderTopColor: colors.hairline }}>

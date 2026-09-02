@@ -3,13 +3,15 @@ import { Check } from 'lucide-react';
 import DirectBankQuiz, { MAX_ATTEMPTS } from './DirectBankQuiz';
 import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';
+import { recordLessonExercise, recordChapterTest } from '../services/masteryService';
+import { attributeChapterTest } from '../../shared/mastery';
 import { toDirectItemFromRow } from '../services/quizBank';
 import { useAppData } from '../hooks/useData';
 import { shuffleArray } from '../utils/shared';
 import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 
-export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose, limit = 10, shuffle = true }) {
+export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapterNumber, courseId, lessonId, onClose, limit = 10, shuffle = true, chapterTestLessons = null }) {
   const { t } = useTranslation();
   const { data: appData } = useAppData();
   const { user } = useStore();
@@ -83,6 +85,22 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
   const [outcome, setOutcome] = useState(null);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const startedAtRef = useRef(Date.now());
+  // questionIdx -> was this question answered right FIRST TRY. Keyed by index
+  // so the several events one question fires can't double-count.
+  //
+  // First try, not "eventually right", and only for the chapter test: this
+  // widget hands out MAX_ATTEMPTS attempts and reveals the answer as you go,
+  // which is the right shape for practice and the wrong shape for the thing
+  // that grants `mastered`. Counting an eventual correct would let a student
+  // brute-force a four-option question to the top rung. Mobile's chapter test
+  // sidesteps this by grading once at the end with no reveal; here the run is
+  // shared with practice, so the *record* is what has to be strict. A wrong
+  // attempt writes false immediately and the later 'correct' can't lift it.
+  const outcomesRef = useRef({});
+  // A chapter-test promotion moves a lesson exactly ONE rung per call, so if the
+  // completion effect ever ran twice for the same sitting (a change in `items`
+  // is enough) the student would skip a level. One write per finished run.
+  const chapterTestWrittenRef = useRef(false);
 
   useEffect(() => {
     setIdx(0);
@@ -90,6 +108,8 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
     setCanAdvance(false);
     setFinished(false);
     startedAtRef.current = Date.now();
+    outcomesRef.current = {};
+    chapterTestWrittenRef.current = false;
   }, [subjectCode, unitId]);
 
   // Reset per-question status whenever the active question changes.
@@ -121,8 +141,34 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
           console.error('[UnitQuiz] Error marking lesson complete:', err);
         });
       }
+
+      // Feed the mastery ladder. This is what makes `familiar` (>=70%) and
+      // `proficient` (100%) reachable on the web at all — the score was
+      // already computed here, it just never landed anywhere a lesson list
+      // could read. Records the exact percentage, not the 60% pass/fail, and
+      // only improves a lesson (the rules live in /shared/mastery.ts).
+      if (lessonId) {
+        recordLessonExercise(user.uid, courseId, lessonId, percentage).catch(err => {
+          console.error('[UnitQuiz] Error recording mastery:', err);
+        });
+      }
+
+      // Chapter test: only the UNIT-WIDE mount passes chapterTestLessons, and
+      // that is the whole point of the top rung — a lesson reaches `mastered`
+      // by being answered correctly when it was mixed in with the rest of the
+      // unit, not by grinding its own exercise set. A lesson is only promoted
+      // when EVERY question drawn from it was correct; a miss never demotes.
+      if (chapterTestLessons && !chapterTestWrittenRef.current) {
+        const perLesson = attributeChapterTest(items, outcomesRef.current, chapterTestLessons);
+        if (Object.keys(perLesson).length > 0) {
+          chapterTestWrittenRef.current = true;
+          recordChapterTest(user.uid, courseId, perLesson).catch(err => {
+            console.error('[UnitQuiz] Error recording chapter test:', err);
+          });
+        }
+      }
     }
-  }, [finished, user?.uid, courseId, score, items.length, subjectCode, chapterNumber, subchapterNumber, lessonId]);
+  }, [finished, user?.uid, courseId, score, items, subjectCode, chapterNumber, subchapterNumber, lessonId, chapterTestLessons]);
 
   const handleScore = (evt) => {
     if (!evt) return;
@@ -130,11 +176,17 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
       if (!canAdvance) setScore((s) => s + 1);
       setCanAdvance(true);
       setOutcome('correct');
+      // Only when no wrong attempt was already recorded for this question.
+      if (outcomesRef.current[idx] === undefined) outcomesRef.current[idx] = true;
     } else if (evt.message === 'exhausted_attempts') {
       setCanAdvance(true);
       setOutcome('out');
       setAttemptsLeft(0);
+      outcomesRef.current[idx] = false;
     } else if (typeof evt.attemptsLeft === 'number') {
+      // A wrong attempt with tries to spare. The question can still be scored
+      // (that's practice), but it can no longer count towards mastery.
+      outcomesRef.current[idx] = false;
       setAttemptsLeft(evt.attemptsLeft);
     }
   };
@@ -175,11 +227,15 @@ export default function UnitQuiz({ subjectCode, unitId, chapterNumber, subchapte
         </p>
         <div className="quiz-card__controls">
           <button className="button button--primary button--sm" onClick={() => {
-            // restart
+            // restart — a genuine retake, so clear the per-question outcomes
+            // and let the chapter test count again.
             setIdx(0);
             setScore(0);
             setCanAdvance(false);
             setFinished(false);
+            outcomesRef.current = {};
+            chapterTestWrittenRef.current = false;
+            startedAtRef.current = Date.now();
           }}>{t('quizzes.retry', 'Recommencer')}</button>
           {onClose && (
             <button className="button button--ghost button--sm" onClick={onClose}>{t('common.close', 'Fermer')}</button>

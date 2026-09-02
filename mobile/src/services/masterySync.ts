@@ -2,7 +2,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import useStore from '../contexts/store';
 import type { ProgressMap } from '../utils/mastery';
-import { mergeProgress, sameProgress, toWireFormat } from '../utils/masteryMerge';
+import { mergeProgress, sameProgress, toWireFormat, MASTERY_PATH } from '../utils/masteryMerge';
 import { mergeReview, sameReview, toReviewWire, type ReviewMap } from '../utils/review';
 
 /**
@@ -28,7 +28,7 @@ import { mergeReview, sameReview, toReviewWire, type ReviewMap } from '../utils/
 const PUSH_DEBOUNCE_MS = 4000;
 
 function masteryDoc(uid: string) {
-  return doc(db, 'users', uid, 'mastery', 'lessons');
+  return doc(db, 'users', uid, MASTERY_PATH.collection, MASTERY_PATH.doc);
 }
 
 /**
