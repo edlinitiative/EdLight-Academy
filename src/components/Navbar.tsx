@@ -23,6 +23,7 @@ import { LevelBadge } from './LevelBadge';
 import NotificationBell from './NotificationBell';
 import PixelAvatar from './PixelAvatar';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import './Navbar.css';
 
 /** Primary destinations shown in the desktop inline nav and the mobile drawer.
  *  Kept identical to the PWA bottom bar (BottomNav) so web + app agree. */

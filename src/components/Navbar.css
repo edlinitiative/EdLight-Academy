@@ -1,0 +1,49 @@
+/* Navbar polish — Coursera-style top bar: quiet flat icon buttons, and a
+   "Log in" (plain text) / "Join for free" (solid) auth pairing instead of
+   two same-weight buttons. Everything else (nav links, logo) stays in the
+   shared index.css navbar rules; this file only fixes navbar-local noise. */
+
+.nav-actions {
+  gap: 0.5rem;
+}
+
+/* Icon buttons (search, theme) share one quiet, flat treatment — no border,
+   no shadow, no lift. Color and a soft tint on hover carry the feedback. */
+.nav-search-btn,
+.navbar .theme-toggle {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.navbar .theme-toggle:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background: var(--surface-muted) !important;
+}
+
+.navbar .theme-toggle:active {
+  transform: none !important;
+}
+
+/* Auth CTAs: "Se connecter" reads as a plain text link (Coursera's "Log
+   in"), "Créer un compte" stays the one solid button on the bar — so there
+   is a single, unambiguous primary action instead of two equal-weight
+   buttons competing for attention. */
+/* Scoped under .navbar (not just the class alone) so this reliably beats
+   the global .button--ghost rule in index.css regardless of which file's
+   CSS lands first in the extracted bundle — both declare `border` with
+   !important at equal (0,1,0) specificity otherwise, and the winner would
+   depend on build-order luck rather than intent. */
+.navbar .nav-actions__signin {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--text-700) !important;
+  padding: 0.55rem 0.85rem !important;
+}
+
+.navbar .nav-actions__signin:hover {
+  background: var(--surface-muted) !important;
+  color: var(--primary-600) !important;
+}
