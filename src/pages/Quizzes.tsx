@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { ChevronDown, SlidersHorizontal, RotateCcw, Target, Lightbulb, BookOpen } from 'lucide-react';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
@@ -7,6 +8,7 @@ import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
+import './Quizzes.css';
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
@@ -22,6 +24,7 @@ const Quizzes = () => {
   const [unit, setUnit] = useState('');
 
   const [queryDefaultsApplied, setQueryDefaultsApplied] = useState(false);
+  const [pendingLevel, setPendingLevel] = useState(null);
   const [pendingUnit, setPendingUnit] = useState(null);
 
   // Derived options
@@ -46,7 +49,10 @@ const Quizzes = () => {
     };
   }, [location.search]);
 
-  // Apply deep-link defaults once (e.g. /quizzes?course=CHEM-NSII&unit=U3)
+  // Apply deep-link defaults once (e.g. /quizzes?course=CHEM-NSII&unit=U3).
+  // The subject is validated against the options we actually have: a stale or
+  // bogus ?course= must fall through to the generic default below rather than
+  // stranding the page on a subject with no levels or units.
   useEffect(() => {
     if (queryDefaultsApplied) return;
     if (!subjectOptions.length) return;
@@ -54,8 +60,14 @@ const Quizzes = () => {
     const { course, unit: qUnit } = queryDefaults;
     if (course) {
       const [subj, lvl] = course.split('-');
-      if (subj) setSubjectBase(subj);
-      if (lvl) setLevel(lvl);
+      if (subj && subjectOptions.some((o) => o.value === subj)) {
+        setSubjectBase(subj);
+        // Staged like `pendingUnit`, not written straight to `level`:
+        // `levelOptions` derives from `subjectBase`, so it is still empty in
+        // this commit and the level guard below would immediately reset a
+        // direct write. The guard claims it once the options exist.
+        if (lvl) setPendingLevel(lvl);
+      }
     }
 
     if (qUnit) {
@@ -65,10 +77,17 @@ const Quizzes = () => {
     setQueryDefaultsApplied(true);
   }, [queryDefaultsApplied, queryDefaults, subjectOptions]);
 
-  // Initialize defaults when data loads
+  // Generic default — first available subject.
+  //
+  // Gated on `queryDefaultsApplied` so it can never clobber a deep link: both
+  // effects run in the same commit once `subjectOptions` first arrives, and
+  // `subjectBase` still reads as '' here (a state update isn't visible to the
+  // effect that queued it), so without the gate this always won the last write
+  // and /quizzes?course=MATH landed on the first subject alphabetically.
   useEffect(() => {
+    if (!queryDefaultsApplied) return;
     if (!subjectBase && subjectOptions[0]) setSubjectBase(subjectOptions[0].value);
-  }, [subjectOptions, subjectBase]);
+  }, [queryDefaultsApplied, subjectOptions, subjectBase]);
 
   const levelOptions = useMemo(() => {
     const lvls = new Set(courses.filter((c) => c.subject === subjectBase).map((c) => c.level));
@@ -79,10 +98,26 @@ const Quizzes = () => {
   }, [courses, subjectBase]);
 
   useEffect(() => {
+    if (pendingLevel) {
+      const target = String(pendingLevel).trim().toLowerCase();
+      const match = levelOptions.find((o) => String(o.value).toLowerCase() === target);
+      if (match) {
+        setLevel(match.value);
+        setPendingLevel(null);
+        return;
+      }
+      // Options for the deep-linked subject haven't arrived yet — leaving
+      // `level` alone here is what keeps the request alive across commits.
+      if (!levelOptions.length) return;
+      // They have arrived and the level isn't among them (e.g. ?course=CHEM-NSII
+      // when Chimie only ships NS I) — drop it and take the default below.
+      setPendingLevel(null);
+    }
+
     if (!levelOptions.find((o) => o.value === level)?.value) {
       setLevel(levelOptions[0]?.value || '');
     }
-  }, [levelOptions, level]);
+  }, [levelOptions, level, pendingLevel]);
 
   const courseCode = subjectBase && level ? `${subjectBase}-${level}` : '';
   const unitOptions = useMemo(() => {
@@ -90,10 +125,10 @@ const Quizzes = () => {
     // or the original Firestore doc id on `id` (e.g. "chem-ns1"). Match either to be robust.
     const course = courses.find((c) => c.code === courseCode || c.id === courseCode);
     const modules = course?.modules || [];
-    
+
     // Sort by order field (chapter number) to ensure proper unit sequence
     const sorted = [...modules].sort((a, b) => (a.order || 0) - (b.order || 0));
-    
+
     return sorted.map((m) => ({ value: m.id, label: m.title || m.id }));
   }, [courses, courseCode]);
 
@@ -129,6 +164,9 @@ const Quizzes = () => {
   const [bankDirectItem, setBankDirectItem] = useState(null);
   const [bankMessage, setBankMessage] = useState('');
   const [isLoadingBank, setIsLoadingBank] = useState(false);
+  // While a question is on screen the selectors collapse behind a disclosure,
+  // so switching unit mid-session never means leaving the page.
+  const [showSelectors, setShowSelectors] = useState(false);
 
   // Taking a practice question is a focused task: hide the bottom tab bar +
   // footer while one is on screen so it reads like a dedicated quiz.
@@ -155,6 +193,7 @@ const Quizzes = () => {
       }
       const direct = toDirectItemFromRow(row);
       setBankDirectItem(direct);
+      setShowSelectors(false);
     } catch (e) {
       console.error('Curriculum practice failed', e);
       setBankMessage(t('quizzes.unableToLoad', 'Impossible de charger les exercices pour le moment.'));
@@ -163,10 +202,75 @@ const Quizzes = () => {
     }
   };
 
+  const subjectLabel = subjectOptions.find((o) => o.value === subjectBase)?.label || subjectBase;
+  const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
+  const unitLabel = unitOptions.find((o) => o.value === unit)?.label || '';
+  const countLabel = t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count });
+
+  const ctaLabel = isLoadingBank
+    ? t('common.loading', 'Chargement…')
+    : bankDirectItem
+      ? t('quizzes.nextQuestion', 'Question suivante')
+      : t('quizzes.startPractice', 'Commencer');
+
+  /** The three dropdowns — shared by the setup card and the in-practice disclosure. */
+  const selectors = (
+    <div className="qz-fields">
+      <div className="qz-field">
+        <label className="qz-field__label" htmlFor="qz-subject">{t('quizzes.course', 'Matière')}</label>
+        <span className="qz-field__control">
+          <select
+            id="qz-subject"
+            className="qz-field__select"
+            value={subjectBase}
+            onChange={(e) => setSubjectBase(e.target.value)}
+          >
+            {subjectOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="qz-field__chevron" aria-hidden="true" />
+        </span>
+      </div>
+      <div className="qz-field">
+        <label className="qz-field__label" htmlFor="qz-level">{t('quizzes.gradeLevel', 'Niveau')}</label>
+        <span className="qz-field__control">
+          <select
+            id="qz-level"
+            className="qz-field__select"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+          >
+            {levelOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="qz-field__chevron" aria-hidden="true" />
+        </span>
+      </div>
+      <div className="qz-field qz-field--wide">
+        <label className="qz-field__label" htmlFor="qz-unit">{t('quizzes.unit', 'Unité')}</label>
+        <span className="qz-field__control">
+          <select
+            id="qz-unit"
+            className="qz-field__select"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+          >
+            {unitOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="qz-field__chevron" aria-hidden="true" />
+        </span>
+      </div>
+    </div>
+  );
+
   if (isError && !appData) {
     return (
-      <section className="section quiz-page">
-        <div className="container">
+      <section className="section qz">
+        <div className="container qz__container">
           <ErrorState onRetry={() => refetch()} retrying={isFetching} />
         </div>
       </section>
@@ -175,32 +279,21 @@ const Quizzes = () => {
 
   if (isLoading && !appData) {
     return (
-      <section className="section quiz-page">
-        <div className="container" aria-busy="true">
-          <div className="page-header">
-            <Skeleton width={220} height={30} style={{ marginBottom: '0.75rem' }} />
-            <SkeletonText lines={2} lastWidth="70%" />
-          </div>
-          <div className="quiz-layout">
-            <div className="quiz-filters">
-              <div className="card">
-                <Skeleton width="100%" height={160} radius={12} style={{ marginBottom: '1rem' }} />
-                <Skeleton width={200} height={20} style={{ marginBottom: '1rem' }} />
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} style={{ marginBottom: '1rem' }}>
-                    <Skeleton width={90} height={13} style={{ marginBottom: '0.5rem' }} />
-                    <Skeleton width="100%" height={44} radius={10} />
-                  </div>
-                ))}
-                <Skeleton width="100%" height={44} radius={999} style={{ marginTop: '1rem' }} />
-              </div>
+      <section className="section qz">
+        <div className="container qz__container" aria-busy="true">
+          <Skeleton width={260} height={32} style={{ marginBottom: '0.75rem' }} />
+          <SkeletonText lines={2} lastWidth="60%" />
+          <div className="qz-card" style={{ marginTop: '1.5rem' }}>
+            <Skeleton width="100%" height={132} radius={12} style={{ marginBottom: '1.25rem' }} />
+            <div className="qz-fields">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="qz-field">
+                  <Skeleton width={70} height={12} style={{ marginBottom: '0.45rem' }} />
+                  <Skeleton width="100%" height={42} radius={10} />
+                </div>
+              ))}
             </div>
-            <div className="quiz-panel">
-              <div className="card">
-                <Skeleton width="45%" height={24} style={{ marginBottom: '1rem' }} />
-                <SkeletonText lines={4} lastWidth="55%" />
-              </div>
-            </div>
+            <Skeleton width="100%" height={46} radius={10} style={{ marginTop: '1.25rem' }} />
           </div>
         </div>
       </section>
@@ -208,26 +301,92 @@ const Quizzes = () => {
   }
 
   return (
-    <section className="section quiz-page">
-      <div className="container">
-        <div className="page-header">
-          <div>
-            <h1 className="page-header__title">{t('quizzes.curriculumPractice', 'Quiz du programme')}</h1>
-            <p className="page-header__subtitle">{t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}</p>
-            <p className="page-header__count">
-              {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}
-            </p>
-          </div>
-        </div>
+    <section className="section qz">
+      <div className="container qz__container">
+        <header className="qz__head">
+          <h1 className="qz__title">{t('quizzes.curriculumPractice', 'Quiz du programme')}</h1>
+          <p className="qz__subtitle">
+            {t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}
+          </p>
+        </header>
 
-        <div className="quiz-layout">
-          {/* Filters Section */}
-          <div className="quiz-filters">
-            <div className="card">
+        {bankDirectItem ? (
+          /* ── In practice: the question owns the column; the selection sits
+                above it as a compact, re-openable context bar. ── */
+          <>
+            <div className="qz-context">
+              <img
+                className="qz-context__thumb"
+                src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
+                alt=""
+                width={96}
+                height={64}
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="qz-context__text">
+                <span className="qz-context__subject">
+                  {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}
+                </span>
+                {unitLabel && <span className="qz-context__unit">{unitLabel}</span>}
+              </div>
+              <button
+                type="button"
+                className="qz-context__toggle"
+                onClick={() => setShowSelectors((v) => !v)}
+                aria-expanded={showSelectors}
+              >
+                <SlidersHorizontal size={15} aria-hidden="true" />
+                <span className="qz-context__toggle-label">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</span>
+              </button>
+            </div>
+
+            {showSelectors && (
+              <div className="qz-card qz-card--tight">
+                {selectors}
+                <p className="qz-count">{countLabel}</p>
+                <button
+                  type="button"
+                  onClick={generateCurriculumPractice}
+                  className="button button--primary qz-cta"
+                  disabled={isLoadingBank}
+                >
+                  {isLoadingBank ? t('common.loading', 'Chargement…') : t('quizzes.startPractice', 'Commencer')}
+                </button>
+              </div>
+            )}
+
+            <div className="qz-question">
+              <DirectBankQuiz
+                item={bankDirectItem}
+                onScore={undefined}
+                onNext={undefined}
+                onClose={undefined}
+              />
+            </div>
+
+            {bankMessage && <p className="qz-message" role="status">{bankMessage}</p>}
+
+            <div className="qz-next">
+              <button
+                type="button"
+                onClick={generateCurriculumPractice}
+                className="button button--primary"
+                disabled={isLoadingBank}
+              >
+                <RotateCcw size={16} aria-hidden="true" /> {ctaLabel}
+              </button>
+            </div>
+          </>
+        ) : (
+          /* ── Setup: one purposeful card, sized to its content. No giant
+                empty panel waiting for a question. ── */
+          <>
+            <div className="qz-card">
               {subjectBase && (
-                <div className="quiz-hero">
+                <div className="qz-cover">
                   <img
-                    className="quiz-hero__img"
+                    className="qz-cover__img"
                     src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
                     alt=""
                     width={760}
@@ -235,100 +394,55 @@ const Quizzes = () => {
                     loading="lazy"
                     decoding="async"
                   />
-                  <div className="quiz-hero__overlay">
-                    <span className="quiz-hero__eyebrow">{t('quizzes.curriculumPractice', 'Exercices du programme')}</span>
-                    <h2 className="quiz-hero__title">
-                      {(subjectOptions.find((o) => o.value === subjectBase)?.label) || subjectBase}
-                    </h2>
-                    {level && <p className="quiz-hero__sub">{level.replace(/^NS(.*)$/i, 'NS $1')}</p>}
+                  <div className="qz-cover__overlay">
+                    <span className="qz-cover__eyebrow">{t('quizzes.curriculumPractice', 'Quiz du programme')}</span>
+                    <span className="qz-cover__title">{subjectLabel}</span>
+                    {levelLabel && <span className="qz-cover__sub">{levelLabel}</span>}
                   </div>
                 </div>
               )}
-              <h3 className="card__title">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</h3>
-              <div className="quiz-selectors">
-                <div className="form-group">
-                  <label className="label">{t('quizzes.course', 'Matière')}</label>
-                  <select className="input-field" value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
-                    {subjectOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">{t('quizzes.gradeLevel', 'Niveau')}</label>
-                  <select className="input-field" value={level} onChange={(e) => setLevel(e.target.value)}>
-                    {levelOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="label">{t('quizzes.unit', 'Unité')}</label>
-                  <select className="input-field" value={unit} onChange={(e) => setUnit(e.target.value)}>
-                    {unitOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              {/* Status chips */}
-              <div className="quiz-status">
-                {subjectBase && level && (
-                  <span className="chip chip--success">
-                    {(subjectOptions.find(o => o.value === subjectBase)?.label) || subjectBase} · {level.replace(/^NS(.*)$/i, 'NS $1')}
-                  </span>
-                )}
-                <span className="chip">
-                  {t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count })}
-                </span>
-              </div>
+
+              {selectors}
+
+              {/* Plain text, not a pill: the subject/level chip that used to
+                  sit here only repeated the two selects directly above it.
+                  The count stays because this is now its only home — the
+                  page header no longer carries it. */}
+              <p className="qz-count">{countLabel}</p>
 
               <button
                 type="button"
                 onClick={generateCurriculumPractice}
-                className="button button--primary"
+                className="button button--primary qz-cta"
                 disabled={isLoadingBank}
-                style={{ width: '100%', marginTop: '1rem' }}
               >
-                {isLoadingBank ? t('common.loading', 'Chargement…') : (bankDirectItem ? t('quizzes.nextQuestion', 'Question suivante') : t('quizzes.startPractice', 'Commencer'))}
+                {ctaLabel}
               </button>
+
+              <p className="qz-hint" role={bankMessage ? 'status' : undefined}>
+                {bankMessage || t('quizzes.readyBody', 'Choisissez un cours, un niveau et une unité, puis cliquez sur « Commencer » pour démarrer.')}
+              </p>
             </div>
 
-            {/* Help cards */}
-            <div className="card card--compact">
-              <h3 className="card__title">{t('quizzes.howItWorks', 'Comment ça marche')}</h3>
-              <ul className="list--bulleted text-muted">
-                <li>{t('quizzes.howItWorksTry', 'Trois essais par question')}</li>
-                <li>{t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse')}</li>
-                <li>{t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai')}</li>
+            <div className="qz-how">
+              <h2 className="qz-how__title">{t('quizzes.howItWorks', 'Comment ça marche')}</h2>
+              <ul className="qz-how__list">
+                <li className="qz-how__item">
+                  <span className="qz-how__icon"><Target size={16} aria-hidden="true" /></span>
+                  {t('quizzes.howItWorksTry', 'Trois essais par question')}
+                </li>
+                <li className="qz-how__item">
+                  <span className="qz-how__icon"><Lightbulb size={16} aria-hidden="true" /></span>
+                  {t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse')}
+                </li>
+                <li className="qz-how__item">
+                  <span className="qz-how__icon"><BookOpen size={16} aria-hidden="true" /></span>
+                  {t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai')}
+                </li>
               </ul>
             </div>
-          </div>
-
-          {/* Quiz Panel */}
-          <div className="quiz-panel">
-            {bankDirectItem ? (
-              <div className="card">
-                <DirectBankQuiz
-                  item={bankDirectItem}
-                  onScore={undefined}
-                  onNext={undefined}
-                  onClose={undefined}
-                />
-              </div>
-            ) : (
-              <div className="card quiz-placeholder">
-                <div className="quiz-placeholder__content">
-                  <h3>{t('quizzes.ready', 'Prêt à vous entraîner ?')}</h3>
-                  <p className="text-muted">
-                    {bankMessage || t('quizzes.readyBody', 'Choisissez un cours, un niveau et une unité, puis cliquez sur « Commencer » pour démarrer.')}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </section>
   );
