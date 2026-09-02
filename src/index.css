@@ -95,7 +95,7 @@
 	   Generous, friendly corners. Buttons are full pills. */
 	--r-panel: 24px;   /* large hero / feature panels */
 	--r-card: 20px;    /* content cards */
-	--r-btn: 10px;     /* buttons — flat rounded rectangle (Estil Klè; was a 999px pill) */
+	--r-btn: 4px;      /* buttons — Coursera's near-square corner (was 999px pill, then 10px) */
 	/* ── Type scale ────────────────────────────────────────────────────
 	   Canonical sizes (12/14/16/20/24/32). Prefer these over one-off values
 	   so headings and body text stay consistent across the platform. */
