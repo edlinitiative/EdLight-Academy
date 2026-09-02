@@ -1,16 +1,23 @@
 /* Profile — account hub
    ───────────────────── */
 
+/* A grid row is as tall as its tallest cell, and align-items:start means the
+   short cell just leaves a void. The old template paired a short left card
+   with a tall right one twice over — "readiness aside" (Réussites is ~400px,
+   readiness ~250px) and "leaderboard monespace" (Mon espace ~330px, the
+   Classement row ~90px) — which is where the dead space came from. The two
+   tall sidebar cards now SPAN the short left ones, so each column accumulates
+   to roughly the same height and nothing is left hanging. */
 .profile {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   grid-template-areas:
-    "hero       hero"
-    "readiness  aside"
-    "progress   progress"
+    "hero        hero"
+    "readiness   aside"
+    "progress    aside"
     "leaderboard monespace"
-    "invite     invite"
-    "certs      certs";
+    "invite      monespace"
+    "certs       monespace";
   gap: 1rem;
   max-width: 1060px;
   align-items: start;
