@@ -5,7 +5,7 @@ import { History, ChevronRight } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { subjectColor } from '../utils/examUtils';
+import { subjectColor, examDisplayTitle } from '../utils/examUtils';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
 import { EmptyState } from '../components/StateViews';
 import { Skeleton } from '../components/Skeleton';
@@ -56,7 +56,7 @@ export default function ExamHistory() {
         return {
           examKey,
           slug,
-          title: exam._title || exam.exam_title || L('Examen', 'Egzamen'),
+          title: examDisplayTitle(exam, L('Examen', 'Egzamen')),
           subject: exam._subject || exam.subject || '',
           year: exam.year || '',
           levelLabel: LEVEL_SLUG_LABELS[slug]?.[ht ? 'ht' : 'fr'] || slug,

@@ -505,6 +505,90 @@ export function normalizeExamTitle(exam: any): string {
   return composeExamTitle(examTitleParts(exam));
 }
 
+/**
+ * Does this string look like the raw MENFP header rather than a title?
+ *
+ * Source PDFs carry the ministry's full letterhead as the document title —
+ * "MINISTÈRE DE L'ÉDUCATION NATIONALE ET DE LA FORMATION PROFESSIONNELLE
+ * (MENFP) FILIÈRE D'ENSEIGNEMENT GÉNÉRAL EXAMENS DE FIN D'ÉTUDES SECONDAIRES
+ * TEXTE MODÈLE 2025 SÉRIE : SES PHYSIQUE" — around 200 characters of it. Any
+ * of these markers, or sheer length, means the string is letterhead and has
+ * to be re-derived rather than shown.
+ */
+export function looksLikeExamBoilerplate(s: any): boolean {
+  const t = String(s || '');
+  if (!t.trim()) return false;
+  if (/MINIST[ÈE]RE|MENFP|FILI[ÈE]RES?\s+D|EXAMENS?\s+DE\s+FIN\s+D/i.test(t)) return true;
+  // A genuine composed title ("Physique — Sujet type · SES · 2025") runs well
+  // under this; letterhead never does.
+  return t.length > 90;
+}
+
+/**
+ * THE title to show a student for an exam, whatever shape the object is in.
+ *
+ * `_title` is only present on exams that went through `buildExamIndex`. The
+ * single-exam fetch path (`/exams/<id>.json`, used by the overview and by
+ * history) deliberately ships the raw document, so reading `_title` there
+ * silently falls through to `exam_title` — which is the ministry letterhead.
+ * That is why every caller must go through this rather than reaching for
+ * either field: the two paths hand you differently-shaped objects for the
+ * same exam.
+ */
+export function examDisplayTitle(exam: any, fallback = 'Examen'): string {
+  if (!exam) return fallback;
+  if (exam._title && !looksLikeExamBoilerplate(exam._title)) return exam._title;
+  if (exam.exam_title || exam.subject) {
+    const composed = normalizeExamTitle(exam);
+    if (composed && composed.trim() && composed !== 'Examen') return composed;
+  }
+  return fallback;
+}
+
+/**
+ * Same, for a title that was SAVED somewhere earlier — an attempt document, a
+ * local draft, a study-plan task. Those were written by whatever the code did
+ * at the time, so older rows hold the letterhead verbatim and no amount of
+ * fixing the render path reaches them. Re-derive when what's stored is
+ * letterhead; otherwise trust it (it may name a topic the catalog lost).
+ */
+export function displayStoredExamTitle(stored: any, exam?: any, fallback = 'Examen'): string {
+  const s = String(stored || '').trim();
+  if (s && !looksLikeExamBoilerplate(s)) return s;
+  if (exam) {
+    const fromExam = examDisplayTitle(exam, '');
+    if (fromExam) return fromExam;
+  }
+  // No catalog entry to fall back on — parse the stored letterhead itself.
+  // Recover the subject from the text first: without it the parser has no
+  // subject to lead with and emits a misleading "Autre — …", while the subject
+  // it needs is usually sitting at the end of the letterhead.
+  if (s) {
+    const composed = normalizeExamTitle({ exam_title: s, subject: subjectFromText(s) });
+    if (composed && composed.trim() && composed !== 'Examen') return composed;
+  }
+  return fallback;
+}
+
+/**
+ * Find a known subject named anywhere in a string. Used only when re-deriving
+ * a title with no catalog entry to consult — the ministry letterhead ends with
+ * the subject ("… SÉRIE : SES PHYSIQUE"), so it is nearly always recoverable.
+ * Returns '' when nothing matches, which the caller treats as "unknown".
+ */
+export function subjectFromText(text: any): string {
+  const t = String(text || '');
+  if (!t) return '';
+  let best = '';
+  for (const key of Object.keys(SUBJECT_MAP)) {
+    // Longest match wins: "anglais et espagnol" must beat "anglais".
+    if (key.length <= best.length) continue;
+    const esc = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|[^A-Za-zÀ-ÿ])${esc}(?![A-Za-zÀ-ÿ])`, 'i').test(t)) best = key;
+  }
+  return best ? (SUBJECT_MAP as Record<string, string>)[best] : '';
+}
+
 // ─── Human-friendly fallback labels ─────────────────────────────────────────
 
 const EXAM_TYPE_LABELS = {

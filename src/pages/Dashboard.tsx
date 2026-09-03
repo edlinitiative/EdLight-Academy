@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle } from 'lucide-react';
 import { subjectCover } from '../utils/subjectCovers';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { buildExamIndex } from '../utils/examUtils';
+import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
 import { sessionRowName } from '../utils/examNaming';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
@@ -500,7 +500,7 @@ export default function Dashboard() {
                       const named = catalogExam ? sessionRowName(catalogExam, isCreole ? 'ht' : 'fr') : null;
                       const title = named
                         ? `${catalogExam._subject ? `${catalogExam._subject} · ` : ''}${named.title}`
-                        : (a?.exam_title || a?.examTitle || (isCreole ? 'Egzamen' : 'Examen'));
+                        : displayStoredExamTitle(a?.exam_title || a?.examTitle, a, isCreole ? 'Egzamen' : 'Examen');
                       const dateMs = a?.updated_at_ms || a?.submitted_at_ms || a?.started_at_ms || Date.now();
                       const urlLevel = levelToUrl(a?.level);
                       const ctaLabel = isSubmitted ? (isCreole ? 'Rezilta' : 'Résultats') : (isCreole ? 'Kontinye' : 'Reprendre');

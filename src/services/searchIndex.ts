@@ -12,6 +12,7 @@
 import { getCachedCourses, loadCoursesData } from './dataService';
 import { GAMES } from '../data/games';
 import { levelToSlug } from '../utils/examLevels';
+import { examDisplayTitle } from '../utils/examUtils';
 
 export type SearchItemType = 'course' | 'lesson' | 'exam' | 'game' | 'page' | 'action';
 
@@ -168,7 +169,12 @@ async function examItems(lang: Lang): Promise<SearchItem[]> {
         return {
           type: 'exam' as const,
           title: `${e.subject || e.exam_title || 'Examen'} — ${levelLabel} ${e.year || ''}`.trim(),
-          subtitle: e.exam_title && e.exam_title !== e.subject ? e.exam_title : undefined,
+          // The raw exam_title is ministry letterhead; show the composed
+          // title instead, and only when it says more than the row already does.
+          subtitle: (() => {
+            const composed = examDisplayTitle(e, '');
+            return composed && composed !== e.subject ? composed : undefined;
+          })(),
           to: `/exams/${levelToSlug(e.level)}/${encodeURIComponent(e.exam_id)}`,
           keywords: `examen egzamen ${e.subject || ''} ${e.year || ''} ${levelLabel}`,
         };

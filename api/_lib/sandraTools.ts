@@ -24,6 +24,9 @@
 
 import { FieldValue, type CollectionReference } from 'firebase-admin/firestore';
 import { gradeProfile } from '../../shared/trackConfig';
+// Same helper the client uses: the two builders must stay byte-identical
+// (there is a parity test), and exam_title is ministry letterhead.
+import { examDisplayTitle } from '../../shared/examUtils';
 import { getDb } from './firebaseAdmin';
 import type { ToolDef } from './llm';
 import { generatePlanCore } from './planGeneration';
@@ -345,7 +348,7 @@ export function buildTasksFromExamsServer(
       coefficient: coeff,
       priority: Math.round(priority * 100) / 100,
       topics: exam.topics || [],
-      examTitle: exam.exam_title || '',
+      examTitle: examDisplayTitle(exam, ''),
       level: exam.level || '',
       year: exam.year || '',
       status,

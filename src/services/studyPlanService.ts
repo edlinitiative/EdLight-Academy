@@ -35,6 +35,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { recordActivity as recordStreakActivity } from './streakService';
+import { examDisplayTitle } from '../utils/examUtils';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -381,7 +382,7 @@ export function buildTasksFromExams(exams, coefficients = {}, existingResults = 
       coefficient: coeff,
       priority: Math.round(priority * 100) / 100,
       topics: exam.topics || [],
-      examTitle: exam.exam_title || '',
+      examTitle: examDisplayTitle(exam, ''),
       level: exam.level || '',
       year: exam.year || '',
       status,

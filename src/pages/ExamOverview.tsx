@@ -8,7 +8,7 @@ import {
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { fetchSingleExam, normalizeExamCatalog, resolveExamFromCatalog } from '../utils/examCatalog';
-import { subjectColor, QUESTION_TYPE_META } from '../utils/examUtils';
+import { subjectColor, QUESTION_TYPE_META, examDisplayTitle } from '../utils/examUtils';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { loadExamAttemptDraft } from '../services/examAttempts';
 import { LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
@@ -113,7 +113,9 @@ export default function ExamOverview() {
   const resumable = draftHasProgress(draft);
   const answeredCount = draft?.answers ? Object.keys(draft.answers).length : 0;
 
-  const title = exam?._title || exam?.exam_title || L('Examen', 'Egzamen');
+  // NOT exam._title: the single-exam fetch path ships the raw document, so
+  // _title is absent here and the fallback was the ministry letterhead.
+  const title = examDisplayTitle(exam, L('Examen', 'Egzamen'));
   const color = exam ? subjectColor(exam._subject) : 'var(--primary-500)';
 
   const sections = full?.sections || [];

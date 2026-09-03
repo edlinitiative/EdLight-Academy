@@ -9,7 +9,7 @@ import CardCover from '../components/CardCover';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { levelToSlug, RAW_LEVEL_TO_URL, LEVEL_SLUG_LABELS } from '../utils/examLevels';
 import { normalizeExamCatalog } from '../utils/examCatalog';
-import { buildExamIndex, subjectColor } from '../utils/examUtils';
+import { buildExamIndex, subjectColor, displayStoredExamTitle } from '../utils/examUtils';
 import { sessionRowName } from '../utils/examNaming';
 import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { listRecentExamAttempts } from '../services/userActivity';
@@ -74,7 +74,7 @@ function localDrafts(): DraftRow[] {
       rows.push({
         examId: k.slice('edlight-exam-draft-'.length),
         level: draft?.level || '',
-        title: draft?.exam_title || draft?.subject || '',
+        title: displayStoredExamTitle(draft?.exam_title, draft, draft?.subject || ''),
         subject: draft?.subject || '',
         answered,
         updatedAtMs: draft?.updated_at_ms ?? draft?.started_at_ms ?? 0,
@@ -143,7 +143,7 @@ const ExamLanding = () => {
             merged.set(r.id, {
               examId: r.id,
               level: r.level || existing?.level || '',
-              title: r.exam_title || existing?.title || r.subject || '',
+              title: displayStoredExamTitle(r.exam_title, r, existing?.title || r.subject || ''),
               subject: r.subject || existing?.subject || '',
               answered,
               updatedAtMs: remoteMs,

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import useStore from '../../contexts/store';
+import { examDisplayTitle } from '../../utils/examUtils';
 
 /**
  * AdminExams — read-only browse of the static exam catalog.
@@ -123,7 +124,7 @@ export default function AdminExams() {
                   const urlLevel = levelToUrl(e.level || '');
                   return (
                     <tr key={id || `${e.exam_title}-${e.year}`}>
-                      <td>{e.exam_title || e.title || '—'}</td>
+                      <td>{examDisplayTitle(e, e.title || '—')}</td>
                       <td>{e.subject || '—'}</td>
                       <td>{e.level || '—'}</td>
                       <td>{e.year != null ? String(e.year) : '—'}</td>
