@@ -61,12 +61,50 @@ export const getPillars = (t: TFn): Pillar[] => [
   { eyebrow: '04', icon: <BarChart3 size={22} strokeWidth={1.8} />, title: t('Suivi premium', 'Swivi premye klas'), desc: t('Tableaux de bord, streaks et plans d’étude personnalisés.', 'Tablodbò, seri jou ak plan etid pèsonalize.') },
 ];
 
-export const getStats = (t: TFn): Stat[] => [
-  { value: '490+', label: t('examens blancs', 'egzamen blan') },
-  { value: '300+', label: t('leçons vidéo', 'leson videyo') },
-  { value: 'NS I–IV', label: t('niveaux couverts', 'nivo ki kouvri') },
-  { value: '100%', label: t('gratuit', 'gratis') },
-];
+/**
+ * Hero stats.
+ *
+ * Two problems with the old version: the numbers were hardcoded strings that
+ * quietly drifted from what the catalogue actually holds, and every one of them
+ * counted *inventory*. A visitor deciding whether to revise here wants to know
+ * other students are already inside — Code leads with "200+ LEARNERS" and it is
+ * the more persuasive number by a distance.
+ *
+ * `live` comes from siteStats and arrives a moment after paint, so the static
+ * values stay as immediate fallbacks — this is the first screen on a slow
+ * connection and it must never wait on Firestore to show something true.
+ */
+export const getStats = (
+  t: TFn,
+  live?: { activeStudentsThisTerm?: number | null; exams?: number | null; videos?: number | null },
+): Stat[] => {
+  const stats: Stat[] = [];
+
+  if (Number.isFinite(live?.activeStudentsThisTerm) && (live!.activeStudentsThisTerm as number) > 0) {
+    stats.push({
+      value: `${live!.activeStudentsThisTerm}+`,
+      label: t('élèves inscrits', 'elèv enskri'),
+    });
+  }
+
+  stats.push({
+    value: Number.isFinite(live?.exams) ? `${live!.exams}+` : '490+',
+    label: t('examens blancs', 'egzamen blan'),
+  });
+  stats.push({
+    value: Number.isFinite(live?.videos) ? `${live!.videos}+` : '300+',
+    label: t('leçons vidéo', 'leson videyo'),
+  });
+  stats.push({ value: 'NS I–IV', label: t('niveaux couverts', 'nivo ki kouvri') });
+
+  // Four tiles is the widest the row lays out cleanly; "gratuit" is already
+  // said in the eyebrow above, so it is the one that yields to the students.
+  if (stats.length < 4) {
+    stats.push({ value: '100%', label: t('gratuit', 'gratis') });
+  }
+
+  return stats;
+};
 
 export const getTestimonials = (t: TFn): Testimonial[] => [
   { quote: t('« EdLight a transformé ma préparation au Bac. Les corrections détaillées ont fait toute la différence. »', '« EdLight chanje preparasyon Bak mwen. Koreksyon detaye yo fè yon gwo diferans. »'), name: 'Carline J.', role: t('Élève NS IV, Port-au-Prince', 'Elèv NS IV, Pòtoprens') },
