@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { RefreshCw, GraduationCap, Eye, EyeOff, User, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
-import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset } from '../services/authService';
+import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset, warmAuth } from '../services/authService';
 import { redeemReferral, getStoredRef, clearStoredRef } from '../services/referralService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -26,6 +26,10 @@ export function AuthModal({ onClose }) {
   const [referralCode, setReferralCode] = useState(() => getStoredRef());
   const [referralNote, setReferralNote] = useState('');
   const modalRef = useRef(null);
+
+  // Boot Firebase's popup resolver (gapi + auth iframe) while the student is
+  // still reading the form, instead of after they click Google.
+  useEffect(() => { warmAuth(); }, []);
 
   const setUser = useStore(state => state.setUser);
   const isAuthenticated = useStore(state => state.isAuthenticated);

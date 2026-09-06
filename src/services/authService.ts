@@ -15,12 +15,44 @@ function loadFirebase() {
 }
 
 /**
- * After authentication, load user profile from Firestore and sync track to store.
+ * Start the sign-in machinery on intent (hover/focus/touch) rather than on click.
+ *
+ * `signInWithPopup` cannot open its popup until Firebase has fetched gapi from
+ * apis.google.com and booted an iframe on the firebaseapp.com auth domain —
+ * measured at ~800ms to popup and ~2.5s to a usable handshake on a fast link,
+ * and far worse on the mobile connections most students are on. None of that
+ * work depends on the click, so it should not wait for it.
+ *
+ * Safe to call repeatedly: the import promise is memoised, and a warm-up that
+ * fails is simply a click that pays the old cost.
  */
-async function syncUserProfile(uid) {
+export function warmAuth() {
+  loadFirebase()
+    .then((fb) => fb.warmGoogleAuth())
+    .catch(() => {});
+}
+
+/**
+ * After authentication, hydrate the store from the Firestore profile and record
+ * the visit.
+ *
+ * Sign-in used to spend three *sequential* Firestore round-trips here before
+ * the student saw the app: upsert read the document to decide create-vs-update,
+ * upsert wrote it, then the profile was read all over again. On a Haitian
+ * mobile connection that is several seconds of spinner after Google has already
+ * said yes.
+ *
+ * Now exactly one read is on the critical path — it doubles as the existence
+ * check — and the write is a side-effect nobody waits on. Auth has already
+ * succeeded by this point, so a failed write must never fail the login.
+ */
+async function hydrateSession(user, isNewUser = false) {
   try {
-    const { getUserProfile } = await loadFirebase();
-    const profile = await getUserProfile(uid);
+    const { getUserProfile, writeUserDocument } = await loadFirebase();
+
+    // A brand-new account has nothing to read: skip straight to the create.
+    const profile = isNewUser ? null : await getUserProfile(user.uid);
+
     if (profile) {
       const store = useStore.getState();
       if (profile.track) {
@@ -30,6 +62,11 @@ async function syncUserProfile(uid) {
         store.setOnboardingCompleted(true);
       }
     }
+
+    // Deliberately not awaited: last_seen is not worth a round-trip of delay.
+    writeUserDocument(user, { create: isNewUser || !profile }).catch((err) => {
+      console.warn('Could not write user document on login:', err);
+    });
   } catch (err) {
     console.warn('Could not sync user profile:', err);
   }
@@ -42,22 +79,12 @@ function getDefaultStudentName() {
 
 export async function loginWithEmailPassword(email, password) {
   try {
-    const { signIn, upsertUserDocument } = await loadFirebase();
+    const { signIn } = await loadFirebase();
     const result = await signIn(email, password);
     const user = result.user;
 
-    // Update user document in Firestore (update last_seen). This is a
-    // non-critical side-effect: authentication has already succeeded, so a
-    // Firestore hiccup here must NOT fail the login (which would leave the
-    // sign-in modal stuck open over an already-authenticated app).
-    try {
-      await upsertUserDocument(user, false);
-    } catch (err) {
-      console.warn('Could not update user document on login:', err);
-    }
-
-    // Sync track/onboarding from Firestore
-    await syncUserProfile(user.uid);
+    // One read to hydrate track/onboarding; the last_seen write is fire-and-forget.
+    await hydrateSession(user, false);
     
     return {
       uid: user.uid,
@@ -72,18 +99,16 @@ export async function loginWithEmailPassword(email, password) {
 
 export async function registerWithEmailPassword(email, password, name) {
   try {
-    const { signUp, upsertUserDocument } = await loadFirebase();
+    const { signUp, writeUserDocument } = await loadFirebase();
     const result = await signUp(email, password, name);
     const user = result.user;
 
-    // Create user document in Firestore (new user). Non-critical: if this
-    // write fails the account still exists and the document is created on the
-    // next login (upsert recreates a missing doc), so it must not fail signup.
-    try {
-      await upsertUserDocument(user, true);
-    } catch (err) {
+    // Non-critical: if this write fails the account still exists and the
+    // document is recreated on the next login, so it must not fail signup —
+    // and the new student should not wait on it to reach the app.
+    writeUserDocument(user, { create: true }).catch((err) => {
       console.warn('Could not create user document on signup:', err);
-    }
+    });
     
     return {
       uid: user.uid,
@@ -98,22 +123,14 @@ export async function registerWithEmailPassword(email, password, name) {
 
 export async function loginWithGoogle() {
   try {
-    const { signInWithGoogle, upsertUserDocument } = await loadFirebase();
+    const { signInWithGoogle } = await loadFirebase();
     const result = await signInWithGoogle();
     const user = result.user;
-    
+
     const isNewUser = result.isNewUser ?? false;
 
-    // Create or update user document in Firestore. Non-critical side-effect —
-    // auth already succeeded, so a Firestore failure must not fail the login.
-    try {
-      await upsertUserDocument(user, isNewUser);
-    } catch (err) {
-      console.warn('Could not upsert user document on Google login:', err);
-    }
-
-    // Sync track/onboarding from Firestore
-    await syncUserProfile(user.uid);
+    // One read to hydrate track/onboarding; the document write is fire-and-forget.
+    await hydrateSession(user, isNewUser);
 
     return {
       uid: user.uid,

@@ -40,6 +40,17 @@
        @font-face lives in index.css; this preload just starts the fetch early. -->
   <link rel="preload" as="font" type="font/woff2" crossorigin
     href="/assets/fonts/SourceSans3-latin.woff2">
+  <!-- Sign-in latency: Firebase's popup resolver must load gapi from
+       apis.google.com and boot an iframe on the (third) firebaseapp.com origin
+       BEFORE it can open the Google popup — measured at ~800ms to popup and
+       ~2.5s to a usable handshake on a fast link, far worse on Haitian mobile.
+       Warming DNS + TLS for those origins here removes ~2 round-trips each
+       from the critical path of the very first click. -->
+  <link rel="preconnect" href="https://apis.google.com" crossorigin>
+  <link rel="preconnect" href="https://edlight-academy.firebaseapp.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <title>EdLight Academy</title>
   <!-- Firebase config at runtime (replace with your real project values) -->
   <script>
