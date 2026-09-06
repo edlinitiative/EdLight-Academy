@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import LessonComplete from '../components/LessonComplete';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Target, Flame, Check, X, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useAppData, useCourses } from '../hooks/useData';
@@ -73,6 +75,7 @@ export default function CourseDetail() {
   // the heavy appData query (video URLs, quiz payloads) loads in the
   // background. Clicking a course card should never show a full-page skeleton.
   const { data: catalog } = useCourses();
+  const queryClient = useQueryClient();
   const [view, setView] = useState('overview'); // 'overview' | 'lesson'
   const [activeModule, setActiveModule] = useState(0);
   const [activeLesson, setActiveLesson] = useState(0);
@@ -315,15 +318,45 @@ export default function CourseDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId, course?.name, activeModuleData?.id, activeLessonData?.id]);
 
-  // Handler to mark lesson as complete
+  // Finishing a lesson is the moment a student is most likely to do one more —
+  // so completion opens the continuation sheet rather than just turning the
+  // button green. `markLessonComplete` also advances the global streak, so the
+  // streak query is invalidated to stop the sheet quoting yesterday's count.
+  const [showDone, setShowDone] = useState(false);
+
   const handleMarkComplete = async () => {
     if (!user?.uid || !courseId || !activeLessonData?.id) return;
-    
+
     try {
       await markLessonComplete(user.uid, courseId, activeLessonData.id);
+      queryClient.invalidateQueries({ queryKey: ['global-streak'] });
     } catch (error) {
       console.error('[CourseDetail] Error marking lesson complete:', error);
+      // The sheet is a reward for work that landed; don't show it for work
+      // that didn't. The button stays actionable so they can retry.
+      return;
     }
+    setShowDone(true);
+  };
+
+  /** The lesson the continuation sheet offers, or null at the end of a course. */
+  const nextUp = useMemo(() => {
+    if (!nextTarget) return null;
+    const lesson = getModuleLessons(nextTarget.module)[nextTarget.lesson];
+    if (!lesson) return null;
+    return {
+      title: lesson.title || (isCreole ? 'Pwochen leson' : 'Leçon suivante'),
+      unit: modules[nextTarget.module]?.title || undefined,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextTarget?.module, nextTarget?.lesson, modules, isCreole]);
+
+  const goToNextLesson = () => {
+    setShowDone(false);
+    if (!nextTarget) return;
+    setActiveModule(nextTarget.module);
+    setActiveLesson(nextTarget.lesson);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Check if current lesson is completed
@@ -812,6 +845,14 @@ export default function CourseDetail() {
         )}
       </div>
       {/* Removed modal overlay; inline rendering used instead */}
+
+      {/* Session-end continuation: turns a finished lesson into the next one. */}
+      <LessonComplete
+        open={showDone}
+        next={nextUp}
+        onContinue={goToNextLesson}
+        onDismiss={() => setShowDone(false)}
+      />
     </div>
   );
 }

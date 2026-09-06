@@ -1,0 +1,150 @@
+/* ── Lesson-complete sheet ──────────────────────────────────────────────────
+   The one modal allowed in the lesson view. It exists to convert a finished
+   lesson into the next one, so the forward action is the only thing with
+   weight; the dismiss is a quiet text link, not a competing button. */
+
+.lesson-done {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 30, 56, 0.42);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: lesson-done-in 160ms ease-out;
+}
+
+.lesson-done__sheet {
+  position: relative;
+  width: min(100%, 25rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 34px 28px 24px;
+  border-radius: 22px;
+  background: var(--surface, #fff);
+  box-shadow: 0 2px 4px rgba(15, 30, 56, .06), 0 32px 64px -24px rgba(15, 30, 56, .45);
+  animation: lesson-done-rise 200ms cubic-bezier(.2, .8, .3, 1);
+}
+
+.lesson-done__close {
+  position: absolute;
+  top: 8px; right: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border: 0; background: none; cursor: pointer;
+  color: var(--text-500, #5A6B85);
+  border-radius: 10px;
+}
+.lesson-done__close:hover { background: var(--surface-muted, #F4F7FB); }
+
+.lesson-done__mark {
+  display: grid; place-items: center;
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--success-500, #17A75C) 14%, transparent);
+  color: var(--success-500, #17A75C);
+}
+
+.lesson-done__title {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.022em;
+  color: var(--text-900, #0F1E38);
+}
+
+.lesson-done__streak {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #E8930C; /* the streak's own warm note, matching StreakRail */
+}
+
+/* What comes next, given enough presence to be worth tapping. */
+.lesson-done__next {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface-muted, #F4F7FB);
+}
+.lesson-done__next-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-500, #5A6B85);
+}
+.lesson-done__next-title {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text-900, #0F1E38);
+  text-wrap: balance;
+}
+.lesson-done__next-unit {
+  font-size: 13px;
+  color: var(--text-500, #5A6B85);
+}
+
+.lesson-done__all {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-500, #5A6B85);
+}
+
+.lesson-done__cta {
+  width: 100%;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  margin-top: 4px;
+  padding: 14px 22px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--primary-700, #114A99), 0 10px 20px -10px rgba(27, 111, 224, .7);
+  transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+.lesson-done__cta:hover { background: var(--primary-600, #1558B8); }
+.lesson-done__cta:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--primary-700, #114A99), 0 5px 12px -8px rgba(27, 111, 224, .7);
+}
+
+.lesson-done__later {
+  border: 0; background: none; padding: 6px;
+  font: inherit; font-size: 14px;
+  color: var(--text-500, #5A6B85);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lesson-done__cta:focus-visible,
+.lesson-done__later:focus-visible,
+.lesson-done__close:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary-500, #1B6FE0) 45%, transparent);
+  outline-offset: 2px;
+}
+
+@keyframes lesson-done-in { from { opacity: 0; } }
+@keyframes lesson-done-rise { from { transform: translateY(12px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-done,
+  .lesson-done__sheet { animation: none; }
+  .lesson-done__cta { transition: none; }
+}
