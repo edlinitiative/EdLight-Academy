@@ -45,9 +45,17 @@ async function probe(redirectUri) {
 
 /**
  * Is /__/auth/* proxied to Firebase at this origin, or is the SPA catch-all
- * still swallowing it? Firebase's iframe page carries a gapi script tag; our
- * shell carries the app's title. Telling them apart matters because both
- * return 200 — a missing proxy fails silently, not loudly.
+ * still swallowing it? Both return HTTP 200, so a missing proxy fails
+ * silently: the auth iframe would load the app's own shell and sign-in would
+ * hang with nothing in the network tab looking wrong.
+ *
+ * Identified by the relative script tags only Firebase's auth pages carry
+ * (iframe.js / handler.js). An earlier version looked for a gapi URL, which
+ * that page does not contain — it reported a working proxy as "unrecognised".
+ *
+ * Note this cannot see a protected preview: Vercel's SSO page answers instead.
+ * That is reported as such rather than as a failed proxy, since the two need
+ * completely different fixes. Use `vercel curl` for protected deployments.
  */
 async function probeProxy(origin) {
   const url = `${origin}/__/auth/iframe?apiKey=AIzaSyBvrcbWNBByF8OlD0_iJstZDYcZrKaBjYU`;
@@ -58,10 +66,17 @@ async function probeProxy(origin) {
   } catch (e) {
     return { ok: false, why: `request failed (${e.message})` };
   }
+  if (/vercel\.com\/(login|sso)/i.test(res.url) || /_vercel\/protection/i.test(body)) {
+    return {
+      ok: false,
+      why: 'Vercel Deployment Protection answered, not the app — re-check with:\n' +
+           `       vercel curl "${url}"`,
+    };
+  }
   if (!res.ok) return { ok: false, why: `HTTP ${res.status}` };
   if (/EdLight Academy/i.test(body)) return { ok: false, why: 'served the SPA shell — proxy not deployed' };
-  if (/apis\.google\.com|gapi/i.test(body)) return { ok: true, why: "Firebase's iframe page" };
-  return { ok: false, why: 'unrecognised response' };
+  if (/src="(iframe|handler)\.js"/i.test(body)) return { ok: true, why: "Firebase's auth iframe page" };
+  return { ok: false, why: `unrecognised response (${body.length} bytes)` };
 }
 
 async function main() {
