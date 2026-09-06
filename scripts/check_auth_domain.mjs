@@ -13,10 +13,14 @@
  * this script probes Google the way a real sign-in would, and refuses to give
  * the all-clear until the URI is actually registered.
  *
- *   node scripts/check_auth_domain.mjs
+ * There is a second precondition too: /__/auth/* must actually be proxied from
+ * our domain. If it is not, the SPA catch-all serves index.html there and the
+ * auth iframe silently loads the app's own shell instead of Firebase's handler.
  *
- * Read-only: it makes unauthenticated GETs to the consent endpoint and never
- * completes a sign-in.
+ *   node scripts/check_auth_domain.mjs
+ *   node scripts/check_auth_domain.mjs --origin https://<preview>.vercel.app
+ *
+ * Read-only: unauthenticated GETs only; it never completes a sign-in.
  */
 
 const CLIENT_ID = '618990331083-lq461c7uqjr6sk389qi1tarcdrgfcobj.apps.googleusercontent.com';
@@ -39,14 +43,42 @@ async function probe(redirectUri) {
   return 'unknown';
 }
 
+/**
+ * Is /__/auth/* proxied to Firebase at this origin, or is the SPA catch-all
+ * still swallowing it? Firebase's iframe page carries a gapi script tag; our
+ * shell carries the app's title. Telling them apart matters because both
+ * return 200 — a missing proxy fails silently, not loudly.
+ */
+async function probeProxy(origin) {
+  const url = `${origin}/__/auth/iframe?apiKey=AIzaSyBvrcbWNBByF8OlD0_iJstZDYcZrKaBjYU`;
+  let res, body;
+  try {
+    res = await fetch(url, { redirect: 'follow' });
+    body = await res.text();
+  } catch (e) {
+    return { ok: false, why: `request failed (${e.message})` };
+  }
+  if (!res.ok) return { ok: false, why: `HTTP ${res.status}` };
+  if (/EdLight Academy/i.test(body)) return { ok: false, why: 'served the SPA shell — proxy not deployed' };
+  if (/apis\.google\.com|gapi/i.test(body)) return { ok: true, why: "Firebase's iframe page" };
+  return { ok: false, why: 'unrecognised response' };
+}
+
 async function main() {
-  const [control, current, target] = await Promise.all([
-    probe(CONTROL), probe(CURRENT), probe(TARGET),
+  const originArg = process.argv.indexOf('--origin');
+  const origin = originArg > -1 ? process.argv[originArg + 1] : 'https://academy.edlight.org';
+
+  const [control, current, target, proxy] = await Promise.all([
+    probe(CONTROL), probe(CURRENT), probe(TARGET), probeProxy(origin),
   ]);
 
-  console.log(`  control (must be rejected) : ${control}`);
-  console.log(`  firebaseapp.com (current)  : ${current}`);
-  console.log(`  academy.edlight.org        : ${target}`);
+  console.log('1. OAuth redirect URI');
+  console.log(`     control (must be rejected) : ${control}`);
+  console.log(`     firebaseapp.com (current)  : ${current}`);
+  console.log(`     academy.edlight.org        : ${target}`);
+  console.log('');
+  console.log(`2. /__/auth/* proxy at ${origin}`);
+  console.log(`     ${proxy.ok ? 'ok' : 'FAILED'} — ${proxy.why}`);
   console.log('');
 
   if (control !== 'rejected' || current !== 'accepted') {
@@ -55,22 +87,30 @@ async function main() {
     process.exit(2);
   }
 
-  if (target === 'accepted') {
-    console.log('SAFE TO SWITCH.');
-    console.log('Set authDomain to "academy.edlight.org" in src/index.html');
-    console.log('(window.EDLIGHT_FIREBASE_CONFIG) and deploy.');
+  const problems = [];
+  if (target !== 'accepted') {
+    problems.push(
+      'Add this exact URI to the OAuth client\'s "Authorized redirect URIs":\n' +
+      `  ${TARGET}\n` +
+      '  https://console.cloud.google.com/apis/credentials?project=edlight-academy\n' +
+      `  → OAuth 2.0 Client IDs → the Web client (${CLIENT_ID.slice(0, 24)}…)`
+    );
+  }
+  if (!proxy.ok) {
+    problems.push(
+      `Deploy the vercel.json rewrite so ${origin}/__/auth/* reaches Firebase.\n` +
+      '  It is inert until authDomain points at it, so it is safe to ship first.\n' +
+      '  On a preview URL, re-run with --origin https://<preview>.vercel.app'
+    );
+  }
+
+  if (problems.length === 0) {
+    console.log('BOTH PRECONDITIONS MET — safe to point authDomain at academy.edlight.org.');
     process.exit(0);
   }
 
-  console.log('NOT SAFE YET — switching now would break every sign-in.');
-  console.log('');
-  console.log('Add this exact URI to the OAuth client\'s "Authorized redirect URIs":');
-  console.log(`  ${TARGET}`);
-  console.log('');
-  console.log('  https://console.cloud.google.com/apis/credentials?project=edlight-academy');
-  console.log(`  → OAuth 2.0 Client IDs → the Web client (${CLIENT_ID.slice(0, 24)}…)`);
-  console.log('');
-  console.log('Then re-run this script. Changes can take a few minutes to propagate.');
+  console.log('NOT SAFE YET — sign-in would break. Outstanding:\n');
+  problems.forEach((p, i) => console.log(`  (${i + 1}) ${p}\n`));
   process.exit(1);
 }
 
