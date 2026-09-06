@@ -16,6 +16,7 @@ import ReviewBanner from '../components/ReviewBanner';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
+import StreakRail from '../components/StreakRail';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
@@ -71,6 +72,15 @@ function levelToUrl(levelLabel) {
   if (s.includes('9')) return '9e';
   if (s.includes('univers')) return 'university';
   return '';
+}
+
+/** Bonjour before 18:00, Bonsoir after — students revise late, and being
+ *  greeted with "good morning" at 9pm is the kind of small wrongness that makes
+ *  software feel unattended. */
+function timeGreeting(isCreole) {
+  const h = new Date().getHours();
+  if (isCreole) return h < 18 ? 'Bonjou' : 'Bonswa';
+  return h < 18 ? 'Bonjour' : 'Bonsoir';
 }
 
 function formatShortDate(msOrDate, locale) {
@@ -221,6 +231,7 @@ export default function Dashboard() {
   const { myRank } = useLeaderboard(50);
 
   const firstName = getFirstName(user);
+  const greeting = timeGreeting(isCreole);
 
   if (!user?.uid && !isLoading) {
     return (
@@ -298,57 +309,95 @@ export default function Dashboard() {
           </h1>
         </header>
 
-        {/* ── Lead action: resume where you left off (Coursera's pattern) ──
-            Five separate blocks used to sit between the greeting and anything
-            a student could act on. This is now the first thing on the page. */}
-        {resume && (
-          <section className="dash-resume" aria-label={isCreole ? 'Kontinye' : 'Reprendre'}>
-            {subjectCover(resume.course.subject) ? (
-              <img
-                className="dash-resume__cover"
-                src={subjectCover(resume.course.subject)}
-                alt=""
-                loading="lazy"
-              />
-            ) : (
-              <span className="dash-resume__cover dash-resume__cover--glyph" aria-hidden="true">
-                <BookOpen size={28} strokeWidth={1.7} />
-              </span>
-            )}
-            <div className="dash-resume__body">
-              <span className="dash-resume__eyebrow">
-                {resume.isEnrolled
-                  ? (isCreole ? 'Kontinye kote ou te ye a' : 'Reprenez où vous en étiez')
-                  : (isCreole ? 'Kòmanse aprann' : 'Commencez à apprendre')}
-              </span>
-              <h2 className="dash-resume__title">{resume.course.name || resume.course.title}</h2>
-              {resume.isEnrolled && resume.total > 0 && (
-                <>
-                  <span className="dash-resume__bar" aria-hidden="true">
-                    <span style={{ width: `${resume.percent}%` }} />
-                  </span>
-                  <span className="dash-resume__meta">
-                    {progressLoading
-                      ? (isCreole ? 'Ap chaje…' : 'Chargement…')
-                      : (isCreole
-                        ? `${resume.percent}% · ${resume.remaining} leson rete`
-                        : `${resume.percent}% · ${resume.remaining} leçon${resume.remaining === 1 ? '' : 's'} restante${resume.remaining === 1 ? '' : 's'}`)}
-                  </span>
-                </>
+        {/* ── The one bold thing on the page ──────────────────────────────
+            A student opening this has exactly one question: what do I study
+            now? The focus card answers it and nothing else — course, where they
+            stopped, how much is left, one button. Everything below it is
+            deliberately quieter so this is what the eye lands on.
+            The streak sits beside it because it is the only thing here that
+            decays; together they say "do this, and don't break that". */}
+        <div className="dash-lead">
+          {resume ? (
+            <section className="dash-focus" aria-label={isCreole ? 'Kontinye' : 'Reprendre'}>
+              {subjectCover(resume.course.subject) && (
+                <img
+                  className="dash-focus__wash"
+                  src={subjectCover(resume.course.subject)}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  /* A broken cover leaves the mask's edge showing as a seam
+                     across the card. Better no artwork than a visible seam. */
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
               )}
-            </div>
-            <button
-              type="button"
-              className="button button--primary dash-resume__cta"
-              onClick={() => navigate(`/courses/${resume.course.id}`)}
-            >
-              <PlayCircle size={17} aria-hidden="true" />
-              {resume.isEnrolled
-                ? (isCreole ? 'Kontinye' : 'Continuer')
-                : (isCreole ? 'Kòmanse' : 'Commencer')}
-            </button>
-          </section>
-        )}
+              <div className="dash-focus__inner">
+                <h2 className="dash-focus__title">
+                  {resume.course.name || resume.course.title}
+                </h2>
+
+                {resume.isEnrolled && resume.total > 0 ? (
+                  <>
+                    <p className="dash-focus__sub">
+                      {progressLoading
+                        ? (isCreole ? 'Ap chaje…' : 'Chargement…')
+                        : (isCreole
+                          ? `${resume.remaining} leson rete`
+                          : `${resume.remaining} leçon${resume.remaining === 1 ? '' : 's'} restante${resume.remaining === 1 ? '' : 's'}`)}
+                    </p>
+                    <div className="dash-focus__progress">
+                      <span className="dash-focus__bar" aria-hidden="true">
+                        <span style={{ width: `${resume.percent}%` }} />
+                      </span>
+                      <span className="dash-focus__pct">{resume.percent}%</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="dash-focus__sub">
+                    {isCreole
+                      ? 'Ou poko kòmanse kou sa a.'
+                      : "Vous n'avez pas encore commencé ce cours."}
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  className="dash-focus__cta"
+                  onClick={() => navigate(`/courses/${resume.course.id}`)}
+                >
+                  <PlayCircle size={19} aria-hidden="true" />
+                  {resume.isEnrolled
+                    ? (isCreole ? 'Kontinye' : 'Reprendre')
+                    : (isCreole ? 'Kòmanse' : 'Commencer')}
+                </button>
+              </div>
+            </section>
+          ) : (
+            /* No course yet. An empty screen is an invitation, not a report. */
+            <section className="dash-focus dash-focus--start">
+              <div className="dash-focus__inner">
+                <h2 className="dash-focus__title">
+                  {isCreole ? 'Chwazi premye kou ou' : 'Choisissez votre premier cours'}
+                </h2>
+                <p className="dash-focus__sub">
+                  {isCreole
+                    ? 'Chimi, fizik, matematik ak ekonomi — tout ale ak pwogram ofisyèl la.'
+                    : 'Chimie, physique, mathématiques et économie — alignés sur le programme officiel.'}
+                </p>
+                <button
+                  type="button"
+                  className="dash-focus__cta"
+                  onClick={() => navigate('/courses')}
+                >
+                  <BookOpen size={18} aria-hidden="true" />
+                  {isCreole ? 'Gade katalòg la' : 'Explorer les cours'}
+                </button>
+              </div>
+            </section>
+          )}
+
+          <StreakRail />
+        </div>
 
         {/* ── "What's next" region ──
             Three components that all answer the same question used to stack as

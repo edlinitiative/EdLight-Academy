@@ -401,11 +401,14 @@ button.dash-activity__tag { cursor: pointer; }
 .dash-activity__tag--neutral { background: color-mix(in srgb, var(--primary-500) 12%, transparent); color: var(--primary-600); }
 
 /* ---------- Empty states (compact) ---------- */
+/* A dashed outline says "nothing has been built here yet". These panels are
+   working correctly — the student simply hasn't started. Solid, quiet, and
+   ending in an action. */
 .dash-empty {
-  display: grid; gap: 0.85rem; justify-items: start;
-  padding: 1.25rem;
+  display: grid; gap: 0.9rem; justify-items: start;
+  padding: 1.4rem 1.25rem;
   border-radius: 14px;
-  border: 1.5px dashed color-mix(in srgb, var(--dash-accent) 28%, var(--border));
+  border: 0;
   background: var(--surface-muted);
   color: var(--text-500);
   line-height: 1.55;
@@ -546,7 +549,10 @@ button.dash-activity__tag { cursor: pointer; }
 }
 .dash--st .dash__status-sep { color: var(--st-line-strong); }
 
-/* Heading — chunky editorial grotesque; NAME gets a highlighter swatch. */
+/* Heading — chunky editorial grotesque. The name used to sit inside a
+   highlighter swatch left over from the retired neo-brutalist layer: it read as
+   a stray rectangle, and its side padding pushed the full stop away from the
+   name ("EdLight ."). The name now carries emphasis with colour alone. */
 .dash--st .dash__title {
   font-family: var(--st-editorial) !important;
   font-weight: 700; letter-spacing: -0.03em; font-size: clamp(28px, 4.4vw, 46px);
@@ -555,12 +561,9 @@ button.dash-activity__tag { cursor: pointer; }
 .dash--st .dash__title b {
   font-weight: 700;
   color: var(--st-highlight-ink);
-  background: var(--st-highlight);
+  background: none;
   -webkit-text-fill-color: var(--st-highlight-ink); /* cancel any global gradient-clip */
-  padding: 0 0.22em;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  border-radius: 2px;
+  padding: 0;
 }
 .dash--st .dash__subtitle { color: var(--st-muted); }
 
@@ -595,18 +598,31 @@ button.dash-activity__tag { cursor: pointer; }
 }
 .dash--st .dash-kpi:hover { transform: translateY(-2px); }
 
-/* Panel + KPI micro-labels → monospace */
-.dash--st .dash-panel__title,
-.dash--st .dash-kpi__label {
-  font-family: var(--st-mono); text-transform: uppercase; letter-spacing: 0.08em;
-  font-size: 11px; color: var(--st-muted); font-weight: 500;
+/* Section headings read as headings, in the page's own voice.
+   These used to be tracked-out uppercase monospace ("CONTINUER
+   L'APPRENTISSAGE", "QUIZ", "EXAMENS"). Stacked six deep it read as system
+   chrome rather than as someone's study page, and it shouted louder than the
+   course names underneath it. Sentence case, one family, real size. */
+.dash--st .dash-panel__title {
+  font-family: var(--st-editorial);
+  text-transform: none;
+  letter-spacing: -0.012em;
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--st-ink);
 }
-.dash--st .dash-panel__title { font-size: 12px; color: var(--st-ink-2); }
 .dash--st .dash-panel__title svg { color: var(--st-accent); }
-.dash--st .dash-panel__link { font-family: var(--st-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--st-accent); }
+.dash--st .dash-kpi__label {
+  text-transform: none; letter-spacing: 0;
+  font-size: 12.5px; color: var(--st-muted); font-weight: 500;
+}
+.dash--st .dash-panel__link {
+  font-family: inherit; font-size: 13.5px; font-weight: 600;
+  letter-spacing: 0; color: var(--st-accent);
+}
 .dash--st .dash-panel__count {
-  font-family: var(--st-mono); font-size: 10px; background: var(--st-line);
-  color: var(--st-muted); border-radius: 3px; padding: 1px 6px;
+  font-size: 12px; font-weight: 600; background: var(--st-accent-tint);
+  color: var(--st-accent-600); border-radius: 999px; padding: 2px 9px;
 }
 
 /* KPI values → big tabular grotesque */
@@ -695,4 +711,146 @@ button.dash-activity__tag { cursor: pointer; }
 .dash--st .dash__tiles { margin: clamp(1.5rem, 3vw, 2.25rem) 0 0; }
 @media (max-width: 900px) {
   .dash--st .dash__hero { grid-template-columns: 1fr; }
+}
+
+
+/* ── Lead: focus card + streak ──────────────────────────────────────────────
+   The dashboard's whole job is answering "what do I study now?". The lead row
+   answers it (focus) and states what's at stake (streak). Every surface below
+   is intentionally flatter so this row wins the page. */
+
+.dash--st .dash__greet {
+  margin: 0 0 18px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--st-muted);
+}
+
+.dash-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(260px, 1fr);
+  gap: 16px;
+  margin: 0 0 18px;
+  align-items: stretch;
+}
+
+/* The focus card is the only surface on the page allowed real depth. */
+.dash-focus {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--st-surface, #fff);
+  box-shadow: var(--st-shadow-hero);
+  min-height: 210px;
+  display: flex;
+}
+
+/* The subject artwork is atmosphere, not a thumbnail. As a 100px chip beside
+   the text it just made the card look like a file listing; bled to the edge and
+   faded out, it gives the card its subject without competing with the title. */
+.dash-focus__wash {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 46%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 62%);
+  mask-image: linear-gradient(to right, transparent, #000 62%);
+}
+
+.dash-focus__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 30px;
+  max-width: 32rem;
+}
+
+.dash-focus__title {
+  margin: 0;
+  font-family: var(--st-editorial);
+  font-size: clamp(24px, 2.6vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  color: var(--st-ink);
+  text-wrap: balance;
+}
+
+.dash-focus__sub {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--st-muted);
+}
+
+.dash-focus__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 22rem);
+  margin-top: 2px;
+}
+.dash-focus__bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--st-accent) 14%, transparent);
+  overflow: hidden;
+}
+.dash-focus__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--st-accent);
+}
+.dash-focus__pct {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--st-ink);
+}
+
+.dash-focus__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 13px 24px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--st-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--primary-700), 0 8px 18px -8px rgba(27, 111, 224, 0.7);
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.dash-focus__cta:hover { background: var(--st-accent-600); }
+.dash-focus__cta:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 var(--primary-700), 0 4px 10px -6px rgba(27, 111, 224, 0.7);
+}
+.dash-focus__cta:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--st-accent) 45%, transparent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .dash-lead { grid-template-columns: 1fr; }
+  .dash-focus { min-height: 0; }
+  .dash-focus__inner { padding: 22px 20px; max-width: none; }
+  .dash-focus__wash { width: 100%; opacity: 0.16;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 140%);
+    mask-image: linear-gradient(to bottom, transparent, #000 140%); }
+  .dash-focus__cta { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-focus__cta { transition: none; }
 }
