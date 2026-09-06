@@ -56,6 +56,17 @@
   <script>
     window.EDLIGHT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyBvrcbWNBByF8OlD0_iJstZDYcZrKaBjYU",
+      // Sign-in loads Firebase's auth iframe from this domain. Pointing it at
+      // academy.edlight.org removes a cold third origin from the critical path
+      // (measured: 1790ms to load that iframe on a FAST connection).
+      //
+      // Two things must both be true before changing this, in this order:
+      //   1. vercel.json proxies /__/auth/* to firebaseapp.com  [done]
+      //   2. https://academy.edlight.org/__/auth/handler is an Authorized
+      //      redirect URI on the OAuth client                   [NOT done]
+      // Identity Toolkit derives redirect_uri from whichever domain asks, so
+      // flipping this before (2) breaks EVERY sign-in with redirect_uri_mismatch.
+      // Verify with: node scripts/check_auth_domain.mjs
       authDomain: "edlight-academy.firebaseapp.com",
       projectId: "edlight-academy",
       storageBucket: "edlight-academy.firebasestorage.app",
