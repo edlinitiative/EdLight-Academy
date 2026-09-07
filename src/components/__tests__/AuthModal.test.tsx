@@ -15,6 +15,7 @@ jest.mock('../../services/authService', () => ({
   registerWithEmailPassword: jest.fn(),
   loginWithGoogle: jest.fn(),
   sendPasswordReset: jest.fn(),
+  warmAuth: jest.fn(),
 }));
 jest.mock('../../hooks/useBodyScrollLock', () => ({ useBodyScrollLock: () => {} }));
 jest.mock('../../hooks/useFocusTrap', () => ({ useFocusTrap: () => {} }));

@@ -5,6 +5,9 @@ import { TRACKS } from '../config/trackConfig';
 
 const clampNumber = (v) => (Number.isFinite(v) ? v : null);
 
+/** Below this, a student count reads as "nobody is here" and is better hidden. */
+const MIN_STUDENTS_SHOWN = 50;
+
 const formatCompact = (n) => {
   if (!Number.isFinite(n)) return '';
   // Keep simple and predictable (no i18n surprises): 1,234
@@ -51,8 +54,14 @@ function buildCards({ counts }) {
 
   // Labels are French (default UI language) with a Creole variant; the app
   // never renders English UI, so no English labels here.
-  // Students: only show once >= 1000
-  if (Number.isFinite(counts.activeStudentsThisTerm) && counts.activeStudentsThisTerm >= 1000) {
+  //
+  // Students: the floor used to be 1000, which meant the count never appeared
+  // at all and the site showed a warehouse of content with no sign that anyone
+  // was in it. A real, modest number of people is more persuasive to a student
+  // choosing where to revise than any inventory figure — EdLight Code leads
+  // with "200+ learners" on a comparable base. The floor now only guards
+  // against a number so small it reads as empty.
+  if (Number.isFinite(counts.activeStudentsThisTerm) && counts.activeStudentsThisTerm >= MIN_STUDENTS_SHOWN) {
     cards.push({
       key: 'students',
       label: 'Élèves actifs',
@@ -108,4 +117,40 @@ export function useSiteStatCards() {
     counts: q.data?.counts,
     masteryRatePercent: q.data?.masteryRatePercent,
   };
+}
+
+
+/**
+ * Just the headline student count, from a single document read.
+ *
+ * `useSiteStatCards` costs three `getCountFromServer` aggregations plus a doc
+ * read — fine on /about, wasteful on the landing page, which is the first thing
+ * a student loads on a slow Haitian connection and the page whose job is to
+ * convert. This is one `getDoc` for the one number the hero actually needs.
+ *
+ * Returns `{ activeStudentsThisTerm: null }` on failure so callers fall back to
+ * their static copy rather than showing a gap.
+ */
+export function useSiteHeadlineStats() {
+  const q = useQuery({
+    queryKey: ['siteStats', 'headline'],
+    queryFn: async () => {
+      const snap = await getDoc(doc(db, 'siteStats', 'public'));
+      const data = snap.exists() ? snap.data() : {};
+      const students = clampNumber(data.active_students_term);
+      return {
+        activeStudentsThisTerm:
+          Number.isFinite(students) && (students as number) >= MIN_STUDENTS_SHOWN ? students : null,
+        // The same document already carries the true exam count, kept current by
+        // scripts/update_site_stats.mjs. Reading it here costs nothing and stops
+        // the hero quoting a hardcoded figure that has drifted from the catalogue.
+        exams: clampNumber(data.exams),
+      };
+    },
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    retry: 1,
+  });
+
+  return q.data ?? { activeStudentsThisTerm: null, exams: null };
 }

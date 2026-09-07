@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Flame, Sparkles } from 'lucide-react';
 import { ArrowIcon, getStats, TFn } from './content';
+import HeroSignup from './HeroSignup';
+import useStore from '../../contexts/store';
+import { useSiteHeadlineStats } from '../../hooks/useSiteStats';
 
 export default function HeroSection({ t }: { t: TFn }) {
   const navigate = useNavigate();
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
   const [heroSrc, setHeroSrc] = useState('/assets/landing-hero.webp');
-  const stats = getStats(t);
+  // One document read for the student count; the rest of the row is static
+  // copy that renders immediately, so nothing here waits on Firestore.
+  const live = useSiteHeadlineStats();
+  const stats = getStats(t, live);
 
   return (
     <section className="lp-hero">
@@ -31,10 +38,16 @@ export default function HeroSection({ t }: { t: TFn }) {
               )}
             </p>
 
+            {/* Signed out, the sign-up card beside this is the primary action,
+                so these step down to secondary — two competing primaries just
+                split the click. */}
             <div className="lp-hero__actions">
-              <button className="lp-btn lp-btn--primary" onClick={() => navigate('/courses')}>
+              <button
+                className={isAuthenticated ? 'lp-btn lp-btn--primary' : 'lp-btn lp-btn--ghost'}
+                onClick={() => navigate('/courses')}
+              >
                 <span>{t('Explorer les cours', 'Eksplore kou yo')}</span>
-                <ArrowIcon />
+                {isAuthenticated && <ArrowIcon />}
               </button>
               <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/exams')}>
                 {t('Passer un examen blanc', 'Pase yon egzamen blan')}
@@ -55,6 +68,15 @@ export default function HeroSection({ t }: { t: TFn }) {
             </div>
           </div>
 
+          {/* Signed out, the hero's job is to open an account — everything the
+              product does to bring a student back (progress, streak, revision,
+              reminders) needs one. Signed in, there is nothing to ask for, so
+              the artwork stays. */}
+          {!isAuthenticated ? (
+            <div className="lp-hero__visual lp-hero__visual--signup">
+              <HeroSignup t={t} />
+            </div>
+          ) : (
           <div className="lp-hero__visual">
             <div className="lp-hero__glow" aria-hidden="true" />
             <div className="lp-hero__frame hatch-frame">
@@ -90,6 +112,7 @@ export default function HeroSection({ t }: { t: TFn }) {
               </span>
             </div>
           </div>
+          )}
         </div>
 
         <div className="lp-hero__stats" data-reveal>

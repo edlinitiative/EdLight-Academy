@@ -40,12 +40,38 @@
        @font-face lives in index.css; this preload just starts the fetch early. -->
   <link rel="preload" as="font" type="font/woff2" crossorigin
     href="/assets/fonts/SourceSans3-latin.woff2">
+  <!-- Sign-in latency: Firebase's popup resolver must load gapi from
+       apis.google.com and boot an auth iframe BEFORE it can open the Google
+       popup — measured at ~800ms to popup and ~2.5s to a usable handshake on a
+       fast link, far worse on Haitian mobile. Warming DNS + TLS for those
+       origins here removes ~2 round-trips each from the very first click.
+       firebaseapp.com is deliberately absent: the auth iframe is served from
+       our own origin now (see authDomain below), so the browser never connects
+       there and preconnecting would be a wasted handshake on every page. -->
+  <link rel="preconnect" href="https://apis.google.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
   <title>EdLight Academy</title>
   <!-- Firebase config at runtime (replace with your real project values) -->
   <script>
     window.EDLIGHT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyBvrcbWNBByF8OlD0_iJstZDYcZrKaBjYU",
-      authDomain: "edlight-academy.firebaseapp.com",
+      // Sign-in's auth iframe and handler load from this domain, and it is now
+      // our own: vercel.json proxies /__/auth/* to edlight-academy.firebaseapp
+      // .com. That keeps the browser on one origin it already holds a warm
+      // connection to, instead of paying DNS + TLS + a cold fetch on a third
+      // one (measured at 1790ms for that iframe on a FAST connection).
+      //
+      // Moving this in either direction requires BOTH to hold:
+      //   1. vercel.json proxies /__/auth/* — otherwise the SPA catch-all
+      //      serves index.html there, HTTP 200, and sign-in hangs silently
+      //   2. <origin>/__/auth/handler is an Authorized redirect URI on the
+      //      OAuth client — Identity Toolkit derives redirect_uri from
+      //      whichever domain asks, so a mismatch breaks EVERY sign-in
+      // Both are checked by: node scripts/check_auth_domain.mjs
+      // Rollback is this one line, back to edlight-academy.firebaseapp.com.
+      authDomain: "academy.edlight.org",
       projectId: "edlight-academy",
       storageBucket: "edlight-academy.firebasestorage.app",
       messagingSenderId: "618990331083",

@@ -70,6 +70,39 @@ export async function signUp(email, password, name) {
 }
 
 /**
+ * Pre-boot the popup sign-in machinery.
+ *
+ * `signInWithPopup` cannot open anything until Firebase's popup resolver has
+ * fetched gapi from apis.google.com and booted an iframe on the firebaseapp.com
+ * auth domain. Measured on a fast connection: gapi at +53ms (522ms to load),
+ * the auth iframe at +771ms (1790ms to load), popup at +807ms. On the mobile
+ * connections most students are on, that is the bulk of "Google login is slow".
+ *
+ * `getRedirectResult` initialises exactly that resolver and then resolves null,
+ * because this app only ever signs in by popup — there is never a pending
+ * redirect for it to consume. Calling it on hover moves the whole handshake off
+ * the click.
+ *
+ * Never throws, and never blocks: a failed warm-up just means the next click
+ * pays the original cost.
+ */
+let warmed = false;
+export async function warmGoogleAuth() {
+  if (warmed) return;
+  warmed = true;
+  try {
+    // Don't spend a student's data plan on a click that may not come.
+    const conn = (navigator as any)?.connection;
+    if (conn?.saveData) return;
+
+    const { getRedirectResult, browserPopupRedirectResolver } = await import('firebase/auth');
+    await getRedirectResult(auth, browserPopupRedirectResolver);
+  } catch {
+    // Warming is best-effort by definition.
+  }
+}
+
+/**
  * Sign in with Google
  */
 export async function signInWithGoogle() {
@@ -139,50 +172,57 @@ export async function authedFetch(url: string, body: unknown): Promise<Response>
 }
 
 /**
- * Create or update user document in Firestore
+ * Write the user document, with the create-vs-touch decision supplied by the
+ * caller.
+ *
+ * `upsertUserDocument` has to spend a Firestore round-trip discovering whether
+ * the document exists. A caller that has *just read the profile* already knows,
+ * and on a high-latency connection that redundant read is a second or more of
+ * a student staring at a spinner. Sign-in passes the answer in instead.
+ *
+ * `create: true` writes the full document (no merge) and must only be used when
+ * the document is known to be absent — it would otherwise clobber a real
+ * profile. `create: false` merges only the fields that can drift.
+ */
+export async function writeUserDocument(user, { create }: { create: boolean }) {
+  const userRef = doc(db, 'users', user.uid);
+
+  if (create) {
+    await setDoc(userRef, {
+      created_at: serverTimestamp(),
+      email: user.email || '',
+      enrollment: '',
+      track: '',
+      full_name: user.displayName || '',
+      last_seen: serverTimestamp(),
+      onboarding_completed: false,
+      profile_picture: user.photoURL || ''
+    });
+    return;
+  }
+
+  await setDoc(userRef, {
+    last_seen: serverTimestamp(),
+    email: user.email || '',
+    full_name: user.displayName || '',
+    profile_picture: user.photoURL || ''
+  }, { merge: true });
+}
+
+/**
+ * Create or update user document in Firestore.
+ *
+ * Costs an extra read to decide create-vs-touch. Prefer `writeUserDocument`
+ * where the caller already knows whether the document exists.
  */
 export async function upsertUserDocument(user, isNewUser = false) {
   try {
-    const userRef = doc(db, 'users', user.uid);
-    
     if (isNewUser) {
-      // Create new user document
-      await setDoc(userRef, {
-        created_at: serverTimestamp(),
-        email: user.email || '',
-        enrollment: '',
-        track: '',
-        full_name: user.displayName || '',
-        last_seen: serverTimestamp(),
-        onboarding_completed: false,
-        profile_picture: user.photoURL || ''
-      });
-    } else {
-      // Check if user document exists
-      const userDoc = await getDoc(userRef);
-      
-      if (!userDoc.exists()) {
-        // Create if doesn't exist
-        await setDoc(userRef, {
-          created_at: serverTimestamp(),
-          email: user.email || '',
-          enrollment: '',
-          track: '',
-          full_name: user.displayName || '',
-          last_seen: serverTimestamp(),
-          onboarding_completed: false,
-          profile_picture: user.photoURL || ''
-        });
-      } else {
-        // Update last_seen and other fields that might have changed
-        await setDoc(userRef, {
-          last_seen: serverTimestamp(),
-          email: user.email || '',
-          full_name: user.displayName || '',
-          profile_picture: user.photoURL || ''
-        }, { merge: true });
-      }
+      await writeUserDocument(user, { create: true });
+      return;
     }
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    await writeUserDocument(user, { create: !userDoc.exists() });
   } catch (error) {
     console.error('Error upserting user document:', error);
     throw error;

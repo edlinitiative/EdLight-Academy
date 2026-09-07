@@ -28,6 +28,10 @@
   ],
   "rewrites": [
     {
+      "source": "/__/auth/(.*)",
+      "destination": "https://edlight-academy.firebaseapp.com/__/auth/$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },

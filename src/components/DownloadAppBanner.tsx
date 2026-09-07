@@ -47,7 +47,25 @@ export default function DownloadAppBanner() {
 
   useEffect(() => {
     if (isStandalone() || wasDismissed()) return;
-    setPlatform(getMobilePlatform());
+    const p = getMobilePlatform();
+    setPlatform(p);
+
+    // The desktop card is a floating panel in the bottom-right corner, and on
+    // the landing page that is exactly where the sign-up card sits — so on a
+    // first visit it covered the one action the page exists to get. Asking
+    // someone to install the app before they have an account is also the wrong
+    // order. Hold it until they've scrolled past the hero and shown interest.
+    if (p === null) {
+      const reveal = () => {
+        if (window.scrollY < window.innerHeight * 0.9) return;
+        setVisible(true);
+        window.removeEventListener('scroll', reveal);
+      };
+      window.addEventListener('scroll', reveal, { passive: true });
+      reveal(); // deep-linked mid-page: no scroll event is coming
+      return () => window.removeEventListener('scroll', reveal);
+    }
+
     setVisible(true);
   }, []);
 
