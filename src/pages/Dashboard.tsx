@@ -300,13 +300,13 @@ export default function Dashboard() {
       {/* One-time grade prompt — self-gates on hydrated + signed-in + !gradeChosen */}
       <WelcomeGradeModal />
       <div className="container dash dash--st">
-        {/* Greeting — one quiet line. The action below is the headline, not
-            this; the old version paired it with an "Explorer le catalogue"
-            button that duplicated the courses panel's own "Tous les cours". */}
+        {/* Greeting — one quiet line, sentence-size. It used to be a 46px
+            display heading that filled a third of the first screen to tell the
+            student their own name. The focus card below is the headline now. */}
         <header className="dash__header">
-          <h1 className="dash__title">
-            {isCreole ? 'Bonjou, ' : 'Bonjour, '}<b>{firstName || (isCreole ? 'zanmi' : 'à vous')}</b>.
-          </h1>
+          <p className="dash__greet">
+            {greeting}, {firstName || (isCreole ? 'zanmi' : 'à vous')}.
+          </p>
         </header>
 
         {/* ── The one bold thing on the page ──────────────────────────────

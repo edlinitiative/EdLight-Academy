@@ -82,6 +82,37 @@ function streakRef(db, doc, uid) {
 // ─── Public API ─────────────────────────────────────────────────────────────
 
 /**
+ * A streak only survives while it is being fed, so expire it on read.
+ *
+ * `currentStreak` is stored, and only ever recomputed inside recordActivity —
+ * which runs when a student *does* something. Stop coming back and nothing
+ * recalculates, so the stored number stands forever: a real account showed
+ * `currentStreak: 3` with `lastActivityDate: 2026-07-28`, forty days stale.
+ * The navbar badge had been reporting that 3 the whole time, and the dashboard
+ * streak rail made the contradiction plain — "3 jours" beside a week of empty
+ * days. A streak you cannot lose is not a streak.
+ *
+ * Kept deliberately consistent with recordActivity's own continuity rules:
+ * today or yesterday is alive; a two-day gap is alive only while a freeze is
+ * available to bridge it (recordActivity spends the freeze); anything more is
+ * gone. `longestStreak` is history and never decays.
+ *
+ * Display-only — nothing is written back. recordActivity's arithmetic is
+ * unaffected: for every case this zeroes, it takes the "streak broken" branch
+ * and resets to 1 regardless.
+ */
+export function decayStreak(streak, today = todayStr()) {
+  const last = streak?.lastActivityDate;
+  if (!last || !streak?.currentStreak) return streak;
+
+  const gap = daysBetween(last, today);
+  if (gap <= 1) return streak;
+  if (gap === 2 && (streak.streakFreezes || 0) > 0) return streak;
+
+  return { ...streak, currentStreak: 0 };
+}
+
+/**
  * Load the user's global streak data.
  * Returns a default object if none exists yet.
  */
@@ -91,7 +122,7 @@ export async function loadStreak(uid) {
     const { db, doc, getDoc } = await loadFirestore();
     const snap = await getDoc(streakRef(db, doc, uid));
     if (!snap.exists()) return defaultStreak();
-    return { ...defaultStreak(), ...(snap.data() as Record<string, unknown>) };
+    return decayStreak({ ...defaultStreak(), ...(snap.data() as Record<string, unknown>) });
   } catch (err) {
     console.error('[Streak] loadStreak error:', err);
     return defaultStreak();
