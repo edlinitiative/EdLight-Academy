@@ -9,6 +9,7 @@ import { sessionRowName } from '../utils/examNaming';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useStreak } from '../hooks/useStreak';
 import DashHeroStrip from '../components/DashHeroStrip';
 import useStore from '../contexts/store';
 import SmartSuggestion from '../components/SmartSuggestion';
@@ -223,10 +224,13 @@ export default function Dashboard() {
     return { inProgress, submitted, lastMs };
   }, [recentExamAttempts]);
 
-  const currentStreak = React.useMemo(
-    () => (allProgress || []).reduce((m, p) => Math.max(m, p?.currentStreak || 0), 0),
-    [allProgress]
-  );
+  // The global streak — the same source the navbar badge and the streak rail
+  // read. This tile used to take the highest per-course streak out of
+  // allProgress instead, so the page showed two different numbers under the
+  // same word: a per-course figure here and the cross-course one beside the
+  // focus card. streaks/global is what "Série" means everywhere else.
+  const { streak: globalStreak } = useStreak();
+  const currentStreak = globalStreak?.currentStreak || 0;
 
   const { myRank } = useLeaderboard(50);
 

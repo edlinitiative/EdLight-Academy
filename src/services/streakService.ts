@@ -20,6 +20,10 @@
  * }
  */
 
+// The liveness rule is shared with the server (reminder e-mails) so the two
+// cannot disagree about whether a student's streak is still going.
+import { liveStreakCount } from '../../shared/streakLife';
+
 // Firebase is imported DYNAMICALLY so the streak widget (rendered eagerly in
 // the navbar/layout) never pulls the ~600 KB Firestore SDK into the initial
 // bundle. It downloads on the first streak read/write for a signed-in user.
@@ -92,24 +96,18 @@ function streakRef(db, doc, uid) {
  * streak rail made the contradiction plain — "3 jours" beside a week of empty
  * days. A streak you cannot lose is not a streak.
  *
- * Kept deliberately consistent with recordActivity's own continuity rules:
- * today or yesterday is alive; a two-day gap is alive only while a freeze is
- * available to bridge it (recordActivity spends the freeze); anything more is
- * gone. `longestStreak` is history and never decays.
+ * The liveness rule itself lives in shared/streakLife so the server-side
+ * reminder e-mails cannot drift from it — they had their own copy that used UTC
+ * dates and ignored freezes, which disagreed with this one.
  *
  * Display-only — nothing is written back. recordActivity's arithmetic is
  * unaffected: for every case this zeroes, it takes the "streak broken" branch
  * and resets to 1 regardless.
  */
-export function decayStreak(streak, today = todayStr()) {
-  const last = streak?.lastActivityDate;
-  if (!last || !streak?.currentStreak) return streak;
-
-  const gap = daysBetween(last, today);
-  if (gap <= 1) return streak;
-  if (gap === 2 && (streak.streakFreezes || 0) > 0) return streak;
-
-  return { ...streak, currentStreak: 0 };
+export function decayStreak(streak, now = new Date()) {
+  if (!streak) return streak;
+  const live = liveStreakCount(streak, now);
+  return live === streak.currentStreak ? streak : { ...streak, currentStreak: live };
 }
 
 /**

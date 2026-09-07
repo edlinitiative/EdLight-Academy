@@ -12,6 +12,7 @@
  */
 import type { Firestore } from 'firebase-admin/firestore';
 import type { ReminderPersonalization } from './reminderEmail';
+import { liveStreakCount } from '../../shared/streakLife';
 
 /** First word of a display name — "Ted Jacquet" → "Ted". */
 export function firstNameOf(displayName?: string | null): string | null {
@@ -22,15 +23,26 @@ export function firstNameOf(displayName?: string | null): string | null {
 /**
  * A streak only counts if it is alive — the doc keeps its last value forever,
  * so a `currentStreak: 7` from March must not greet a student in August.
- * Alive = last activity today or yesterday (date-string comparison; the app
- * stores `lastActivityDate` as YYYY-MM-DD).
+ *
+ * Delegates to shared/streakLife, which the web app also uses. This function
+ * used to carry its own rule and it disagreed with the app's in two ways:
+ * it compared UTC dates (Haiti is UTC-5, so through the evening a student who
+ * studied yesterday read as two days stale and their live streak was declared
+ * dead), and it ignored streak freezes that the app counts as bridging a gap.
+ * An e-mail telling a student their streak had ended while the app showed it
+ * running is worse than sending nothing.
+ *
+ * Returns null rather than 0 for a dead streak — callers use it to decide
+ * whether to mention the streak at all.
  */
-export function aliveStreak(currentStreak: unknown, lastActivityDate: unknown, now: Date): number | null {
-  const n = typeof currentStreak === 'number' ? currentStreak : 0;
-  if (n <= 0 || typeof lastActivityDate !== 'string') return null;
-  const today = now.toISOString().slice(0, 10);
-  const yesterday = new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10);
-  return lastActivityDate === today || lastActivityDate === yesterday ? n : null;
+export function aliveStreak(
+  currentStreak: unknown,
+  lastActivityDate: unknown,
+  now: Date,
+  streakFreezes?: unknown,
+): number | null {
+  const live = liveStreakCount({ currentStreak, lastActivityDate, streakFreezes }, now);
+  return live > 0 ? live : null;
 }
 
 /** Count lessons confirmed on a chapter test in the mastery map. */
@@ -70,7 +82,7 @@ export async function loadEmailPersonalization(
     ]);
 
     const streak = streakSnap.exists ? streakSnap.data() ?? {} : {};
-    p.streakDays = aliveStreak(streak.currentStreak, streak.lastActivityDate, new Date());
+    p.streakDays = aliveStreak(streak.currentStreak, streak.lastActivityDate, new Date(), streak.streakFreezes);
     p.masteredCount = countMastered(masterySnap.exists ? masterySnap.data()?.lessons : null);
     p.dueReviewCount = countDueReview(reviewSnap.exists ? reviewSnap.data()?.questions : null);
   } catch (err) {

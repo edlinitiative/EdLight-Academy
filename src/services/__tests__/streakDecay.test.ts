@@ -1,10 +1,10 @@
 import { decayStreak } from '../streakService';
 
 /**
- * A streak that cannot be lost is not a streak. currentStreak is only ever
- * recomputed by recordActivity, so without expiry-on-read a stored value
- * survives indefinitely — a real account read `currentStreak: 3` forty days
- * after its last activity.
+ * decayStreak is the thin wrapper loadStreak applies on read. The liveness rule
+ * itself is shared with the server and covered by streakLifeParity; what
+ * matters here is that the wrapper only ever rewrites currentStreak and leaves
+ * the rest of the document alone.
  */
 const base = {
   currentStreak: 3,
@@ -12,51 +12,53 @@ const base = {
   lastActivityDate: '2026-09-04',
   activeDays: ['2026-09-02', '2026-09-03', '2026-09-04'],
   frozenDays: [],
-  milestones: [],
+  milestones: ['streak_3'],
   streakFreezes: 0,
   totalActiveDays: 3,
 };
 
+const at = (iso: string) => new Date(iso);
+
 describe('decayStreak', () => {
-  it('keeps a streak fed today', () => {
-    expect(decayStreak(base, '2026-09-04').currentStreak).toBe(3);
+  it('leaves a live streak untouched, same object identity', () => {
+    const live = decayStreak(base, at('2026-09-05T10:00:00'));
+    expect(live).toBe(base);
   });
 
-  it('keeps a streak fed yesterday — today can still extend it', () => {
-    expect(decayStreak(base, '2026-09-05').currentStreak).toBe(3);
+  it('zeroes a dead streak', () => {
+    expect(decayStreak(base, at('2026-09-06T10:00:00')).currentStreak).toBe(0);
   });
 
-  it('expires a streak after two clear days with no freeze', () => {
-    expect(decayStreak(base, '2026-09-06').currentStreak).toBe(0);
-  });
-
-  it('bridges a two-day gap while a freeze is available', () => {
-    // recordActivity spends a freeze for exactly this gap, so reporting the
-    // streak as alive is what the student will actually get.
-    const withFreeze = { ...base, streakFreezes: 1 };
-    expect(decayStreak(withFreeze, '2026-09-06').currentStreak).toBe(3);
-  });
-
-  it('expires anyway once the gap outgrows what one freeze can bridge', () => {
-    const withFreeze = { ...base, streakFreezes: 1 };
-    expect(decayStreak(withFreeze, '2026-09-07').currentStreak).toBe(0);
-  });
-
-  it('reproduces the live stale case: 3 days, last activity 40 days ago', () => {
+  it('reproduces the live stale case: 3 days, last activity 40 days earlier', () => {
     const stale = { ...base, lastActivityDate: '2026-07-28' };
-    expect(decayStreak(stale, '2026-09-06').currentStreak).toBe(0);
+    expect(decayStreak(stale, at('2026-09-06T10:00:00')).currentStreak).toBe(0);
   });
 
-  it('never touches longestStreak — that is history, not a live count', () => {
-    expect(decayStreak(base, '2026-10-01').longestStreak).toBe(7);
+  it('preserves every other field when it expires the count', () => {
+    const dead = decayStreak(base, at('2026-10-01T10:00:00'));
+    // longestStreak is history; activeDays and frozenDays still feed the weekly
+    // view and the heatmap, which must keep showing what really happened.
+    expect(dead.longestStreak).toBe(7);
+    expect(dead.activeDays).toEqual(base.activeDays);
+    expect(dead.frozenDays).toEqual(base.frozenDays);
+    expect(dead.milestones).toEqual(base.milestones);
+    expect(dead.totalActiveDays).toBe(3);
+    expect(dead.lastActivityDate).toBe('2026-09-04');
   });
 
-  it('leaves activeDays alone so the weekly view still shows real history', () => {
-    expect(decayStreak(base, '2026-10-01').activeDays).toEqual(base.activeDays);
+  it('does not mutate the document it was given', () => {
+    const copy = { ...base };
+    decayStreak(copy, at('2026-10-01T10:00:00'));
+    expect(copy.currentStreak).toBe(3);
+  });
+
+  it('passes a nullish document straight through', () => {
+    expect(decayStreak(null)).toBeNull();
+    expect(decayStreak(undefined)).toBeUndefined();
   });
 
   it('passes through an account that has never recorded anything', () => {
     const fresh = { ...base, currentStreak: 0, lastActivityDate: null };
-    expect(decayStreak(fresh, '2026-09-06').currentStreak).toBe(0);
+    expect(decayStreak(fresh, at('2026-09-06T10:00:00')).currentStreak).toBe(0);
   });
 });
