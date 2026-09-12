@@ -27,6 +27,7 @@
  * `?dryRun=1` returns the full plan without sending or stamping anything.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { Firestore } from 'firebase-admin/firestore';
 import { getDb, getAuthAdmin, isAdminConfigured } from './_lib/firebaseAdmin';
 import { sendPushToUser, isPushConfigured } from './_lib/push';
 import { sendExpoPushToUser } from './_lib/expoPush';
@@ -75,7 +76,8 @@ export interface CandidateUser {
   lastReengagementEmailMs: number | null;
 }
 
-export type PlanAction = 'push-soft' | 'push-hard' | 'email';
+export type { PlanAction } from './_lib/reengagementCopy';
+import type { PlanAction } from './_lib/reengagementCopy';
 
 export interface PlanEntry {
   uid: string;
@@ -118,27 +120,46 @@ export function planReengagement(users: CandidateUser[], nowMs: number): PlanEnt
   return plan;
 }
 
-// ─── Copy (FR first, Creole second line; grade-flavored when known) ─────────
+export { reengagementCopy } from './_lib/reengagementCopy';
+import { reengagementCopy } from './_lib/reengagementCopy';
 
-/** Human label for the grade code in copy ("NS4", "9e", "Préfac"…). */
-function gradeLabel(grade: string | null): string | null {
-  if (!grade) return null;
-  if (grade === 'POSTBAC') return 'Préfac';
-  return grade;
-}
-
-export function reengagementCopy(action: PlanAction, grade: string | null): { title: string; body: string } {
-  const g = gradeLabel(grade);
-  if (action === 'push-soft') {
-    return {
-      title: g ? `Ton défi ${g} t’attend 🔥` : 'Ton défi du jour t’attend 🔥',
-      body: '2 minutes de quiz pour relancer ta série. · 2 minit quiz pou reprann seri ou.',
-    };
+/**
+ * How many students finished a quiz today.
+ *
+ * ── Why one query for the whole run ────────────────────────────────────────
+ * This is social proof, so it appears in every message the run sends. Asking
+ * per student would multiply one number by the size of the batch, against a
+ * Firestore budget that has already taken this product down once. It is the
+ * same figure for everyone anyway: measured once, passed to every message.
+ *
+ * ── Why it can return null ─────────────────────────────────────────────────
+ * A count that cannot be measured is omitted from the copy, never guessed and
+ * never rounded up. The sentence it feeds — "N students have already done one
+ * today" — is only worth saying because it is true, and a fabricated N would
+ * make every other number in these e-mails worth doubting.
+ */
+async function countQuizzesToday(db: Firestore): Promise<number | null> {
+  try {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    const snap = await db
+      .collectionGroup('quizAttempts')
+      .where('created_at_ms', '>=', since.getTime())
+      .select('created_at_ms')
+      .limit(2000)
+      .get();
+    // Distinct students, not attempts: one student doing six quizzes is one
+    // person, and "N students" has to mean N people.
+    const students = new Set<string>();
+    for (const doc of snap.docs) {
+      const uid = doc.ref.parent.parent?.id;
+      if (uid) students.add(uid);
+    }
+    return students.size;
+  } catch (err) {
+    console.error('[reengagement] peer count unavailable:', err);
+    return null;
   }
-  return {
-    title: g ? `${g} : on ne t’a pas vu depuis un moment` : 'On ne t’a pas vu depuis un moment',
-    body: 'Ton défi du jour et le classement de la semaine t’attendent. · Defi jodi a ak klasman semèn nan ap tann ou.',
-  };
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
@@ -205,6 +226,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const emailOn = isEmailConfigured();
   const webPushOn = isPushConfigured();
 
+  // Once for the run, not once per student: it is the same number for all of
+  // them, and this cron can address hundreds.
+  const peersToday = await countQuizzesToday(db);
+
   for (const entry of plan) {
     try {
       // Same preference gate as send-reminders — studyReminders off = silence.
@@ -217,7 +242,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         continue;
       }
       const lang: ReminderEmailLang = prefs.language === 'ht' ? 'ht' : 'fr';
-      const copy = reengagementCopy(entry.action, entry.grade);
+      const copy = reengagementCopy(entry.action, entry.grade, lang, peersToday);
 
       if (entry.action === 'email') {
         if (!emailOn || prefs.emailNotifications === false) {
