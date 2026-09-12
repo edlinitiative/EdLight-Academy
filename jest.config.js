@@ -7,7 +7,11 @@
  */
 module.exports = {
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src'],
+  // `api` as well as `src`: the serverless functions were outside the test
+  // scope entirely, which is how `top-performers` came to recompute its whole
+  // answer — up to 75,000 Firestore reads — on every single request, with
+  // nothing able to say so.
+  roots: ['<rootDir>/src', '<rootDir>/api'],
   // Allow importing the pure `.mjs` chunk builders (scripts/sandra_kb_chunks.mjs)
   // from unit tests. `.mjs` is resolved via moduleFileExtensions and transpiled
   // by babel-jest — Jest's default transform regex (`\.[jt]sx?$`) skips `.mjs`,

@@ -36,6 +36,12 @@ import {
   type DirectoryRow,
 } from '../_lib/internalDirectory';
 import { loadAllEvidence, loadIdentityRows } from '../_lib/internalDirectoryStore';
+import {
+  isFresh,
+  isQuotaExhausted,
+  readPerformerCache,
+  writePerformerCache,
+} from '../_lib/internalPerformerCache';
 
 const METRIC = 'Verified learning score';
 
@@ -62,9 +68,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const limit = clampLimit(req.query.limit);
   const sinceMs = parseSince(req.query.since);
+  const fresh = String(req.query.fresh ?? '') === '1';
+  const db = getDb();
+  const nowMs = Date.now();
+
+  /*
+    Serve the stored snapshot when there is a usable one.
+
+    Computing this answer costs a full scan of the database — up to 75,000
+    document reads against a Spark tier that allows 50,000 a DAY — so a single
+    uncached call can exhaust the project. Serving from the snapshot costs one
+    read. See `internalPerformerCache.ts` for the whole reckoning.
+
+    `limit` and `since` are applied to the CACHED rows rather than being part of
+    the cache key: the expensive half is gathering every learner's evidence, and
+    ranking and slicing that is arithmetic. One snapshot therefore answers every
+    limit and every window.
+  */
+  if (!fresh) {
+    try {
+      const cached = await readPerformerCache(db);
+      if (isFresh(cached, nowMs)) {
+        const body = cached.payload as { rows?: DirectoryRow[] };
+        if (Array.isArray(body.rows)) {
+          res.setHeader('x-cache', 'hit');
+          res.status(200).json({
+            platform: 'academy',
+            metric: METRIC,
+            metricDescription: METRIC_DESCRIPTION,
+            generatedAt: new Date(cached.computedAtMs).toISOString(),
+            performers: rankPerformers(body.rows, { limit, sinceMs }),
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      // A cache that cannot be READ is not a reason to fail: fall through and
+      // compute. Unless it is the quota, in which case computing is hopeless
+      // and the honest answer is that this project is out of reads.
+      if (isQuotaExhausted(err)) {
+        res.status(503).json({
+          error: 'quota_exhausted',
+          detail:
+            'EdLight Academy has used its Firestore read quota for today. It resets at '
+            + 'midnight US/Pacific. Upgrading the project to the Blaze plan removes the cap.',
+        });
+        return;
+      }
+      console.error('[internal/top-performers] cache read failed:', err);
+    }
+  }
 
   try {
-    const db = getDb();
     const [identities, evidence] = await Promise.all([
       loadIdentityRows(db),
       loadAllEvidence(db),
@@ -80,14 +135,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       evidence: evidence.get(row.id) ?? emptyEvidence(),
     }));
 
+    // Store the ROWS, not the ranked slice: the caller's limit and window are
+    // applied on the way out, so one snapshot serves every request shape.
+    await writePerformerCache(db, { rows }, nowMs);
+
+    res.setHeader('x-cache', fresh ? 'bypass' : 'miss');
     res.status(200).json({
       platform: 'academy',
       metric: METRIC,
       metricDescription: METRIC_DESCRIPTION,
-      generatedAt: new Date().toISOString(),
+      generatedAt: new Date(nowMs).toISOString(),
       performers: rankPerformers(rows, { limit, sinceMs }),
     });
   } catch (err) {
+    /*
+      Quota is its own answer.
+
+      Every fault used to come back as 500 `lookup_failed`, so Apply's console
+      said "EdLight Academy is not available right now" while the real message,
+      two Firebase projects away, was "Quota exceeded". A caller cannot retry
+      its way out of that and neither can this code: the remedy is a billing
+      plan. 503 says try later, which is true — it clears at midnight Pacific.
+    */
+    if (isQuotaExhausted(err)) {
+      console.error('[internal/top-performers] Firestore read quota exhausted');
+      res.status(503).json({
+        error: 'quota_exhausted',
+        detail:
+          'EdLight Academy has used its Firestore read quota for today. It resets at '
+          + 'midnight US/Pacific. Upgrading the project to the Blaze plan removes the cap.',
+      });
+      return;
+    }
     console.error('[internal/top-performers] error:', err);
     res.status(500).json({ error: 'lookup_failed' });
   }

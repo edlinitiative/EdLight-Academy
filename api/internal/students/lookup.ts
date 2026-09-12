@@ -27,6 +27,7 @@ import {
   toPerson,
 } from '../../_lib/internalDirectory';
 import { loadEvidenceFor, loadIdentityRows } from '../../_lib/internalDirectoryStore';
+import { isQuotaExhausted } from '../../_lib/internalPerformerCache';
 
 /** First value only — a repeated query parameter arrives as an array. */
 function one(value: unknown): string {
@@ -73,6 +74,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     res.status(200).json({ platform: 'academy', students });
   } catch (err) {
+    // Same reasoning as top-performers: quota is not a fault a caller can
+    // retry its way out of, and flattening it into `lookup_failed` is what
+    // made the outage hard to find. This endpoint scans identities on every
+    // call too (three queries capped at USER_SCAN_CAP), so it is exposed to
+    // the same limit, if less steeply.
+    if (isQuotaExhausted(err)) {
+      console.error('[internal/students/lookup] Firestore read quota exhausted');
+      res.status(503).json({
+        error: 'quota_exhausted',
+        detail:
+          'EdLight Academy has used its Firestore read quota for today. It resets at '
+          + 'midnight US/Pacific. Upgrading the project to the Blaze plan removes the cap.',
+      });
+      return;
+    }
     console.error('[internal/students/lookup] error:', err);
     res.status(500).json({ error: 'lookup_failed' });
   }
