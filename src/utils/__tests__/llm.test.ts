@@ -1,4 +1,4 @@
-import { resolveLLMConfig, extractJSON, LLMError } from '../../../api/_lib/llm';
+import { LLMError, extractJSON, resolveLLMConfig, thinkingConfigFor } from '../../../api/_lib/llm';
 
 describe('resolveLLMConfig — provider auto-detection', () => {
   it('auto-detects DeepSeek and defaults its base URL + model', () => {
@@ -24,7 +24,7 @@ describe('resolveLLMConfig — provider auto-detection', () => {
   it('uses the native Gemini transport when only GEMINI_API_KEY is set', () => {
     const c = resolveLLMConfig({ GEMINI_API_KEY: 'AIza-x' })!;
     expect(c.provider).toBe('gemini');
-    expect(c.model).toBe('gemini-2.5-flash');
+    expect(c.model).toBe('gemini-3.6-flash');
     expect(c.baseUrl).toBe('');
   });
 
@@ -63,5 +63,34 @@ describe('extractJSON', () => {
   });
   it('throws LLMError on unparseable text', () => {
     expect(() => extractJSON('not json at all')).toThrow(LLMError);
+  });
+});
+
+/**
+ * Gemini 3.x will not let you switch thinking off.
+ *
+ * Every Gemini call in this file used to send `thinkingBudget: 0` — reasoning
+ * off, because a chat reply wants to be fast and a grading pass deterministic.
+ * 3.x removed the option, and a budget of 0 is REJECTED rather than ignored:
+ * the whole request comes back `400 Request contains an invalid argument` with
+ * nothing naming the field, which is what took Sandra down and took a payload
+ * bisection to find. `thinkingLevel: 'low'` is the 3.x equivalent.
+ */
+describe('thinkingConfigFor', () => {
+  it('uses the 3.x spelling on 3.x models', () => {
+    for (const model of ['gemini-3.6-flash', 'gemini-3.0-pro', 'gemini-4-flash']) {
+      expect([model, thinkingConfigFor(model)]).toEqual([model, { thinkingLevel: 'low' }]);
+    }
+  });
+
+  it('keeps the 2.5 spelling for 2.x, which still accepts it', () => {
+    for (const model of ['gemini-2.5-flash', 'gemini-2.0-flash']) {
+      expect([model, thinkingConfigFor(model)]).toEqual([model, { thinkingBudget: 0 }]);
+    }
+  });
+
+  it('never sends thinkingBudget 0 to a 3.x model', () => {
+    // The single assertion that would have caught the outage.
+    expect(thinkingConfigFor('gemini-3.6-flash')).not.toHaveProperty('thinkingBudget');
   });
 });

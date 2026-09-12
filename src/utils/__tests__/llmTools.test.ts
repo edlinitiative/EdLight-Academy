@@ -10,10 +10,10 @@ const openaiConfig: LLMConfig = {
 
 const geminiConfig: LLMConfig = {
   provider: 'gemini',
-  label: 'gemini (gemini-2.5-flash)',
+  label: 'gemini (gemini-3.6-flash)',
   apiKey: 'AIza-test',
   baseUrl: '',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.6-flash',
 };
 
 const progressTool: ToolDef = {
@@ -71,7 +71,7 @@ describe('chatWithTools — gemini transport', () => {
 
     // Round 1: tool declarations in gemini shape.
     const [url1, init1] = fetchMock.mock.calls[0];
-    expect(url1).toContain('models/gemini-2.5-flash:generateContent');
+    expect(url1).toContain('models/gemini-3.6-flash:generateContent');
     const payload1 = JSON.parse((init1 as RequestInit).body as string);
     expect(payload1.systemInstruction).toEqual({ parts: [{ text: 'Tu es Sandra.' }] });
     expect(payload1.tools).toEqual([{

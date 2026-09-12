@@ -65,7 +65,7 @@ type Env = Record<string, string | undefined>;
  * 2.5 keeps the old spelling, because those deployments still work and this
  * file is read by whoever pins LLM_MODEL to an older one.
  */
-function thinkingConfigFor(model: string): Record<string, unknown> {
+export function thinkingConfigFor(model: string): Record<string, unknown> {
   const major = Number(/gemini-(\d+)/.exec(model)?.[1] ?? 0);
   return major >= 3 ? { thinkingLevel: 'low' } : { thinkingBudget: 0 };
 }
@@ -77,8 +77,8 @@ const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; model: string; transp
   openrouter: { baseUrl: 'https://openrouter.ai/api/v1', model: 'meta-llama/llama-3.1-70b-instruct', transport: 'openai-compatible' },
   mistral: { baseUrl: 'https://api.mistral.ai/v1', model: 'mistral-small-latest', transport: 'openai-compatible' },
   // gemini-2.5-flash is "no longer available to new users" — a key issued today
-  // gets a 404 naming gemini-3.6-flash as the replacement. Existing keys still
-  // reach 2.5, so LLM_MODEL still overrides this for a deployment that pins it.
+  // gets a 404 naming gemini-3.6-flash as the replacement. Existing keys can
+  // still reach 2.5, so LLM_MODEL overrides this for a deployment that pins it.
   gemini: { baseUrl: '', model: 'gemini-3.6-flash', transport: 'gemini' },
 };
 

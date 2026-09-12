@@ -33,10 +33,10 @@ jest.mock('../../../api/_lib/llm', () => {
     embed: jest.fn(),
     resolveLLMConfig: jest.fn(() => ({
       provider: 'gemini',
-      label: 'gemini (gemini-2.5-flash)',
+      label: 'gemini (gemini-3.6-flash)',
       apiKey: 'AIza-test',
       baseUrl: '',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
     })),
   };
 });

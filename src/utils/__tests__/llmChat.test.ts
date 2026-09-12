@@ -10,10 +10,10 @@ const openaiConfig: LLMConfig = {
 
 const geminiConfig: LLMConfig = {
   provider: 'gemini',
-  label: 'gemini (gemini-2.5-flash)',
+  label: 'gemini (gemini-3.6-flash)',
   apiKey: 'AIza-test',
   baseUrl: '',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.6-flash',
 };
 
 const jsonResponse = (body: unknown): Response =>
@@ -75,7 +75,7 @@ describe('chatText — gemini transport', () => {
 
     expect(reply).toBe('Réponse.');
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toContain('models/gemini-2.5-flash:generateContent');
+    expect(url).toContain('models/gemini-3.6-flash:generateContent');
     const payload = JSON.parse((init as RequestInit).body as string);
     expect(payload.systemInstruction).toEqual({ parts: [{ text: 'Tu es Sandra.' }] });
     expect(payload.contents).toEqual([
