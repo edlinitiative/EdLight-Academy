@@ -11,7 +11,8 @@ import {
   REMIND_EVERY_MS,
   type HealthState,
 } from '../_lib/sandraAlert';
-import type { ProbeResult, HealthStage } from '../_lib/sandraHealth';
+import { resolveOrigin, DEFAULT_CHAT_ORIGIN } from '../_lib/sandraProbes';
+import type { ProbeResult, HealthStage } from '../_lib/sandraProbes';
 
 const T0 = 1_800_000_000_000;
 
@@ -133,5 +134,42 @@ describe('the alert itself', () => {
     const { html } = buildAlertEmail('recovered', healthy, down(), T0);
     expect(html).not.toContain('What to check first');
     expect(html).toContain('answering again');
+  });
+});
+
+/**
+ * Which host the route probe points at.
+ *
+ * This is here because getting it wrong is silent and expensive: the first
+ * version fell back to VERCEL_URL, and every deployment URL on this project
+ * sits behind Vercel Authentication, which answers 401 with a
+ * {"protection":{...}} body to every request. The monitor would have reported
+ * an outage on its very first run and every ten minutes thereafter.
+ */
+describe('the host the route probe points at', () => {
+  it('never falls back to the deployment URL, which is auth-walled', () => {
+    expect(resolveOrigin({ VERCEL_URL: 'something.vercel.app' } as NodeJS.ProcessEnv))
+      .toBe(DEFAULT_CHAT_ORIGIN);
+  });
+
+  it('uses the public domain when nothing is configured', () => {
+    expect(resolveOrigin({} as NodeJS.ProcessEnv)).toBe('https://academy.edlight.org');
+  });
+
+  it('lets an explicit origin win, and strips a trailing slash', () => {
+    expect(resolveOrigin({ SANDRA_CHAT_ORIGIN: 'https://preview.example.com/' } as NodeJS.ProcessEnv))
+      .toBe('https://preview.example.com');
+  });
+});
+
+describe('the production-domain fallback', () => {
+  it("prefers Vercel's PRODUCTION url over the auth-walled deployment url", () => {
+    // Both set is the real production case. VERCEL_URL must lose: on this
+    // project it 302s to a Vercel SSO page, which is why Sandra's exam
+    // catalog tool was failing before this resolver was shared with chat.ts.
+    expect(resolveOrigin({
+      VERCEL_URL: 'deployment-abc123.vercel.app',
+      VERCEL_PROJECT_PRODUCTION_URL: 'academy.edlight.org',
+    } as NodeJS.ProcessEnv)).toBe('https://academy.edlight.org');
   });
 });

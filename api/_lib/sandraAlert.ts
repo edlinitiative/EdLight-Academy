@@ -25,7 +25,7 @@
  * an alert about ten minutes in — with one immediate in-run retry before the
  * first failure is even recorded, so a one-second stumble never counts.
  */
-import type { HealthStage, ProbeResult } from './sandraHealth';
+import type { HealthStage, ProbeResult } from './sandraProbes';
 
 export interface HealthState {
   state: 'up' | 'down';

@@ -61,17 +61,25 @@ interface StoredMessage {
 
 const CHAT_LIMIT_MAX = 30; // mirrors LIMITS['chat'] in _lib/rateLimit.ts
 
-/**
- * Trusted origin for server-side fetches of our own public files (the exam
- * catalog). Derived from configured env — NEVER from req.headers.host, which is
- * client-controlled and would let a caller point Sandra's tools at any host.
- */
-function resolveOrigin(): string {
-  const explicit = process.env.PUBLIC_ORIGIN || process.env.CANONICAL_ORIGIN;
-  if (explicit) return explicit.replace(/\/+$/, '');
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return 'http://localhost:3000';
-}
+/*
+  Trusted origin for server-side fetches of our own public files (the exam
+  catalog). Derived from configured env — NEVER from req.headers.host, which is
+  client-controlled and would let a caller point Sandra's tools at any host.
+
+  This used to fall back to VERCEL_URL and that was BROKEN in production.
+  VERCEL_URL is the per-deployment hostname, and every deployment URL on this
+  project sits behind Vercel Authentication: fetching
+  https://<deployment>/exam_catalog_index.json answers 302 to a Vercel SSO
+  page, while the same path on academy.edlight.org answers 200 with the JSON.
+  Since no PUBLIC_ORIGIN is configured, fetchCatalog was hitting the auth wall,
+  so every question that needed the exam catalog failed with "Catalogue
+  d'examens indisponible" — a whole tool quietly dead, and invisible because
+  Sandra just answered without it.
+
+  Shared with the health monitor rather than duplicated, so the two cannot
+  drift and the choice of host is tested in one place.
+*/
+import { resolveOrigin } from './_lib/sandraProbes';
 
 function sanitizePage(raw: ChatBody['page']): PageContext | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
