@@ -60,6 +60,24 @@ for (const [name, body] of Object.entries(banks(src))) {
     if (!q.trim()) fail('empty question');
     if (opts.some((o) => !o.trim())) fail('an empty option');
 
+    /*
+      A letter from an alphabet this product does not write in.
+
+      Writing these by hand produced "Agent deноyau" — two Cyrillic letters
+      inside a French distractor, invisible at a glance and unreadable on a
+      phone. Listing the scripts that are always a mistake, rather than
+      allow-listing the characters that are fine: the first version of this
+      check took the second approach and rejected "1/3 + 1/3" and "E = mc²",
+      because an allow-list of characters has to remember every symbol anyone
+      will ever legitimately type, and it will not.
+
+      Greek is excluded from the list: π belongs in the maths bank.
+    */
+    const WRONG_SCRIPT = /[\p{Script=Cyrillic}\p{Script=Han}\p{Script=Arabic}\p{Script=Hebrew}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Devanagari}\p{Script=Thai}]/u;
+    for (const [where, text] of [['question', q], ['Kreyòl', qHt], ...opts.map((o) => ['option', o])]) {
+      if (WRONG_SCRIPT.test(text)) fail(`a letter from another alphabet in the ${where}: ${text}`);
+    }
+
     const key = q.replace(/\s+/g, ' ').trim().toLowerCase();
     if (seen.has(key)) fail(`duplicate of an earlier question in this bank`);
     else seen.set(key, true);
