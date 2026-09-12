@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock } from 'lucide-react';
 import useStore from '../contexts/store';
@@ -8,6 +8,7 @@ import { useStreak } from '../hooks/useStreak';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../data/triviaData';
 import { useTriviaContent } from '../hooks/useTriviaContent';
 import { getDailyChallengeQuestions } from '../utils/dailyChallenge';
+import { drawAndRemember } from '../utils/questionRotation';
 import { todayStr } from '../services/streakService';
 import { GAMES, GAME_ICONS, getGameById } from '../data/games';
 import Leaderboard from '../components/Leaderboard';
@@ -18,16 +19,6 @@ import CalculGame from '../components/games/CalculGame';
 import SuitesGame from '../components/games/SuitesGame';
 import './TriviaGames.css';
 import { logAnswerEvent } from '../services/answerEventsService';
-
-/* ─── Utility: shuffle an array (Fisher-Yates) ─── */
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 /* ─── Category Selection Screen ─── */
 function CategoryPicker({ onSelect, isCreole, categories = TRIVIA_CATEGORIES as any[], questions = TRIVIA_QUESTIONS as Record<string, any[]> }) {
@@ -121,13 +112,46 @@ function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_
 /* ─── Active Game Screen ─── */
 function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: providedQuestions = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[], questionsMap = TRIVIA_QUESTIONS as Record<string, any[]> }) {
   const cat = categories.find((c) => c.id === category);
-  const questions = useMemo(
+  /*
+    Draw the round from a bag that remembers what it has already served, so
+    every question in a category comes up before any of them comes up twice.
+    The old `shuffle(bank).slice(0, count)` re-sampled independently each time,
+    which meant about one repeat in five by the tenth round.
+
+    `providedQuestions` is the Daily Challenge, which is seeded by the date and
+    deliberately identical for everybody — it must NOT go through the bag, or
+    playing it would consume questions from the normal rotation.
+
+    Drawn ONCE per mount, in a lazy initialiser rather than a useMemo.
+    useMemo recomputes whenever its dependencies change, and `questionsMap`
+    changes identity exactly once — when useTriviaContent's Firestore fetch
+    resolves and calls setQuestions. On a fast connection that lands before
+    anyone presses play; on a slow one it can land mid-round, and the old code
+    would then silently swap the player's questions underneath them. Drawing in
+    an initialiser makes the round immutable for the life of the quiz, and
+    TriviaQuiz is keyed on `${category}-${playNonce}` so every new game is a
+    fresh mount and therefore a fresh draw.
+  */
+  const drawRoundNow = useCallback(
     () =>
       providedQuestions && providedQuestions.length
         ? providedQuestions
-        : shuffle(questionsMap[category] || []).slice(0, count),
+        : drawAndRemember(category, questionsMap[category] || [], count),
     [category, count, providedQuestions, questionsMap],
   );
+  const [questions, setQuestions] = useState(drawRoundNow);
+
+  /*
+    The one case where a redraw is right: we mounted before the bank existed,
+    so the first draw came back empty. Filling an empty round in is a fix;
+    replacing a round already in progress is the bug described above, which is
+    why this returns early unless there is nothing to play.
+  */
+  useEffect(() => {
+    if (questions.length > 0) return;
+    const drawn = drawRoundNow();
+    if (drawn.length > 0) setQuestions(drawn);
+  }, [drawRoundNow, questions.length]);
   const accent = accentColor || cat?.color || '#1B6FE0';
 
   const [current, setCurrent] = useState(0);
