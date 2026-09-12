@@ -1,0 +1,73 @@
+/**
+ * Check every trivia bank for the faults a reader would notice and a diff
+ * would not.
+ *
+ *   node scripts/validate_trivia.mjs
+ *
+ * Run it after editing src/data/triviaData.ts, and from the nightly generator
+ * before anything it produced is published. The generator has no human
+ * reviewing its output, so this file is the only thing standing between a
+ * malformed question and a student.
+ *
+ * What it refuses:
+ *   · fewer or more than four options
+ *   · an answer index outside those options
+ *   · duplicate options inside one question (two identical choices, one of
+ *     which is "correct", is unanswerable)
+ *   · the same question text twice in a bank
+ *   · a missing Kreyòl translation — this product is bilingual, and a question
+ *     that exists in one language is broken for half its readers
+ *   · an empty string anywhere
+ */
+import { readFileSync } from 'node:fs';
+
+const SRC = 'src/data/triviaData.ts';
+const src = readFileSync(SRC, 'utf8');
+
+/** Pull each `const NAME = [ … ]` bank out of the module by brace matching. */
+function banks(text) {
+  const out = {};
+  for (const m of text.matchAll(/const ([A-Z_]+) = \[/g)) {
+    let i = m.index + m[0].length - 1, depth = 0;
+    for (; i < text.length; i += 1) {
+      if (text[i] === '[') depth += 1;
+      else if (text[i] === ']') { depth -= 1; if (depth === 0) break; }
+    }
+    const body = text.slice(m.index + m[0].length, i);
+    if (/\bq:\s*["'`]/.test(body)) out[m[1]] = body;
+  }
+  return out;
+}
+
+const OBJ = /\{\s*q:\s*(["'])((?:\\.|(?!\1).)*)\1\s*,\s*qHt:\s*(["'])((?:\\.|(?!\3).)*)\3\s*,\s*options:\s*\[([^\]]*)\]\s*,\s*answer:\s*(\d+)\s*\}/g;
+
+let problems = 0;
+let counted = 0;
+
+for (const [name, body] of Object.entries(banks(src))) {
+  const seen = new Map();
+  let n = 0;
+  for (const m of body.matchAll(OBJ)) {
+    n += 1;
+    const [q, qHt, rawOpts, answer] = [m[2], m[4], m[5], Number(m[6])];
+    const opts = [...rawOpts.matchAll(/(["'])((?:\\.|(?!\1).)*)\1/g)].map((o) => o[2]);
+    const fail = (why) => { problems += 1; console.log(`  ${name}: ${why}\n    ${q}`); };
+
+    if (opts.length !== 4) fail(`${opts.length} options, expected 4`);
+    if (!(answer >= 0 && answer < opts.length)) fail(`answer index ${answer} is outside the options`);
+    if (new Set(opts).size !== opts.length) fail('two identical options');
+    if (!qHt.trim()) fail('no Kreyòl translation');
+    if (!q.trim()) fail('empty question');
+    if (opts.some((o) => !o.trim())) fail('an empty option');
+
+    const key = q.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (seen.has(key)) fail(`duplicate of an earlier question in this bank`);
+    else seen.set(key, true);
+  }
+  counted += n;
+  console.log(`${name.padEnd(22)} ${String(n).padStart(4)}`);
+}
+
+console.log(`\n${counted} questions across ${Object.keys(banks(src)).length} hand-written banks`);
+if (problems) { console.log(`\n${problems} PROBLEM(S)`); process.exit(1); }
+console.log('all clean');
