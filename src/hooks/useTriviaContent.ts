@@ -55,12 +55,48 @@ export function useTriviaContent() {
         for (const cat of finalCategories) {
           const catId = cat.id;
           const staticQs = (TRIVIA_QUESTIONS as Record<string, any[]>)[catId] || [];
-          const fsQs = fsQuestions[catId];
-          const useFs =
-            !GENERATED_CATEGORY_IDS.includes(catId) &&
-            Array.isArray(fsQs) &&
-            fsQs.length > 0;
-          mergedQuestions[catId] = useFs ? fsQs : staticQs;
+          const fsQs = Array.isArray(fsQuestions[catId]) ? fsQuestions[catId] : [];
+          const canUseFs = !GENERATED_CATEGORY_IDS.includes(catId) && fsQs.length > 0;
+
+          if (!canUseFs) {
+            mergedQuestions[catId] = staticQs;
+            continue;
+          }
+
+          /*
+            Two kinds of Firestore question, and they mean opposite things.
+
+            A question an admin wrote in /admin/trivia is an EDIT: the bank in
+            Firestore is the one they curated, and it replaces the shipped one.
+            That is the behaviour this screen has always had and staff rely on
+            it to correct a question without a deploy.
+
+            A question the nightly generator wrote is an ADDITION. Treating it
+            the same way would be a data loss with no warning: fifteen
+            generated questions would REPLACE the ninety-one shipped ones, and
+            the category would quietly shrink to a sixth of its size the first
+            night the cron ran.
+
+            So generated docs carry `source: 'generated'` and are appended to
+            the static bank, de-duplicated on the question text so a generated
+            question that happens to match a shipped one cannot appear twice in
+            a round.
+          */
+          const generated = fsQs.filter((x) => x?.source === 'generated');
+          const authored = fsQs.filter((x) => x?.source !== 'generated');
+
+          const base = authored.length > 0 ? authored : staticQs;
+          const seen = new Set(
+            base.map((x) => String(x?.q ?? '').replace(/\s+/g, ' ').trim().toLowerCase())
+          );
+          const extra = generated.filter((x) => {
+            const key = String(x?.q ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+
+          mergedQuestions[catId] = extra.length > 0 ? [...base, ...extra] : base;
         }
 
         setCategories(finalCategories);
