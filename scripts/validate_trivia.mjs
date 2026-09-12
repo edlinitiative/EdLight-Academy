@@ -18,6 +18,13 @@
  *   · a missing Kreyòl translation — this product is bilingual, and a question
  *     that exists in one language is broken for half its readers
  *   · an empty string anywhere
+ *   · a question that contains its own answer. "Quel autre membre des Fugees,
+ *     « Pras Michel », est d'origine haïtienne ?" answers "Pras Michel". Seven
+ *     of these sat in the people bank, each a free point that teaches nothing.
+ *   · a correct option that refuses to choose — "Tous sont connus", "Toutes ces
+ *     artistes", "Aucune de ces réponses". Three questions asked which painter
+ *     or singer was the great figure and answered "all of them", which is not a
+ *     question. If the honest answer is "several", the question is wrong.
  *
  * What it reports without failing:
  *   · two questions in one bank with the SAME correct answer. Usually that is
@@ -74,6 +81,29 @@ for (const [name, body] of Object.entries(banks(src))) {
     if (!qHt.trim()) fail('no Kreyòl translation');
     if (!q.trim()) fail('empty question');
     if (opts.some((o) => !o.trim())) fail('an empty option');
+
+    /*
+      The question gives the answer away, or refuses to have one.
+
+      Both are about a question that cannot be got wrong. The first is matched
+      on the correct option appearing inside the question text, accent- and
+      case-insensitively; it is skipped for options under five characters and
+      for pure numbers, because "7" and "Le Nord" appear inside perfectly good
+      questions by coincidence and a bare year legitimately repeats.
+    */
+    const flat = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const correctOpt = opts[answer] ?? '';
+    const bare = correctOpt.replace(/^(le |la |les |l'|un |une |des |du )/i, '').trim();
+    // A translation prompt is exempt: "Comment dit-on « bonjour » en créole ?"
+    // answers "Bonjou", and a cognate pair looking alike is the point of the
+    // question rather than a leak.
+    const isTranslation = /se dit en |comment dit-on|que veut dire|que signifie|traduit/i.test(q);
+    if (!isTranslation && bare.length >= 5 && !/^[\d\s.,%°-]+$/.test(bare) && flat(q).includes(flat(bare))) {
+      fail(`the question contains its own answer ("${correctOpt}")`);
+    }
+    if (/^(tous|toutes|aucun|aucune|les deux|toutes les|tous les)\b/i.test(correctOpt.trim())) {
+      fail(`the correct option refuses to choose: "${correctOpt}"`);
+    }
 
     /*
       A letter from an alphabet this product does not write in.
