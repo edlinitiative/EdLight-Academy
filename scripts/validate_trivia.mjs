@@ -21,6 +21,14 @@
  *   · a question that contains its own answer. "Quel autre membre des Fugees,
  *     « Pras Michel », est d'origine haïtienne ?" answers "Pras Michel". Seven
  *     of these sat in the people bank, each a free point that teaches nothing.
+ *   · the same proverb twice, compared with accents and punctuation stripped.
+ *     The proverbs bank ended in fourteen reruns of its own opening — « Deyè
+ *     mòn gen mòn » after « Dèyè mòn gen mòn », « Kreyon Bondye pa gen gonm »
+ *     after « … gòm » — which the question-text check could not see because a
+ *     single accent made each string unique. This one is scoped to the
+ *     proverbs bank on purpose: elsewhere a quoted phrase is a TITLE, and
+ *     asking two different things about « Gouverneurs de la rosée » or « La
+ *     Dessalinienne » is a bank doing its job, not repeating itself.
  *   · a correct option that refuses to choose — "Tous sont connus", "Toutes ces
  *     artistes", "Aucune de ces réponses". Three questions asked which painter
  *     or singer was the great figure and answered "all of them", which is not a
@@ -67,6 +75,7 @@ const clusters = [];
 
 for (const [name, body] of Object.entries(banks(src))) {
   const seen = new Map();
+  const seenQuoted = new Map();
   const byAnswer = new Map();
   let n = 0;
   for (const m of body.matchAll(OBJ)) {
@@ -126,6 +135,21 @@ for (const [name, body] of Object.entries(banks(src))) {
     const key = q.replace(/\s+/g, ' ').trim().toLowerCase();
     if (seen.has(key)) fail(`duplicate of an earlier question in this bank`);
     else seen.set(key, true);
+
+    /*
+      The same proverb, respelt. Everything between « » is normalised down to
+      its bare letters before comparison, so an accent or a doubled consonant
+      can no longer disguise a repeat.
+    */
+    const quoted = name === 'HAITI_PROVERBS'
+      ? [...q.matchAll(/«\s*(.+?)\s*»/g)].map((x) => x[1])
+      : [];
+    for (const phrase of quoted) {
+      const pk = phrase.normalize('NFD').replace(/[^a-zA-Z ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (pk.length < 8) continue;
+      if (seenQuoted.has(pk)) fail(`the phrase «\u00a0${phrase}\u00a0» already appears in this bank, spelt differently`);
+      else seenQuoted.set(pk, phrase);
+    }
 
     const correct = opts[answer];
     if (correct) {
