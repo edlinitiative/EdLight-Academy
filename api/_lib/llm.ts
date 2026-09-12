@@ -16,7 +16,7 @@
  *   LLM_PROVIDER   "deepseek" | "openai" | "gemini" | "openai-compatible"
  *   LLM_API_KEY    generic key (overrides provider-specific keys below)
  *   LLM_BASE_URL   e.g. https://api.deepseek.com/v1  (openai-compatible only)
- *   LLM_MODEL      e.g. deepseek-chat / gpt-4o-mini / gemini-2.5-flash
+ *   LLM_MODEL      e.g. deepseek-chat / gpt-4o-mini / gemini-3.6-flash
  *
  *   DEEPSEEK_API_KEY / OPENAI_API_KEY / edlight_chatgpt_api / GEMINI_API_KEY
  *
@@ -46,13 +46,40 @@ export class LLMError extends Error {
 
 type Env = Record<string, string | undefined>;
 
+/**
+ * How much to let a Gemini model think, per generation.
+ *
+ * ── Why this is not one constant ────────────────────────────────────────────
+ * Every Gemini call here sent `thinkingConfig: { thinkingBudget: 0 }` — turn
+ * reasoning off, because a conversational reply wants to be fast and a grading
+ * pass wants to be deterministic. That is a 2.5 spelling.
+ *
+ * Gemini 3.x REMOVED it. Thinking cannot be switched off on those models at
+ * all, and a budget of 0 is not ignored, it is rejected: the whole request
+ * comes back `400 Request contains an invalid argument.` with nothing naming
+ * the field. Isolated by sending the payload a piece at a time — bare,
+ * systemInstruction, empty functionDeclarations all answer fine; adding
+ * thinkingBudget:0 is what turns it into a 400.
+ *
+ * `thinkingLevel: 'low'` is the 3.x equivalent and the closest thing to off.
+ * 2.5 keeps the old spelling, because those deployments still work and this
+ * file is read by whoever pins LLM_MODEL to an older one.
+ */
+function thinkingConfigFor(model: string): Record<string, unknown> {
+  const major = Number(/gemini-(\d+)/.exec(model)?.[1] ?? 0);
+  return major >= 3 ? { thinkingLevel: 'low' } : { thinkingBudget: 0 };
+}
+
 const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; model: string; transport: LLMProvider }> = {
   deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', transport: 'openai-compatible' },
   openai: { baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini', transport: 'openai-compatible' },
   groq: { baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', transport: 'openai-compatible' },
   openrouter: { baseUrl: 'https://openrouter.ai/api/v1', model: 'meta-llama/llama-3.1-70b-instruct', transport: 'openai-compatible' },
   mistral: { baseUrl: 'https://api.mistral.ai/v1', model: 'mistral-small-latest', transport: 'openai-compatible' },
-  gemini: { baseUrl: '', model: 'gemini-2.5-flash', transport: 'gemini' },
+  // gemini-2.5-flash is "no longer available to new users" — a key issued today
+  // gets a 404 naming gemini-3.6-flash as the replacement. Existing keys still
+  // reach 2.5, so LLM_MODEL still overrides this for a deployment that pins it.
+  gemini: { baseUrl: '', model: 'gemini-3.6-flash', transport: 'gemini' },
 };
 
 const firstNonEmpty = (...vals: Array<string | undefined>): string =>
@@ -167,7 +194,7 @@ export async function chatJSON(params: ChatJSONParams): Promise<unknown> {
         maxOutputTokens: maxTokens,
         responseMimeType: 'application/json',
         // gemini-2.5 reasons by default; disable for fast, deterministic grading.
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: thinkingConfigFor(config.model),
       },
     };
     const res = await fetchWithTimeout(url, {
@@ -232,7 +259,7 @@ export async function chatText(params: ChatTextParams): Promise<string> {
         temperature,
         maxOutputTokens: maxTokens,
         // gemini-2.5 reasons by default; disable for fast conversational replies.
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: thinkingConfigFor(config.model),
       },
     };
     const res = await fetchWithTimeout(url, {
@@ -361,7 +388,7 @@ export async function chatWithTools(params: ChatWithToolsParams): Promise<{ repl
           temperature,
           maxOutputTokens: maxTokens,
           // gemini-2.5 reasons by default; disable for fast conversational replies.
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: thinkingConfigFor(config.model),
         },
       };
       const res = await fetchWithTimeout(url, {
