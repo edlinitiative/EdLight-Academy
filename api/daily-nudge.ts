@@ -53,6 +53,7 @@ import {
   alreadyNudgedToday,
   type NudgeKind,
 } from './_lib/dailyNudge';
+import { pickTeaser, teaserCopy } from './_lib/teaserQuestion';
 
 /** Backlog cap per run, mirroring the other crons. */
 const MAX_SENDS_PER_RUN = 300;
@@ -101,6 +102,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!isNudgeHour(now) && !force) {
     return res.status(200).json({ skipped: 'not-nudge-hour', haitiDate: today });
   }
+
+  /*
+    One question for the whole run, and for the whole day.
+
+    Computed here rather than per user for two reasons. It is the same question
+    for everybody, so doing it inside the loop would repeat identical work a
+    hundred times; and because it is derived from the Haiti date, this job can
+    run at both 10:00Z and 11:00Z — which it does, since Haiti observes DST —
+    without any risk of asking the same person two different questions an hour
+    apart.
+
+    null is a normal outcome, not an error: if no category yields a question
+    short enough for a lock screen, every user falls back to the ordinary nudge
+    copy. A missing teaser must never cost somebody their morning reminder.
+  */
+  const teaser = pickTeaser(today);
 
   // A run that could touch more than one account needs the explicit flag.
   const enabled = process.env.DAILY_NUDGE_ENABLED === 'true';
@@ -176,7 +193,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       summary.eligible += 1;
-      const copy = nudgeCopy(kind, lang, firstNameOf(u.full_name));
+
+      /*
+        Lead with the day's question instead of "come and practise".
+
+        A reminder asks somebody to do homework; a question they cannot answer
+        makes them want to. The teaser carries the question and NOT the answer
+        (see _lib/teaserQuestion.ts), so finishing the thought means opening
+        the app — which is the whole point.
+
+        The streak-at-risk flavour keeps its own copy. Someone about to lose a
+        streak already has a reason to open the app, and burying that under a
+        trivia question would trade a strong, specific, time-bound hook for a
+        weaker general one.
+      */
+      const copy = kind === 'streak-at-risk' || !teaser
+        ? nudgeCopy(kind, lang, firstNameOf(u.full_name))
+        : teaserCopy(teaser, lang, firstNameOf(u.full_name));
       plan.push({ uid, email: to, kind, lang });
 
       if (dryRun) continue;
@@ -186,7 +219,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           to,
           title: copy.title,
           message: copy.message,
-          url: '/dashboard',
+          // Straight into the category the question came from, so answering
+          // it is the first thing they can do rather than something to go and
+          // find from the dashboard.
+          url: teaser && kind !== 'streak-at-risk' ? `/quiz/${teaser.categoryId}` : '/dashboard',
           lang,
         });
         if ('sent' in r) summary.emailed += 1;
@@ -199,7 +235,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const p = await sendExpoPushToUser(uid, {
         title: copy.title,
         body: copy.message,
-        data: { type: 'daily-quiz', kind: 'daily-nudge' },
+        data: {
+          type: 'daily-quiz',
+          kind: 'daily-nudge',
+          ...(teaser && kind !== 'streak-at-risk' ? { categoryId: teaser.categoryId } : {}),
+        },
       });
       summary.pushed += p.sent;
 

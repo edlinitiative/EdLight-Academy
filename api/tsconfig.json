@@ -9,7 +9,9 @@
     // runtime. Extensionless relative imports (./_lib/...) also require CJS.
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "types": ["node", "@vercel/node"],
+    // "jest" so the tests in api/__tests__ type-check too; without it every
+    // describe/it/expect in this project was an error and the noise hid real ones.
+    "types": ["node", "@vercel/node", "jest"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,

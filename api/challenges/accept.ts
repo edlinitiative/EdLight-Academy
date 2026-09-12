@@ -140,7 +140,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         409: 'already_played',
         410: 'expired',
       };
-      res.status(outcome.error).json({ error: messages[outcome.error] });
+      // `error` is optional on the transaction's failure shape, so it can be
+      // absent. Without a default this line crashed the handler — res.status
+      // throws on undefined — turning a handled rejection into a 500 with no
+      // body, which is the hardest kind of failure to read from the client.
+      const status = outcome.error ?? 400;
+      res.status(status).json({ error: messages[status] ?? 'bad_request' });
       return;
     }
 

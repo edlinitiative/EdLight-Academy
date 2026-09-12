@@ -411,8 +411,34 @@ const COUNTRIES = [
 
 /* ─── Question generation helpers ───────────────────────────────────────── */
 
+/**
+ * One row of COUNTRIES. Typed because this module is imported by the Vercel
+ * API (api/challenges/accept.ts, api/_lib/teaserQuestion.ts) whose project is
+ * `strict`: untyped helpers here produced twenty implicit-any errors over
+ * there, which drowned out the two real ones in the same output.
+ */
+export interface TriviaCountry {
+  name: string;
+  ht: string;
+  prep: string;
+  cap: string;
+  cur: string;
+  flag?: string;
+}
+
+/** A single multiple-choice question, in both languages. */
+export interface TriviaQuestion {
+  q: string;
+  qHt: string;
+  options: string[];
+  answer: number;
+  flag?: string;
+  flagIso?: string | null;
+  source?: string;
+}
+
 /** Fisher-Yates shuffle (non-mutating). */
-function shuffleArr(arr) {
+function shuffleArr<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -422,13 +448,13 @@ function shuffleArr(arr) {
 }
 
 /** Pick `n` unique distractors from `pool`, excluding `correct`. */
-function pickDistractors(correct, pool, n = 3) {
+function pickDistractors(correct: string, pool: string[], n = 3): string[] {
   const others = pool.filter((v) => v !== correct);
   return shuffleArr(others).slice(0, n);
 }
 
 /** Place correct answer randomly among distractors and return { options, answer }. */
-function buildOptions(correct, distractors) {
+function buildOptions(correct: string, distractors: string[]): { options: string[]; answer: number } {
   const idx = Math.floor(Math.random() * (distractors.length + 1));
   const options = [...distractors];
   options.splice(idx, 0, correct);
@@ -437,7 +463,7 @@ function buildOptions(correct, distractors) {
 
 /* — Generators — */
 
-function buildCapitalQs(data) {
+function buildCapitalQs(data: TriviaCountry[]): TriviaQuestion[] {
   const allCaps = data.map((c) => c.cap);
   return data.map((c) => {
     const distractors = pickDistractors(c.cap, allCaps);
@@ -451,7 +477,7 @@ function buildCapitalQs(data) {
   });
 }
 
-function buildCurrencyQs(data) {
+function buildCurrencyQs(data: TriviaCountry[]): TriviaQuestion[] {
   // Use unique currency names so distractors are always distinct from the correct answer.
   const uniqueCurs = [...new Set(data.map((c) => c.cur))];
   return data.map((c) => {
@@ -466,10 +492,10 @@ function buildCurrencyQs(data) {
   });
 }
 
-function flagEmojiToIso(flag) {
+function flagEmojiToIso(flag: string | undefined): string | null {
   if (!flag) return null;
   // Flag emojis are two regional indicator symbols (U+1F1E6 = 'A', etc.)
-  const codePoints = [...flag].map((c) => c.codePointAt(0));
+  const codePoints = [...flag].map((c) => c.codePointAt(0) ?? 0);
   if (codePoints.length < 2) return null;
   const A = 0x1f1e6;
   const Z = 0x1f1ff;
@@ -479,7 +505,7 @@ function flagEmojiToIso(flag) {
   return (a + b).toLowerCase();
 }
 
-function buildFlagQs(data) {
+function buildFlagQs(data: TriviaCountry[]): TriviaQuestion[] {
   const allNames = data.map((c) => c.name);
   return data
     .filter((c) => c.flag) // keep only entries with a flag emoji
@@ -505,7 +531,7 @@ function buildFlagQs(data) {
  * ────────────────────────────────────────────────────────────────────────── */
 
 /** Shuffle the options of each static question and re-point `answer`. */
-function randomizeBank(questions) {
+function randomizeBank(questions: TriviaQuestion[]): TriviaQuestion[] {
   return questions.map((item) => {
     const correct = item.options[item.answer];
     const options = shuffleArr(item.options);
