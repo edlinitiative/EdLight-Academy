@@ -28,6 +28,10 @@
     {
       "path": "/api/cron-trivia",
       "schedule": "20 3 * * *"
+    },
+    {
+      "path": "/api/cron-sandra-health",
+      "schedule": "*/10 * * * *"
     }
   ],
   "rewrites": [
