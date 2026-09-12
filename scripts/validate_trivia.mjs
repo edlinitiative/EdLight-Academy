@@ -18,6 +18,18 @@
  *   · a missing Kreyòl translation — this product is bilingual, and a question
  *     that exists in one language is broken for half its readers
  *   · an empty string anywhere
+ *
+ * What it reports without failing:
+ *   · two questions in one bank with the SAME correct answer. Usually that is
+ *     a paraphrase pair — "Comment appelle-t-on le prêtre vodou (homme) ?" and
+ *     "Comment appelle-t-on le prêtre vodou masculin ?" both answer "houngan",
+ *     and the duplicate-text check cannot see it because the strings differ.
+ *     The culture bank held nine such clusters, twenty questions in all, and
+ *     reading them turned up three that were not merely repeated but wrong.
+ *     It is a report and not a failure because a shared answer is sometimes
+ *     legitimate: "quelle est la capitale" and "où siège le gouvernement" are
+ *     a fair pair, and the maths bank will answer "12" more than once. A
+ *     person decides; this only makes the clusters visible.
  */
 import { readFileSync } from 'node:fs';
 
@@ -43,9 +55,12 @@ const OBJ = /\{\s*q:\s*(["'])((?:\\.|(?!\1).)*)\1\s*,\s*qHt:\s*(["'])((?:\\.|(?!
 
 let problems = 0;
 let counted = 0;
+let sameAnswer = 0;
+const clusters = [];
 
 for (const [name, body] of Object.entries(banks(src))) {
   const seen = new Map();
+  const byAnswer = new Map();
   let n = 0;
   for (const m of body.matchAll(OBJ)) {
     n += 1;
@@ -81,9 +96,26 @@ for (const [name, body] of Object.entries(banks(src))) {
     const key = q.replace(/\s+/g, ' ').trim().toLowerCase();
     if (seen.has(key)) fail(`duplicate of an earlier question in this bank`);
     else seen.set(key, true);
+
+    const correct = opts[answer];
+    if (correct) {
+      const ak = correct.replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!byAnswer.has(ak)) byAnswer.set(ak, []);
+      byAnswer.get(ak).push(q);
+    }
+  }
+  for (const [ans, qs] of byAnswer) {
+    if (qs.length < 2) continue;
+    sameAnswer += 1;
+    clusters.push(`  ${name}: ${qs.length} questions answer "${ans}"\n${qs.map((x) => `      ${x}`).join('\n')}`);
   }
   counted += n;
   console.log(`${name.padEnd(22)} ${String(n).padStart(4)}`);
+}
+
+if (clusters.length) {
+  console.log(`\n${sameAnswer} cluster(s) of questions sharing one answer — read them, they are usually paraphrases:\n`);
+  for (const c of clusters) console.log(c);
 }
 
 console.log(`\n${counted} questions across ${Object.keys(banks(src)).length} hand-written banks`);
