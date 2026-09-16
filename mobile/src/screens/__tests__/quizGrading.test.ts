@@ -15,6 +15,9 @@ jest.mock('../../services/answerEventsService', () => ({
 // The post-content DefiHandoffCard pulls in useTrivia → triviaService →
 // firebase, and the navigator — sever it too (renders nothing in tests).
 jest.mock('../../components/DefiHandoffCard', () => ({ __esModule: true, default: () => null }));
+// Same reason as the mocks above: the result screen's challenge card reaches
+// referralService -> firebase, whose ESM build Jest will not transform.
+jest.mock('../../components/share/BeatMyScoreCard', () => ({ __esModule: true, default: () => null }));
 
 /**
  * Pins the QuizzesScreen scoring bug: the quiz bank stores the correct answer

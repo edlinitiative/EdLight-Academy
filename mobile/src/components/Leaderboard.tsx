@@ -11,6 +11,7 @@ import { useTheme, typeScale } from '../theme/theme';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
 import { tapLight } from '../utils/haptics';
+import { logInviteSent } from '../services/referralService';
 import Avatar from './ui/Avatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
@@ -473,6 +474,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
     <TouchableOpacity
       onPress={() => {
         tapLight();
+        logInviteSent('champion');
         shareRef.current?.share({
           mode: 'champion',
           name: (myEntry as any).displayName || t('Élève', 'Elèv'),
