@@ -8,6 +8,7 @@ import { registerRootComponent } from 'expo';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import { onAuthStateChange, upsertUserDocument, getUserProfile, updateUserGrade } from './src/services/firebase';
 import useStore from './src/contexts/store';
 import AppNavigator, { navigationRef, navigateToTab } from './src/navigation/AppNavigator';
@@ -19,6 +20,22 @@ import {
 import { registerForPushNotifications } from './src/services/pushService';
 import { syncMasteryOnLogin, startMasterySync, stopMasterySync, disposeMasterySync } from './src/services/masterySync';
 import { hydrateQueryCache, persistQueryCacheOnChange } from './src/services/queryPersistence';
+
+// Hold the native splash until the app can actually show its first real screen.
+//
+// Without this, Expo hides the splash on the first JS frame — which is App's
+// `return null` — and the navigator then puts up its own logo while auth
+// resolves. Same artwork, but the native splash draws it `contain` (near
+// full-width) and the JS screen drew it at 120pt on a themed ground, so a cold
+// launch flashed what looked like two different logos. One splash, held until
+// ready, is the whole fix. (TestFlight: "when the app is loading, it shows two
+// versions of the logo".)
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Already hidden, or the module is unavailable — launch must not depend on it.
+});
+
+/** Never leave a user staring at a splash because auth never resolved. */
+const SPLASH_MAX_MS = 4000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +130,7 @@ function AuthGate() {
 
 function App() {
   const { theme } = useStore();
+  const authConfirmed = useStore((s) => s.authConfirmed);
   // Source Sans 3 (per-weight) is the app's display/body face — the Estil Klè
   // restyle. Falls back to system if it fails.
   const [fontsLoaded, fontError] = useFonts({
@@ -215,6 +233,28 @@ function App() {
 
     const sub = Notifications.addNotificationResponseReceivedListener(runHandle);
     return () => sub.remove();
+  }, []);
+
+  // The native splash stays up until the first real screen is ready, so the
+  // app never swaps one logo for another. `authConfirmed` is part of "ready"
+  // because until it resolves the navigator only has the Loading screen to
+  // show — which is exactly the second logo we're removing.
+  const ready = cacheHydrated && (fontsLoaded || fontError) && authConfirmed;
+
+  useEffect(() => {
+    if (!ready) return;
+    // One frame after the real tree paints, so the reveal lands on content
+    // rather than on an empty root view.
+    const id = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, 0);
+    return () => clearTimeout(id);
+  }, [ready]);
+
+  // Safety net: a stalled auth handshake (no network on a cold start) must not
+  // strand the user on the splash. After this the JS Loading screen takes over,
+  // and it is drawn to match the splash so the handoff is still invisible.
+  useEffect(() => {
+    const id = setTimeout(() => { SplashScreen.hideAsync().catch(() => {}); }, SPLASH_MAX_MS);
+    return () => clearTimeout(id);
   }, []);
 
   // Wait for the cache and fonts (but don't block forever if fonts error out).

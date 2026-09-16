@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View } from 'react-native';
+import { Animated, View, useWindowDimensions } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
-import { useColors } from '../theme/theme';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
@@ -117,29 +116,47 @@ const linking = {
   },
 };
 
+/** Must stay in sync with expo.splash.backgroundColor in app.json. */
+const SPLASH_BACKGROUND = '#FFFFFF';
+
+/**
+ * Continuation of the native splash, not a second screen.
+ *
+ * App.tsx now holds the native splash until the first real screen is ready, so
+ * this is only reached when the splash's safety timeout fires (a stalled auth
+ * handshake on a cold start). When that happens it must be indistinguishable
+ * from the splash it replaces: the SAME asset — assets/splash.png and
+ * assets/logo.png are byte-identical — at the same `contain` scale, on the same
+ * background. The old version drew it at 120pt on the themed ground, which is
+ * what made a cold launch look like two different logos.
+ */
 function LoadingScreen() {
-  const colors = useColors();
-  const opacity = useRef(new Animated.Value(0.4)).current;
+  const opacity = useRef(new Animated.Value(0.55)).current;
+  const { width, height } = useWindowDimensions();
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.4, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.55, duration: 900, useNativeDriver: true }),
       ])
     ).start();
   }, []);
 
-  // Gentle "breathing" — opacity + a subtle scale so the splash feels alive
-  // rather than a flat pulsing logo. Themed background so a dark-mode user
-  // doesn't get a full-screen white flash on every cold launch.
-  const scale = opacity.interpolate({ inputRange: [0.4, 1], outputRange: [0.96, 1.04] });
+  // `resizeMode: "contain"` on the native splash fits the square logo to the
+  // screen's shorter side. Match that exactly, or the logo visibly resizes at
+  // the handoff. Only opacity animates — a scale would change its size, which
+  // is the very thing being reported.
+  const side = Math.min(width, height);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
+    // Matches expo.splash.backgroundColor in app.json. Not the themed bg: the
+    // native splash is this color, and stepping to the app ground here would
+    // just move the flash earlier.
+    <View style={{ flex: 1, backgroundColor: SPLASH_BACKGROUND, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.Image
-        source={require('../../assets/logo.png')}
-        style={{ width: 120, height: 120, opacity, transform: [{ scale }] }}
+        source={require('../../assets/splash.png')}
+        style={{ width: side, height: side, opacity }}
         resizeMode="contain"
       />
     </View>
