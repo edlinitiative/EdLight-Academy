@@ -63,8 +63,12 @@ export default function FillBlankAnswer({
     const next = [...values];
     next[i] = v;
     // Trailing empties are kept so blank 2 still lands in slot 2 when blank 1
-    // is left empty — the grader matches by position.
-    onChange(next.join('|'));
+    // is left empty — the grader matches by position. But when EVERY blank is
+    // empty, emit '' rather than "|": a pipe-only string is a non-empty value,
+    // so typing a character and deleting it would otherwise leave the question
+    // counted as answered in the header, the submit warning and the draft.
+    const joined = next.join('|');
+    onChange(next.some((v2) => v2.trim() !== '') ? joined : '');
   };
 
   return (

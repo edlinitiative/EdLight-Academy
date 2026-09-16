@@ -615,7 +615,20 @@ export default function ExamTakeScreen() {
   }
 
   function setAnswer(idx: number, value: Answer) {
-    setAnswers((prev) => ({ ...prev, [idx]: value }));
+    // An emptied answer is not an answer. `answeredCount` counts KEYS, so
+    // leaving the key behind after a student clears a field inflates the
+    // header count, under-reports the "N unanswered" warning on submit, and
+    // makes the resume card claim progress that isn't there.
+    const isEmpty = Array.isArray(value)
+      ? value.length === 0
+      : value == null || String(value).trim() === '';
+    setAnswers((prev) => {
+      if (!isEmpty) return { ...prev, [idx]: value };
+      if (!(idx in prev)) return prev;
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
   }
 
   async function handleSubmit() {
