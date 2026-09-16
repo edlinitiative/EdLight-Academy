@@ -17,7 +17,7 @@ import { logAnswerEvent } from '../services/answerEventsService';
 import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
-import { useColors, useTheme, typeScale, radius } from '../theme/theme';
+import { useColors, useTheme, typeScale, displayScale, lift, radius } from '../theme/theme';
 import { subjectColor } from '../utils/examUtils';
 import { tapLight, tapMedium, select, success, warn } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
@@ -221,15 +221,20 @@ function QuizAnswerOption({
           flexDirection: 'row',
           alignItems: 'center',
           overflow: 'hidden',
-          borderWidth: 1.5,
+          // Resting rows keep a hairline; the row in focus drops the outline and
+          // rises instead, so the selection reads as physical rather than
+          // recoloured. One element lifted beats four elements outlined.
+          borderWidth: isSelected || confirmed ? 0 : 1,
           borderColor,
           backgroundColor: bgColor,
-          borderRadius: 15,
+          borderRadius: radius.hero,
           marginBottom: 12,
+          ...(isSelected || (confirmed && isCorrectOpt) ? lift.focus : lift.rest),
         }}
       >
-        <View className="items-center justify-center m-2" style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: labelBg }}>
-          <Text style={{ fontFamily: typeScale.title.fontFamily, fontSize: 14, color: labelText }}>{label}</Text>
+        <View className="items-center justify-center m-2" style={{ width: 36, height: 36, borderRadius: 999, backgroundColor: labelBg }}>
+          {/* Serif letter: a small moment of the display voice inside UI chrome. */}
+          <Text style={{ fontFamily: displayScale.md.fontFamily, fontSize: 17, color: labelText }}>{label.toLowerCase()}</Text>
         </View>
         <Text style={[typeScale.bodyMd, { flex: 1, color: colors.ink, paddingVertical: 10, paddingRight: 12 }]}>{opt}</Text>
         {confirmed && isCorrectOpt && (
@@ -343,10 +348,12 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
                 .damping(springs.settle.damping)
                 .stiffness(springs.settle.stiffness)
                 .withInitialValues({ transform: [{ translateY: travel.lg }] })}
-          style={{ borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 16, ...shadow.md }}
+          // Lift, not outline: depth comes from light. A border AND a shadow is
+          // belt-and-braces and reads cheaper than either alone.
+          style={{ borderRadius: radius.hero, overflow: 'hidden', marginBottom: 18, ...lift.rest }}
         >
-          <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ padding: 18 }}>
-            <Text style={[typeScale.h2, { color: colors.ink }]}>{q.question ?? q.stem ?? ''}</Text>
+          <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ padding: 22 }}>
+            <Text style={[displayScale.lg, { color: colors.ink }]}>{q.question ?? q.stem ?? ''}</Text>
           </LinearGradient>
         </Animated.View>
 

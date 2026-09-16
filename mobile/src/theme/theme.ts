@@ -113,6 +113,28 @@ export const fonts = {
   // No 900 on purpose: Estil Klè's calm comes from stopping at 700 —
   // hierarchy is carried by size and space, not maximum boldness.
   black: 'SourceSans3-Bold',
+  /**
+   * Display face. One characterful serif alongside the UI sans is the single
+   * biggest lever on whether the app reads as considered or as a default
+   * template: a lone sans doing headings, body, numbers and labels is what
+   * makes a screen look like every other React Native app. Reserved for
+   * moments that deserve weight — a question, a name, a score — never for UI
+   * chrome, which stays in Source Sans.
+   */
+  display: 'InstrumentSerif-Regular',
+  displayItalic: 'InstrumentSerif-Italic',
+} as const;
+
+/**
+ * Display ramp — the serif voice. Optical sizes, not a linear scale: big serif
+ * type needs tighter tracking and looser leading than the UI ramp allows.
+ */
+export const displayScale = {
+  hero:     { fontFamily: fonts.display, fontSize: 40, lineHeight: 44, letterSpacing: -0.8 },
+  xl:       { fontFamily: fonts.display, fontSize: 32, lineHeight: 37, letterSpacing: -0.4 },
+  lg:       { fontFamily: fonts.display, fontSize: 26, lineHeight: 31, letterSpacing: -0.3 },
+  md:       { fontFamily: fonts.display, fontSize: 21, lineHeight: 26, letterSpacing: -0.1 },
+  quiet:    { fontFamily: fonts.displayItalic, fontSize: 18, lineHeight: 24, letterSpacing: 0 },
 } as const;
 
 /**
@@ -166,6 +188,47 @@ export const shadow = {
     shadowOpacity: 0.10,
     shadowRadius: 18,
     elevation: 10,
+  },
+} as const;
+
+/**
+ * Lifted surfaces — the premium counterpart to `shadow`.
+ *
+ * `shadow` above is tuned for cards that sit quietly in a list. These are for
+ * the few elements that should read as physically above the page: a selected
+ * answer, a hero card, a CTA. The difference is the falloff — a wide, very soft
+ * shadow plus a tight contact shadow, rather than one medium blur. A single
+ * mid-blur shadow is what makes a surface look stuck to the page rather than
+ * floating over it, and it is most of why a screen reads as "flat".
+ *
+ * Paired with `radius.hero` and NO border: depth should come from light, not
+ * from an outline. A 1px border plus a shadow is belt and braces, and reads
+ * cheaper than either alone.
+ */
+export const lift = {
+  /** Resting card that should still feel above the page. */
+  rest: {
+    shadowColor: '#0B1B33',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.07,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  /** The one element in focus — a chosen answer, the primary action. */
+  focus: {
+    shadowColor: '#0B1B33',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.16,
+    shadowRadius: 34,
+    elevation: 14,
+  },
+  /** Brand-tinted glow for a filled azure control, so it throws its own colour. */
+  azureGlow: {
+    shadowColor: colors.azure,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.38,
+    shadowRadius: 26,
+    elevation: 12,
   },
 } as const;
 
@@ -245,9 +308,11 @@ export function useTheme() {
       radius,
       spacing,
       typeScale,
+      displayScale,
       fonts,
       gradients,
       shadow: sh,
+      lift,
       cardSurface: {
         backgroundColor: c.surface,
         borderRadius: radius.card,
