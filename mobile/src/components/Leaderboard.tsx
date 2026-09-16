@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, withSpring, Easing } from 'react-native-reanimated';
-import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown, Sparkles, Timer } from 'lucide-react-native';
+import { Crown, Medal, Trophy, Pencil, ShieldCheck, ChevronDown, Sparkles, Timer, Share2 } from 'lucide-react-native';
+import ShareCardCapture, { type ShareCardCaptureHandle } from './share/ShareCardCapture';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias, weekId, weekNumber, timeToWeekEnd } from '../services/leaderboardService';
@@ -9,6 +10,8 @@ import useStore from '../contexts/store';
 import { useTheme, typeScale } from '../theme/theme';
 import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '../../../shared/leaderboardAgg';
 import { useReduceMotion } from '../utils/motion';
+import { tapLight } from '../utils/haptics';
+import { logInviteSent } from '../services/referralService';
 import Avatar from './ui/Avatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
@@ -344,6 +347,7 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
+  const shareRef = useRef<ShareCardCaptureHandle>(null);
   const [period, setPeriod] = useState<BoardPeriod>('week');
   const [scope, setScope] = useState<BoardScope>('national');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
@@ -454,8 +458,57 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
     </TouchableOpacity>
   );
 
+  // Being №1 is the peak moment on this screen, and until now it produced no
+  // artifact — the student had nothing to post. The champion card is a
+  // ready-to-share 1080×1920 PNG with the referral code and @edlightacademy
+  // baked in, so a victory post is also an invite.
+  const scopeLabel = scope === 'school'
+    ? t('Champion de mon école', 'Chanpyon lekòl mwen')
+    : scope === 'city'
+      ? t('Champion de ma ville', 'Chanpyon vil mwen')
+      : scope === 'department'
+        ? t('Champion de mon département', 'Chanpyon depatman mwen')
+        : t('Champion national', 'Chanpyon nasyonal');
+
+  const championBanner = !compact && myRank === 1 && myEntry && (
+    <TouchableOpacity
+      onPress={() => {
+        tapLight();
+        logInviteSent('champion');
+        shareRef.current?.share({
+          mode: 'champion',
+          name: (myEntry as any).displayName || t('Élève', 'Elèv'),
+          scope: scopeLabel,
+          scoreLabel: `${(myEntry as any).xp ?? 0} XP`,
+          period: period === 'all' ? t('Tous les temps', 'Tout tan') : t('Cette semaine', 'Semèn sa a'),
+        });
+      }}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={t('Partager ma victoire', 'Pataje viktwa mwen')}
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+        backgroundColor: colors.azureSoft, borderRadius: 14,
+        paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
+      }}
+    >
+      <Text style={{ fontSize: 22 }}>👑</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>
+          {t('Tu es N°1 !', 'Ou se N°1 !')}
+        </Text>
+        <Text style={{ fontSize: 12, color: colors.muted }}>
+          {t('Partage ta victoire en story', 'Pataje viktwa w nan istwa')}
+        </Text>
+      </View>
+      <Share2 color={colors.azure} size={18} />
+    </TouchableOpacity>
+  );
+
   const header = !compact && (
     <>
+      <ShareCardCapture ref={shareRef} />
+      {championBanner}
       <View className="flex-row items-center gap-2 mb-3">
         <Trophy color={colors.azure} size={18} />
         <Text style={{ fontSize: 16, fontWeight: '800', color: colors.ink }}>

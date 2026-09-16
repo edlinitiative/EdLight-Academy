@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, G, LinearGradient as SvgGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fonts } from '../../theme/theme';
 
@@ -37,9 +37,45 @@ const C = {
   goldMuted: '#8A5A00',
 };
 
+/**
+ * Champion cards invert the palette. A winner's post should not look like the
+ * same light card everyone else posts after a quiz — the night-azure ground is
+ * what makes it read as an event rather than a score, and it is what "surreal"
+ * buys us: glow reads on dark, and not on near-white.
+ */
+const CH = {
+  night: '#04112B',
+  deep: '#0A2A63',
+  mid: '#0E3E8F',
+  ray: 'rgba(122,196,255,0.30)',
+  halo: 'rgba(91,184,255,0.55)',
+  gold: '#FFC65C',
+  goldDeep: '#F5A623',
+  ink: '#FFFFFF',
+  muted: 'rgba(226,240,255,0.76)',
+  chip: 'rgba(255,255,255,0.10)',
+  chipBorder: 'rgba(255,255,255,0.22)',
+};
+
+/** Brand handles printed on every card — the post has to lead somewhere. */
+const SITE = 'academy.edlight.org';
+const IG_HANDLE = '@edlightacademy';
+
 export type ShareCardData =
   | { mode: 'score'; subject: string; score: number; total: number }
-  | { mode: 'rank'; subject: string; scoreLabel?: string; holder: string };
+  | { mode: 'rank'; subject: string; scoreLabel?: string; holder: string }
+  /**
+   * A win worth posting: tournament champion, weekly №1, or the school that
+   * topped the board. `name` is whoever won (a pseudo or a school), `scope`
+   * says what they won ("École championne"), `period` when.
+   */
+  | {
+      mode: 'champion';
+      name: string;
+      scope?: string;
+      scoreLabel?: string;
+      period?: string;
+    };
 
 export interface ShareCardProps {
   data: ShareCardData;
@@ -59,9 +95,131 @@ function verdict(pct: number, lang: 'fr' | 'ht'): string {
   return t('Continue 🎯', 'Kontinye 🎯');
 }
 
+
+/**
+ * Radiating rays, echoing the EdLight mark itself — the logo is a bulb throwing
+ * light, so the champion card blows that motif up to full bleed rather than
+ * inventing unrelated decoration.
+ */
+function Rays({ size }: { size: number }) {
+  const c = size / 2;
+  const spokes = 24;
+  const paths: string[] = [];
+  for (let i = 0; i < spokes; i += 1) {
+    const a = (i / spokes) * Math.PI * 2;
+    const w = 0.018 * Math.PI * 2;
+    const inner = size * 0.12;
+    const outer = size * 0.58;
+    const x1 = c + Math.cos(a - w) * inner, y1 = c + Math.sin(a - w) * inner;
+    const x2 = c + Math.cos(a) * outer, y2 = c + Math.sin(a) * outer;
+    const x3 = c + Math.cos(a + w) * inner, y3 = c + Math.sin(a + w) * inner;
+    paths.push(`M${x1},${y1} L${x2},${y2} L${x3},${y3} Z`);
+  }
+  return (
+    <Svg width={size} height={size} style={{ position: 'absolute' }}>
+      <Defs>
+        <RadialGradient id="rayFade" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={CH.ray} stopOpacity="0.95" />
+          <Stop offset="70%" stopColor={CH.ray} stopOpacity="0.25" />
+          <Stop offset="100%" stopColor={CH.ray} stopOpacity="0" />
+        </RadialGradient>
+        <RadialGradient id="halo" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={CH.halo} stopOpacity="0.85" />
+          <Stop offset="100%" stopColor={CH.halo} stopOpacity="0" />
+        </RadialGradient>
+      </Defs>
+      <Circle cx={c} cy={c} r={size * 0.42} fill="url(#halo)" />
+      <G>
+        {paths.map((d, i) => (
+          <Path key={i} d={d} fill="url(#rayFade)" />
+        ))}
+      </G>
+    </Svg>
+  );
+}
+
+function ChampionBody({
+  name, scope, scoreLabel, period, lang,
+}: { name: string; scope?: string; scoreLabel?: string; period?: string; lang: 'fr' | 'ht' }) {
+  const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
+  // Long school names are the norm ("Collège Dominique Savio de Pétion-Ville"),
+  // so the name steps down a size rather than being clipped.
+  const nameSize = name.length > 34 ? 62 : name.length > 22 ? 78 : 96;
+
+  return (
+    <View style={{ alignItems: 'center' }}>
+      <View style={{ width: 760, height: 760, alignItems: 'center', justifyContent: 'center' }}>
+        <Rays size={760} />
+
+        {/* Medallion */}
+        <View
+          style={{
+            width: 330, height: 330, borderRadius: 165,
+            alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(255,255,255,0.06)',
+            borderWidth: 3, borderColor: 'rgba(255,214,140,0.55)',
+          }}
+        >
+          <Text style={{ fontSize: 132 }}>👑</Text>
+          <Text style={{ fontFamily: fonts.black, fontSize: 30, color: CH.gold, letterSpacing: 5, marginTop: 2 }}>
+            {t('CHAMPION', 'CHANPYON')}
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        numberOfLines={2}
+        style={{
+          fontFamily: fonts.black, fontSize: nameSize, color: CH.ink,
+          textAlign: 'center', letterSpacing: -1.5, lineHeight: nameSize * 1.06, marginTop: -40,
+        }}
+      >
+        {name}
+      </Text>
+
+      {scope ? (
+        <Text style={{ fontFamily: fonts.bold, fontSize: 34, color: CH.gold, marginTop: 20, textAlign: 'center' }}>
+          {scope}
+        </Text>
+      ) : null}
+
+      <View style={{ flexDirection: 'row', gap: 16, marginTop: 30 }}>
+        {scoreLabel ? (
+          <View style={champChip}>
+            <Text style={{ fontFamily: fonts.black, fontSize: 30, color: CH.ink }}>{scoreLabel}</Text>
+          </View>
+        ) : null}
+        {period ? (
+          <View style={champChip}>
+            <Text style={{ fontFamily: fonts.medium, fontSize: 30, color: CH.muted }}>{period}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const champChip = {
+  backgroundColor: CH.chip,
+  borderColor: CH.chipBorder,
+  borderWidth: 2,
+  borderRadius: 999,
+  paddingHorizontal: 30,
+  paddingVertical: 14,
+} as const;
+
 export default function ShareCard({ data, lang, code, onReady }: ShareCardProps) {
   const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
   const [logoLoaded, setLogoLoaded] = useState(false);
+  // Champion cards run on the night palette; everything else keeps Lumière.
+  const isChampion = data.mode === 'champion';
+  // Tuple-typed: expo-linear-gradient requires at least two colours at the type
+  // level, which a plain string[] does not satisfy.
+  const bgColors: readonly [string, string, ...string[]] = isChampion
+    ? [CH.night, CH.deep, CH.mid, CH.night]
+    : [C.bgTop, C.bgBottom];
+  const ink = isChampion ? CH.ink : C.ink;
+  const muted = isChampion ? CH.muted : C.muted;
 
   // Fire onReady once the logo has loaded + a frame has painted, so the capture
   // never grabs a blank/half-rendered card. Fallback timer covers a load miss.
@@ -77,15 +235,18 @@ export default function ShareCard({ data, lang, code, onReady }: ShareCardProps)
 
   return (
     <LinearGradient
-      colors={[C.bgTop, C.bgBottom]}
+      colors={bgColors}
       start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
+      end={{ x: 0.35, y: 1 }}
       style={{ width: 1080, height: 1920, paddingHorizontal: 94, paddingTop: 104, paddingBottom: 100 }}
     >
       {/* Corner glow */}
       <View
         pointerEvents="none"
-        style={{ position: 'absolute', top: -260, right: -220, width: 900, height: 900, borderRadius: 450, backgroundColor: C.glow, opacity: 0.6 }}
+        style={{
+          position: 'absolute', top: -260, right: -220, width: 900, height: 900, borderRadius: 450,
+          backgroundColor: isChampion ? CH.halo : C.glow, opacity: isChampion ? 0.28 : 0.6,
+        }}
       />
 
       {/* Brand header */}
@@ -98,8 +259,8 @@ export default function ShareCard({ data, lang, code, onReady }: ShareCardProps)
           resizeMode="contain"
         />
         <View>
-          <Text style={{ fontFamily: fonts.black, fontSize: 46, color: C.ink, letterSpacing: -1 }}>EdLight</Text>
-          <Text style={{ fontFamily: fonts.medium, fontSize: 19, color: C.muted, letterSpacing: 7, marginTop: 4 }}>ACADEMY</Text>
+          <Text style={{ fontFamily: fonts.black, fontSize: 46, color: ink, letterSpacing: -1 }}>EdLight</Text>
+          <Text style={{ fontFamily: fonts.medium, fontSize: 19, color: muted, letterSpacing: 7, marginTop: 4 }}>ACADEMY</Text>
         </View>
       </View>
 
@@ -107,6 +268,14 @@ export default function ShareCard({ data, lang, code, onReady }: ShareCardProps)
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         {data.mode === 'score' ? (
           <ScoreBody subject={data.subject} score={data.score} total={data.total} lang={lang} />
+        ) : data.mode === 'champion' ? (
+          <ChampionBody
+            name={data.name}
+            scope={data.scope}
+            scoreLabel={data.scoreLabel}
+            period={data.period}
+            lang={lang}
+          />
         ) : (
           <RankBody subject={data.subject} scoreLabel={data.scoreLabel} holder={data.holder} lang={lang} />
         )}
@@ -114,27 +283,38 @@ export default function ShareCard({ data, lang, code, onReady }: ShareCardProps)
 
       {/* Footer CTA */}
       <View style={{ alignItems: 'center', gap: 30 }}>
-        <Text style={{ fontFamily: fonts.bold, fontSize: 40, color: C.ink, textAlign: 'center' }}>
-          {data.mode === 'rank'
-            ? t('Essaie de me détrôner 👑', 'Eseye detwone m 👑')
-            : t('Tu peux me battre ?', 'Èske w ka bat mwen ?')}
+        <Text style={{ fontFamily: fonts.bold, fontSize: 40, color: ink, textAlign: 'center' }}>
+          {data.mode === 'champion'
+            ? t('À toi de jouer la semaine prochaine', 'Semèn pwochèn se tou pa w')
+            : data.mode === 'rank'
+              ? t('Essaie de me détrôner 👑', 'Eseye detwone m 👑')
+              : t('Tu peux me battre ?', 'Èske w ka bat mwen ?')}
         </Text>
         <View style={{ flexDirection: 'row', gap: 16 }}>
           {code ? (
-            <View style={chipStyle}>
-              <Text style={{ fontFamily: fonts.medium, fontSize: 27, color: C.muted }}>
+            <View style={isChampion ? champChip : chipStyle}>
+              <Text style={{ fontFamily: fonts.medium, fontSize: 27, color: muted }}>
                 {t('Code ', 'Kòd ')}
-                <Text style={{ fontFamily: fonts.black, color: C.azure }}>{code}</Text>
+                <Text style={{ fontFamily: fonts.black, color: isChampion ? CH.gold : C.azure }}>{code}</Text>
               </Text>
             </View>
           ) : null}
-          <View style={chipStyle}>
-            <Text style={{ fontFamily: fonts.bold, fontSize: 27, color: C.ink }}>🎁 {t('+ bonus', '+ bonis')}</Text>
+          <View style={isChampion ? champChip : chipStyle}>
+            <Text style={{ fontFamily: fonts.bold, fontSize: 27, color: ink }}>🎁 {t('+ bonus', '+ bonis')}</Text>
           </View>
         </View>
-        <Text style={{ fontFamily: fonts.bold, fontSize: 29, color: C.muted, letterSpacing: 0.4 }}>
-          academy.<Text style={{ color: C.ink }}>edlight.org</Text>
-        </Text>
+
+        {/* Where the post leads. A story that shows a win but not a handle
+            converts nobody, so both the site and the Instagram account ride on
+            every card, champion or not. */}
+        <View style={{ alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontFamily: fonts.bold, fontSize: 29, color: muted, letterSpacing: 0.4 }}>
+            academy.<Text style={{ color: ink }}>edlight.org</Text>
+          </Text>
+          <Text style={{ fontFamily: fonts.black, fontSize: 29, color: isChampion ? CH.gold : C.azure, letterSpacing: 0.4 }}>
+            {IG_HANDLE}
+          </Text>
+        </View>
       </View>
     </LinearGradient>
   );

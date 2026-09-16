@@ -22,6 +22,7 @@ import { tapLight, tapMedium, select, success, warn } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import PressableScale from '../components/ui/PressableScale';
 import PopIn from '../components/ui/PopIn';
+import BeatMyScoreCard from '../components/share/BeatMyScoreCard';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import DefiHandoffCard from '../components/DefiHandoffCard';
@@ -386,8 +387,10 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
   );
 }
 
-function QuizResultScreen({ score, total, onRetry, onBack, t, isCreole }: {
+function QuizResultScreen({ score, total, onRetry, onBack, t, isCreole, quizTitle }: {
   score: number; total: number; onRetry: () => void; onBack: () => void; t: Translate; isCreole: boolean;
+  /** Names the quiz in the challenge message ("J'ai fait 8/10 en Chimie NS1"). */
+  quizTitle: string;
 }) {
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
   const title = pct >= 80
@@ -430,6 +433,15 @@ function QuizResultScreen({ score, total, onRetry, onBack, t, isCreole }: {
           <Text style={{ fontSize: 18, fontFamily: typeScale.num.fontFamily, color: '#fff' }}>{pct}%</Text>
           <Text style={{ fontSize: 10, fontFamily: typeScale.overline.fontFamily, color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 }}>{t('CORRECT', 'KÒRÈK')}</Text>
         </View>
+      </View>
+
+      {/* The duel prompt, at the one moment the score is fresh. Finishing a quiz
+          is the most frequent completion in the app, and until now it offered no
+          way to challenge anyone — scoreShare was only wired to exam results and
+          the Jeux hub. The referral code rides in the message, so a challenge is
+          also an invite. */}
+      <View style={{ width: '100%', marginTop: 16 }}>
+        <BeatMyScoreCard title={quizTitle} score={score} total={total} variant="glass" source="quiz" />
       </View>
 
       {/* Handoff into the XP loop — practice quizzes award no XP, so this is
@@ -569,6 +581,7 @@ export default function QuizzesScreen() {
           onBack={() => setState('list')}
           t={t}
           isCreole={isCreole}
+          quizTitle={String(activeQuiz?.title || t('ce quiz', 'quiz sa a'))}
         />
       </SafeAreaView>
     );

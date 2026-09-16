@@ -12,7 +12,8 @@
  * can degrade gracefully — a referral must never crash a screen or block signup.
  */
 
-import { auth } from './firebase';
+import { auth, db } from './firebase';
+import { doc, increment, setDoc } from 'firebase/firestore';
 
 const CODE_URL = 'https://academy.edlight.org/api/referrals/code';
 const REDEEM_URL = 'https://academy.edlight.org/api/referrals/redeem';
@@ -110,4 +111,32 @@ export function inviteMessage(code: string, link: string, lang: 'fr' | 'ht'): st
     return `📚 Vin jwenn mwen sou EdLight Academy pou n revize Bak la ! Sèvi ak kòd mwen ${code} lè w enskri, nou chak ap genyen yon bonus. ${link}`;
   }
   return `📚 Rejoins-moi sur EdLight Academy pour réviser le Bac ! Utilise mon code ${code} à l'inscription — on gagne chacun un bonus. ${link}`;
+}
+
+
+/**
+ * Count an invite the moment it is SENT, not just when it converts.
+ *
+ * Without this the funnel has only its bottom half: `referrals` records the 1
+ * completed referral, but nothing records how many of the 123 users ever tried
+ * to invite anyone — so there is no way to tell a reach problem (nobody shares)
+ * from a conversion problem (people share and nobody joins), and no way to
+ * compute a k-factor at all.
+ *
+ * Writes to the caller's OWN user doc, which existing rules already permit, so
+ * this needs no rules change and no deploy. Fire-and-forget: a failed count must
+ * never block a share.
+ */
+export function logInviteSent(kind: 'quiz' | 'exam' | 'game' | 'champion' | 'other'): void {
+  const user = auth.currentUser;
+  if (!user) return;
+  setDoc(
+    doc(db, 'users', user.uid),
+    {
+      invitesSent: increment(1),
+      [`invitesSentBy_${kind}`]: increment(1),
+      lastInviteAtMs: Date.now(),
+    },
+    { merge: true },
+  ).catch(() => {});
 }
