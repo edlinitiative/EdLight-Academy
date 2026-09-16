@@ -498,7 +498,11 @@ export function examTitleParts(exam: any) {
  */
 export function composeExamTitle(parts: any) {
   const { subject, topic, series, session, year, examType } = parts;
-  const out = [subject || 'Examen'];
+  // Translate at the point of display, here rather than at each call site:
+  // every composed title flows through this function, and fixing only the
+  // list/overview/home call sites left "Mixed — Sciences Génie · 2025" sitting
+  // in the ExamTake header — the screen a student actually reads.
+  const out = [subjectDisplayName(subject) || 'Examen'];
   // Prefer the real topic; otherwise fall back to a clean session-type label
   // ("Bac permanent", "Sujet type") rather than leaving just "Subject · Year".
   const subtitle = topic || examTypeLabel(examType);

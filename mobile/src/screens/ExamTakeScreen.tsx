@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { ArrowLeft, ChevronLeft, ChevronRight, Send, Lightbulb, Check } from 'lucide-react-native';
 import { fetchSingleExam } from '../utils/examCatalog';
-import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate } from '../utils/examUtils';
+import { flattenQuestions, gradeExam, normalizeSubject, normalizeExamTitle, normalizeYear, stripExamHallBoilerplate, subjectFromText } from '../utils/examUtils';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { saveExamResult } from '../services/examResults';
 import { recordReview } from '../services/reviewService';
@@ -58,12 +58,8 @@ function ProgressStrip({ progress }: { progress: number }) {
 // Fixed item widths so the auto-scroll offset can be computed without
 // measuring: dot 36 + 8 gap, section chip 30 + 8 gap.
 const NAV_DOT_W = 44;
-const NAV_CHIP_W = 38;
-
-function sectionNumeral(title: string, fallback: number): string {
-  const m = /^\s*(?:section\s+)?([IVXLC]+|\d+)\b/i.exec(String(title ?? ''));
-  return m ? m[1].toUpperCase() : String(fallback);
-}
+/** A section divider: 1pt rule + its 8pt gap. */
+const NAV_SEP_W = 9;
 
 function QuestionNav({ current, total, answers, sections, onGoto }: {
   current: number;
@@ -79,8 +75,10 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
 
   // Keep the active question centered as the student navigates.
   useEffect(() => {
-    const chipsBefore = sections.filter((s) => s.start <= current).length;
-    const itemCenter = chipsBefore * NAV_CHIP_W + current * NAV_DOT_W + 16 + 18;
+    // Dividers render for every section EXCEPT the first, so they only shift
+    // the centring for boundaries the rail has actually passed.
+    const sepsBefore = sections.filter((sec, idx) => idx > 0 && sec.start <= current).length;
+    const itemCenter = sepsBefore * NAV_SEP_W + current * NAV_DOT_W + 16 + 18;
     const x = itemCenter - Dimensions.get('window').width / 2;
     scrollRef.current?.scrollTo({ x: Math.max(0, x), animated: true });
   }, [current, sections]);
@@ -88,31 +86,26 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
   const items: React.ReactNode[] = [];
   for (let i = 0; i < total; i++) {
     const sectionIdx = sections.findIndex((s) => s.start === i);
-    if (sectionIdx >= 0) {
-      const s = sections[sectionIdx];
-      const inSection = current >= s.start && current <= s.end;
+    // A section boundary is a DIVIDER, not a token. It used to render the
+    // section's numeral in a chip the same size and colour family as a question
+    // pill, so a sectioned paper's rail read "1 1 2 2 3 4 5 6 3" — the numbers
+    // looked duplicated and meant nothing to the student. The section's identity
+    // is already announced above the question by ExamSectionContext ("NOUVELLE
+    // SECTION / PARTIE A"); all the rail has to carry is the grouping.
+    if (sectionIdx > 0) {
       items.push(
-        <PressableScale
-          key={`s${sectionIdx}`}
-          onPress={() => onGoto(s.start)}
-          pressedScale={0.97}
-          hitSlop={{ top: 6, bottom: 6 }}
-          accessibilityRole="button"
-          accessibilityLabel={`${t('Section', 'Seksyon')} ${sectionNumeral(s.title, sectionIdx + 1)}`}
+        <View
+          key={`sep${sectionIdx}`}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
           style={{
-            width: 30,
-            height: 36,
-            borderRadius: 10,
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: 1,
+            height: 18,
             marginRight: 8,
-            backgroundColor: inSection ? colors.azureSoft : colors.bg,
+            alignSelf: 'center',
+            backgroundColor: colors.border,
           }}
-        >
-          <Text style={[typeScale.micro, { color: inSection ? colors.azure : colors.muted, fontFamily: 'Satoshi-Bold' }]}>
-            {sectionNumeral(s.title, sectionIdx + 1)}
-          </Text>
-        </PressableScale>,
+        />,
       );
     }
     const answered = answers[i] != null && answers[i] !== '';
@@ -801,6 +794,23 @@ export default function ExamTakeScreen() {
   const sectionPassage = section?.passage ?? '';
   const isSectionStart = section ? safeIdx === section.start : safeIdx === 0;
 
+  // A multi-subject paper ("Mixed", or a comma-joined subject list) has no single
+  // subject, so the exam-level value fails every MATH_SUBJECTS check and its
+  // maths questions lost the step-by-step scaffold and the math keypad — they
+  // fell back to one free-text box despite carrying full `answer_parts`. The
+  // section knows better: "Mathématiques - Partie A" resolves to Mathématiques.
+  // Only consulted when the exam subject is NOT already specific, so ordinary
+  // single-subject papers behave exactly as before.
+  // Plain computation, not a hook: this sits after the loading/error early
+  // returns, so a useMemo here would be called conditionally.
+  const questionSubject = (() => {
+    const examSubjectRaw = String(exam?.subject ?? '');
+    const isMultiSubject = subject === 'Mixed' || subject === 'Autre' || examSubjectRaw.includes(',');
+    if (!isMultiSubject) return subject;
+    const fromSection = normalizeSubject(subjectFromText(sectionTitle) || '');
+    return fromSection && fromSection !== 'Autre' ? fromSection : subject;
+  })();
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
@@ -891,7 +901,7 @@ export default function ExamTakeScreen() {
               onAnswer={(a) => setAnswer(safeIdx, a)}
               isCreole={isCreole}
             />
-          ) : usesScaffold(q, subject) ? (
+          ) : usesScaffold(q, questionSubject) ? (
             // Step-by-step scaffold (PWA parity): authored solution text with
             // numbered blanks; persists {scaffold:[…]} through the same
             // answers/autosave/submit flow.
@@ -899,7 +909,7 @@ export default function ExamTakeScreen() {
               question={q}
               value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
               onChange={(v) => setAnswer(safeIdx, v)}
-              mathMode={scaffoldNeedsMath(q, subject)}
+              mathMode={scaffoldNeedsMath(q, questionSubject)}
             />
           ) : blankCount > 1 ? (
             // Several blanks in one sentence — one input each, pipe-joined.
@@ -929,7 +939,7 @@ export default function ExamTakeScreen() {
                     : t('Votre réponse…', 'Repons ou…')
               }
               mathy={
-                MATH_SUBJECTS.has(subject) &&
+                MATH_SUBJECTS.has(questionSubject) &&
                 looksMathy(typeof q?.correct === 'string' ? q.correct : undefined, questionText)
               }
             />

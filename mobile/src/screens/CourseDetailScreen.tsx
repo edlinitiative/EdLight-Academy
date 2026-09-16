@@ -18,7 +18,7 @@ import CourseInstructorCard from '../components/CourseInstructorCard';
 import ChapterTest from '../components/ChapterTest';
 import PressableScale from '../components/ui/PressableScale';
 import { MasteryMeter } from '../components/MasteryMeter';
-import { courseVideoThumb } from '../utils/videoThumb';
+import { useCourseThumb } from '../hooks/useCourseThumb';
 import {
   summarize, lessonMastery, masteryLabel, masteryColor, masteryNextStep,
   courseLessonIds, chapterTestReady, type ProgressMap,
@@ -447,8 +447,9 @@ export default function CourseDetailScreen() {
     }).length,
     [allLessons, progress],
   );
-  const heroThumb = useMemo(() => (course ? courseVideoThumb(course) : null), [course]);
-  const [heroThumbFailed, setHeroThumbFailed] = useState(false);
+  // Full-width 180pt hero — the sharp hq720 still, walking down the candidates
+  // on failure. It used to take the 320×180 mqdefault and upscale it ~3.7x.
+  const { uri: heroThumb, onError: onHeroThumbError } = useCourseThumb(course);
 
   const tint = courseTint(course?.color);
   // "Next" is the first lesson that isn't finished learning — which is not the
@@ -719,11 +720,11 @@ export default function CourseDetailScreen() {
             video still — no gradient ground, no arc. */}
         {showHero && (
           <View style={{ paddingHorizontal: 16 }}>
-            {heroThumb && !heroThumbFailed ? (
+            {heroThumb ? (
               <Image
                 source={{ uri: heroThumb }}
                 resizeMode="cover"
-                onError={() => setHeroThumbFailed(true)}
+                onError={onHeroThumbError}
                 style={{ width: '100%', height: 180, borderRadius: radius.card, backgroundColor: colors.surfaceAlt }}
               />
             ) : (

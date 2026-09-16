@@ -26,16 +26,23 @@ type Nav = BottomTabNavigationProp<TabParamList>;
  * their next step from a list; this card IS the next step.
  */
 export default function NextStepCard({
-  step, onOpenReview, thumb,
+  step, onOpenReview, thumbs,
 }: {
   step: NonNullable<NextStep>;
   onOpenReview: () => void;
   /** The course's video still — the card leads with real imagery when it has some. */
-  thumb?: string | null;
+  /**
+   * Ordered video-still candidates, sharpest first. A list rather than one URL
+   * because the sharp `hq720` still isn't served for every upload: the card
+   * walks down on load failure instead of dropping straight to no image. This
+   * is the largest image on the home screen, so the resolution shows.
+   */
+  thumbs?: string[];
 }) {
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface, shadow, radius } = useTheme();
-  const [thumbFailed, setThumbFailed] = React.useState(false);
+  const [thumbAttempt, setThumbAttempt] = React.useState(0);
+  const thumb = thumbs?.[thumbAttempt] ?? null;
   // How far into the paper the student already is. An abandoned exam is the
   // strongest open loop on the home screen, but the card used to show only its
   // title next to a generic target glyph — nothing that said "you are 4
@@ -149,7 +156,7 @@ export default function NextStepCard({
     }
   }
 
-  const showThumb = !!thumb && !thumbFailed;
+  const showThumb = !!thumb;
 
   return (
     <View style={{ ...cardSurface, ...shadow.md, padding: 0, overflow: 'hidden' }}>
@@ -157,7 +164,7 @@ export default function NextStepCard({
         <Image
           source={{ uri: thumb! }}
           resizeMode="cover"
-          onError={() => setThumbFailed(true)}
+          onError={() => setThumbAttempt((a) => a + 1)}
           style={{ width: '100%', height: 150, backgroundColor: colors.surfaceAlt }}
         />
       )}

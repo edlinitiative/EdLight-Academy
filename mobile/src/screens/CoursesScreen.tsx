@@ -12,6 +12,7 @@ import { useCourses } from '../hooks/useData';
 import { getSubjectColor } from '../utils/shared';
 import { SUBJECT_META } from '../utils/subjectMeta';
 import { courseVideoThumb } from '../utils/videoThumb';
+import { useCourseThumb } from '../hooks/useCourseThumb';
 import useStore from '../contexts/store';
 import { ListSkeleton, ErrorState, EmptyState } from '../components/StateViews';
 import {
@@ -98,8 +99,8 @@ function CourseCard({
   const totalLessons = countLessons(course);
   const units = countUnits(course);
   const tint = getSubjectColor(course.subject);
-  const thumb = courseVideoThumb(course);
-  const [thumbFailed, setThumbFailed] = useState(false);
+  // Full-bleed 150pt still: the sharp candidate first, stepping down on error.
+  const { uri: thumb, onError: onThumbError } = useCourseThumb(course);
   const started = lessonsDone > 0 || summary.started > 0;
 
   return (
@@ -117,11 +118,11 @@ function CourseCard({
         overflow: 'hidden',
       }}
     >
-      {thumb && !thumbFailed ? (
+      {thumb ? (
         <Image
           source={{ uri: thumb }}
           resizeMode="cover"
-          onError={() => setThumbFailed(true)}
+          onError={onThumbError}
           style={{ width: '100%', height: 150, backgroundColor: colors.surfaceAlt }}
         />
       ) : (
@@ -280,8 +281,10 @@ function ShelfCard({
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
   const soon = !!course.comingSoon;
-  const thumb = soon ? null : courseVideoThumb(course);
-  const [thumbFailed, setThumbFailed] = useState(false);
+  // Full-bleed 84pt still — stretched to the card's width, so it needs the
+  // sharp candidate just as much as the taller cards do.
+  const { uri: rawThumb, onError: onThumbError } = useCourseThumb(course);
+  const thumb = soon ? null : rawThumb;
   const tint = getSubjectColor(course.subject);
   const lessons = countLessons(course);
 
@@ -303,11 +306,11 @@ function ShelfCard({
         opacity: soon ? 0.55 : 1,
       }}
     >
-      {thumb && !thumbFailed ? (
+      {thumb ? (
         <Image
           source={{ uri: thumb }}
           resizeMode="cover"
-          onError={() => setThumbFailed(true)}
+          onError={onThumbError}
           style={{ width: '100%', height: 84, backgroundColor: colors.surfaceAlt }}
         />
       ) : (
