@@ -102,7 +102,7 @@ export default function ExamSectionContext({
   if (!safeTitle && !safeInstructions && !safePassage) return null;
 
   const { numeral, name } = parseSectionTitle(safeTitle);
-  const displayTitle = numeral ? t(`Section ${numeral} — ${name}`, `Seksyon ${numeral} — ${name}`) : safeTitle;
+  const displayTitle = numeral ? t(`Section ${numeral} · ${name}`, `Seksyon ${numeral} · ${name}`) : safeTitle;
 
   // ── Section intro (first question of the section) ──────────────────────────
   // Title stays prominent; the consignes (often long, generic exam-wide rules)

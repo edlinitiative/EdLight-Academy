@@ -131,7 +131,7 @@ export default function ChallengeScreen({ code, onClose }: { code: string; onClo
           )}
           {acceptError && (
             <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
-              {t('Le score n’a pas pu être envoyé — vérifie ta connexion.', 'Nòt la pa t ka voye — verifye koneksyon ou.')}
+              {t('Le score n’a pas pu être envoyé. Vérifie ta connexion.', 'Nòt la pa t ka voye. Verifye koneksyon ou.')}
             </Text>
           )}
         </View>

@@ -227,7 +227,7 @@ export default function MoKacheGame({ isCreole, onExit, onRecord, highScore = nu
           {isCreole ? 'Poko gen mo' : 'Aucun mot disponible'}
         </Text>
         <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
-          {isCreole ? 'Tounen pita — n ap ajoute mo.' : 'Revenez plus tard — des mots arrivent.'}
+          {isCreole ? 'Tounen pita, n ap ajoute mo.' : 'Revenez plus tard, des mots arrivent.'}
         </Text>
         <TouchableOpacity
           onPress={onExit}

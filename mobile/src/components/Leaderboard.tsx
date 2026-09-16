@@ -53,9 +53,13 @@ function EntryRow({ entry, isMe, compact = false, delta = 0 }: { entry: any; isM
       accessible
       accessibilityLabel={rowLabel}
       className="flex-row items-center py-2.5 px-3 rounded-xl mb-1.5"
+      // Ordinary rows are plain: they already sit inside the leaderboard card,
+      // so giving each one its own outline drew a border inside a border
+      // ("i don't like the outer border", TestFlight 2026-09-09). Only YOUR row
+      // keeps a frame, which is now the one thing the eye lands on.
       style={isMe
         ? { backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azure }
-        : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+        : { backgroundColor: 'transparent' }}
     >
       {/* Rank badge */}
       <View
@@ -404,8 +408,8 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
           <Pencil size={14} color={colors.warn} />
           <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: colors.warn }}>
             {t(
-              'Il vous manque un pseudo — choisissez-en un pour apparaître.',
-              'Ou manke yon ti non — chwazi youn pou parèt.',
+              'Il vous manque un pseudo. Choisissez-en un pour apparaître.',
+              'Ou manke yon ti non. Chwazi youn pou parèt.',
             )}
           </Text>
         </TouchableOpacity>
@@ -543,8 +547,8 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
           <Sparkles size={14} color={colors.azure} />
           <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '600', color: colors.azure }}>
             {t(
-              'Nouvelle semaine ! Voici le classement de la semaine dernière — joue pour prendre la tête.',
-              'Nouvo semèn ! Men klasman semèn pase a — jwe pou pran devan.',
+              'Semaine dernière : joue pour prendre la tête.',
+              'Semèn pase a : jwe pou pran devan.',
             )}
           </Text>
         </View>

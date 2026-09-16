@@ -3,6 +3,7 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import MathText from './MathText';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
+import { mathToText } from '../utils/mathText';
 
 /**
  * Answer inputs for open exam questions, mirroring the PWA (src/pages/ExamTake.tsx):
@@ -40,32 +41,13 @@ export function hasLatexMarkers(value: string): boolean {
 }
 
 /**
- * Display-only cleanup of a LaTeX-ish string for native Text (option chips):
- * strips $ delimiters and swaps the common commands for their unicode glyphs.
+ * Display-only cleanup of a LaTeX-ish string for native Text (option chips).
+ * Delegates to `mathToText` so plain-text surfaces have exactly ONE LaTeX
+ * transform: the local symbol table this used to carry knew nothing about
+ * \frac, greek letters or superscripts, so exam option chips rendered raw
+ * source ("5 × 3 × \frac{5!}{2!2!}") straight to students.
  */
-export function prettifyMath(s: string): string {
-  return String(s ?? '')
-    .replace(/\$\$?/g, '')
-    .replace(/\\text\{([^}]*)\}/g, '$1')
-    .replace(/\\cup\b/g, '∪')
-    .replace(/\\cap\b/g, '∩')
-    .replace(/\\infty\b/g, '∞')
-    .replace(/\\neq\b/g, '≠')
-    .replace(/\\ne\b/g, '≠')
-    .replace(/\\leq\b/g, '≤')
-    .replace(/\\le\b/g, '≤')
-    .replace(/\\geq\b/g, '≥')
-    .replace(/\\ge\b/g, '≥')
-    .replace(/\\times\b/g, '×')
-    .replace(/\\div\b/g, '÷')
-    .replace(/\\pm\b/g, '±')
-    .replace(/\\pi\b/g, 'π')
-    .replace(/\\sqrt\b/g, '√')
-    .replace(/\\cdot\b/g, '·')
-    .replace(/\\,/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+export const prettifyMath = mathToText;
 
 // ── Math symbol chips ────────────────────────────────────────────────────────
 

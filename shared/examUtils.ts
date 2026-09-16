@@ -107,6 +107,24 @@ const SUBJECT_MAP = {
   éthique: 'Philosophie',
 };
 
+/**
+ * French display label for a canonical subject key.
+ *
+ * `normalizeSubject` returns the CANONICAL key, which `trackConfig` (Bac
+ * coefficients, subject ordering) and the readiness service are keyed on — so
+ * the key itself must not change. A couple of those keys are not French words:
+ * multi-subject papers are stored as "Mixed", which reached students as
+ * "Mixed · 2025" on the exam list and overview. Translate at the display edge.
+ */
+const SUBJECT_DISPLAY_FR: Record<string, string> = {
+  Mixed: 'Toutes matières',
+};
+
+export function subjectDisplayName(subject: any): string {
+  const s = String(subject ?? '').trim();
+  return SUBJECT_DISPLAY_FR[s] ?? s;
+}
+
 export function normalizeSubject(raw: string): string {
   if (!raw) return 'Autre';
   const key = raw.trim().toLowerCase();
@@ -687,6 +705,34 @@ export function questionTypeMeta(type: any) {
   return (QUESTION_TYPE_META as Record<string, any>)[type] || QUESTION_TYPE_META.unknown;
 }
 
+/**
+ * How many of an exam's questions the app can actually grade by itself.
+ *
+ * The published `_autoGradable` counter credits any question carrying
+ * `answer_parts` — which sweeps in ESSAYS, because their answer_parts hold a
+ * guided plan, not a key. A 3-question dissertation paper therefore announced
+ * "3 questions corrigées automatiquement", which is not true of any of them.
+ * Counting from the type breakdown keeps the claim honest, and needs no
+ * regeneration of the 530-exam index.
+ */
+export function autoGradableCount(exam: any): number {
+  const counts = exam?._typeCounts;
+  if (!counts || typeof counts !== 'object') return Number(exam?._autoGradable) || 0;
+  return Object.entries(counts).reduce(
+    (n, [type, count]) => (questionTypeMeta(type).gradable ? n + (Number(count) || 0) : n),
+    0,
+  );
+}
+
+/** True when the paper is essay-shaped: nothing (or almost nothing) auto-grades. */
+export function isEssayExam(exam: any): boolean {
+  const counts = exam?._typeCounts;
+  if (!counts || typeof counts !== 'object') return false;
+  const total = Object.values(counts).reduce<number>((n, c: any) => n + (Number(c) || 0), 0);
+  const essays = (Number(counts.essay) || 0) + (Number(counts.matching) || 0);
+  return total > 0 && essays / total >= 0.5;
+}
+
 // ─── Build index ────────────────────────────────────────────────────────────
 
 /**
@@ -1072,10 +1118,86 @@ function fuzzyTextMatch(user: any, expected: any): boolean {
   const userWords = u.split(' ').filter((w: string) => w.length >= 3);
   if (expectedWords.length > 1 && userWords.length > 0) {
     // Accept if user provided at least one significant matching word
-    const matchCount = userWords.filter(uw => expectedWords.some(ew => ew === uw)).length;
+    const matchCount = userWords.filter(uw => expectedWords.some(ew => nearWord(ew, uw))).length;
     if (matchCount > 0 && matchCount >= Math.min(userWords.length, 1)) return true;
   }
+  // Single-word (or short-phrase) answers have no other word to carry the
+  // match, so compare them directly with a typo budget: a Culture Générale
+  // question asking for a name scored zero on one dropped letter.
+  if (expectedWords.length <= 1 || userWords.length <= 1) {
+    if (nearWord(u, e)) return true;
+  }
   return false;
+}
+
+/**
+ * Levenshtein distance, capped: we only ever care whether two words are within
+ * one or two edits, so bail out as soon as the best possible distance exceeds
+ * `max`. Keeps the grader O(n·max) on long answers.
+ */
+function editDistance(a: string, b: string, max: number): number {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const curr = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > max) return max + 1;
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+/**
+ * How many edits we forgive in a word. Short words are left strict — "mer" and
+ * "fer" are different answers, not a typo — while longer words get one edit,
+ * and long ones two. Only ever applied to non-math subjects.
+ */
+function typoBudget(word: string): number {
+  if (word.length <= 4) return 0;
+  if (word.length <= 8) return 1;
+  return 2;
+}
+
+/**
+ * Two words are "the same word typed imperfectly". The budget comes from the
+ * LONGER of the two: a dropped letter shortens the student's word, and taking
+ * the shorter one's budget would make "Atal" too short to forgive against
+ * "Attal" — the exact case reported from TestFlight.
+ */
+function nearWord(a: string, b: string): boolean {
+  const budget = typoBudget(a.length >= b.length ? a : b);
+  if (budget === 0) return a === b;
+  return editDistance(a, b, budget) <= budget;
+}
+
+/**
+ * Split an authored answer key for a question with `blankCount` blanks.
+ *
+ * exam_catalog.json separates the per-blank answers with a comma (702
+ * questions), semicolon (97), slash (20), pipe (2), or plain spaces (51) —
+ * and 1408 single-blank keys may legitimately CONTAIN a comma
+ * ("Port-au-Prince, Haïti"), so a separator only counts when it yields exactly
+ * one part per blank. Returns null when the key cannot be split that way.
+ */
+export function splitBlankKey(correct: any, blankCount: number): string[] | null {
+  const raw = String(correct ?? '').trim();
+  if (!raw || blankCount < 2) return null;
+  for (const sep of ['|', ';', ',', '/']) {
+    if (!raw.includes(sep)) continue;
+    const parts = raw.split(sep).map((p) => p.trim()).filter(Boolean);
+    if (parts.length === blankCount) return parts;
+  }
+  // Space-separated only when every blank gets exactly one word, so a key like
+  // "they don't like" is never chopped into three answers.
+  const words = raw.split(/\s+/).filter(Boolean);
+  if (words.length === blankCount) return words;
+  return null;
 }
 
 /**
@@ -2031,6 +2153,19 @@ function checkAnswer(question: any, userAnswer: any, options: Record<string, any
 
       if (!effectiveUser) return false;
       const correctClean = correct;
+
+      // Multi-blank question: the student answers one input per blank and the
+      // values arrive pipe-joined. Grade each blank against its own part of the
+      // key — every blank must match, in order. (883 of the 2291 fill_blank
+      // questions in the catalog carry more than one blank.)
+      if (effectiveUser.includes('|')) {
+        const userParts = effectiveUser.split('|').map((v: string) => v.trim());
+        const keyParts = splitBlankKey(question.correct, userParts.length);
+        if (keyParts) {
+          return userParts.every((val: string, i: number) =>
+            answerMatches(val, keyParts[i], [], options));
+        }
+      }
 
       // Exact match first
       if (effectiveUser === correctClean) return true;

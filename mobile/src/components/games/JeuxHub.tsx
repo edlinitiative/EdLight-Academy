@@ -526,8 +526,8 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
                   <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
                     {bestPersonal
                       ? (isCreole
-                          ? 'Pataje rekò w oswa envite yo — nou chak ap genyen yon bonus.'
-                          : 'Partage ton record ou invite-les — vous gagnez chacun un bonus.')
+                          ? 'Pataje rekò w oswa envite yo : nou chak ap genyen yon bonus.'
+                          : 'Partage ton record ou invite-les : vous gagnez chacun un bonus.')
                       : (isCreole
                           ? 'Envite yo jwe : nou chak ap genyen +1 jèl seri ak XP.'
                           : 'Invite-les à jouer : vous gagnez chacun +1 gel de série et des XP.')}

@@ -8,8 +8,8 @@ import {
   MathPreview,
   hasLatexMarkers,
   looksMathy,
-  prettifyMath,
 } from './ExamAnswerInput';
+import { mathToText } from '../utils/mathText';
 
 /**
  * Simplified native port of the PWA's ScaffoldedAnswer (src/pages/ExamTake.tsx):
@@ -287,7 +287,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                           fontWeight: selected ? '700' : '400',
                         }}
                       >
-                        {prettifyMath(optValue) || optValue}
+                        {mathToText(optValue) || optValue}
                       </Text>
                     </TouchableOpacity>
                   );

@@ -4,6 +4,7 @@
 // subject is known (TestFlight feedback: "for chimie NSI I want a better icon").
 import {
   BookOpen, Calculator, Atom, FlaskConical, TrendingUp, Leaf, PenLine, Globe,
+  Landmark, Scale, Palette, Laptop, HeartPulse, Lightbulb, Layers, Languages,
 } from 'lucide-react-native';
 
 export const SUBJECT_META: Record<string, { name: string; nameHt: string; Icon: any }> = {
@@ -40,4 +41,38 @@ export function courseSubjectCode(course: any): string | null {
 export function courseSubjectIcon(course: any): any {
   const code = courseSubjectCode(course);
   return code ? SUBJECT_META[code].Icon : BookOpen;
+}
+
+// ── Exam subjects ───────────────────────────────────────────────────────────
+// Exams span more subjects than the video courses do (Philosophie, Santé,
+// Culture Générale, multi-subject papers…), and their cards used to carry
+// EMOJI badges — 📐⚗️🧬🧩 — which Ted rejected twice ("i don't like how this
+// looks", "i don't like these icons as well… something we can borrow from
+// coursera"). Emoji render as full-color stickers that fight the calm azure
+// palette and look different on every OS version. These are the same Lucide
+// line glyphs the course tiles use, so the whole app now speaks one icon
+// language. Keyed by CANONICAL subject name (what `normalizeSubject` returns).
+export const EXAM_SUBJECT_ICONS: Record<string, any> = {
+  'Mathématiques': Calculator,
+  'Physique': Atom,
+  'Chimie': FlaskConical,
+  'SVT': Leaf,
+  'Français': PenLine,
+  'Kreyòl': PenLine,
+  'Anglais': Languages,
+  'Espagnol': Languages,
+  'Histoire-Géo': Landmark,
+  'Philosophie': Scale,
+  'Économie': TrendingUp,
+  'Art & Musique': Palette,
+  'Informatique': Laptop,
+  'Santé': HeartPulse,
+  'Culture Générale': Lightbulb,
+  // Multi-subject papers: stacked layers, not a jigsaw piece.
+  'Mixed': Layers,
+};
+
+/** Lucide icon for an exam's canonical subject — BookOpen when unknown. */
+export function examSubjectIcon(subject: any): any {
+  return EXAM_SUBJECT_ICONS[String(subject ?? '').trim()] ?? BookOpen;
 }

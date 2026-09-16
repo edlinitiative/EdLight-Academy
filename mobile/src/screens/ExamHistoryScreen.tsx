@@ -131,7 +131,7 @@ export default function ExamHistoryScreen() {
         <EmptyState
           icon={<BarChart3 color={colors.azure} size={34} strokeWidth={1.75} />}
           title={t('Aucun examen terminé pour l’instant', 'Ou poko fini okenn egzamen')}
-          description={t('Passez un examen blanc — votre score apparaîtra ici.', 'Fè yon egzamen blan — nòt ou ap parèt la.')}
+          description={t('Passez un examen blanc. Votre score apparaîtra ici.', 'Fè yon egzamen blan. Nòt ou ap parèt la.')}
           ctaLabel={t('Voir les examens', 'Gade egzamen yo')}
           onCta={() => navigation.navigate('ExamBrowser', { level: 'terminale' })}
         />

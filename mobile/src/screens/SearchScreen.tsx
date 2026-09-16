@@ -264,8 +264,8 @@ export default function SearchScreen({ onClose, navigation }: { onClose?: () => 
             <MessageCircle size={14} color={colors.muted} />
             <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
               {t(
-                'Astuce : tapez une question et envoyez-la à Sandra — elle peut aussi créer votre plan d’étude.',
-                'Ti konsèy : ekri yon kesyon epi voye l bay Sandra — li ka kreye plan etid ou tou.',
+                'Astuce : tapez une question et envoyez-la à Sandra. Elle peut aussi créer votre plan d’étude.',
+                'Ti konsèy : ekri yon kesyon epi voye l bay Sandra. Li ka kreye plan etid ou tou.',
               )}
             </Text>
           </View>

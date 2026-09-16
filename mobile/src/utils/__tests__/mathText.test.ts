@@ -58,4 +58,21 @@ describe('mathToText', () => {
     expect(mathToText('36√{\\frac{2}{7}}')).toBe('36√(2/7)');
     expect(mathToText('17√{\\frac{2}{49}}')).toBe('17√(2/49)');
   });
+
+  it('renders a matrix environment instead of spelling out "beginpmatrix"', () => {
+    // TestFlight shot 04: the Mathématiques 2025 determinant question showed
+    // "beginpmatrix 3 & -2 & a \\ 1 & 3 & -2 \\ 2 & -1 & a endpmatrix" because
+    // \begin/\end fell through to the bare-command rule and \\ was left alone.
+    expect(mathToText('M = \\begin{pmatrix} 3 & -2 & a \\\\ 1 & 3 & -2 \\\\ 2 & -1 & a \\end{pmatrix}'))
+      .toBe('M = [3, -2, a; 1, 3, -2; 2, -1, a]');
+  });
+
+  it('handles the other matrix environments and a single row', () => {
+    expect(mathToText('\\begin{bmatrix} 1 & 0 \\\\ 0 & 1 \\end{bmatrix}')).toBe('[1, 0; 0, 1]');
+    expect(mathToText('\\begin{vmatrix} a & b \\end{vmatrix}')).toBe('[a, b]');
+  });
+
+  it('drops an unknown environment wrapper rather than spelling its name', () => {
+    expect(mathToText('\\begin{aligned} x = 1 \\end{aligned}')).toBe('x = 1');
+  });
 });

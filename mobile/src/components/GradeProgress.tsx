@@ -81,13 +81,13 @@ function motivationLine(grade: string | null | undefined, isCreole: boolean): st
     case '7e':
     case '8e':
       return t(
-        'Chaque quiz te fait gagner des XP — continue à jouer pour apprendre !',
-        'Chak quiz fè w genyen XP — kontinye jwe pou w aprann !',
+        'Chaque quiz te fait gagner des XP. Continue à jouer pour apprendre !',
+        'Chak quiz fè w genyen XP. Kontinye jwe pou w aprann !',
       );
     case '9e':
       return t(
-        'Continue comme ça — tu construis de bonnes bases pour l’examen de 9ᵉ.',
-        'Kontinye konsa — w ap bati bon baz pou egzamen 9yèm nan.',
+        'Continue comme ça : tu construis de bonnes bases pour l’examen de 9ᵉ.',
+        'Kontinye konsa : w ap bati bon baz pou egzamen 9yèm nan.',
       );
     case 'NS1':
     case 'NS2':
@@ -98,13 +98,13 @@ function motivationLine(grade: string | null | undefined, isCreole: boolean): st
       );
     case 'POSTBAC':
       return t(
-        'Belle régularité — chaque session te rapproche de ton concours.',
-        'Bèl regilarite — chak sesyon pwoche w de konkou w la.',
+        'Belle régularité : chaque session te rapproche de ton concours.',
+        'Bèl regilarite : chak sesyon pwoche w de konkou w la.',
       );
     default:
       return t(
-        'Continue sur ta lancée — chaque effort compte.',
-        'Kontinye konsa — chak efò konte.',
+        'Continue sur ta lancée : chaque effort compte.',
+        'Kontinye konsa : chak efò konte.',
       );
   }
 }

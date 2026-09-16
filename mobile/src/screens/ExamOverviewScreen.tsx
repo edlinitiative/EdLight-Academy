@@ -9,23 +9,24 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  ArrowLeft, Clock, FileText, Layers, Award, CheckCircle2, Play, RotateCcw, BarChart3,
+  ArrowLeft, Clock, FileText, Layers, Award, CheckCircle2, Play, RotateCcw, BarChart3, Lightbulb,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useTheme, typeScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { ListSkeleton, ErrorState } from '../components/StateViews';
 import { fetchCatalogIndex, fetchSingleExam } from '../utils/examCatalog';
-import { subjectColor, QUESTION_TYPE_META, normalizeExamTitle, normalizeSubject } from '../utils/examUtils';
+import { subjectColor, QUESTION_TYPE_META, normalizeExamTitle, normalizeSubject, subjectDisplayName, autoGradableCount, isEssayExam } from '../utils/examUtils';
 import { loadExamResult } from '../services/examResults';
 import { loadExamAttemptDraft } from '../services/examAttempts';
 import type { ExamsParamList } from '../navigation/ExamsNavigator';
 import { tapLight, tapMedium } from '../utils/haptics';
+import { tabBarSpace } from '../navigation/tabBarSpace';
 
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamOverview'>;
 type Route = RouteProp<ExamsParamList, 'ExamOverview'>;
@@ -50,6 +51,7 @@ export default function ExamOverviewScreen() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const { colors, cardSurface } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [slim, setSlim] = useState<any | null>(null);
   const [full, setFull] = useState<any | null>(null);
@@ -141,7 +143,9 @@ export default function ExamOverviewScreen() {
     || 0;
   const duration = slim?.duration_minutes || full?.duration_minutes || 0;
   const points = slim?.total_points || full?.total_points || 0;
-  const autoGradable = slim?._autoGradable || 0;
+  // Counted from the type breakdown: the published counter credits essays.
+  const autoGradable = autoGradableCount(slim);
+  const essayExam = isEssayExam(slim);
   const diff = slim?.difficulty ? DIFFICULTY_META[slim.difficulty] : null;
   const langLabel = slim?.language ? (LANG_LABEL[slim.language] || String(slim.language).toUpperCase()) : null;
   const topics: string[] = Array.isArray(slim?.topics) ? slim.topics.slice(0, 6) : [];
@@ -180,7 +184,7 @@ export default function ExamOverviewScreen() {
         <ArrowLeft color={colors.ink} size={22} />
       </TouchableOpacity>
       <Text style={[typeScale.titleSm, { color: colors.muted, flex: 1 }]} numberOfLines={1}>
-        {subject || t('Examen', 'Egzamen')}
+        {subjectDisplayName(subject) || t('Examen', 'Egzamen')}
       </Text>
     </View>
   );
@@ -222,7 +226,7 @@ export default function ExamOverviewScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {header}
-      <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 120 + tabBarSpace(insets.bottom) }}>
         {/* Identity */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: accent }} />
@@ -255,8 +259,8 @@ export default function ExamOverviewScreen() {
             <Play size={16} color={colors.azure} />
             <Text style={[typeScale.caption, { color: colors.ink, flex: 1 }]}>
               {t(
-                `Examen en cours — ${draftAnswered} réponse${(draftAnswered || 0) > 1 ? 's' : ''} enregistrée${(draftAnswered || 0) > 1 ? 's' : ''}.`,
-                `Egzamen an ap kontinye — ${draftAnswered} repons anrejistre.`,
+                `Examen en cours : ${draftAnswered} réponse${(draftAnswered || 0) > 1 ? 's' : ''} enregistrée${(draftAnswered || 0) > 1 ? 's' : ''}.`,
+                `Egzamen an ap kontinye : ${draftAnswered} repons anrejistre.`,
               )}
             </Text>
           </View>
@@ -277,6 +281,32 @@ export default function ExamOverviewScreen() {
               {isCreole
                 ? `${autoGradable} kesyon korije otomatikman`
                 : `${autoGradable} question${autoGradable > 1 ? 's' : ''} corrigée${autoGradable > 1 ? 's' : ''} automatiquement`}
+            </Text>
+          </View>
+        )}
+
+        {/* Essay papers grade nothing by themselves, so the overview used to
+            offer a student who wants to LEARN nothing but a 120-minute timer.
+            Say plainly what the paper does carry: a guided plan per subject,
+            on-demand hints, and a model answer to compare against. */}
+        {essayExam && (
+          <View
+            style={{
+              ...cardSurface, marginTop: 12, padding: 14, gap: 8,
+              backgroundColor: colors.azureSoft, borderColor: colors.azureSoft,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Lightbulb size={15} color={colors.azure} />
+              <Text style={[typeScale.label, { color: colors.azure }]}>
+                {t('Épreuve de rédaction', 'Egzamen redaksyon')}
+              </Text>
+            </View>
+            <Text style={[typeScale.caption, { color: colors.ink, lineHeight: 20 }]}>
+              {t(
+                "Pas de correction automatique ici : tu écris, puis tu compares. Chaque sujet vient avec un plan guidé, des indices si tu bloques, et un corrigé modèle.",
+                "Pa gen koreksyon otomatik la a : ou ekri, apre ou konpare. Chak sijè gen yon plan gide, endis si ou bloke, ak yon modèl repons.",
+              )}
             </Text>
           </View>
         )}
@@ -346,7 +376,7 @@ export default function ExamOverviewScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20 }}>
             <Clock size={13} color={colors.faint} />
             <Text style={[typeScale.micro, { color: colors.faint }]}>
-              {t('Sans limite de temps — à votre rythme.', 'San limit tan — nan ritm pa ou.')}
+              {t('Sans limite de temps, à votre rythme.', 'San limit tan, nan ritm pa ou.')}
             </Text>
           </View>
         )}
@@ -356,7 +386,10 @@ export default function ExamOverviewScreen() {
       <View
         style={{
           position: 'absolute', left: 0, right: 0, bottom: 0,
-          paddingHorizontal: GUTTER, paddingTop: 10, paddingBottom: 28,
+          paddingHorizontal: GUTTER, paddingTop: 10,
+          // Clear the floating tab bar — a flat 28 left "Commencer l'examen"
+          // sitting behind it (TestFlight 2026-09-04).
+          paddingBottom: tabBarSpace(insets.bottom),
           backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.hairline ?? colors.border,
           gap: 10,
         }}

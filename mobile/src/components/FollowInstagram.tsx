@@ -57,8 +57,8 @@ export function FollowInstagramPrompt() {
           {t('Tu progresses bien 🎉', 'W ap pwogrese byen 🎉')}
         </Text>
         <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={2}>
-          {t('Rejoins la communauté EdLight sur Instagram — astuces et annonces.',
-             'Antre nan kominote EdLight sou Instagram — konsèy ak anons.')}
+          {t('Rejoins la communauté EdLight sur Instagram : astuces et annonces.',
+             'Antre nan kominote EdLight sou Instagram : konsèy ak anons.')}
         </Text>
         <PressableScale
           onPress={() => { setIgPromptSeen(true); openInstagram(); }}

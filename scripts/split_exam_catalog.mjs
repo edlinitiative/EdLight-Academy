@@ -52,7 +52,10 @@ function countQuestions(exam) {
       const t = q.type || 'unknown';
       typeCounts[t] = (typeCounts[t] || 0) + 1;
       const isGradable = GRADABLE_TYPES.has(t);
-      const hasParts = Boolean(q.answer_parts);
+      // answer_parts alone is NOT proof of auto-grading: an essay's parts are a
+      // guided plan, not an answer key, so crediting them told students a
+      // 3-essay dissertation was "corrigée automatiquement".
+      const hasParts = Boolean(q.answer_parts) && isGradable;
       if ((isGradable && q.correct) || hasParts) autoGradable += 1;
     }
   }

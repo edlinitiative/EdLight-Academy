@@ -292,7 +292,7 @@ export default function ProfileScreen() {
           onPress: () =>
             Alert.alert(
               t('Confirmer la suppression', 'Konfime efasman an'),
-              t('Dernière étape — supprimer ton compte pour de bon ?', 'Dènye etap — efase kont ou nèt?'),
+              t('Dernière étape : supprimer ton compte pour de bon ?', 'Dènye etap : efase kont ou nèt ?'),
               [
                 { text: t('Annuler', 'Anile'), style: 'cancel' },
                 {

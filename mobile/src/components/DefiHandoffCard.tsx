@@ -67,7 +67,7 @@ export default function DefiHandoffCard({
       >
         <Check color={glassLook ? '#4ade80' : colors.success} size={16} />
         <Text style={[typeScale.caption, { color: sub, flex: 1 }]} numberOfLines={2}>
-          {t('Défi du jour fait ✓ — essaie ', 'Defi jodi a fini ✓ — eseye ')}
+          {t('Défi du jour fait ✓. Essaie ', 'Defi jodi a fini ✓. Eseye ')}
           <Text style={{ color: ink, fontFamily: typeScale.label.fontFamily }}>{gameName}</Text>
           {t(' (×2 XP cette semaine)', ' (×2 XP semèn sa a)')}
         </Text>

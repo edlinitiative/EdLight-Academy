@@ -19,18 +19,15 @@ interface ExamFigureProps {
 
 export default function ExamFigure({ description }: ExamFigureProps) {
   const colors = useColors();
-  const cardShadow = {
-    shadowColor: colors.azureDeep,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 1,
-  } as const;
+  // Flat: a recessed panel inside a card should not also float.
+  const cardShadow = {} as const;
+  // No border: the figure is rendered INSIDE the question card, so its own
+  // outline made a card-inside-a-card (and the embed draws a third panel around
+  // the figure itself). Ted circled exactly that stack — "why all these extra
+  // borders". A tinted ground is enough to separate the figure from the prose.
   const card = {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: 14,
   } as const;
   const [height, setHeight] = useState(120);
   const [width, setWidth] = useState(0);
@@ -90,7 +87,7 @@ export default function ExamFigure({ description }: ExamFigureProps) {
             key={width > 0 ? `w${Math.round(width)}` : 'init'}
             source={{ uri }}
             injectedJavaScript={viewportFix}
-            style={{ height, backgroundColor: colors.surface }}
+            style={{ height, backgroundColor: colors.surfaceAlt }}
             onMessage={(e) => {
               const h = Number(e.nativeEvent?.data);
               if (Number.isFinite(h) && h > 0) {
@@ -114,7 +111,7 @@ export default function ExamFigure({ description }: ExamFigureProps) {
                 bottom: 0,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: colors.surface,
+                backgroundColor: colors.surfaceAlt,
               }}
             >
               <ActivityIndicator size="small" color={colors.azure} />

@@ -86,7 +86,7 @@ export default function WeeklyGoalSheet({
           </Text>
           <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
             {reached
-              ? t('Objectif atteint — bravo, continue sur ta lancée !', 'Ou rive sou objektif la — bravo, kontinye konsa !')
+              ? t('Objectif atteint, bravo ! Continue sur ta lancée.', 'Ou rive sou objektif la, bravo ! Kontinye konsa.')
               : t('cette semaine (lundi à dimanche)', 'semèn sa a (lendi rive dimanch)')}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
@@ -115,8 +115,8 @@ export default function WeeklyGoalSheet({
           <Text style={{ fontSize: 22 }}>🧊</Text>
           <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
             {t(
-              `Termine ${WEEKLY_QUIZ_GOAL} quiz dans la semaine et gagne 1 gel — il protège ta série 🔥 si tu rates un jour.`,
-              `Fini ${WEEKLY_QUIZ_GOAL} quiz nan semèn nan epi genyen 1 jèl — li pwoteje seri w 🔥 si w rate yon jou.`,
+              `Termine ${WEEKLY_QUIZ_GOAL} quiz dans la semaine et gagne 1 gel. Il protège ta série 🔥 si tu rates un jour.`,
+              `Fini ${WEEKLY_QUIZ_GOAL} quiz nan semèn nan epi genyen 1 jèl. Li pwoteje seri w 🔥 si w rate yon jou.`,
             )}
           </Text>
         </View>

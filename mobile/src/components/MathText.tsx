@@ -3,6 +3,8 @@ import { Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useColors } from '../theme/theme';
 import { KATEX_CSS, KATEX_JS } from './katexAssets';
+import { needsKatex } from '../utils/mathRouting';
+import { mathToText } from '../utils/mathText';
 
 /**
  * Render mixed prose + LaTeX. The whole string is NOT LaTeX — only the
@@ -94,14 +96,19 @@ interface MathTextProps {
 export function MathText({ text, display = false, style }: MathTextProps) {
   const colors = useColors();
   const safeText = String(text ?? '');
-  const hasMath = HAS_MATH.test(safeText);
+  // KaTeX only typesets DELIMITED segments. Undelimited LaTeX — which exam
+  // content ships constantly ("36\sqrt{\frac{2}{7}}") — used to reach the
+  // WebView, match no delimiters, and leave raw source on screen. Route it
+  // through mathToText instead, which renders readable Unicode.
+  const useKatex = needsKatex(safeText);
   const [height, setHeight] = useState(display ? 44 : 28);
   const html = useMemo(() => KATEX_HTML(safeText, display, colors.ink), [safeText, display, colors.ink]);
 
   if (!safeText) return null;
   // Themed ink is the default text color so plain prose is legible in dark mode
-  // too; callers can still override via `style`.
-  if (!hasMath) return <Text style={[{ color: colors.ink }, style]}>{safeText}</Text>;
+  // too; callers can still override via `style`. mathToText is a no-op on text
+  // that carries no math at all.
+  if (!useKatex) return <Text style={[{ color: colors.ink }, style]}>{mathToText(safeText)}</Text>;
 
   return (
     <WebView
