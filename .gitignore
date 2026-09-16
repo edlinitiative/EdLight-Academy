@@ -83,3 +83,7 @@ __pycache__/
 *firebase-adminsdk*.json
 *serviceaccount*.json
 /mobile/dist
+
+# Seeded design-canvas payloads are generated output (~2.4MB each) —
+# the .dc.html artboards beside them are the source worth keeping.
+design-canvas/*.html
