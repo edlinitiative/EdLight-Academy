@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withSpring, withSequence, withRepeat, Easing,
+  FadeInDown,
 } from 'react-native-reanimated';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +21,7 @@ import { useColors, useTheme, typeScale, radius } from '../theme/theme';
 import { subjectColor } from '../utils/examUtils';
 import { tapLight, tapMedium, select, success, warn } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
+import { spring as springs, easing as easings, duration as durations, travel, stagger } from '../theme/motion';
 import PressableScale from '../components/ui/PressableScale';
 import PopIn from '../components/ui/PopIn';
 import BeatMyScoreCard from '../components/share/BeatMyScoreCard';
@@ -138,10 +140,12 @@ function QuizProgressBar({ pct }: { pct: number }) {
 // confirm, green (correct) / red (wrong) with a Check/X icon + spoken state so
 // correctness is never conveyed by colour alone. Correct pops, wrong shakes.
 function QuizAnswerOption({
-  opt, label, isSelected, isCorrectOpt, confirmed, onPress, colors, reduceMotion, t,
+  opt, label, index, isSelected, isCorrectOpt, confirmed, onPress, colors, reduceMotion, t,
 }: {
   opt: string;
   label: string;
+  /** Position in the list — drives the entrance stagger. */
+  index: number;
   isSelected: boolean;
   isCorrectOpt: boolean;
   confirmed: boolean;
@@ -157,8 +161,8 @@ function QuizAnswerOption({
     if (!confirmed || reduceMotion) return;
     if (isCorrectOpt) {
       scale.value = withSequence(
-        withTiming(1.04, { duration: 130, easing: Easing.out(Easing.quad) }),
-        withSpring(1, { damping: 7, stiffness: 220, mass: 0.6 }),
+        withTiming(1.04, { duration: durations.instant, easing: easings.emphasis }),
+        withSpring(1, springs.celebrate),
       );
     } else if (isSelected) {
       shake.value = withSequence(
@@ -191,7 +195,20 @@ function QuizAnswerOption({
     : '';
 
   return (
-    <Animated.View style={animStyle}>
+    <Animated.View
+      style={animStyle}
+      // Siblings arrive in sequence rather than all at once — the cheapest way
+      // to make four plain rows read as considered. Keyed by question upstream
+      // so it replays on every question, not just the first.
+      entering={reduceMotion
+        ? undefined
+        : FadeInDown
+            .delay(stagger(index))
+            .springify()
+            .damping(springs.settle.damping)
+            .stiffness(springs.settle.stiffness)
+            .withInitialValues({ transform: [{ translateY: travel.md }] })}
+    >
       <PressableScale
         onPress={onPress}
         disabled={confirmed}
@@ -315,16 +332,31 @@ function QuizRunner({ quiz, onFinish, t }: { quiz: any; onFinish: (score: number
 
       <ScrollView className="flex-1" contentContainerStyle={[{ padding: 16, paddingBottom: 24 }, centerColumn]} showsVerticalScrollIndicator={false}>
         {/* Lifted question card — subtle top→bottom surface gradient (Trivia feel) */}
-        <View style={{ borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 16, ...shadow.md }}>
+        <Animated.View
+          // The question leads its options in, so each new question reads as a
+          // sequence starting rather than a screen swapping.
+          key={`q-${idx}`}
+          entering={reduceMotion
+            ? undefined
+            : FadeInDown
+                .springify()
+                .damping(springs.settle.damping)
+                .stiffness(springs.settle.stiffness)
+                .withInitialValues({ transform: [{ translateY: travel.lg }] })}
+          style={{ borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, marginBottom: 16, ...shadow.md }}
+        >
           <LinearGradient colors={[colors.surface, colors.surfaceAlt]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ padding: 18 }}>
             <Text style={[typeScale.h2, { color: colors.ink }]}>{q.question ?? q.stem ?? ''}</Text>
           </LinearGradient>
-        </View>
+        </Animated.View>
 
         {options.map((opt, i) => (
           <QuizAnswerOption
-            key={i}
+            // Keyed by question too: remounting is what makes the entrance
+            // replay for each new question instead of only the first.
+            key={`${idx}-${i}`}
             opt={opt}
+            index={i}
             label={letters[i] ?? String(i + 1)}
             isSelected={opt === selected}
             isCorrectOpt={isQuizAnswerCorrect(q, opt)}

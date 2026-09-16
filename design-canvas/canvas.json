@@ -1,0 +1,17 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Quiz" },
+    { "id": "page-2", "name": "Cartes champion" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "page": "page-1", "title": "Papye — clair, éditorial", "x": 0, "y": 0, "w": 390, "h": 844 },
+    { "file": "QuizNwit.dc.html", "page": "page-1", "title": "Nwit — sombre, atmosphérique", "x": 510, "y": 0, "w": 390, "h": 844 },
+    { "file": "ChampionFoil.dc.html", "page": "page-2", "title": "Foil — certificat", "x": 0, "y": 0, "w": 1080, "h": 1920 },
+    { "file": "ChampionKover.dc.html", "page": "page-2", "title": "Kover — pochette", "x": 1240, "y": 0, "w": 1080, "h": 1920 }
+  ],
+  "annotations": [
+    { "id": "quiz-note-2", "page": "page-1", "x": 0, "y": -170, "w": 900, "text": "Deuxième passe. Ce qui change par rapport à la première: une vraie police d'affichage (Instrument Serif) au lieu d'un seul sans-serif; de la profondeur par la lumière et l'ombre au lieu de bordures à 1px; du grain et de la texture; un fond crème tiède plutôt que du blanc pur; la progression en segments comptables; et de l'artwork de matière (le réseau hexagonal) au lieu d'une icône.\n\nPapye: papier fin, encre noire, une touche d'azur. Nwit: verre et lumière sur fond nuit." },
+    { "id": "champ-note-2", "page": "page-2", "x": 0, "y": -170, "w": 1000, "text": "Les cartes ne sont plus des « graphiques sociaux » centrés sur un dégradé.\n\nFoil: un certificat — typo métallique en dégradé doré, trame de points, filets gravés. Kover: une pochette d'album — une grande illustration, le nom en énorme serif qui déborde, les chiffres traités comme une fiche technique.\n\nTaille réelle d'export 1080×1920. Code de parrainage et @edlightacademy sur les deux." }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif; }
+    a { color: #E8C98A; } a:hover { color: #f3ddb0; }
+  </style>
+</helmet>
+
+<!-- Foil direction: an award certificate, not a social graphic. Metallic type,
+     halftone ground, engraved rules. -->
+<div style="width: 1080px; height: 1920px; background: #0A0C14; position: relative; overflow: hidden; box-sizing: border-box; padding: 96px 88px; display: flex; flex-direction: column;">
+
+  <svg viewBox="0 0 1080 1920" width="1080" height="1920" style="position: absolute; inset: 0;">
+    <defs>
+      <pattern id="halftone" width="16" height="16" patternUnits="userSpaceOnUse">
+        <circle cx="4" cy="4" r="1.6" fill="#E8C98A" opacity=".16"/>
+      </pattern>
+      <radialGradient id="vign" cx="50%" cy="38%" r="62%">
+        <stop offset="0%" stop-color="#1A2340" stop-opacity=".95"/>
+        <stop offset="100%" stop-color="#0A0C14" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1080" height="1920" fill="url(#vign)"/>
+    <rect width="1080" height="1920" fill="url(#halftone)"/>
+  </svg>
+
+  <!-- Engraved frame -->
+  <div style="position: absolute; inset: 52px; border: 1px solid rgba(232,201,138,.28);"></div>
+  <div style="position: absolute; inset: 60px; border: 1px solid rgba(232,201,138,.14);"></div>
+
+  <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+    <svg width="72" height="72" viewBox="0 0 100 100" fill="none" stroke="#E8C98A" stroke-width="4" stroke-linecap="round">
+      <line x1="50" y1="10" x2="50" y2="25"/><line x1="50" y1="75" x2="50" y2="90"/>
+      <line x1="10" y1="50" x2="25" y2="50"/><line x1="75" y1="50" x2="90" y2="50"/>
+      <line x1="21" y1="21" x2="32" y2="32"/><line x1="68" y1="68" x2="79" y2="79"/>
+      <line x1="21" y1="79" x2="32" y2="68"/><line x1="68" y1="32" x2="79" y2="21"/>
+      <circle cx="50" cy="50" r="18"/>
+    </svg>
+    <span style="font-size: 20px; font-weight: 700; letter-spacing: 9px; color: rgba(232,201,138,.78);">EDLIGHT ACADEMY</span>
+  </div>
+
+  <div style="position: relative; flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;">
+    <span style="font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 52px; color: rgba(255,255,255,.62); margin-bottom: 8px;">décerné à</span>
+
+    <div style="font-family: 'Instrument Serif', Georgia, serif; font-size: 138px; line-height: .98; letter-spacing: -2px; text-align: center;
+                background: linear-gradient(168deg, #FFF3D6 0%, #E8C98A 24%, #A87B36 46%, #F6E4BC 62%, #C9A05A 82%, #8C6326 100%);
+                -webkit-background-clip: text; background-clip: text; color: transparent;">
+      Wendy<br>Jean-Baptiste
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 22px; margin: 46px 0 40px;">
+      <div style="width: 130px; height: 1px; background: linear-gradient(90deg, rgba(232,201,138,0), rgba(232,201,138,.75));"></div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#E8C98A"><path d="M12 2l2.6 6.9L22 10l-5.5 4.7L18 22l-6-3.7L6 22l1.5-7.3L2 10l7.4-1.1z"/></svg>
+      <div style="width: 130px; height: 1px; background: linear-gradient(270deg, rgba(232,201,138,0), rgba(232,201,138,.75));"></div>
+    </div>
+
+    <span style="font-size: 34px; font-weight: 600; color: rgba(255,255,255,.80); text-align: center; letter-spacing: .3px;">Première du classement national</span>
+
+    <div style="display: flex; align-items: baseline; gap: 14px; margin-top: 54px;">
+      <span style="font-family: 'Instrument Serif', Georgia, serif; font-size: 116px; color: #ffffff; line-height: 1; letter-spacing: -2px;">2 456</span>
+      <span style="font-size: 30px; font-weight: 700; letter-spacing: 4px; color: rgba(232,201,138,.82);">XP</span>
+    </div>
+    <span style="font-size: 26px; font-weight: 500; color: rgba(255,255,255,.44); margin-top: 14px; letter-spacing: 2px;">SEMAINE 38 · 2026</span>
+  </div>
+
+  <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+    <span style="font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 44px; color: #ffffff;">Essaie de me détrôner.</span>
+    <div style="display: flex; align-items: center; gap: 14px; padding: 12px 28px; border: 1px solid rgba(232,201,138,.40);">
+      <span style="font-size: 24px; color: rgba(255,255,255,.62); letter-spacing: 1px;">CODE</span>
+      <span style="font-size: 24px; font-weight: 800; color: #E8C98A; letter-spacing: 3px;">TED4X2</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 18px; margin-top: 4px;">
+      <span style="font-size: 25px; font-weight: 600; color: rgba(255,255,255,.52);">academy.edlight.org</span>
+      <span style="width: 4px; height: 4px; border-radius: 99px; background: rgba(232,201,138,.6);"></span>
+      <span style="font-size: 25px; font-weight: 800; color: #E8C98A;">@edlightacademy</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
