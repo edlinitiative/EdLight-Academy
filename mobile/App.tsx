@@ -134,6 +134,10 @@ function App() {
   // Source Sans 3 (per-weight) is the app's display/body face — the Estil Klè
   // restyle. Falls back to system if it fails.
   const [fontsLoaded, fontError] = useFonts({
+    // Display face — see fonts.display in theme. Bundled like the others, so it
+    // rides an OTA update rather than needing a native build.
+    'InstrumentSerif-Regular': require('@expo-google-fonts/instrument-serif/400Regular/InstrumentSerif_400Regular.ttf'),
+    'InstrumentSerif-Italic': require('@expo-google-fonts/instrument-serif/400Regular_Italic/InstrumentSerif_400Regular_Italic.ttf'),
     'SourceSans3-Regular': require('@expo-google-fonts/source-sans-3/400Regular/SourceSans3_400Regular.ttf'),
     'SourceSans3-SemiBold': require('@expo-google-fonts/source-sans-3/600SemiBold/SourceSans3_600SemiBold.ttf'),
     'SourceSans3-Bold': require('@expo-google-fonts/source-sans-3/700Bold/SourceSans3_700Bold.ttf'),
