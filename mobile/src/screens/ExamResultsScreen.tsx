@@ -251,8 +251,35 @@ export default function ExamResultsScreen() {
     return () => { alive = false; };
   }, [user?.uid, examId, reloadKey]);
 
-  if (loading) return <LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />;
-  if (loadError) return <ErrorState onRetry={() => setReloadKey((k) => k + 1)} />;
+  // Same chrome while loading and on error, so the header doesn't pop in once
+  // the result arrives and a failed load still has a way back. (The back button
+  // judges THIS stack's depth: canGoBack() counts the parent tab navigator too,
+  // so it is true even when this is the only route here.)
+  const goBack = () => {
+    const stackRoutes = navigation.getState()?.routes ?? [];
+    if (stackRoutes.length > 1) navigation.goBack();
+    else navigation.reset({ index: 0, routes: [{ name: 'ExamLanding' }] });
+  };
+  const withChrome = (body: React.ReactNode) => (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+      <View className="flex-row items-center px-5 pt-2 pb-3">
+        <TouchableOpacity
+          onPress={goBack}
+          className="p-1 mr-3"
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Retour', 'Retounen')}
+        >
+          <ArrowLeft color={colors.muted} size={22} />
+        </TouchableOpacity>
+        <Text style={[typeScale.title, { color: colors.ink }]}>{t('Résultats', 'Rezilta')}</Text>
+      </View>
+      {body}
+    </SafeAreaView>
+  );
+
+  if (loading) return withChrome(<LoadingState message={t('Chargement des résultats…', 'Ap chaje rezilta yo…')} />);
+  if (loadError) return withChrome(<ErrorState onRetry={() => setReloadKey((k) => k + 1)} />);
 
   // Guests never get a persisted result (ExamTakeScreen only saves for signed-in
   // users), so `result` is null and every derived number below would be 0. Don't

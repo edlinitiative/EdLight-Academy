@@ -462,14 +462,38 @@ export default function CourseDetailScreen() {
   const nextStep = masteryNextStep(nextLevel, isCreole);
   const description = useMemo(() => parseCourseDescription(course?.description), [course?.description]);
 
-  if (isLoading) {
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
-        <ListSkeleton rows={6} />
-      </SafeAreaView>
-    );
-  }
-  if (isError || !course) return <ErrorState />;
+  const goBack = () => {
+    // Stay inside the Courses stack: canGoBack() also counts the parent tab
+    // navigator, which sent deep-linked users "back" to Home. If this is the
+    // only route in the stack, land on the course list instead.
+    const stackRoutes = navigation.getState()?.routes ?? [];
+    if (stackRoutes.length > 1) navigation.goBack();
+    else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
+  };
+
+  // Loading and error carry the same back arrow as the loaded screen: the
+  // header used to appear only once the course resolved, and a failed load left
+  // the student on a bare error with no way out of the screen at all.
+  const withChrome = (body: React.ReactNode) => (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+      <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+        <TouchableOpacity
+          onPress={goBack}
+          className="mr-3 p-1"
+          accessibilityRole="button"
+          accessibilityLabel={t('Retour', 'Retounen')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <ArrowLeft color={colors.ink} size={22} />
+        </TouchableOpacity>
+        <Text style={[typeScale.titleSm, { color: colors.muted }]}>{t('Cours', 'Kou')}</Text>
+      </View>
+      {body}
+    </SafeAreaView>
+  );
+
+  if (isLoading) return withChrome(<ListSkeleton rows={6} />);
+  if (isError || !course) return withChrome(<ErrorState />);
 
   // A course that loaded fine but has no lessons (empty `modules` — the
   // catalog-migration / orphan-video case) otherwise rendered "0/0 leçons", no
@@ -534,15 +558,6 @@ export default function CourseDetailScreen() {
   // The syllabus gets the aurora hero; once a lesson is open the video owns the
   // screen and the chrome goes quiet.
   const showHero = !activeLesson;
-
-  const goBack = () => {
-    // Stay inside the Courses stack: canGoBack() also counts the parent tab
-    // navigator, which sent deep-linked users "back" to Home. If this is the
-    // only route in the stack, land on the course list instead.
-    const stackRoutes = navigation.getState()?.routes ?? [];
-    if (stackRoutes.length > 1) navigation.goBack();
-    else navigation.reset({ index: 0, routes: [{ name: 'CourseList' }] });
-  };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>

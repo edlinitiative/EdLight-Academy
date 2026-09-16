@@ -734,9 +734,27 @@ export default function ExamTakeScreen() {
     return metas;
   }, [exam]);
 
-  if (loading) return <LoadingState message={t("Chargement de l'examen…", 'Egzamen an ap chaje…')} />;
-  if (error || !exam) return <ErrorState onRetry={retryLoad} />;
-  if (questions.length === 0) return <ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} />;
+  // Loading and error keep the screen's own chrome. Returning a bare state view
+  // meant the header popped in only after the exam loaded, and — worse — an
+  // error left the student on a full-screen message with no back arrow, with
+  // only the tab bar or an edge swipe to escape. Same shape in, same shape out.
+  const withChrome = (body: React.ReactNode) => (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 12, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <TouchableOpacity onPress={handleBack} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={t('Retour', 'Retounen')}>
+          <ArrowLeft color={colors.ink} size={22} />
+        </TouchableOpacity>
+        <Text style={[typeScale.titleSm, { color: colors.ink, flex: 1 }]} numberOfLines={1}>
+          {exam ? normalizeExamTitle(exam) : t('Examen', 'Egzamen')}
+        </Text>
+      </View>
+      {body}
+    </SafeAreaView>
+  );
+
+  if (loading) return withChrome(<LoadingState message={t("Chargement de l'examen…", 'Egzamen an ap chaje…')} />);
+  if (error || !exam) return withChrome(<ErrorState onRetry={retryLoad} />);
+  if (questions.length === 0) return withChrome(<ErrorState message={t("Cet examen n'a pas de questions.", 'Egzamen sa a pa gen kesyon.')} onRetry={retryLoad} />);
 
   const answeredCount = Object.keys(answers).length;
 

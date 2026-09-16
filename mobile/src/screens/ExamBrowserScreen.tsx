@@ -434,7 +434,27 @@ export default function ExamBrowserScreen() {
         </View>
       </SafeAreaView>
     );
-  if (error) return <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />;
+  // The loading branch above deliberately carries the header "so nothing
+  // shifts" — the error branch has to do the same, or a failed catalog fetch
+  // drops the student on a bare message with no back arrow.
+  if (error)
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
+        <View className="flex-row items-center px-4 py-3" style={{ backgroundColor: colors.bg }}>
+          <TouchableOpacity
+            onPress={goBackToExams}
+            className="mr-3 p-1"
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('Retour', 'Retounen')}
+          >
+            <ArrowLeft color={colors.muted} size={22} />
+          </TouchableOpacity>
+          <Text style={[typeScale.h1, { color: colors.ink }]}>{screenTitle}</Text>
+        </View>
+        <ErrorState onRetry={() => setRetryCount((n) => n + 1)} />
+      </SafeAreaView>
+    );
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
