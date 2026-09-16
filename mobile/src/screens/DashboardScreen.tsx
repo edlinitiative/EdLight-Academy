@@ -28,6 +28,7 @@ import { gradeProfile, seasonAnchorYear } from '../config/trackConfig';
 import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import NextStepCard from '../components/NextStepCard';
+import TournamentCard from '../components/TournamentCard';
 import ReviewCard from '../components/ReviewCard';
 import ReviewSession from '../components/ReviewSession';
 import { computeNextStep } from '../utils/nextStep';
@@ -546,6 +547,13 @@ export default function DashboardScreen() {
             />
           </View>
         )}
+
+        {/* The school tournament sits directly above the personal board: the
+            individual ranking is what a student cares about, and the collective
+            one is what makes them recruit. Seeing them together is the point. */}
+        <View className="px-5 mb-4">
+          <TournamentCard />
+        </View>
 
         {/* Leaderboard — compact teaser; "Voir tout" (and the card) open the
             dedicated full-page classement on the root stack. */}
