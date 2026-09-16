@@ -33,6 +33,7 @@ import { useReduceMotion } from '../../utils/motion';
 import { success } from '../../utils/haptics';
 import PressableScale from '../ui/PressableScale';
 import Confetti from '../ui/Confetti';
+import RayBurst, { type CelebrationTier } from '../celebration/RayBurst';
 import PopIn from '../ui/PopIn';
 
 const CIRC = 327; // 2 * π * 52
@@ -279,15 +280,31 @@ export default function QuizResultHero({
         {/* Aurora glows */}
         <View pointerEvents="none" style={{ position: 'absolute', top: -50, left: -40, width: 210, height: 210, borderRadius: 105, backgroundColor: gA, opacity: 0.3 }} />
         <View pointerEvents="none" style={{ position: 'absolute', bottom: -40, right: -30, width: 210, height: 210, borderRadius: 105, backgroundColor: gB, opacity: 0.26 }} />
-        {celebrate && <Confetti />}
+        {/* Confetti only for a PERFECT score. Below that the ray burst behind
+            the ring carries the celebration on its own: full-screen falling
+            particles on top of a burst is two celebrations competing, which is
+            the kind of busy-ness that reads as cheap rather than premium. */}
+        {celebrate && pct >= 100 && <Confetti />}
 
         <ScrollView
           contentContainerStyle={{ alignItems: 'center', paddingHorizontal: 24, paddingTop: 56, paddingBottom: 48 }}
           showsVerticalScrollIndicator={false}
         >
-          <PopIn from={0.6}>
-            <ScoreRing score={score} total={total} from={rFrom} to={rTo} label={ringLabel} />
-          </PopIn>
+          {/* The burst sits BEHIND the ring, centred on it — the score stays the
+              subject and the light is what happens around it. */}
+          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+            {celebrate && (
+              <View pointerEvents="none" style={{ position: 'absolute' }}>
+                <RayBurst
+                  tier={(pct >= 100 ? 2 : pct >= 80 ? 1 : 0) as CelebrationTier}
+                  playKey={`${score}-${total}`}
+                />
+              </View>
+            )}
+            <PopIn from={0.6}>
+              <ScoreRing score={score} total={total} from={rFrom} to={rTo} label={ringLabel} />
+            </PopIn>
+          </View>
 
           <Text
             style={{ fontSize: 26, fontFamily: typeScale.num.fontFamily, color: '#fff', marginTop: 22, letterSpacing: -0.5, textAlign: 'center' }}
