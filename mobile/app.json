@@ -12,11 +12,6 @@
     "icon": "./assets/icon.png",
     "_note_assets": "Run: npx expo install and then generate assets with: npx expo-doctor. Placeholder PNGs can be 1024x1024 for icon and 1284x2778 for splash.",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -67,6 +62,19 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF",
+          "enableFullScreenImage_legacy": true,
+          "dark": {
+            "image": "./assets/splash-dark.png",
+            "backgroundColor": "#0b1220"
+          }
+        }
+      ],
       "expo-font",
       "expo-apple-authentication",
       [
