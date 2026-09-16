@@ -195,7 +195,7 @@ export default function AuthScreen() {
   function reasonNote(reason: string): string {
     switch (reason) {
       case 'invalid_code':
-        return t('Code invalide — mais ton compte est bien créé.', 'Kòd la pa bon — men kont ou kreye byen.');
+        return t('Code invalide, mais ton compte est bien créé.', 'Kòd la pa bon, men kont ou kreye byen.');
       case 'already_referred':
         return t('Tu as déjà utilisé un code.', 'Ou deja sèvi ak yon kòd.');
       case 'self':
@@ -203,7 +203,7 @@ export default function AuthScreen() {
       case 'too_old':
         return t('Ce code ne peut plus être utilisé sur ce compte.', 'Kòd sa a pa ka itilize sou kont sa a ankò.');
       default:
-        return t('Code non appliqué — mais ton compte est prêt.', 'Kòd la pa aplike — men kont ou pare.');
+        return t('Code non appliqué, mais ton compte est prêt.', 'Kòd la pa aplike, men kont ou pare.');
     }
   }
 
@@ -296,7 +296,7 @@ export default function AuthScreen() {
             <Text style={{ fontSize: 14.5, color: MUTED, marginTop: 5, textAlign: 'center', lineHeight: 20 }}>
               {isSignIn
                 ? t('Continue ta préparation au Bac.', 'Kontinye preparasyon Bak ou.')
-                : t('Gratuit — et ta progression reste sauvegardée.', 'Gratis — epi pwogrè ou ap konsève.')}
+                : t('Gratuit, et ta progression reste sauvegardée.', 'Gratis, epi pwogrè ou ap konsève.')}
             </Text>
           </View>
 

@@ -152,11 +152,11 @@ export async function buildChallengeShareMessage(opts: {
   const ref = await getReferralCode().catch(() => null);
   const codeLine = ref
     ? opts.lang === 'ht'
-      ? ` Sèvi ak kòd mwen ${ref.code} lè w enskri — nou chak ap genyen yon bonus.`
+      ? ` Sèvi ak kòd mwen ${ref.code} lè w enskri, nou chak ap genyen yon bonus.`
       : ` Utilise mon code ${ref.code} en t'inscrivant — on gagne chacun un bonus.`
     : '';
   return opts.lang === 'ht'
-    ? `⚔️ M ap defye w sou EdLight Academy ! Mwen fè ${opts.score}/${opts.total} nan ${opts.categoryLabel}. Menm ${opts.total} kesyon yo, yon sèl tantativ — èske w ka bat mwen ?${codeLine} ${opts.url}`
+    ? `⚔️ M ap defye w sou EdLight Academy ! Mwen fè ${opts.score}/${opts.total} nan ${opts.categoryLabel}. Menm ${opts.total} kesyon yo, yon sèl tantativ, èske w ka bat mwen ?${codeLine} ${opts.url}`
     : `⚔️ Je te défie sur EdLight Academy ! J'ai fait ${opts.score}/${opts.total} en ${opts.categoryLabel}. Les mêmes ${opts.total} questions, une seule tentative — tu peux me battre ?${codeLine} ${opts.url}`;
 }
 

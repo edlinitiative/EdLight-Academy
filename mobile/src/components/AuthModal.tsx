@@ -32,7 +32,7 @@ export default function AuthModal() {
             <Text style={[typeScale.label, { color: 'rgba(255,255,255,0.85)', marginTop: 3 }]}>
               {t(
                 "Tu as atteint la limite d'exploration — inscris-toi pour garder ta progression.",
-                'Ou rive nan limit eksplorasyon an — enskri pou konsève pwogrè ou.',
+                'Ou rive nan limit eksplorasyon an : enskri pou konsève pwogrè ou.',
               )}
             </Text>
           </View>

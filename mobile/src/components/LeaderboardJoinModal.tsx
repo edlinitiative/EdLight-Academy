@@ -159,8 +159,8 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
           </View>
           <Text style={[typeScale.caption, { color: colors.muted, marginTop: -6 }]}>
             {t(
-              'Vous apparaissez avec un pseudo — vous restez anonyme.',
-              'Ou parèt ak yon ti non — ou rete anonim.',
+              'Vous apparaissez avec un pseudo. Vous restez anonyme.',
+              'Ou parèt ak yon ti non. Ou rete anonim.',
             )}
           </Text>
 
@@ -199,7 +199,7 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
           <SelectField
             label={t('Département (optionnel)', 'Depatman (opsyonèl)')}
             value={department}
-            placeholder={t('— Choisir —', '— Chwazi —')}
+            placeholder={t('Choisir…', 'Chwazi…')}
             onPress={() => setSheet('dept')}
           />
 
@@ -207,7 +207,7 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
             <SelectField
               label={t('Ville (optionnel)', 'Vil (opsyonèl)')}
               value={cityChoice === OTHER_CITY ? t('Autre ville…', 'Lòt vil…') : cityChoice}
-              placeholder={t('— Choisir —', '— Chwazi —')}
+              placeholder={t('Choisir…', 'Chwazi…')}
               onPress={() => setSheet('city')}
             />
           )}

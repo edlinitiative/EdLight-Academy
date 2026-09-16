@@ -764,7 +764,7 @@ export default function CourseDetailScreen() {
                 <MasteryMeter level={summary.level} size="sm" />
                 <Text style={[typeScale.label, { color: colors.muted, flex: 1 }]}>
                   {t('Maîtrise', 'Metriz')} · {summary.points}/100
-                  {nextStep ? ` — ${nextStep}` : ''}
+                  {nextStep ? ` · ${nextStep}` : ''}
                 </Text>
               </View>
             )}

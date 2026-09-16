@@ -260,10 +260,10 @@ export default function DashboardScreen() {
   // at zero in a way a report card never is; lifetime stats live on Profile.
   const goalReached = quizzesThisWeek >= WEEKLY_QUIZ_GOAL;
   const goalSublabel = goalReached
-    ? t('Objectif atteint — continue sur ta lancée !', 'Ou rive sou objektif la — kontinye konsa !')
+    ? t('Objectif atteint, continue sur ta lancée !', 'Ou rive sou objektif la, kontinye konsa !')
     : quizzesThisWeek === 0
-      ? t('Fais ton premier quiz — termine et gagne 1 gel 🧊', 'Fè premye quiz ou — fini epi genyen 1 jèl 🧊')
-      : t(`${quizzesThisWeek} quiz sur ${WEEKLY_QUIZ_GOAL} — termine et gagne 1 gel 🧊`, `${quizzesThisWeek} quiz sou ${WEEKLY_QUIZ_GOAL} — fini epi genyen 1 jèl 🧊`);
+      ? t('Fais ton premier quiz, gagne 1 gel 🧊', 'Fè premye quiz ou, genyen 1 jèl 🧊')
+      : t(`${quizzesThisWeek}/${WEEKLY_QUIZ_GOAL} quiz, gagne 1 gel 🧊`, `${quizzesThisWeek}/${WEEKLY_QUIZ_GOAL} quiz, genyen 1 jèl 🧊`);
   const weeklyGoalBlock = (
     <View className="px-5 mb-4">
       <PressableScale

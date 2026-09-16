@@ -391,7 +391,7 @@ export default function SandraScreen({
           kind: 'limit',
           message:
             result.message ||
-            t('Limite atteinte — réessayez plus tard.', 'Ou rive nan limit — eseye ankò pita.'),
+            t('Limite atteinte. Réessayez plus tard.', 'Ou rive nan limit. Eseye ankò pita.'),
         });
       } else if (result.kind === 'auth') {
         setNotice({ kind: 'auth' });

@@ -51,8 +51,8 @@ export default function DailyChallengeBanner({
           </Text>
           <Text style={[typeScale.caption, { marginTop: 2, color: colors.muted }]}>
             {isCreole
-              ? `Fini — ${daily?.score}/${daily?.total}. Retounen demen !`
-              : `Terminé — ${daily?.score}/${daily?.total}. Revenez demain !`}
+              ? `Fini : ${daily?.score}/${daily?.total}. Retounen demen !`
+              : `Terminé : ${daily?.score}/${daily?.total}. Revenez demain !`}
           </Text>
         </View>
       </View>

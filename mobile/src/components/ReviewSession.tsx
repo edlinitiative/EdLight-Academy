@@ -98,8 +98,8 @@ export default function ReviewSession({
               <Text style={{ fontSize: 34, marginBottom: 12 }}>🎉</Text>
               <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center' }]}>
                 {t(
-                  'Rien à réviser — tu as corrigé toutes tes erreurs !',
-                  'Anyen pou revize — ou korije tout erè ou yo !',
+                  'Rien à réviser : tu as corrigé toutes tes erreurs !',
+                  'Anyen pou revize : ou korije tout erè ou yo !',
                 )}
               </Text>
             </View>

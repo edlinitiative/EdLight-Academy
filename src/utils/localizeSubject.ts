@@ -13,7 +13,7 @@
  * French is the canonical key, so unknown/already-French names pass through.
  */
 
-type SubjectLocale = { ht: string; en: string };
+type SubjectLocale = { ht: string; en: string; /** Set when the canonical key is not itself French (e.g. 'Mixed'). */ fr?: string };
 
 const SUBJECT_I18N: Record<string, SubjectLocale> = {
   'SVT': { ht: 'SVT', en: 'Biology & Earth Sci.' },
@@ -31,7 +31,7 @@ const SUBJECT_I18N: Record<string, SubjectLocale> = {
   'Informatique': { ht: 'Enfòmatik', en: 'Computing' },
   'Santé': { ht: 'Sante', en: 'Health' },
   'Culture Générale': { ht: 'Kilti Jeneral', en: 'General Knowledge' },
-  'Mixed': { ht: 'Melanje', en: 'Mixed' },
+  'Mixed': { fr: 'Toutes matières', ht: 'Tout matyè', en: 'Mixed' },
   'Autre': { ht: 'Lòt', en: 'Other' },
 };
 
@@ -46,7 +46,7 @@ export function localizeSubject(name: string, language: string = 'fr'): string {
   if (!entry) return name; // already French or an unmapped name → leave as-is
   if (language === 'ht') return entry.ht;
   if (language === 'en') return entry.en;
-  return name;
+  return entry.fr ?? name;
 }
 
 export default localizeSubject;

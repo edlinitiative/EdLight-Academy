@@ -137,7 +137,7 @@ export default function ExamOverview({
             <Text style={[typeScale.label, { flex: 1, color: colors.muted }]}>
               {t(
                 `Progression sauvegardée — ${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''} sur ${questionCount}.`,
-                `Pwogrè konsève — ${answeredCount} repons anrejistre sou ${questionCount}.`,
+                `Pwogrè konsève : ${answeredCount} repons anrejistre sou ${questionCount}.`,
               )}
             </Text>
           </View>

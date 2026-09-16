@@ -69,10 +69,13 @@ export default function NativeTabNavigator() {
       // bar reads calmer without five captions. tabBarLabel stays set below:
       // it still feeds accessibility and the iPad sidebar.
       labeled={false}
-      // iOS 26: the bar shrinks away as content scrolls down and returns on the
-      // way back up — the "can you make it disappear on scrolling?" ask, done by
-      // the OS rather than by us animating a View.
-      minimizeBehavior="onScrollDown"
+      // iOS 26 can minimize the bar as content scrolls down. That was the first
+      // read of "can you make it disappear on scrolling?" (2026-08-17), but the
+      // OS doesn't hide it — it shrinks it to a single floating glyph, and Ted
+      // rejected that twice on seeing it (2026-08-17 "i don't like when it
+      // collapses", 2026-09-09 "can you remove that feature"). The bar now stays
+      // whole; screens that genuinely need the space set `focusMode` instead.
+      minimizeBehavior="never"
       // Matches the JS bar's press haptic.
       hapticFeedbackEnabled
       // Exam-taking and gameplay hide the bar so it can never cover a screen's

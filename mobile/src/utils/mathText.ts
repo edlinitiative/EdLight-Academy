@@ -80,6 +80,23 @@ export function mathToText(input: string): string {
     if (s === before) break;
   }
 
+  // \begin{env}…\end{env}. Without this the bare-command rule below turns
+  // "\begin{pmatrix}" into the word "beginpmatrix" and leaves the `\\` row
+  // separators untouched — exactly what the determinant question showed on
+  // TestFlight. Matrices read as bracketed rows; any other environment just
+  // contributes its body, since its name is noise to a student.
+  s = s.replace(
+    /\\begin\s*\{([a-zA-Z*]+)\}([\s\S]*?)\\end\s*\{\1\}/g,
+    (_, env: string, body: string) => {
+      const rows = body.split(/\\\\/).map((r) => r.trim()).filter(Boolean);
+      if (/matrix$/i.test(env)) {
+        const cells = rows.map((r) => r.split('&').map((c) => c.trim()).join(', '));
+        return `[${cells.join('; ')}]`;
+      }
+      return rows.map((r) => r.replace(/&/g, ' ').replace(/\s+/g, ' ').trim()).join(' ');
+    },
+  );
+
   // \left( \right) sizing wrappers are noise in plain text
   s = s.replace(/\\left\s*/g, '').replace(/\\right\s*/g, '');
 

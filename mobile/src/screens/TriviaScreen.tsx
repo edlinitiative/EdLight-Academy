@@ -1064,8 +1064,8 @@ function TriviaResults({
         {dailyReplay && (
           <Text style={{ fontFamily: typeScale.caption.fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8, textAlign: 'center' }}>
             {isCreole
-              ? 'Defi a te fèt deja jodi a — antrennman (0 XP).'
-              : "Défi déjà joué aujourd'hui — manche d'entraînement (0 XP)."}
+              ? 'Defi a te fèt deja jodi a. Antrennman (0 XP).'
+              : "Défi déjà joué aujourd'hui. Manche d'entraînement (0 XP)."}
           </Text>
         )}
         {reward?.guest && (

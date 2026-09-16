@@ -26,6 +26,7 @@ import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
 import ExamAnswerInput, { WordCountAnswer, looksMathy } from '../components/ExamAnswerInput';
 import ScaffoldAnswer, { usesScaffold, scaffoldNeedsMath, MATH_SUBJECTS } from '../components/ScaffoldAnswer';
+import FillBlankAnswer, { countBlanks, numberBlanks } from '../components/FillBlankAnswer';
 import ConditionBuilder from '../components/ConditionBuilder';
 import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import ExamSectionContext from '../components/ExamSectionContext';
@@ -208,7 +209,7 @@ function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   if (entries.length === 0) {
     return (
       <View style={{ gap: 8 }}>
-        <Text style={[typeScale.caption, { color: colors.muted }]}>{t('Options non disponibles — écris ta réponse :', 'Opsyon pa disponib — ekri repons ou :')}</Text>
+        <Text style={[typeScale.caption, { color: colors.muted }]}>{t('Options non disponibles. Écris ta réponse :', 'Opsyon pa disponib. Ekri repons ou :')}</Text>
         <OpenQuestion answer={answer} onAnswer={onAnswer} isCreole={isCreole} />
       </View>
     );
@@ -436,6 +437,10 @@ export default function ExamTakeScreen() {
   answersRef.current = answers;
   const currentIdxRef = useRef(currentIdx);
   currentIdxRef.current = currentIdx;
+  // Persisted with the draft so resume surfaces can show "4/10" without
+  // refetching the whole paper.
+  const questionCountRef = useRef(0);
+  questionCountRef.current = questions.length;
   // Set once the exam is submitted so a late autosave can't revert the doc
   // back to `in_progress`.
   const submittedRef = useRef(false);
@@ -469,6 +474,9 @@ export default function ExamTakeScreen() {
     const payload = {
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
+      // Stored so a resume surface can say "4/10" without refetching the paper
+      // (the Home "Examen en cours" card reads this).
+      questionCount: questionCountRef.current,
       status: 'in_progress',
       updated_at_ms: Date.now(),
     };
@@ -476,6 +484,7 @@ export default function ExamTakeScreen() {
     saveExamAttemptDraft(user.uid, examId, {
       answers: answersRef.current,
       currentIdx: currentIdxRef.current,
+      questionCount: questionCountRef.current,
     }).catch(() => {});
   }, [user?.uid, examId, localDraftKey]);
 
@@ -756,7 +765,13 @@ export default function ExamTakeScreen() {
   const isLast = safeIdx === questions.length - 1;
   const progress = Math.round((answeredCount / questions.length) * 100);
   const points = Number(q?.points) || 0;
-  const questionText = mathToText(String(q?._displayText ?? q?.question ?? ''));
+  const rawQuestionText = String(q?._displayText ?? q?.question ?? '');
+  // A question with several blanks gets each one numbered (①②③…) so the
+  // student can tell which input fills which hole.
+  const blankCount = String(q?.type ?? '').toLowerCase() === 'fill_blank'
+    ? countBlanks(rawQuestionText)
+    : 0;
+  const questionText = mathToText(blankCount > 1 ? numberBlanks(rawQuestionText) : rawQuestionText);
   const rawAnswer = answers[safeIdx];
   const answerText = Array.isArray(rawAnswer) ? rawAnswer.join(', ') : String(rawAnswer ?? '');
 
@@ -867,6 +882,13 @@ export default function ExamTakeScreen() {
               value={typeof answers[safeIdx] === 'string' ? (answers[safeIdx] as string) : ''}
               onChange={(v) => setAnswer(safeIdx, v)}
               mathMode={scaffoldNeedsMath(q, subject)}
+            />
+          ) : blankCount > 1 ? (
+            // Several blanks in one sentence — one input each, pipe-joined.
+            <FillBlankAnswer
+              text={rawQuestionText}
+              value={answerText}
+              onChange={(v) => setAnswer(safeIdx, v)}
             />
           ) : qType === 'essay' || qType === 'short_answer' ? (
             <View style={{ gap: 8 }}>

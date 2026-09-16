@@ -103,7 +103,7 @@ export default function VraiFauxGame({
           {isCreole ? 'Poko gen kesyon' : 'Aucune question disponible'}
         </Text>
         <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
-          {isCreole ? 'Tounen pita — n ap ajoute kesyon.' : 'Revenez plus tard — des questions arrivent.'}
+          {isCreole ? 'Tounen pita, n ap ajoute kesyon.' : 'Revenez plus tard, des questions arrivent.'}
         </Text>
         <TouchableOpacity
           onPress={onExit}

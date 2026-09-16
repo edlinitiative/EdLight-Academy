@@ -131,7 +131,7 @@ export default function MemoireGame({
           {isCreole ? 'Poko gen pè kat' : 'Aucune paire disponible'}
         </Text>
         <Text style={[typeScale.body, { color: colors.muted, textAlign: 'center', marginBottom: 20 }]}>
-          {isCreole ? 'Tounen pita — n ap ajoute kontni.' : 'Revenez plus tard — du contenu arrive.'}
+          {isCreole ? 'Tounen pita, n ap ajoute kontni.' : 'Revenez plus tard, du contenu arrive.'}
         </Text>
         <PressableScale
           onPress={onExit}

@@ -3,6 +3,7 @@ import { View, Text, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Play, Zap, Target, Brain, History, ArrowRight } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
 import { useTheme, typeScale, courseTint } from '../theme/theme';
 import { masteryNextStep } from '../utils/mastery';
@@ -10,6 +11,9 @@ import type { NextStep } from '../utils/nextStep';
 import PressableScale from './ui/PressableScale';
 import { TabParamList } from '../navigation/TabNavigator';
 import { tapLight } from '../utils/haptics';
+import { loadExamAttemptDraft } from '../services/examAttempts';
+import { examSubjectIcon } from '../utils/subjectMeta';
+import { normalizeSubject, subjectDisplayName } from '../utils/examUtils';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
 
@@ -32,6 +36,36 @@ export default function NextStepCard({
   const navigation = useNavigation<Nav>();
   const { colors, cardSurface, shadow, radius } = useTheme();
   const [thumbFailed, setThumbFailed] = React.useState(false);
+  // How far into the paper the student already is. An abandoned exam is the
+  // strongest open loop on the home screen, but the card used to show only its
+  // title next to a generic target glyph — nothing that said "you are 4
+  // questions in". ("it's a french exams - how can we make it more attractive")
+  const [examProgress, setExamProgress] = React.useState<{ done: number; total: number } | null>(null);
+  const user = useStore((st) => st.user);
+  const examPath = step.kind === 'resume-exam' ? step.resume.path : null;
+
+  React.useEffect(() => {
+    if (!examPath) { setExamProgress(null); return; }
+    let active = true;
+    (async () => {
+      let draft: any = null;
+      try { if (user?.uid) draft = await loadExamAttemptDraft(user.uid, String(examPath)); } catch { /* offline */ }
+      try {
+        const raw = await AsyncStorage.getItem(`edlight-exam-draft-${examPath}`);
+        if (raw) {
+          const local = JSON.parse(raw);
+          // Same freshness rule as ExamOverview/ExamTake: newest wins.
+          if (local?.status === 'in_progress' &&
+              (!draft || (local.updated_at_ms || 0) > (draft.updated_at_ms || 0))) draft = local;
+        }
+      } catch { /* corrupt mirror */ }
+      if (!active) return;
+      const done = draft?.answers ? Object.keys(draft.answers).length : 0;
+      const total = Number(draft?.questionCount) || 0;
+      setExamProgress(done > 0 ? { done, total } : null);
+    })();
+    return () => { active = false; };
+  }, [examPath, user?.uid]);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -70,14 +104,22 @@ export default function NextStepCard({
       cta = t("Reprendre où tu t'étais arrêté", 'Kontinye kote ou te rete a');
       onPress = () => resumeActivity(step.resume);
       break;
-    case 'resume-exam':
-      Icon = Target;
+    case 'resume-exam': {
+      // The paper's own subject glyph, not a generic bullseye.
+      const examSubject = normalizeSubject(step.resume.subtitle ?? step.resume.title ?? '');
+      Icon = examSubjectIcon(examSubject);
       eyebrow = t('Examen en cours', 'Egzamen ou an ap tann ou');
-      title = step.resume.title;
-      meta = step.resume.subtitle ?? null;
+      title = subjectDisplayName(step.resume.title);
+      // Lead with how far in they are; fall back to the paper's own subtitle.
+      meta = examProgress
+        ? (examProgress.total > 0
+            ? `${examProgress.done}/${examProgress.total} ${t('réponses', 'repons')}`
+            : `${examProgress.done} ${t('réponses enregistrées', 'repons anrejistre')}`)
+        : (step.resume.subtitle ?? null);
       cta = t("Continuer l'examen", 'Kontinye egzamen an');
       onPress = () => resumeActivity(step.resume);
       break;
+    }
     case 'review':
       Icon = Brain;
       eyebrow = t("Pour toi aujourd'hui", 'Pou ou jodi a');

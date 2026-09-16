@@ -107,7 +107,7 @@ export async function redeemReferral(code: string): Promise<RedeemResult> {
  */
 export function inviteMessage(code: string, link: string, lang: 'fr' | 'ht'): string {
   if (lang === 'ht') {
-    return `📚 Vin jwenn mwen sou EdLight Academy pou n revize Bak la ! Sèvi ak kòd mwen ${code} lè w enskri — nou chak ap genyen yon bonus. ${link}`;
+    return `📚 Vin jwenn mwen sou EdLight Academy pou n revize Bak la ! Sèvi ak kòd mwen ${code} lè w enskri, nou chak ap genyen yon bonus. ${link}`;
   }
   return `📚 Rejoins-moi sur EdLight Academy pour réviser le Bac ! Utilise mon code ${code} à l'inscription — on gagne chacun un bonus. ${link}`;
 }

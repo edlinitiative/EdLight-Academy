@@ -12,7 +12,8 @@ import {
   Clock, Layers, Award, GraduationCap,
 } from 'lucide-react-native';
 import { fetchFullCatalog } from '../utils/examCatalog';
-import { normalizeSubject, normalizeLevel, normalizeExamTitle, examTitleParts, subjectColor } from '../utils/examUtils';
+import { normalizeSubject, normalizeLevel, normalizeExamTitle, examTitleParts, subjectColor, subjectDisplayName } from '../utils/examUtils';
+import { examSubjectIcon } from '../utils/subjectMeta';
 import { loadAllExamResultSummaries } from '../services/examResults';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
@@ -66,30 +67,6 @@ function sectionCount(exam: any): number {
   return Array.isArray(exam.sections) ? exam.sections.length : 0;
 }
 
-/** Emoji per canonical subject — the scannable "badge" on each exam card. */
-const SUBJECT_EMOJI: Record<string, string> = {
-  Mathématiques: '📐',
-  Physique: '⚛️',
-  Chimie: '⚗️',
-  SVT: '🧬',
-  Français: '📖',
-  Anglais: '🗣️',
-  Espagnol: '🗣️',
-  'Histoire-Géo': '🌍',
-  Philosophie: '💭',
-  Kreyòl: '📖',
-  Économie: '📊',
-  'Art & Musique': '🎨',
-  Informatique: '💻',
-  Santé: '🩺',
-  'Culture Générale': '🧠',
-  Mixed: '🧩',
-};
-
-function subjectEmoji(subject: string): string {
-  return SUBJECT_EMOJI[subject] ?? '📝';
-}
-
 function ExamCard({
   exam,
   attemptInfo,
@@ -108,6 +85,9 @@ function ExamCard({
   const parts = examTitleParts(exam);
   const subject = parts.subject || normalizeSubject(exam.subject ?? '') || t('Examen', 'Egzamen');
   const color = subjectColor(subject);
+  // "Mixed" is a catalog key, not a word to show a French-speaking student.
+  const subjectLabel = subjectDisplayName(subject);
+  const SubjectIcon = examSubjectIcon(subject);
   const yearOrSession = parts.session || (parts.year ? String(parts.year) : '');
   const levelLbl = normalizeLevel(exam.level ?? exam.niveau ?? '');
   // Meta = "Niveau · [topic / série]" — the distinguishing detail so two exams of
@@ -122,7 +102,7 @@ function ExamCard({
   const done = !!attemptInfo?.attempted;
   const pct = typeof attemptInfo?.percentage === 'number' ? Math.round(attemptInfo.percentage) : null;
 
-  const a11y = `${subject}${yearOrSession ? ' ' + yearOrSession : ''}`;
+  const a11y = `${subjectLabel}${yearOrSession ? ' ' + yearOrSession : ''}`;
 
   return (
     <PressableScale
@@ -138,13 +118,13 @@ function ExamCard({
           className="items-center justify-center flex-shrink-0"
           style={{ width: 46, height: 46, borderRadius: 13, backgroundColor: color + '1f' }}
         >
-          <Text style={{ fontSize: 22 }}>{subjectEmoji(subject)}</Text>
+          <SubjectIcon color={color} size={22} strokeWidth={1.75} />
         </View>
 
         <View className="flex-1" style={{ minWidth: 0 }}>
           {/* Title: "Matière · Année" */}
           <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>
-            {subject}
+            {subjectLabel}
             {yearOrSession ? <Text style={{ color }}>{`  ·  ${yearOrSession}`}</Text> : null}
           </Text>
 
@@ -189,11 +169,24 @@ function ExamCard({
 
         {/* Right: completion badge or chevron */}
         {done ? (
-          <View className="items-center" style={{ gap: 2 }}>
-            <CheckCircle2 color={colors.success} size={20} />
+          // A finished exam shows the score as a pill rather than a bare check:
+          // the number is the reason to come back and beat it.
+          <View className="items-center" style={{ gap: 3 }}>
             {pct !== null ? (
-              <Text style={[typeScale.micro, { color: colors.success }]}>{pct}%</Text>
-            ) : null}
+              <View
+                style={{
+                  paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999,
+                  backgroundColor: (pct >= 50 ? colors.successFill : colors.warn) + '1f',
+                }}
+              >
+                <Text style={[typeScale.micro, { color: pct >= 50 ? colors.successFill : colors.warn, fontFamily: 'Satoshi-Bold' }]}>
+                  {pct}%
+                </Text>
+              </View>
+            ) : (
+              <CheckCircle2 color={colors.success} size={20} />
+            )}
+            <Text style={[typeScale.micro, { color: colors.faint }]}>{t('Refaire', 'Refè')}</Text>
           </View>
         ) : (
           <ChevronRight color={colors.faint} size={18} />

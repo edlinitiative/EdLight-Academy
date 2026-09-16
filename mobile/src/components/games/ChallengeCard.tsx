@@ -95,10 +95,10 @@ export default function ChallengeCard({
           <View style={{ marginTop: 14, alignItems: 'center' }}>
             <Text style={[typeScale.bodyMd, { color: '#ffffff' }]}>
               {challenge.opponent!.score > challenge.challengerScore
-                ? t('Défi relevé — victoire ! 🏆', 'Defi fèt — viktwa ! 🏆')
+                ? t('Défi relevé, victoire ! 🏆', 'Defi fèt, viktwa ! 🏆')
                 : challenge.opponent!.score === challenge.challengerScore
                   ? t('Égalité !', 'Egalite !')
-                  : t('Défi relevé — bien essayé !', 'Defi fèt — bèl efò !')}
+                  : t('Défi relevé, bien essayé !', 'Defi fèt, bèl efò !')}
             </Text>
           </View>
         ) : expired ? (

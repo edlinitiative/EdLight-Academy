@@ -33,8 +33,8 @@ async function buildMessage(opts: ScoreShareOpts): Promise<string> {
       : `${opts.score}`;
   const codeLine = ref
     ? opts.lang === 'ht'
-      ? ` Sèvi ak kòd mwen ${ref.code} — nou chak ap genyen yon bonus.`
-      : ` Utilise mon code ${ref.code} — on gagne chacun un bonus.`
+      ? ` Sèvi ak kòd mwen ${ref.code}, nou chak ap genyen yon bonus.`
+      : ` Utilise mon code ${ref.code}, on gagne chacun un bonus.`
     : '';
   return opts.lang === 'ht'
     ? `🎯 Mwen fè ${scoreStr} nan ${opts.title} sou EdLight Academy ! Èske ou ka bat mwen ?${codeLine} ${link}`

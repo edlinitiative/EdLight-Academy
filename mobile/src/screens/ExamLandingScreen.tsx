@@ -550,18 +550,12 @@ export default function ExamLandingScreen() {
                 accessibilityLabel={t(level.label, level.labelHt)}
                 style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
               >
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 12,
-                    backgroundColor: colors.azureSoft,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <level.Icon color={colors.azure} size={22} />
-                </View>
+                {/* A bare glyph, not a tinted tile. Three identical pale-blue
+                    squares stacked down the page was the "2014" look Ted keeps
+                    rejecting ("i don't like these icons as well… something we
+                    can borrow from coursera"); Coursera's list rows let the
+                    title carry the row and keep the mark quiet. */}
+                <level.Icon color={colors.muted} size={20} strokeWidth={1.75} />
                 <View style={{ flex: 1 }}>
                   <Text style={[typeScale.title, { color: colors.ink }]}>{t(level.label, level.labelHt)}</Text>
                   <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
@@ -585,18 +579,7 @@ export default function ExamLandingScreen() {
               accessibilityLabel={t('Mes résultats', 'Rezilta mwen yo')}
               style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}
             >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: colors.azureSoft,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <History color={colors.azure} size={22} />
-              </View>
+              <History color={colors.muted} size={20} strokeWidth={1.75} />
               <View style={{ flex: 1 }}>
                 <Text style={[typeScale.title, { color: colors.ink }]}>{t('Mes résultats', 'Rezilta mwen yo')}</Text>
                 <Text style={[typeScale.caption, { color: colors.muted, marginTop: 1 }]} numberOfLines={1}>
