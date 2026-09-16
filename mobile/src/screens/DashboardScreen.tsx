@@ -34,7 +34,7 @@ import { computeNextStep } from '../utils/nextStep';
 import { dueQuestionIds } from '../utils/review';
 import { TabParamList } from '../navigation/TabNavigator';
 import { resetTabToRoot } from '../navigation/navHelpers';
-import { useColors, useTheme, radius, courseTint, typeScale, gradients } from '../theme/theme';
+import { useColors, useTheme, radius, courseTint, typeScale, gradients, displayScale } from '../theme/theme';
 import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import { tapLight } from '../utils/haptics';
 
@@ -424,7 +424,9 @@ export default function DashboardScreen() {
             the top of the page belongs to the ONE next action. */}
         <View className="px-5 pt-5 flex-row items-center justify-between">
           <View className="flex-1 pr-3">
-            <Text style={[typeScale.display, { color: colors.ink }]} numberOfLines={1}>
+            {/* The first line anyone reads on opening the app — worth the
+                display voice rather than another bold sans heading. */}
+            <Text style={[displayScale.xl, { color: colors.ink }]} numberOfLines={1}>
               {greeting}, {firstName || t('Étudiant', 'Elèv')}
             </Text>
             <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]} numberOfLines={1}>

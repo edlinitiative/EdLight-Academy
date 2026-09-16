@@ -27,7 +27,7 @@ import Svg, {
 import Animated, {
   useSharedValue, useAnimatedProps, withTiming, Easing,
 } from 'react-native-reanimated';
-import { typeScale } from '../../theme/theme';
+import { typeScale, fonts } from '../../theme/theme';
 import { useCountUp } from '../../hooks/useCountUp';
 import { useReduceMotion } from '../../utils/motion';
 import { success } from '../../utils/haptics';
@@ -133,8 +133,10 @@ function ScoreRing({
           />
         </Svg>
         <View className="absolute items-center justify-center" style={{ width: 150, height: 150 }}>
-          <Text style={{ fontSize: 30, fontFamily: typeScale.num.fontFamily, color: '#fff', letterSpacing: -0.5 }}>
-            {shownScore}<Text style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }}>/{total}</Text>
+          {/* The score is the moment — set it in the display face, not in the
+              same sans as the surrounding chrome. */}
+          <Text style={{ fontSize: 42, fontFamily: fonts.display, color: '#fff', letterSpacing: -1 }}>
+            {shownScore}<Text style={{ fontSize: 20, color: 'rgba(255,255,255,0.5)' }}>/{total}</Text>
           </Text>
           <Text style={{ fontSize: 12, color: to, fontFamily: typeScale.overline.fontFamily, letterSpacing: 0.5 }}>
             {shownPct}%

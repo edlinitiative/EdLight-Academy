@@ -17,7 +17,7 @@ import {
   ArrowLeft, Clock, FileText, Layers, Award, CheckCircle2, Play, RotateCcw, BarChart3, Lightbulb,
 } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useTheme, typeScale } from '../theme/theme';
+import { useTheme, typeScale, displayScale } from '../theme/theme';
 import PressableScale from '../components/ui/PressableScale';
 import { ListSkeleton, ErrorState } from '../components/StateViews';
 import { fetchCatalogIndex, fetchSingleExam } from '../utils/examCatalog';
@@ -234,7 +234,7 @@ export default function ExamOverviewScreen() {
             {[slim?.year, langLabel].filter(Boolean).join(' · ') || t('EXAMEN OFFICIEL', 'EGZAMEN OFISYÈL')}
           </Text>
         </View>
-        <Text style={[typeScale.display, { color: colors.ink }]}>{title}</Text>
+        <Text style={[displayScale.xl, { color: colors.ink }]}>{title}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
           {diff ? <Chip label={t(diff.fr, diff.ht)} /> : null}
           {tracks.map((code) => <Chip key={code} label={code} />)}
