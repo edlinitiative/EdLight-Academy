@@ -730,8 +730,15 @@ function GeometryFigure({ description }) {
 
   // Concentric circles: distinguish target/bullseye from math geometry
   const isConcentric = /concentric|concentri/.test(d);
-  const isTarget = /cible|target|zones?\s*[:.]|points?\s+for|point.*zone/i.test(d)
-    || (/concentric/.test(d) && /zone|point/i.test(d));
+  // A target needs actual target semantics — a named target, or zones carrying
+  // POINT VALUES. The old rule also fired on `point.*zone` and `points? for`,
+  // which matched any description that happened to mention a point and later a
+  // zone: a circle with a chord and "une zone hachurée" (the classic segment
+  // figure) was drawn as a dartboard labelled 10pt/5pt/3pt/1pt, and a function
+  // graph "showing ... points for x=1, 2, 3" went the same way.
+  const isTarget = /cible|target|bullseye/i.test(d)
+    || /zones?\s+(?:de|à|valant)\s*\d+/i.test(d)
+    || (/concentri/i.test(d) && /\b\d+\s*(?:pts?|points?)\b/i.test(d));
   const isTangentGeometry = isConcentric && /tangent|perpendiculaire|rayon.*[rR]|droit|AB|OA|OB/i.test(d);
 
   // Circle geometry (not concentric, not mirror) — circle with chord, tangent, inscribed angle, etc.

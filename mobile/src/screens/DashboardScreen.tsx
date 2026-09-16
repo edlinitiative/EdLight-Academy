@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useScrollToTop } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { ChevronRight, CalendarCheck, Search as SearchIcon } from 'lucide-react-native';
-import { courseVideoThumb } from '../utils/videoThumb';
+import { courseVideoThumb, courseVideoThumbs } from '../utils/videoThumb';
 import { FollowInstagramPrompt } from '../components/FollowInstagram';
 import WeeklyGoalSheet from '../components/WeeklyGoalSheet';
 import SandraFab from '../components/SandraFab';
@@ -190,14 +190,14 @@ export default function DashboardScreen() {
   // The next-step card leads with the course's own video still when it points
   // at a course (a lesson, or a welcome-back resume of one).
   const nextStepThumb = React.useMemo(() => {
-    if (!nextStep || !courses) return null;
+    if (!nextStep || !courses) return [];
     const courseId = nextStep.kind === 'lesson'
       ? nextStep.courseId
       : nextStep.kind === 'welcome-back' && nextStep.resume.type !== 'exam'
         ? nextStep.resume.path
         : null;
     const c = courseId ? courses.find((x) => x.id === courseId) : null;
-    return c ? courseVideoThumb(c) : null;
+    return c ? courseVideoThumbs(c) : [];
   }, [nextStep, courses]);
 
   // ---------------------------------------------------------------------------
@@ -467,7 +467,7 @@ export default function DashboardScreen() {
             with no enrolled courses). */}
         {nextStep ? (
           <View className="px-5" style={{ marginTop: 18 }}>
-            <NextStepCard step={nextStep} thumb={nextStepThumb} onOpenReview={() => setReviewOpen(true)} />
+            <NextStepCard step={nextStep} thumbs={nextStepThumb} onOpenReview={() => setReviewOpen(true)} />
           </View>
         ) : lastActivity ? (
           <View className="px-5" style={{ marginTop: 18 }}>
