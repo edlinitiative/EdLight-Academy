@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, useWindowDimensions } from 'react-native';
+import { Animated, View, useColorScheme, useWindowDimensions } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
@@ -116,8 +116,17 @@ const linking = {
   },
 };
 
-/** Must stay in sync with expo.splash.backgroundColor in app.json. */
-const SPLASH_BACKGROUND = '#FFFFFF';
+/**
+ * Must stay in sync with the expo-splash-screen plugin config in app.json.
+ *
+ * The dark mark is the same artwork recoloured to the dark-mode azure: the
+ * brand blue (#004AAD) sits at only 2.2:1 on this ground, so reusing it would
+ * have swapped a white flash for an unreadable logo.
+ */
+const SPLASH = {
+  light: { background: '#FFFFFF', image: require('../../assets/splash.png') },
+  dark: { background: '#0b1220', image: require('../../assets/splash-dark.png') },
+} as const;
 
 /**
  * Continuation of the native splash, not a second screen.
@@ -133,6 +142,11 @@ const SPLASH_BACKGROUND = '#FFFFFF';
 function LoadingScreen() {
   const opacity = useRef(new Animated.Value(0.55)).current;
   const { width, height } = useWindowDimensions();
+  // Follows the SYSTEM appearance, not the app's own theme toggle: the native
+  // splash this continues is chosen by the OS, so a user who forced dark inside
+  // the app on a light phone still gets the light splash — and this must match
+  // whatever they just saw, not what they will see next.
+  const splash = useColorScheme() === 'dark' ? SPLASH.dark : SPLASH.light;
 
   useEffect(() => {
     Animated.loop(
@@ -153,9 +167,9 @@ function LoadingScreen() {
     // Matches expo.splash.backgroundColor in app.json. Not the themed bg: the
     // native splash is this color, and stepping to the app ground here would
     // just move the flash earlier.
-    <View style={{ flex: 1, backgroundColor: SPLASH_BACKGROUND, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: splash.background, alignItems: 'center', justifyContent: 'center' }}>
       <Animated.Image
-        source={require('../../assets/splash.png')}
+        source={splash.image}
         style={{ width: side, height: side, opacity }}
         resizeMode="contain"
       />
