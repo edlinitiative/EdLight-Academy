@@ -60,8 +60,8 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
     [schools, q, commune],
   );
   const maybeSame = useMemo(
-    () => (adding && q.trim().length >= 4 ? likelyDuplicate(schools, q, newCommune || commune) : null),
-    [adding, q, schools, newCommune, commune],
+    () => (adding && q.trim().length >= 4 ? likelyDuplicate(schools, q) : null),
+    [adding, q, schools],
   );
 
   const choose = (s: School) => { select(); onSelect(s); onClose(); };
@@ -120,9 +120,9 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 accessibilityLabel={t('Chercher une école', 'Chèche yon lekòl')}
               />
             </View>
-            {commune && !q ? (
+            {!q ? (
               <Text style={[typeScale.caption, { color: colors.muted, marginTop: 6 }]}>
-                {t(`Écoles à ${commune}`, `Lekòl nan ${commune}`)}
+                {t('Les écoles les plus fréquentées', 'Lekòl yo plis moun ale')}
               </Text>
             ) : null}
           </View>
@@ -147,7 +147,7 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 </View>
               ) : null}
 
-              <Text style={[typeScale.label, { color: colors.muted }]}>{t('Commune', 'Komin')}</Text>
+              <Text style={[typeScale.label, { color: colors.muted }]}>{t("Commune de l'école", 'Komin lekòl la')}</Text>
               <TextInput
                 value={newCommune}
                 onChangeText={setNewCommune}
@@ -233,7 +233,7 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 <Text style={[typeScale.caption, { color: colors.muted, paddingVertical: 18, textAlign: 'center' }]}>
                   {q
                     ? t('Aucune école trouvée.', 'Nou pa jwenn okenn lekòl.')
-                    : t('Commence à taper le nom de ton école.', 'Kòmanse tape non lekòl ou.')}
+                    : t('Cherche le nom de ton école.', 'Chèche non lekòl ou.')}
                 </Text>
               }
               ListFooterComponent={

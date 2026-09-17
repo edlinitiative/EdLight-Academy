@@ -17,8 +17,11 @@ import seedDoc from '../../../shared/data/schools-seed.json';
  * with the seed and nothing on screen breaks.
  */
 
-const SEED: School[] = (seedDoc.schools as { name: string; commune: string; applicants?: number }[])
-  .map((s) => ({ key: schoolKey(s.name), name: s.name, commune: s.commune, applicants: s.applicants }));
+// The seed records no location: its source is the student's home address, not
+// the school's, so a school is one entry per name nationally. A commune only
+// appears once a student adds a school and types the school's own address.
+const SEED: School[] = (seedDoc.schools as { name: string; applicants?: number }[])
+  .map((s) => ({ key: schoolKey(s.name), name: s.name, commune: '', applicants: s.applicants }));
 
 /** Bound the read: the list is a picker, not an archive. */
 const MAX_ADDED = 500;
@@ -76,7 +79,7 @@ export async function addSchool(input: {
   if (name.length < 4 || !key) return { ok: false, reason: 'invalid' };
 
   const all = await loadSchools();
-  const existing = likelyDuplicate(all, name, input.commune) ?? all.find((s) => s.key === key) ?? null;
+  const existing = likelyDuplicate(all, name) ?? all.find((s) => s.key === key) ?? null;
   if (existing) return { ok: false, reason: 'duplicate', existing };
 
   const school: School = { key, name, commune: input.commune.trim(), address: input.address?.trim() || undefined };

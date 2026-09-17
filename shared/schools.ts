@@ -20,6 +20,7 @@ export interface School {
   /** Stable grouping key — matches how the leaderboard groups by school. */
   key: string;
   name: string;
+  /** Where the SCHOOL is, when a student who added it said so. Often empty. */
   commune: string;
   /** Only on schools added by a student: how they described where it is. */
   address?: string;
@@ -130,13 +131,16 @@ export function searchSchools(
  * The school a new name would collide with, if any. Only a confident match
  * counts: offering "did you mean?" for a loose one trains people to dismiss it,
  * and then it stops working for the cases that matter.
+ *
+ * Deliberately NOT narrowed by commune. There is one Saint-Louis de Gonzague
+ * in Haiti, and its students live in Delmas, Tabarre, Carrefour-Feuilles,
+ * Laboule and Pétion-Ville — so a commune test would let each of them add the
+ * school again, which is the exact duplicate this is here to prevent. Students
+ * also mistype and mix up communes, and a name match is the stronger signal.
  */
-export function likelyDuplicate(schools: School[], name: string, commune?: string | null): School | null {
-  const candidates = commune
-    ? schools.filter((s) => !s.commune || normalizeName(s.commune) === normalizeName(commune))
-    : schools;
+export function likelyDuplicate(schools: School[], name: string): School | null {
   let best: { s: School; score: number } | null = null;
-  for (const s of candidates) {
+  for (const s of schools) {
     const score = matchScore(s, name);
     if (score >= 70 && (!best || score > best.score)) best = { s, score };
   }
