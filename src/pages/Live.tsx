@@ -118,19 +118,26 @@ export default function Live() {
 
   return (
     <div className="live">
-      <div className="live__ground" aria-hidden />
-      <div className="live__grain" aria-hidden />
+      {/* The mark's own rays, at wall scale. Nothing blurred — the logo has
+          no blur in it, and a soft glow is what made the first version of this
+          page look like every other generated dark dashboard. */}
+      <div className="live__rays" aria-hidden />
+      <div className="live__horizon" aria-hidden />
 
       <div className="live__inner">
         <header className="live__head">
-          <div>
-            <h1 className="live__title">{t('La course des écoles', 'Kous lekòl yo')}</h1>
-            <p className="live__subtitle">
-              {t(
-                `Chaque école est classée sur ses ${TEAM_SIZE} meilleurs élèves`,
-                `Chak lekòl klase sou ${TEAM_SIZE} pi bon elèv li yo`,
-              )}
-            </p>
+          <div className="live__brand">
+            {/* The real mark, not a drawn approximation of it. */}
+            <img className="live__mark" src="/assets/logo.png" alt="EdLight" />
+            <div>
+              <h1 className="live__title">{t('La course des écoles', 'Kous lekòl yo')}</h1>
+              <p className="live__subtitle">
+                {t(
+                  `Chaque école est classée sur ses ${TEAM_SIZE} meilleurs élèves`,
+                  `Chak lekòl klase sou ${TEAM_SIZE} pi bon elèv li yo`,
+                )}
+              </p>
+            </div>
           </div>
           <span className="live__onair">
             <span className="live__onair-dot" />
@@ -175,7 +182,7 @@ export default function Live() {
                       {school.label}
                       {school.rankDelta !== 0 && (
                         <span className={`live__delta live__delta--${climbed ? 'up' : 'down'}`}>
-                          {climbed ? '▲' : '▼'} {Math.abs(school.rankDelta)}
+                          {climbed ? '+' : '−'}{Math.abs(school.rankDelta)}
                         </span>
                       )}
                     </div>
@@ -206,7 +213,7 @@ export default function Live() {
                 <span className="live__ticker-item" key={`${p.id}-${i}`}>
                   <span className="live__ticker-name">{p.displayName}</span>
                   <span className="live__ticker-school">{p.school}</span>
-                  <span>{(p.xp ?? 0).toLocaleString('fr-FR')} XP</span>
+                  <span className="live__ticker-xp">{(p.xp ?? 0).toLocaleString('fr-FR')}</span>
                 </span>
               ))}
             </div>
