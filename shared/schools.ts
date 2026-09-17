@@ -80,8 +80,15 @@ function typesConflict(a: string, b: string): boolean {
   return !!ta && !!tb && ta !== tb;
 }
 
-/** Words that carry no identity: "Collège DE la Sainte Famille". */
-const FILLER = /\b(de|du|des|la|le|les|d|l|et|saint|sainte)\b/g;
+/** Words that carry no identity: "Collège DE la Sainte Famille", "École MIXTE X". */
+const FILLER = /\b(de|du|des|la|le|les|d|l|et|saint|sainte|mixte|nationale?)\b/g;
+
+/**
+ * A street address typed into the name box. The corpus has "…(FDM) Rue 2k" and
+ * "…, # 9, Route de Jacquet", with and without a comma before it.
+ */
+const STREET_TAIL =
+  /[,\s]+(?:#\s*\d|no\.?\s*\d|rue\b|route\b|ruelle\b|avenue\b|ave\.?\b|impasse\b|angle\b|delmas\s*\d).*$/i;
 
 const ABBREVIATIONS: [RegExp, string][] = [
   [/\bcoll?\.?\b/g, 'college'],
@@ -98,15 +105,22 @@ const ABBREVIATIONS: [RegExp, string][] = [
  * can genuinely differ only by being a Collège and a Lycée.
  */
 export function schoolKey(raw: string): string {
-  let s = normalizeName(raw);
+  let s = normalizeName(String(raw).replace(STREET_TAIL, ''));
   for (const [pattern, replacement] of ABBREVIATIONS) s = s.replace(pattern, replacement);
   return s.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 /** The identity-bearing words, for matching a name typed without its type. */
 function core(raw: string): string {
-  return schoolKey(raw).replace(TYPE_PREFIX, '').replace(FILLER, ' ').replace(/\s+/g, ' ').trim();
+  // Twice, with the filler dropped between: "École mixte Académie Chrétienne"
+  // leads with a type, then a descriptor, then the type that actually names it.
+  let s = schoolKey(raw).replace(TYPE_PREFIX, '').replace(FILLER, ' ').replace(/\s+/g, ' ').trim();
+  s = s.replace(TYPE_PREFIX, '').trim();
+  return s;
 }
+
+/** Letters only — catches "SacréCoeur" written without its space. */
+const squash = (s: string) => s.replace(/[^a-z0-9]/g, '');
 
 /** Every word of the query appears in the candidate, in any order. */
 function containsAllWords(haystack: string, needle: string): boolean {
@@ -128,7 +142,13 @@ export function matchScore(school: School, query: string): number {
 
   if (name === q) return 100;
   if (nc && nc === qc) return 90;          // "Saint Louis" ≡ "Collège Saint Louis"
+  // The same letters, spaced or punctuated differently: "Institution du
+  // SacréCoeur" for "Institution du Sacré Coeur", "L'ouverture Cleary School"
+  // for "Louverture Cleary School". Checked before the looser rules below,
+  // because identical letters are a stronger signal than shared words.
+  if (squash(name) === squash(q)) return 85;
   if (name.startsWith(q)) return 80;
+  if (nc && squash(nc) === squash(qc)) return 74;
   if (nc.startsWith(qc)) return 70;
   if (containsAllWords(name, q)) return 60;
   if (nc && containsAllWords(nc, qc)) return 50;
@@ -189,9 +209,33 @@ export function searchSchools(
  * school again, which is the exact duplicate this is here to prevent. Students
  * also mistype and mix up communes, and a name match is the stronger signal.
  */
+/**
+ * Pairs that read as one school and are two. Confirmed by someone who knows
+ * the schools — which is the only way to know, because nothing in the strings
+ * says so: each pair is a shorter name, and a longer one adding a religious
+ * order or a town. That is the same shape as Institution Marie Régine des
+ * sœurs salésiennes, which IS Collège Marie regine.
+ *
+ * So these are recorded rather than derived, and they only ever suppress a
+ * suggestion — the schools stay separate entries either way.
+ */
+const KNOWN_DISTINCT: [string, string][] = [
+  ['institution du sacre coeur', 'ecole du sacre coeur dirrigee par les filles de marie'],
+  ['ecole immaculee conception', 'ecole immaculee conception de trou du nord'],
+  ['academie chretienne', 'institution chretienne mixte les gedeons'],
+  ['academie chretienne', 'institution chretienne reformer adoration'],
+];
+
+function knownDistinct(a: string, b: string): boolean {
+  const ka = schoolKey(a);
+  const kb = schoolKey(b);
+  return KNOWN_DISTINCT.some(([x, y]) => (ka === x && kb === y) || (ka === y && kb === x));
+}
+
 export function likelyDuplicate(schools: School[], name: string): School | null {
   let best: { s: School; score: number } | null = null;
   for (const s of schools) {
+    if (knownDistinct(s.name, name)) continue;
     const score = matchScore(s, name);
     if (score >= 70 && (!best || score > best.score)) best = { s, score };
   }

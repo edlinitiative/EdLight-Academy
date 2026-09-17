@@ -60,16 +60,16 @@
    "applicants": 9
   },
   {
+   "name": "Institution du Sacré Coeur",
+   "applicants": 8
+  },
+  {
    "name": "Institution Nouvelle Source",
    "applicants": 7
   },
   {
-   "name": "Institution du Sacré Coeur",
-   "applicants": 7
-  },
-  {
    "name": "Académie Chrétienne",
-   "applicants": 5
+   "applicants": 6
   },
   {
    "name": "Collège Adventiste de Diquini",
@@ -101,6 +101,10 @@
   },
   {
    "name": "Collège Secondaire Louverture Cleary",
+   "applicants": 3
+  },
+  {
+   "name": "Ecole du Sacré-Cœur dirrigée par les Filles de Marie",
    "applicants": 3
   },
   {
@@ -164,10 +168,6 @@
    "applicants": 2
   },
   {
-   "name": "Ecole du Sacré-Cœur dirrigée par les Filles de Marie",
-   "applicants": 2
-  },
-  {
    "name": "INSTITUTION PERE GIRARD",
    "applicants": 2
   },
@@ -201,6 +201,10 @@
   },
   {
    "name": "Institution mixte les frères Rogeste",
+   "applicants": 2
+  },
+  {
+   "name": "Louverture cleary school",
    "applicants": 2
   },
   {
@@ -284,10 +288,6 @@
    "applicants": 1
   },
   {
-   "name": "Ecole du Sacré cœur dirigé par les filles de marie (FDM) Rue 2k",
-   "applicants": 1
-  },
-  {
    "name": "Ensemble Scolaire Père Basile Moreau",
    "applicants": 1
   },
@@ -328,10 +328,6 @@
    "applicants": 1
   },
   {
-   "name": "Institution du SacréCoeur",
-   "applicants": 1
-  },
-  {
    "name": "Institution mixte Saint-Jean Évangéliste",
    "applicants": 1
   },
@@ -341,10 +337,6 @@
   },
   {
    "name": "Institutions Mixte de SOPUDEP",
-   "applicants": 1
-  },
-  {
-   "name": "Louverture cleary school",
    "applicants": 1
   },
   {
@@ -361,10 +353,6 @@
   },
   {
    "name": "Lycée national de pétionville",
-   "applicants": 1
-  },
-  {
-   "name": "L’ouverture Cleary school",
    "applicants": 1
   },
   {
@@ -413,10 +401,6 @@
   },
   {
    "name": "École Soeur Etienne",
-   "applicants": 1
-  },
-  {
-   "name": "École mixte Academie Chrétienne",
    "applicants": 1
   }
  ]
