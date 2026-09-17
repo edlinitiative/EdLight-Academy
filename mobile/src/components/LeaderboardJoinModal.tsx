@@ -7,6 +7,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import SchoolPicker from './SchoolPicker';
 import { X, ShieldCheck, ChevronDown, Check } from 'lucide-react-native';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
@@ -88,6 +89,7 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
   const [customCity, setCustomCity] = useState('');
   const [saving, setSaving] = useState(false);
   const [sheet, setSheet] = useState<null | 'dept' | 'city'>(null);
+  const [schoolPicker, setSchoolPicker] = useState(false);
 
   // Seed from the saved profile every time the modal opens; legacy free-typed
   // cities snap onto the canonical commune when they match one.
@@ -184,17 +186,15 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
             )}
           </View>
 
-          <View style={{ gap: 5 }}>
-            <Text style={[typeScale.label, { color: colors.muted }]}>{t('École (optionnel)', 'Lekòl (opsyonèl)')}</Text>
-            <TextInput
-              value={school}
-              onChangeText={setSchool}
-              maxLength={60}
-              placeholder={t('Nom de votre école', 'Non lekòl ou')}
-              placeholderTextColor={colors.faint}
-              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, backgroundColor: colors.surfaceAlt, color: colors.ink }}
-            />
-          </View>
+          {/* Picked from a list, never typed: the school board groups by name,
+              so three spellings of one school are three schools with a third
+              of the points each — the same reason ville is a dropdown. */}
+          <SelectField
+            label={t('École (optionnel)', 'Lekòl (opsyonèl)')}
+            value={school}
+            placeholder={t('Chercher votre école…', 'Chèche lekòl ou…')}
+            onPress={() => setSchoolPicker(true)}
+          />
 
           <SelectField
             label={t('Département (optionnel)', 'Depatman (opsyonèl)')}
@@ -256,6 +256,15 @@ export default function LeaderboardJoinModal({ visible, onClose }: { visible: bo
         ]}
         onPick={(v) => { setCityChoice(v); if (v !== OTHER_CITY) setCustomCity(''); }}
         onClose={() => setSheet(null)}
+      />
+      {/* The ville already chosen scopes the search, which is what actually
+          stops duplicates: a national list becomes a handful of names, so the
+          school someone is about to re-add is right in front of them. */}
+      <SchoolPicker
+        visible={schoolPicker}
+        commune={cityChoice === OTHER_CITY ? customCity : cityChoice}
+        onSelect={(s) => setSchool(s.name)}
+        onClose={() => setSchoolPicker(false)}
       />
     </Modal>
   );

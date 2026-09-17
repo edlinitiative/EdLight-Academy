@@ -1,0 +1,159 @@
+import { normalizeName } from './leaderboardAgg';
+
+/**
+ * Finding a school in a list, and deciding when two names are the same school.
+ *
+ * The school board groups by name, so spelling IS the grouping. Left to free
+ * text, "Lycée Toussaint", "lycee toussaint" and "L. Toussaint Louverture"
+ * become three schools with a third of the points each, and the comparison the
+ * whole competition is built on quietly stops working. haitiGeo.ts solved this
+ * one level up for villes, for the same reason and in the same way: pick from a
+ * list rather than type.
+ *
+ * The hard part is not the list, it is what happens when someone's school is
+ * not on it. Most duplicates are not people wanting a new entry — they are
+ * people failing to find the one that exists. So search has to forgive
+ * accents, abbreviations and the institution type before it offers to add.
+ */
+
+export interface School {
+  /** Stable grouping key — matches how the leaderboard groups by school. */
+  key: string;
+  name: string;
+  commune: string;
+  /** Only on schools added by a student: how they described where it is. */
+  address?: string;
+  /** How many ESLP applicants named it — orders the seeded list. */
+  applicants?: number;
+}
+
+/** Institution types, which people include or omit interchangeably. */
+const TYPE_PREFIX =
+  /^(coll?ege|lycee|institution|institut|ecole|centre|academie|academy|petit seminaire|seminaire|externat|juvenat|foyer|school)\s+/;
+
+/** Words that carry no identity: "Collège DE la Sainte Famille". */
+const FILLER = /\b(de|du|des|la|le|les|d|l|et|saint|sainte)\b/g;
+
+const ABBREVIATIONS: [RegExp, string][] = [
+  [/\bcoll?\.?\b/g, 'college'],
+  [/\binst\.?\b/g, 'institution'],
+  [/\bst\.?\b/g, 'saint'],
+  [/\bste\.?\b/g, 'sainte'],
+  [/\bnd\b/g, 'notre dame'],
+  [/\bnat\.?\b/g, 'national'],
+];
+
+/**
+ * The form a name is compared in: accents folded, abbreviations expanded,
+ * punctuation dropped. Keeps the institution type — two schools in one commune
+ * can genuinely differ only by being a Collège and a Lycée.
+ */
+export function schoolKey(raw: string): string {
+  let s = normalizeName(raw);
+  for (const [pattern, replacement] of ABBREVIATIONS) s = s.replace(pattern, replacement);
+  return s.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** The identity-bearing words, for matching a name typed without its type. */
+function core(raw: string): string {
+  return schoolKey(raw).replace(TYPE_PREFIX, '').replace(FILLER, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Every word of the query appears in the candidate, in any order. */
+function containsAllWords(haystack: string, needle: string): boolean {
+  const words = needle.split(' ').filter(Boolean);
+  return words.length > 0 && words.every((w) => haystack.includes(w));
+}
+
+/**
+ * Rank schools against what the student typed. Higher is better; 0 means no
+ * match at all. Exactness wins, then prefix, then all-words-present — someone
+ * typing "marie anne" must be shown "Collège Marie-Anne" before anything else.
+ */
+export function matchScore(school: School, query: string): number {
+  const q = schoolKey(query);
+  if (!q) return 0;
+  const name = schoolKey(school.name);
+  const qc = core(query);
+  const nc = core(school.name);
+
+  if (name === q) return 100;
+  if (nc && nc === qc) return 90;          // "Saint Louis" ≡ "Collège Saint Louis"
+  if (name.startsWith(q)) return 80;
+  if (nc.startsWith(qc)) return 70;
+  if (containsAllWords(name, q)) return 60;
+  if (nc && containsAllWords(nc, qc)) return 50;
+  if (name.includes(q) && q.length >= 4) return 40;
+  return 0;
+}
+
+/**
+ * Search, preferring the student's own commune.
+ *
+ * Scoping to the commune is what actually prevents duplicates: it turns a
+ * national list into a handful of names, so the school someone is about to
+ * re-add is right in front of them. Schools elsewhere still appear, below —
+ * students board, move, and travel to school across communes.
+ */
+export function searchSchools(
+  schools: School[],
+  query: string,
+  opts: { commune?: string | null; limit?: number } = {},
+): School[] {
+  const limit = opts.limit ?? 20;
+  const commune = opts.commune ? normalizeName(opts.commune) : '';
+
+  if (!query.trim()) {
+    // No query yet: show this commune's schools, most-attended first.
+    const local = commune ? schools.filter((s) => normalizeName(s.commune) === commune) : [];
+    const rest = commune ? schools.filter((s) => normalizeName(s.commune) !== commune) : schools;
+    const byPopularity = (a: School, b: School) =>
+      (b.applicants ?? 0) - (a.applicants ?? 0) || a.name.localeCompare(b.name);
+    return [...local.sort(byPopularity), ...rest.sort(byPopularity)].slice(0, limit);
+  }
+
+  return schools
+    .map((s) => ({
+      s,
+      score: matchScore(s, query) + (commune && normalizeName(s.commune) === commune ? 5 : 0),
+    }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) =>
+      b.score - a.score
+      || (b.s.applicants ?? 0) - (a.s.applicants ?? 0)
+      || a.s.name.localeCompare(b.s.name))
+    .slice(0, limit)
+    .map((r) => r.s);
+}
+
+/**
+ * The school a new name would collide with, if any. Only a confident match
+ * counts: offering "did you mean?" for a loose one trains people to dismiss it,
+ * and then it stops working for the cases that matter.
+ */
+export function likelyDuplicate(schools: School[], name: string, commune?: string | null): School | null {
+  const candidates = commune
+    ? schools.filter((s) => !s.commune || normalizeName(s.commune) === normalizeName(commune))
+    : schools;
+  let best: { s: School; score: number } | null = null;
+  for (const s of candidates) {
+    const score = matchScore(s, name);
+    if (score >= 70 && (!best || score > best.score)) best = { s, score };
+  }
+  return best?.s ?? null;
+}
+
+/** Merge the bundled seed with schools students have added, seed winning ties. */
+export function mergeSchools(seed: School[], added: School[]): School[] {
+  const byKey = new Map<string, School>();
+  for (const s of [...added, ...seed]) {
+    const key = s.key || schoolKey(s.name);
+    if (!key) continue;
+    const existing = byKey.get(key);
+    // Prefer whichever knows the commune; the seed's applicant count is kept.
+    if (!existing || (!existing.commune && s.commune)) {
+      byKey.set(key, { ...existing, ...s, key });
+    }
+  }
+  return [...byKey.values()];
+}
