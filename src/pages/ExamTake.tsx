@@ -24,6 +24,7 @@ import {
   subjectColor,
   parseConsignes,
 } from '../utils/examUtils';
+import { compileQuestion, isSerializable, responseToStored, storedToResponse } from '../utils/question';
 import { Skeleton } from '../components/Skeleton';
 
 /** Per-question grading result stored in the `questionResults` map (immediate
@@ -3148,6 +3149,26 @@ function ImmediateFeedback({ result, question, color }) {
 
 // ── Question Input Components ────────────────────────────────────────────────
 
+/**
+ * Whether this question is answered as a ladder of labeled parts: the compiled
+ * question is nothing but steps, and there are at least two of them. Asking the
+ * compiled question rather than re-reading `type` and `answer_parts` here is
+ * what keeps web and mobile showing the same fields.
+ */
+function isLadderQuestion(question, subject) {
+  if (!question || usesScaffold(question, subject)) return false;
+  if (Array.isArray(question.conditions) && question.conditions.length > 0) return false;
+  try {
+    const compiled = compileQuestion(question, { subject });
+    const ids = Object.keys(compiled.widgets);
+    return ids.length > 1
+      && ids.every((id) => /^step\d+$/.test(id))
+      && isSerializable(compiled);
+  } catch {
+    return false;
+  }
+}
+
 function QuestionInput({ question, index, value, onChange, disabled, subject }) {
   const type = question.type || 'unknown';
 
@@ -3160,6 +3181,11 @@ function QuestionInput({ question, index, value, onChange, disabled, subject }) 
   // Route proof / demonstration questions to the step-by-step input
   if (isProofQuestion(question, subject)) {
     return <ProofInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} />;
+  }
+
+  // A question authored as several labeled parts is asked as several fields.
+  if (isLadderQuestion(question, subject)) {
+    return <LadderInput question={question} index={index} value={value} onChange={onChange} disabled={disabled} subject={subject} />;
   }
 
   switch (type) {
@@ -3181,6 +3207,63 @@ function QuestionInput({ question, index, value, onChange, disabled, subject }) 
     default:
       return <TextInput type={type} index={index} value={value} onChange={onChange} disabled={disabled} />;
   }
+}
+
+// ── Step ladder (labeled answer_parts, no scaffold) ──────────────────────
+//
+// 1,535 questions carry two to eleven LABELED answer_parts and no
+// scaffold_text — "Citez trois inconvénients de la vie en petite ville", with
+// a label for each — and got one box for all of them, marked all-or-nothing
+// against a single summary answer. RubricGuide listed the labels above that
+// box; this gives each one its own field, and the grader marks them one by
+// one with partial credit.
+//
+// The stored value is {"scaffold":[…]}, the shape the grader already reads,
+// built by the shared engine so web and mobile cannot drift.
+
+function LadderInput({ question, index, value, onChange, disabled, subject }) {
+  const language = useStore((s) => s.language);
+  const t = (fr, ht) => (language === 'ht' ? ht : fr);
+  const compiled = useMemo(
+    () => compileQuestion(question, { subject }),
+    [question, subject],
+  );
+  const response = useMemo(
+    () => storedToResponse(compiled, value ?? ''),
+    [compiled, value],
+  );
+  const ids = Object.keys(compiled.widgets);
+
+  const setField = (id, v) => {
+    onChange(index, responseToStored(compiled, { ...response, [id]: v }));
+  };
+
+  return (
+    <div className="exam-take__ladder">
+      <span className="exam-take__ladder-title">
+        {t('Répondez à chaque point :', 'Reponn chak pwen :')}
+      </span>
+      {ids.map((id, i) => {
+        const w = compiled.widgets[id];
+        const label = ('label' in w && w.label) ? String(w.label) : `${t('Point', 'Pwen')} ${i + 1}`;
+        const fieldId = `ladder-${index}-${id}`;
+        return (
+          <div className="exam-take__ladder-row" key={id}>
+            <label className="exam-take__ladder-label" htmlFor={fieldId}>{label}</label>
+            <input
+              id={fieldId}
+              className="exam-take__ladder-input"
+              type="text"
+              value={typeof response[id] === 'string' ? response[id] : ''}
+              onChange={(e) => setField(id, e.target.value)}
+              placeholder={t('Votre réponse…', 'Repons ou…')}
+              disabled={disabled}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ── Guided Condition Builder Input ───────────────────────────────────────
