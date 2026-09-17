@@ -1,4 +1,4 @@
-import { aggregateBy, membersOf, groupForUid, normalizeName } from '../../../shared/leaderboardAgg';
+import { aggregateBy, membersOf, groupForUid, normalizeName, rankTeams, teamStandingFor } from '../../../shared/leaderboardAgg';
 
 const ENTRIES = [
   { uid: 'a', displayName: 'Ana', xp: 500, school: 'Lycée Toussaint', city: 'Port-au-Prince' },
@@ -84,5 +84,69 @@ describe('groupForUid', () => {
   it('returns null when the user has no group', () => {
     const schools = aggregateBy(ENTRIES, 'school');
     expect(groupForUid(schools, ENTRIES, 'school', 'f')).toBeNull(); // Fé has no school
+  });
+});
+
+// ── Team scoring: a school's best five ─────────────────────────────────────
+describe('rankTeams — a school is scored on its best five', () => {
+  const group = (label: string, xps: number[], members = xps.length) => ({
+    key: normalizeName(label),   // real groups are keyed the way aggregateBy keys them
+    label,
+    totalXp: xps.reduce((a, b) => a + b, 0),
+    members,
+    avgXp: members ? Math.round(xps.reduce((a, b) => a + b, 0) / members) : 0,
+    rank: 0,
+    topMembers: xps.map((xp, i) => ({ uid: `${label}${i}`, displayName: `E${i}`, xp })),
+  });
+
+  it('does not let the biggest school win on turnout alone', () => {
+    // Twelve students averaging 40 lose to five averaging 100. Ranking on the
+    // total would hand it to the big school every week and teach every smaller
+    // school there is no point turning up.
+    const big = group('Grand Collège', Array(12).fill(40));       // total 480
+    const small = group('Petit Lycée', [100, 100, 100, 100, 100]); // total 500
+    const [first] = rankTeams([big, small]);
+    expect(first.label).toBe('Petit Lycée');
+    expect(first.teamXp).toBe(500);
+  });
+
+  it('does not let one strong student carry a school', () => {
+    const star = group('Une Star', [900, 10, 10]);   // 3 members — short
+    const team = group('Vraie Équipe', [80, 80, 80, 80, 80]);
+    const ranked = rankTeams([star, team]);
+    expect(ranked[0].label).toBe('Vraie Équipe');
+    expect(ranked[0].rank).toBe(1);
+    // The school with three players is not in the running at all.
+    expect(ranked[1].qualified).toBe(false);
+    expect(ranked[1].rank).toBe(0);
+  });
+
+  it('never punishes a school for bringing more students', () => {
+    const five = group('École A', [50, 50, 50, 50, 50]);
+    const fifty = group('École B', [50, 50, 50, 50, 50, ...Array(45).fill(1)]);
+    const ranked = rankTeams([five, fifty]);
+    expect(ranked.map((s) => s.teamXp)).toEqual([250, 250]);
+    // Tied on the best five — the school that brought more people edges it.
+    expect(ranked[0].label).toBe('École B');
+  });
+
+  it('says how many more players a school needs', () => {
+    // The recruiting message: actionable tonight, unlike a points gap.
+    const short = group('Presque', [30, 30, 30]);
+    const [s] = rankTeams([short]);
+    expect(s.needed).toBe(2);
+    expect(s.qualified).toBe(false);
+  });
+
+  it('counts a short school on what it has, so progress is visible', () => {
+    const [s] = rankTeams([group('Deux', [70, 30])]);
+    expect(s.counted).toBe(2);
+    expect(s.teamXp).toBe(100);
+  });
+
+  it('finds a school by its unnormalised name', () => {
+    const standings = rankTeams([group('Lycée Toussaint', [10, 10, 10, 10, 10])]);
+    expect(teamStandingFor(standings, 'LYCÉE  TOUSSAINT')?.rank).toBe(1);
+    expect(teamStandingFor(standings, null)).toBeNull();
   });
 });
