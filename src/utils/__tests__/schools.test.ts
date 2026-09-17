@@ -94,28 +94,45 @@ describe('spellings of one school', () => {
   });
 });
 
-describe('the kind of school is part of its name', () => {
+describe('the kind of school ranks, but never hides', () => {
   const list = [
     s('Institution du Sacré-Cœur'),
     s('Ecole du Sacré-Cœur des Filles de Marie'),
+    s('Institution Marie Régine des sœurs salésiennes de Don Boscos'),
     s('Collège Dominique Savio'),
   ];
 
-  it('does not match an École to an Institution', () => {
-    // A school called an Institution is never written "École" by its own
-    // students, so the type is part of the identity, not decoration.
-    expect(likelyDuplicate([list[0]], 'Ecole du Sacré-Cœur des Filles de Marie')).toBeNull();
-    expect(likelyDuplicate([list[1]], 'Institution du Sacré-Cœur')).toBeNull();
-    expect(searchSchools(list, 'Institution du Sacré-Cœur').map((x) => x.name))
-      .toEqual(['Institution du Sacré-Cœur']);
+  it('cannot tell these two apart from the names, so it offers both', () => {
+    // Institution du Sacré-Cœur and Ecole du Sacré-Cœur des Filles de Marie are
+    // two schools. Institution Marie Régine des sœurs salésiennes and Collège
+    // Marie regine are one. Structurally those are the same shape — a shorter
+    // name, a different type, and an extra religious order — so no rule reads
+    // them apart. The exact name wins, the other is offered below it, and the
+    // student settles it.
+    const hits = searchSchools(list, 'Institution du Sacré-Cœur');
+    expect(hits[0].name).toBe('Institution du Sacré-Cœur');
+    expect(hits.map((h) => h.name)).toContain('Ecole du Sacré-Cœur des Filles de Marie');
+  });
+
+  it('still finds a school a student typed with the wrong type', () => {
+    // Collège Marie regine and Institution Marie Régine are one school. Hiding
+    // a match on a type mismatch would have the student add it a second time,
+    // which is the expensive direction — so the type only reorders.
+    expect(likelyDuplicate(list, 'Collège Marie regine')?.name)
+      .toBe('Institution Marie Régine des sœurs salésiennes de Don Boscos');
+    expect(searchSchools(list, 'Collège Marie regine')).toHaveLength(1);
+  });
+
+  it('puts the same kind of school first', () => {
+    const both = [s('Ecole Sainte Famille'), s('Institution Sainte Famille')];
+    expect(searchSchools(both, 'Institution Sainte Famille')[0].name)
+      .toBe('Institution Sainte Famille');
+    expect(searchSchools(both, 'Ecole Sainte Famille')[0].name).toBe('Ecole Sainte Famille');
   });
 
   it('still matches a name typed without any type at all', () => {
-    // Leaving the type off is the commonest way a duplicate gets created —
-    // "Dominique Savio" not finding "Collège Dominique Savio" — so a missing
-    // type is not a conflict, only a different one is.
+    // Leaving the type off is the commonest way a duplicate gets created.
     expect(searchSchools(list, 'Dominique Savio')[0].name).toBe('Collège Dominique Savio');
-    expect(likelyDuplicate(list, 'Sacré-Cœur')).not.toBeNull();
   });
 
   it('treats Institut and Institution as the same word', () => {
