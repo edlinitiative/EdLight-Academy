@@ -127,12 +127,31 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
         ?? (partAnswers.length === blankCount ? partAnswers : null))
     : null;
 
+  /**
+   * When a blanked sentence also carries answer_parts, one per blank, they are
+   * the SAME answers — 695 questions do this, and in 636 of them the two are
+   * character-identical. The rest write the part longer: "homeless" in the key,
+   * "They are homeless" in the part.
+   *
+   * Compiling both sets made every one of those questions two answers too many.
+   * Marks divide across widgets, so a student who filled both blanks correctly
+   * scored 50% against two step widgets they were never shown. The longer form
+   * is an accepted alternative, not another question.
+   */
+  const partsAreTheBlanks = blankCount > 0 && blankKeys !== null
+    && partAnswers.length === blankCount;
+
   if (blankCount > 0 && blankKeys) {
+    const authored: any[] = Array.isArray(raw?.answer_parts) ? raw.answer_parts : [];
     parts.forEach((segment, i) => {
       if (segment) prompt.push({ type: 'text', content: segment });
       if (i < blankCount) {
         const id = `blank${i + 1}`;
-        widgets[id] = widgetForAnswer(id, blankKeys[i], { fuzzy });
+        const alternatives = partsAreTheBlanks
+          ? [partAnswers[i], ...(authored[i]?.alternatives ?? []).map(str)]
+            .filter((a) => a && a !== blankKeys[i])
+          : [];
+        widgets[id] = widgetForAnswer(id, blankKeys[i], { alternatives, fuzzy });
         prompt.push({ type: 'widget', id });
       }
     });
@@ -157,7 +176,9 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
   }
 
   // ── The step ladder — the grading key for 82.8% of the corpus ──────────
-  const authoredParts: any[] = Array.isArray(raw?.answer_parts) ? raw.answer_parts : [];
+  const authoredParts: any[] = partsAreTheBlanks || !Array.isArray(raw?.answer_parts)
+    ? []
+    : raw.answer_parts;
   authoredParts.forEach((p, i) => {
     const answer = str(p?.answer);
     if (!answer) return;

@@ -28,9 +28,11 @@ import ExamAnswerInput, { WordCountAnswer, looksMathy } from '../components/Exam
 import ScaffoldAnswer, { usesScaffold, scaffoldNeedsMath, MATH_SUBJECTS } from '../components/ScaffoldAnswer';
 import FillBlankAnswer, { countBlanks, numberBlanks } from '../components/FillBlankAnswer';
 import ConditionBuilder from '../components/ConditionBuilder';
+import QuestionView from '../components/question/QuestionView';
 import ExamOverview, { ExamSectionSummary } from '../components/ExamOverview';
 import ExamSectionContext from '../components/ExamSectionContext';
 import { ExamsParamList } from '../navigation/ExamsNavigator';
+import { compileQuestion, isSerializable, responseToStored, storedToResponse } from '../utils/question';
 
 type Route = RouteProp<ExamsParamList, 'ExamTake'>;
 type Nav = NativeStackNavigationProp<ExamsParamList, 'ExamTake'>;
@@ -824,6 +826,35 @@ export default function ExamTakeScreen() {
     return fromSection && fromSection !== 'Autre' ? fromSection : subject;
   })();
 
+  // The compiled question decides what inputs to draw. Plain computation for
+  // the same reason as questionSubject above: this sits after the loading and
+  // error early returns, so a useMemo here would be a conditional hook.
+  const compiled = (() => {
+    try {
+      return compileQuestion(q, { subject: questionSubject });
+    } catch {
+      return null; // a question we cannot compile falls back to the old inputs
+    }
+  })();
+
+  // MCQ, true/false, the condition builder and the scaffold have their own
+  // well-tested inputs and their own stored formats; the engine takes the rest,
+  // and only when the answers survive a round trip through a stored string.
+  const hasConditions = Array.isArray(q?.conditions) && q.conditions.length > 0;
+  const usesEngine = !!compiled
+    && !hasConditions
+    && !['mcq', 'multiple_choice', 'qcm', 'true_false', 'essay'].includes(qType)
+    && !usesScaffold(q, questionSubject)
+    && isSerializable(compiled);
+
+  // Derived from the stored answer on every render, so there is one source of
+  // truth and no second copy of the answer to keep in step.
+  const response = usesEngine && compiled ? storedToResponse(compiled, rawAnswer) : {};
+  const setWidgetValue = (id: string, value: string) => {
+    if (!compiled) return;
+    setAnswer(safeIdx, responseToStored(compiled, { ...response, [id]: value }));
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       {/* Header */}
@@ -884,12 +915,14 @@ export default function ExamTakeScreen() {
                 <Text style={[typeScale.micro, { color: colors.muted }]}>{points} pt{points > 1 ? 's' : ''}</Text>
               ) : null}
             </View>
-            <View style={[{ backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border }, shadow.sm]}>
-              <MathText text={questionText} style={{ fontSize: 16, color: colors.ink, lineHeight: 24 }} />
-              {q?.has_figure && q?.figure_description ? (
-                <ExamFigure description={String(q.figure_description)} />
-              ) : null}
-            </View>
+            {usesEngine ? null : (
+              <View style={[{ backgroundColor: colors.surface, borderRadius: radius.card, padding: 16, borderWidth: 1, borderColor: colors.border }, shadow.sm]}>
+                <MathText text={questionText} style={{ fontSize: 16, color: colors.ink, lineHeight: 24 }} />
+                {q?.has_figure && q?.figure_description ? (
+                  <ExamFigure description={String(q.figure_description)} />
+                ) : null}
+              </View>
+            )}
           </View>
 
           {/* Answer area */}
@@ -924,22 +957,38 @@ export default function ExamTakeScreen() {
               onChange={(v) => setAnswer(safeIdx, v)}
               mathMode={scaffoldNeedsMath(q, questionSubject)}
             />
-          ) : blankCount > 1 ? (
-            // Several blanks in one sentence — one input each, pipe-joined.
-            <FillBlankAnswer
-              text={rawQuestionText}
-              value={answerText}
-              onChange={(v) => setAnswer(safeIdx, v)}
-            />
-          ) : qType === 'essay' || qType === 'short_answer' ? (
+          ) : qType === 'essay' ? (
             <View style={{ gap: 8 }}>
               <Text style={[typeScale.label, { color: colors.muted }]}>{t('Rédige ta réponse', 'Ekri repons ou an')}</Text>
               <WordCountAnswer
                 value={answerText}
                 onChangeText={(v) => setAnswer(safeIdx, v)}
-                type={qType === 'short_answer' ? 'short_answer' : 'essay'}
+                type="essay"
               />
             </View>
+          ) : usesEngine && compiled ? (
+            // The prompt and its inputs come from the compiled question: a
+            // blank mid-sentence is answered in the sentence, and a numeric
+            // answer gets a number pad rather than the full keyboard.
+            <QuestionView
+              question={compiled}
+              response={response}
+              onChange={setWidgetValue}
+              mathy={
+                MATH_SUBJECTS.has(questionSubject) &&
+                looksMathy(typeof q?.correct === 'string' ? q.correct : undefined, questionText)
+              }
+            />
+          ) : blankCount > 1 ? (
+            // 21 multi-blank questions the engine hands back — an unsplittable
+            // key, or an answer containing the "|" it would be stored with.
+            // They still get one input per blank rather than one box for two
+            // answers, which is the bug this component exists to prevent.
+            <FillBlankAnswer
+              text={rawQuestionText}
+              value={answerText}
+              onChange={(v) => setAnswer(safeIdx, v)}
+            />
           ) : (
             <ExamAnswerInput
               value={answerText}
