@@ -63,10 +63,16 @@ export function schoolType(raw: string): string | null {
 /**
  * True when two names declare DIFFERENT kinds of school.
  *
- * A name with no type at all is not a conflict — the student simply left it
- * off, which is the commonest way a duplicate gets created ("Dominique Savio"
- * not finding "Collège Dominique Savio"). Only two stated, different types
- * rule a match out.
+ * This RANKS, it never excludes. The type is a real signal — a school called an
+ * Institution is rarely written "École" by its own students — but it is not
+ * reliable enough to hide a match on, and hiding one is the expensive
+ * direction: the student adds the school again and the board splits.
+ *
+ * Collège Marie regine and Institution Marie Régine des sœurs salésiennes are
+ * one school, written two ways. Meanwhile "Ecole du Sacré-Cœur des Filles de
+ * Marie" and "Institution du Sacré-Cœur" — two schools — already score zero
+ * against each other on their names alone, with no help from the type at all.
+ * So the type earns its place in the ordering and nowhere else.
  */
 function typesConflict(a: string, b: string): boolean {
   const ta = schoolType(a);
@@ -116,7 +122,6 @@ function containsAllWords(haystack: string, needle: string): boolean {
 export function matchScore(school: School, query: string): number {
   const q = schoolKey(query);
   if (!q) return 0;
-  if (typesConflict(school.name, query)) return 0;
   const name = schoolKey(school.name);
   const qc = core(query);
   const nc = core(school.name);
@@ -159,7 +164,10 @@ export function searchSchools(
   return schools
     .map((s) => ({
       s,
-      score: matchScore(s, query) + (commune && normalizeName(s.commune) === commune ? 5 : 0),
+      score: matchScore(s, query)
+        + (commune && normalizeName(s.commune) === commune ? 5 : 0)
+        // Same kind of school first — a nudge in the ordering, never a filter.
+        - (typesConflict(s.name, query) ? 8 : 0),
     }))
     .filter((r) => r.score > 0)
     .sort((a, b) =>
