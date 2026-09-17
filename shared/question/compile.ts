@@ -54,6 +54,10 @@ const MATH_SUBJECTS = new Set(['Mathématiques', 'Physique', 'Chimie', 'SVT', 'I
 
 const str = (v: unknown) => String(v ?? '').trim();
 
+/** Accent- and case-insensitive form, for comparing two authored answers. */
+const fold = (v: unknown) =>
+  String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 /** Numbers hide in `correct` as "12", "3,14 cm". Null when it is not one. */
 function asNumber(raw: string): number | null {
   const t = raw.replace(',', '.');
@@ -141,7 +145,33 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
   const partsAreTheBlanks = blankCount > 0 && blankKeys !== null
     && partAnswers.length === blankCount;
 
-  if (blankCount > 0 && blankKeys) {
+  /**
+   * The same duplication, one shape along: MORE parts than blanks, where the
+   * leading parts are the blanks' own answers.
+   *
+   *   "Charles forgets to dot his i's ........ he writes fast."
+   *   correct: "because"
+   *   parts:   [Conjonction correcte: "because", Raison: "he writes fast"]
+   *
+   * Compiling both gave the student the blank in the sentence AND a field
+   * below asking the same thing again, with the marks divided three ways for
+   * two real answers. 167 questions are shaped like this — including the ones
+   * that key the blank by letter ("c") against a part that spells it out
+   * ("c) flew"), which is why a leading match counts, not just an exact one.
+   *
+   * The ladder is the fuller set, so it wins and the blanks are not compiled.
+   * The sentence still reads with its authored underscores; the answers are
+   * asked once each, under the labels the paper gave them.
+   */
+  const blanksRepeatLeadingParts = blankCount > 0 && blankKeys !== null
+    && partAnswers.length > blankCount
+    && blankKeys.every((key, i) => {
+      const part = fold(partAnswers[i] ?? '');
+      const blank = fold(key);
+      return blank !== '' && part !== '' && (part === blank || part.startsWith(blank));
+    });
+
+  if (blankCount > 0 && blankKeys && !blanksRepeatLeadingParts) {
     const authored: any[] = Array.isArray(raw?.answer_parts) ? raw.answer_parts : [];
     parts.forEach((segment, i) => {
       if (segment) prompt.push({ type: 'text', content: segment });
