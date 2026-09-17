@@ -1,9 +1,8 @@
-import React from 'react';
-import { View, useColorScheme } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, View, useColorScheme } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
-import AnimatedLogo from '../components/celebration/AnimatedLogo';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
@@ -123,33 +122,53 @@ const linking = {
  * where the native one left off.
  */
 const SPLASH = {
-  light: { background: '#FFFFFF', mark: '#004AAD' },
-  dark: { background: '#0b1220', mark: '#4C9AF5' },
+  light: { background: '#FFFFFF', image: require('../../assets/splash.png') },
+  dark: { background: '#0b1220', image: require('../../assets/splash-dark.png') },
 } as const;
 
 /** Matches `imageWidth` in the expo-splash-screen plugin config. */
-const SPLASH_LOGO_SIZE = 140;
+const SPLASH_LOGO_SIZE = 98;
 
 /**
  * The animated splash.
  *
- * A native launch screen is a static image by definition — it is drawn before
- * any JS exists, so it cannot animate. The sequence is therefore: the native
- * splash shows the mark at 140pt, and the moment JS can render, this takes over
- * with the SAME mark at the SAME size on the SAME ground and brings it to life.
- * Nothing moves or resizes at the handoff, so the swap itself is invisible —
- * only the animation starting marks it.
+ * The REAL logo asset, breathing. An earlier version redrew the mark as SVG so
+ * it could animate freely — but a hand-traced approximation is not the logo,
+ * and it read as one: the proportions and stroke weights never match the real
+ * file. The actual artwork with a slow zoom is both honest and simpler.
  *
- * Follows the SYSTEM appearance, not the app's own theme toggle: the native
- * splash it continues is chosen by the OS, so a user who forced dark in-app on
- * a light phone must still see the light splash here.
+ * A native launch screen cannot animate, so the sequence is: the native splash
+ * shows this same asset at the same size, and the moment JS can render, this
+ * takes over and starts the breath. Nothing resizes at the handoff, so the swap
+ * is invisible; only the motion marks it.
+ *
+ * Follows the SYSTEM appearance, not the app's theme toggle — the native splash
+ * it continues is chosen by the OS.
  */
 function LoadingScreen() {
   const splash = useColorScheme() === 'dark' ? SPLASH.dark : SPLASH.light;
+  const zoom = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // A slow in-and-out, not a pulse: 6% is enough to read as alive at this
+    // size, and anything faster starts to look like a loading spinner.
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(zoom, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(zoom, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    ).start();
+  }, [zoom]);
+
+  const scale = zoom.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
 
   return (
     <View style={{ flex: 1, backgroundColor: splash.background, alignItems: 'center', justifyContent: 'center' }}>
-      <AnimatedLogo size={SPLASH_LOGO_SIZE} color={splash.mark} />
+      <Animated.Image
+        source={splash.image}
+        style={{ width: SPLASH_LOGO_SIZE, height: SPLASH_LOGO_SIZE, transform: [{ scale }] }}
+        resizeMode="contain"
+      />
     </View>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 import Svg, { Circle, Defs, G, LinearGradient, Path, Stop } from 'react-native-svg';
 import Animated, {
   useSharedValue, useAnimatedStyle, withDelay, withSpring, withTiming,
@@ -125,21 +125,16 @@ export default function ChampionMedallion({
         </Svg>
       </Animated.View>
 
-      {/* The mark itself — the EdLight bulb, in gold */}
+      {/* The REAL mark, not a traced one. The laurel and rays around it are
+          ornament and can be drawn; the logo itself cannot — a hand-traced
+          approximation never matches the file's proportions or stroke weights,
+          and it reads as an imitation. */}
       <Animated.View style={[{ position: 'absolute' }, markStyle]}>
-        <Svg width={s} height={s} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-          <G stroke="#FFF3D6" strokeWidth={3.2} strokeLinecap="round" fill="none">
-            <Path d={`M${C},${C - 46} L${C},${C - 32}`} />
-            <Path d={`M${C},${C + 32} L${C},${C + 46}`} />
-            <Path d={`M${C - 46},${C} L${C - 32},${C}`} />
-            <Path d={`M${C + 32},${C} L${C + 46},${C}`} />
-            <Path d={`M${C - 33},${C - 33} L${C - 23},${C - 23}`} />
-            <Path d={`M${C + 23},${C + 23} L${C + 33},${C + 33}`} />
-            <Path d={`M${C - 33},${C + 33} L${C - 23},${C + 23}`} />
-            <Path d={`M${C + 23},${C - 23} L${C + 33},${C - 23 - 10}`} />
-            <Circle cx={C} cy={C} r={17} />
-          </G>
-        </Svg>
+        <Image
+          source={require('../../../assets/splash-dark.png')}
+          style={{ width: s * 0.38, height: s * 0.38 }}
+          resizeMode="contain"
+        />
       </Animated.View>
     </View>
   );
