@@ -90,10 +90,24 @@ describe('numeric answers carry tolerance and units', () => {
     expect(parseNumeric('abc')).toBeNull();
   });
 
-  it('applies a relative tolerance by default', () => {
-    const w = { kind: 'numeric' as const, id: 'n', answer: 100 };
-    expect(isCorrect(w, '100.5')).toBe(true);   // within 1%
-    expect(isCorrect(w, '95')).toBe(false);
+  it('marks to the precision the answer was authored in', () => {
+    // An integer is exact. A blanket relative tolerance would accept anything
+    // within 1% — which on an answer like 21,872,500 is ±218,725, so plainly
+    // wrong arithmetic passes. Found by auditing the corpus.
+    const int = { kind: 'numeric' as const, id: 'n', answer: 100 };
+    expect(isCorrect(int, '100')).toBe(true);
+    expect(isCorrect(int, '100.5')).toBe(false);
+
+    // Two authored decimals accept anything that rounds to them — including a
+    // MORE precise answer, which is not a mistake.
+    const dec = { kind: 'numeric' as const, id: 'n', answer: 3.14 };
+    expect(isCorrect(dec, '3.14')).toBe(true);
+    expect(isCorrect(dec, '3.14159')).toBe(true);
+    expect(isCorrect(dec, '3.2')).toBe(false);
+
+    // A question may still author its own tolerance, which always wins.
+    const loose = { kind: 'numeric' as const, id: 'n', answer: 9.81, tolerance: 0.5 };
+    expect(isCorrect(loose, '10')).toBe(true);
   });
 
   it('rejects a wrong unit', () => {

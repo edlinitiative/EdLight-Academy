@@ -49,6 +49,26 @@ export function parseNumeric(raw: string): { value: number; unit: string } | nul
   return { value, unit: m[2] ?? '' };
 }
 
+/**
+ * How far off is still right, derived from the AUTHORED answer's precision.
+ *
+ * A blanket relative tolerance is dangerous: 1% of 21,872,500 accepts anything
+ * within ±218,725, so a student whose arithmetic is plainly wrong is marked
+ * correct. Exams do not mark that way — they mark to the precision the answer
+ * was written in.
+ *
+ *  - An integer is exact. "12" means 12, not "roughly 12".
+ *  - A decimal is right when it rounds to the authored precision: 3.14 accepts
+ *    3.14 but not 3.2, because the author chose two places.
+ *
+ * `tolerance` on the widget always wins when a question authors its own.
+ */
+export function toleranceFor(answer: number): number {
+  if (Number.isInteger(answer)) return 0;
+  const places = (String(answer).split('.')[1] ?? '').length;
+  return 0.5 * 10 ** -places;
+}
+
 export function validate(widget: Widget, raw: Response[string]): Validity {
   const isBlank = raw == null
     || (typeof raw === 'string' && raw.trim() === '')
@@ -87,9 +107,7 @@ export function isCorrect(widget: Widget, raw: Response[string]): boolean | null
     case 'numeric': {
       const parsed = parseNumeric(String(raw));
       if (!parsed) return false;
-      // Absolute tolerance when authored, else 1% relative with a small floor,
-      // so 0 and very small answers stay sane.
-      const tol = widget.tolerance ?? Math.max(Math.abs(widget.answer) * 0.01, 0.01);
+      const tol = widget.tolerance ?? toleranceFor(widget.answer);
       if (Math.abs(parsed.value - widget.answer) > tol) return false;
       if (widget.unitRequired && strip(parsed.unit) !== strip(widget.unit ?? '')) return false;
       // A wrong unit is wrong even when it was not required to be typed.
