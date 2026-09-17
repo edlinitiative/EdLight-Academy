@@ -1,0 +1,387 @@
+/*
+ * The live stage — broadcast graphics, not a dashboard.
+ *
+ * Every other surface in this app is Limyè: soft light, white cards, one azure.
+ * This page deliberately breaks that, and the reason is context rather than
+ * taste. It is made to be projected, streamed and screenshotted — and on a
+ * phone camera pointed at a screen, or inside an Instagram Live window, a white
+ * dashboard blows out to a grey rectangle. Colour and light only read against
+ * a dark ground. Sports broadcast has settled this for forty years.
+ *
+ * Three rules hold the motion together:
+ *   - The ground never stops moving, and never asks to be looked at. A slow
+ *     drift under everything keeps a static leaderboard from reading as a
+ *     frozen stream, which is the single commonest way a live page looks dead.
+ *   - Only a CHANGE is animated. Ranks that held still do not shimmer; if
+ *     everything moves, nothing moved.
+ *   - Position, opacity and transform only. A lane reordering must not lay the
+ *     page out again mid-animation while a timer is running beside it.
+ */
+
+.live {
+	--stage-ink: #F4F7FF;
+	--stage-dim: #8FA3C4;
+	--stage-faint: #4A5B78;
+	--stage-ground: #070C17;
+	--stage-lane: rgba(255, 255, 255, 0.045);
+	--stage-lane-mine: rgba(27, 111, 224, 0.16);
+	--stage-azure: #4D97FF;
+	--stage-gold: #FFC24D;
+	--stage-coral: #FF5C39;
+
+	position: relative;
+	min-height: 100vh;
+	min-height: 100dvh;
+	overflow: hidden;
+	background: var(--stage-ground);
+	color: var(--stage-ink);
+	font-family: var(--font-sans, 'Source Sans 3', system-ui, sans-serif);
+	padding: clamp(14px, 2.8vh, 48px) clamp(16px, 4vw, 56px);
+	padding-top: max(clamp(14px, 2.8vh, 48px), env(safe-area-inset-top, 0px));
+	padding-bottom: max(clamp(14px, 2.8vh, 48px), env(safe-area-inset-bottom, 0px));
+}
+
+/* ── The ground ─────────────────────────────────────────────────────────── */
+
+/*
+ * Two radial washes drifting past each other on a long cycle. Long enough that
+ * nobody watches it move, short enough that a still frame of the stream is
+ * never the same twice.
+ */
+.live__ground {
+	position: absolute;
+	inset: -30%;
+	pointer-events: none;
+	background:
+		radial-gradient(38% 42% at 22% 28%, rgba(27, 111, 224, 0.38), transparent 70%),
+		radial-gradient(34% 38% at 78% 68%, rgba(255, 92, 57, 0.20), transparent 70%);
+	filter: blur(24px);
+	animation: live-drift 38s ease-in-out infinite alternate;
+}
+
+.live__grain {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	opacity: 0.5;
+	background:
+		repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px);
+	mix-blend-mode: overlay;
+}
+
+@keyframes live-drift {
+	from { transform: translate3d(-3%, -2%, 0) scale(1); }
+	to   { transform: translate3d(3%, 2%, 0) scale(1.08); }
+}
+
+.live__inner {
+	position: relative;
+	max-width: 1180px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: clamp(14px, 2.6vh, 34px);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.live__head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.live__title {
+	margin: 0;
+	font-size: clamp(30px, 6vw, 68px);
+	font-weight: 800;
+	letter-spacing: -0.028em;
+	line-height: 0.98;
+	background: linear-gradient(180deg, #ffffff 0%, #B9CCEC 100%);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+.live__subtitle {
+	margin: 6px 0 0;
+	color: var(--stage-dim);
+	font-size: clamp(13px, 1.6vw, 17px);
+}
+
+/* The "on air" dot — the one element allowed to pulse continuously, because it
+   is the only one whose whole meaning is that this is happening now. */
+.live__onair {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 14px;
+	border-radius: 999px;
+	background: rgba(255, 92, 57, 0.12);
+	border: 1px solid rgba(255, 92, 57, 0.35);
+	color: #FFB4A0;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.live__onair-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--stage-coral);
+	box-shadow: 0 0 0 0 rgba(255, 92, 57, 0.6);
+	animation: live-onair 2.2s ease-out infinite;
+}
+
+@keyframes live-onair {
+	0%   { box-shadow: 0 0 0 0 rgba(255, 92, 57, 0.55); }
+	70%  { box-shadow: 0 0 0 11px rgba(255, 92, 57, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(255, 92, 57, 0); }
+}
+
+/* ── Lanes ──────────────────────────────────────────────────────────────── */
+
+.live__lanes {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(7px, 1.1vh, 11px);
+}
+
+.live__lane {
+	position: relative;
+	display: grid;
+	grid-template-columns: clamp(38px, 5vw, 62px) 1fr auto;
+	align-items: center;
+	gap: clamp(10px, 2vw, 20px);
+	padding: clamp(10px, 1.7vh, 18px) clamp(13px, 2vw, 22px);
+	border-radius: 16px;
+	background: var(--stage-lane);
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	/* FLIP writes transform on this element; the transition is what turns an
+	   inverted offset into a slide. Kept off `all` so nothing else animates. */
+	transition: transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+	            background-color 400ms ease,
+	            border-color 400ms ease;
+	will-change: transform;
+}
+
+.live__lane--mine {
+	background: var(--stage-lane-mine);
+	border-color: rgba(77, 151, 255, 0.4);
+}
+
+/* The leader keeps a standing glow — the only permanent decoration on the
+   page, because "who is winning" is the question the page exists to answer. */
+.live__lane--leader {
+	background: linear-gradient(90deg, rgba(255, 194, 77, 0.14), rgba(255, 194, 77, 0.03));
+	border-color: rgba(255, 194, 77, 0.45);
+}
+
+.live__rank {
+	font-size: clamp(20px, 3.4vw, 40px);
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	color: var(--stage-faint);
+	text-align: right;
+	line-height: 1;
+}
+
+.live__lane--leader .live__rank { color: var(--stage-gold); }
+.live__lane--mine .live__rank { color: var(--stage-azure); }
+
+.live__school {
+	min-width: 0;
+}
+
+.live__name {
+	font-size: clamp(15px, 2.1vw, 25px);
+	font-weight: 700;
+	letter-spacing: -0.012em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.live__bar {
+	position: relative;
+	height: 7px;
+	margin-top: 9px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.07);
+	overflow: hidden;
+}
+
+.live__bar-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: linear-gradient(90deg, var(--stage-azure), #8FC2FF);
+	/* The bar is the only thing that grows on every tick, so it gets the long
+	   curve: it should look like distance being covered, not a value updating. */
+	transition: width 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.live__lane--leader .live__bar-fill {
+	background: linear-gradient(90deg, var(--stage-gold), #FFE1A3);
+}
+
+.live__score {
+	font-size: clamp(17px, 2.6vw, 32px);
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.02em;
+}
+
+.live__needed {
+	margin-top: 5px;
+	font-size: clamp(11px, 1.3vw, 13px);
+	color: var(--stage-gold);
+}
+
+/* ── The overtake ───────────────────────────────────────────────────────── */
+
+/*
+ * A school gaining a place is the only genuine event on this page, so it is the
+ * only thing that gets a one-shot animation: a band of light sweeps the lane
+ * once, left to right. It runs on transform of a pseudo-element rather than a
+ * background-position, so it composites and cannot cost a repaint of the row
+ * underneath while every other lane is mid-slide.
+ */
+.live__lane--climbed::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 16px;
+	pointer-events: none;
+	background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.22) 50%, transparent 80%);
+	transform: translateX(-100%);
+	animation: live-sweep 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes live-sweep {
+	to { transform: translateX(100%); }
+}
+
+.live__delta {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	margin-left: 9px;
+	padding: 2px 7px;
+	border-radius: 999px;
+	font-size: clamp(11px, 1.4vw, 14px);
+	font-weight: 800;
+	vertical-align: middle;
+	animation: live-delta-in 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.live__delta--up { background: rgba(74, 222, 128, 0.16); color: #86EFAC; }
+.live__delta--down { background: rgba(148, 163, 184, 0.14); color: #94A3B8; }
+
+@keyframes live-delta-in {
+	from { opacity: 0; transform: translateY(6px) scale(0.86); }
+	to   { opacity: 1; transform: none; }
+}
+
+/* ── Ticker: who is carrying their school ───────────────────────────────── */
+
+.live__ticker {
+	position: relative;
+	overflow: hidden;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	padding-top: 14px;
+	mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+	-webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.live__ticker-track {
+	display: flex;
+	gap: 40px;
+	width: max-content;
+	animation: live-ticker 42s linear infinite;
+}
+
+.live__ticker:hover .live__ticker-track { animation-play-state: paused; }
+
+.live__ticker-item {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 9px;
+	color: var(--stage-dim);
+	font-size: clamp(12px, 1.5vw, 16px);
+	white-space: nowrap;
+}
+
+.live__ticker-name { color: var(--stage-ink); font-weight: 700; }
+.live__ticker-school { color: var(--stage-faint); }
+
+@keyframes live-ticker {
+	from { transform: translate3d(0, 0, 0); }
+	to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ── Empty + loading ────────────────────────────────────────────────────── */
+
+.live__empty {
+	padding: clamp(40px, 10vw, 110px) 0;
+	text-align: center;
+	color: var(--stage-dim);
+	font-size: clamp(14px, 1.8vw, 19px);
+}
+
+.live__skeleton {
+	height: 62px;
+	border-radius: 16px;
+	background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.09), rgba(255,255,255,0.04));
+	background-size: 200% 100%;
+	animation: live-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes live-shimmer {
+	from { background-position: 200% 0; }
+	to   { background-position: -200% 0; }
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+	.live__lane {
+		grid-template-columns: 32px 1fr auto;
+		gap: 10px;
+	}
+	.live__head { align-items: flex-start; }
+}
+
+/* ── Reduce motion ──────────────────────────────────────────────────────── */
+
+/*
+ * Everything here is decoration over information that is legible standing
+ * still, so reduce-motion removes the motion rather than substituting for it.
+ * The drift, the sweep and the ticker stop; the standings are unchanged.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.live__ground,
+	.live__onair-dot,
+	.live__ticker-track,
+	.live__skeleton,
+	.live__lane--climbed::after,
+	.live__delta {
+		animation: none !important;
+	}
+	.live__lane,
+	.live__bar-fill {
+		transition: none !important;
+	}
+	.live__ground { transform: none; }
+}
+
+/* A school not yet qualified still shows where it stands, but quietly — the
+   number is provisional and the line under the bar says so. */
+.live__rank--provisional {
+	color: var(--stage-faint);
+	opacity: 0.55;
+}
