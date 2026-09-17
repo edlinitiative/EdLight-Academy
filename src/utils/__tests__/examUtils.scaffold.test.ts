@@ -353,3 +353,50 @@ describe('non-math short_answer scaffolds', () => {
     expect(r.status).toBe('manual');
   });
 });
+// ── A ladder without a scaffold is still answered part by part ──────────────
+describe('gradeScaffoldAnswer — answer_parts without scaffold_text', () => {
+  const ladder = {
+    type: 'short_answer',
+    points: 6,
+    question: 'Citez trois inconvénients.',
+    answer_parts: [
+      { label: 'Emploi', answer: 'limited job opportunities' },
+      { label: 'Loisirs', answer: 'fewer entertainment options' },
+      { label: 'Santé', answer: 'less access to specialised care' },
+    ],
+  };
+  const stored = (v: string[]) => JSON.stringify({ scaffold: v });
+
+  it('grades per part although the question has no scaffold_text', () => {
+    // 1,535 questions carry labeled parts and no scaffold_text; the gate on
+    // scaffold_text meant they got one box, marked all-or-nothing.
+    const r = gradeScaffoldAnswer(ladder, stored([
+      'limited job opportunities', 'fewer entertainment options', 'non',
+    ]));
+    expect(r?.status).toBe('partial');
+    expect(r?.awarded).toBe(4);
+  });
+
+  it('awards full marks when every part is right', () => {
+    const r = gradeScaffoldAnswer(ladder, stored(ladder.answer_parts.map((p) => p.answer)));
+    expect(r?.status).toBe('correct');
+    expect(r?.awarded).toBe(6);
+  });
+
+  it('does not count a part the paper left unanswerable', () => {
+    // The violin is not a transposing instrument, so its answer is blank.
+    // Counting it capped a perfect answer at 2 of 3.
+    const gapped = {
+      type: 'fill_blank',
+      points: 3,
+      answer_parts: [{ answer: 'T' }, { answer: '' }, { answer: 'T' }],
+    };
+    const r = gradeScaffoldAnswer(gapped, stored(['T', '', 'T']));
+    expect(r?.status).toBe('correct');
+    expect(r?.awarded).toBe(3);
+  });
+
+  it('ignores an answer that is not a scaffold payload', () => {
+    expect(gradeScaffoldAnswer(ladder, 'une réponse en un seul bloc')).toBeNull();
+  });
+});
