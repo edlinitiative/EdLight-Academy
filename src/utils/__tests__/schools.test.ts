@@ -139,3 +139,35 @@ describe('the kind of school ranks, but never hides', () => {
     expect(searchSchools([s('Institut Saint-Ignace')], 'Institution Saint-Ignace')).toHaveLength(1);
   });
 });
+
+describe('the ways one school gets written twice', () => {
+  it('matches a name missing a space', () => {
+    // "Institution du SacréCoeur" is the same school as "Institution du Sacré
+    // Coeur", typed in a hurry.
+    expect(likelyDuplicate([s('Institution du Sacré Coeur')], 'Institution du SacréCoeur'))
+      .not.toBeNull();
+  });
+
+  it('matches across an apostrophe', () => {
+    expect(likelyDuplicate([s('Louverture Cleary School')], "L'ouverture Cleary school"))
+      .not.toBeNull();
+  });
+
+  it('ignores a street address typed into the name', () => {
+    // The corpus has these with and without a comma before the street.
+    expect(schoolKey('Collège Marie-Anne, # 9, Route de Jacquet')).toBe(schoolKey('Collège Marie-Anne'));
+    expect(schoolKey('Ecole du Sacré Coeur Rue 2k')).toBe(schoolKey('Ecole du Sacré Coeur'));
+  });
+
+  it('ignores "mixte", which describes a school rather than naming it', () => {
+    expect(searchSchools([s('Académie Chrétienne')], 'École mixte Academie Chrétienne'))
+      .toHaveLength(1);
+  });
+
+  it('does not suggest two schools confirmed to be different', () => {
+    // Nothing in the strings separates these — a shorter name and a longer one
+    // adding a religious order — so the distinction is recorded, not derived.
+    const list = [s('Institution du Sacré Coeur')];
+    expect(likelyDuplicate(list, 'Ecole du Sacré-Cœur dirrigée par les Filles de Marie')).toBeNull();
+  });
+});
