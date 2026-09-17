@@ -159,3 +159,66 @@ the same component — position decides the layout, not the question type.
    but have no authored options.
 
 None of these need new questions written — only enrichment of what exists.
+
+---
+
+# Part III — what else, before building
+
+Measured rather than brainstormed. The short answer: **almost nothing needs to
+be authored. Three things need to be shown, and one needs to be derived.**
+
+## Authored, and never rendered
+
+| Field | Coverage | Used in the app? |
+|---|---:|---|
+| `model_answer` | 7,883 (83.6%) | **no — zero references** |
+| `approaches` (alternative solution methods) | 2,002 (21.2%) | **no — zero references** |
+| `explanation` | 8,546 (90.7%) | only in the end-of-exam review, as a caption |
+
+`approaches` is the standout. Two thousand questions carry *a second way to
+solve the problem*, written and sitting unused. "Here is another route to the
+same answer" is the most advanced thing in the corpus and nothing has ever
+displayed it.
+
+`explanation` has a timing problem rather than a display one: it exists for
+nine questions in ten, averages 212 characters, and appears forty questions
+later in a review list. It teaches at the moment of answering, not at the end.
+
+## Partial credit is available and unused
+
+Every question carries `points` (100%). **No `answer_parts` entry carries points
+(0%)** — so per-step credit means dividing the question's points across its
+steps. With 19,041 authored steps that turns an all-or-nothing mark into "two
+of your three steps were right", which is both fairer and the difference
+between a student feeling stuck and feeling close.
+
+## The one real content gap: per-question topics
+
+Exam-level topics exist (741 distinct across the catalog) but **not one question
+carries its own topic (0%)**. So after an exam we can say "you scored 40% on
+this paper" but never "you are losing marks on logarithms" — and targeted
+practice is the whole point of sitting one. This is derivable from question text
+rather than requiring new authoring, and it is what makes results actionable.
+
+## Do not build adaptivity yet
+
+`questionStats` holds 955 rows and `answerEvents` 2,547 — but the sample rows
+read `seen: 1`. With 123 users, per-question difficulty is n≈1 and means
+nothing. The crowd-ordering machinery already exists; it should stay dormant
+rather than being extended on noise.
+
+## Repeats are accidental, and could be deliberate
+
+358 question texts appear more than once across the catalog (774 instances). A
+student can meet the same question twice by chance. The same fact is an asset
+if it is intentional: spaced repetition wants a deliberate second encounter,
+and `review.ts` already exists to schedule one.
+
+## Revised priority
+
+1. Show `model_answer` and `approaches` after answering — the largest unused
+   teaching assets in the product.
+2. Move `explanation` to the moment of answering.
+3. Partial credit per step.
+4. Derive per-question topics, so results say what to practise.
+5. Then the layout work in Parts I and II.
