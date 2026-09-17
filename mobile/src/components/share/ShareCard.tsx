@@ -3,6 +3,7 @@ import { View, Text, Image } from 'react-native';
 import Svg, { Circle, Defs, G, LinearGradient as SvgGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fonts } from '../../theme/theme';
+import ChampionMedallion from '../celebration/ChampionMedallion';
 
 /**
  * ShareCard — the premium 1080×1920 "Lumière" story card, rendered off-screen
@@ -152,16 +153,18 @@ function ChampionBody({
         <Rays size={760} />
 
         {/* Medallion */}
-        <View
-          style={{
-            width: 330, height: 330, borderRadius: 165,
-            alignItems: 'center', justifyContent: 'center',
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            borderWidth: 3, borderColor: 'rgba(255,214,140,0.55)',
-          }}
-        >
-          <Text style={{ fontSize: 132 }}>👑</Text>
-          <Text style={{ fontFamily: fonts.black, fontSize: 30, color: CH.gold, letterSpacing: 5, marginTop: 2 }}>
+        {/* Drawn, not an emoji. A system glyph was the last thing on this card
+            still rendering differently per OS version — and the one piece a
+            student's screenshot couldn't be trusted to match ours. Static here:
+            the card is captured to a PNG, so the still IS the artifact. */}
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+          <ChampionMedallion size={330} />
+          <Text
+            style={{
+              position: 'absolute', bottom: 18,
+              fontFamily: fonts.black, fontSize: 30, color: CH.gold, letterSpacing: 5,
+            }}
+          >
             {t('CHAMPION', 'CHANPYON')}
           </Text>
         </View>

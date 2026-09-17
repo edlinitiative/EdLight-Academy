@@ -12,6 +12,7 @@ import { aggregateBy, normalizeName, type GroupField, type GroupRanking } from '
 import { useReduceMotion } from '../utils/motion';
 import { tapLight } from '../utils/haptics';
 import { logInviteSent } from '../services/referralService';
+import ChampionMedallion from './celebration/ChampionMedallion';
 import Avatar from './ui/Avatar';
 import Stagger from './ui/Stagger';
 import LeaderboardJoinModal from './LeaderboardJoinModal';
@@ -492,7 +493,9 @@ export default function Leaderboard({ compact = false, maxRows = 10, onViewChang
         paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
       }}
     >
-      <Text style={{ fontSize: 22 }}>👑</Text>
+      {/* Animated here, unlike on the share card: this is the moment the
+          student LEARNS they are champion, so the medallion assembles. */}
+      <ChampionMedallion size={40} animate playKey={`${scope}-${period}-${myRank}`} />
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: '800', color: colors.ink }}>
           {t('Tu es N°1 !', 'Ou se N°1 !')}
