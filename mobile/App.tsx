@@ -239,11 +239,17 @@ function App() {
     return () => sub.remove();
   }, []);
 
-  // The native splash stays up until the first real screen is ready, so the
-  // app never swaps one logo for another. `authConfirmed` is part of "ready"
-  // because until it resolves the navigator only has the Loading screen to
-  // show — which is exactly the second logo we're removing.
-  const ready = cacheHydrated && (fontsLoaded || fontError) && authConfirmed;
+  // Hand off to the ANIMATED splash as soon as JS can draw it — deliberately
+  // NOT waiting for auth any more.
+  //
+  // A native launch screen cannot animate, so holding it until everything was
+  // ready meant the animation was never seen. The handoff is safe now because
+  // both sides draw the same mark at the same 140pt on the same ground: nothing
+  // moves or resizes, so the swap is invisible and only the animation starting
+  // marks it. (That equivalence is the whole reason the two-logo bug is gone —
+  // it was never about *when* we handed off, but about handing off to something
+  // that looked different.)
+  const ready = cacheHydrated && (fontsLoaded || fontError);
 
   useEffect(() => {
     if (!ready) return;

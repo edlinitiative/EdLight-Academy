@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, View, useColorScheme, useWindowDimensions } from 'react-native';
+import React from 'react';
+import { View, useColorScheme } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import useStore from '../contexts/store';
+import AnimatedLogo from '../components/celebration/AnimatedLogo';
 import TabNavigator from './TabNavigator';
 import AuthModal from '../components/AuthModal';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
@@ -117,62 +118,38 @@ const linking = {
 };
 
 /**
- * Must stay in sync with the expo-splash-screen plugin config in app.json.
- *
- * The dark mark is the same artwork recoloured to the dark-mode azure: the
- * brand blue (#004AAD) sits at only 2.2:1 on this ground, so reusing it would
- * have swapped a white flash for an unreadable logo.
+ * Must stay in sync with the expo-splash-screen plugin config in app.json —
+ * the background AND the 140pt image width, so the JS splash lands exactly
+ * where the native one left off.
  */
 const SPLASH = {
-  light: { background: '#FFFFFF', image: require('../../assets/splash.png') },
-  dark: { background: '#0b1220', image: require('../../assets/splash-dark.png') },
+  light: { background: '#FFFFFF', mark: '#004AAD' },
+  dark: { background: '#0b1220', mark: '#4C9AF5' },
 } as const;
 
+/** Matches `imageWidth` in the expo-splash-screen plugin config. */
+const SPLASH_LOGO_SIZE = 140;
+
 /**
- * Continuation of the native splash, not a second screen.
+ * The animated splash.
  *
- * App.tsx now holds the native splash until the first real screen is ready, so
- * this is only reached when the splash's safety timeout fires (a stalled auth
- * handshake on a cold start). When that happens it must be indistinguishable
- * from the splash it replaces: the SAME asset — assets/splash.png and
- * assets/logo.png are byte-identical — at the same `contain` scale, on the same
- * background. The old version drew it at 120pt on the themed ground, which is
- * what made a cold launch look like two different logos.
+ * A native launch screen is a static image by definition — it is drawn before
+ * any JS exists, so it cannot animate. The sequence is therefore: the native
+ * splash shows the mark at 140pt, and the moment JS can render, this takes over
+ * with the SAME mark at the SAME size on the SAME ground and brings it to life.
+ * Nothing moves or resizes at the handoff, so the swap itself is invisible —
+ * only the animation starting marks it.
+ *
+ * Follows the SYSTEM appearance, not the app's own theme toggle: the native
+ * splash it continues is chosen by the OS, so a user who forced dark in-app on
+ * a light phone must still see the light splash here.
  */
 function LoadingScreen() {
-  const opacity = useRef(new Animated.Value(0.55)).current;
-  const { width, height } = useWindowDimensions();
-  // Follows the SYSTEM appearance, not the app's own theme toggle: the native
-  // splash this continues is chosen by the OS, so a user who forced dark inside
-  // the app on a light phone still gets the light splash — and this must match
-  // whatever they just saw, not what they will see next.
   const splash = useColorScheme() === 'dark' ? SPLASH.dark : SPLASH.light;
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.55, duration: 900, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
-  // `resizeMode: "contain"` on the native splash fits the square logo to the
-  // screen's shorter side. Match that exactly, or the logo visibly resizes at
-  // the handoff. Only opacity animates — a scale would change its size, which
-  // is the very thing being reported.
-  const side = Math.min(width, height);
-
   return (
-    // Matches expo.splash.backgroundColor in app.json. Not the themed bg: the
-    // native splash is this color, and stepping to the app ground here would
-    // just move the flash earlier.
     <View style={{ flex: 1, backgroundColor: splash.background, alignItems: 'center', justifyContent: 'center' }}>
-      <Animated.Image
-        source={splash.image}
-        style={{ width: side, height: side, opacity }}
-        resizeMode="contain"
-      />
+      <AnimatedLogo size={SPLASH_LOGO_SIZE} color={splash.mark} />
     </View>
   );
 }
