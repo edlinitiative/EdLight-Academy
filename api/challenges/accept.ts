@@ -27,6 +27,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getDb } from '../_lib/firebaseAdmin';
+import { sendExpoPushToUser } from '../_lib/expoPush';
 
 /** Duel stakes — winner takes WIN_XP, a tie pays TIE_XP to each side. */
 const WIN_XP = 20;
@@ -185,6 +186,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     } catch (err) {
       // The duel result is already recorded — XP payout is best-effort.
       console.error('[challenges/accept] payout error:', err);
+    }
+
+    // ── Tell the challenger their duel came back ────────────────────────
+    //
+    // Without this the duel only ran one way: you sent a link and never found
+    // out what happened unless you thought to re-open your own link. The
+    // comeback is the half that makes it a rivalry rather than a broadcast.
+    //
+    // Best-effort and deliberately after the payout: the result is already
+    // recorded, and a push that fails must not fail the opponent's request.
+    try {
+      const u = (await db.doc(`users/${outcome.challengerUid}`).get()).data() as any ?? {};
+      const ht = (u?.prefs?.language || u?.language) === 'ht';
+      const who = opponentName || (ht ? 'Yon zanmi' : 'Un ami');
+      const line = `${outcome.opponentScore}/${outcome.total} ${ht ? 'kont' : 'contre'} ${outcome.challengerScore}/${outcome.total}`;
+      const beaten = outcome.opponentScore > outcome.challengerScore;
+      await sendExpoPushToUser(outcome.challengerUid, {
+        title: tie
+          ? (ht ? `Egalite ak ${who}` : `Égalité avec ${who}`)
+          : beaten
+            ? (ht ? `${who} bat ou` : `${who} t'a battu`)
+            : (ht ? `Ou bat ${who}` : `Tu as battu ${who}`),
+        body: beaten
+          ? `${line} · ${ht ? 'Pran revanj ou' : 'Prends ta revanche'}`
+          : `${line} · ${ht ? 'Defye yon lòt moun' : 'Défie quelqu\'un d\'autre'}`,
+        data: { type: 'duel-result', code, tab: 'trivia' },
+      });
+    } catch (err) {
+      console.error('[challenges/accept] push error:', err);
     }
 
     res.status(200).json({

@@ -18,6 +18,7 @@ import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import DailyChallengeBanner from './DailyChallengeBanner';
+import DuelResults from './DuelResults';
 import Leaderboard from '../Leaderboard';
 import { Skeleton } from '../StateViews';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
@@ -46,6 +47,8 @@ interface JeuxHubProps {
   onSelectGame: (id: string) => void;
   onStartTrivia: () => void;
   onStartDaily: () => void;
+  /** Replay a duel's category — the rematch, straight from the result. */
+  onRematch: (categoryId: string) => void;
 }
 
 /* ─── Records: best-ever score per arcade game + holder ─── */
@@ -213,7 +216,7 @@ function HubSegments({
 }
 
 /* ─── Hub ─── */
-export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: JeuxHubProps) {
+export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onRematch }: JeuxHubProps) {
   const { profile, level, isAuthed, daily } = useTrivia();
   const { streak } = useStreak();
   const { myRank } = useLeaderboard(25);
@@ -320,6 +323,10 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily }: J
           <View className="px-4 pb-2">
             <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={onStartDaily} />
           </View>
+
+          {/* What came back from the duels you sent — renders nothing until
+              an opponent has actually played one. */}
+          <DuelResults isCreole={isCreole} onRematch={onRematch} />
 
           {/* Jeu de la semaine — thin strip (was a tall hero card). */}
           {featured && (

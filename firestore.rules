@@ -317,9 +317,16 @@ service cloud.firestore {
     // list) and all writes go through /api/challenges/* via the Admin SDK
     // (create mints the doc, accept transactionally records the single
     // opponent attempt — bypassing these rules).
+    // A player may list the duels THEY minted, and only those: the query must
+    // filter on challengerUid == their own uid or every document fails this
+    // rule and the whole query is rejected. That is what lets the app tell
+    // you your friend played and beat you — without it a duel only ever ran
+    // one way. Nobody can browse the collection, and writes still go only
+    // through /api/challenges/* via the Admin SDK.
     match /challenges/{code} {
       allow get: if request.auth != null;
-      allow list: if false;
+      allow list: if request.auth != null
+                  && resource.data.challengerUid == request.auth.uid;
       allow write: if false;
     }
 

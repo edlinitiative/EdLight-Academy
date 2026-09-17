@@ -192,6 +192,10 @@ function App() {
         if (navigationRef.isReady()) (navigationRef.navigate as any)('Leaderboard');
       } else if (type === 'study-reminder') {
         navigateToTab('Courses');
+      } else if (type === 'duel-result') {
+        // Your opponent played the duel you sent — the Jeux tab is where the
+        // result and the rematch button are.
+        navigateToTab('Trivia');
       } else if (type === 'achievement') {
         // Badge unlocked → Profile, where achievements live.
         navigateToTab('Profile');
