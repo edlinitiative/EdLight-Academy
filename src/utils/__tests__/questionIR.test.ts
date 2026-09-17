@@ -1,5 +1,6 @@
 import { compileQuestion, splitKey, isPlaceholderKey } from '../../../shared/question/compile';
 import { gradeQuestion, validate, isCorrect, parseNumeric } from '../../../shared/question/grade';
+import { isSerializable, responseToStored, storedToResponse } from '../../../shared/question/serialize';
 
 /**
  * The question IR — compiled from the shapes the real catalog actually uses.
@@ -259,5 +260,73 @@ describe('keys that are not answers', () => {
     }, { subject: 'Mathématiques' });
     expect(q.steps).toEqual(['step1', 'step2']);
     expect(gradeQuestion(q, { step1: '12', step2: '7' }).allCorrect).toBe(true);
+  });
+});
+
+describe('answer_parts that are the blanks, not extra steps', () => {
+  const raw = {
+    type: 'fill_blank',
+    question: "Les atomes sont unis par une ____ liaison et une ____ liaison.",
+    correct: 'simple, double',
+    answer_parts: [{ answer: 'une liaison simple' }, { answer: 'une liaison double' }],
+    points: 4,
+  };
+
+  it('does not ask the same two answers twice', () => {
+    // Compiling blanks AND a ladder made this four answers. Marks divide across
+    // widgets, so a student who filled both blanks correctly scored 50% against
+    // two steps they were never shown. 695 questions are shaped like this.
+    const q = compileQuestion(raw, { subject: 'Chimie' });
+    expect(Object.keys(q.widgets)).toEqual(['blank1', 'blank2']);
+    expect(gradeQuestion(q, { blank1: 'simple', blank2: 'double' }).earned).toBe(4);
+  });
+
+  it('accepts the longer authored form as an alternative', () => {
+    const q = compileQuestion(raw, { subject: 'Chimie' });
+    expect(isCorrect(q.widgets.blank1, 'une liaison simple')).toBe(true);
+    expect(isCorrect(q.widgets.blank1, 'simple')).toBe(true);
+  });
+
+  it('keeps a real step ladder when the counts do not line up', () => {
+    const q = compileQuestion(
+      { ...raw, answer_parts: [{ answer: 'a' }, { answer: 'b' }, { answer: 'c' }] },
+      { subject: 'Chimie' },
+    );
+    expect(Object.keys(q.widgets)).toEqual(['blank1', 'blank2', 'step1', 'step2', 'step3']);
+  });
+});
+
+describe('storing an answer as the one string an attempt has always been', () => {
+  const twoBlanks = compileQuestion({
+    type: 'fill_blank',
+    question: 'Une ____ liaison et une ____ liaison.',
+    correct: 'simple, double',
+    points: 2,
+  }, { subject: 'Chimie' });
+
+  it('round-trips through the stored form', () => {
+    const typed = { blank1: 'simple', blank2: 'double' };
+    const stored = responseToStored(twoBlanks, typed);
+    expect(stored).toBe('simple|double');
+    expect(storedToResponse(twoBlanks, stored)).toEqual(typed);
+  });
+
+  it('reads a cleared question as unanswered, not as an empty answer', () => {
+    // "||" is truthy, so leaving the key behind made the header count the
+    // question as answered and under-report the unanswered warning on submit.
+    expect(responseToStored(twoBlanks, { blank1: '', blank2: '' })).toBe('');
+    expect(responseToStored(twoBlanks, { blank1: 'simple', blank2: '' })).toBe('simple|');
+  });
+
+  it('refuses a question whose answer contains the separator', () => {
+    // "||" is the salt bridge in Zn|Zn²⁺||Cu²⁺|Cu — a real chemistry answer.
+    const salty = compileQuestion({
+      type: 'fill_blank',
+      question: 'Le pont ____ relie ____ .',
+      correct: '||, deux demi-piles',
+      points: 2,
+    }, { subject: 'Chimie' });
+    expect(isSerializable(salty)).toBe(false);
+    expect(isSerializable(twoBlanks)).toBe(true);
   });
 });
