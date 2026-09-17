@@ -1,4 +1,4 @@
-import { compileQuestion, splitKey } from '../../../shared/question/compile';
+import { compileQuestion, splitKey, isPlaceholderKey } from '../../../shared/question/compile';
 import { gradeQuestion, validate, isCorrect, parseNumeric } from '../../../shared/question/grade';
 
 /**
@@ -219,5 +219,45 @@ describe('a key that does not divide', () => {
     );
     expect((q.widgets.blank1 as any).answer).toBe('méthane');
     expect((q.widgets.blank2 as any).answer).toBe('CH4');
+  });
+});
+
+describe('keys that are not answers', () => {
+  it('falls back to final_answer, the only key 48 questions have', () => {
+    const q = compileQuestion(
+      { type: 'short_answer', question: 'Q', final_answer: "S'excuser et réparer.", points: 5 },
+      { subject: 'Philosophie' },
+    );
+    expect((q.widgets.answer as any).answer).toBe("S'excuser et réparer.");
+  });
+
+  it('sends a question to review rather than fail it against "Texte manquant"', () => {
+    const q = compileQuestion(
+      { type: 'short_answer', question: 'Q', final_answer: 'Incomplete Question', points: 5 },
+      { subject: 'Art & Musique' },
+    );
+    expect(q.widgets.answer.kind).toBe('essay');
+    expect(gradeQuestion(q, { answer: 'une réponse' }).needsReview).toBe(true);
+  });
+
+  it('matches placeholders exactly, never by pattern', () => {
+    // A regex for "incomplète" or "voir" would swallow these real answers.
+    expect(isPlaceholderKey('Dominance incomplète/codominance')).toBe(false);
+    expect(isPlaceholderKey('Voir ne suffit pas pour savoir')).toBe(false);
+    expect(isPlaceholderKey('Question incomplète')).toBe(true);
+    expect(isPlaceholderKey('Texte manquant')).toBe(true);
+  });
+
+  it('leaves a question alone when answer_parts carry the real key', () => {
+    // The placeholder sits in `correct`; the ladder is the actual answer.
+    const q = compileQuestion({
+      type: 'calculation',
+      question: 'Q',
+      correct: 'Voir les answer_parts',
+      answer_parts: [{ answer: '12' }, { answer: '7' }],
+      points: 4,
+    }, { subject: 'Mathématiques' });
+    expect(q.steps).toEqual(['step1', 'step2']);
+    expect(gradeQuestion(q, { step1: '12', step2: '7' }).allCorrect).toBe(true);
   });
 });
