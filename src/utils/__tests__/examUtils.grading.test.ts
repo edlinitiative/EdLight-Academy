@@ -153,3 +153,33 @@ describe('gradeSingleQuestion — basic auto-graded types', () => {
     expect(gradeSingleQuestion(essay, 'Une longue réponse.', null, MATH).status).toBe('manual');
   });
 });
+
+// ── An unreadable key must never cost the student their paper ───────────────
+// Five catalog questions store `correct` as a pair map ({"a":"Autrichien", …}).
+// Two of them are not typed `matching`, so they reached checkAnswer, which
+// called .trim() on an object and threw — taking the whole submission with it.
+describe('gradeExam — a question whose key is a pair map', () => {
+  const pairMap = {
+    type: 'short_answer',
+    points: 5,
+    question: 'Trouver la nationalité de chacun de ces musiciens.',
+    correct: { a: 'Autrichien', b: 'Haïtien', c: 'Allemand' },
+  };
+
+  it('grades the rest of the paper instead of throwing', () => {
+    const questions = [mcq('b'), pairMap, mcq('a')];
+    const result = gradeExam(questions, { 0: 'b', 1: 'Autrichien', 2: 'a' }, {}, MATH);
+    expect(result.summary.correctCount).toBe(2);
+    expect(result.results).toHaveLength(3);
+  });
+
+  it('sends it to manual review rather than marking it wrong', () => {
+    const result = gradeExam([pairMap], { 0: 'Autrichien' }, {}, MATH);
+    expect(result.results[0].status).toBe('manual');
+    expect(result.summary.manualReview).toBe(1);
+  });
+
+  it('agrees with gradeSingleQuestion, which students hit in live feedback', () => {
+    expect(gradeSingleQuestion(pairMap, 'Autrichien', null, MATH).status).toBe('manual');
+  });
+});
