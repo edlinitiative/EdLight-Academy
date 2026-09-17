@@ -1826,6 +1826,16 @@ export function gradeSingleQuestion(question: any, userAnswer: any, preGradedEss
     };
   }
 
+  // A pair-map key is unreadable here, exactly as in gradeExam — review, not wrong.
+  if (question.correct && typeof question.correct === 'object') {
+    return {
+      question,
+      userAnswer,
+      status: 'manual',
+      result: { awarded: 0, maxPoints: pts },
+    };
+  }
+
   // Auto-gradable
   const isCorrect = checkAnswer(question, userAnswer, options);
   return {
@@ -2063,6 +2073,20 @@ export function gradeExam(questions: any, answers: any, preGradedResults: Record
       };
     }
 
+    // A pair map ({"a":"4", …}) is a key this grader cannot read: five questions
+    // in the catalog carry one, and two of them are not typed `matching`, so they
+    // reach checkAnswer and used to throw — losing the student's whole paper.
+    // Send them to manual review, which is what an unreadable key already means.
+    if (q.correct && typeof q.correct === 'object') {
+      manualReview++;
+      return {
+        question: q,
+        userAnswer,
+        status: 'manual',
+        result: { awarded: 0, maxPoints: pts },
+      };
+    }
+
     // Grade it
     autoGraded++;
     const isCorrect = checkAnswer(q, userAnswer, options);
@@ -2110,7 +2134,10 @@ export function gradeExam(questions: any, answers: any, preGradedResults: Record
 }
 
 function checkAnswer(question: any, userAnswer: any, options: Record<string, any> = {}) {
-  const correct = (question.correct || '').trim().toLowerCase();
+  // `correct` is authored loosely and is not always a string — coerce rather
+  // than assume, so one odd question can never throw mid-grade.
+  const correct = (typeof question.correct === 'string' ? question.correct : '')
+    .trim().toLowerCase();
   const user = String(userAnswer).trim().toLowerCase();
 
   if (!correct || !user) return false;
