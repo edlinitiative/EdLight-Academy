@@ -7,6 +7,25 @@
 
 import { checkWithCAS } from './mathCAS';
 import { getCoefficient } from './trackConfig';
+import { isPlaceholderKey } from './question/compile';
+
+/**
+ * True when the only answer this question offers is a note that the source
+ * paper was incomplete — "Texte manquant", "Question incomplète", "N/A".
+ *
+ * 24 questions are like this, worth 335 marks, and we were marking students
+ * incorrect against them. A question with no real key cannot be failed; it
+ * goes to review. Questions that also carry answer_parts are untouched: the
+ * real key is there and the placeholder is only a stand-in in `correct`.
+ */
+function hasOnlyPlaceholderKey(question: any): boolean {
+  if (Array.isArray(question?.answer_parts) && question.answer_parts.length > 0) return false;
+  if (question?.scaffold_blanks) return false;
+  const keys = [question?.correct, question?.final_answer].filter(
+    (k) => typeof k === 'string' && k.trim() !== '',
+  );
+  return keys.length > 0 && keys.every((k) => isPlaceholderKey(k));
+}
 
 // ─── Subject normalisation ──────────────────────────────────────────────────
 
@@ -1738,6 +1757,15 @@ export function gradeSingleQuestion(question: any, userAnswer: any, preGradedEss
     };
   }
 
+  if (hasOnlyPlaceholderKey(question)) {
+    return {
+      question,
+      userAnswer,
+      status: 'manual',
+      result: { awarded: 0, maxPoints: pts },
+    };
+  }
+
   // Essay or short_answer with AI grade already available
   if ((question.type === 'essay' || question.type === 'short_answer') && preGradedEssay) {
     const scoreParts = (preGradedEssay.score || '').split('/');
@@ -1886,6 +1914,16 @@ export function gradeExam(questions: any, answers: any, preGradedResults: Record
     const userAnswer = answers[i] != null ? answers[i] : null;
     const pts = q.points || 1;
     totalPoints += pts;
+
+    if (hasOnlyPlaceholderKey(q)) {
+      manualReview++;
+      return {
+        question: q,
+        userAnswer,
+        status: 'manual',
+        result: { awarded: 0, maxPoints: pts },
+      };
+    }
 
     const meta = (QUESTION_TYPE_META as Record<string, any>)[q.type] || QUESTION_TYPE_META.unknown;
 

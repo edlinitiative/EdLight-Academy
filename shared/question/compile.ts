@@ -22,6 +22,34 @@ import type { Block, CompiledQuestion, Widget } from './schema';
 /** Authored blanks: runs of 4+ underscores or dots. Matches the PWA. */
 const BLANK_RE = /_{4,}|\.{4,}/g;
 
+/**
+ * Keys that are not answers: a note to a human that the source paper was
+ * incomplete, or a pointer to where the answer really lives.
+ *
+ * Matched exactly, never by pattern. "Dominance incomplète/codominance" and
+ * "Voir ne suffit pas pour savoir" are real authored answers, and a regex for
+ * "incomplète" or "voir" marks them unanswerable. Exactness is the safeguard.
+ *
+ * These are almost always harmless — the question also carries answer_parts,
+ * which we prefer. They only matter when the placeholder is the ONLY key, and
+ * then the honest outcome is review, not marking the student wrong.
+ */
+const PLACEHOLDER_KEYS = new Set([
+  'no text provided', 'texte manquant', 'texte 1 manquant', 'texte 2 manquant',
+  'texte incomplet', 'tableau incomplet', 'question manquante', 'question incomplète',
+  'information manquante', 'information non fournie', 'incomplete information',
+  'incomplete question', 'pregunta incompleta', 'mots manquants',
+  'démonstration incomplète', 'n/a',
+  'voir les answer_parts', 'voir tableau ci-dessus', 'voir réponse détaillée',
+  'voir les réponses a, b, c', 'voir la liste des nationalités',
+  'voir définitions ci-dessus',
+]);
+
+export function isPlaceholderKey(raw: unknown): boolean {
+  const t = String(raw ?? '').trim().toLowerCase().replace(/\.$/, '');
+  return t === '' || PLACEHOLDER_KEYS.has(t);
+}
+
 const MATH_SUBJECTS = new Set(['Mathématiques', 'Physique', 'Chimie', 'SVT', 'Informatique']);
 
 const str = (v: unknown) => String(v ?? '').trim();
@@ -151,10 +179,15 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
   // ── Otherwise: one answer for the whole question ────────────────────────
   if (Object.keys(widgets).length === 0) {
     const id = 'answer';
-    if (type === 'essay' || type === 'matching') {
+    // `final_answer` carries the key for 48 questions that have no other, and
+    // the live grader has always read it. A placeholder is not a key, and a
+    // question with no key at all is for review — never an input the student
+    // is marked wrong against.
+    const key = [str(raw?.correct), str(raw?.final_answer)].find((k) => !isPlaceholderKey(k));
+    if (type === 'essay' || type === 'matching' || !key) {
       widgets[id] = { kind: 'essay', id, modelAnswer: str(raw?.model_answer) || undefined };
     } else {
-      widgets[id] = widgetForAnswer(id, str(raw?.correct), { fuzzy });
+      widgets[id] = widgetForAnswer(id, key, { fuzzy });
     }
     steps.push(id);
   }

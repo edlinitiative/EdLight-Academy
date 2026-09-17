@@ -183,3 +183,23 @@ describe('gradeExam — a question whose key is a pair map', () => {
     expect(gradeSingleQuestion(pairMap, 'Autrichien', null, MATH).status).toBe('manual');
   });
 });
+
+// ── A key that is only a note saying the paper was incomplete ───────────────
+describe('gradeExam — a question whose only key is a placeholder', () => {
+  const placeholder = {
+    type: 'short_answer',
+    points: 5,
+    question: 'Trouver la nationalité de chacun de ces musiciens.',
+    final_answer: 'Incomplete Question',
+  };
+
+  it('does not mark the student wrong against "Incomplete Question"', () => {
+    expect(gradeExam([placeholder], { 0: 'Autrichien' }, {}, MATH).results[0].status).toBe('manual');
+    expect(gradeSingleQuestion(placeholder, 'Autrichien', null, MATH).status).toBe('manual');
+  });
+
+  it('still grades a question whose answer_parts carry the real key', () => {
+    const real = { ...placeholder, correct: 'Voir les answer_parts', answer_parts: [{ answer: 'Autrichien' }] };
+    expect(gradeSingleQuestion(real, 'Autrichien', null, MATH).status).not.toBe('manual');
+  });
+});
