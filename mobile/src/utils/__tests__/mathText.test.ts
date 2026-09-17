@@ -59,6 +59,17 @@ describe('mathToText', () => {
     expect(mathToText('17√{\\frac{2}{49}}')).toBe('17√(2/49)');
   });
 
+  it('renders blackboard-bold sets instead of spelling out "mathbbR"', () => {
+    // TestFlight 2026-09-17: "Soit a ∈ mathbbR" — \mathbb fell through to the
+    // bare-command rule exactly as \begin did.
+    expect(mathToText('Soit $a \\in \\mathbb{R}$')).toBe('Soit a ∈ ℝ');
+    expect(mathToText('$\\mathbb{N}$, $\\mathbb{Z}$, $\\mathbb{Q}$, $\\mathbb{C}$')).toBe('ℕ, ℤ, ℚ, ℂ');
+  });
+
+  it('unwraps the other math-font commands rather than naming them', () => {
+    expect(mathToText('$\\mathcal{F}$ et $\\mathfrak{g}$')).toBe('F et g');
+  });
+
   it('renders a matrix environment instead of spelling out "beginpmatrix"', () => {
     // TestFlight shot 04: the Mathématiques 2025 determinant question showed
     // "beginpmatrix 3 & -2 & a \\ 1 & 3 & -2 \\ 2 & -1 & a endpmatrix" because

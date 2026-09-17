@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import MathText from './MathText';
 import useStore from '../contexts/store';
 import { useColors } from '../theme/theme';
@@ -201,6 +202,7 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
   // Which blank the keypad types into. Defaults to the first mathy one so the
   // keypad is useful before anything is tapped.
   const [focused, setFocused] = useState(0);
+  const [demarcheOpen, setDemarcheOpen] = useState(false);
 
   const displayText = useMemo(
     () => markScaffoldText(String(question?.scaffold_text ?? '')),
@@ -211,6 +213,10 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
   // real prose — common for simple fill-in-the-blank questions — the "Complète
   // la démarche" card is empty noise. Only show it when there's actual guidance
   // text (strip circled markers ①..⑳ and "(n)" fallbacks, then check for prose).
+  // Past roughly a screenful, the derivation stops being context and becomes an
+  // obstacle between the question and the inputs.
+  const isLongDemarche = displayText.length > 320;
+
   const hasDemarcheText = useMemo(
     () => displayText.replace(/[①-⑳]/g, '').replace(/\(\d+\)/g, '').trim().length > 0,
     [displayText],
@@ -223,19 +229,44 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
       {/* Authored solution text with ①②③ markers — omitted when it's marker-only. */}
       {hasDemarcheText ? (
         <View style={[card, cardShadow, { padding: 16 }]}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              color: colors.muted,
-              textTransform: 'uppercase',
-              letterSpacing: 0.8,
-              marginBottom: 8,
-            }}
+          {/* Collapsible when long. Some authored solutions are a FULL
+              derivation — one exam question's ran to a screen and a half of
+              dense LaTeX before the student reached a single input ("this is
+              hard to even read and go through"). The steps below are the
+              actual task; the derivation is reference, so it opens on demand.
+              Short ones stay open, because hiding three lines helps nobody. */}
+          <TouchableOpacity
+            onPress={() => (isLongDemarche ? setDemarcheOpen((v) => !v) : undefined)}
+            activeOpacity={isLongDemarche ? 0.7 : 1}
+            accessibilityRole={isLongDemarche ? 'button' : undefined}
+            accessibilityState={isLongDemarche ? { expanded: demarcheOpen } : undefined}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}
           >
-            {t('Complète la démarche', 'Konplete demach la')}
-          </Text>
-          <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: colors.ink }} />
+            <Text
+              style={{
+                flex: 1,
+                fontSize: 11,
+                fontWeight: '700',
+                color: colors.muted,
+                textTransform: 'uppercase',
+                letterSpacing: 0.8,
+              }}
+            >
+              {t('Complète la démarche', 'Konplete demach la')}
+            </Text>
+            {isLongDemarche ? (
+              demarcheOpen
+                ? <ChevronUp color={colors.muted} size={16} />
+                : <ChevronDown color={colors.muted} size={16} />
+            ) : null}
+          </TouchableOpacity>
+          {(!isLongDemarche || demarcheOpen) ? (
+            <MathText text={displayText} style={{ fontSize: 15, lineHeight: 23, color: colors.ink }} />
+          ) : (
+            <Text style={{ fontSize: 13, color: colors.faint }}>
+              {t('Touche pour voir la démarche complète.', 'Tape pou wè tout demach la.')}
+            </Text>
+          )}
         </View>
       ) : null}
 

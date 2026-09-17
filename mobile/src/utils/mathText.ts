@@ -28,6 +28,11 @@ const SYMBOLS: Record<string, string> = {
   circ: '°', ldots: '…', dots: '…', cdots: '⋯',
 };
 
+/** The named sets, which carry meaning a bare letter does not. */
+const BLACKBOARD: Record<string, string> = {
+  N: 'ℕ', Z: 'ℤ', Q: 'ℚ', R: 'ℝ', C: 'ℂ',
+};
+
 function toScript(s: string, map: Record<string, string>): string | null {
   let out = '';
   for (const ch of s) {
@@ -68,8 +73,14 @@ export function mathToText(input: string): string {
     s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (_, a, b) => `${wrap(a)}/${wrap(b)}`);
     // \sqrt{x} -> √(x) — also the pre-mixed Unicode form "√{x}"
     s = s.replace(/(?:\\sqrt|√)\s*\{([^{}]*)\}/g, (_, x) => `√(${x})`);
-    // text-ish wrappers keep their content
-    s = s.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}/g, '$1');
+    // Blackboard bold is a REAL symbol, not a font choice: \mathbb{R} is ℝ, and
+    // unwrapping it to a bare "R" loses the meaning. Named sets first, then the
+    // general unwrap.
+    s = s.replace(/\\mathbb\s*\{\s*([NZQRC])\s*\}/g, (_, L) => BLACKBOARD[L] ?? L);
+    // text-ish wrappers keep their content. \mathbb/\mathcal/\mathfrak were
+    // missing here, so "\mathbb{R}" fell through to the bare-command rule below
+    // and reached students as the word "mathbbR".
+    s = s.replace(/\\(?:text|mathrm|mathbf|mathit|mathbb|mathcal|mathfrak|mathsf|mathtt|operatorname)\s*\{([^{}]*)\}/g, '$1');
 
     // super/subscripts
     s = s.replace(/\^\{([^{}]*)\}/g, (_, x) => toScript(x, SUP) ?? `^(${x})`);

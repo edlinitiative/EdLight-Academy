@@ -15,6 +15,7 @@ import { typeScale } from '../../theme/theme';
 import { success } from '../../utils/haptics';
 import QuizResultHero, { HeroButton, glass } from '../quiz/QuizResultHero';
 import ShareCardCapture, { type ShareCardCaptureHandle } from '../share/ShareCardCapture';
+import BeatMyScoreCard from '../share/BeatMyScoreCard';
 
 export interface GameReward {
   xpEarned: number;
@@ -121,6 +122,21 @@ export default function GameOverCard({
               onPress={() => shareRef.current?.share({ mode: 'score', subject: shareSubject, score, total: maxScore })}
               style={{ marginBottom: 10 }}
             />
+          )}
+          {/* Invite someone to play. "Partager mon score" posts a picture;
+              this asks a specific person to beat it, which is the thing that
+              actually brings a second player in. Games had neither until now —
+              the duel prompt only reached quiz results. */}
+          {shareSubject && (
+            <View style={{ marginBottom: 10 }}>
+              <BeatMyScoreCard
+                title={shareSubject}
+                score={score}
+                total={maxScore}
+                variant="glass"
+                source="game"
+              />
+            </View>
           )}
           <HeroButton
             variant="ghost"
