@@ -1,0 +1,604 @@
+{
+ "_comment": [
+  "Seed list for the school picker, derived from ESLP application forms",
+  "(2022, 2023, 2025) in the EdLight shared drive — the 'Établissement",
+  "scolaire' and address columns only. No applicant name, email or phone is",
+  "included, and rows shifted by '|' characters inside free-text answers",
+  "were dropped rather than guessed at.",
+  "",
+  "`applicants` is how many applications named the school; the picker sorts",
+  "by it so the schools students actually come from surface first.",
+  "`commune` is inferred from the residence address and is empty where the",
+  "form did not collect one (2022) — the picker asks for it on first use.",
+  "",
+  "This is a SEED, not the source of truth: the live list lives in Firestore",
+  "and grows as students add their own school."
+ ],
+ "schools": [
+  {
+   "name": "Collège Dominique Savio",
+   "commune": "Pétion-Ville",
+   "applicants": 23
+  },
+  {
+   "name": "Collège Saint-Louis de Bourdon",
+   "commune": "Port-au-Prince",
+   "applicants": 16
+  },
+  {
+   "name": "Collège Marie-Anne",
+   "commune": "Delmas",
+   "applicants": 15
+  },
+  {
+   "name": "Collège Marie Dominique Mazzarello",
+   "commune": "Delmas",
+   "applicants": 13
+  },
+  {
+   "name": "Institution Mère Délia",
+   "commune": "Delmas",
+   "applicants": 12
+  },
+  {
+   "name": "Institution Saint-Louis de Gonzague",
+   "commune": "Delmas",
+   "applicants": 11
+  },
+  {
+   "name": "Institution Saint François Xavier",
+   "commune": "Cap-Haïtien",
+   "applicants": 9
+  },
+  {
+   "name": "Collège Canado Haïtien",
+   "commune": "Tabarre",
+   "applicants": 7
+  },
+  {
+   "name": "Institution Nouvelle Source",
+   "commune": "Delmas",
+   "applicants": 7
+  },
+  {
+   "name": "Académie Chrétienne",
+   "commune": "Croix-des-Bouquets",
+   "applicants": 5
+  },
+  {
+   "name": "Collège Adventiste de Diquini",
+   "commune": "Carrefour",
+   "applicants": 5
+  },
+  {
+   "name": "Petit Séminaire Collège Saint Martial",
+   "commune": "Port-au-Prince",
+   "applicants": 5
+  },
+  {
+   "name": "Saint Louis de Gonzague",
+   "commune": "Kenscoff",
+   "applicants": 5
+  },
+  {
+   "name": "Ecole Immaculée Conception",
+   "commune": "Delmas",
+   "applicants": 4
+  },
+  {
+   "name": "Collège Catts Pressoir",
+   "commune": "",
+   "applicants": 3
+  },
+  {
+   "name": "Collège Marie Esther",
+   "commune": "Port-au-Prince",
+   "applicants": 3
+  },
+  {
+   "name": "Collège Saint Louis de Jérémie",
+   "commune": "Jérémie",
+   "applicants": 3
+  },
+  {
+   "name": "Collège Secondaire Louverture Cleary",
+   "commune": "Delmas",
+   "applicants": 3
+  },
+  {
+   "name": "Institution Louis Chauvet",
+   "commune": "Pétion-Ville",
+   "applicants": 3
+  },
+  {
+   "name": "Institution du Sacré Coeur",
+   "commune": "",
+   "applicants": 3
+  },
+  {
+   "name": "Institution mixte Hibiscus",
+   "commune": "Pétion-Ville",
+   "applicants": 3
+  },
+  {
+   "name": "Institution mixte hans muselaire",
+   "commune": "",
+   "applicants": 3
+  },
+  {
+   "name": "Nouveau Collège Bird",
+   "commune": "",
+   "applicants": 3
+  },
+  {
+   "name": "Sainte Rose de Lima",
+   "commune": "Pétion-Ville",
+   "applicants": 3
+  },
+  {
+   "name": "Centre d'Etudes Classiques Hadassa",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Centre d'études lumière",
+   "commune": "Gressier",
+   "applicants": 2
+  },
+  {
+   "name": "College Mixte Lesly Docteur",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "College methodiste de frères",
+   "commune": "Delmas",
+   "applicants": 2
+  },
+  {
+   "name": "Collège Canado-Haïtien (CCH)",
+   "commune": "Port-au-Prince",
+   "applicants": 2
+  },
+  {
+   "name": "Collège Canapé-vert",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Collège Jean Wesley",
+   "commune": "Jérémie",
+   "applicants": 2
+  },
+  {
+   "name": "Collège Marie Dominique Mazarello",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Collège Marie Dominique Mazzarello (CMDM)",
+   "commune": "Delmas",
+   "applicants": 2
+  },
+  {
+   "name": "Collège phillipe guerrier",
+   "commune": "Delmas",
+   "applicants": 2
+  },
+  {
+   "name": "Complexe Éducatif Jésus Bon Pasteur",
+   "commune": "Croix-des-Bouquets",
+   "applicants": 2
+  },
+  {
+   "name": "Ecole du Sacré-Cœur dirrigée par les Filles de Marie",
+   "commune": "Cap-Haïtien",
+   "applicants": 2
+  },
+  {
+   "name": "INSTITUTION PERE GIRARD",
+   "commune": "Croix-des-Bouquets",
+   "applicants": 2
+  },
+  {
+   "name": "Institut La Sève",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Institution Chrétienne mixte les gédéons",
+   "commune": "Delmas",
+   "applicants": 2
+  },
+  {
+   "name": "Institution Foyer Emmanuel",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Institution La Jachère",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Institution Marie Régine des soeurs salésiennes de Thorlande",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Institution Marie Régine des sœurs salésiennes de Don Boscos",
+   "commune": "Carrefour",
+   "applicants": 2
+  },
+  {
+   "name": "Institution du Sacré-Cœur de Turgeau",
+   "commune": "Delmas",
+   "applicants": 2
+  },
+  {
+   "name": "Institution la Pléiade des Gonaives (IPG)",
+   "commune": "Gonaïves",
+   "applicants": 2
+  },
+  {
+   "name": "Institution mixte les frères Rogeste",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Notre Dame du Rosaire",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "Université Quisqueya",
+   "commune": "Delmas",
+   "applicants": 2
+  },
+  {
+   "name": "École Congréganiste Sainte-Thérèse de Pétion-Ville",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "École Marc sadar de Girardeau",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "École Mixte La Providence",
+   "commune": "Croix-des-Bouquets",
+   "applicants": 2
+  },
+  {
+   "name": "École Sainte Trinité",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "École baha'ie anis zunuzi",
+   "commune": "",
+   "applicants": 2
+  },
+  {
+   "name": "#16 rue douyon, routes des dalles, carrefour feuilles",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "#24,Rue Thémy, Route de Frères, P-AU-P",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "#4, Impasse love and peace, morne-rouge",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "#45, Ruelle Vaillant, Port-au-Prince, Haïti",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Clercine 11, Rue Plaisimond #22",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "College Diril Brutus",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "College Saint André",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "College coeur de Jesus",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Dominique Savio de Pétion-ville",
+   "commune": "Pétion-Ville",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Lumière du Savoir",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Marie Dominique Mazzarello (CMDM), # 9, Route de Jacquet, Delmas 95",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Marie Dominique Mozzarello",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Marie regine",
+   "commune": "Carrefour",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Saint Martin de Tours",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Collège la Providence des Cayes",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Collège notre dame du perpétuel secours",
+   "commune": "Cap-Haïtien",
+   "applicants": 1
+  },
+  {
+   "name": "Collège saint Francois d’assise",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Collège Évangélique Bon Samaritain",
+   "commune": "Jérémie",
+   "applicants": 1
+  },
+  {
+   "name": "Croix des Bouquets, Meyer, Habitation Leroux",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Delmas 19,rue E Janvier #3",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Delmas 75,Faustin 1er rue Laurent #10",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "ECENFACH ( école encyclopédique frano-anglais des chérubins Haïtiens )",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "ECENFACH(Ecole Encyclopédique Franco-anglaise des Chérubins Haïtiens)",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Ecole Acacia",
+   "commune": "Pétion-Ville",
+   "applicants": 1
+  },
+  {
+   "name": "Ecole du Sacré cœur dirigé par les filles de marie (FDM) Rue 2k",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Ensemble Scolaire Père Basile Moreau",
+   "commune": "Carrefour",
+   "applicants": 1
+  },
+  {
+   "name": "Grande Rivière du Nord, Bas du bourg",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Haut-Du-Cap, Cap-Haitien, Haiti",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Haïti croix des bouquets",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "INSTITUTION MIXTE FRÈRES DÉLIA",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Institut Georges Marc",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Institution Chrétienne reformer adoration",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Institution Educative Manitane de Luc (APJ)",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Institution Mixte Frère Mathurin (IMFM)",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Institution Père Médaille",
+   "commune": "Cap-Haïtien",
+   "applicants": 1
+  },
+  {
+   "name": "Institution Sainte Marguerite d'Youville",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Institution du Sacré Coeur de Turgeau",
+   "commune": "Port-au-Prince",
+   "applicants": 1
+  },
+  {
+   "name": "Institution du Sacré-Cœur",
+   "commune": "Port-au-Prince",
+   "applicants": 1
+  },
+  {
+   "name": "Institution du SacréCoeur",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Institution mixte Saint-Jean Évangéliste",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Institution saint jean évangéliste de Jérémie",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Institution Éducative Manitane de Luc",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Institutions Mixte de SOPUDEP",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Louverture cleary school",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Lycée Fritz Pierre Louis",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Lycée Jean Jacques Dessalines",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Lycée Paul Eugène Magloire de quartier Morin",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Lycée national de pétionville",
+   "commune": "Port-au-Prince",
+   "applicants": 1
+  },
+  {
+   "name": "L’ouverture Cleary school",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Maïs Gâté 8 rue Béthanie #18",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Meyotte 29 bas duval",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Nouveau Collège Bird (NCB)",
+   "commune": "Delmas",
+   "applicants": 1
+  },
+  {
+   "name": "Nouveau Collège Concordia",
+   "commune": "Pétion-Ville",
+   "applicants": 1
+  },
+  {
+   "name": "Phone number",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Port-au-Prince, Lalue Rue Nord Alexis #34",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Route de Kenscoff, Laboule 12, Route de Boutilliers #45",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Routes de Frères, Rue Dutaillis prolongée #10 bis",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "Rue panaméricaine #2, Pierre sully",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "SANTO 25, CROIX-DES-BOUQUETS",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "institutions mixte saphir",
+   "commune": "Port-au-Prince",
+   "applicants": 1
+  },
+  {
+   "name": "École Congréganiste Christ-Roi Filles de Marie",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "École Immaculée Conception de Trou-du-Nord",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "École Soeur Etienne",
+   "commune": "",
+   "applicants": 1
+  },
+  {
+   "name": "École mixte Academie Chrétienne",
+   "commune": "Delmas",
+   "applicants": 1
+  }
+ ]
+}
