@@ -1384,9 +1384,16 @@ export function parseScaffoldAnswer(userAnswer: any) {
  * fill-in-the-solution flow instead of single-answer string matching.
  */
 export function gradeScaffoldAnswer(question: any, userAnswer: any, options: Record<string, any> = {}) {
-  if (!question.scaffold_text || !question.scaffold_blanks) return null;
   const scaffoldValues = parseScaffoldAnswer(userAnswer);
   if (!scaffoldValues) return null;
+  const parts = Array.isArray(question.answer_parts) ? question.answer_parts : [];
+  // Answered part by part, so gradeable part by part. This used to require
+  // `scaffold_text`, which is authored for maths — but 1,535 questions carry
+  // labeled answer_parts and no scaffold_text, worth 11,056 marks, and the
+  // screen could only give them one box marked all-or-nothing against a single
+  // summary answer. What decides this is the shape of the stored answer, not
+  // which fields the question happens to carry.
+  if (parts.length === 0 && (!question.scaffold_text || !question.scaffold_blanks)) return null;
 
   const pts = question.points || 1;
   const filled = scaffoldValues.filter((v: any) => v && String(v).trim());
@@ -1394,14 +1401,20 @@ export function gradeScaffoldAnswer(question: any, userAnswer: any, options: Rec
     return { status: 'unanswered', awarded: 0, maxPoints: pts, ratio: 0 };
   }
 
-  if (question.answer_parts && question.answer_parts.length > 0) {
-    const blankResults = gradeScaffoldBlanks(scaffoldValues, question.answer_parts, options);
+  if (parts.length > 0) {
+    const blankResults = gradeScaffoldBlanks(scaffoldValues, parts, options);
     const correctBlanks = blankResults.filter((r: any) => r.correct).length;
-    const totalBlanks = question.answer_parts.length;
-    const ratio = totalBlanks > 0 ? correctBlanks / totalBlanks : 0;
+    // A part can be authored with an empty answer, and one question means it:
+    // "Mettez la lettre T après les instruments transpositeurs" leaves the
+    // violin blank because the violin is not one. Counting an unanswerable
+    // part in the denominator caps the question below full marks however well
+    // it is answered, so only parts with an answer are marked.
+    const totalBlanks = parts.filter((p: any) => String(p?.answer ?? '').trim() !== '').length
+      || parts.length;
+    const ratio = totalBlanks > 0 ? Math.min(correctBlanks / totalBlanks, 1) : 0;
     const awarded = Math.round(pts * ratio * 100) / 100;
     return {
-      status: correctBlanks === totalBlanks ? 'correct' : correctBlanks > 0 ? 'partial' : 'incorrect',
+      status: correctBlanks >= totalBlanks ? 'correct' : correctBlanks > 0 ? 'partial' : 'incorrect',
       awarded,
       maxPoints: pts,
       blankResults,

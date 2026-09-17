@@ -25,6 +25,26 @@ function blankIds(q: CompiledQuestion): string[] {
     .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)));
 }
 
+/** Widget ids that make up a step ladder, in the order they were authored. */
+function stepIds(q: CompiledQuestion): string[] {
+  return Object.keys(q.widgets)
+    .filter((id) => /^step\d+$/.test(id))
+    .sort((a, b) => Number(a.slice(4)) - Number(b.slice(4)));
+}
+
+/**
+ * A ladder is stored as {"scaffold":[…]}, the shape the grader already reads
+ * for scaffolded maths, with one entry per authored part in order. Reusing it
+ * means these answers are graded per part — with partial credit — by code that
+ * already exists, rather than a second format nobody else understands.
+ */
+const SCAFFOLD_KEY = 'scaffold';
+
+function isLadder(q: CompiledQuestion): boolean {
+  const ids = Object.keys(q.widgets);
+  return ids.length > 1 && stepIds(q).length === ids.length;
+}
+
 /**
  * True when this question's answers can round-trip through a stored string
  * without losing which answer went where. The caller renders anything else
@@ -40,8 +60,10 @@ export function isSerializable(q: CompiledQuestion): boolean {
   if (ids.some((id) => q.widgets[id].kind === 'choice' || q.widgets[id].kind === 'order')) {
     return false;
   }
-  // One answer is stored verbatim, so nothing can collide with the separator.
+  // One answer is stored verbatim, so nothing can collide with the separator,
+  // and it is graded against `correct` exactly as it always has been.
   if (ids.length === 1) return true;
+  if (isLadder(q)) return true;
   if (blankIds(q).length !== ids.length) return false;
   // One chemistry answer is "||" — the salt bridge in a cell notation,
   // Zn|Zn²⁺||Cu²⁺|Cu. Pipe-joining it loses which blank it belongs to, so a
@@ -59,6 +81,19 @@ export function responseToStored(q: CompiledQuestion, response: Response): strin
 
   if (ids.length === 1) return one(ids[0]);
 
+  if (isLadder(q)) {
+    // Positional, NOT dense. A part authored with an empty answer gets no
+    // widget, so the ids can read step1, step3 — and the grader matches
+    // scaffold[i] to answer_parts[i]. Packing them tightly would mark step3's
+    // answer against part 2 and cost the student marks they had earned.
+    const values: string[] = [];
+    for (const id of stepIds(q)) values[Number(id.slice(4)) - 1] = one(id);
+    for (let i = 0; i < values.length; i += 1) if (values[i] == null) values[i] = '';
+    return values.some((v) => v !== '')
+      ? JSON.stringify({ [SCAFFOLD_KEY]: values })
+      : '';
+  }
+
   const blanks = blankIds(q);
   const values = blanks.map(one);
   // All blanks empty is NOT an answer. Returning "||" would count the question
@@ -73,6 +108,28 @@ export function storedToResponse(q: CompiledQuestion, stored: unknown): Response
   const raw = typeof stored === 'string' ? stored : Array.isArray(stored) ? stored.join('|') : '';
 
   if (ids.length === 1) return { [ids[0]]: raw };
+
+  if (isLadder(q)) {
+    const steps = stepIds(q);
+    let values: unknown[] | null = null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed[SCAFFOLD_KEY])) values = parsed[SCAFFOLD_KEY];
+    } catch { /* not a ladder payload */ }
+
+    const response: Response = {};
+    if (values) {
+      for (const id of steps) response[id] = String(values[Number(id.slice(4)) - 1] ?? '');
+      return response;
+    }
+    // A draft saved before this question had fields per part: one block of
+    // text, typed into the single box it used to show. Dropping it would wipe
+    // an exam a student is part-way through, so it reappears in the first
+    // field for them to split up.
+    for (const id of steps) response[id] = '';
+    if (raw.trim()) response[steps[0]] = raw;
+    return response;
+  }
 
   const blanks = blankIds(q);
   const parts = raw.split('|');

@@ -330,3 +330,76 @@ describe('storing an answer as the one string an attempt has always been', () =>
     expect(isSerializable(twoBlanks)).toBe(true);
   });
 });
+
+describe('a step ladder is asked and marked part by part', () => {
+  const ladder = compileQuestion({
+    type: 'short_answer',
+    question: 'Citez trois inconvénients de la vie en petite ville.',
+    answer_parts: [
+      { label: 'Emploi', answer: 'limited job opportunities' },
+      { label: 'Loisirs', answer: 'fewer entertainment options' },
+      { label: 'Santé', answer: 'less access to specialised care' },
+    ],
+    points: 6,
+  }, { subject: 'Anglais' });
+
+  it('stores the ladder in the shape the grader already reads', () => {
+    const stored = responseToStored(ladder, { step1: 'a', step2: 'b', step3: 'c' });
+    expect(JSON.parse(stored)).toEqual({ scaffold: ['a', 'b', 'c'] });
+    expect(storedToResponse(ladder, stored)).toEqual({ step1: 'a', step2: 'b', step3: 'c' });
+  });
+
+  it('gives partial credit instead of all-or-nothing', () => {
+    // One box for three labeled parts marked the whole question wrong for a
+    // student who knew two of them. 1,535 questions were shaped like this.
+    const s = gradeQuestion(ladder, {
+      step1: 'limited job opportunities',
+      step2: 'fewer entertainment options',
+      step3: 'non',
+    });
+    expect(s.earned).toBe(4);
+    expect(s.possible).toBe(6);
+  });
+
+  it('keeps the ladder positional when a part has no answer', () => {
+    // "Mettez la lettre T après les instruments transpositeurs" leaves the
+    // violin blank on purpose. The compiler makes no widget for it, so the
+    // ids skip a number — packing them tightly would mark step3 against the
+    // violin and cost the student a mark they had earned.
+    const gapped = compileQuestion({
+      type: 'fill_blank',
+      question: 'Instruments transpositeurs ?',
+      answer_parts: [
+        { label: 'Saxophone', answer: 'T' },
+        { label: 'Violon', answer: '' },
+        { label: 'Clarinette', answer: 'T' },
+      ],
+      points: 2,
+    }, { subject: 'Art & Musique' });
+
+    expect(Object.keys(gapped.widgets)).toEqual(['step1', 'step3']);
+    expect(JSON.parse(responseToStored(gapped, { step1: 'T', step3: 'T' })))
+      .toEqual({ scaffold: ['T', '', 'T'] });
+  });
+});
+
+describe('an exam already in progress', () => {
+  const ladder = compileQuestion({
+    type: 'short_answer',
+    question: 'Citez deux causes.',
+    answer_parts: [{ label: 'Une', answer: 'a' }, { label: 'Deux', answer: 'b' }],
+    points: 4,
+  }, { subject: 'Histoire-Géo' });
+
+  it('keeps what a student typed before the question had fields per part', () => {
+    // Their draft is one block of text from the single box. Parsing it as a
+    // ladder payload fails, and dropping it would wipe an exam in progress.
+    const resumed = storedToResponse(ladder, 'la guerre et la sécheresse');
+    expect(resumed.step1).toBe('la guerre et la sécheresse');
+    expect(resumed.step2).toBe('');
+  });
+
+  it('reads a draft that has no answer as no answer', () => {
+    expect(storedToResponse(ladder, '')).toEqual({ step1: '', step2: '' });
+  });
+});
