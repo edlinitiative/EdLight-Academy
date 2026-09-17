@@ -8847,6 +8847,47 @@ textarea:focus-visible,
 	font-style: italic;
 }
 
+/* Step ladder — one labeled field per authored answer part */
+.exam-take__ladder {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+.exam-take__ladder-title {
+	font-weight: 700;
+	font-size: 0.82rem;
+	color: var(--text-600, #52525b);
+}
+.exam-take__ladder-row {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+.exam-take__ladder-label {
+	font-size: 0.82rem;
+	color: var(--text-500, #71717a);
+	line-height: 1.4;
+}
+.exam-take__ladder-input {
+	width: 100%;
+	padding: 0.65rem 0.85rem;
+	border: 1.5px solid var(--border-200, #e4e4e7);
+	border-radius: 10px;
+	font-family: inherit;
+	font-size: 1rem;
+	background: var(--surface-50, #fafafa);
+	transition: border-color 0.15s;
+}
+.exam-take__ladder-input:focus {
+	outline: none;
+	border-color: var(--azure-500, #1B6FE0);
+	background: #fff;
+}
+.exam-take__ladder-input:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
 /* Essay word count */
 .exam-take__essay-wrap {
 	position: relative;
