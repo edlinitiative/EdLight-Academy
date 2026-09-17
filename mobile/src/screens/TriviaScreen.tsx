@@ -1398,6 +1398,7 @@ export default function TriviaScreen() {
             onSelectGame={(id) => { setSelectedGame(id); setPhase('arcade'); }}
             onStartTrivia={() => setPhase('categories')}
             onStartDaily={startDaily}
+            onRematch={handleSelectCategory}
           />
           {/* Transient ack for the home deep-link when the daily is already
               done — the tap should read as "seen", not as a dead tap. */}

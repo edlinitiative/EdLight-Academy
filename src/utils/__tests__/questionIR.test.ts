@@ -403,3 +403,51 @@ describe('an exam already in progress', () => {
     expect(storedToResponse(ladder, '')).toEqual({ step1: '', step2: '' });
   });
 });
+
+describe('a blank whose answer is repeated in the parts', () => {
+  const raw = {
+    type: 'fill_blank',
+    question: "Charles forgets to dot his i's ........ he writes fast.",
+    correct: 'because',
+    answer_parts: [
+      { label: 'Conjonction correcte', answer: 'because' },
+      { label: 'Raison', answer: 'he writes fast' },
+    ],
+    points: 4,
+  };
+
+  it('asks each answer once instead of the blank twice', () => {
+    // Compiling both gave the blank in the sentence AND a field below asking
+    // the same thing, with marks split three ways for two real answers.
+    const q = compileQuestion(raw, { subject: 'Anglais' });
+    expect(Object.keys(q.widgets)).toEqual(['step1', 'step2']);
+    expect(gradeQuestion(q, { step1: 'because', step2: 'he writes fast' }).earned).toBe(4);
+  });
+
+  it('matches a letter key against the part that spells it out', () => {
+    // The blank is keyed "c"; the part reads "c) flew".
+    const q = compileQuestion(
+      { ...raw, correct: 'c', answer_parts: [{ answer: 'c) flew' }, { answer: 'passé simple' }] },
+      { subject: 'Anglais' },
+    );
+    expect(Object.keys(q.widgets)).toEqual(['step1', 'step2']);
+  });
+
+  it('keeps the blank when the parts are about something else', () => {
+    const q = compileQuestion(
+      { ...raw, answer_parts: [{ answer: 'une autre idée' }, { answer: 'et encore une' }] },
+      { subject: 'Anglais' },
+    );
+    expect(Object.keys(q.widgets)).toEqual(['blank1', 'step1', 'step2']);
+  });
+
+  it('does not let a one-letter blank swallow an unrelated part', () => {
+    // "a" appears inside "la maison", but the part does not START with it.
+    const q = compileQuestion(
+      { type: 'fill_blank', question: 'Voici ____ .', correct: 'a', points: 2,
+        answer_parts: [{ answer: 'la maison' }, { answer: 'autre chose' }] },
+      { subject: 'Anglais' },
+    );
+    expect(Object.keys(q.widgets)).toContain('blank1');
+  });
+});

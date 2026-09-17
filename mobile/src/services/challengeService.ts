@@ -13,7 +13,7 @@
  */
 
 import { Share } from 'react-native';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where, Timestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { getReferralCode } from './referralService';
 
@@ -134,6 +134,54 @@ export async function getChallenge(code: string): Promise<Challenge | null> {
   } catch (err) {
     console.error('[Challenge] getChallenge error:', err);
     return null;
+  }
+}
+
+/** Read one Firestore challenge doc into a Challenge. */
+function toChallenge(id: string, d: any): Challenge {
+  const ms = (v: any) => (v instanceof Timestamp ? v.toMillis() : Number(v) || 0);
+  return {
+    code: id,
+    challengerUid: d.challengerUid,
+    challengerName: d.challengerName ?? null,
+    categoryId: d.categoryId,
+    questionIdxs: Array.isArray(d.questionIdxs) ? d.questionIdxs : [],
+    total: Number(d.total) || 0,
+    challengerScore: Number(d.challengerScore) || 0,
+    createdAt: ms(d.createdAt),
+    expiresAt: ms(d.expiresAt),
+    opponent: d.opponent
+      ? { uid: d.opponent.uid, name: d.opponent.name ?? null, score: Number(d.opponent.score) || 0, playedAt: ms(d.opponent.playedAt) }
+      : null,
+    status: d.status === 'played' ? 'played' : 'open',
+  };
+}
+
+/**
+ * The duels YOU sent, newest first.
+ *
+ * A duel used to run one way: you shared a link and never learned what
+ * happened unless you re-opened your own link. The rule for this query is
+ * scoped to challengerUid == your uid, so the `where` below is not a filter
+ * for convenience — drop it and Firestore rejects the whole query.
+ *
+ * Returns [] rather than throwing when the rules or the composite index are
+ * not deployed yet, so the screen simply shows nothing instead of erroring.
+ */
+export async function listMyChallenges(max = 20): Promise<Challenge[]> {
+  const user = auth.currentUser;
+  if (!user) return [];
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'challenges'),
+      where('challengerUid', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(max),
+    ));
+    return snap.docs.map((d) => toChallenge(d.id, d.data()));
+  } catch (err) {
+    console.error('[Challenge] listMyChallenges error:', err);
+    return [];
   }
 }
 
