@@ -222,3 +222,80 @@ and `review.ts` already exists to schedule one.
 3. Partial credit per step.
 4. Derive per-question topics, so results say what to practise.
 5. Then the layout work in Parts I and II.
+
+---
+
+# Part IV — what to take from Khan's Perseus
+
+[Khan/perseus](https://github.com/Khan/perseus) is Khan Academy's exercise
+renderer and editor. **MIT licensed**, monorepo, published as `perseus`,
+`perseus-editor`, `perseus-core`, `perseus-linter`, `perseus-score` and
+`math-input`. Khan states it is not accepting external contributions.
+
+## What we cannot do
+
+**Adopt it wholesale.** Perseus is a React *web* renderer; there is no React
+Native support. More decisively, its questions are authored as Perseus JSON
+with widgets embedded in an extended Markdown — adopting it means re-authoring
+**9,426 questions** into that format. That is not a migration, it is a rewrite
+of the entire corpus.
+
+(The web app is React, so Perseus *could* run there, and mobile already renders
+figures through a WebView — so a WebView-hosted renderer is technically open.
+It still does not solve the authoring problem.)
+
+## What is worth taking
+
+### 1. Inline widgets in the question text — the architecture, not the code
+
+Perseus embeds interactive widgets *inside* the markdown of the question rather
+than appending inputs below it. This is exactly the shape asked for: the field
+belongs in the sentence. Our 619 mid-sentence blanks and 903 multi-blank
+questions are the same problem Perseus solved, and its answer is the right one:
+**the question body is a document with holes, and each hole is a graded widget.**
+
+We do not need their renderer to adopt their model. `BLANK_RE` already splits our
+text; making each split point a *typed widget* rather than a plain field is a
+small step with a large payoff, because it generalises: a hole can be a text
+field, a numeric field with tolerance, or a dropdown, and the grader treats them
+uniformly.
+
+### 2. The validation / scoring split
+
+Perseus separates *validation* (is this input well-formed?) from *scoring* (is it
+right?) — `perseus-score` is a distinct package. Our grading is one function in
+`shared/examUtils` that does both at once, which is part of why unfair marking is
+hard to reason about: "empty", "malformed" and "wrong" all come back as `false`.
+Splitting them lets us tell a student "that is not a number" instead of marking
+them incorrect, and it is a refactor of our own code, not an import.
+
+### 3. `numeric-input` semantics
+
+Perseus's numeric input carries tolerance, significant figures and units as
+first-class answer properties. That is precisely the gap Part III identified for
+our 366 numeric answers, where "3,14 m" and "3.14m" must both pass. Worth
+reimplementing the semantics; no dependency required.
+
+### 4. The widget catalogue as a menu of formats
+
+Beyond radio and numeric input, Perseus ships **sorter, orderer, matcher,
+categorizer, matrix and interactive-graph**. These are the answer to "easy to
+grade but challenging enough to learn": ordering steps of a derivation, matching
+terms to definitions and categorising examples all mark exactly while demanding
+real recall. We have 93 matching questions and nothing else of this kind — and
+our 19,041 authored steps would make an *ordering* exercise almost free to
+generate from content that already exists.
+
+### 5. `math-input`
+
+Khan's MathQuill-based keypad is a mature mobile math input. Ours is a row of
+character chips. This is the one place where taking the actual package is worth
+evaluating — though it is React DOM, so on mobile it would have to live in the
+same WebView pattern we already use for figures.
+
+## Recommendation
+
+Take the **model**, not the dependency: holes-in-a-document, typed widgets,
+validation split from scoring, and numeric semantics with tolerance and units.
+Then add **ordering** as a new format, because it is the cheapest new question
+type we can build — the steps are already written.
