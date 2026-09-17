@@ -38,7 +38,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { fetchCatalogIndex } from '../utils/examCatalog';
-import { normalizeSubject } from '../utils/examUtils';
+import { normalizeSubject, examDisplayTitle } from '../utils/examUtils';
 import { loadAllExamResultSummaries } from './examResults';
 import { loadAppData } from './dataService';
 import { TRACK_COEFFICIENTS, TRACKS, TRACK_LEVEL } from '../config/trackConfig';
@@ -371,7 +371,11 @@ export function buildTasksFromExams(
       coefficient: coeff,
       priority: Math.round(priority * 100) / 100,
       topics: exam.topics || [],
-      examTitle: exam.exam_title || '',
+      // The raw `exam_title` is ministry letterhead — "MINISTÈRE DE L'ÉDUCATION
+      // NATIONALE ET DE LA FORMATION…" — so a plan listing six Chimie papers
+      // showed six identical, meaningless rows. examDisplayTitle composes
+      // "Chimie · 2024" instead, and already knows this letterhead by sight.
+      examTitle: examDisplayTitle(exam, normalizeSubject(exam.subject ?? '') || 'Examen'),
       level: exam.level || '',
       year: exam.year || '',
       status,

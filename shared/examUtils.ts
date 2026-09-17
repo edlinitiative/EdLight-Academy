@@ -505,8 +505,11 @@ export function composeExamTitle(parts: any) {
   const out = [subjectDisplayName(subject) || 'Examen'];
   // Prefer the real topic; otherwise fall back to a clean session-type label
   // ("Bac permanent", "Sujet type") rather than leaving just "Subject · Year".
+  // Middot, not an em-dash: the composed title already uses ' · ' for its
+  // chips, so one separator throughout reads cleaner — and em-dashes are the
+  // one punctuation mark Ted has objected to repeatedly.
   const subtitle = topic || examTypeLabel(examType);
-  if (subtitle) out.push('—', subtitle);
+  if (subtitle) out.push('·', subtitle);
 
   const chips = [];
   if (series) chips.push(series);
