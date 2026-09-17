@@ -130,7 +130,12 @@ export default function CalculGame({
   const okDisabled = input === '' || input === '-';
 
   return (
-    <View className="flex-1 px-4 pt-3" style={{ backgroundColor: colors.bg }}>
+    // Column layout: HUD and timer at the top, the problem taking the free
+    // space in the middle, keypad and actions anchored at the BOTTOM. It was
+    // all top-packed, which left a third of a tall phone empty below the
+    // buttons and put the keypad out of thumb reach ("fix the layout and
+    // positioning").
+    <View className="flex-1 px-4 pt-3 pb-4" style={{ backgroundColor: colors.bg }}>
       {/* HUD */}
       <View className="flex-row items-center justify-between mb-2">
         <View className="flex-row items-center gap-1.5">
@@ -155,6 +160,9 @@ export default function CalculGame({
       <View
         className="px-5 py-6 mt-4 flex-row items-center justify-center gap-3"
         style={{
+          // Absorbs the slack so nothing is stranded at the top of a tall phone.
+          flexGrow: 1,
+          maxHeight: 220,
           borderRadius: radius.hero,
           backgroundColor: colors.surface,
           borderWidth: 2,
@@ -207,7 +215,7 @@ export default function CalculGame({
         ))}
       </View>
 
-      {/* Actions */}
+      {/* Actions — last child, so they rest on the bottom edge. */}
       <View className="flex-row gap-3 mt-4">
         <TouchableOpacity
           onPress={() => advance(false)}
