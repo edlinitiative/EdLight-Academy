@@ -68,7 +68,7 @@
           "image": "./assets/splash.png",
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF",
-          "imageWidth": 140,
+          "imageWidth": 98,
           "dark": {
             "image": "./assets/splash-dark.png",
             "backgroundColor": "#0b1220"
