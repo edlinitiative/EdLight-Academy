@@ -19,6 +19,7 @@ import { useStreak } from '../../hooks/useStreak';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import DailyChallengeBanner from './DailyChallengeBanner';
 import DuelResults from './DuelResults';
+import SchoolRace from '../trivia/SchoolRace';
 import Leaderboard from '../Leaderboard';
 import { Skeleton } from '../StateViews';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
@@ -327,6 +328,13 @@ export default function JeuxHub({ onSelectGame, onStartTrivia, onStartDaily, onR
           {/* What came back from the duels you sent — renders nothing until
               an opponent has actually played one. */}
           <DuelResults isCreole={isCreole} onRematch={onRematch} />
+
+          {/* The school race, for everyone — you do not have to be playing to
+              care which school is winning, and watching it is what makes
+              someone start. */}
+          <View className="px-4 pb-3">
+            <SchoolRace isCreole={isCreole} />
+          </View>
 
           {/* Jeu de la semaine — thin strip (was a tall hero card). */}
           {featured && (

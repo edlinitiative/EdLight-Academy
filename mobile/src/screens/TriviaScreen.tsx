@@ -25,6 +25,10 @@ import { success, warn, select, tapMedium, tapLight } from '../utils/haptics';
 import { useReduceMotion } from '../utils/motion';
 import { shuffleAligned } from '../utils/shuffleAligned';
 import PopIn from '../components/ui/PopIn';
+import StageEnter from '../components/trivia/StageEnter';
+import ScoreCounter from '../components/trivia/ScoreCounter';
+import CorrectFlash from '../components/trivia/CorrectFlash';
+import SchoolRace from '../components/trivia/SchoolRace';
 import QuizResultHero, { HeroButton, glass } from '../components/quiz/QuizResultHero';
 import { notifyLeaderboardRank } from '../services/notificationService';
 import { logAnswerEvent } from '../services/answerEventsService';
@@ -458,14 +462,39 @@ function RoundPicker({
 
 // ─── TriviaQuiz ───────────────────────────────────────────────────────────────
 
+/**
+ * The countdown ring, beating once a second when time is short.
+ *
+ * The arc already shrinks and reddens, but both are slow signals — a player
+ * reading the question does not glance up in time to notice either. A pulse is
+ * peripheral: it registers without being looked at, which is the whole job of a
+ * timer. It starts at five seconds, because before that the pressure is not
+ * real yet and a permanently beating ring is just noise.
+ */
 function TimerRing({ timeLeft }: { timeLeft: number }) {
   const colors = useColors();
+  const reduceMotion = useReduceMotion();
   const progress = timeLeft / 15;
   const fill = progress * CIRC;
 
   const color = timeLeft > 8 ? '#10b981' : timeLeft > 5 ? '#f59e0b' : '#ef4444';
 
+  const beat = useSharedValue(1);
+  useEffect(() => {
+    if (reduceMotion || timeLeft > 5 || timeLeft <= 0) {
+      beat.value = withTiming(1, { duration: 120 });
+      return;
+    }
+    beat.value = withSequence(
+      withTiming(1.12, { duration: 140, easing: Easing.out(Easing.quad) }),
+      withSpring(1, { damping: 9, stiffness: 300, mass: 0.6 }),
+    );
+  }, [timeLeft, reduceMotion, beat]);
+
+  const pulse = useAnimatedStyle(() => ({ transform: [{ scale: beat.value }] }));
+
   return (
+    <Animated.View style={pulse}>
     <Svg width={44} height={44} viewBox="0 0 120 120">
       {/* Track */}
       <Circle
@@ -490,6 +519,7 @@ function TimerRing({ timeLeft }: { timeLeft: number }) {
         origin="60, 60"
       />
     </Svg>
+    </Animated.View>
   );
 }
 
@@ -635,6 +665,9 @@ export function QuizPlayer({
   const [selected, setSelected] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [score, setScore] = useState(0);
+  // Consecutive correct answers in THIS round — drives how much light a right
+  // answer throws. Reset on a miss, so the build is something to protect.
+  const [run, setRun] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // The current selection, readable from the timeout path without the
@@ -696,8 +729,10 @@ export function QuizPlayer({
       if (wasCorrect) {
         success();
         setScore((s) => s + 1);
+        setRun((r) => r + 1);
       } else {
         warn();
+        setRun(0);
         if (questions[idx]) mistakesRef.current.push({ q: questions[idx], chosen: currentSelected });
       }
       // Crowd-difficulty logging (canonical FR stem so IDs match across langs).
@@ -722,8 +757,10 @@ export function QuizPlayer({
     if (correct) {
       success();
       setScore((s) => s + 1);
+      setRun((r) => r + 1);
     } else {
       warn();
+      setRun(0);
       mistakesRef.current.push({ q, chosen: selected });
     }
     if (q?.q) logAnswerEvent(q.q, correct);
@@ -757,7 +794,7 @@ export function QuizPlayer({
               {/* Live score badge */}
               <View className="flex-row items-center rounded-full px-2.5 py-1" style={{ gap: 4, backgroundColor: colors.azureSoft }}>
                 <Trophy color={colors.azure} size={13} />
-                <Text style={[typeScale.label, { color: colors.azure }]}>{score}</Text>
+                <ScoreCounter value={score} style={{ ...typeScale.label, color: colors.azure }} />
               </View>
             </View>
             {/* Slim brand-gradient progress bar */}
@@ -802,8 +839,8 @@ export function QuizPlayer({
         )}
 
         {/* Question card — lifted, subtle top→bottom surface gradient */}
+        <StageEnter playKey={idx} index={0} springy style={{ marginBottom: 16 }}>
         <View
-          className="mb-4"
           style={{
             borderRadius: radius.card,
             overflow: 'hidden',
@@ -821,12 +858,16 @@ export function QuizPlayer({
             <MathText text={questionText} />
           </LinearGradient>
         </View>
+        </StageEnter>
 
-        {/* Answer options — Kreyòl strings when the bank carries them */}
+        {/* Answer options — Kreyòl strings when the bank carries them.
+            The wash of light behind them fires only on a right answer, and
+            sits under the options so it never intercepts a tap. */}
         <View style={{ gap: 10 }}>
+          {confirmed && isCorrect ? <CorrectFlash playKey={idx} streak={run} /> : null}
           {displayOptions.map((opt, i) => (
+            <StageEnter key={i} playKey={idx} index={i + 1}>
             <AnswerOption
-              key={i}
               opt={opt}
               label={LETTER_LABELS[i] ?? String(i + 1)}
               isSelected={opt === selected}
@@ -836,6 +877,7 @@ export function QuizPlayer({
               colors={colors}
               reduceMotion={reduceMotion}
             />
+            </StageEnter>
           ))}
         </View>
 
@@ -1000,6 +1042,12 @@ function TriviaResults({
             onPress={onRetry}
             style={{ marginBottom: 10 }}
           />
+          {/* What that score did to the school race — the reason to play the
+              next round, shown at the one moment the player is looking. */}
+          <View style={{ marginBottom: 14 }}>
+            <SchoolRace isCreole={isCreole} compact />
+          </View>
+
           <HeroButton
             variant="solid"
             color="#22C55E"
