@@ -234,7 +234,12 @@ export default function ExamOverviewScreen() {
             {[slim?.year, langLabel].filter(Boolean).join(' · ') || t('EXAMEN OFFICIEL', 'EGZAMEN OFISYÈL')}
           </Text>
         </View>
-        <Text style={[displayScale.xl, { color: colors.ink }]}>{title}</Text>
+        {/* Back to the UI face. The serif suits a greeting ("Bonjour, Ted");
+            on a taxonomic title like "Culture Générale · Connaissances
+            Générales · 2026" it reads like a newspaper masthead, which is what
+            prompted "why this style?". Display type earns its place on short,
+            human lines — not on catalogue strings. */}
+        <Text style={[typeScale.display, { color: colors.ink }]}>{title}</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
           {diff ? <Chip label={t(diff.fr, diff.ht)} /> : null}
           {tracks.map((code) => <Chip key={code} label={code} />)}

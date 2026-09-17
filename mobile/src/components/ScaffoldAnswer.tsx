@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MathText from './MathText';
 import useStore from '../contexts/store';
@@ -198,6 +198,10 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
     onChange(next.some((v) => v.trim()) ? JSON.stringify({ scaffold: next }) : '');
   };
 
+  // Which blank the keypad types into. Defaults to the first mathy one so the
+  // keypad is useful before anything is tapped.
+  const [focused, setFocused] = useState(0);
+
   const displayText = useMemo(
     () => markScaffoldText(String(question?.scaffold_text ?? '')),
     [question?.scaffold_text],
@@ -294,10 +298,14 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
                 })}
               </View>
             ) : (
-              // Free input, with math chips + live preview when mathy
+              // Free input. The math keypad is NOT here: one keypad per blank
+              // meant three identical toolbars stacked down a three-part
+              // question ("what's all this?", TestFlight 2026-09-17). A single
+              // keypad below, bound to whichever field has focus, does the same
+              // work without repeating itself.
               <View style={{ gap: 8 }}>
-                {mathy ? <MathChips onInsert={(c) => setBlank(i, current + c)} /> : null}
                 <TextInput
+                  onFocus={() => setFocused(i)}
                   style={{
                     backgroundColor: colors.surface,
                     borderWidth: 1,
@@ -321,6 +329,11 @@ export default function ScaffoldAnswer({ question, value, onChange, mathMode = f
           </View>
         );
       })}
+
+      {/* ONE keypad for the whole question, typing into the focused blank. */}
+      {mathMode ? (
+        <MathChips onInsert={(c) => setBlank(focused, (values[focused] ?? '') + c)} />
+      ) : null}
     </View>
   );
 }

@@ -114,8 +114,8 @@ describe('label helpers', () => {
 describe('normalizeExamTitle — one-line title (cover / preview)', () => {
   it('falls back to a session-type label instead of repeating the year', () => {
     expect(normalizeExamTitle({ subject: 'SVT', year: 'modèle', exam_title: "EXAMENS DE FIN D'ÉTUDES SECONDAIRES TEXTE MODÈLE SÉRIE : SVT" }))
-      .toBe('SVT — Sujet type');
+      .toBe('SVT · Sujet type');
     expect(normalizeExamTitle({ subject: 'Chimie', year: '2016', exam_title: 'BACCALAURÉAT SESSION ORDINAIRE JUIN 2016 CHIMIE Polyamide:SR' }))
-      .toBe('Chimie — Polyamide · Juin 2016');
+      .toBe('Chimie · Polyamide · Juin 2016');
   });
 });

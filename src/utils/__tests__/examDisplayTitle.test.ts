@@ -32,13 +32,15 @@ describe('looksLikeExamBoilerplate', () => {
 describe('examDisplayTitle', () => {
   it('turns the reported letterhead into a readable title', () => {
     const title = examDisplayTitle(REPORTED_EXAM);
-    expect(title).toBe('Physique — Sujet type · SES · 2025');
+    expect(title).toBe('Physique · Sujet type · SES · 2025');
     // The point of the whole exercise: it fits on a line.
     expect(title.length).toBeLessThan(60);
   });
 
   it('prefers an already-enriched _title from buildExamIndex', () => {
     // The browse path enriches; the single-exam path does not. Both must work.
+    // Passed through verbatim: a stored title is data we did not compose, so
+    // its own separator is preserved rather than normalized.
     expect(examDisplayTitle({ ...REPORTED_EXAM, _title: 'Physique — Ondes · 2025' }))
       .toBe('Physique — Ondes · 2025');
   });
@@ -46,7 +48,7 @@ describe('examDisplayTitle', () => {
   it('ignores an _title that is itself letterhead', () => {
     // Guards the case where the enrichment ran but produced nothing better.
     expect(examDisplayTitle({ ...REPORTED_EXAM, _title: REPORTED }))
-      .toBe('Physique — Sujet type · SES · 2025');
+      .toBe('Physique · Sujet type · SES · 2025');
   });
 
   it('falls back rather than rendering an empty heading', () => {
@@ -61,7 +63,7 @@ describe('displayStoredExamTitle', () => {
     // Attempts written before this fix hold the raw string; fixing the render
     // path alone would never reach them.
     expect(displayStoredExamTitle(REPORTED, REPORTED_EXAM))
-      .toBe('Physique — Sujet type · SES · 2025');
+      .toBe('Physique · Sujet type · SES · 2025');
   });
 
   it('re-derives from the stored string alone when the exam is gone', () => {

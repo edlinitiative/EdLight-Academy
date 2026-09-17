@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-import { Play, Zap, Target, Brain, History, ArrowRight } from 'lucide-react-native';
+import { ArrowRight } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useStore from '../contexts/store';
 import { useTheme, typeScale, courseTint } from '../theme/theme';
@@ -12,8 +12,7 @@ import PressableScale from './ui/PressableScale';
 import { TabParamList } from '../navigation/TabNavigator';
 import { tapLight } from '../utils/haptics';
 import { loadExamAttemptDraft } from '../services/examAttempts';
-import { examSubjectIcon } from '../utils/subjectMeta';
-import { normalizeSubject, subjectDisplayName } from '../utils/examUtils';
+import { subjectDisplayName } from '../utils/examUtils';
 
 type Nav = BottomTabNavigationProp<TabParamList>;
 
@@ -79,7 +78,6 @@ export default function NextStepCard({
 
   const accent = step.kind === 'lesson' ? courseTint(step.courseColor) : colors.azure;
 
-  let Icon = Play;
   let eyebrow = '';
   let title = '';
   let meta: string | null = null;
@@ -104,7 +102,6 @@ export default function NextStepCard({
 
   switch (step.kind) {
     case 'welcome-back':
-      Icon = History;
       eyebrow = t('Tu nous as manqué ! 👋', 'Nou manke w! 👋');
       title = step.resume.title;
       meta = step.resume.subtitle ?? null;
@@ -112,9 +109,6 @@ export default function NextStepCard({
       onPress = () => resumeActivity(step.resume);
       break;
     case 'resume-exam': {
-      // The paper's own subject glyph, not a generic bullseye.
-      const examSubject = normalizeSubject(step.resume.subtitle ?? step.resume.title ?? '');
-      Icon = examSubjectIcon(examSubject);
       eyebrow = t('Examen en cours', 'Egzamen ou an ap tann ou');
       title = subjectDisplayName(step.resume.title);
       // Lead with how far in they are; fall back to the paper's own subtitle.
@@ -128,7 +122,6 @@ export default function NextStepCard({
       break;
     }
     case 'review':
-      Icon = Brain;
       eyebrow = t("Pour toi aujourd'hui", 'Pou ou jodi a');
       title = t('Revois tes erreurs', 'Revize erè ou yo');
       meta = `${step.dueCount} ${t('questions', 'kesyon')} · ~${Math.max(1, Math.ceil(step.dueCount / 2))} min`;
@@ -136,7 +129,6 @@ export default function NextStepCard({
       onPress = onOpenReview;
       break;
     case 'lesson': {
-      Icon = step.action === 'watch' ? Play : step.action === 'test' ? Target : Zap;
       eyebrow = step.courseName;
       title = step.lessonTitle || step.unitTitle || step.courseName;
       const parts: string[] = [];
@@ -171,17 +163,10 @@ export default function NextStepCard({
       <View style={{ padding: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {/* With real imagery above, a tinted icon tile is just clutter. */}
-        {!showThumb && (
-          <View
-            style={{
-              width: 44, height: 44, borderRadius: radius.tile,
-              backgroundColor: accent + '18',
-              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}
-          >
-            <Icon color={accent} size={20} />
-          </View>
-        )}
+        {/* No icon tile. Ted has now asked for this treatment to go three
+            times — the Examens landing rows, the MissionCard eyebrow, and here
+            — and he is right that a tinted square repeated beside every title
+            is filler: the eyebrow already says what kind of thing this is. */}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[typeScale.overline, { color: accent, marginBottom: 2 }]} numberOfLines={1}>
             {eyebrow}
