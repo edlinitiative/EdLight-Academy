@@ -48,19 +48,23 @@ describe('finding a school someone is about to re-add', () => {
 
 describe('before adding a new school', () => {
   it('catches the duplicate someone is about to create', () => {
-    expect(likelyDuplicate(LIST, 'college marie anne', 'Delmas')?.name).toBe('Collège Marie-Anne');
-    expect(likelyDuplicate(LIST, 'Saint-Louis de Gonzague', 'Delmas')?.name)
+    expect(likelyDuplicate(LIST, 'college marie anne')?.name).toBe('Collège Marie-Anne');
+    expect(likelyDuplicate(LIST, 'Saint-Louis de Gonzague')?.name)
       .toBe('Institution Saint-Louis de Gonzague');
   });
 
   it('stays quiet when it is genuinely a different school', () => {
     // Offering "did you mean?" for a loose match trains people to dismiss it,
     // and then it fails for the cases that matter.
-    expect(likelyDuplicate(LIST, 'Lycée National de Pétion-Ville', 'Pétion-Ville')).toBeNull();
+    expect(likelyDuplicate(LIST, 'Lycée National de Pétion-Ville')).toBeNull();
   });
 
-  it('does not match across communes', () => {
-    expect(likelyDuplicate(LIST, 'Collège Marie-Anne', 'Cap-Haïtien')).toBeNull();
+  it('catches it wherever the student lives', () => {
+    // There is one Saint-Louis de Gonzague in Haiti, and its students live in
+    // Delmas, Tabarre, Carrefour-Feuilles, Laboule and Pétion-Ville. Narrowing
+    // by commune would let each of them add the school again.
+    const gonzague = LIST.find((x) => x.name.includes('Gonzague'))!;
+    expect(likelyDuplicate(LIST, 'Institution Saint Louis de Gonzague')).toEqual(gonzague);
   });
 });
 
@@ -76,5 +80,16 @@ describe('merging the seed with schools students added', () => {
     const merged = mergeSchools(seed, added);
     expect(merged).toHaveLength(1);
     expect(merged[0].commune).toBe('Cap-Haïtien');
+  });
+});
+
+describe('spellings of one school', () => {
+  it('matches across a ligature and a hyphen', () => {
+    // "Institution du Sacré-Cœur" and "Institution du Sacre Coeur" are one
+    // school; the ligature kept them apart until normalizeName folded it.
+    const list = [s('Institution du Sacré-Cœur')];
+    expect(searchSchools(list, 'Institution du Sacre Coeur')[0]).toBeDefined();
+    expect(likelyDuplicate(list, 'institution du sacre coeur')?.name)
+      .toBe('Institution du Sacré-Cœur');
   });
 });

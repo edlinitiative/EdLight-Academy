@@ -150,3 +150,14 @@ describe('rankTeams — a school is scored on its best five', () => {
     expect(teamStandingFor(standings, null)).toBeNull();
   });
 });
+
+describe('normalizeName — ligatures', () => {
+  it('groups Cœur with Coeur', () => {
+    // NFD does not decompose a ligature, so these two spellings of one school
+    // were ranked as two schools.
+    // normalizeName keeps hyphens on purpose — "Port-au-Prince" needs them —
+    // so compare the ligature alone; schoolKey is what drops punctuation.
+    expect(normalizeName('Sacré-Cœur')).toBe(normalizeName('Sacre-Coeur'));
+    expect(normalizeName('Sœurs Salésiennes')).toBe('soeurs salesiennes');
+  });
+});

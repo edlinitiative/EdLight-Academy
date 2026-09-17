@@ -50,6 +50,11 @@ export function normalizeName(raw?: string): string {
   return raw
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '') // strip diacritics
+    // Ligatures are single characters, so NFD leaves them alone and
+    // "Institution du Sacré-Cœur" never groups with "Institution du Sacré
+    // Coeur" — two spellings of one school, ranked separately.
+    .replace(/œ/gi, 'oe')
+    .replace(/æ/gi, 'ae')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
