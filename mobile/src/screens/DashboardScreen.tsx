@@ -29,6 +29,7 @@ import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import NextStepCard from '../components/NextStepCard';
 import TournamentCard from '../components/TournamentCard';
+import StreakFlame from '../components/celebration/StreakFlame';
 import ReviewCard from '../components/ReviewCard';
 import ReviewSession from '../components/ReviewSession';
 import { computeNextStep } from '../utils/nextStep';
@@ -63,11 +64,14 @@ function formatXp(n: number): string {
 // ---------------------------------------------------------------------------
 
 /** One cell of the quiet stats strip at the bottom of the page. */
-function StatCell({ value, label }: { value: string | number; label: string }) {
+function StatCell({ value, label, glyph }: { value: string | number; label: string; glyph?: React.ReactNode }) {
   const colors = useColors();
   return (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-      <Text style={[typeScale.titleSm, { color: colors.ink, fontSize: 17 }]} maxFontSizeMultiplier={1.3}>{value}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        {glyph}
+        <Text style={[typeScale.titleSm, { color: colors.ink, fontSize: 17 }]} maxFontSizeMultiplier={1.3}>{value}</Text>
+      </View>
       <Text style={[typeScale.caption, { color: colors.faint }]} numberOfLines={1}>{label}</Text>
     </View>
   );
@@ -386,7 +390,20 @@ export default function DashboardScreen() {
           paddingVertical: 14,
         }}
       >
-        <StatCell value={streak?.currentStreak ?? 0} label={t('Jours de série', 'Jou seri')} />
+        <StatCell
+          value={streak?.currentStreak ?? 0}
+          label={t('Jours de série', 'Jou seri')}
+          // Alive only while the streak is running: a lit flame next to a zero
+          // would be celebrating nothing. `leapKey` fires one leap when the
+          // count changes.
+          glyph={(
+            <StreakFlame
+              size={20}
+              alive={(streak?.currentStreak ?? 0) > 0}
+              leapKey={streak?.currentStreak ?? 0}
+            />
+          )}
+        />
         <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.hairline }} />
         <StatCell value={formatXp(weeklyXp)} label={t('XP semaine', 'XP semèn')} />
         <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.hairline }} />
