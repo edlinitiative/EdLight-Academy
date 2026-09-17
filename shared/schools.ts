@@ -30,7 +30,49 @@ export interface School {
 
 /** Institution types, which people include or omit interchangeably. */
 const TYPE_PREFIX =
-  /^(coll?ege|lycee|institution|institut|ecole|centre|academie|academy|petit seminaire|seminaire|externat|juvenat|foyer|school)\s+/;
+  /^(nouveau |petit |grand )?(coll?ege|lycee|institution|institut|ecole|centre|academie|academy|seminaire|externat|juvenat|foyer|school)\s+/;
+
+/**
+ * Types that mean the same thing. Everything else is a real distinction:
+ * a school called an École is not the one called an Institution, because its
+ * own students never write it the other way. "Ecole du Sacré-Cœur des Filles
+ * de Marie" and "Institution du Sacré-Cœur" are two schools, not one.
+ */
+const TYPE_FAMILY: Record<string, string> = {
+  college: 'college',
+  lycee: 'lycee',
+  institution: 'institution',
+  institut: 'institution',
+  ecole: 'ecole',
+  school: 'ecole',
+  centre: 'centre',
+  academie: 'academie',
+  academy: 'academie',
+  seminaire: 'seminaire',
+  externat: 'externat',
+  juvenat: 'juvenat',
+  foyer: 'foyer',
+};
+
+/** The kind of school a name declares, or null when it does not say. */
+export function schoolType(raw: string): string | null {
+  const m = TYPE_PREFIX.exec(schoolKey(raw));
+  return m ? (TYPE_FAMILY[m[2]] ?? m[2]) : null;
+}
+
+/**
+ * True when two names declare DIFFERENT kinds of school.
+ *
+ * A name with no type at all is not a conflict — the student simply left it
+ * off, which is the commonest way a duplicate gets created ("Dominique Savio"
+ * not finding "Collège Dominique Savio"). Only two stated, different types
+ * rule a match out.
+ */
+function typesConflict(a: string, b: string): boolean {
+  const ta = schoolType(a);
+  const tb = schoolType(b);
+  return !!ta && !!tb && ta !== tb;
+}
 
 /** Words that carry no identity: "Collège DE la Sainte Famille". */
 const FILLER = /\b(de|du|des|la|le|les|d|l|et|saint|sainte)\b/g;
@@ -74,6 +116,7 @@ function containsAllWords(haystack: string, needle: string): boolean {
 export function matchScore(school: School, query: string): number {
   const q = schoolKey(query);
   if (!q) return 0;
+  if (typesConflict(school.name, query)) return 0;
   const name = schoolKey(school.name);
   const qc = core(query);
   const nc = core(school.name);
