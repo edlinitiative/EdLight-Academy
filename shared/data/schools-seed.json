@@ -18,13 +18,18 @@
   "`applicants` is how many applications named the school; the picker shows",
   "the most-attended first.",
   "",
+  "Two entries name the same school twice, once with the place written out",
+  "(« de Pétion-ville », « de Turgeau »); they are merged. École Immaculée",
+  "Conception de Trou-du-Nord is NOT merged with École Immaculée Conception:",
+  "Trou-du-Nord is in the Nord-Est, not the same school.",
+  "",
   "Lives under shared/ because Metro only watches that folder — both the web",
   "app and the mobile app import this same file."
  ],
  "schools": [
   {
    "name": "Collège Dominique Savio",
-   "applicants": 23
+   "applicants": 24
   },
   {
    "name": "Collège Marie Dominique Mazzarello",
@@ -59,6 +64,10 @@
    "applicants": 7
   },
   {
+   "name": "Institution du Sacré Coeur",
+   "applicants": 7
+  },
+  {
    "name": "Académie Chrétienne",
    "applicants": 5
   },
@@ -72,10 +81,6 @@
   },
   {
    "name": "Ecole Immaculée Conception",
-   "applicants": 4
-  },
-  {
-   "name": "Institution du Sacré Coeur",
    "applicants": 4
   },
   {
@@ -99,19 +104,15 @@
    "applicants": 3
   },
   {
-   "name": "Institution du Sacré-Cœur de Turgeau",
-   "applicants": 3
-  },
-  {
    "name": "Institution Louis Chauvet",
    "applicants": 3
   },
   {
-   "name": "Institution mixte hans muselaire",
+   "name": "Institution mixte Hibiscus",
    "applicants": 3
   },
   {
-   "name": "Institution mixte Hibiscus",
+   "name": "Institution mixte hans muselaire",
    "applicants": 3
   },
   {
@@ -127,6 +128,14 @@
    "applicants": 2
   },
   {
+   "name": "College Mixte Lesly Docteur",
+   "applicants": 2
+  },
+  {
+   "name": "College methodiste de frères",
+   "applicants": 2
+  },
+  {
    "name": "Collège Canapé-vert",
    "applicants": 2
   },
@@ -136,14 +145,6 @@
   },
   {
    "name": "Collège Marie Dominique Mazarello",
-   "applicants": 2
-  },
-  {
-   "name": "College methodiste de frères",
-   "applicants": 2
-  },
-  {
-   "name": "College Mixte Lesly Docteur",
    "applicants": 2
   },
   {
@@ -159,27 +160,11 @@
    "applicants": 2
   },
   {
-   "name": "École baha'ie anis zunuzi",
-   "applicants": 2
-  },
-  {
-   "name": "École Congréganiste Sainte-Thérèse de Pétion-Ville",
-   "applicants": 2
-  },
-  {
    "name": "Ecole du Sacré-Cœur dirrigée par les Filles de Marie",
    "applicants": 2
   },
   {
-   "name": "École Marc sadar de Girardeau",
-   "applicants": 2
-  },
-  {
-   "name": "École Mixte La Providence",
-   "applicants": 2
-  },
-  {
-   "name": "École Sainte Trinité",
+   "name": "INSTITUTION PERE GIRARD",
    "applicants": 2
   },
   {
@@ -203,7 +188,7 @@
    "applicants": 2
   },
   {
-   "name": "Institution la Pléiade des Gonaives (IPG)",
+   "name": "Institution Marie Régine des soeurs salésiennes de Thorlande",
    "applicants": 2
   },
   {
@@ -211,15 +196,11 @@
    "applicants": 2
   },
   {
-   "name": "Institution Marie Régine des soeurs salésiennes de Thorlande",
+   "name": "Institution la Pléiade des Gonaives (IPG)",
    "applicants": 2
   },
   {
    "name": "Institution mixte les frères Rogeste",
-   "applicants": 2
-  },
-  {
-   "name": "INSTITUTION PERE GIRARD",
    "applicants": 2
   },
   {
@@ -231,23 +212,35 @@
    "applicants": 2
   },
   {
-   "name": "College coeur de Jesus",
-   "applicants": 1
+   "name": "École Congréganiste Sainte-Thérèse de Pétion-Ville",
+   "applicants": 2
+  },
+  {
+   "name": "École Marc sadar de Girardeau",
+   "applicants": 2
+  },
+  {
+   "name": "École Mixte La Providence",
+   "applicants": 2
+  },
+  {
+   "name": "École Sainte Trinité",
+   "applicants": 2
+  },
+  {
+   "name": "École baha'ie anis zunuzi",
+   "applicants": 2
   },
   {
    "name": "College Diril Brutus",
    "applicants": 1
   },
   {
-   "name": "Collège Dominique Savio de Pétion-ville",
+   "name": "College Saint André",
    "applicants": 1
   },
   {
-   "name": "Collège Évangélique Bon Samaritain",
-   "applicants": 1
-  },
-  {
-   "name": "Collège la Providence des Cayes",
+   "name": "College coeur de Jesus",
    "applicants": 1
   },
   {
@@ -263,11 +256,15 @@
    "applicants": 1
   },
   {
-   "name": "Collège notre dame du perpétuel secours",
+   "name": "Collège Saint Martin de Tours",
    "applicants": 1
   },
   {
-   "name": "College Saint André",
+   "name": "Collège la Providence des Cayes",
+   "applicants": 1
+  },
+  {
+   "name": "Collège notre dame du perpétuel secours",
    "applicants": 1
   },
   {
@@ -275,7 +272,7 @@
    "applicants": 1
   },
   {
-   "name": "Collège Saint Martin de Tours",
+   "name": "Collège Évangélique Bon Samaritain",
    "applicants": 1
   },
   {
@@ -291,23 +288,7 @@
    "applicants": 1
   },
   {
-   "name": "École Congréganiste Christ-Roi Filles de Marie",
-   "applicants": 1
-  },
-  {
    "name": "Ecole du Sacré cœur dirigé par les filles de marie (FDM) Rue 2k",
-   "applicants": 1
-  },
-  {
-   "name": "École Immaculée Conception de Trou-du-Nord",
-   "applicants": 1
-  },
-  {
-   "name": "École mixte Academie Chrétienne",
-   "applicants": 1
-  },
-  {
-   "name": "École Soeur Etienne",
    "applicants": 1
   },
   {
@@ -319,11 +300,15 @@
    "applicants": 1
   },
   {
+   "name": "Haut-Du-Cap, Cap-Haitien, Haiti",
+   "applicants": 1
+  },
+  {
    "name": "Haïti croix des bouquets",
    "applicants": 1
   },
   {
-   "name": "Haut-Du-Cap, Cap-Haitien, Haiti",
+   "name": "INSTITUTION MIXTE FRÈRES DÉLIA",
    "applicants": 1
   },
   {
@@ -335,19 +320,7 @@
    "applicants": 1
   },
   {
-   "name": "Institution du SacréCoeur",
-   "applicants": 1
-  },
-  {
    "name": "Institution Mixte Frère Mathurin (IMFM)",
-   "applicants": 1
-  },
-  {
-   "name": "INSTITUTION MIXTE FRÈRES DÉLIA",
-   "applicants": 1
-  },
-  {
-   "name": "Institution mixte Saint-Jean Évangéliste",
    "applicants": 1
   },
   {
@@ -355,23 +328,23 @@
    "applicants": 1
   },
   {
-   "name": "Institution saint jean évangéliste de Jérémie",
-   "applicants": 1
-  },
-  {
    "name": "Institution Sainte Marguerite d'Youville",
    "applicants": 1
   },
   {
+   "name": "Institution du SacréCoeur",
+   "applicants": 1
+  },
+  {
+   "name": "Institution mixte Saint-Jean Évangéliste",
+   "applicants": 1
+  },
+  {
+   "name": "Institution saint jean évangéliste de Jérémie",
+   "applicants": 1
+  },
+  {
    "name": "Institutions Mixte de SOPUDEP",
-   "applicants": 1
-  },
-  {
-   "name": "institutions mixte saphir",
-   "applicants": 1
-  },
-  {
-   "name": "L’ouverture Cleary school",
    "applicants": 1
   },
   {
@@ -387,11 +360,15 @@
    "applicants": 1
   },
   {
+   "name": "Lycée Paul Eugène Magloire de quartier Morin",
+   "applicants": 1
+  },
+  {
    "name": "Lycée national de pétionville",
    "applicants": 1
   },
   {
-   "name": "Lycée Paul Eugène Magloire de quartier Morin",
+   "name": "L’ouverture Cleary school",
    "applicants": 1
   },
   {
@@ -424,6 +401,26 @@
   },
   {
    "name": "SANTO 25, CROIX-DES-BOUQUETS",
+   "applicants": 1
+  },
+  {
+   "name": "institutions mixte saphir",
+   "applicants": 1
+  },
+  {
+   "name": "École Congréganiste Christ-Roi Filles de Marie",
+   "applicants": 1
+  },
+  {
+   "name": "École Immaculée Conception de Trou-du-Nord",
+   "applicants": 1
+  },
+  {
+   "name": "École Soeur Etienne",
+   "applicants": 1
+  },
+  {
+   "name": "École mixte Academie Chrétienne",
    "applicants": 1
   }
  ]

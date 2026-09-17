@@ -93,3 +93,32 @@ describe('spellings of one school', () => {
       .toBe('Institution du Sacré-Cœur');
   });
 });
+
+describe('the kind of school is part of its name', () => {
+  const list = [
+    s('Institution du Sacré-Cœur'),
+    s('Ecole du Sacré-Cœur des Filles de Marie'),
+    s('Collège Dominique Savio'),
+  ];
+
+  it('does not match an École to an Institution', () => {
+    // A school called an Institution is never written "École" by its own
+    // students, so the type is part of the identity, not decoration.
+    expect(likelyDuplicate([list[0]], 'Ecole du Sacré-Cœur des Filles de Marie')).toBeNull();
+    expect(likelyDuplicate([list[1]], 'Institution du Sacré-Cœur')).toBeNull();
+    expect(searchSchools(list, 'Institution du Sacré-Cœur').map((x) => x.name))
+      .toEqual(['Institution du Sacré-Cœur']);
+  });
+
+  it('still matches a name typed without any type at all', () => {
+    // Leaving the type off is the commonest way a duplicate gets created —
+    // "Dominique Savio" not finding "Collège Dominique Savio" — so a missing
+    // type is not a conflict, only a different one is.
+    expect(searchSchools(list, 'Dominique Savio')[0].name).toBe('Collège Dominique Savio');
+    expect(likelyDuplicate(list, 'Sacré-Cœur')).not.toBeNull();
+  });
+
+  it('treats Institut and Institution as the same word', () => {
+    expect(searchSchools([s('Institut Saint-Ignace')], 'Institution Saint-Ignace')).toHaveLength(1);
+  });
+});
