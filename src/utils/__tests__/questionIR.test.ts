@@ -176,4 +176,48 @@ describe('splitKey — the separators the corpus actually uses', () => {
     // A single-blank key may legitimately contain a comma.
     expect(splitKey('Port-au-Prince, Haïti', 1)).toEqual(['Port-au-Prince, Haïti']);
   });
+
+  it('does not cut a number in half', () => {
+    // "2,4-Dinitrophénylhydrazine" is one reagent. Splitting on every comma
+    // gave three parts for two blanks, so the key was dropped entirely.
+    expect(splitKey('$C=O$, 2,4-Dinitrophénylhydrazine (DNPH)', 2))
+      .toEqual(['$C=O$', '2,4-Dinitrophénylhydrazine (DNPH)']);
+  });
+
+  it('reads "et" and "and" as separators, but only as whole words', () => {
+    expect(splitKey('propanal et propanone', 2)).toEqual(['propanal', 'propanone']);
+    expect(splitKey('homeless and nowhere', 2)).toEqual(['homeless', 'nowhere']);
+  });
+
+  it('returns null rather than inventing keys it cannot justify', () => {
+    // 49 questions write ONE answer for a two-blank sentence.
+    expect(splitKey('le méthane ($CH_4$)', 2)).toBeNull();
+  });
+});
+
+describe('a key that does not divide', () => {
+  const raw = {
+    type: 'fill_blank',
+    question: 'Le composé ______ a pour formule ______.',
+    correct: 'le méthane ($CH_4$)',
+    points: 2,
+  };
+
+  it('asks for the answer once instead of two blanks nobody can fill', () => {
+    // Splitting this key two ways produced two EMPTY answers, so the student
+    // could type the right thing and still be marked wrong.
+    const q = compileQuestion(raw, { subject: 'Chimie' });
+    expect(Object.keys(q.widgets)).toEqual(['answer']);
+    expect((q.widgets.answer as any).answer).toBe('le méthane ($CH_4$)');
+    expect(gradeQuestion(q, { answer: 'le méthane ($CH_4$)' }).allCorrect).toBe(true);
+  });
+
+  it('falls back to answer_parts when they line up with the blanks', () => {
+    const q = compileQuestion(
+      { ...raw, correct: '', answer_parts: [{ answer: 'méthane' }, { answer: 'CH4' }] },
+      { subject: 'Chimie' },
+    );
+    expect((q.widgets.blank1 as any).answer).toBe('méthane');
+    expect((q.widgets.blank2 as any).answer).toBe('CH4');
+  });
 });

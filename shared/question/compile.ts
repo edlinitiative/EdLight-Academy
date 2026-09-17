@@ -91,14 +91,20 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
     .map((p: any) => str(p?.answer))
     .filter(Boolean);
 
-  if (blankCount > 0) {
-    // Split the authored key across the blanks the same way the grader does.
-    const keys = splitKey(str(raw?.correct), blankCount) ?? [];
+  // Split the authored key across the blanks. The key may not divide: 49
+  // questions write ONE answer for a sentence with two blanks ("le méthane
+  // ($CH_4$)"), and answer_parts may not line up either.
+  const blankKeys = blankCount > 0
+    ? (splitKey(str(raw?.correct), blankCount)
+        ?? (partAnswers.length === blankCount ? partAnswers : null))
+    : null;
+
+  if (blankCount > 0 && blankKeys) {
     parts.forEach((segment, i) => {
       if (segment) prompt.push({ type: 'text', content: segment });
       if (i < blankCount) {
         const id = `blank${i + 1}`;
-        widgets[id] = widgetForAnswer(id, keys[i] ?? partAnswers[i] ?? '', { fuzzy });
+        widgets[id] = widgetForAnswer(id, blankKeys[i], { fuzzy });
         prompt.push({ type: 'widget', id });
       }
     });
@@ -168,17 +174,31 @@ export function compileQuestion(raw: any, ctx: { subject?: string; id?: string }
 }
 
 /**
- * Split an authored key across N blanks. The corpus separates with a comma
- * (702), semicolon (97), slash (20), pipe (2) or spaces (51) — and single-blank
- * keys legitimately contain commas, so a separator only counts when it yields
- * exactly one part per blank.
+ * Separators the corpus actually uses, in order of how unambiguous they are.
+ *
+ * A comma is only a separator when it does NOT sit between digits: chemistry
+ * writes "2,4-Dinitrophénylhydrazine" and French writes "3,14", and splitting
+ * those produced one part too many, so the key was dropped entirely.
+ *
+ * "et" / "and" are real separators here ("propanal et propanone") but only as
+ * whole words with space either side, so "complet" is never cut in half.
+ */
+const KEY_SEPARATORS = [/\|/, /;/, /,(?!\d)/, /\s+\/\s+/, /\s+et\s+/i, /\s+and\s+/i, /\s+&\s+/];
+
+/**
+ * Split an authored key across N blanks, or null when it does not divide
+ * cleanly. Null is a real answer, not a failure: 49 questions write a single
+ * answer for a two-blank sentence, and inventing two empty keys for them made
+ * the question impossible to get right.
+ *
+ * A separator only counts when it yields exactly one part per blank, because
+ * single-blank keys legitimately contain commas ("Port-au-Prince, Haïti").
  */
 export function splitKey(correct: string, blanks: number): string[] | null {
   const t = str(correct);
   if (!t || blanks < 2) return blanks === 1 && t ? [t] : null;
-  for (const sep of ['|', ';', ',', '/']) {
-    if (!t.includes(sep)) continue;
-    const p = t.split(sep).map((x) => x.trim()).filter(Boolean);
+  for (const re of KEY_SEPARATORS) {
+    const p = t.split(re).map((x) => x.trim()).filter(Boolean);
     if (p.length === blanks) return p;
   }
   const words = t.split(/\s+/).filter(Boolean);
