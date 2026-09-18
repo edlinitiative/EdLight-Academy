@@ -48,6 +48,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import {
   MAPPED_DEPARTMENTS,
   MAP_VIEWBOX,
+  MAP_WIDTH,
   buildMapLayers,
   crowdRadius,
   densityBounds,
@@ -186,16 +187,22 @@ export default function HaitiMap({
                   >
                     <circle cx={c.x} cy={c.y} r={10} vectorEffect="non-scaling-stroke" />
                   </g>
-                  {c.playerCount >= COUNT_THRESHOLD && (
-                    <text
-                      className="hmap__crowd-count"
-                      x={c.x + r + 7}
-                      y={c.y}
-                      dominantBaseline="central"
-                    >
-                      {nf.format(c.playerCount)}
-                    </text>
-                  )}
+                  {c.playerCount >= COUNT_THRESHOLD && (() => {
+                    // Ouanaminthe sits 20 units from the eastern edge; its
+                    // count would hang off the canvas. Flip it inboard.
+                    const flip = c.x + r + 40 > MAP_WIDTH;
+                    return (
+                      <text
+                        className="hmap__crowd-count"
+                        x={flip ? c.x - r - 7 : c.x + r + 7}
+                        y={c.y}
+                        textAnchor={flip ? 'end' : 'start'}
+                        dominantBaseline="central"
+                      >
+                        {nf.format(c.playerCount)}
+                      </text>
+                    );
+                  })()}
                 </g>
               );
             })}

@@ -31,7 +31,7 @@
 	--hmap-sea: #060E1C;
 	/* Five flat steps of azure over the ground, pre-mixed. Step 0 is bare
 	   land: "no data" is a different statement from "very few". */
-	--hmap-s0: #0C1626;
+	--hmap-s0: #101D33;
 	--hmap-s1: #0F2138;
 	--hmap-s2: #142F52;
 	--hmap-s3: #1A3F74;
@@ -134,12 +134,17 @@
 	font-size: 15px;
 	font-weight: 500;
 	letter-spacing: -0.02em;
+	/* A halo, not a box: the figure has to survive sitting on the brightest
+	   density step as well as on bare land. */
+	paint-order: stroke;
+	stroke: var(--hmap-ground);
+	stroke-width: 3;
+	stroke-linejoin: round;
 }
 
 /* In density the shading carries the value, so the discs step back to rings
    and let the fill through instead of stacking two encodings of one number. */
 .hmap--density .hmap__crowd-mark circle { fill-opacity: 0.1; stroke-opacity: 0.9; }
-.hmap--density .hmap__crowd-count { fill: var(--hmap-dim); }
 
 /* ── The named actors ───────────────────────────────────────────────────── */
 
@@ -192,9 +197,15 @@
  * map's working scale), opacity from nothing. Existing marks never re-run it,
  * because the element is keyed and only mounts once.
  */
+/*
+ * `backwards`, never `both`: a finished animation with a forwards fill keeps
+ * writing opacity:1 at animation priority and would quietly beat .is-receded,
+ * so the spotlight would dim nothing. Backwards holds the hidden state through
+ * the stagger delay and then hands the element back to the cascade.
+ */
 .hmap__enter,
 .hmap__school {
-	animation: hmap-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+	animation: hmap-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
 	transition: opacity 180ms linear;
 }
 
@@ -315,6 +326,9 @@
 	align-items: center;
 	gap: clamp(8px, 1.2vw, 16px);
 	margin-left: auto;
+	/* Wrap to its own line rather than overflowing the frame on a narrow
+	   stage — it is the last thing that should push the figure off screen. */
+	flex: none;
 }
 
 .hmap__legend-step {
@@ -413,7 +427,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.hmap__enter,
 	.hmap__school {
-		animation: hmap-fade 320ms linear both;
+		animation: hmap-fade 320ms linear backwards;
 	}
 
 	@keyframes hmap-fade {
