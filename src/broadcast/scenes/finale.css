@@ -1,0 +1,514 @@
+/*
+ * The finale — sequences 13, 14, 15, 17, 18, 19 and 20.
+ *
+ * Everything here inherits the palette declared on `.live` in src/pages/Live.css.
+ * Nothing redeclares a colour token: the champion screen and the board are the
+ * same programme, and a second palette drifts from the first within a month.
+ *
+ * Two rules constrain every declaration below.
+ *
+ * **Only transform and opacity animate.** These scenes play at the end of a
+ * tournament, on a laptop driving a projector, while a Firestore listener is
+ * still delivering the tail of the event feed. An animated `width` or `top`
+ * here would lay out the whole stage sixty times a second on the one screen
+ * nobody can afford to drop frames on. The wipes are `scaleX`, the reveals are
+ * `translateY`, and the bars that look like they grow are scaled, not resized.
+ *
+ * **Hairlines, not cards.** A rounded rectangle per statistic is a web app; a
+ * rule between statistics is a scoreboard. The superlatives board and the
+ * halftime grid are both built from 1px rules and whitespace, which is also
+ * what lets the names sit as large as they do.
+ */
+
+/* ── Shared finale furniture ─────────────────────────────────────────────── */
+
+.finale {
+	width: 100%;
+	display: grid;
+	gap: clamp(10px, 1.8vh, 22px);
+}
+
+.finale-mono {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.03em;
+}
+
+.finale-label {
+	font-size: clamp(10px, 0.85vw, 13px);
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--stage-dim, #7C8EAC);
+}
+
+.finale-value {
+	font-size: clamp(16px, 1.9vw, 30px);
+	font-weight: 700;
+	color: var(--stage-ink, #EEF3FB);
+	line-height: 1.1;
+}
+
+.finale-detail {
+	font-size: clamp(11px, 1vw, 16px);
+	color: var(--stage-dim, #7C8EAC);
+}
+
+/*
+ * The one flourish. Coral marks a gain and nothing else — an edge bar on the
+ * school that climbed, never a fill, never a second accent elsewhere.
+ */
+.finale-gain { color: var(--stage-coral, #FF5C39); }
+
+/* ── Ranked lanes, shared by halftime and the final five ─────────────────── */
+
+.finale-ranks {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+}
+
+.finale-rank {
+	display: grid;
+	grid-template-columns: 3ch 1fr auto;
+	gap: clamp(10px, 1.4vw, 22px);
+	align-items: baseline;
+	padding: clamp(6px, 1vh, 12px) 0;
+	border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.finale-rank__pos {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-variant-numeric: tabular-nums;
+	color: var(--stage-dim, #7C8EAC);
+	font-size: clamp(13px, 1.3vw, 20px);
+}
+
+.finale-rank__name {
+	font-weight: 800;
+	font-size: clamp(17px, 2.2vw, 38px);
+	line-height: 1;
+	letter-spacing: -0.01em;
+	color: var(--stage-ink, #EEF3FB);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.finale-rank__full {
+	display: block;
+	font-weight: 400;
+	font-size: clamp(10px, 0.9vw, 14px);
+	letter-spacing: 0;
+	color: var(--stage-faint, #3C4B67);
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.finale-rank__score {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(16px, 2vw, 32px);
+	letter-spacing: -0.035em;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+/* The leader's lane colour. An edge bar, never a fill — section L. */
+.finale-rank--lead { position: relative; }
+.finale-rank--lead::before {
+	content: '';
+	position: absolute;
+	left: -10px;
+	top: 20%;
+	bottom: 20%;
+	width: 3px;
+	background: var(--stage-gold, #FFB92E);
+}
+
+/*
+ * The margin between two lanes, sitting in the rule between them. In the final
+ * five these become permanent, which is the whole point of sequence 14: from
+ * here on you can read the distance without waiting for a callout.
+ */
+.finale-gap {
+	padding: 4px 0 4px calc(3ch + clamp(10px, 1.4vw, 22px));
+	font-size: clamp(10px, 0.95vw, 14px);
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--stage-faint, #3C4B67);
+}
+
+/* ── Halftime (13) ───────────────────────────────────────────────────────── */
+
+.finale-halftime {
+	grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+	align-items: start;
+	column-gap: clamp(20px, 3.4vw, 64px);
+}
+
+.finale-halftime__ranks { grid-column: 1; }
+.finale-halftime__cards { grid-column: 2; }
+
+/*
+ * Five facts, each on its own hairline. Auto-fit rather than a fixed count so a
+ * card the data cannot support — a climb with no earlier snapshot to measure it
+ * against — is simply absent, and the row closes up instead of showing a gap
+ * where a statistic should be.
+ */
+.finale-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(clamp(150px, 15vw, 230px), 1fr));
+	gap: 1px;
+	background: var(--stage-rule, rgba(160, 190, 235, 0.14));
+	border: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.finale-card {
+	background: var(--stage-ground, #060E1C);
+	padding: clamp(10px, 1.6vh, 20px) clamp(12px, 1.2vw, 20px);
+	display: grid;
+	gap: 5px;
+	align-content: start;
+	min-width: 0;
+}
+
+.finale-card__value,
+.finale-card__detail { overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Final five (14) ─────────────────────────────────────────────────────── */
+
+/*
+ * "5 QUESTIONS" wipes across. A hairline scaled from the left edge under the
+ * words — the rays have square ends, so this does too. `scaleX` on a 1px rule
+ * composites; an animated `width` would relayout the lanes beneath it.
+ */
+.finale-wipe {
+	height: 1px;
+	width: 100%;
+	background: var(--stage-azure, #2F80ED);
+	transform-origin: left center;
+	animation: finale-wipe 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes finale-wipe {
+	from { transform: scaleX(0); }
+	to   { transform: scaleX(1); }
+}
+
+/* ── Final question (15) ─────────────────────────────────────────────────── */
+
+/*
+ * THE RAY STOP.
+ *
+ * Section K gives sequence 15 the only moment in the whole broadcast where the
+ * ray field stops turning, and the field itself lives on `.live__rays` in
+ * src/pages/Live.css, which this scene does not own. So the scene raises a
+ * marker class on its own root and the page keys off it.
+ *
+ * `animation-play-state: paused` rather than `animation: none`: pausing freezes
+ * the spokes wherever they happen to be, which is a held breath. Removing the
+ * animation snaps them back to 0deg, which is a jump cut nobody asked for.
+ *
+ * Two hooks, because the integrator may prefer either: a `:has()` on the stage
+ * root, which works today with no wiring at all, and a plain data attribute the
+ * page can set on any ancestor if it would rather be explicit.
+ */
+.live:has(.stage-rays-hold) .live__rays,
+[data-stage-rays='hold'] .live__rays {
+	animation-play-state: paused;
+}
+
+.finale-stakes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	display: grid;
+}
+
+.finale-stake {
+	display: grid;
+	grid-template-columns: minmax(0, auto) 1fr;
+	gap: clamp(10px, 1.4vw, 24px);
+	align-items: baseline;
+	padding: clamp(7px, 1.1vh, 14px) 0;
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.finale-stake__name {
+	font-weight: 800;
+	font-size: clamp(18px, 2.4vw, 40px);
+	line-height: 1;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+.finale-stake__line {
+	font-size: clamp(11px, 1.15vw, 18px);
+	color: var(--stage-dim, #7C8EAC);
+	text-align: right;
+}
+
+.finale-stake--lead .finale-stake__line { color: var(--stage-gold, #FFB92E); }
+
+/* ── Champions (17, 18) ──────────────────────────────────────────────────── */
+
+/*
+ * A short name is 2–8 characters of uppercase set at wall scale, and display
+ * type tracked for running text opens up badly at that size. Tightened here and
+ * nowhere else.
+ */
+.finale-champion .stage-scene__figure { letter-spacing: -0.045em; }
+
+/*
+ * The reveal counter, so a viewer joining mid-sequence knows where they are.
+ * Dots, not a progress bar: five schools are five discrete moments.
+ */
+.finale-slots {
+	display: flex;
+	gap: 7px;
+	align-items: center;
+}
+
+.finale-slot {
+	width: clamp(14px, 1.6vw, 26px);
+	height: 2px;
+	background: var(--stage-faint, #3C4B67);
+}
+
+.finale-slot--done { background: var(--stage-ink, #EEF3FB); }
+
+/* The champion's five, named. This is the half of the frame that gets clipped. */
+.finale-five {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 clamp(14px, 1.8vw, 34px);
+	font-size: clamp(12px, 1.25vw, 20px);
+	color: var(--stage-ink, #EEF3FB);
+}
+
+.finale-five li {
+	padding: 5px 0;
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	flex: 1 1 clamp(120px, 12vw, 190px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* The podium steps already revealed, settled beneath the one on screen. */
+.finale-podium {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+}
+
+.finale-podium__row {
+	display: grid;
+	grid-template-columns: 4ch minmax(0, 1fr) auto;
+	gap: clamp(10px, 1.4vw, 22px);
+	align-items: baseline;
+	padding: 7px 0;
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	color: var(--stage-dim, #7C8EAC);
+	font-size: clamp(11px, 1.1vw, 17px);
+}
+
+.finale-podium__name { color: var(--stage-ink, #EEF3FB); font-weight: 700; }
+
+.finale-stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 clamp(12px, 1.6vw, 28px);
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ── The provisional line ────────────────────────────────────────────────── */
+
+/*
+ * Not small print, and deliberately not styled down.
+ *
+ * Section M's integrity argument is that pulling a cheat off the podium
+ * afterwards is the published rule working rather than a reversal — and that is
+ * only true if the announcement itself said the result was provisional. Since
+ * the champion frames are built to be screenshotted and posted, this line has
+ * to survive the crop, so it sits inside the frame at support size with a rule
+ * above it, not in a corner at 11px.
+ */
+.finale-provisional {
+	width: 100%;
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	padding-top: clamp(7px, 1.1vh, 13px);
+	display: grid;
+	gap: 3px;
+}
+
+.finale-provisional__title {
+	font-size: clamp(12px, 1.2vw, 19px);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+.finale-provisional__detail {
+	font-size: clamp(11px, 1.05vw, 17px);
+	color: var(--stage-dim, #7C8EAC);
+}
+
+/* ── Post-game (19) ──────────────────────────────────────────────────────── */
+
+/*
+ * The map is a headline element, not a footnote: "participation by commune" is
+ * the one statistic in the whole tournament that is about the country rather
+ * than about the winners, and it gets the larger half of the screen.
+ */
+.finale-postgame {
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+	column-gap: clamp(20px, 3.2vw, 64px);
+	align-items: start;
+}
+
+.finale-postgame__facts { display: grid; gap: clamp(8px, 1.4vh, 18px); min-width: 0; }
+.finale-postgame__map { display: grid; gap: clamp(8px, 1.2vh, 16px); min-width: 0; }
+
+/*
+ * The slot the real map lands in. Reserved by aspect-ratio so the layout does
+ * not jump the frame the map finishes loading — and so the board reads
+ * correctly on the night the map is not wired in at all.
+ */
+.finale-map-slot {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 4 / 3;
+	border: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	display: grid;
+	place-items: center;
+	min-height: 0;
+}
+
+.finale-map-slot > * { max-width: 100%; }
+
+.finale-map-slot__empty {
+	font-size: clamp(11px, 1vw, 15px);
+	color: var(--stage-faint, #3C4B67);
+	padding: 16px;
+	text-align: center;
+}
+
+.finale-communes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 0;
+}
+
+.finale-commune {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(clamp(60px, 8vw, 140px), auto) auto;
+	gap: clamp(8px, 1.2vw, 20px);
+	align-items: center;
+	padding: 5px 0;
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	font-size: clamp(11px, 1.05vw, 17px);
+	color: var(--stage-dim, #7C8EAC);
+}
+
+.finale-commune__name {
+	color: var(--stage-ink, #EEF3FB);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* A share bar that scales rather than resizes. Square ends, like the rays. */
+.finale-commune__bar {
+	height: 3px;
+	background: rgba(160, 190, 235, 0.10);
+	overflow: hidden;
+}
+
+.finale-commune__fill {
+	height: 100%;
+	background: var(--stage-azure, #2F80ED);
+	transform-origin: left center;
+	transform: scaleX(var(--finale-share, 0));
+}
+
+.finale-commune__count {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-variant-numeric: tabular-nums;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+/* ── Next teaser (20) ────────────────────────────────────────────────────── */
+
+.finale-teaser { justify-items: start; }
+
+/*
+ * A headline made of words rather than a figure.
+ *
+ * The one-number rule is about hierarchy, not about a fixed size: set at the
+ * champion's 132px, "QUI PEUT LES DÉTRÔNER ?" or "MOINS D'UN POINT" simply runs
+ * off a 1920 screen. So the display slot steps down whenever the thing in it is
+ * a phrase — it is still unambiguously the largest thing on the screen, which
+ * is all the rule asks.
+ */
+.finale-words .stage-scene__figure,
+.finale-challenge .stage-scene__figure {
+	font-size: clamp(26px, 4.4vw, 78px);
+	line-height: 1.02;
+}
+
+.finale-teaser__date {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-size: clamp(13px, 1.4vw, 22px);
+	letter-spacing: 0.06em;
+	color: var(--stage-gold, #FFB92E);
+}
+
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+
+/*
+ * Landscape at 1920×1080 is the real case, but the same page is the one a
+ * student watches on a phone in the same room — so the two-column finales stack
+ * rather than compress, and nothing is given a min-width wider than a screen.
+ */
+@media (max-width: 900px) {
+	.finale-halftime,
+	.finale-postgame {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.finale-halftime__ranks,
+	.finale-halftime__cards { grid-column: 1; }
+	.finale-map-slot { aspect-ratio: 1 / 1; }
+}
+
+@media (max-width: 620px) {
+	.finale-rank { grid-template-columns: 2.5ch 1fr auto; }
+	.finale-stake { grid-template-columns: minmax(0, 1fr); }
+	.finale-stake__line { text-align: left; }
+	.finale-commune { grid-template-columns: minmax(0, 1fr) auto; }
+	.finale-commune__bar { display: none; }
+}
+
+/* ── Reduce motion ───────────────────────────────────────────────────────── */
+
+/*
+ * The motion here is entrance and cadence; the information is the standings.
+ * So reduced motion drops the animations and keeps every figure, exactly as the
+ * contract requires — the scenes additionally collapse their holds in JS, so
+ * the full result is on screen at once rather than being drip-fed.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.finale-wipe,
+	.finale-card,
+	.finale-rank {
+		animation: none !important;
+	}
+	.finale-wipe { transform: none; }
+}

@@ -1,0 +1,504 @@
+/*
+ * The movement sequences — 6 to 12 and their neighbours.
+ *
+ * Every token here is INHERITED from `.live` in src/pages/Live.css. Nothing in
+ * this file declares a colour of its own except the one place the design says
+ * to: a school's lane hue, which is computed from its key and drawn as an edge
+ * bar, never as a fill (section L — a hue we assign is our wayfinding, a crest
+ * is theirs).
+ *
+ * Two rules shape all of it:
+ *
+ *  1. A RANK MOVEMENT TRAVELS. The lanes are always rendered in the order the
+ *     standings have already settled into, and each lane is given the offset it
+ *     has to START from as `--mv-from`. The keyframe carries it back to zero,
+ *     so the board is never lying and the motion is the change itself.
+ *  2. TRANSFORM AND OPACITY ONLY. This runs 45 minutes on a projector. Not one
+ *     width, height, top or left is animated anywhere in this file; the two
+ *     places that would naturally want one — a bar filling and a chart drawing
+ *     — use `scaleX` on an element whose size was set once at render.
+ */
+
+/* One lane height for the whole file, so a FLIP offset can be written as
+   `calc(var(--mv-lane-h) * n)` and stay exact at every breakpoint. */
+.mv-scene {
+	--mv-lane-h: clamp(40px, 5.6vh, 76px);
+	--mv-ease: cubic-bezier(0.16, 1, 0.3, 1);
+	position: relative;
+	/* Its own stacking context, so the ray burst can sit BEHIND the type
+	   (z-index: -1) without falling behind the page's background. */
+	isolation: isolate;
+	display: grid;
+	gap: clamp(8px, 1.6vh, 20px);
+	width: 100%;
+	justify-items: start;
+}
+
+/*
+ * The viewer asked for less motion: the travel and the holds go, every word and
+ * every figure stays. Set as a class on the scene's own root — including on the
+ * `SceneFrame` root, which is why it reaches the support and cause slots too.
+ */
+.mv-still,
+.mv-still * {
+	animation: none !important;
+	transition: none !important;
+}
+
+/* ── Lanes ──────────────────────────────────────────────────────────────── */
+
+.mv-lanes {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+}
+
+.mv-lane {
+	position: relative;
+	box-sizing: border-box;
+	height: var(--mv-lane-h);
+	display: grid;
+	grid-template-columns: clamp(30px, 3.2vw, 58px) 1fr auto;
+	align-items: center;
+	gap: clamp(10px, 1.8vw, 28px);
+	padding: 0 0 0 0;
+	border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.mv-lane:first-child { border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14)); }
+
+/* The FLIP. A lane that did not move gets an offset of zero and this costs
+   nothing; a lane that moved starts where it was. */
+.mv-lane--travel {
+	animation: mv-flip 640ms var(--mv-ease) both;
+	will-change: transform;
+}
+
+@keyframes mv-flip {
+	from { transform: translateY(var(--mv-from, 0px)); }
+	to   { transform: none; }
+}
+
+.mv-lane__rank {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-size: clamp(20px, 2.6vw, 42px);
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.04em;
+	line-height: 0.9;
+	text-align: right;
+	color: var(--stage-faint, #3C4B67);
+}
+
+.mv-lane__school { min-width: 0; }
+
+.mv-lane__name {
+	font-size: clamp(15px, 1.9vw, 30px);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.05;
+	color: var(--stage-ink, #EEF3FB);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mv-lane__full {
+	margin-top: 2px;
+	font-size: clamp(10px, 0.95vw, 13px);
+	color: var(--stage-dim, #7C8EAC);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mv-lane__score {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-size: clamp(16px, 2vw, 32px);
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.035em;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+/* The school's own lane colour. An edge bar — never a fill, never a crest. */
+.mv-lane__hue {
+	position: absolute;
+	left: calc(-1 * clamp(7px, 1.1vw, 16px));
+	top: 22%;
+	bottom: 22%;
+	width: 3px;
+	background: hsl(var(--mv-hue, 210) 58% 60%);
+}
+
+.mv-lane--mover .mv-lane__rank,
+.mv-lane--focus .mv-lane__rank { color: var(--stage-azure-lit, #6FB0FF); }
+
+/* Everything that is not the moment, held at a readable trace of itself. */
+.mv-lane--dim { opacity: 0.22; }
+
+/*
+ * The ray sweep. A hard bar of light crossing the lane once — the mark's own
+ * ray passing over it. This marks a GAIN and nothing else in these sequences
+ * uses it.
+ */
+.mv-lane--gain::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: linear-gradient(90deg, transparent, rgba(111, 176, 255, 0.34) 46%, rgba(111, 176, 255, 0.05) 52%, transparent 60%);
+	transform: translateX(-100%);
+	animation: mv-sweep 820ms var(--mv-ease) 180ms;
+}
+
+@keyframes mv-sweep {
+	to { transform: translateX(100%); }
+}
+
+/* ── The gain chip ──────────────────────────────────────────────────────── */
+
+.mv-chip {
+	display: inline-block;
+	margin-left: clamp(8px, 1vw, 16px);
+	padding: 2px 9px;
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-size: clamp(11px, 1.05vw, 15px);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	color: #14060A;
+	background: var(--stage-coral, #FF5C39);
+	animation: stage-enter 320ms var(--mv-ease) 560ms both;
+}
+
+.mv-chip--quiet {
+	color: var(--stage-dim, #7C8EAC);
+	background: none;
+	border: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	padding: 1px 8px;
+}
+
+/* ── The leader's name, and its school bar ─────────────────────────────── */
+
+/*
+ * Sequence 6 sets the short name at full display size with the school's lane
+ * colour beside it. An edge bar, the same decision as a lane: it is wayfinding
+ * we assigned, and it never pretends to be the school's own colour.
+ */
+.mv-lead {
+	position: relative;
+	display: inline-block;
+	padding-left: clamp(14px, 1.3vw, 26px);
+}
+
+.mv-lead__bar {
+	position: absolute;
+	left: 0;
+	top: 6%;
+	bottom: 6%;
+	width: clamp(4px, 0.45vw, 9px);
+	background: hsl(var(--mv-hue, 210) 58% 60%);
+}
+
+.mv-lead__avg {
+	font-size: clamp(19px, 2.3vw, 38px);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+.mv-lead__over { margin-top: 6px; }
+
+/*
+ * A person's name in the figure slot. Still the biggest thing on screen, but a
+ * name is not a two-character figure and 132px of "Marie-Lourdes" wraps into
+ * the support line on a 16:9 stage.
+ */
+.mv-figure-name {
+	display: block;
+	font-size: clamp(28px, 5vw, 88px);
+	line-height: 0.96;
+}
+
+/* ── Shared small type ──────────────────────────────────────────────────── */
+
+.mv-head {
+	display: flex;
+	align-items: baseline;
+	gap: clamp(10px, 1.4vw, 20px);
+	width: 100%;
+}
+
+.mv-name { color: var(--stage-ink, #EEF3FB); font-weight: 700; }
+.mv-short { font-family: var(--font-mono, 'Geist Mono', monospace); letter-spacing: 0.04em; }
+.mv-num { font-family: var(--font-mono, 'Geist Mono', monospace); font-variant-numeric: tabular-nums; }
+
+/* The cause is the payoff, so it arrives after the scene has been read. */
+.mv-late {
+	display: inline-block;
+	animation: stage-enter 320ms var(--mv-ease) 1400ms both;
+}
+
+/* ── The corner card (sequence 9, and the school streak beside it) ──────── */
+
+.mv-aside {
+	justify-self: end;
+	width: min(460px, 100%);
+	padding: clamp(10px, 1.4vh, 16px) 0 0 clamp(12px, 1.2vw, 18px);
+	border-left: 3px solid var(--stage-coral, #FF5C39);
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	animation: stage-enter 320ms var(--mv-ease) both;
+}
+
+.mv-card__figure {
+	font-size: clamp(30px, 3.6vw, 64px);
+	font-weight: 800;
+	line-height: 0.95;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+.mv-card__unit {
+	margin-left: 10px;
+	font-size: clamp(11px, 1vw, 15px);
+	font-weight: 700;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--stage-dim, #7C8EAC);
+}
+
+.mv-card__line {
+	margin-top: 4px;
+	font-size: clamp(12px, 1.15vw, 18px);
+	color: var(--stage-dim, #7C8EAC);
+}
+
+/* ── The five slots (sequences 8 and its other half) ────────────────────── */
+
+.mv-slots {
+	display: grid;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: clamp(8px, 1.1vw, 20px);
+	width: 100%;
+}
+
+.mv-slot {
+	position: relative;
+	box-sizing: border-box;
+	min-height: clamp(62px, 8vh, 104px);
+	padding-top: 9px;
+	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.mv-slot__n {
+	font-family: var(--font-mono, 'Geist Mono', monospace);
+	font-size: clamp(10px, 0.95vw, 13px);
+	color: var(--stage-faint, #3C4B67);
+}
+
+.mv-slot__name {
+	margin-top: 5px;
+	font-size: clamp(12px, 1.25vw, 20px);
+	font-weight: 700;
+	line-height: 1.12;
+	color: var(--stage-ink, #EEF3FB);
+	overflow-wrap: anywhere;
+}
+
+.mv-slot__meta {
+	margin-top: 3px;
+	font-size: clamp(10px, 0.95vw, 13px);
+	color: var(--stage-dim, #7C8EAC);
+	font-variant-numeric: tabular-nums;
+}
+
+.mv-slot--incoming { border-top-color: var(--stage-coral, #FF5C39); }
+
+.mv-slot__in { animation: mv-slot-in 520ms var(--mv-ease) 300ms both; }
+
+@keyframes mv-slot-in {
+	from { opacity: 0; transform: translateY(26px); }
+	to   { opacity: 1; transform: none; }
+}
+
+/* The team-mate who was in that slot, leaving it. */
+.mv-slot__out {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 9px;
+	pointer-events: none;
+	animation: mv-slot-out 520ms var(--mv-ease) both;
+}
+
+@keyframes mv-slot-out {
+	from { opacity: 1; transform: none; }
+	to   { opacity: 0; transform: translateY(24px); }
+}
+
+.mv-slot__out .mv-slot__name { color: var(--stage-dim, #7C8EAC); }
+
+/* ── Sequence 10 — the round's five questions, and the burst ────────────── */
+
+.mv-marks {
+	display: flex;
+	gap: clamp(7px, 0.9vw, 16px);
+	width: 100%;
+}
+
+.mv-mark {
+	height: clamp(6px, 0.8vh, 11px);
+	width: clamp(34px, 5vw, 92px);
+	background: var(--stage-coral, #FF5C39);
+	transform-origin: left center;
+	animation: mv-mark-in 320ms var(--mv-ease) both;
+}
+
+@keyframes mv-mark-in {
+	from { opacity: 0; transform: scaleX(0); }
+	to   { opacity: 1; transform: none; }
+}
+
+/*
+ * The ray burst, at LOW intensity: the mark's own spokes, thrown once and left
+ * sitting well under the type. Hard-edged, like every ray on this stage.
+ */
+.mv-burst {
+	position: absolute;
+	inset: -30% -15%;
+	z-index: -1;
+	pointer-events: none;
+	background: repeating-conic-gradient(
+		from 0deg,
+		rgba(255, 92, 57, 0.15) 0deg 0.9deg,
+		transparent 0.9deg 9deg
+	);
+	-webkit-mask-image: radial-gradient(closest-side, #000 4%, rgba(0, 0, 0, 0.32) 38%, transparent 70%);
+	mask-image: radial-gradient(closest-side, #000 4%, rgba(0, 0, 0, 0.32) 38%, transparent 70%);
+	animation: mv-burst 1200ms var(--mv-ease) both;
+}
+
+@keyframes mv-burst {
+	from { opacity: 0; transform: scale(0.86); }
+	45%  { opacity: 0.62; }
+	to   { opacity: 0.3; transform: none; }
+}
+
+/* ── Sequence 11 — the rank path ────────────────────────────────────────── */
+
+.mv-chart {
+	width: min(980px, 100%);
+	height: clamp(104px, 22vh, 260px);
+	overflow: visible;
+}
+
+.mv-chart__rule { stroke: var(--stage-rule, rgba(160, 190, 235, 0.14)); stroke-width: 1; }
+.mv-chart__line {
+	fill: none;
+	stroke: var(--stage-coral, #FF5C39);
+	stroke-width: 3;
+	stroke-linejoin: miter;
+	stroke-linecap: butt;
+}
+.mv-chart__node { fill: var(--stage-coral, #FF5C39); }
+.mv-chart__node--now { fill: var(--stage-ink, #EEF3FB); }
+
+/*
+ * The line draws itself with a wipe rather than a dash offset: a stroke-dash
+ * animation repaints the path every frame, and this is a transform on one rect
+ * the compositor can carry on its own.
+ */
+.mv-chart__wipe {
+	fill: var(--stage-ground, #060E1C);
+	transform-box: fill-box;
+	transform-origin: 100% 50%;
+	animation: mv-wipe 1100ms var(--mv-ease) 240ms both;
+}
+
+@keyframes mv-wipe {
+	from { transform: scaleX(1); }
+	to   { transform: scaleX(0); }
+}
+
+/* ── Sequence 12 — the margin between two lanes ─────────────────────────── */
+
+.mv-gap {
+	display: grid;
+	justify-items: center;
+	gap: 2px;
+	width: 100%;
+	padding: clamp(6px, 1.4vh, 18px) 0;
+}
+
+/* The margin is the one number in sequence 12, and it is between the two
+   lanes because that is where the gap is. */
+.mv-gap__figure {
+	font-size: clamp(30px, 5.4vw, 96px);
+	font-weight: 800;
+	line-height: 0.95;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+	color: var(--stage-ink, #EEF3FB);
+}
+
+.mv-gap__label {
+	font-size: clamp(10px, 0.9vw, 13px);
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--stage-dim, #7C8EAC);
+}
+
+/* ── The share bar (a player carrying their five) ───────────────────────── */
+
+.mv-share {
+	position: relative;
+	width: 100%;
+	height: 3px;
+	background: rgba(160, 190, 235, 0.10);
+}
+
+.mv-share__fill {
+	height: 100%;
+	background: var(--stage-azure, #2F80ED);
+	transform-origin: left center;
+	animation: mv-grow 900ms var(--mv-ease) both;
+}
+
+@keyframes mv-grow {
+	from { transform: scaleX(0); }
+	to   { transform: scaleX(1); }
+}
+
+.mv-share__ticks {
+	display: flex;
+	justify-content: space-between;
+	width: 100%;
+	margin-top: 6px;
+	font-size: clamp(10px, 0.95vw, 13px);
+	color: var(--stage-dim, #7C8EAC);
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 620px) {
+	.mv-scene { --mv-lane-h: 46px; }
+	.mv-lane { grid-template-columns: 26px 1fr auto; gap: 10px; }
+	.mv-lane__hue { left: -9px; width: 2px; }
+	.mv-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.mv-aside { width: 100%; }
+	.mv-marks { gap: 5px; }
+	.mv-mark { width: auto; flex: 1; }
+}
+
+/* ── Reduce motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+	.mv-scene *,
+	.mv-scene {
+		animation: none !important;
+		transition: none !important;
+	}
+}

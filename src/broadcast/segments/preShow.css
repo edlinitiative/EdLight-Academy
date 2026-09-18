@@ -1,0 +1,250 @@
+/*
+ * The pre-show — sequences 1 and 2, and the only part of the broadcast the
+ * audience sees for longer than a few seconds at a time.
+ *
+ * It holds from the doors opening until the first question, which on the night
+ * is half an hour. Everything here is built for that: one clock, one card that
+ * changes on a three-second beat, and a map. Nothing loops faster than three
+ * seconds, nothing pulses, and nothing asks to be watched — a pre-show that
+ * fidgets for thirty minutes is exhausting in a way a still one never is.
+ *
+ * The palette is inherited from `.live`; the ray field and the shared sweep
+ * come from `../scenes/roundRhythm.css`.
+ */
+
+.rp {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: clamp(12px, 2.2vh, 30px);
+  overflow: hidden;
+}
+
+/* The ray field is the only thing behind; everything else sits in front of it. */
+.rp > *:not(.rr-rays) {
+  position: relative;
+  z-index: 1;
+}
+
+.rp__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: clamp(10px, 1.6vw, 24px);
+  padding-bottom: clamp(8px, 1.2vh, 16px);
+  border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.rp__title {
+  margin: 0;
+  font-size: clamp(15px, 1.7vw, 27px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--stage-ink, #EEF3FB);
+}
+
+.rp__doors {
+  font-size: clamp(10px, 0.9vw, 14px);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--stage-coral, #FF5C39);
+}
+
+/*
+ * The map is a first-class element, not an illustration in a corner.
+ *
+ * The product argument is the whole reason the pre-show exists in this shape:
+ * the thing worth watching before a tournament starts is not a clock, it is
+ * WHO IS HERE — and in Haiti that means where they are. So the map takes the
+ * larger half of a landscape screen and the school being introduced sits
+ * directly beside it, at the same height, so a card and the point lighting up
+ * on the map read as one statement rather than two panels.
+ */
+.rp__body {
+  display: grid;
+  grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
+  gap: clamp(16px, 3vw, 56px);
+  align-items: start;
+  min-height: 0;
+}
+
+/* No map yet (or none supplied): the clock and the introduction card share the
+   width evenly rather than leaving a hole where the map would be. */
+.rp__body[data-map='none'] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+.rp__left {
+  display: grid;
+  gap: clamp(14px, 2.6vh, 36px);
+  align-content: start;
+  min-width: 0;
+}
+
+.rp__map {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+}
+
+/* The countdown is the one figure on this screen. Mono, because a clock that
+   changes width as the digits fall makes the whole block twitch on a wall. */
+.rp__clock .stage-scene__figure {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-weight: 500;
+  letter-spacing: -0.05em;
+}
+
+.rp__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(14px, 2.2vw, 38px);
+}
+
+/* ── Sequence 2 · the school introduction ───────────────────────────────── */
+
+/*
+ * A hard cut every three seconds. No cross-fade, no slide: the cut is what
+ * makes each school its own moment rather than one long dissolve of schools.
+ *
+ * The short name is large but deliberately smaller than the countdown. Section
+ * K allows exactly one biggest thing on screen, and on the pre-show that is the
+ * clock — so this card is emphatic without competing.
+ */
+.rp-intro {
+  position: relative;
+  display: grid;
+  gap: clamp(4px, 0.8vh, 10px);
+  padding: clamp(12px, 1.8vh, 24px) 0 0 clamp(12px, 1.2vw, 22px);
+  border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+  overflow: hidden;
+}
+
+.rp-intro__edge {
+  position: absolute;
+  left: 0;
+  top: clamp(12px, 1.8vh, 24px);
+  bottom: 0;
+  width: 3px;
+  background: hsl(var(--rp-hue, 212) 72% 58%);
+}
+
+.rp-intro__short {
+  font-size: clamp(30px, 4.2vw, 76px);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.03em;
+  color: var(--stage-ink, #EEF3FB);
+  word-break: break-word;
+}
+
+.rp-intro__full {
+  font-size: clamp(13px, 1.3vw, 21px);
+  color: var(--stage-dim, #7C8EAC);
+}
+
+.rp-intro__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: clamp(8px, 1.2vw, 20px);
+  font-size: clamp(11px, 1vw, 16px);
+  color: var(--stage-faint, #3C4B67);
+}
+
+.rp-intro__players {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  color: var(--stage-dim, #7C8EAC);
+}
+
+.rp-intro__badge {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.rp-intro__badge--qualified { color: var(--stage-azure-lit, #6FB0FF); }
+.rp-intro__badge--waiting { color: var(--stage-faint, #3C4B67); }
+
+/* The sweep between cards, per section K's own row for this sequence. Reuses
+   `rb-sweep` from the round rhythm so there is one sweep in the codebase. */
+.rp-intro__sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(111, 176, 255, 0.24) 46%,
+    rgba(111, 176, 255, 0.04) 52%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  animation: rb-sweep 620ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── The arrivals ticker ────────────────────────────────────────────────── */
+
+.rp__ticker {
+  position: relative;
+  overflow: hidden;
+  padding-top: clamp(8px, 1.2vh, 16px);
+  border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+@keyframes rp-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.rp__ticker-track {
+  display: flex;
+  width: max-content;
+  gap: clamp(18px, 2.4vw, 44px);
+  white-space: nowrap;
+  animation: rp-ticker var(--rp-ticker-s, 90s) linear infinite;
+}
+
+/* Reduced motion, or nothing to scroll: the arrivals wrap and sit still. They
+   are still all readable — the motion was never the information. */
+.rp__ticker-track--still {
+  animation: none;
+  width: auto;
+  flex-wrap: wrap;
+  white-space: normal;
+}
+
+.rp__arrival {
+  font-size: clamp(11px, 1.05vw, 17px);
+  color: var(--stage-dim, #7C8EAC);
+}
+
+.rp__arrival-short { color: var(--stage-ink, #EEF3FB); font-weight: 700; }
+.rp__arrival-place { color: var(--stage-faint, #3C4B67); }
+
+.rp__empty {
+  margin: 0;
+  font-size: clamp(12px, 1.1vw, 17px);
+  color: var(--stage-dim, #7C8EAC);
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+/*
+ * Landscape-first — this is designed for 1920×1080 on a wall — but the map
+ * stacks under the clock rather than being squeezed into a column that makes
+ * Haiti unreadable.
+ */
+@media (max-width: 900px) {
+  .rp__body,
+  .rp__body[data-map='none'] { grid-template-columns: minmax(0, 1fr); }
+  .rp__map { min-height: 46vw; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp__ticker-track,
+  .rp-intro__sweep { animation: none !important; }
+  .rp-intro__sweep { display: none; }
+}

@@ -1,0 +1,552 @@
+/*
+ * The board and the round rhythm — sequences 3, 4, 5 and 16, plus the resting
+ * board they all hand back to.
+ *
+ * Inherits the stage palette from `.live` (src/pages/Live.css). Nothing here
+ * declares a colour that is not one of those tokens: the broadcast is one
+ * programme, and a second palette drifts from the first inside a month.
+ *
+ * Two constraints run through every rule below and neither is negotiable.
+ *
+ * **Only `transform` and `opacity` animate.** This runs for forty-five minutes
+ * on a projector driven by whatever laptop is in the room. A `width` that
+ * animates relayouts the row on every frame; a `transform` that animates is
+ * handed to the compositor and costs the main thread nothing. That is the
+ * difference between a board that reorders smoothly while a school overtakes
+ * three others and a board that stutters at the one moment anybody is looking.
+ *
+ * **A ray sweep marks a gain, and nothing else uses it.** The moment a sweep
+ * also means "loading" or "selected", it stops meaning anything.
+ */
+
+/* ── The board ──────────────────────────────────────────────────────────── */
+
+.rb-board {
+  --rb-lane-h: clamp(44px, 6.2vh, 78px);
+  width: 100%;
+  display: grid;
+  gap: clamp(8px, 1.4vh, 18px);
+}
+
+.rb-board__lanes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.rb-board__empty,
+.rb-board__note {
+  font-size: clamp(12px, 1.1vw, 16px);
+  color: var(--stage-dim, #7C8EAC);
+  margin: 0;
+}
+
+.rb-board__note { color: var(--stage-faint, #3C4B67); }
+
+/*
+ * A lane, not a card. A rounded rectangle per row is a web app; a rule between
+ * rows is a scoreboard, and it lets the names sit far bigger.
+ *
+ * The height is FIXED rather than content-driven, because the rank travel below
+ * offsets a lane by a whole number of lane heights. A lane that grows with its
+ * content would make that offset a guess, and the row would land off its rule.
+ */
+.rb-lane {
+  position: relative;
+  box-sizing: border-box;
+  height: var(--rb-lane-h);
+  display: grid;
+  grid-template-columns: 3ch 1fr auto;
+  gap: clamp(12px, 1.6vw, 28px);
+  align-items: center;
+  padding: 0 0 0 clamp(12px, 1.2vw, 22px);
+  border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+/*
+ * The school's hue, as an EDGE BAR and never a fill (section L). A hue we
+ * assign is our wayfinding; a crest is the school's own. Presenting our hue as
+ * a fill would read as the school's colour, which is a claim we have no right
+ * to make.
+ */
+.rb-lane__edge {
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  background: hsl(var(--rb-hue, 212) 72% 58%);
+}
+
+.rb-lane--leader .rb-lane__edge { background: var(--stage-gold, #FFB92E); }
+
+.rb-lane__rank {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(14px, 1.5vw, 24px);
+  color: var(--stage-faint, #3C4B67);
+}
+
+.rb-lane--leader .rb-lane__rank { color: var(--stage-gold, #FFB92E); }
+
+.rb-lane__id { min-width: 0; }
+
+.rb-lane__short {
+  display: block;
+  font-size: clamp(17px, 2.1vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--stage-ink, #EEF3FB);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rb-lane__full {
+  display: block;
+  font-size: clamp(10px, 0.85vw, 14px);
+  color: var(--stage-faint, #3C4B67);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rb-lane__score {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(18px, 2.4vw, 38px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  color: var(--stage-ink, #EEF3FB);
+  line-height: 1;
+}
+
+/*
+ * The travel. The board renders in the NEW order and each moved lane starts
+ * offset back to where it came from, then is released — so the row travels from
+ * its old position to its new one with no layout read at all. The custom
+ * property is resolved per element inside the keyframe, which is what lets one
+ * keyframe serve a lane that climbed one place and a lane that climbed six.
+ *
+ * A row never teleports, because the travel IS the information.
+ */
+@keyframes rb-travel {
+  from { transform: translateY(calc(var(--rb-lane-h) * var(--rb-rows, 0))); }
+  to   { transform: none; }
+}
+
+.rb-lane[data-moved] {
+  animation: rb-travel 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  /* Above its neighbours while it moves, so a climbing lane passes over the
+     lanes it passed rather than disappearing behind their rules. */
+  z-index: 1;
+}
+
+/*
+ * The sweep. A hard bar of light crosses a lane that GAINED — a ray passing,
+ * not a shimmer, and hard-edged because nothing in the mark is blurred. On a
+ * pseudo-element transform so it cannot repaint the row while every other lane
+ * is mid-travel.
+ */
+@keyframes rb-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.rb-lane[data-moved='up']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(111, 176, 255, 0.30) 46%,
+    rgba(111, 176, 255, 0.05) 52%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  animation: rb-sweep 820ms cubic-bezier(0.16, 1, 0.3, 1) 120ms;
+}
+
+/* ── The ambient callout ────────────────────────────────────────────────── */
+
+/*
+ * What a resting board says when it has rested long enough to look stuck.
+ * Always something TRUE — the closest race, a live streak — because a screen
+ * that invents a stat teaches the room it makes things up.
+ */
+.rb-ambient {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(10px, 1.2vw, 20px);
+  padding-top: clamp(8px, 1.2vh, 16px);
+  border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+  animation: stage-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rb-ambient__label {
+  font-size: clamp(10px, 0.85vw, 13px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--stage-faint, #3C4B67);
+  white-space: nowrap;
+}
+
+.rb-ambient__text {
+  font-size: clamp(13px, 1.3vw, 21px);
+  color: var(--stage-dim, #7C8EAC);
+}
+
+.rb-ambient__figure {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  color: var(--stage-ink, #EEF3FB);
+}
+
+/* ── The board's states, driven by the scene that owns it ───────────────── */
+
+/*
+ * Sequence 4 dims the board to 40% and gives it back; sequence 5 brightens it.
+ * The board itself knows nothing about either — it is handed a modifier by the
+ * scene holding the screen, which is what keeps it the resting state rather
+ * than a scene with opinions about the round.
+ */
+@keyframes rb-dim-and-return {
+  0%   { opacity: 1; }
+  22%  { opacity: 0.4; }
+  72%  { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+.rb-board--dim { animation: rb-dim-and-return 900ms linear both; }
+
+@keyframes rb-brighten {
+  from { opacity: 0.55; }
+  to   { opacity: 1; }
+}
+
+.rb-board--brighten { animation: rb-brighten 520ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/*
+ * Sequence 3's wipe from the left rule, built out of the only two properties
+ * that may animate: each lane arrives from the left, staggered, and the
+ * aggregate reads as one wipe crossing the board.
+ */
+@keyframes rb-wipe-in {
+  from { opacity: 0; transform: translateX(-34px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.rb-board--wipe .rb-lane {
+  animation: rb-wipe-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--rb-index, 0) * 55ms);
+}
+
+/* ── Shared ray work ────────────────────────────────────────────────────── */
+
+/*
+ * A scene-local ray field, so a sequence that needs the rays to DO something
+ * (accelerate at the start, sweep while grading) can drive them without
+ * reaching out of itself into the page that mounted it.
+ *
+ * Same construction as `.live__rays`: one element, one animated property,
+ * hard-edged spokes from an origin off the left edge.
+ */
+.rr-rays {
+  position: absolute;
+  /* Behind the scene it lights. An absolutely positioned element paints above
+     its static siblings by default, which would put the ray field over the
+     type it is supposed to sit behind. */
+  z-index: 0;
+  left: calc(6vw - 85vmax);
+  top: 50%;
+  width: 170vmax;
+  height: 170vmax;
+  margin-top: -85vmax;
+  pointer-events: none;
+  opacity: 0.5;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(47, 128, 237, 0.20) 0deg 1.05deg,
+    transparent 1.05deg 9deg
+  );
+  -webkit-mask-image: radial-gradient(closest-side, #000 16%, rgba(0, 0, 0, 0.5) 44%, transparent 76%);
+  mask-image: radial-gradient(closest-side, #000 16%, rgba(0, 0, 0, 0.5) 44%, transparent 76%);
+}
+
+/* Sequence 1 — slow. The field turns once every four minutes; a still frame
+   never repeats and nothing on screen appears to move. */
+@keyframes rr-rays-slow {
+  to { transform: rotate(360deg); }
+}
+
+.rr-rays--slow { animation: rr-rays-slow 240s linear infinite; }
+
+/* Sequence 3 — the rays accelerate ONCE and settle. The ease does the work:
+   fast out of the gate, long tail into rest. */
+@keyframes rr-rays-accelerate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(26deg); }
+}
+
+.rr-rays--accelerate { animation: rr-rays-accelerate 1600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* ── Sequence 3 · the start ─────────────────────────────────────────────── */
+
+.rr-scene {
+  position: relative;
+  width: 100%;
+  display: grid;
+  gap: clamp(10px, 1.8vh, 24px);
+  overflow: hidden;
+}
+
+/* Everything except the ray field sits in front of it. */
+.rr-scene > *:not(.rr-rays),
+.rg > *:not(.rg__sweep) {
+  position: relative;
+  z-index: 1;
+}
+
+.rr-figure {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(10px, 1.2vw, 22px);
+}
+
+/* The one number. The total sits beside it, smaller, so there is never a second
+   thing on screen competing to be read first. */
+.rr-figure__of {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(16px, 1.8vw, 30px);
+  font-weight: 500;
+  color: var(--stage-faint, #3C4B67);
+  letter-spacing: -0.02em;
+}
+
+.rr-category {
+  font-size: clamp(12px, 1.1vw, 18px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--stage-azure-lit, #6FB0FF);
+}
+
+/* ── Sequence 4 · the question transition ───────────────────────────────── */
+
+/*
+ * The counter rolls: the number leaving travels up and out of a clipped
+ * window while the number arriving takes its place. Two digits in a column and
+ * one translate — no cross-fade, because a cross-fade of two numbers is a
+ * moment where the screen shows neither.
+ */
+.rr-roll {
+  height: 1em;
+  overflow: hidden;
+  line-height: 1;
+}
+
+.rr-roll__track {
+  display: grid;
+  grid-auto-rows: 1em;
+}
+
+@keyframes rr-roll-up {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-1em); }
+}
+
+.rr-roll__track--rolling {
+  animation: rr-roll-up 420ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+/*
+ * The category word crosses the screen and leaves. It does not stop, and it is
+ * never the biggest thing on screen — the index is. A word that parked here
+ * would be a second headline arguing with the first.
+ */
+@keyframes rr-cross {
+  0%   { opacity: 0; transform: translateX(-16vw); }
+  22%  { opacity: 1; }
+  74%  { opacity: 1; }
+  100% { opacity: 0; transform: translateX(18vw); }
+}
+
+.rr-cross {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  pointer-events: none;
+  text-align: center;
+  font-size: clamp(22px, 3.4vw, 62px);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--stage-azure-lit, #6FB0FF);
+  opacity: 0;
+  animation: rr-cross 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Sequence 5 · the round result ──────────────────────────────────────── */
+
+/*
+ * The hairline. A rule that fills, not a track with a pill inside it — square
+ * ends, because the mark's rays have square ends. Scaled from the left rather
+ * than widened, so the fill composites.
+ */
+.rq-hairline {
+  position: relative;
+  height: 3px;
+  width: 100%;
+  background: rgba(160, 190, 235, 0.10);
+}
+
+.rq-hairline__fill {
+  height: 100%;
+  width: 100%;
+  background: var(--stage-azure, #2F80ED);
+  transform-origin: left center;
+  transform: scaleX(var(--rq-fill, 0));
+}
+
+.rq-fastest {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(8px, 1vw, 16px);
+  font-size: clamp(12px, 1.2vw, 19px);
+  color: var(--stage-dim, #7C8EAC);
+}
+
+.rq-fastest__name { color: var(--stage-ink, #EEF3FB); font-weight: 700; }
+.rq-fastest__school { color: var(--stage-faint, #3C4B67); }
+
+.rq-fastest__ms {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  color: var(--stage-coral, #FF5C39);
+}
+
+/* ── Sequence 16 · calculating ──────────────────────────────────────────── */
+
+.rg {
+  position: relative;
+  width: 100%;
+  min-height: clamp(220px, 46vh, 520px);
+  display: grid;
+  align-content: center;
+  gap: clamp(12px, 2vh, 28px);
+  overflow: hidden;
+}
+
+/*
+ * The withheld phrase. It is the biggest thing on screen and there is NO number
+ * beside it, because there is nothing true to put there yet — the scores are
+ * being calculated. A count, a bar or a spinner here would all promise a
+ * progress this scene cannot know.
+ */
+.rg .stage-scene__figure {
+  font-size: clamp(26px, 5.2vw, 96px);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+}
+
+.rg .stage-scene__cause { max-width: 52ch; }
+
+/* One sweep per second across the ray field. Not a progress bar: it says
+   "still running" and refuses to say anything else. */
+@keyframes rg-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.rg__sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(47, 128, 237, 0.26) 48%,
+    rgba(47, 128, 237, 0.04) 54%,
+    transparent 62%
+  );
+  transform: translateX(-100%);
+  animation: rg-sweep 1000ms linear infinite;
+}
+
+/* ── Sequence for TOURNAMENT_OPEN · the room is open ────────────────────── */
+
+.ro-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(14px, 2.4vw, 40px);
+}
+
+.ro-count {
+  display: grid;
+  gap: 4px;
+}
+
+.ro-count__value {
+  font-family: var(--font-mono, 'Geist Mono', monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(16px, 1.9vw, 30px);
+  font-weight: 500;
+  color: var(--stage-ink, #EEF3FB);
+  letter-spacing: -0.03em;
+}
+
+.ro-count__label {
+  font-size: clamp(10px, 0.85vw, 13px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--stage-faint, #3C4B67);
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+/*
+ * The broadcast is landscape-first — 1920×1080 on a wall is the real case — but
+ * it must not break on the phone somebody watches it on afterwards.
+ */
+@media (max-width: 620px) {
+  .rb-board { --rb-lane-h: 54px; }
+  .rb-lane {
+    grid-template-columns: 2.5ch 1fr auto;
+    gap: 12px;
+  }
+  .rb-lane__full { display: none; }
+  .rb-ambient { flex-direction: column; gap: 4px; }
+}
+
+/* ── Reduce motion ──────────────────────────────────────────────────────── */
+
+/*
+ * Every scene here also reads the `reduceMotion` prop and removes travel at the
+ * source. This block is the belt-and-braces for a viewer whose preference the
+ * stage never asked about — and it removes MOTION only. Nothing above conveys
+ * information by animation alone: the lane is in its new place either way, the
+ * hairline is at its true fraction either way, and the calculating phrase says
+ * the same thing standing still.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .rb-lane,
+  .rb-lane[data-moved]::after,
+  .rb-board--dim,
+  .rb-board--brighten,
+  .rb-board--wipe .rb-lane,
+  .rb-ambient,
+  .rr-rays,
+  .rr-roll__track,
+  .rr-cross,
+  .rg__sweep {
+    animation: none !important;
+  }
+  .rr-cross { opacity: 1; }
+  .rg__sweep { display: none; }
+}
