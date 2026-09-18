@@ -1,0 +1,88 @@
+/*
+ * The stage's shared skeleton. Scene-specific styling lives with its scene.
+ *
+ * Tokens are inherited from `.live` in src/pages/Live.css rather than
+ * redeclared — the broadcast is one programme and a second palette would drift
+ * from the first within a month.
+ */
+
+@keyframes stage-enter {
+  from { opacity: 0; transform: translateY(var(--stage-travel, 14px)); }
+  to   { opacity: 1; transform: none; }
+}
+
+.stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+
+.stage-scene {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  width: 100%;
+}
+
+.stage-scene__overline {
+  font-size: clamp(11px, 0.9vw, 14px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--stage-dim, #7C8EAC);
+}
+
+/* The one number. Nothing else on a scene may use display type. */
+.stage-scene__figure {
+  font-size: clamp(38px, 7.5vw, 132px);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  color: var(--stage-ink, #EEF3FB);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-scene--coral .stage-scene__figure { color: var(--stage-coral, #FF5C39); }
+.stage-scene--gold  .stage-scene__figure { color: var(--stage-gold, #FFB92E); }
+
+.stage-scene__support {
+  font-size: clamp(13px, 1.4vw, 22px);
+  color: var(--stage-dim, #7C8EAC);
+}
+
+/* The cause is named last because the cause is the payoff. */
+.stage-scene__cause {
+  font-size: clamp(12px, 1.1vw, 17px);
+  color: var(--stage-faint, #3C4B67);
+  border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+  padding-top: 8px;
+  width: 100%;
+}
+
+.stage-board { width: 100%; }
+.stage-board__empty { color: var(--stage-dim, #7C8EAC); font-size: 14px; }
+.stage-board__lanes { list-style: none; margin: 0; padding: 0; }
+
+.stage-board__lane {
+  display: grid;
+  grid-template-columns: 3ch 1fr auto;
+  gap: 16px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+}
+
+.stage-board__rank,
+.stage-board__score {
+  font-variant-numeric: tabular-nums;
+  color: var(--stage-dim, #7C8EAC);
+}
+
+.stage-board__name {
+  color: var(--stage-ink, #EEF3FB);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-scene { animation: none !important; }
+}
