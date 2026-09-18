@@ -57,6 +57,11 @@ const LIMITS: Record<string, Limit> = {
   'arena-register': { max: 10, windowSec: 3600 },
   'arena-answer':   { max: 120, windowSec: 3600 },
   'arena-presence': { max: 240, windowSec: 3600 },
+  // Authoring and the claim flow. Tight: both are admin or once-per-person
+  // actions, and both sit next to prize money.
+  'arena-questions': { max: 300, windowSec: 3600 },
+  'arena-claim':     { max: 20, windowSec: 3600 },
+  'arena-doors-close': { max: 20, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't

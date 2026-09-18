@@ -433,6 +433,30 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false;
       }
+
+      // The frozen roster: which schools were actually in the room when doors
+      // closed, and therefore which ones can be ranked. Public, because the
+      // broadcast explains why a school is unranked and a student deserves to
+      // see the same answer their school got.
+      //
+      // A school that failed to qualify is NOT excluded — its students play and
+      // score individually. The document is read-only to everyone because
+      // re-freezing a roster mid-tournament would move a school's eligibility
+      // under a board already ranking on it.
+      match /roster/{schoolKey} {
+        allow read: if true;
+        allow write: if false;
+      }
+
+      // Prize claims. A claimant reads their OWN and nobody else's: these carry
+      // a contact, and for the many winners who are minors a guardian's name
+      // and contact too. Nothing here is public, and nothing is client-written —
+      // a claim that could be edited by its claimant is not evidence of
+      // anything.
+      match /claims/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
     }
 
     // A student reads their own registration and nobody else's.
