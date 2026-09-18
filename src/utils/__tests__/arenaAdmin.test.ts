@@ -36,6 +36,7 @@ import {
   type ArenaControl,
   type ArenaQuestionDraft,
   type ControlContext,
+  validateTournamentDraft,
 } from '../../services/arenaAdminService';
 import { ARENA_STATES, type ArenaState } from '../../../shared/arena/state';
 
@@ -387,5 +388,56 @@ describe('the next beat — the line a host reads instead of guessing', () => {
       .forEach((state) => {
         expect(nextBeat({ state, index: 0, questionCount: 25 }, null, PAUSE, NOW).kind).toBe('idle');
       });
+  });
+});
+
+// ── The tournament creation form ────────────────────────────────────────────
+
+describe('validateTournamentDraft', () => {
+  const base = { tournamentId: 'sept-2026', title: 'Arène de septembre', startsAt: 1_800_000_000_000 };
+  const fields = (d: any) => validateTournamentDraft(d, false).map((i) => i.field);
+
+  it('accepts a complete draft', () => {
+    expect(validateTournamentDraft(base, false)).toEqual([]);
+  });
+
+  it('refuses an id that would not survive a URL', () => {
+    for (const id of ['', 'sept 2026', 'sept/2026', '-sept', 'é2026', 'x'.repeat(65)]) {
+      expect(fields({ ...base, tournamentId: id })).toContain('tournamentId');
+    }
+  });
+
+  it('accepts the ids the server accepts', () => {
+    for (const id of ['a', 'sept-2026', 'SEPT_2026', '2026']) {
+      expect(fields({ ...base, tournamentId: id })).not.toContain('tournamentId');
+    }
+  });
+
+  /*
+   * The rule worth stating twice. `rankSchools` reads qualification off the
+   * pool it is handed, so a tournament scoring five with only three required
+   * present would call a school qualified on a pool that cannot fill its own
+   * counting five — discovered on a stream, not in review.
+   */
+  it('refuses fewer players present than the number that score', () => {
+    expect(fields({ ...base, teamSize: 5, minPlayers: 3 })).toContain('minPlayers');
+    expect(fields({ ...base, teamSize: 5, minPlayers: 5 })).not.toContain('minPlayers');
+    expect(fields({ ...base, teamSize: 5, minPlayers: 8 })).not.toContain('minPlayers');
+  });
+
+  it('refuses doors that open after the first question', () => {
+    expect(fields({ ...base, doorsAt: base.startsAt + 1 })).toContain('doorsAt');
+    expect(fields({ ...base, doorsAt: base.startsAt - 600_000 })).not.toContain('doorsAt');
+  });
+
+  it('refuses a missing start time and a too-short title', () => {
+    expect(fields({ ...base, startsAt: 0 })).toContain('startsAt');
+    expect(fields({ ...base, title: 'A' })).toContain('title');
+  });
+
+  it('writes its messages in the reader’s language', () => {
+    const fr = validateTournamentDraft({ ...base, title: '' }, false)[0].message;
+    const ht = validateTournamentDraft({ ...base, title: '' }, true)[0].message;
+    expect(fr).not.toBe(ht);
   });
 });

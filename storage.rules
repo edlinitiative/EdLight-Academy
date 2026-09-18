@@ -1,0 +1,47 @@
+rules_version = '2';
+
+/**
+ * Cloud Storage rules — the Arena's parental consent forms, and nothing else.
+ *
+ * This bucket exists for exactly one thing: a signed parental authorisation
+ * from the guardian of a minor who has won prize money. Section M's rule that
+ * we never store an identity document is unchanged and is enforced at the API
+ * (`FORBIDDEN_CLAIM_FIELDS` in api/arena/claim.ts) — a consent form is a
+ * signature releasing a prize, not a proof of who anybody is, and it is the
+ * only document this product holds about a child.
+ *
+ * Three properties, each of which is the whole point:
+ *
+ *  · NOBODY READS FROM A CLIENT. Not the uploader, not an admin. Storage rules
+ *    cannot ask Firestore what `users/{uid}.role` says, and this codebase has
+ *    no admin custom claims, so any read rule expressible here would be either
+ *    "everyone" or a second, weaker definition of "admin" than the one every
+ *    other surface uses. Admins fetch through `/api/arena/consent`, which
+ *    verifies the role with the Admin SDK and returns a short-lived signed URL.
+ *  · A STUDENT MAY ONLY WRITE UNDER THEIR OWN UID. The path carries the uid and
+ *    the rule pins it to `request.auth.uid`, so one winner cannot attach a form
+ *    to another winner's claim.
+ *  · WRITE-ONCE. `update` and `delete` are denied: a signed form that can be
+ *    swapped after an admin has looked at it is not evidence of anything. A
+ *    corrected form uploads as a NEW object (the filename carries a timestamp)
+ *    and the claim document points at the latest, leaving the trail intact.
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /arena-consent/{tid}/{uid}/{file} {
+      allow read: if false;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.size <= 8 * 1024 * 1024
+                    && request.resource.contentType.matches('^(application/pdf|image/(jpeg|png|heic|heif|webp))$');
+      allow update, delete: if false;
+    }
+
+    // Everything else in the bucket is closed. A default-open path is how a
+    // bucket opened for one feature becomes a file host.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

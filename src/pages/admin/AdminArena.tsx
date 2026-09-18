@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Swords, ChevronLeft, AlertTriangle, RefreshCw, ListChecks, ShieldAlert,
+  Swords, ChevronLeft, RefreshCw, ListChecks, ShieldAlert, Plus,
 } from 'lucide-react';
 import useStore from '../../contexts/store';
 import {
@@ -9,6 +9,8 @@ import {
   CONTROL_ENDPOINT,
   authoringProgress,
   controlPermission,
+  createTournament,
+  fetchConsentUrl,
   freezeRoster,
   listQuestions,
   listTournaments,
@@ -16,15 +18,20 @@ import {
   postAdvance,
   postAggregate,
   requestTransition,
+  reviewClaim,
+  validateTournamentDraft,
+  watchClaims,
   watchLiveQuestion,
   watchStandings,
   watchTournament,
+  type AdminClaim,
   type ArenaControl,
   type ArenaLiveQuestion,
   type ArenaStandingsSummary,
   type ArenaTournament,
   type ControlContext,
   type ControlReason,
+  type NewTournamentInput,
 } from '../../services/arenaAdminService';
 import { type ArenaState } from '../../../shared/arena/state';
 
@@ -45,15 +52,12 @@ import { type ArenaState } from '../../../shared/arena/state';
  *   whose most prominent button is "next question" is a console someone drives
  *   by hand, and a tournament driven by hand desynchronises from the broadcast.
  *
- * · **Most of these controls have no server route yet.** The roster freeze is
- *   the exception — `/api/arena/doors-close` accepts a signed-in admin, so it
- *   works. `/api/arena/advance`
- *   and `/api/arena/aggregate` authenticate with `CRON_SECRET`, which a browser
- *   must never hold, and the state transitions (`registration`, `doors`,
- *   `live`, `provisional`, `final`, `void`) have no endpoint at all. The
- *   controls are still rendered, still gated by `canTransition`, and still say
- *   why — a host needs to know a control exists before the minute they need
- *   it. What they do not do is pretend to work.
+ * · **A disabled control is refused, not broken.** Every state-changing
+ *   control runs through `canTransition` before it is offered, and one that is
+ *   wrong for this moment is greyed WITH ITS REASON UNDERNEATH rather than
+ *   hidden — a host needs to know a control exists before the minute they need
+ *   it. The server re-checks the same rule inside the transaction that writes,
+ *   so this page can never be the thing that invented an illegal move.
  *
  * Renders inside AdminLayout's <Outlet>. The tournament is selected with a
  * `?tid=` query param so a console can be linked to, opened on a second screen
@@ -122,6 +126,462 @@ function formatWhen(ms: number, locale: string): string {
   }
 }
 
+/**
+ * Create a tournament.
+ *
+ * Collapsed by default: this is a once-a-month action sitting above a list
+ * somebody opens every week, and a form that is always expanded trains people
+ * to scroll past the thing they came for.
+ *
+ * Two fields carry the decisions worth defending, so the form explains them
+ * rather than leaving them as numbers: the counting five (why `minPlayers`
+ * cannot be under `teamSize`) and the prizes, typed in dollars and stored in
+ * cents so nobody ever types 10000 meaning a hundred.
+ */
+function NewTournamentCard({
+  t,
+  onCreated,
+}: {
+  t: (fr: string, ht: string) => string;
+  onCreated: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<NewTournamentInput>(() => ({
+    tournamentId: '',
+    title: '',
+    titleHt: '',
+    startsAt: 0,
+    questionCount: 25,
+    teamSize: 5,
+    minPlayers: 5,
+    prizes: [10_000, 5_000, 2_500],
+  }));
+  const [startsAtLocal, setStartsAtLocal] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [touched, setTouched] = useState(false);
+
+  const isCreole = useStore((s) => s.language) === 'ht';
+  const issues = useMemo(() => validateTournamentDraft(draft, isCreole), [draft, isCreole]);
+  const issueFor = (field: string) => issues.find((i) => i.field === field)?.message;
+
+  const set = <K extends keyof NewTournamentInput>(key: K, value: NewTournamentInput[K]) =>
+    setDraft((d) => ({ ...d, [key]: value }));
+
+  const setPrize = (i: number, dollars: string) => {
+    const cents = Math.round((Number(dollars) || 0) * 100);
+    setDraft((d) => {
+      const prizes = [...(d.prizes || [])];
+      prizes[i] = Math.max(0, cents);
+      return { ...d, prizes };
+    });
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTouched(true);
+    if (issues.length > 0) return;
+    setSaving(true);
+    setNote(null);
+    try {
+      await createTournament(draft);
+      setNote({
+        type: 'success',
+        text: t(
+          `« ${draft.title} » créé en brouillon. Rédigez les questions avant d’ouvrir les inscriptions.`,
+          `« ${draft.title} » kreye kòm bouyon. Redije kesyon yo anvan ou louvri enskripsyon yo.`,
+        ),
+      });
+      setDraft((d) => ({ ...d, tournamentId: '', title: '', titleHt: '', startsAt: 0 }));
+      setStartsAtLocal('');
+      setTouched(false);
+      await onCreated();
+    } catch (err) {
+      const e2 = err as ArenaAdminError;
+      setNote({
+        type: 'error',
+        text: e2?.code === 'already_exists'
+          ? t(
+              'Un tournoi porte déjà cet identifiant.',
+              'Gen yon tounwa ki gen idantifyan sa a deja.',
+            )
+          : (e2?.message || String(err)),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field = (label: string, control: React.ReactNode, error?: string, hint?: string) => (
+    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+      {label}
+      <div style={{ marginTop: 4, fontWeight: 400 }}>{control}</div>
+      {hint && !error ? (
+        <div className="admin-page__subtitle" style={{ fontSize: 11, marginTop: 3, fontWeight: 400 }}>{hint}</div>
+      ) : null}
+      {touched && error ? (
+        <div style={{ fontSize: 11, marginTop: 3, color: '#B42318', fontWeight: 400 }}>{error}</div>
+      ) : null}
+    </label>
+  );
+
+  const input: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: 8,
+    border: '1px solid var(--admin-border, #d9dde3)', fontSize: 13, background: '#fff',
+  };
+
+  return (
+    <div className="admin-card" style={{ padding: 16, marginBottom: 20 }}>
+      <button
+        type="button"
+        className="admin-btn admin-btn--ghost"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <Plus size={14} aria-hidden="true" /> {t('Nouveau tournoi', 'Nouvo tounwa')}
+      </button>
+
+      {note ? (
+        <p style={{ marginTop: 12, marginBottom: 0, fontSize: 13, color: note.type === 'error' ? '#B42318' : '#067647' }}>
+          {note.text}
+        </p>
+      ) : null}
+
+      {open ? (
+        <form onSubmit={submit} style={{ marginTop: 16, display: 'grid', gap: 14 }}>
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
+            {field(
+              t('Identifiant', 'Idantifyan'),
+              <input
+                style={input}
+                value={draft.tournamentId}
+                onChange={(e) => set('tournamentId', e.target.value.trim())}
+                placeholder="sept-2026"
+                autoComplete="off"
+              />,
+              issueFor('tournamentId'),
+              t('Il apparaît dans les liens et ne change jamais.', 'Li parèt nan lyen yo epi li pa janm chanje.'),
+            )}
+            {field(
+              t('Titre (français)', 'Tit (fransè)'),
+              <input style={input} value={draft.title} onChange={(e) => set('title', e.target.value)} />,
+              issueFor('title'),
+            )}
+            {field(
+              t('Titre (kreyòl)', 'Tit (kreyòl)'),
+              <input style={input} value={draft.titleHt || ''} onChange={(e) => set('titleHt', e.target.value)} />,
+              undefined,
+              t('Vide = le titre français.', 'Vid = tit fransè a.'),
+            )}
+            {field(
+              t('Première question', 'Premye kesyon'),
+              <input
+                type="datetime-local"
+                style={input}
+                value={startsAtLocal}
+                onChange={(e) => {
+                  setStartsAtLocal(e.target.value);
+                  const ms = e.target.value ? new Date(e.target.value).getTime() : 0;
+                  set('startsAt', Number.isFinite(ms) ? ms : 0);
+                }}
+              />,
+              issueFor('startsAt'),
+              t('Les portes ouvrent 10 minutes avant.', 'Pòt yo louvri 10 minit anvan.'),
+            )}
+            {field(
+              t('Questions', 'Kesyon'),
+              <input
+                type="number" min={1} style={input}
+                value={draft.questionCount ?? 25}
+                onChange={(e) => set('questionCount', Number(e.target.value))}
+              />,
+              issueFor('questionCount'),
+            )}
+            {field(
+              t('Joueurs qui comptent', 'Jwè ki konte'),
+              <input
+                type="number" min={1} style={input}
+                value={draft.teamSize ?? 5}
+                onChange={(e) => set('teamSize', Number(e.target.value))}
+              />,
+              undefined,
+              t('L’école est classée sur la moyenne de ses cinq meilleurs.', 'Lekòl la klase sou mwayèn senk pi bon yo.'),
+            )}
+            {field(
+              t('Présents minimum', 'Prezan minimòm'),
+              <input
+                type="number" min={1} style={input}
+                value={draft.minPlayers ?? 5}
+                onChange={(e) => set('minPlayers', Number(e.target.value))}
+              />,
+              issueFor('minPlayers'),
+              t('Mesuré à la fermeture des portes, pas aux inscriptions.', 'Mezire lè pòt yo fèmen, pa sou enskripsyon yo.'),
+            )}
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              {t('Prix individuels (USD)', 'Pri endividyèl (USD)')}
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12 }}>{i + 1}{i === 0 ? 'er' : 'e'}</span>
+                  <input
+                    type="number" min={0} step="1"
+                    style={{ ...input, width: 100 }}
+                    value={((draft.prizes?.[i] ?? 0) / 100).toString()}
+                    onChange={(e) => setPrize(i, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="admin-page__subtitle" style={{ fontSize: 11, marginTop: 4 }}>
+              {t(
+                'Un rang à 0 ne paie pas et n’ouvre aucune réclamation.',
+                'Yon ran ki a 0 pa peye epi li pa louvri okenn reklamasyon.',
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button type="submit" className="admin-btn" disabled={saving}>
+              {saving ? t('Création…', 'Ap kreye…') : t('Créer en brouillon', 'Kreye kòm bouyon')}
+            </button>
+            <span className="admin-page__subtitle" style={{ fontSize: 11 }}>
+              {t(
+                'Le tournoi naît en brouillon : rien n’est public tant que vous n’ouvrez pas les inscriptions.',
+                'Tounwa a fèt kòm bouyon : anyen pa piblik toutotan ou pa louvri enskripsyon yo.',
+              )}
+            </span>
+          </div>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The claim queue — who has asked for their prize, and what is still missing.
+ *
+ * Only shown once the podium exists, because before `provisional` there is
+ * nothing to claim and a queue of empty rows reads like a broken page.
+ *
+ * The column that matters most is the one that is easy to leave out: for a
+ * minor, whether the signed parental authorisation is actually on file. A
+ * claim from a fifteen-year-old with a contact and a guardian name looks
+ * complete in every other respect and is not — and the person who notices has
+ * to be the admin sitting here, on day two, not the family on day four.
+ *
+ * The consent document itself is never listed, prefetched or embedded. One
+ * click asks `/api/arena/consent` for a fifteen-minute signed URL. A queue that
+ * pre-signs every form hands out a page full of live links to documents about
+ * children that nobody has opened.
+ */
+function ClaimQueue({
+  tid,
+  t,
+  locale,
+}: {
+  tid: string;
+  t: (fr: string, ht: string) => string;
+  locale: string;
+}) {
+  const [claims, setClaims] = useState<AdminClaim[]>([]);
+  const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [note, setNote] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!tid) return undefined;
+    return watchClaims(tid, setClaims, (e) => {
+      console.error('[AdminArena] claims listener failed:', e);
+    });
+  }, [tid]);
+
+  const openConsent = useCallback(async (uid: string) => {
+    setBusyUid(uid);
+    setNote(null);
+    try {
+      const url = await fetchConsentUrl(tid, uid);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      const e = err as ArenaAdminError;
+      setNote({
+        type: 'error',
+        text: e?.message === 'storage_not_configured'
+          ? t(
+              'Le stockage des formulaires n’est pas configuré sur ce déploiement.',
+              'Depo fòm yo pa konfigire sou deplwaman sa a.',
+            )
+          : t('Formulaire introuvable.', 'Nou pa jwenn fòm nan.'),
+      });
+    } finally {
+      setBusyUid(null);
+    }
+  }, [tid, t]);
+
+  const decide = useCallback(async (uid: string, decision: 'verified' | 'rejected') => {
+    const claim = claims.find((c) => c.uid === uid);
+    const confirmText = decision === 'rejected'
+      ? t(
+          'Refuser cette réclamation ? Le prix passe immédiatement au concurrent suivant.',
+          'Refize reklamasyon sa a ? Pri a pase touswit bay moun ki vin apre a.',
+        )
+      : claim?.isMinor && !claim.hasConsent
+        ? t(
+            'Ce gagnant est mineur et l’autorisation parentale signée n’est PAS au dossier. Valider quand même ?',
+            'Moun sa a poko gen 18 an epi otorizasyon paran an ki siyen an PA nan dosye a. Ou vle valide kanmenm ?',
+          )
+        : t('Valider cette réclamation ?', 'Valide reklamasyon sa a ?');
+    if (!window.confirm(confirmText)) return;
+
+    setBusyUid(uid);
+    setNote(null);
+    try {
+      await reviewClaim(tid, uid, decision);
+      setNote({
+        type: 'success',
+        text: decision === 'verified'
+          ? t('Réclamation validée.', 'Reklamasyon an valide.')
+          : t('Réclamation refusée ; le prix a été réattribué.', 'Reklamasyon an refize ; pri a pase bay yon lòt moun.'),
+      });
+    } catch (err) {
+      setNote({ type: 'error', text: (err as Error)?.message || String(err) });
+    } finally {
+      setBusyUid(null);
+    }
+  }, [tid, t, claims]);
+
+  if (claims.length === 0) return null;
+
+  const money = (cents: number) => `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
+
+  return (
+    <div className="admin-card" style={{ padding: 18, marginBottom: 18 }}>
+      <div className="admin-tile__label" style={{ marginBottom: 4 }}>
+        {t('RÉCLAMATIONS', 'REKLAMASYON')}
+      </div>
+      <p className="admin-page__subtitle" style={{ marginTop: 0, fontSize: 12 }}>
+        {t(
+          'Vérifiez sur un appel. Pour un mineur, l’autorisation parentale signée doit être au dossier avant de valider.',
+          'Verifye sou yon apèl. Pou yon minè, otorizasyon paran ki siyen an dwe nan dosye a anvan ou valide.',
+        )}
+      </p>
+
+      {note ? (
+        <p style={{ fontSize: 13, color: note.type === 'error' ? '#B42318' : '#067647' }}>{note.text}</p>
+      ) : null}
+
+      <div className="admin-table__scroll">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>{t('Rang', 'Ran')}</th>
+              <th>{t('État', 'Eta')}</th>
+              <th>{t('Contact', 'Kontak')}</th>
+              <th>{t('Mineur', 'Minè')}</th>
+              <th>{t('Autorisation', 'Otorizasyon')}</th>
+              <th>{t('Échéance', 'Delè')}</th>
+              <th aria-label={t('Actions', 'Aksyon')} />
+            </tr>
+          </thead>
+          <tbody>
+            {claims.map((c) => {
+              const blocked = c.isMinor === true && !c.hasConsent;
+              return (
+                <tr key={c.uid}>
+                  <td>
+                    <strong>{c.rank}</strong>
+                    <div className="admin-page__subtitle" style={{ fontSize: 12 }}>{money(c.prizeCents)}</div>
+                    {c.rolledDownFrom ? (
+                      <div className="admin-page__subtitle" style={{ fontSize: 11 }}>
+                        {t(`reporté du rang ${c.rolledDownFrom}`, `soti nan ran ${c.rolledDownFrom}`)}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td>
+                    <span className="admin-role-pill">{CLAIM_STATE_COPY[c.state]?.[locale === 'fr-HT' ? 1 : 0] || c.state}</span>
+                  </td>
+                  <td style={{ fontSize: 12 }}>
+                    {c.contact || <span className="admin-page__subtitle">{t('pas encore', 'poko')}</span>}
+                    {c.guardian ? (
+                      <div className="admin-page__subtitle" style={{ fontSize: 11 }}>
+                        {c.guardian.name}{c.guardian.relationship ? ` (${c.guardian.relationship})` : ''} · {c.guardian.contact}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td>{c.isMinor === null ? '—' : c.isMinor ? t('oui', 'wi') : t('non', 'non')}</td>
+                  <td style={{ fontSize: 12 }}>
+                    {c.isMinor !== true ? (
+                      <span className="admin-page__subtitle">{t('sans objet', 'pa konsène')}</span>
+                    ) : c.hasConsent ? (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost"
+                        disabled={busyUid === c.uid}
+                        onClick={() => { void openConsent(c.uid); }}
+                      >
+                        {t('Ouvrir', 'Louvri')}
+                      </button>
+                    ) : (
+                      <span style={{ color: '#B54708', fontWeight: 600 }}>
+                        {t('manquante', 'li manke')}
+                        {c.consentEmailSent === false ? (
+                          <div style={{ fontWeight: 400, fontSize: 11 }}>
+                            {t('email non parti', 'imel la pa pati')}
+                          </div>
+                        ) : null}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ fontSize: 12 }}>{formatWhen(c.expiresAt, locale)}</td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {c.state === 'claimed' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="admin-btn"
+                          disabled={busyUid === c.uid}
+                          title={blocked
+                            ? t('Autorisation parentale manquante.', 'Otorizasyon paran an manke.')
+                            : undefined}
+                          onClick={() => { void decide(c.uid, 'verified'); }}
+                        >
+                          {t('Valider', 'Valide')}
+                        </button>{' '}
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--danger"
+                          disabled={busyUid === c.uid}
+                          onClick={() => { void decide(c.uid, 'rejected'); }}
+                        >
+                          {t('Refuser', 'Refize')}
+                        </button>
+                      </>
+                    ) : (
+                      <span className="admin-page__subtitle" style={{ fontSize: 12 }}>
+                        {c.reviewNote || '—'}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const CLAIM_STATE_COPY: Record<string, [string, string]> = {
+  open: ['offert', 'ofri'],
+  claimed: ['à vérifier', 'pou verifye'],
+  verified: ['validé', 'valide'],
+  rejected: ['refusé', 'refize'],
+  expired: ['expiré', 'depase'],
+};
+
 export default function AdminArena() {
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = useCallback((fr: string, ht: string) => (isCreole ? ht : fr), [isCreole]);
@@ -142,20 +602,17 @@ export default function AdminArena() {
 
   // ── Loads and listeners ───────────────────────────────────────────────────
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const rows = await listTournaments();
-        if (alive) setTournaments(rows);
-      } catch (err) {
-        console.error('[AdminArena] listTournaments failed:', err);
-      } finally {
-        if (alive) setListLoading(false);
-      }
-    })();
-    return () => { alive = false; };
+  const reloadList = useCallback(async () => {
+    try {
+      setTournaments(await listTournaments());
+    } catch (err) {
+      console.error('[AdminArena] listTournaments failed:', err);
+    } finally {
+      setListLoading(false);
+    }
   }, []);
+
+  useEffect(() => { void reloadList(); }, [reloadList]);
 
   // A run console that polls tells the host something that stopped being true
   // four seconds ago, on the one night where that difference is the whole job.
@@ -258,7 +715,10 @@ export default function AdminArena() {
         return t('Aucune question à ouvrir.', 'Pa gen kesyon pou ouvri.');
       default:
         if (CONTROL_ENDPOINT[control] === 'advance') {
-          return t('Route serveur : CRON_SECRET requis.', 'Wout sèvè : CRON_SECRET obligatwa.');
+          return t(
+            'Override manuel : l’horloge avance toute seule.',
+            'Ovèrayd manyèl : revèy la ap avanse pou kont li.',
+          );
         }
         return CONTROL_ENDPOINT[control] === 'doorsClose'
           ? t(
@@ -319,8 +779,8 @@ export default function AdminArena() {
       setMessage({
         type: 'error',
         text: t(
-          'Refusé : cet endpoint n’accepte que CRON_SECRET, jamais un jeton d’administrateur.',
-          'Refize : endpoint sa a aksepte sèlman CRON_SECRET, pa yon jeton administratè.',
+          'Refusé : le serveur n’a pas reconnu votre compte administrateur. Déploiement mal configuré.',
+          'Refize : sèvè a pa rekonèt kont administratè ou. Deplwaman an mal konfigire.',
         ),
       });
       return;
@@ -470,17 +930,7 @@ export default function AdminArena() {
           </p>
         </div>
 
-        <div className="admin-card" style={{ padding: 16, marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <AlertTriangle size={16} aria-hidden="true" style={{ flex: 'none', marginTop: 2 }} />
-            <p style={{ margin: 0, fontSize: 13 }}>
-              {t(
-                'Créer un tournoi depuis la console n’est pas possible : firestore.rules refuse toute écriture client sous tournaments/**, et il n’existe pas de route /api/arena/tournaments. Créez le document côté serveur, puis pilotez-le ici.',
-                'Ou pa ka kreye yon tounwa nan konsòl la : firestore.rules refize tout ekriti kliyan anba tournaments/**, epi pa gen wout /api/arena/tournaments. Kreye dokiman an bò sèvè a, apre sa pilote l isit la.',
-              )}
-            </p>
-          </div>
-        </div>
+        <NewTournamentCard t={t} onCreated={reloadList} />
 
         <div className="admin-card">
           {listLoading ? (
@@ -771,11 +1221,16 @@ export default function AdminArena() {
             </button>
             <span className="admin-page__subtitle" style={{ fontSize: 11, lineHeight: 1.35 }}>
               <span style={{ color: '#C77700', fontWeight: 600 }}>{t('SÉCURITÉ · ', 'SEKIRITE · ')}</span>
-              {t('Route serveur : CRON_SECRET requis.', 'Wout sèvè : CRON_SECRET obligatwa.')}
+              {t(
+                'Le classement se recalcule à chaque fermeture de question.',
+                'Klasman an rekalkile chak fwa yon kesyon fèmen.',
+              )}
             </span>
           </div>
         </div>
       </div>
+
+      <ClaimQueue tid={tid} t={t} locale={locale} />
 
       <div className="admin-card" style={{ padding: 18, marginBottom: 18 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', justifyContent: 'space-between' }}>

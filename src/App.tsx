@@ -27,6 +27,8 @@ const DeleteAccount = lazyWithRetry(() => import('./pages/DeleteAccount'));
 const Terms = lazyWithRetry(() => import('./pages/Terms'));
 const Defi = lazyWithRetry(() => import('./pages/Defi'));
 const Live = lazyWithRetry(() => import('./pages/Live'));
+const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
+const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
 const CourseManager = lazyWithRetry(() => import('./pages/CourseManager'));
 // Admin console pages
@@ -166,6 +168,12 @@ export default function App() {
                   and streamed, so the site header, footer and nav would be
                   furniture around a broadcast. Full bleed, or it is not a
                   stage. */}
+              {/* The prize claim and the parental authorisation it needs. Both
+                  are linked from an email, so both are plain public routes —
+                  the claim page does its own auth gate, and the form is a
+                  printable document that reveals nothing. */}
+              <Route path="/arena/reclamation" element={<ArenaClaim />} />
+              <Route path="/arena/autorisation" element={<ArenaConsentForm />} />
               <Route path="/direct" element={<Live />} />
               <Route path="/live" element={<Navigate to="/direct" replace />} />
             </Routes>

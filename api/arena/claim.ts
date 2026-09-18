@@ -57,11 +57,12 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { Timestamp, type DocumentReference, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, type DocumentReference, type Firestore } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
-import { getDb } from '../_lib/firebaseAdmin';
-import { asArenaState, isValidTournamentId, parseBody, toMillis } from './_shared';
+import { getConsentBucket, getDb } from '../_lib/firebaseAdmin';
+import { sendConsentEmail } from '../_lib/arenaConsentEmail';
+import { asArenaState, isValidTournamentId, parseBody, publicDisplayName, toMillis } from './_shared';
 
 // ── The published window ────────────────────────────────────────────────────
 
@@ -405,6 +406,68 @@ function readGuardian(g: Record<string, unknown>): GuardianContact {
   };
 }
 
+// ── The parental consent form ───────────────────────────────────────────────
+
+/**
+ * Where a signed consent form lives.
+ *
+ * `arena-consent/{tid}/{uid}/consent-{ms}.{ext}` — the uid is IN the path
+ * because storage.rules pins it to `request.auth.uid`, which is the only thing
+ * stopping one winner from attaching a form to another winner's claim. The
+ * timestamp makes every upload a new object: the rules deny `update` and
+ * `delete`, so a corrected form lands beside the first one rather than
+ * replacing it, and an admin who has already looked at a form can be sure the
+ * bytes they looked at are still there.
+ */
+export const CONSENT_PREFIX = 'arena-consent';
+
+/** What a parent can actually produce: a scan, a phone photo, or a signed PDF. */
+export const CONSENT_TYPES: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'image/webp': 'webp',
+};
+
+/** 8 MB. A phone photo of a signed page is ~2–4 MB; a scan is less. */
+export const CONSENT_MAX_BYTES = 8 * 1024 * 1024;
+
+export function consentPath(tid: string, uid: string, contentType: string, now: number): string | null {
+  const ext = CONSENT_TYPES[contentType];
+  if (!ext) return null;
+  return `${CONSENT_PREFIX}/${tid}/${uid}/consent-${now}.${ext}`;
+}
+
+export type ConsentPathError = 'wrong_prefix' | 'wrong_owner' | 'bad_filename';
+
+/**
+ * Is this path one THIS student may claim to have written, for THIS tournament?
+ *
+ * The client uploads straight to Storage and then tells us the path, so the
+ * path is untrusted input. Storage's own rules already stop a write outside the
+ * uploader's own folder; this is the second half — stopping a student from
+ * POINTING a claim at an object that is not theirs, which the rules cannot see.
+ */
+export function parseConsentPath(
+  path: unknown,
+  tid: string,
+  uid: string,
+): { ok: true; ext: string } | { ok: false; error: ConsentPathError } {
+  if (typeof path !== 'string') return { ok: false, error: 'wrong_prefix' };
+  const parts = path.split('/');
+  if (parts.length !== 4 || parts[0] !== CONSENT_PREFIX) return { ok: false, error: 'wrong_prefix' };
+  if (parts[1] !== tid) return { ok: false, error: 'wrong_prefix' };
+  if (parts[2] !== uid) return { ok: false, error: 'wrong_owner' };
+
+  const m = /^consent-(\d{10,16})\.([a-z]{3,4})$/.exec(parts[3]);
+  if (!m) return { ok: false, error: 'bad_filename' };
+  const ext = m[2];
+  if (!Object.values(CONSENT_TYPES).includes(ext)) return { ok: false, error: 'bad_filename' };
+  return { ok: true, ext };
+}
+
 // ── Firestore plumbing ──────────────────────────────────────────────────────
 
 type Row = Record<string, unknown>;
@@ -526,7 +589,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
   const action = typeof body.action === 'string' ? body.action : 'claim';
-  if (action !== 'claim' && action !== 'review' && action !== 'sweep') {
+  if (action !== 'claim' && action !== 'review' && action !== 'sweep' && action !== 'consent') {
     res.status(400).json({ error: 'invalid_action' });
     return;
   }
@@ -552,6 +615,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     if (action === 'claim') {
       await handleClaim({ db, res, uid, tid: String(tournamentId), tournament, body });
+      return;
+    }
+
+    // The claimant attaches their own signed form. Not an admin action: the
+    // family does this, and an admin who could upload on their behalf is an
+    // admin who could manufacture the consent they are meant to be checking.
+    if (action === 'consent') {
+      await handleConsent({ db, res, uid, tid: String(tournamentId), body });
       return;
     }
 
@@ -674,6 +745,37 @@ async function handleClaim(ctx: {
     return;
   }
 
+  // The guardian email goes out AFTER the claim is written, and its failure is
+  // recorded rather than raised: the claim is already valid, the page in front
+  // of the student already lists the same three steps, and a bounced email
+  // costs a reminder, not a prize. An admin chasing a silent winner needs to be
+  // able to see that the message never went out.
+  let consentEmail: { sent: boolean; to?: string[]; error?: string } | null = null;
+  if (submission.isMinor && submission.guardian) {
+    // The name the podium showed. A parent recognises their child from it;
+    // falling back to "your child" is better than falling back to a uid, which
+    // would read like a scam in an email about money.
+    const alias = await publicDisplayName(db, uid, undefined);
+    const isCreole = body.lang !== 'fr';
+    const result = await sendConsentEmail({
+      to: [submission.guardian.contact, submission.contact],
+      lang: isCreole ? 'ht' : 'fr',
+      playerName: alias || (isCreole ? 'pitit ou a' : 'votre enfant'),
+      guardianName: submission.guardian.name,
+      tournamentTitle: String(tournament.title ?? tid),
+      rank: outcome.rank,
+      prizeCents: outcome.prizeCents,
+      expiresAt: outcome.expiresAt,
+      tournamentId: tid,
+    });
+    consentEmail = 'sent' in result ? { sent: true, to: result.to } : { sent: false, error: result.error };
+    await claimRef.set({
+      consentEmail: { ...consentEmail, at: Timestamp.fromMillis(Date.now()) },
+    }, { merge: true }).catch((err) => {
+      console.error('[arena/claim] could not record consent email result:', err);
+    });
+  }
+
   res.status(200).json({
     ok: true,
     action: 'claimed',
@@ -681,8 +783,104 @@ async function handleClaim(ctx: {
     prizeCents: outcome.prizeCents,
     expiresAt: outcome.expiresAt,
     guardianRequired: submission.isMinor,
+    consentRequired: submission.isMinor,
+    consentEmail,
     message: 'Reklamasyon an anrejistre. Nou pral rele w pou verifye.',
   });
+}
+
+// ── 1b · The family attaches the signed consent form ────────────────────────
+
+/**
+ * Record a consent form the claimant has already uploaded to Storage.
+ *
+ * The upload itself goes straight from the browser to Cloud Storage, under
+ * rules that pin the path to the uploader's own uid and deny every read. This
+ * endpoint does the half the rules cannot: it checks that the path names THIS
+ * tournament and THIS student, and that an object is actually there — a claim
+ * pointing at a file that does not exist would show an admin a broken link and
+ * a student a finished task.
+ *
+ * It does NOT verify anybody. The state stays `claimed`: an upload is a
+ * document arriving, and a document arriving is not a person checked. Moving to
+ * `verified` on upload would make the form its own approval, which is exactly
+ * the check this whole flow exists to perform.
+ */
+async function handleConsent(ctx: {
+  db: Firestore;
+  res: VercelResponse;
+  uid: string;
+  tid: string;
+  body: Record<string, unknown>;
+}): Promise<void> {
+  const { db, res, uid, tid, body } = ctx;
+
+  const parsed = parseConsentPath(body.path, tid, uid);
+  if (!parsed.ok) {
+    res.status(400).json({ error: 'invalid_consent_path', reason: parsed.error });
+    return;
+  }
+  const path = String(body.path);
+
+  const claimRef = db.doc(`tournaments/${tid}/claims/${uid}`);
+  const snap = await claimRef.get();
+  if (!snap.exists) {
+    res.status(404).json({ error: 'claim_not_found' });
+    return;
+  }
+  const claim = (snap.data() ?? {}) as Row;
+  const state = String(claim.state ?? '') as ClaimState;
+  if (state === 'rejected') { res.status(409).json({ error: 'claim_rejected' }); return; }
+  if (state === 'expired') { res.status(410).json({ error: 'claim_expired' }); return; }
+
+  const expiresAt = toMillis(claim.expiresAt) ?? 0;
+  const now = Date.now();
+  if (expiresAt > 0 && now >= expiresAt) {
+    res.status(410).json({ error: 'claim_expired' });
+    return;
+  }
+
+  // The object must exist, and it must be within the size the rules allow —
+  // read from the object itself rather than from what the client said it
+  // uploaded, because the client is the one thing here we did not write.
+  let size = 0;
+  let contentType = '';
+  try {
+    const file = getConsentBucket().file(path);
+    const [exists] = await file.exists();
+    if (!exists) {
+      res.status(404).json({ error: 'consent_file_missing' });
+      return;
+    }
+    const [meta] = await file.getMetadata();
+    size = Number(meta.size ?? 0);
+    contentType = String(meta.contentType ?? '');
+    if (size > CONSENT_MAX_BYTES || !CONSENT_TYPES[contentType]) {
+      res.status(400).json({ error: 'consent_file_rejected' });
+      return;
+    }
+  } catch (err) {
+    if ((err as Error)?.message === 'storage_not_configured') {
+      console.error('[arena/claim] FIREBASE_STORAGE_BUCKET is not set; consent uploads cannot be recorded');
+      res.status(503).json({ error: 'storage_not_configured' });
+      return;
+    }
+    console.error('[arena/claim] consent object check failed:', err);
+    res.status(502).json({ error: 'consent_check_failed' });
+    return;
+  }
+
+  // Appended, not replaced. The rules make each upload a new object, so the
+  // history of what was submitted stays readable; `consent` points at the one
+  // an admin should look at now.
+  const entry = { path, size, contentType, uploadedAt: Timestamp.fromMillis(now) };
+  await claimRef.set({
+    consent: entry,
+    consentHistory: FieldValue.arrayUnion({ path, size, contentType, uploadedAtMs: now }),
+    updatedAt: Timestamp.fromMillis(now),
+  }, { merge: true });
+
+  res.status(200).json({ ok: true, action: 'consent_recorded', path, size, contentType });
 }
 
 // ── 2 · An admin verifies or rejects ────────────────────────────────────────

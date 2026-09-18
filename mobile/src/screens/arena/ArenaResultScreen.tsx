@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -63,7 +63,10 @@ export default function ArenaResultScreen() {
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
   const result = useArenaResult(tournamentId);
-  const { me, mySchool, schoolName, inTheFive, accuracyPct, avgMs, calculating, provisional } = result;
+  const {
+    me, mySchool, schoolName, inTheFive, accuracyPct, avgMs, calculating, provisional,
+    prizeCents, claimOpen,
+  } = result;
 
   if (!tournamentId || result.absent) {
     return (
@@ -186,9 +189,60 @@ export default function ArenaResultScreen() {
           </StageEnter>
         )}
 
+        {/* Money waiting, and the clock running against it.
+            This sits ABOVE the provisional notice on purpose: a winner who
+            only ever sees "we will contact you" waits for an email that may
+            land in spam, and the 72-hour window does not wait with them. */}
+        {claimOpen ? (
+          <StageEnter playKey="result" index={3} springy>
+            <View style={{
+              padding: 18,
+              borderRadius: radius.card,
+              backgroundColor: colors.azure,
+              gap: 10,
+            }}>
+              <Text style={[typeScale.overline, { color: 'rgba(255,255,255,0.8)' }]}>
+                {t('Tu as gagné', 'Ou genyen')}
+              </Text>
+              <Text style={[typeScale.title, { color: '#fff' }]}>
+                {`$${(prizeCents / 100).toFixed(prizeCents % 100 === 0 ? 0 : 2)}`}
+              </Text>
+              <Text style={[typeScale.caption, { color: 'rgba(255,255,255,0.9)' }]}>
+                {t(
+                  'Tu as 72 heures pour réclamer. Passé ce délai, le prix passe au suivant.',
+                  'Ou gen 72 èdtan pou reklame. Apre delè sa a, pri a pase bay moun ki vin apre a.',
+                )}
+              </Text>
+              <PressableScale
+                onPress={() => {
+                  tapMedium();
+                  Linking.openURL(
+                    `https://academy.edlight.org/arena/reclamation?tid=${encodeURIComponent(tournamentId)}`,
+                  ).catch(() => undefined);
+                }}
+                pressedScale={0.98}
+                accessibilityRole="button"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 13,
+                  borderRadius: radius.control,
+                  backgroundColor: '#fff',
+                }}
+              >
+                <Text style={[typeScale.label, { color: colors.azure }]}>
+                  {t('Réclamer mon prix', 'Reklame pri mwen')}
+                </Text>
+              </PressableScale>
+            </View>
+          </StageEnter>
+        ) : null}
+
         {/* Provisional, said plainly and before anyone asks. */}
         {provisional ? (
-          <StageEnter playKey="result" index={3}>
+          <StageEnter playKey="result" index={4}>
             <View style={{
               padding: 14,
               borderRadius: radius.card,
@@ -212,7 +266,7 @@ export default function ArenaResultScreen() {
 
         {/* The invite, framed at the school — the only framing that works here,
             because a school needs five and that is not a favour to ask. */}
-        <StageEnter playKey="result" index={4}>
+        <StageEnter playKey="result" index={5}>
           <PressableScale
             onPress={() => { tapMedium(); navigation.navigate('ArenaLobby', { tournamentId }); }}
             pressedScale={0.98}
@@ -234,7 +288,7 @@ export default function ArenaResultScreen() {
           </PressableScale>
         </StageEnter>
 
-        <StageEnter playKey="result" index={5}>
+        <StageEnter playKey="result" index={6}>
           <PressableScale
             onPress={() => { tapMedium(); navigation.goBack(); }}
             pressedScale={0.98}

@@ -939,3 +939,70 @@ placeholder for each paying rank as the podium is published. Existing claims
 are never overwritten — re-running must not hand a student a fresh 72 hours or
 reset a verification — and a **tie at a paying rank opens no placeholder at
 all**, because two placeholders at one rank is two students on one prize.
+
+---
+
+## Correction to section M — how a minor's prize actually gets released
+
+Section M modelled the guardian as a NORMAL FIELD on every claim (name and
+contact, never an identity document) and verification as a short video call.
+Both stand. What was missing was the step between them: nothing recorded the
+parent actually AGREEING, and "a parent said yes on a call" is not something
+anybody can produce six months later when a family or a funder asks.
+
+**Ted's decision, 2026-09-18.** The child claims and names a parent. The parent
+signs. The logistics happen AFTER the tournament: the family receives an email
+with the authorisation form, the parent signs it, and the winner uploads it to
+the claim page — so there is one artifact to verify rather than a conversation
+to remember.
+
+### What this stores, and what it still refuses
+
+A signed parental authorisation is a **consent artifact**, not proof of who
+anybody is. `FORBIDDEN_CLAIM_FIELDS` is unchanged and still rejects `idPhoto`,
+`idNumber`, `passport`, `birthCertificate` and the rest at the door. The form
+itself asks for no document number and no bank details, and says so in print —
+because this email and this page are exactly what a scam built on top of the
+tournament would imitate, and a family that has read the sentence once has a
+test they can apply to the next message they get.
+
+It does mean the product now holds one document about a child. That is a real
+change in posture and it is the reason the storage rules are as narrow as they
+are.
+
+### `storage.rules` — three properties, each load-bearing
+
+- **Nobody reads from a client.** Not the uploader, not an admin. Storage rules
+  cannot query Firestore, and this codebase keeps `role` on the user document
+  with no admin custom claims — so any read rule expressible there would be
+  either "everyone" or a second, weaker definition of admin than
+  `firestore.rules`, `/api/arena/questions` and `/api/arena/state` all share.
+  Admins go through `GET /api/arena/consent`, which checks the role with the
+  Admin SDK and returns a **15-minute signed URL**, one document at a time, and
+  logs who opened what.
+- **A student may only write under their own uid**, which is in the path and
+  pinned to `request.auth.uid`. The second half of that — stopping a student
+  from POINTING their claim at somebody else's object, which the rules cannot
+  see — is `parseConsentPath` in claim.ts.
+- **Write-once.** `update` and `delete` are denied. A form that can be swapped
+  after an admin has looked at it is not evidence; a corrected form uploads as
+  a new object and the claim points at the latest, leaving the trail intact.
+
+### Recording is not verifying
+
+`action: 'consent'` leaves the claim in `claimed`. An upload is a document
+arriving; a document arriving is not a person checked. Moving to `verified` on
+upload would make the form its own approval, which is the check the whole flow
+exists to perform. The admin queue shows **"autorisation manquante"** in amber
+for any minor without one, and confirms before letting an admin verify anyway.
+
+### Deployment prerequisites (none of these are code)
+
+1. Enable Cloud Storage on the Firebase project.
+2. `firebase deploy --only storage` for the new `storage.rules`.
+3. Set `FIREBASE_STORAGE_BUCKET` in Vercel — read explicitly rather than guessed
+   from the project id, because Firebase has used two default bucket suffixes
+   and a guess fails at upload time, on the one path where failing means a
+   winning child cannot be paid.
+4. `storageBucket` must be present in `window.EDLIGHT_FIREBASE_CONFIG`.
+5. `RESEND_API_KEY` already exists; the guardian email uses it.

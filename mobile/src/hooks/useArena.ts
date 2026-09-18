@@ -531,6 +531,10 @@ export interface ArenaResultView {
   avgMs: number | null;
   /** Still settling — the scores are not final even provisionally. */
   calculating: boolean;
+  /** Cents this student has waiting, from the tournament's own prize list. */
+  prizeCents: number;
+  /** There is money to claim AND the window is open. */
+  claimOpen: boolean;
   now: number;
 }
 
@@ -558,6 +562,22 @@ export function useArenaResult(tid: string | null | undefined): ArenaResultView 
   );
 
   const answered = tournament?.questionCount ?? 0;
+
+  /*
+   * Does this student have money waiting?
+   *
+   * Read from the tournament's own prize list rather than hardcoded to three,
+   * because a later event may pay a different number of places — and a winner
+   * who never opens the claim email has no other way of learning that a
+   * 72-hour window is running against them. The app is where they already are.
+   */
+  const prizeCents = useMemo(() => {
+    if (!me || !tournament) return 0;
+    const prizes = tournament.prizes || [];
+    const cents = prizes[me.rank - 1];
+    return typeof cents === 'number' && cents > 0 ? cents : 0;
+  }, [me, tournament]);
+
   return {
     tournament,
     loading,
@@ -565,6 +585,8 @@ export function useArenaResult(tid: string | null | undefined): ArenaResultView 
     provisional: tournament?.state !== 'final',
     me,
     mySchool,
+    prizeCents,
+    claimOpen: prizeCents > 0 && tournament?.state === 'provisional',
     schoolName: mySchool ? (mySchool.shortName || mySchool.label) : '',
     inTheFive: !!(me && mySchool?.top5?.includes(me.uid)),
     accuracyPct: me && answered > 0 ? Math.round((me.correct / answered) * 100) : null,

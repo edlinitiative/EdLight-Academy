@@ -392,6 +392,113 @@ function stateError(res: Response, body: Row): ArenaAdminError {
   return new ArenaAdminError('server_error', str(body.error, `http_${res.status}`));
 }
 
+// ── Prize claims ────────────────────────────────────────────────────────────
+
+export interface AdminClaim {
+  uid: string;
+  rank: number;
+  finishRank: number | null;
+  prizeCents: number;
+  state: 'open' | 'claimed' | 'verified' | 'rejected' | 'expired';
+  contact: string | null;
+  isMinor: boolean | null;
+  guardian: { name: string; contact: string; relationship: string | null } | null;
+  claimedAt: number;
+  expiresAt: number;
+  /** A signed parental authorisation is on file. The bytes are NEVER here. */
+  hasConsent: boolean;
+  consentUploadedAt: number;
+  consentEmailSent: boolean | null;
+  reviewedBy: string | null;
+  reviewNote: string | null;
+  rolledDownFrom: number | null;
+}
+
+/**
+ * Watch the claim queue.
+ *
+ * Read straight from Firestore, not through an endpoint: `firestore.rules`
+ * already allows an admin to read `tournaments/{tid}/claims/**`, and a review
+ * queue that has to be refreshed by hand is a queue where somebody misses the
+ * moment a family finishes uploading at 22:40 on the third day.
+ *
+ * The consent FILE is not in here and cannot be: `storage.rules` denies every
+ * client read of the bucket. This carries only the fact that one exists; the
+ * bytes come from `/api/arena/consent`, one signed URL at a time.
+ */
+export function watchClaims(
+  tid: string,
+  onClaims: (claims: AdminClaim[]) => void,
+  onError?: (e: Error) => void,
+): () => void {
+  return onSnapshot(
+    collection(db, 'tournaments', tid, 'claims'),
+    (snap) => {
+      const rows: AdminClaim[] = snap.docs.map((d) => {
+        const v = d.data() as Row;
+        const consent = (v.consent ?? null) as Row | null;
+        const email = (v.consentEmail ?? null) as Row | null;
+        return {
+          uid: d.id,
+          rank: num(v.rank),
+          finishRank: typeof v.finishRank === 'number' ? v.finishRank : null,
+          prizeCents: num(v.prizeCents),
+          state: (str(v.state, 'open')) as AdminClaim['state'],
+          contact: str(v.contact) || null,
+          isMinor: typeof v.isMinor === 'boolean' ? v.isMinor : null,
+          guardian: v.guardian && typeof v.guardian === 'object' ? {
+            name: str((v.guardian as Row).name),
+            contact: str((v.guardian as Row).contact),
+            relationship: str((v.guardian as Row).relationship) || null,
+          } : null,
+          claimedAt: millis(v.claimedAt),
+          expiresAt: millis(v.expiresAt),
+          hasConsent: !!consent && typeof consent.path === 'string',
+          consentUploadedAt: millis(consent?.uploadedAt),
+          consentEmailSent: email ? email.sent === true : null,
+          reviewedBy: str(v.reviewedBy) || null,
+          reviewNote: str(v.reviewNote) || null,
+          rolledDownFrom: typeof v.rolledDownFrom === 'number' ? v.rolledDownFrom : null,
+        };
+      });
+      rows.sort((a, b) => a.rank - b.rank || a.uid.localeCompare(b.uid));
+      onClaims(rows);
+    },
+    (e) => onError?.(e as Error),
+  );
+}
+
+/** Verify or reject one claim. A rejection rolls the prize down immediately. */
+export async function reviewClaim(
+  tid: string,
+  uid: string,
+  decision: 'verified' | 'rejected',
+  note?: string,
+): Promise<void> {
+  const res = await authedFetch('/api/arena/claim', {
+    action: 'review', tournamentId: tid, uid, decision, note: note || '',
+  });
+  if (!res.ok) throw stateError(res, await readError(res));
+}
+
+/**
+ * A short-lived link to one signed consent form.
+ *
+ * Fetched per view rather than listed with the queue, on purpose. These are
+ * documents about children, and a queue that pre-signs every one of them hands
+ * out a page full of live links to a document nobody has opened. One click,
+ * one link, fifteen minutes.
+ */
+export async function fetchConsentUrl(tid: string, uid: string): Promise<string> {
+  const res = await authedGet(
+    `/api/arena/consent?tid=${encodeURIComponent(tid)}&uid=${encodeURIComponent(uid)}`,
+  );
+  if (!res.ok) throw stateError(res, await readError(res));
+  const body = await res.json() as { url?: string };
+  if (!body.url) throw new ArenaAdminError('not_found', 'no_consent_on_file');
+  return body.url;
+}
+
 /** GET with the admin's ID token. `authedFetch` is POST-only, so this is the
  *  same header assembly against a GET. */
 async function authedGet(url: string): Promise<Response> {
@@ -452,6 +559,79 @@ export async function saveQuestion(tid: string, question: ArenaQuestionDraft): P
   if (!res.ok) throw questionsError(res, await readError(res));
   const body = await res.json() as { index?: number };
   return num(body.index, question.index);
+}
+
+/**
+ * A tournament id, as `isValidTournamentId` on the server defines it.
+ *
+ * Duplicated rather than imported because `api/arena/_shared.ts` pulls in
+ * `firebase-admin` and the Vercel types, neither of which belongs in a browser
+ * bundle. The regex is the contract; if it drifts, the server refuses and the
+ * form says so rather than the browser silently accepting something the
+ * endpoint will not.
+ */
+export function isValidTournamentSlug(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(value);
+}
+
+export interface TournamentDraftIssue { field: string; message: string }
+
+/**
+ * The creation form's client-side check.
+ *
+ * Instant feedback only — `validateCreate` on the server is the authority and
+ * its refusals are surfaced verbatim. The one rule worth stating twice is
+ * `minPlayers >= teamSize`: `rankSchools` reads qualification off the pool it
+ * is handed, so a tournament that scores five but only needs three present
+ * would report a school as qualified on a pool that cannot fill its own
+ * counting five — and that is discovered on a stream, not in review.
+ */
+export function validateTournamentDraft(
+  d: Partial<NewTournamentInput>,
+  isCreole: boolean,
+): TournamentDraftIssue[] {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const issues: TournamentDraftIssue[] = [];
+
+  if (!d.tournamentId || !isValidTournamentSlug(d.tournamentId)) {
+    issues.push({
+      field: 'tournamentId',
+      message: t(
+        'Identifiant : lettres, chiffres, tiret ou souligné, 64 caractères max.',
+        'Idantifyan : lèt, chif, tirè oswa souliyen, 64 karaktè maksimòm.',
+      ),
+    });
+  }
+  if (!d.title || d.title.trim().length < 3) {
+    issues.push({ field: 'title', message: t('Le titre est trop court.', 'Tit la twò kout.') });
+  }
+  if (!d.startsAt || !Number.isFinite(d.startsAt) || d.startsAt <= 0) {
+    issues.push({ field: 'startsAt', message: t('Date de début manquante.', 'Dat kòmansman an manke.') });
+  }
+  if (d.doorsAt && d.startsAt && d.doorsAt > d.startsAt) {
+    issues.push({
+      field: 'doorsAt',
+      message: t(
+        'Les portes ne peuvent pas ouvrir après la première question.',
+        'Pòt yo pa ka louvri apre premye kesyon an.',
+      ),
+    });
+  }
+  const teamSize = d.teamSize ?? 5;
+  const minPlayers = d.minPlayers ?? 5;
+  if (minPlayers < teamSize) {
+    issues.push({
+      field: 'minPlayers',
+      message: t(
+        `Il faut au moins ${teamSize} joueurs présents — c’est le nombre qui compte pour l’école.`,
+        `Fòk gen omwen ${teamSize} jwè prezan — se kantite ki konte pou lekòl la.`,
+      ),
+    });
+  }
+  if ((d.questionCount ?? 25) < 1) {
+    issues.push({ field: 'questionCount', message: t('Au moins une question.', 'Omwen yon kesyon.') });
+  }
+  return issues;
 }
 
 /** What `POST /api/arena/state` needs to mint a `draft` tournament. */
