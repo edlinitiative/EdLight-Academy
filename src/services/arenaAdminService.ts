@@ -31,6 +31,8 @@ import {
 } from 'firebase/firestore';
 import { db, authedFetch, getIdToken } from './firebase';
 import { canTransition, type ArenaState } from '../../shared/arena/state';
+import { schoolKey } from '../../shared/schools';
+import seedDoc from '../../shared/data/schools-seed.json';
 
 // ── Shapes ──────────────────────────────────────────────────────────────────
 
@@ -1094,4 +1096,102 @@ export function nextBeat(
   }
   if (ctx.index >= ctx.questionCount - 1) return { kind: 'grading', inMs: 0 };
   return { kind: 'opens', inMs: Math.max(0, live.closedAt + pauseMs - now) };
+}
+
+// ── Where a school is ───────────────────────────────────────────────────────
+
+/**
+ * One school, as the location editor sees it.
+ *
+ * `commune` is the whole point and it is nullable. The 94 seeded schools ship
+ * with no location at all — `shared/data/schools-seed.json` deliberately
+ * carries none, because the version that did inferred it from applicants' home
+ * addresses and split one real school into two. So "unknown" is the normal
+ * state here, not a loading artefact, and the editor shows it as a count
+ * rather than as a blank column nobody reads.
+ */
+export interface AdminSchoolRow {
+  key: string;
+  name: string;
+  shortName: string | null;
+  /** Stated by a person, or null. Never derived from where students live. */
+  commune: string | null;
+  /** Number of ESLP applicants who named it — the seed's ordering. */
+  applicants: number;
+  /** Whether a Firestore document exists yet (the seed alone means no). */
+  stored: boolean;
+}
+
+/**
+ * The full school list: the bundled seed, plus everything students have added.
+ *
+ * Read straight from Firestore rather than through an endpoint, because
+ * `firestore.rules` already lets any signed-in client read `schools/{id}` —
+ * only the WRITE needs a server. The seed is merged in client-side exactly as
+ * `mobile/src/services/schoolService.ts` merges it, so an admin sees the same
+ * 94 schools the student's picker offers rather than only the handful that
+ * happen to have documents.
+ */
+export async function listSchoolsForLocation(): Promise<AdminSchoolRow[]> {
+  const seeded: AdminSchoolRow[] = (seedDoc.schools as Row[]).map((s) => ({
+    key: schoolKey(str(s.name)),
+    name: str(s.name),
+    shortName: str(s.shortName) || null,
+    commune: null,
+    applicants: num(s.applicants, 0),
+    stored: false,
+  }));
+
+  const byKey = new Map<string, AdminSchoolRow>();
+  for (const row of seeded) if (row.key) byKey.set(row.key, row);
+
+  try {
+    const snap = await getDocs(collection(db, 'schools'));
+    for (const d of snap.docs) {
+      const v = d.data() as Row;
+      const key = str(v.key) || schoolKey(str(v.name));
+      if (!key) continue;
+      const seed = byKey.get(key);
+      byKey.set(key, {
+        key,
+        // The seed's name wins for a seeded school: it is the spelling the
+        // picker shows and the standings group by.
+        name: seed?.name || str(v.name) || key,
+        shortName: str(v.shortName) || seed?.shortName || null,
+        commune: str(v.commune) || null,
+        applicants: seed?.applicants ?? num(v.applicants, 0),
+        stored: true,
+      });
+    }
+  } catch (e) {
+    // The seed alone is still a usable editor — and an admin who can see the
+    // list can at least see WHICH schools have no location, which is the
+    // number this screen exists to move.
+    console.warn('[arena] school list read failed, showing the seed only:', e);
+  }
+
+  return [...byKey.values()].sort(
+    (a, b) => b.applicants - a.applicants || a.name.localeCompare(b.name),
+  );
+}
+
+/**
+ * State — or clear — where one school is.
+ *
+ * `commune` must be a commune from `src/data/haitiGeo.ts`; the endpoint refuses
+ * anything else, because the broadcast map joins a school's commune against the
+ * villes students picked from that same list and a free-typed spelling is a
+ * school that silently never appears. `null` clears the location, which an
+ * admin who realises they guessed must be able to do.
+ *
+ * `name` is sent so the endpoint can create the document for a seeded school,
+ * which has none until the first time anybody says anything about it.
+ */
+export async function setSchoolCommune(
+  key: string,
+  commune: string | null,
+  name: string,
+): Promise<void> {
+  const res = await authedFetch('/api/arena/school-location', { key, commune, name });
+  if (!res.ok) throw stateError(res, await readError(res));
 }

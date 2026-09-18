@@ -61,6 +61,12 @@ const LIMITS: Record<string, Limit> = {
   // actions, and both sit next to prize money.
   'arena-questions': { max: 300, windowSec: 3600 },
   'arena-claim':     { max: 20, windowSec: 3600 },
+  // Stating where a school is (api/arena/school-location). Admin-only, and the
+  // realistic job is one sitting that types in all 94 seeded schools, so the
+  // cap has to clear that comfortably in an hour. Declared rather than left
+  // out: an undeclared `arena-` bucket fails CLOSED, so a missing line here is
+  // not a loose limit, it is an endpoint that never runs.
+  'arena-schools':   { max: 300, windowSec: 3600 },
   'arena-doors-close': { max: 20, windowSec: 3600 },
   // The run console. `arena-state` moves the tournament between states — a
   // seven-step machine plus mistakes, so 60 an hour is far more than a real
