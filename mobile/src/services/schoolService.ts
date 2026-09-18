@@ -1,6 +1,14 @@
 import { addDoc, collection, getDocs, limit, query, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { schoolKey, mergeSchools, likelyDuplicate, type School } from '../../../shared/schools';
+import {
+  schoolKey,
+  shortNameKey,
+  mergeSchools,
+  likelyDuplicate,
+  validateShortName,
+  type School,
+  type ShortNameReason,
+} from '../../../shared/schools';
 import seedDoc from '../../../shared/data/schools-seed.json';
 
 /**
@@ -20,8 +28,38 @@ import seedDoc from '../../../shared/data/schools-seed.json';
 // The seed records no location: its source is the student's home address, not
 // the school's, so a school is one entry per name nationally. A commune only
 // appears once a student adds a school and types the school's own address.
-const SEED: School[] = (seedDoc.schools as { name: string; applicants?: number }[])
-  .map((s) => ({ key: schoolKey(s.name), name: s.name, commune: '', applicants: s.applicants }));
+const SEED: School[] = (seedDoc.schools as { name: string; applicants?: number; shortName?: string }[])
+  .map((s) => ({
+    key: schoolKey(s.name),
+    name: s.name,
+    commune: '',
+    applicants: s.applicants,
+    // Only the schools whose short name someone actually told us carry one.
+    shortName: s.shortName,
+  }));
+
+/** A Firestore school document, before we have checked anything about it. */
+type SchoolDoc = Record<string, unknown>;
+
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+/**
+ * The status of a stored school.
+ *
+ * A document written before short names existed has no status at all, and those
+ * are treated as approved: they are already on the live school board, and
+ * demoting them to pending would quietly strip schools students have been
+ * playing under for months.
+ */
+function readStatus(v: unknown): School['status'] {
+  return v === 'pending' || v === 'merged' || v === 'approved' ? v : undefined;
+}
+
+function readAliases(v: unknown): string[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const aliases = v.filter((a): a is string => typeof a === 'string' && a.trim().length > 0);
+  return aliases.length ? aliases : undefined;
+}
 
 /** Bound the read: the list is a picker, not an archive. */
 const MAX_ADDED = 500;
@@ -35,14 +73,27 @@ export async function loadSchools(): Promise<School[]> {
   try {
     const snap = await getDocs(query(collection(db, 'schools'), limit(MAX_ADDED)));
     added = snap.docs.map((d) => {
-      const v = d.data() as any;
+      const v = d.data() as SchoolDoc;
       return {
-        key: String(v.key || schoolKey(String(v.name ?? ''))),
-        name: String(v.name ?? ''),
-        commune: String(v.commune ?? ''),
-        address: v.address ? String(v.address) : undefined,
+        key: str(v.key) || schoolKey(str(v.name)),
+        name: str(v.name),
+        commune: str(v.commune),
+        address: str(v.address) || undefined,
+        city: str(v.city) || undefined,
+        shortName: shortNameKey(str(v.shortName)) || undefined,
+        aliases: readAliases(v.aliases),
+        // Carried through rather than dropped: a caller that shows a pending
+        // school has to be able to say so, and the Arena has to be able to
+        // refuse a short name a pending school has not earned yet.
+        status: readStatus(v.status),
+        mergedInto: str(v.mergedInto) || undefined,
       };
-    }).filter((s) => s.name && s.key);
+    })
+      // A pending school stays in the picker — the student who just added
+      // theirs must be able to pick it, or they cannot finish signing up at
+      // all. A merged one does not: it has been folded into another entry, and
+      // offering it again re-splits the points the merge just brought together.
+      .filter((s) => s.name && s.key && s.status !== 'merged');
   } catch (err) {
     // Rules not deployed, offline, or signed out — the seed is enough to pick from.
     console.error('[Schools] load error:', err);
@@ -59,6 +110,7 @@ export function seedSchools(): School[] {
 export type AddResult =
   | { ok: true; school: School }
   | { ok: false; reason: 'duplicate'; existing: School }
+  | { ok: false; reason: 'short-name'; detail: ShortNameReason }
   | { ok: false; reason: 'signed-out' | 'invalid' | 'failed' };
 
 /**
@@ -72,6 +124,11 @@ export async function addSchool(input: {
   name: string;
   commune: string;
   address?: string;
+  city?: string;
+  /** Optional: a student who does not know their school's short name leaves it
+   *  blank, and an admin asks later. Demanding one here is how invented short
+   *  names get created. */
+  shortName?: string;
 }): Promise<AddResult> {
   const name = input.name.trim();
   const key = schoolKey(name);
@@ -82,11 +139,35 @@ export async function addSchool(input: {
   const existing = likelyDuplicate(all, name) ?? all.find((s) => s.key === key) ?? null;
   if (existing) return { ok: false, reason: 'duplicate', existing };
 
-  const school: School = { key, name, commune: input.commune.trim(), address: input.address?.trim() || undefined };
+  // Re-validated here and not only in the form, for the same reason the
+  // duplicate check is: the list can have grown between the two, and a short
+  // name is the one field where a second student getting through would put two
+  // schools behind one bar on the stage.
+  let shortName: string | undefined;
+  if (input.shortName?.trim()) {
+    const check = validateShortName(input.shortName, all);
+    if (!check.ok) return { ok: false, reason: 'short-name', detail: check.reason };
+    shortName = check.value;
+  }
+
+  const school: School = {
+    key,
+    name,
+    commune: input.commune.trim(),
+    address: input.address?.trim() || undefined,
+    city: input.city?.trim() || undefined,
+    shortName,
+    // Student-submitted, so NOT canonical yet: an admin approves it, merges it
+    // into an existing school, or rejects it. Writing 'approved' here would put
+    // every typo into the tournament's list of real schools.
+    status: 'pending',
+  };
   try {
     await addDoc(collection(db, 'schools'), {
       ...school,
       address: school.address ?? null,
+      city: school.city ?? null,
+      shortName: school.shortName ?? null,
       createdBy: auth.currentUser.uid,
       createdAt: serverTimestamp(),
     });

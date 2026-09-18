@@ -26,6 +26,93 @@ export interface School {
   address?: string;
   /** How many ESLP applicants named it — orders the seeded list. */
   applicants?: number;
+  /**
+   * What the school's own students call it: CODOSA, SLG. ALWAYS supplied by a
+   * student, never derived — no rule turns "Collège Dominique Savio" into
+   * CODOSA, and a generated one would put a name on the tournament stage that
+   * nobody at the school recognises as theirs.
+   */
+  shortName?: string;
+  /** Other names the same school is genuinely known by, for search only. */
+  aliases?: string[];
+  /**
+   * Whether the school is canonical. A school a student added is `pending`
+   * until an admin approves it — it can still be picked and played with, it
+   * just cannot yet claim a short name away from an approved school. Absent
+   * means approved: the seeded schools shipped in the bundle.
+   */
+  status?: 'approved' | 'pending' | 'merged';
+  /** When `status` is 'merged', the key of the school that absorbed it. */
+  mergedInto?: string;
+  /** The town, when the commune is not the name a student would recognise. */
+  city?: string;
+}
+
+/**
+ * Short names — the identity the tournament stage is actually built on.
+ *
+ * A stage has room for CODOSA, not for "Collège Dominique Savio", and a school
+ * chanting its own short name is the whole point of an inter-school race. Two
+ * rules keep that honest: the name comes from a student, and it is unique, so
+ * one school's supporters can never end up cheering a bar that belongs to
+ * another.
+ */
+
+/** 2 is the shortest a real school abbreviates to; 8 is what the stage fits. */
+export const SHORT_NAME_MIN = 2;
+export const SHORT_NAME_MAX = 8;
+
+/**
+ * Names nobody may claim. EDLIGHT and ADMIN would let a school speak for us on
+ * a public stream; TEST is what a first submission is always called; NULL,
+ * NONE and UNDEFINED are what a missing value looks like once something
+ * upstream stringifies it, and a school called NULL on the standings is
+ * indistinguishable from a bug we would then hunt for.
+ */
+const RESERVED_SHORT_NAMES = new Set(['EDLIGHT', 'ADMIN', 'TEST', 'NULL', 'NONE', 'UNDEFINED']);
+
+export type ShortNameReason = 'too-short' | 'too-long' | 'charset' | 'taken' | 'reserved';
+
+export type ShortNameCheck =
+  | { ok: true; value: string }
+  | { ok: false; reason: ShortNameReason };
+
+/** The form a short name is stored, compared and displayed in: it is a shout. */
+export function shortNameKey(raw: string): string {
+  return String(raw).trim().toUpperCase();
+}
+
+/**
+ * Approved means canonical. A school with no status is a seeded one — it
+ * shipped inside the app, so nothing needs to approve it; only the two
+ * explicit non-approved states are not.
+ */
+function isApproved(school: School): boolean {
+  return (school.status ?? 'approved') === 'approved';
+}
+
+/**
+ * Validate a short name a student typed for their school.
+ *
+ * Uniqueness is checked against APPROVED schools only, and deliberately so: a
+ * pending submission must not be able to reserve CODOSA and lock out the real
+ * Collège Dominique Savio, and two students submitting the same pending school
+ * on launch night must both get through rather than the second being told an
+ * invisible entry already took the name. Collisions between pending schools are
+ * an admin's problem at approval time, where a human can see both.
+ */
+export function validateShortName(raw: string, existing: School[]): ShortNameCheck {
+  const value = shortNameKey(raw);
+  if (value.length < SHORT_NAME_MIN) return { ok: false, reason: 'too-short' };
+  if (value.length > SHORT_NAME_MAX) return { ok: false, reason: 'too-long' };
+  // Letters and digits only: the stage sets these in one type style, and a
+  // short name carrying an accent or a space stops being chantable.
+  if (!/^[A-Z0-9]+$/.test(value)) return { ok: false, reason: 'charset' };
+  if (RESERVED_SHORT_NAMES.has(value)) return { ok: false, reason: 'reserved' };
+  if (existing.some((s) => isApproved(s) && s.shortName && shortNameKey(s.shortName) === value)) {
+    return { ok: false, reason: 'taken' };
+  }
+  return { ok: true, value };
 }
 
 /** Institution types, which people include or omit interchangeably. */
@@ -129,16 +216,17 @@ function containsAllWords(haystack: string, needle: string): boolean {
 }
 
 /**
- * Rank schools against what the student typed. Higher is better; 0 means no
- * match at all. Exactness wins, then prefix, then all-words-present — someone
- * typing "marie anne" must be shown "Collège Marie-Anne" before anything else.
+ * Rank ONE name — a school's own, or one of its aliases — against what the
+ * student typed. Higher is better; 0 means no match at all. Exactness wins,
+ * then prefix, then all-words-present — someone typing "marie anne" must be
+ * shown "Collège Marie-Anne" before anything else.
  */
-export function matchScore(school: School, query: string): number {
+function nameScore(candidate: string, query: string): number {
   const q = schoolKey(query);
   if (!q) return 0;
-  const name = schoolKey(school.name);
+  const name = schoolKey(candidate);
   const qc = core(query);
-  const nc = core(school.name);
+  const nc = core(candidate);
 
   if (name === q) return 100;
   if (nc && nc === qc) return 90;          // "Saint Louis" ≡ "Collège Saint Louis"
@@ -154,6 +242,36 @@ export function matchScore(school: School, query: string): number {
   if (nc && containsAllWords(nc, qc)) return 50;
   if (name.includes(q) && q.length >= 4) return 40;
   return 0;
+}
+
+/**
+ * Rank a school against what the student typed, across every name it answers
+ * to: its own, its short name, and its aliases.
+ *
+ * An exact short name scores above the top of the name ladder because it is
+ * the most confident signal the picker will ever get — nobody types CODOSA by
+ * accident, and the student who types it is telling us exactly which school
+ * they mean. It has to beat an exact name match too: a school elsewhere in the
+ * list called "Codosa" would otherwise tie with the school whose students
+ * actually chant it.
+ *
+ * Only an EXACT short name counts. Matching a prefix would make "CO" pull in
+ * every school in the country, and short names are too dense for a near miss
+ * to mean anything.
+ */
+export function matchScore(school: School, query: string): number {
+  if (!schoolKey(query)) return 0;
+  if (school.shortName && shortNameKey(query) === shortNameKey(school.shortName)) return 110;
+
+  // Aliases are scored on the same ladder as the name: an alias is recorded
+  // because the school is genuinely called that, so "Ti Kolèj" deserves what
+  // the registered name would get. The best of them wins.
+  let best = nameScore(school.name, query);
+  for (const alias of school.aliases ?? []) {
+    if (best >= 100) break;
+    best = Math.max(best, nameScore(alias, query));
+  }
+  return best;
 }
 
 /**

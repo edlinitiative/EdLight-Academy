@@ -18,6 +18,12 @@
   "`applicants` is how many applications named the school; the picker shows",
   "the most-attended first.",
   "",
+  "`shortName` is what a school's own students call it — CODOSA, SLG. It is",
+  "OPTIONAL and it is never generated: no rule turns 'Collège Dominique Savio'",
+  "into CODOSA, and an invented one would put a name on the tournament stage",
+  "that nobody at the school recognises. So this file carries a short name only",
+  "where one is actually known; the rest are backfilled by asking students.",
+  "",
   "Two entries name the same school twice, once with the place written out",
   "(« de Pétion-ville », « de Turgeau »); they are merged. École Immaculée",
   "Conception de Trou-du-Nord is NOT merged with École Immaculée Conception:",
@@ -29,6 +35,7 @@
  "schools": [
   {
    "name": "Collège Dominique Savio",
+   "shortName": "CODOSA",
    "applicants": 24
   },
   {

@@ -347,7 +347,25 @@ service cloud.firestore {
                     && request.resource.data.name.size() >= 4
                     && request.resource.data.name.size() <= 90
                     && request.resource.data.key is string
-                    && request.resource.data.key.size() > 0;
+                    && request.resource.data.key.size() > 0
+                    // A student-submitted school is PENDING and only an admin
+                    // may say otherwise. Without this line the client asserts
+                    // its own status, which makes the review queue optional —
+                    // and the short name is what the broadcast reads, so a
+                    // self-approved school puts an unreviewed string on screen.
+                    && request.resource.data.status == 'pending'
+                    // A short name is displayed at size on a stage; bound it
+                    // here too, because the client-side validator is a
+                    // convenience and this is the guarantee.
+                    && (!('shortName' in request.resource.data.keys())
+                        || request.resource.data.shortName == null
+                        || (request.resource.data.shortName is string
+                            && request.resource.data.shortName.size() >= 2
+                            && request.resource.data.shortName.size() <= 8))
+                    && (!('city' in request.resource.data.keys())
+                        || request.resource.data.city == null
+                        || (request.resource.data.city is string
+                            && request.resource.data.city.size() <= 60));
       allow update, delete: if isAdmin();
     }
 
