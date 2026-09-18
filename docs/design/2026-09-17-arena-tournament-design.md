@@ -1006,3 +1006,42 @@ for any minor without one, and confirms before letting an admin verify anyway.
    winning child cannot be paid.
 4. `storageBucket` must be present in `window.EDLIGHT_FIREBASE_CONFIG`.
 5. `RESEND_API_KEY` already exists; the guardian email uses it.
+
+---
+
+## Correction — the three crons that could never have run
+
+Found while preparing to merge. All three Arena entries in `vercel.json` were
+dead, each for two independent reasons:
+
+1. **A Vercel cron fires a GET.** All three endpoints were `POST`-only, so
+   every scheduled invocation was a 405.
+2. **A cron entry carries no arguments.** `/api/arena/aggregate` and
+   `/api/arena/doors-close` both required a tournament id they were never
+   given, and `/api/arena/claim?action=sweep` read `action` from the request
+   BODY, so the query string in the cron path did nothing — and the endpoint
+   demanded a Firebase ID token the scheduler cannot have.
+
+What that cost, concretely: the aggregator's safety net against a frozen board
+never existed; the roster freeze at doors close only ever happened if a human
+pressed the button in the right ten minutes; and the 72-hour claim window —
+the deadline published before the tournament, the entire reason roll-down is
+defensible in public — was enforced by nothing at all.
+
+**The fix.** All three accept `GET|POST` (the house pattern, as
+`api/leaderboard/aggregate-snapshot.ts` already had it), and a call with no
+tournament id now finds its own work through `tournamentsInStates` in
+`_shared.ts`: `live`/`grading` for the aggregator, `doors` for the freeze,
+`provisional` for the sweep. The query is capped at five documents, because a
+cron that can become a full-collection scan eventually costs more than the
+event it protects.
+
+The claim sweep also reads `action` from the query string and accepts the cron
+secret — but ONLY for `sweep`. Every other action still requires a signed-in
+person, because every other action is one.
+
+**The lesson worth keeping.** Every one of these was green: typechecked, unit
+tested, lint clean, deployed. Nothing in a test suite asks whether the caller
+in production can reach the door at all. The cron entries were written from the
+design doc and the handlers were written from the design doc, and neither was
+ever written against the other.

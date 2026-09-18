@@ -84,6 +84,7 @@ import {
   isValidTournamentId,
   parseBody,
   toMillis,
+  tournamentsInStates,
 } from './_shared';
 import type { ArenaState } from '../../shared/arena/state';
 
@@ -500,8 +501,10 @@ async function scanPresence(db: Firestore, tid: string): Promise<ScanResult> {
 // ── Handler ─────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+  // GET as well as POST: a Vercel cron fires a GET, and the cron entry for
+  // this path is what freezes the roster if nobody presses the button.
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
@@ -535,10 +538,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // `tournamentId` matches register/presence/answer; `tid` matches
   // advance/aggregate. Both are accepted rather than picking a side, because a
   // scheduler entry that posts the wrong key would fail silently at 17:50.
-  const tournamentId = body.tournamentId ?? body.tid ?? req.query.tid;
+  let tournamentId = body.tournamentId ?? body.tid ?? req.query.tid;
+
+  // A cron entry carries no arguments, so a scheduled call finds its own work:
+  // the tournament currently at `doors`. One per tick is enough — the doors
+  // window is about ten minutes and this runs every minute, so a second
+  // tournament in the same window is picked up sixty seconds later. Two
+  // tournaments holding their doors open in the same minute is not a situation
+  // this product has.
   if (!isValidTournamentId(tournamentId)) {
-    res.status(400).json({ error: 'invalid_tournament_id' });
-    return;
+    const waiting = await tournamentsInStates(db, ['doors']);
+    if (waiting.length === 0) {
+      res.status(200).json({ ok: true, action: 'nothing_at_doors' });
+      return;
+    }
+    tournamentId = waiting[0];
   }
 
   const tournamentRef = db.doc(`tournaments/${tournamentId}`);

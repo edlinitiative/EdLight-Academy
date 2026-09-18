@@ -62,7 +62,7 @@ import {
   type IndividualStanding,
 } from '../../shared/arena/events';
 import type { ArenaState } from '../../shared/arena/state';
-import { authorizeCronOrAdmin } from './_shared';
+import { authorizeCronOrAdmin, tournamentsInStates } from './_shared';
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 
@@ -517,34 +517,26 @@ async function loadPool(
   };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    res.status(405).json({ error: 'method_not_allowed' });
-    return;
-  }
-
-  // `advance` calls this at every question close with the cron secret; the run
-  // console's "recompute standings" calls it by hand. One door, two keys.
-  const db = getDb();
-  const actor = await authorizeCronOrAdmin(req, res, db, 'arena-control');
-  if (!actor) return;
-
-  const body: Row = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-  const tid = str(body.tid, str(req.query.tid));
-  if (!tid) {
-    res.status(400).json({ error: 'invalid_tid' });
-    return;
-  }
-  const now = Date.now();
+/**
+ * One tournament's recompute, lifted out of the handler so the scheduled sweep
+ * can run it for each live tournament without faking a request object.
+ *
+ * Returns the response rather than writing it: the sweep handles several
+ * tournaments in one invocation, and a function that writes to `res` can only
+ * ever answer for the first.
+ */
+async function aggregateOne(
+  db: Firestore,
+  tid: string,
+  now: number,
+): Promise<{ status: number; body: Row }> {
 
   try {
     // ── 1 · The tournament, and whether this tick should do anything ────────
     const tournamentRef = db.doc(`tournaments/${tid}`);
     const tournamentSnap = await tournamentRef.get();
     if (!tournamentSnap.exists) {
-      res.status(404).json({ error: 'not_found' });
-      return;
+      return { status: 404, body: { error: 'not_found' } };
     }
     const tournament = tournamentSnap.data() as Row;
     const state = str(tournament.state);
@@ -552,8 +544,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       // Not an error: the scheduler is dumb on purpose and calls on a fixed
       // cadence. Rewriting standings in `provisional` would edit a board that
       // has already been announced on a stream.
-      res.status(200).json({ ok: true, skipped: 'state', state });
-      return;
+      return { status: 200, body: { ok: true, skipped: 'state', state } };
     }
 
     const teamSize = Math.max(1, num(tournament.teamSize, 5));
@@ -649,16 +640,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     batch.set(standingsRef, { ...stored, updatedAt: FieldValue.serverTimestamp() });
     await batch.commit();
 
-    res.status(200).json({
-      ok: true,
-      state,
-      schools: next.schools.length,
-      players: next.individuals.length,
-      events: events.length,
-      seq: stored.seq,
-    });
+    return {
+      status: 200,
+      body: {
+        ok: true,
+        state,
+        schools: next.schools.length,
+        players: next.individuals.length,
+        events: events.length,
+        seq: stored.seq,
+      },
+    };
   } catch (err) {
     console.error('[arena/aggregate] error:', err);
-    res.status(500).json({ error: 'aggregate_failed' });
+    return { status: 500, body: { error: 'aggregate_failed' } };
   }
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  // GET as well as POST: a Vercel cron fires a GET, and the safety net that
+  // stops a frozen board is this endpoint's cron entry.
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
+  }
+
+  // `advance` calls this at every question close with the cron secret; the run
+  // console's "recompute standings" calls it by hand. One door, two keys.
+  const db = getDb();
+  const actor = await authorizeCronOrAdmin(req, res, db, 'arena-control');
+  if (!actor) return;
+
+  const body: Row = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
+  const tid = str(body.tid, str(req.query.tid));
+
+  // No id: this is the scheduled sweep. It recomputes every tournament that is
+  // actually running, which is the only thing the cron entry can mean — it has
+  // no arguments to give us.
+  if (!tid) {
+    const ids = await tournamentsInStates(db, ['live', 'grading']);
+    const ran: string[] = [];
+    for (const id of ids) {
+      try {
+        await aggregateOne(db, id, Date.now());
+        ran.push(id);
+      } catch (err) {
+        console.error(`[arena/aggregate] sweep failed for ${id}:`, err);
+      }
+    }
+    res.status(200).json({ ok: true, swept: ran.length, tournaments: ran });
+    return;
+  }
+
+  const out = await aggregateOne(db, tid, Date.now());
+  res.status(out.status).json(out.body);
 }

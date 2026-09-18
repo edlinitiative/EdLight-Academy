@@ -572,3 +572,30 @@ export async function authorizeCronOrAdmin(
   }
   return { kind: 'admin', label: decoded.uid, uid: decoded.uid };
 }
+
+/**
+ * Which tournaments does a scheduled tick have to look at?
+ *
+ * A Vercel cron entry is a path and a schedule — it carries no arguments. So
+ * `/api/arena/aggregate` fires every minute with no tournament id, and every
+ * one of these endpoints was written to require one. The result is not a
+ * degraded safety net; it is a 400 a minute, forever, and a board that stays
+ * frozen on the one night anybody is watching.
+ *
+ * So a scheduled call asks this instead: the tournaments currently in a state
+ * this job is for. `limit` is small and deliberate — there is one live
+ * tournament a month, and a cron that can turn into a full-collection scan is
+ * a cron that eventually costs more than the event it protects.
+ */
+export async function tournamentsInStates(
+  db: Firestore,
+  states: ArenaState[],
+  limit = 5,
+): Promise<string[]> {
+  if (states.length === 0) return [];
+  const snap = await db.collection('tournaments')
+    .where('state', 'in', states)
+    .limit(limit)
+    .get();
+  return snap.docs.map((d) => d.id);
+}

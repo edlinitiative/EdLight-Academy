@@ -62,7 +62,15 @@ import { requireAuthDecoded } from '../_lib/requireAuth';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { getConsentBucket, getDb } from '../_lib/firebaseAdmin';
 import { sendConsentEmail } from '../_lib/arenaConsentEmail';
-import { asArenaState, isValidTournamentId, parseBody, publicDisplayName, toMillis } from './_shared';
+import {
+  asArenaState,
+  cronAuthorized,
+  isValidTournamentId,
+  parseBody,
+  publicDisplayName,
+  toMillis,
+  tournamentsInStates,
+} from './_shared';
 
 // ── The published window ────────────────────────────────────────────────────
 
@@ -563,38 +571,67 @@ const ROLLDOWN_DEPTH = 50;
 // ── Handler ─────────────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+  // GET as well as POST: the hourly sweep is a Vercel cron entry, and a cron
+  // fires a GET. That sweep is the ONLY thing enforcing the 72-hour window we
+  // published before the tournament — a deadline nothing enforces is a
+  // deadline we cannot defend when a prize rolls down.
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
 
-  const decoded = await requireAuthDecoded(req, res);
-  if (!decoded) return;
-  const { uid } = decoded;
-
-  const { allowed, remaining, resetAt } = await checkRateLimit(uid, 'arena-claim');
-  if (!allowed) {
-    res.setHeader('X-RateLimit-Remaining', '0');
-    res.setHeader('Retry-After', String(Math.max(1, Math.ceil((resetAt - Date.now()) / 1000))));
-    res.status(429).json({ error: 'rate_limit_exceeded', message: 'Trop de requêtes. Réessayez plus tard.' });
-    return;
-  }
-  res.setHeader('X-RateLimit-Remaining', String(remaining));
-
+  const db = getDb();
   const body = parseBody(req);
-  const tournamentId = body.tournamentId ?? body.tid;
-  if (!isValidTournamentId(tournamentId)) {
-    res.status(400).json({ error: 'invalid_tournament_id' });
-    return;
-  }
-  const action = typeof body.action === 'string' ? body.action : 'claim';
+
+  // Read from the query string too: a cron entry can only carry arguments
+  // there, and `?action=sweep` in vercel.json has to mean what it says.
+  const action = typeof body.action === 'string'
+    ? body.action
+    : (typeof req.query.action === 'string' ? req.query.action : 'claim');
   if (action !== 'claim' && action !== 'review' && action !== 'sweep' && action !== 'consent') {
     res.status(400).json({ error: 'invalid_action' });
     return;
   }
 
-  const db = getDb();
+  // The scheduler has no Firebase user to authenticate as, so the sweep — and
+  // only the sweep — accepts the shared secret. Every other action still
+  // requires a signed-in person, because every other action is one.
+  const scheduled = action === 'sweep' && cronAuthorized(req);
+
+  let uid = 'cron';
+  if (!scheduled) {
+    const decoded = await requireAuthDecoded(req, res);
+    if (!decoded) return;
+    uid = decoded.uid;
+
+    const { allowed, remaining, resetAt } = await checkRateLimit(uid, 'arena-claim');
+    if (!allowed) {
+      res.setHeader('X-RateLimit-Remaining', '0');
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((resetAt - Date.now()) / 1000))));
+      res.status(429).json({ error: 'rate_limit_exceeded', message: 'Trop de requêtes. Réessayez plus tard.' });
+      return;
+    }
+    res.setHeader('X-RateLimit-Remaining', String(remaining));
+  }
+
+  let tournamentId = body.tournamentId ?? body.tid ?? req.query.tid;
+  if (!isValidTournamentId(tournamentId)) {
+    // A scheduled sweep finds its own work: the tournament whose results are
+    // provisional, which is the only state a claim window runs in. One per
+    // tick, because there is one tournament a month and `provisional` lasts
+    // three days — a second would be swept an hour later.
+    if (!scheduled) {
+      res.status(400).json({ error: 'invalid_tournament_id' });
+      return;
+    }
+    const open = await tournamentsInStates(db, ['provisional']);
+    if (open.length === 0) {
+      res.status(200).json({ ok: true, action: 'nothing_provisional' });
+      return;
+    }
+    tournamentId = open[0];
+  }
 
   try {
     const tSnap = await db.doc(`tournaments/${tournamentId}`).get();
@@ -626,7 +663,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    if (!(await isAdminUid(db, uid))) {
+    if (!scheduled && !(await isAdminUid(db, uid))) {
       res.status(403).json({ error: 'not_admin' });
       return;
     }

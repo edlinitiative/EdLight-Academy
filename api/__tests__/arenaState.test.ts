@@ -24,6 +24,7 @@ import {
   DEFAULT_QUESTION_COUNT,
 } from '../arena/state';
 import { CLAIM_WINDOW_MS } from '../arena/claim';
+import { tournamentsInStates } from '../arena/_shared';
 
 const NOW = 1_800_000_000_000;
 const STARTS = NOW + 7 * 24 * 3600_000;
@@ -143,5 +144,57 @@ describe('podiumClaims', () => {
     const claims = podiumClaims(individuals, [10_000], NOW);
     expect(claims).toHaveLength(1);
     expect(claims[0].uid).toBe('u1');
+  });
+});
+
+// ── The scheduled sweeps ────────────────────────────────────────────────────
+
+/**
+ * A Vercel cron entry is a path and a schedule. It carries no arguments, so
+ * every Arena endpoint that required a tournament id answered the scheduler
+ * with a 400 a minute — including the hourly sweep that is the only thing
+ * enforcing the 72-hour claim window we publish before the tournament.
+ *
+ * `tournamentsInStates` is how a scheduled call finds its own work. The cap is
+ * the part worth testing: a cron that can turn into a full-collection scan
+ * eventually costs more than the event it protects.
+ */
+describe('tournamentsInStates', () => {
+  const fakeDb = (ids: string[]) => {
+    const calls: any = {};
+    const q = {
+      where: (field: string, op: string, value: unknown) => {
+        calls.where = { field, op, value };
+        return q;
+      },
+      limit: (n: number) => { calls.limit = n; return q; },
+      get: async () => ({ docs: ids.map((id) => ({ id })) }),
+    };
+    return {
+      db: { collection: (path: string) => { calls.collection = path; return q; } } as any,
+      calls,
+    };
+  };
+
+  it('asks for exactly the states the job is for', async () => {
+    const { db, calls } = fakeDb(['sept-2026']);
+    const out = await tournamentsInStates(db, ['live', 'grading']);
+    expect(out).toEqual(['sept-2026']);
+    expect(calls.collection).toBe('tournaments');
+    expect(calls.where).toEqual({ field: 'state', op: 'in', value: ['live', 'grading'] });
+  });
+
+  it('caps the read so a cron can never become a table scan', async () => {
+    const { db, calls } = fakeDb([]);
+    await tournamentsInStates(db, ['doors']);
+    expect(calls.limit).toBe(5);
+    await tournamentsInStates(db, ['doors'], 1);
+    expect(calls.limit).toBe(1);
+  });
+
+  it('does not query at all when there is no state to look for', async () => {
+    const { db, calls } = fakeDb(['x']);
+    expect(await tournamentsInStates(db, [])).toEqual([]);
+    expect(calls.collection).toBeUndefined();
   });
 });
