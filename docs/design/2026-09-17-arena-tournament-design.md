@@ -710,10 +710,10 @@ the full sequence set, post-game stats.
 ### Phase 6 — History
 Hall of Champions, school history, "can anyone dethrone CODOSA", per-school pages.
 
-**Suggested first event: run phases 0–2 plus a stripped phase 4, with status-only
-prizes.** No cash means no cheating stake, which means phase 3 is not yet on the
-critical path and the whole thing gets to production months earlier. Add cash at
-event two, once the format has survived contact with real students.
+**Decided: cash at event one**, so phases 0–4 all ship before the first
+tournament and phase 3 carries a native build. The sequence is unchanged — the
+game is still built before the broadcast — but nothing can be deferred past the
+first event.
 
 ---
 
@@ -743,27 +743,22 @@ changes every number already on screen in the app. Change it with the display.
 
 ### Questions that need Ted
 
-1. **Who presses "next question" at the first event?** I recommend a human, on
-   the admin console, so the rounds follow the commentary. It also removes a
-   whole class of failure. Automate at event three.
+1. ~~**Who presses "next question" at the first event?**~~ **ANSWERED** —
+   automated, with a deliberate pause between questions. See Decisions.
 2. **How long is the event?** 25 questions × ~20s plus transitions plus a 2-minute
    halftime lands near 30 minutes end to end. Confirm, because it sizes the
    question authoring effort every month.
 3. **One category or several?** Generalist first is simpler and is what the
    product concept says. Multiple simultaneous categories multiplies the
    authoring and the broadcast complexity.
-4. **Cash at event one, or status?** You have already said cash, and the reasoning
-   holds. The consequence is that phase 3 moves onto the critical path and the
-   first event is months rather than weeks away. Worth naming that trade
-   explicitly before committing.
+4. ~~**Cash at event one, or status?**~~ **ANSWERED** — cash, and a native build
+   is acceptable. Phase 3 is on the critical path. See Decisions.
 5. **Who authors 25 fresh questions a month, and by when?** This is the recurring
    operational cost of the format and it has no owner in the plan.
 6. **Guardian path for a minor's prize.** Needs deciding before it happens, not
    on the night.
-7. **Does a student who registers but does not show up still count toward their
-   school's five?** I recommend **no** — qualification should mean five players
-   *present at doors*, or a school can be qualified on paper and score nothing.
-   This affects the Lobby copy and needs deciding early.
+7. ~~**Does a registered no-show count toward the five?**~~ **ANSWERED** — no.
+   Qualification is measured at doors close, on players present. See Decisions.
 
 ### The one thing I would push back on
 
@@ -773,3 +768,87 @@ makes this special, and the wrong order to build it in. If the game is solid and
 the broadcast is a plain board, you have a tournament. If the broadcast is
 cinematic and the game drops answers, you have a very good-looking incident. The
 plan above builds the game first on purpose.
+
+---
+
+## Decisions — 2026-09-18
+
+Ted resolved the three questions that blocked phase 2. Recorded here with the
+consequences each one carries, including the ones that were not obvious when the
+question was asked.
+
+### 1 · Cash prizes at event one; a native build is acceptable
+
+**Phase 3 moves onto the critical path.** `expo-screen-capture` blocks screenshots
+on iOS 13+ and Android and cannot ship over the air, so the first event needs a
+real build and a TestFlight cycle. Bundle it with the splash-sizing fix that has
+been waiting.
+
+**And the question bank must be server-held from day one.** With money on the
+line there is no version of this that reads the bundled bank — so phase 2 carries
+the full server-delivery path, not a simplified one.
+
+### 2 · Question advance is automated, with a deliberate pause between questions
+
+The run console keeps a "next question" control, but as a **safety override**,
+not the primary mechanism.
+
+The cycle:
+
+```
+ open ──20s── close ──────── pause (≈10s) ──────── open next
+        │                     │
+        │                     ├─ answers still landing are accepted and shown
+        │                     ├─ correct answer revealed
+        │                     └─ standings settle, events emit
+        └─ answers accepted
+```
+
+**The window always closes on the timer, never early.** Closing as soon as
+"everyone" has answered is unworkable — with thousands of players someone is
+always disconnected — and closing on a high-percentile threshold punishes exactly
+the slow connections this scoring already tries to protect. The answer rate
+flattening is a *broadcast* signal, not a control signal.
+
+**The pause is where late submissions land.** This is the point Ted made and it
+is the right one: a student on a bad connection whose answer arrives at 21s is
+still submitting in good faith. The pause makes that visible rather than
+invisible, and the answer is still recorded — scored at whatever tier its
+timestamp earns, which is usually zero, but recorded, shown, and counted toward
+their school's participation.
+
+**The non-obvious consequence, and it is a gift.** A guaranteed ~10s gap between
+questions is the broadcast's natural slot. Every scene in section K that needs
+the screen — the overtake, the Top-5 substitution, the lead change — now has a
+predictable window to play in, and the director never has to interrupt a live
+question to show a moment. That removes the hardest scheduling problem in the
+whole broadcast design.
+
+**A new sequence for section K:**
+
+| # | Sequence | Trigger | On screen · motion · return | Dur |
+|---|---|---|---|---|
+| 4b | **Submissions landing** | question opens | The answer count climbing in large mono, with a hairline that fills as the rate flattens. During the pause it keeps ticking as stragglers arrive, then hands over to the reveal. Communicates scale — *4,821 students answering right now* — which is the single most persuasive thing this tournament can show a viewer. | full window + pause |
+
+### 3 · A registered no-show does not count toward a school's five
+
+Qualification is evaluated **at doors close**, on players actually present, not on
+registrations.
+
+**This needs care in the product, because a school can lose qualification on the
+night** — five registered in the lobby, three present at 18:00. Discovering that
+at kick-off is a bad surprise and a bad story.
+
+Mitigations, all in phase 1:
+
+- The lobby shows both numbers once doors open: **`CODOSA · 5 inscrits · 3 présents`**,
+  with the present count as the one that matters.
+- Push to every registered player of a school that is short at doors open:
+  *"Il manque 2 joueurs à CODOSA — la salle est ouverte."* This is the highest-
+  intent notification in the whole product and it fires exactly once.
+- The invite copy shifts at doors from "register" to "come now".
+- A school that fails to qualify still plays. Its students compete individually,
+  score normally, and the school is simply unranked. Nobody is turned away.
+
+**Registration still matters** — it is what makes a school visible, drives the
+invite loop, and seeds the push list. It just is not the qualification test.
