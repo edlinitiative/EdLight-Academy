@@ -5,7 +5,15 @@ import PressableScale from './ui/PressableScale';
 import useStore from '../contexts/store';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import { select, tapMedium } from '../utils/haptics';
-import { searchSchools, likelyDuplicate, type School } from '../../../shared/schools';
+import {
+  searchSchools,
+  likelyDuplicate,
+  validateShortName,
+  shortNameKey,
+  SHORT_NAME_MAX,
+  type School,
+  type ShortNameReason,
+} from '../../../shared/schools';
 import { loadSchools, seedSchools, addSchool, type AddResult } from '../services/schoolService';
 
 /**
@@ -21,6 +29,12 @@ import { loadSchools, seedSchools, addSchool, type AddResult } from '../services
  * abbreviations and the institution type, the student's own commune is listed
  * first, and adding is offered only after a search has come up short — with one
  * last "did you mean?" if the name still looks like one we have.
+ *
+ * The short name is asked for here and nowhere else, because this is the one
+ * moment a student is telling us about their own school. It is optional on
+ * purpose: a student who does not know it leaves it blank and an admin asks
+ * later, whereas a required field would be filled with something invented —
+ * and an invented short name on the tournament stage is worse than none.
  */
 
 export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
@@ -40,6 +54,8 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
   const [adding, setAdding] = useState(false);
   const [newCommune, setNewCommune] = useState(commune ?? '');
   const [newAddress, setNewAddress] = useState('');
+  const [newCity, setNewCity] = useState('');
+  const [newShortName, setNewShortName] = useState('');
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<AddResult | null>(null);
 
@@ -52,7 +68,10 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
   }, [visible]);
 
   useEffect(() => {
-    if (!visible) { setQ(''); setAdding(false); setProblem(null); setNewAddress(''); }
+    if (!visible) {
+      setQ(''); setAdding(false); setProblem(null);
+      setNewAddress(''); setNewCity(''); setNewShortName('');
+    }
   }, [visible]);
 
   const results = useMemo(
@@ -63,13 +82,38 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
     () => (adding && q.trim().length >= 4 ? likelyDuplicate(schools, q) : null),
     [adding, q, schools],
   );
+  // Checked against the whole list as it is typed, so "already taken" lands
+  // while the student can still ask a classmate what theirs actually is —
+  // finding out after tapping Ajouter is how a second-best name gets invented.
+  const shortNameCheck = useMemo(
+    () => (newShortName.trim() ? validateShortName(newShortName, schools) : null),
+    [newShortName, schools],
+  );
+
+  const shortNameProblem = (reason: ShortNameReason): string => ({
+    'too-short': t('Au moins 2 caractères.', 'Omwen 2 karaktè.'),
+    'too-long': t('8 caractères au maximum.', '8 karaktè omaksimòm.'),
+    charset: t('Lettres et chiffres seulement.', 'Sèlman lèt ak chif.'),
+    taken: t('Une autre école utilise déjà ce nom court.', 'Yon lòt lekòl deja ap sèvi ak non kout sa a.'),
+    reserved: t('Ce nom court est réservé.', 'Non kout sa a rezève.'),
+  })[reason];
 
   const choose = (s: School) => { select(); onSelect(s); onClose(); };
+
+  // A blank short name is fine; a broken one is not, because it would be
+  // rejected by the service after the student thinks they are done.
+  const canSubmit = q.trim().length >= 4 && (!shortNameCheck || shortNameCheck.ok);
 
   const submitNew = async () => {
     setBusy(true);
     setProblem(null);
-    const res = await addSchool({ name: q.trim(), commune: newCommune.trim(), address: newAddress });
+    const res = await addSchool({
+      name: q.trim(),
+      commune: newCommune.trim(),
+      address: newAddress,
+      city: newCity,
+      shortName: newShortName,
+    });
     setBusy(false);
     if (res.ok) { tapMedium(); onSelect(res.school); onClose(); return; }
     setProblem(res);
@@ -157,6 +201,46 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 style={field}
               />
 
+              <Text style={[typeScale.label, { color: colors.muted }]}>{t('Ville', 'Vil')}</Text>
+              <TextInput
+                value={newCity}
+                onChangeText={setNewCity}
+                maxLength={40}
+                placeholder={t('Ex. Port-au-Prince', 'Egz. Pòtoprens')}
+                placeholderTextColor={colors.faint}
+                style={field}
+              />
+
+              <Text style={[typeScale.label, { color: colors.muted }]}>
+                {t('Nom court — ex. CODOSA', 'Non kout — egz. CODOSA')}
+              </Text>
+              <TextInput
+                value={newShortName}
+                // Stored the way it will be shouted and displayed, so what the
+                // student sees here is exactly what goes on the board.
+                onChangeText={(v) => { setNewShortName(shortNameKey(v)); setProblem(null); }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                // Capped at the length the check allows, so the only inline
+                // errors left are ones the student can actually act on.
+                maxLength={SHORT_NAME_MAX}
+                placeholder={t('CODOSA', 'CODOSA')}
+                placeholderTextColor={colors.faint}
+                style={field}
+                accessibilityLabel={t("Nom court de l'école", 'Non kout lekòl la')}
+              />
+              <Text style={[
+                typeScale.caption,
+                { color: shortNameCheck && !shortNameCheck.ok ? colors.danger : colors.muted },
+              ]}>
+                {shortNameCheck && !shortNameCheck.ok
+                  ? shortNameProblem(shortNameCheck.reason)
+                  : t(
+                    "Comme les élèves l'appellent. Laisse vide si tu n'es pas sûr — on ne l'invente pas.",
+                    'Jan elèv yo rele l. Kite l vid si ou pa sèten — nou pa envante l.',
+                  )}
+              </Text>
+
               <Text style={[typeScale.label, { color: colors.muted }]}>{t('Adresse', 'Adrès')}</Text>
               <TextInput
                 value={newAddress}
@@ -177,9 +261,14 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 <Text style={[typeScale.caption, { color: colors.danger }]}>
                   {problem.reason === 'duplicate'
                     ? t(`Déjà dans la liste : ${problem.existing.name}`, `Deja nan lis la : ${problem.existing.name}`)
-                    : problem.reason === 'signed-out'
-                      ? t('Connecte-toi pour ajouter une école.', 'Konekte pou ajoute yon lekòl.')
-                      : t("Impossible d'ajouter pour le moment.", 'Nou pa ka ajoute l kounye a.')}
+                    : problem.reason === 'short-name'
+                      // The list can grow between the typing and the tap, so
+                      // the service re-checks and can still refuse: name the
+                      // reason here, or the student is left with a dead button.
+                      ? shortNameProblem(problem.detail)
+                      : problem.reason === 'signed-out'
+                        ? t('Connecte-toi pour ajouter une école.', 'Konekte pou ajoute yon lekòl.')
+                        : t("Impossible d'ajouter pour le moment.", 'Nou pa ka ajoute l kounye a.')}
                 </Text>
               ) : null}
 
@@ -194,10 +283,10 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                 </PressableScale>
                 <PressableScale
                   onPress={submitNew}
-                  disabled={busy || q.trim().length < 4}
+                  disabled={busy || !canSubmit}
                   pressedScale={0.97}
                   accessibilityRole="button"
-                  style={{ flex: 2, alignItems: 'center', paddingVertical: 13, borderRadius: radius.control, backgroundColor: q.trim().length < 4 ? colors.border : colors.azure }}
+                  style={{ flex: 2, alignItems: 'center', paddingVertical: 13, borderRadius: radius.control, backgroundColor: canSubmit ? colors.azure : colors.border }}
                 >
                   {busy
                     ? <ActivityIndicator color="#fff" size="small" />
@@ -217,10 +306,27 @@ export default function SchoolPicker({ visible, commune, onSelect, onClose }: {
                   onPress={() => choose(item)}
                   pressedScale={0.98}
                   accessibilityRole="button"
-                  accessibilityLabel={item.commune ? `${item.name}, ${item.commune}` : item.name}
+                  accessibilityLabel={[item.name, item.shortName, item.commune].filter(Boolean).join(', ')}
                   style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}
                 >
-                  <Text style={[typeScale.label, { color: colors.ink }]}>{item.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={[typeScale.label, { color: colors.ink, flexShrink: 1 }]}>{item.name}</Text>
+                    {/* The short name is how students recognise their school
+                        faster than the registered name — and seeing it here is
+                        what teaches everyone else that it exists. */}
+                    {item.shortName ? (
+                      <Text style={[typeScale.caption, {
+                        color: colors.azure,
+                        backgroundColor: colors.azureSoft,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 999,
+                        overflow: 'hidden',
+                      }]}>
+                        {item.shortName}
+                      </Text>
+                    ) : null}
+                  </View>
                   {item.commune ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                       <MapPin color={colors.faint} size={11} />

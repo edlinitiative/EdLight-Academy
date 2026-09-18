@@ -347,8 +347,91 @@ service cloud.firestore {
                     && request.resource.data.name.size() >= 4
                     && request.resource.data.name.size() <= 90
                     && request.resource.data.key is string
-                    && request.resource.data.key.size() > 0;
+                    && request.resource.data.key.size() > 0
+                    // A student-submitted school is PENDING and only an admin
+                    // may say otherwise. Without this line the client asserts
+                    // its own status, which makes the review queue optional —
+                    // and the short name is what the broadcast reads, so a
+                    // self-approved school puts an unreviewed string on screen.
+                    && request.resource.data.status == 'pending'
+                    // A short name is displayed at size on a stage; bound it
+                    // here too, because the client-side validator is a
+                    // convenience and this is the guarantee.
+                    && (!('shortName' in request.resource.data.keys())
+                        || request.resource.data.shortName == null
+                        || (request.resource.data.shortName is string
+                            && request.resource.data.shortName.size() >= 2
+                            && request.resource.data.shortName.size() <= 8))
+                    && (!('city' in request.resource.data.keys())
+                        || request.resource.data.city == null
+                        || (request.resource.data.city is string
+                            && request.resource.data.city.size() <= 60));
       allow update, delete: if isAdmin();
+    }
+
+    // ── The Arena: live inter-school tournaments ──────────────────────────
+    //
+    // Every write here goes through /api/arena/* with the Admin SDK. The client
+    // posts and the server decides — timestamps, tiers, scores and standings are
+    // never client-reported, because this is the one feature in the product
+    // where being wrong costs somebody money.
+    match /tournaments/{tid} {
+      // Schedule, counts and prizes are public: the arena page and the
+      // broadcast are both watchable without an account.
+      allow read: if true;
+      allow write: if false;
+
+      // THE QUESTIONS ARE NEVER READABLE BY A CLIENT. Not by an admin client,
+      // not by a signed-in player, not ever. The whole integrity model rests on
+      // the answer key existing only server-side — the bundled trivia bank ships
+      // inside the app with its answers, and that is exactly what a tournament
+      // cannot do.
+      match /questions/{index} {
+        allow read, write: if false;
+      }
+
+      // The delivery document: one per question, no answer key, written when the
+      // round opens. Every playing client subscribes to it — this single doc is
+      // the entire question fan-out. Signed-in only, so it cannot be scraped
+      // ahead of an event by an anonymous crawler.
+      match /live/{index} {
+        allow read: if request.auth != null;
+        allow write: if false;
+      }
+
+      // A player reads their OWN row and nobody else's. A full mid-game
+      // scoreboard in the hands of a client is the raw material for a side tool
+      // that tells someone which questions everyone else got wrong.
+      match /players/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if false;
+      }
+
+      // Submissions are integrity evidence: immutable, server-written, and not
+      // readable by anyone. They are what makes a post-hoc disqualification
+      // defensible rather than a judgement call.
+      match /answers/{answerId} {
+        allow read, write: if false;
+      }
+
+      // What the broadcast reads. Public, because the broadcast is public, and
+      // one document however many thousand people are watching.
+      match /standings/{docId} {
+        allow read: if true;
+        allow write: if false;
+      }
+
+      match /events/{seq} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+    // A student reads their own registration and nobody else's.
+    match /tournamentRegistrations/{regId} {
+      allow read: if request.auth != null
+                  && resource.data.uid == request.auth.uid;
+      allow write: if false;
     }
 
     // Rate limit counters — server-side only, never client-accessible
