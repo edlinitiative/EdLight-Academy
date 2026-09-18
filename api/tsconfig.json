@@ -9,6 +9,12 @@
     // runtime. Extensionless relative imports (./_lib/...) also require CJS.
     "module": "CommonJS",
     "moduleResolution": "Node",
+    // TS 6 deprecates node10 resolution, but the CJS output above is what the
+    // @vercel/node runtime actually loads — changing it to silence a warning
+    // would reintroduce the cold-start failure the comment above describes.
+    // Acknowledge the deprecation so this project type-checks CLEAN and can
+    // therefore gate CI, which matters more than the warning.
+    "ignoreDeprecations": "6.0",
     // "jest" so the tests in api/__tests__ type-check too; without it every
     // describe/it/expect in this project was an error and the noise hid real ones.
     "types": ["node", "@vercel/node", "jest"],

@@ -305,7 +305,8 @@ minutes, bursting into the first ~5 seconds after each question opens.
 - **No counter is incremented globally.** The naive design — a running school
   total — is exactly the 500-writes/sec-per-document limit, hit instantly. It is
   avoided entirely by not keeping one.
-- **Standings are recomputed, not accumulated.** An aggregator runs every ~5s:
+- **Standings are recomputed, not accumulated.** The aggregator runs ONCE PER
+  QUESTION CLOSE, inside the pause, not on a timer — see the correction below:
   for each school, query the top 5 players by score (composite index on
   `schoolKey asc, score desc, totalMs asc`), compute the mean, diff against the
   previous standings, emit events, write one `standings/current` document.
@@ -852,3 +853,195 @@ Mitigations, all in phase 1:
 
 **Registration still matters** — it is what makes a school visible, drives the
 invite loop, and seeds the push list. It just is not the qualification test.
+
+
+---
+
+## Correction to section F — the aggregator has no scheduler
+
+Section F specified an aggregator "every ~5s". That cannot be a Vercel cron:
+**cron granularity is one minute**, twelve times too slow, and adding an
+external scheduler would mean a new always-on component in a product that has
+none — the exact thing the WebSocket argument was made to avoid.
+
+It also turns out to be unnecessary, and the reason is Decision 2.
+
+**Standings only change when answers land, and answers only land during a
+question window.** So there is nothing to recompute between questions except
+the moment a question closes. The aggregator runs once per close, in the pause
+— which is precisely where the design already wanted standings to settle and
+events to emit.
+
+So `advance` calls `aggregate` when it closes a question. No scheduler, no
+cron, no tick, and the cadence is exactly right by construction rather than by
+tuning. A Vercel cron remains as a slow safety net (one per minute during a
+live tournament) purely so a dropped `advance` cannot leave the board frozen.
+
+**One thing this does not cover, and should not.** The broadcast wants to show
+answers arriving *during* the window (sequence 4b — the count climbing, which
+is the most persuasive shot in the format). That is a counter, not a standing,
+and it does not need the aggregator: the spectator page can read a cheap
+per-question count that the answer endpoint increments on a sharded counter.
+Keeping it off the aggregator is what stops "show the count moving" from
+dragging a full recompute onto a five-second timer.
+
+---
+
+## Correction to section L — the run console needed a door, not just controls
+
+Building the console surfaced the gap that made most of it decorative:
+**six of the seven moves in the state machine had no server route at all.**
+`firestore.rules` denies every client write under `tournaments/**` (correctly —
+the document that decides prize money is not one a browser session may mint),
+and `advance` performs exactly one transition, `live → grading`, as a side
+effect of the clock. Nothing served `draft → registration`, `registration →
+doors`, `doors → live`, `grading → provisional`, `provisional → final` or
+`* → void`, and nothing created the tournament document in the first place.
+
+`POST /api/arena/state` is that door. It never decides which transition is
+legal — `canTransition` remains the only definition, checked inside the same
+transaction that writes the new state, so two admins pressing "start" produce
+one start and one 409.
+
+### Two doors, one definition of who may drive the engine
+
+`advance` and `aggregate` authenticated with `CRON_SECRET` only, so the run
+console's "force close", "force next" and "recompute standings" would have
+returned 401 forever. The shared secret cannot be shipped to a browser: a page
+holding it hands the entire engine to whoever reads localStorage.
+
+So `authorizeCronOrAdmin` in `api/arena/_shared.ts` is now the single door for
+`advance`, `aggregate`, `state` and `doors-close` — cron secret, or a
+server-verified admin (`users/{uid}.role`, never a custom claim, and a failed
+lookup is never an admin). The cron path costs no Firestore read, because the
+scheduler calls `advance` every few seconds during a live tournament.
+
+### Two refusals the route adds on purpose
+
+- **`doors → live` counts the authored questions first.** `advance` treats a
+  missing `questions/{index}` as `missing_question` and stops — which on a
+  stream is a dead screen at question 14 with 300 students watching. One small
+  read before anything is live is the cheapest possible place to catch it.
+- **`grading → provisional` requires standings to exist**, and stamps the
+  placeholder claims (below). Publishing a podium of nobody would start three
+  claim windows against it.
+
+### The podium write section M assumed but nobody performed
+
+`rollDown` reads a MISSING claim document as "no deadline has passed" and
+leaves the prize where it is. Correct in isolation — and it meant an unclaimed
+first place would never roll down to anybody. claim.ts says so explicitly:
+*"the window still runs from the moment the podium was published, which the
+caller stamps onto a placeholder claim."* There was no caller.
+
+Entering `provisional` is that moment, so `state.ts` now writes an `open`
+placeholder for each paying rank as the podium is published. Existing claims
+are never overwritten — re-running must not hand a student a fresh 72 hours or
+reset a verification — and a **tie at a paying rank opens no placeholder at
+all**, because two placeholders at one rank is two students on one prize.
+
+---
+
+## Correction to section M — how a minor's prize actually gets released
+
+Section M modelled the guardian as a NORMAL FIELD on every claim (name and
+contact, never an identity document) and verification as a short video call.
+Both stand. What was missing was the step between them: nothing recorded the
+parent actually AGREEING, and "a parent said yes on a call" is not something
+anybody can produce six months later when a family or a funder asks.
+
+**Ted's decision, 2026-09-18.** The child claims and names a parent. The parent
+signs. The logistics happen AFTER the tournament: the family receives an email
+with the authorisation form, the parent signs it, and the winner uploads it to
+the claim page — so there is one artifact to verify rather than a conversation
+to remember.
+
+### What this stores, and what it still refuses
+
+A signed parental authorisation is a **consent artifact**, not proof of who
+anybody is. `FORBIDDEN_CLAIM_FIELDS` is unchanged and still rejects `idPhoto`,
+`idNumber`, `passport`, `birthCertificate` and the rest at the door. The form
+itself asks for no document number and no bank details, and says so in print —
+because this email and this page are exactly what a scam built on top of the
+tournament would imitate, and a family that has read the sentence once has a
+test they can apply to the next message they get.
+
+It does mean the product now holds one document about a child. That is a real
+change in posture and it is the reason the storage rules are as narrow as they
+are.
+
+### `storage.rules` — three properties, each load-bearing
+
+- **Nobody reads from a client.** Not the uploader, not an admin. Storage rules
+  cannot query Firestore, and this codebase keeps `role` on the user document
+  with no admin custom claims — so any read rule expressible there would be
+  either "everyone" or a second, weaker definition of admin than
+  `firestore.rules`, `/api/arena/questions` and `/api/arena/state` all share.
+  Admins go through `GET /api/arena/consent`, which checks the role with the
+  Admin SDK and returns a **15-minute signed URL**, one document at a time, and
+  logs who opened what.
+- **A student may only write under their own uid**, which is in the path and
+  pinned to `request.auth.uid`. The second half of that — stopping a student
+  from POINTING their claim at somebody else's object, which the rules cannot
+  see — is `parseConsentPath` in claim.ts.
+- **Write-once.** `update` and `delete` are denied. A form that can be swapped
+  after an admin has looked at it is not evidence; a corrected form uploads as
+  a new object and the claim points at the latest, leaving the trail intact.
+
+### Recording is not verifying
+
+`action: 'consent'` leaves the claim in `claimed`. An upload is a document
+arriving; a document arriving is not a person checked. Moving to `verified` on
+upload would make the form its own approval, which is the check the whole flow
+exists to perform. The admin queue shows **"autorisation manquante"** in amber
+for any minor without one, and confirms before letting an admin verify anyway.
+
+### Deployment prerequisites (none of these are code)
+
+1. Enable Cloud Storage on the Firebase project.
+2. `firebase deploy --only storage` for the new `storage.rules`.
+3. Set `FIREBASE_STORAGE_BUCKET` in Vercel — read explicitly rather than guessed
+   from the project id, because Firebase has used two default bucket suffixes
+   and a guess fails at upload time, on the one path where failing means a
+   winning child cannot be paid.
+4. `storageBucket` must be present in `window.EDLIGHT_FIREBASE_CONFIG`.
+5. `RESEND_API_KEY` already exists; the guardian email uses it.
+
+---
+
+## Correction — the three crons that could never have run
+
+Found while preparing to merge. All three Arena entries in `vercel.json` were
+dead, each for two independent reasons:
+
+1. **A Vercel cron fires a GET.** All three endpoints were `POST`-only, so
+   every scheduled invocation was a 405.
+2. **A cron entry carries no arguments.** `/api/arena/aggregate` and
+   `/api/arena/doors-close` both required a tournament id they were never
+   given, and `/api/arena/claim?action=sweep` read `action` from the request
+   BODY, so the query string in the cron path did nothing — and the endpoint
+   demanded a Firebase ID token the scheduler cannot have.
+
+What that cost, concretely: the aggregator's safety net against a frozen board
+never existed; the roster freeze at doors close only ever happened if a human
+pressed the button in the right ten minutes; and the 72-hour claim window —
+the deadline published before the tournament, the entire reason roll-down is
+defensible in public — was enforced by nothing at all.
+
+**The fix.** All three accept `GET|POST` (the house pattern, as
+`api/leaderboard/aggregate-snapshot.ts` already had it), and a call with no
+tournament id now finds its own work through `tournamentsInStates` in
+`_shared.ts`: `live`/`grading` for the aggregator, `doors` for the freeze,
+`provisional` for the sweep. The query is capped at five documents, because a
+cron that can become a full-collection scan eventually costs more than the
+event it protects.
+
+The claim sweep also reads `action` from the query string and accepts the cron
+secret — but ONLY for `sweep`. Every other action still requires a signed-in
+person, because every other action is one.
+
+**The lesson worth keeping.** Every one of these was green: typechecked, unit
+tested, lint clean, deployed. Nothing in a test suite asks whether the caller
+in production can reach the door at all. The cron entries were written from the
+design doc and the handlers were written from the design doc, and neither was
+ever written against the other.

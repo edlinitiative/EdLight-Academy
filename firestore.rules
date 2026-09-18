@@ -399,12 +399,20 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // A player reads their OWN row and nobody else's. A full mid-game
-      // scoreboard in the hands of a client is the raw material for a side tool
-      // that tells someone which questions everyone else got wrong.
+      // Server-only, INCLUDING a player's own row.
+      //
+      // Letting someone read their own score sounds harmless and is not: the
+      // increment lands the instant their answer is scored, so five friends
+      // submitting five different options learn the correct one from whose
+      // score moved — inside the window, while the question is still open. It
+      // is the cheapest attack on this design and it needs no tooling at all.
+      //
+      // Nothing is lost by closing it. Section H says the live screen shows the
+      // student their SCHOOL's position and whether they are in its five, never
+      // a running personal score, and that comes from `standings/current`, which
+      // only moves when a question closes.
       match /players/{uid} {
-        allow read: if request.auth != null && request.auth.uid == uid;
-        allow write: if false;
+        allow read, write: if false;
       }
 
       // Submissions are integrity evidence: immutable, server-written, and not
@@ -423,6 +431,34 @@ service cloud.firestore {
 
       match /events/{seq} {
         allow read: if true;
+        allow write: if false;
+      }
+
+      // The frozen roster: which schools were actually in the room when doors
+      // closed, and therefore which ones can be ranked. Public, because the
+      // broadcast explains why a school is unranked and a student deserves to
+      // see the same answer their school got.
+      //
+      // A school that failed to qualify is NOT excluded — its students play and
+      // score individually. The document is read-only to everyone because
+      // re-freezing a roster mid-tournament would move a school's eligibility
+      // under a board already ranking on it.
+      match /roster/{schoolKey} {
+        allow read: if true;
+        allow write: if false;
+      }
+
+      // Prize claims. A claimant reads their OWN and nobody else's: these carry
+      // a contact, and for the many winners who are minors a guardian's name
+      // and contact too. Nothing here is public, and nothing is client-written —
+      // a claim that could be edited by its claimant is not evidence of
+      // anything.
+      match /claims/{uid} {
+        // The claimant, and the admins who have to verify them. A review queue
+        // nobody can read is a review that does not happen — and the whole
+        // prize model rests on somebody actually looking before money moves.
+        allow read: if request.auth != null
+                    && (request.auth.uid == uid || isAdmin());
         allow write: if false;
       }
     }

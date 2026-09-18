@@ -20,6 +20,7 @@ import {
   applicationDefault,
   type App,
 } from 'firebase-admin/app';
+import { getStorage } from 'firebase-admin/storage';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth, type DecodedIdToken } from 'firebase-admin/auth';
 
@@ -81,4 +82,20 @@ export function verifyIdToken(idToken: string): Promise<DecodedIdToken> {
 /** Firebase Auth Admin instance (user management — e.g. deleteUser). */
 export function getAuthAdmin(): Auth {
   return getAuth(init());
+}
+
+/**
+ * The Cloud Storage bucket holding the Arena's parental consent forms.
+ *
+ * The bucket name is read from the environment rather than guessed from the
+ * project id. Firebase has used two different default bucket suffixes over the
+ * years (`appspot.com` and `firebasestorage.app`), and a guess that lands on
+ * the wrong one fails at upload time — on the one path where the failure means
+ * a winning child's prize cannot be released. An explicit variable fails at
+ * deploy time instead, where somebody is looking.
+ */
+export function getConsentBucket() {
+  const name = process.env.FIREBASE_STORAGE_BUCKET || '';
+  if (!name) throw new Error('storage_not_configured');
+  return getStorage(init()).bucket(name);
 }

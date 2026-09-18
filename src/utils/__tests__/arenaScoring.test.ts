@@ -415,3 +415,55 @@ describe('rankIndividuals — the cash podium', () => {
     expect(rankSchools([], OPTS)).toEqual([]);
   });
 });
+
+describe('qualification counts who was in the room', () => {
+  const school = (key: string, scores: number[], presentCount?: number) => ({
+    key,
+    label: key,
+    playerScores: scores,
+    playerTotalMs: scores.map(() => 5_000),
+    playerCorrect: scores.map(() => 1),
+    presentCount,
+  });
+
+  it('does not qualify a school that registered five and brought three', () => {
+    // Decision 3: a registered no-show does not count. Without the present
+    // count this school ranks on the strength of two students who never opened
+    // the app, which is the exact outcome that decision overturned.
+    const [s] = rankSchools([school('a', [900, 900, 900, 900, 900], 3)], {
+      teamSize: 5,
+      minPlayers: 5,
+    });
+    expect(s.qualified).toBe(false);
+    expect(s.needed).toBe(2);
+  });
+
+  it('qualifies one that brought its five', () => {
+    const [s] = rankSchools([school('a', [900, 900, 900, 900, 900], 5)], {
+      teamSize: 5,
+      minPlayers: 5,
+    });
+    expect(s.qualified).toBe(true);
+  });
+
+  it('counts registrations when there is no roster yet', () => {
+    // Before doors close nobody is present and registration IS the count — a
+    // lobby that showed every school as unqualified would be telling the truth
+    // about the wrong question.
+    const [s] = rankSchools([school('a', [900, 900, 900, 900, 900])], {
+      teamSize: 5,
+      minPlayers: 5,
+    });
+    expect(s.qualified).toBe(true);
+  });
+
+  it('does not cap a large school at the fetched page', () => {
+    // The pool is a page, five deep. A school with two hundred present must not
+    // report five members just because that is all we read.
+    const [s] = rankSchools([school('a', [900, 900, 900, 900, 900], 200)], {
+      teamSize: 5,
+      minPlayers: 5,
+    });
+    expect(s.members).toBe(200);
+  });
+});
