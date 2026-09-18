@@ -290,12 +290,20 @@ describe('rankPathPoints', () => {
 // ── Who caused it ───────────────────────────────────────────────────────────
 
 describe('causes', () => {
-  it('names a student once across a composed scene, with their whole gain', () => {
+  it('names a student once across a composed scene', () => {
     const merged = mergeCauses([
       [cause('ana', 12), cause('bo', 8)],
       [cause('ana', 5)],
     ]);
-    expect(merged.map((c) => [c.uid, c.gained])).toEqual([['ana', 17], ['bo', 8]]);
+    expect(merged.map((c) => c.uid)).toEqual(['ana', 'bo']);
+  });
+
+  it('never inflates a gain by adding the same answer up twice', () => {
+    // The emitter hands the SAME `causedBy` to every event it derives for a
+    // school in one question, so a composed scene sees the same 12 points
+    // twice. Reading "+24" out on a stage is not a rounding error.
+    const merged = mergeCauses([[cause('ana', 12)], [cause('ana', 12)], [cause('ana', 7)]]);
+    expect(merged).toEqual([{ uid: 'ana', displayName: 'ANA', schoolKey: 'sch', gained: 12 }]);
   });
 
   it('orders by the size of the gain, then by uid so nothing flickers', () => {
@@ -308,7 +316,7 @@ describe('causes', () => {
       event('PLAYER_ENTERS_TOP_5', { causedBy: [cause('ana', 10)] }, 1),
       event('SCHOOL_OVERTAKE', { causedBy: [cause('ana', 4), cause('bo', 6)] }, 2),
     ]);
-    expect(sceneCauses(composed).map((c) => [c.uid, c.gained])).toEqual([['ana', 14], ['bo', 6]]);
+    expect(sceneCauses(composed).map((c) => [c.uid, c.gained])).toEqual([['ana', 10], ['bo', 6]]);
   });
 
   it('survives a payload that carries no cause at all', () => {

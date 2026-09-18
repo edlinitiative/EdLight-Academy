@@ -63,6 +63,7 @@ import {
 } from '../../shared/arena/events';
 import type { ArenaState } from '../../shared/arena/state';
 import { authorizeCronOrAdmin, tournamentsInStates } from './_shared';
+import { highestSeq, nextSeq, renumber, seqAfter, writeEvents } from './_events';
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 
@@ -194,28 +195,30 @@ export function withoutUndefined<T extends Record<string, unknown>>(value: T): T
 // ── Pure logic (unit-tested in api/__tests__/arenaAggregate.test.ts) ─────────
 
 /**
- * The first seq this tick may hand out.
+ * Sequence allocation lives in `_events.ts`, with the emitters that share it.
  *
- * `standings.seq` is the HIGHEST event seq the stored board already accounts
- * for, so the next event starts one above it. That definition is what makes the
- * single-batch write in step 5 meaningful: any event a spectator can see has a
- * seq at or below the seq of the standings document sitting next to it.
+ * It used to live here, and that is precisely how the race got in: this tick
+ * read `standings.seq` at the top and numbered its events from that read
+ * hundreds of milliseconds later, so any event `advance` or `state` emitted in
+ * between was overwritten — same seq, same document id, one survivor. Both
+ * re-exported because this module is where the rest of the codebase and its
+ * tests already import them from.
  */
-export function nextSeq(previous: StandingsSnapshot | null): number {
-  const last = previous && Number.isFinite(previous.seq) ? previous.seq : 0;
-  return Math.max(0, Math.trunc(last)) + 1;
-}
+export { nextSeq, eventDocId } from './_events';
 
 /**
- * Document id for an event.
+ * A board with no `schools` array is not a previous board.
  *
- * Zero-padded because Firestore orders document ids LEXICOGRAPHICALLY: with raw
- * ids, `events/10` sorts before `events/9` and a broadcast paging the feed by
- * document id replays the match out of order. The numeric `seq` is on the
- * document too, so a client may order by either.
+ * `standings/current` can exist before any tick has computed anything: the
+ * event emitters create it carrying only `seq` when `TOURNAMENT_OPEN` fires
+ * during registration. Diffing against that stub would make `deriveEvents`
+ * read every school as absent-then-present and fire the whole board as a first
+ * lead change — the "opens as confetti" failure its own comments describe.
  */
-export function eventDocId(seq: number): string {
-  return String(Math.max(0, Math.trunc(seq))).padStart(6, '0');
+export function asPreviousBoard(previous: StoredStandings | null): StoredStandings | null {
+  return previous && Array.isArray(previous.schools) && Array.isArray(previous.individuals)
+    ? previous
+    : null;
 }
 
 /**
@@ -518,6 +521,55 @@ async function loadPool(
 }
 
 /**
+ * Write the board and the events it describes, numbering them at commit time.
+ *
+ * TWO properties, and the second is the one that was missing:
+ *
+ *  1. ONE TRANSACTION. Two writes would leave a window in which a spectator's
+ *     listener has delivered "CODOSA just took the lead" while
+ *     `standings/current` still shows the old order — the stage animates a move
+ *     the board denies. Both land, or neither does.
+ *  2. THE SEQ IS ALLOCATED HERE, from a `standings/current` re-read INSIDE the
+ *     transaction, not from the read at the top of the tick. Between those two
+ *     moments this tick runs one query per school; `advance` closing a question
+ *     emits in that window, and the events numbered from the stale read landed
+ *     on the same document ids — one event silently replacing another, and
+ *     `standings.seq` set back below where the emitter had left it. Firestore
+ *     aborts and retries whichever of the two transactions loses the race, so
+ *     the retry reads the counter the winner moved.
+ *
+ * `previousSeq` is only a floor: it keeps the stored seq from going BACKWARDS
+ * in the impossible-but-cheap-to-rule-out case of a standings document whose
+ * counter was lost.
+ */
+export async function commitBoard(
+  db: Firestore,
+  tid: string,
+  board: StoredStandings,
+  events: ArenaEvent[],
+  previousSeq: number,
+): Promise<{ events: ArenaEvent[]; seq: number }> {
+  const standingsRef = db.doc(`tournaments/${tid}/standings/current`);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(standingsRef);
+    const allocated = Math.max(
+      highestSeq(snap.exists ? (snap.data() as Record<string, unknown>) : null),
+      Math.max(0, previousSeq - 1),
+    );
+    const numbered = renumber(events, allocated + 1);
+    writeEvents(tx, db, tid, numbered);
+    const stored: StoredStandings = {
+      ...board,
+      // The board accounts for every event just emitted, so its seq is the
+      // highest of them — the invariant `nextSeq` documents.
+      seq: seqAfter(numbered, allocated),
+    };
+    tx.set(standingsRef, { ...stored, updatedAt: FieldValue.serverTimestamp() });
+    return { events: numbered, seq: stored.seq };
+  });
+}
+
+/**
  * One tournament's recompute, lifted out of the handler so the scheduled sweep
  * can run it for each live tournament without faking a request object.
  *
@@ -592,6 +644,12 @@ async function aggregateOne(
     )).filter((p): p is SchoolPool => p !== null);
 
     // ── 4 · Rank with the shared functions, then diff against the last board ─
+    //
+    // `seq` here is PROVISIONAL. It is what the board read at the top of this
+    // tick, which is precisely the value that an emitter committing while these
+    // queries ran has already moved. `deriveEvents` needs a number to count
+    // from; the real allocation happens at commit time in step 5, and the
+    // events are renumbered there.
     const seq = nextSeq(previous);
     const next = buildSnapshot(pools, { teamSize, minPlayers, seq, now });
 
@@ -608,37 +666,21 @@ async function aggregateOne(
       totalQuestions,
       now,
     };
-    const events: ArenaEvent[] = deriveEvents(previous, next, ctx);
+    const events: ArenaEvent[] = deriveEvents(asPreviousBoard(previous), next, ctx);
 
-    // ── 5 · Events and the board they describe, in ONE batch ────────────────
-    //
-    // Two writes would leave a window in which a spectator's listener has
-    // delivered "CODOSA just took the lead" while `standings/current` still
-    // shows the old order — the stage animates a move the board denies. The
-    // batch closes that window: both land, or neither does.
-    const batch = db.batch();
-    for (const event of events) {
-      batch.set(db.doc(`tournaments/${tid}/events/${eventDocId(event.seq)}`), {
-        ...event,
-        tid,
-        writtenAt: FieldValue.serverTimestamp(),
-      });
-    }
     const qualifiedAtByKey = new Map(pools.map((p) => [p.key, p.qualifiedAt]));
-    const stored: StoredStandings = withoutUndefined({
+    const board: StoredStandings = withoutUndefined({
       ...next,
       schools: next.schools.map((s) => withoutUndefined({
         ...s,
         qualifiedAt: qualifiedAtByKey.get(s.key),
       })),
-      // The board accounts for every event just emitted, so its seq is the
-      // highest of them — the invariant `nextSeq` documents.
-      seq: events.length ? events[events.length - 1].seq : seq - 1,
       rosterCursorMs: cursorMs,
       cadenceIndex: ctx.questionsRemaining >= 0 ? questionIndex : previous?.cadenceIndex,
     });
-    batch.set(standingsRef, { ...stored, updatedAt: FieldValue.serverTimestamp() });
-    await batch.commit();
+
+    // ── 5 · Events and the board they describe, in ONE transaction ──────────
+    const committed = await commitBoard(db, tid, board, events, seq);
 
     return {
       status: 200,
@@ -647,8 +689,8 @@ async function aggregateOne(
         state,
         schools: next.schools.length,
         players: next.individuals.length,
-        events: events.length,
-        seq: stored.seq,
+        events: committed.events.length,
+        seq: committed.seq,
       },
     };
   } catch (err) {

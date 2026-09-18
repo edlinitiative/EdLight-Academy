@@ -220,18 +220,24 @@ const causesOf = (event: ArenaEvent | null | undefined): ArenaCause[] => {
  * One list of names for a scene that may be speaking for several events.
  *
  * A composed scene — she entered the five, so the school passed three others —
- * has the same student named in two payloads. Merging by uid and summing the
- * gain is what turns that into one sentence instead of the same name read out
- * twice.
+ * has the same student named in two payloads, and the scene must say her name
+ * once.
+ *
+ * The gain is the LARGEST the scene was told, never the sum. The emitter builds
+ * `causedBy` from one snapshot diff and hands the same list to every event it
+ * derives for that school in that question, so adding them up would credit a
+ * student with twice what she scored the moment two of her school's events land
+ * in one scene — and an inflated number read out on a stage is the one kind of
+ * mistake this feed cannot take back.
  */
 export function mergeCauses(lists: ArenaCause[][]): ArenaCause[] {
   const byUid = new Map<string, ArenaCause>();
   for (const list of lists || []) {
     for (const cause of list || []) {
       if (!cause || typeof cause.uid !== 'string') continue;
-      const seen = byUid.get(cause.uid);
       const gained = Number.isFinite(cause.gained) ? cause.gained : 0;
-      if (seen) seen.gained += gained;
+      const seen = byUid.get(cause.uid);
+      if (seen) seen.gained = Math.max(seen.gained, gained);
       else byUid.set(cause.uid, { ...cause, gained });
     }
   }

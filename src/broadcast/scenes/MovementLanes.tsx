@@ -56,14 +56,17 @@ export default function MovementLanes({ rows, interposeAfter, interpose }: Movem
           <li
             className={[
               'mv-lane',
-              row.travel !== undefined ? 'mv-lane--travel' : '',
+              row.travel ? 'mv-lane--travel' : '',
               row.gain ? 'mv-lane--gain' : '',
               row.dim ? 'mv-lane--dim' : '',
               row.focus ? 'mv-lane--focus' : '',
             ].filter(Boolean).join(' ')}
             style={{
               ['--mv-hue' as string]: String(schoolHue(row.key)),
-              ...(row.travel !== undefined
+              // A lane that did not move is not given an animation at all: it
+              // would be a no-op keyframe and a `will-change` hint on every
+              // untouched row of a board that runs all night.
+              ...(row.travel
                 ? { ['--mv-from' as string]: `calc(var(--mv-lane-h) * ${row.travel})` }
                 : null),
             }}

@@ -229,6 +229,7 @@
 	align-items: baseline;
 	gap: clamp(10px, 1.4vw, 20px);
 	width: 100%;
+	animation: stage-enter 320ms var(--mv-ease) both;
 }
 
 .mv-name { color: var(--stage-ink, #EEF3FB); font-weight: 700; }
@@ -341,6 +342,17 @@
 
 .mv-slot__out .mv-slot__name { color: var(--stage-dim, #7C8EAC); }
 
+/*
+ * With motion off, the leaving card has no drop to leave by — so it stops
+ * overlapping the arriving one and sits beneath it, quieter, still named. The
+ * substitution is still legible; it just does not move.
+ */
+.mv-still .mv-slot__out {
+	position: static;
+	margin-top: 10px;
+	opacity: 0.55;
+}
+
 /* ── Sequence 10 — the round's five questions, and the burst ────────────── */
 
 .mv-marks {
@@ -378,6 +390,10 @@
 	);
 	-webkit-mask-image: radial-gradient(closest-side, #000 4%, rgba(0, 0, 0, 0.32) 38%, transparent 70%);
 	mask-image: radial-gradient(closest-side, #000 4%, rgba(0, 0, 0, 0.32) 38%, transparent 70%);
+	/* Low intensity is the BASE state, not the end of an animation: with motion
+	   switched off there is no animation to end, and a burst that defaulted to
+	   full strength would be the loudest thing on the quietest stage. */
+	opacity: 0.3;
 	animation: mv-burst 1200ms var(--mv-ease) both;
 }
 
@@ -415,6 +431,10 @@
 	fill: var(--stage-ground, #060E1C);
 	transform-box: fill-box;
 	transform-origin: 100% 50%;
+	/* Collapsed by default. With motion switched off there is no wipe to run,
+	   and a cover that defaulted to "covering" would hide the whole chart —
+	   reduced motion removes the travel, never the information. */
+	transform: scaleX(0);
 	animation: mv-wipe 1100ms var(--mv-ease) 240ms both;
 }
 
@@ -500,5 +520,11 @@
 	.mv-scene {
 		animation: none !important;
 		transition: none !important;
+	}
+
+	.mv-slot__out {
+		position: static;
+		margin-top: 10px;
+		opacity: 0.55;
 	}
 }

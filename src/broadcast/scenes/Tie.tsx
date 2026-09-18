@@ -61,12 +61,18 @@ export default function Tie({ scene, data, elapsed, reduceMotion, t }: SceneProp
   const margin = tieMarginAt(payload?.margin ?? 0, elapsed, COUNT, reduceMotion);
   const upperKey = visible.find((s) => s.rank === upper)?.key;
 
-  const gap = (
-    <li className="mv-gap" key="mv-gap">
+  const readout = (
+    <>
       <span className="mv-gap__figure mv-num">{margin.toFixed(2)}</span>
       <span className="mv-gap__label">{t('% D’ÉCART', '% DIFERANS')}</span>
-    </li>
+    </>
   );
+
+  // The margin belongs BETWEEN the two lanes, which is where the gap is. If the
+  // board cannot place them — an empty snapshot, a school the standings have
+  // not caught up with — the number still has to be on screen, so it is shown
+  // on its own rather than silently dropped with the lane it was attached to.
+  const placed = Boolean(upperKey);
 
   return (
     <div className={`mv-scene${reduceMotion ? ' mv-still' : ''}`}>
@@ -83,14 +89,15 @@ export default function Tie({ scene, data, elapsed, reduceMotion, t }: SceneProp
           : null}
       </div>
 
-      {rows.length > 0
-        ? <MovementLanes rows={rows} interposeAfter={upperKey} interpose={gap} />
-        : (
-          <div className="mv-gap">
-            <span className="mv-gap__figure mv-num">{margin.toFixed(2)}</span>
-            <span className="mv-gap__label">{t('% D’ÉCART', '% DIFERANS')}</span>
-          </div>
-        )}
+      {placed ? null : <div className="mv-gap">{readout}</div>}
+
+      {rows.length > 0 ? (
+        <MovementLanes
+          rows={rows}
+          interposeAfter={upperKey}
+          interpose={placed ? <li className="mv-gap">{readout}</li> : undefined}
+        />
+      ) : null}
     </div>
   );
 }
