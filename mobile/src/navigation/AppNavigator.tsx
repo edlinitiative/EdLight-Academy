@@ -16,6 +16,8 @@ import TeachScreen from '../screens/TeachScreen';
 import SearchScreen from '../screens/SearchScreen';
 import ArenaLobbyScreen from '../screens/arena/ArenaLobbyScreen';
 import ArenaLiveScreen from '../screens/arena/ArenaLiveScreen';
+import ArenaDoorsScreen from '../screens/arena/ArenaDoorsScreen';
+import ArenaResultScreen from '../screens/arena/ArenaResultScreen';
 
 export type RootParamList = {
   Loading: undefined;
@@ -35,7 +37,9 @@ export type RootParamList = {
    * precedent for a takeover screen in this app.
    */
   ArenaLobby: { tournamentId: string };
+  ArenaDoors: { tournamentId: string };
   ArenaLive: { tournamentId: string };
+  ArenaResult: { tournamentId: string };
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
@@ -226,6 +230,16 @@ export default function AppNavigator() {
                 name="ArenaLobby"
                 component={ArenaLobbyScreen}
                 options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="ArenaDoors"
+                component={ArenaDoorsScreen}
+                options={{ animation: 'fade' }}
+              />
+              <Stack.Screen
+                name="ArenaResult"
+                component={ArenaResultScreen}
+                options={{ animation: 'slide_from_bottom' }}
               />
               <Stack.Screen
                 name="ArenaLive"

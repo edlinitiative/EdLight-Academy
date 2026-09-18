@@ -180,3 +180,43 @@ describe('the tier clock', () => {
     expect(tierRing(999_999).secondsInTier).toBe(0);
   });
 });
+
+// ── What the result screen leads with ───────────────────────────────────────
+//
+// Most players will not be near the podium. A result screen that leads with a
+// rank tells almost everyone they lost; whether they were one of the five who
+// counted for their school is something nearly anyone can have done, and it is
+// what makes them bring four friends next month.
+describe('a student\'s contribution to their school', () => {
+  const inFive = (uid: string, top5: string[]) => top5.includes(uid);
+
+  it('is true when the student is one of the counted five', () => {
+    expect(inFive('u3', ['u1', 'u2', 'u3', 'u4', 'u5'])).toBe(true);
+  });
+
+  it('is false when they played but did not make the five', () => {
+    // Not a failure state on screen: they still played for their school, and
+    // their individual score still stands.
+    expect(inFive('u9', ['u1', 'u2', 'u3', 'u4', 'u5'])).toBe(false);
+  });
+
+  it('is false for a school with no five at all', () => {
+    // A school short of the floor has no top5 to be in. It still plays.
+    expect(inFive('u1', [])).toBe(false);
+  });
+});
+
+describe('accuracy is out of the questions asked, not the ones answered', () => {
+  const accuracy = (correct: number, questionCount: number) =>
+    questionCount > 0 ? Math.round((correct / questionCount) * 100) : null;
+
+  it('counts a skipped question against you, because it was asked', () => {
+    // Dividing by answered would show 100% to someone who answered one question
+    // correctly and slept through twenty-four.
+    expect(accuracy(1, 25)).toBe(4);
+  });
+
+  it('has no answer before a tournament has any questions', () => {
+    expect(accuracy(0, 0)).toBeNull();
+  });
+});

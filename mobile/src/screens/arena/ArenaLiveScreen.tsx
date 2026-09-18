@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Line } from 'react-native-svg';
 import Animated, {
@@ -58,6 +58,18 @@ export default function ArenaLiveScreen() {
   // The presence heartbeat runs inside useArenaLive: a student watching the
   // round IS in the room, and qualification is decided on who is.
   const { tournament, question, mySchool, me, inFive, answerable, inPause, loading, now } = useArenaLive(tid);
+  const navigation = useNavigation<any>();
+
+  /*
+   * The last question has closed. Hand over to the result screen with `replace`
+   * rather than `navigate`: there is nothing to go back to, and leaving the
+   * live screen on the stack lets a student swipe back into a tournament that
+   * has ended and sit on a dead question.
+   */
+  const over = !!tournament && tournament.state !== 'live' && tournament.state !== 'doors';
+  useEffect(() => {
+    if (over && tid) navigation.replace('ArenaResult', { tournamentId: tid });
+  }, [over, tid, navigation]);
   const answer = useArenaAnswer(tid);
 
   // The Arena takes over the screen on tournament night: anything that lets a

@@ -415,3 +415,161 @@ export function useArenaLive(tid: string | null | undefined): ArenaLiveView {
     now,
   };
 }
+
+// ── Doors ───────────────────────────────────────────────────────────────────
+
+export interface ArenaDoorsView {
+  tournament: ArenaTournament | null;
+  loading: boolean;
+  absent: boolean;
+  /** The student's own school lane, once standings carry it. */
+  mySchool: ArenaSchoolStanding | null;
+  schoolName: string;
+  counts: ArenaSchoolCounts | null;
+  qualification: QualificationState | null;
+  /** Schools seen arriving since this screen mounted, newest first. */
+  arrivals: string[];
+  /** Total schools and players in the room, from the tournament document. */
+  roomSchools: number;
+  roomPlayers: number;
+  /** ms until the first question opens. */
+  msToStart: number;
+  /** The tournament has started — the caller should hand over to Live. */
+  started: boolean;
+  now: number;
+}
+
+/**
+ * The ante-room, in the ten minutes before the first question.
+ *
+ * The room filling IS the content here, which is why this hook computes
+ * ARRIVALS rather than just a count: a number climbing from 41 to 43 is data,
+ * and "SLDG vient d'entrer" is an event. It is the only moment in the whole
+ * tournament where a student is looking at the screen with nothing to do, so
+ * it has to be worth looking at.
+ *
+ * Arrivals are diffed client-side against the previous standings rather than
+ * read from a feed. There is no arrivals document and there should not be one:
+ * this is decoration over data the screen already subscribes to, and a missed
+ * arrival costs nothing.
+ */
+export function useArenaDoors(tid: string | null | undefined): ArenaDoorsView {
+  const { data: tournament, loading, error } = useArenaTournament(tid);
+  const { data: standings } = useArenaStandings(tid);
+  const { counts } = useArenaPresence(tid, tournament?.state ?? null);
+  const now = useNow(1000);
+  const uid = useStore((s) => s.user?.uid) ?? null;
+
+  const mySchool = useMemo(() => {
+    if (!standings || !uid) return null;
+    const mine = standings.individuals.find((i) => i.uid === uid);
+    if (!mine) return null;
+    return standings.schools.find((s) => s.key === mine.schoolKey) ?? null;
+  }, [standings, uid]);
+
+  // Seen-set lives in a ref so a school already in the room when the screen
+  // mounted is never announced as arriving — the student would be told about
+  // forty schools at once, which is noise, not an event.
+  const seen = useRef<Set<string> | null>(null);
+  const [arrivals, setArrivals] = useState<string[]>([]);
+  useEffect(() => {
+    if (!standings) return;
+    const names = standings.schools.map((s) => s.shortName || s.label);
+    if (seen.current === null) {
+      seen.current = new Set(names);
+      return;
+    }
+    const fresh = names.filter((n) => !seen.current!.has(n));
+    if (fresh.length === 0) return;
+    fresh.forEach((n) => seen.current!.add(n));
+    setArrivals((prev) => [...fresh.reverse(), ...prev].slice(0, 8));
+  }, [standings]);
+
+  const startsAt = tournament?.startsAt ?? 0;
+  const state = tournament?.state ?? null;
+
+  return {
+    tournament,
+    loading,
+    absent: !!error || (!loading && !tournament),
+    mySchool,
+    schoolName: mySchool ? (mySchool.shortName || mySchool.label) : '',
+    counts,
+    qualification: counts
+      ? qualificationState({
+          registered: counts.registered,
+          present: counts.present,
+          minPlayers: tournament?.minPlayers ?? 5,
+          // Doors are open by definition on this screen, so presence is the
+          // test — a school qualified on registrations alone is not qualified.
+          doorsOpen: true,
+        })
+      : null,
+    arrivals,
+    roomSchools: tournament?.counts?.schools ?? standings?.schools.length ?? 0,
+    roomPlayers: tournament?.counts?.players ?? 0,
+    msToStart: Math.max(0, startsAt - now),
+    started: state === 'live',
+    now,
+  };
+}
+
+// ── Result ──────────────────────────────────────────────────────────────────
+
+export interface ArenaResultView {
+  tournament: ArenaTournament | null;
+  loading: boolean;
+  absent: boolean;
+  /** True until integrity review completes. Never say "you won" before this. */
+  provisional: boolean;
+  me: ArenaIndividualStanding | null;
+  mySchool: ArenaSchoolStanding | null;
+  schoolName: string;
+  /** Was the student one of the five who counted for their school. */
+  inTheFive: boolean;
+  accuracyPct: number | null;
+  avgMs: number | null;
+  /** Still settling — the scores are not final even provisionally. */
+  calculating: boolean;
+  now: number;
+}
+
+/**
+ * What a student sees when it is over.
+ *
+ * Everything here is labelled PROVISIONAL and that is not a formality: prizes
+ * are held until integrity review completes, and a screen that says "you won"
+ * before that has to be taken back in public. Saying it up front means a later
+ * removal is the rule working as announced rather than a reversal.
+ */
+export function useArenaResult(tid: string | null | undefined): ArenaResultView {
+  const { data: tournament, loading, error } = useArenaTournament(tid);
+  const { data: standings } = useArenaStandings(tid);
+  const now = useNow(1000);
+  const uid = useStore((s) => s.user?.uid) ?? null;
+
+  const me = useMemo(
+    () => (standings && uid ? standings.individuals.find((i) => i.uid === uid) ?? null : null),
+    [standings, uid],
+  );
+  const mySchool = useMemo(
+    () => (standings && me ? standings.schools.find((s) => s.key === me.schoolKey) ?? null : null),
+    [standings, me],
+  );
+
+  const answered = tournament?.questionCount ?? 0;
+  return {
+    tournament,
+    loading,
+    absent: !!error || (!loading && !tournament),
+    provisional: tournament?.state !== 'final',
+    me,
+    mySchool,
+    schoolName: mySchool ? (mySchool.shortName || mySchool.label) : '',
+    inTheFive: !!(me && mySchool?.top5?.includes(me.uid)),
+    accuracyPct: me && answered > 0 ? Math.round((me.correct / answered) * 100) : null,
+    avgMs: me?.avgMs ?? null,
+    calculating: tournament?.state === 'grading',
+    now,
+  };
+}

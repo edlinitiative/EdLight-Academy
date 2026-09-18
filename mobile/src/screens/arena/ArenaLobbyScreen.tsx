@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Check, School as SchoolIcon, Share2, Trophy, Users } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import SchoolPicker from '../../components/SchoolPicker';
@@ -45,6 +45,7 @@ export default function ArenaLobbyScreen() {
 
   const lobby = useArenaLobby(tid);
   const { tournament, loading, absent, signedIn, registered, counts, mySchool, qualification, doorsOpen } = lobby;
+  const navigation = useNavigation<any>();
 
   const [picker, setPicker] = useState(false);
   const [school, setSchool] = useState<School | null>(null);
@@ -298,6 +299,34 @@ export default function ArenaLobbyScreen() {
                   : doorsOpen
                     ? t('Appelle-les maintenant', 'Rele yo kounye a')
                     : t('Compléter l’équipe', 'Konplete ekip la')}
+              </Text>
+            </PressableScale>
+          </StageEnter>
+        ) : null}
+
+        {/* Once the room is open, being IN it is the only thing that matters:
+            qualification is measured on who turned up, not who registered. So
+            this becomes the primary action and sits above the invite. */}
+        {doorsOpen && registered ? (
+          <StageEnter playKey="lobby" index={3}>
+            <PressableScale
+              onPress={() => { tapMedium(); navigation.navigate('ArenaDoors', { tournamentId: tid }); }}
+              pressedScale={0.98}
+              accessibilityRole="button"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 9,
+                paddingVertical: 16,
+                borderRadius: radius.control,
+                backgroundColor: colors.azure,
+                marginBottom: 14,
+              }}
+            >
+              <Trophy color="#fff" size={17} />
+              <Text style={[typeScale.title, { color: '#fff' }]}>
+                {t('Entrer dans l’Arène', 'Antre nan Arèn nan')}
               </Text>
             </PressableScale>
           </StageEnter>
