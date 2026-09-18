@@ -32,6 +32,10 @@
     {
       "path": "/api/cron-sandra-health",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/arena/aggregate",
+      "schedule": "* * * * *"
     }
   ],
   "rewrites": [

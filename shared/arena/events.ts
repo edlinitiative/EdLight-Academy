@@ -715,14 +715,26 @@ export function deriveEvents(
     }
 
     for (const school of nextSchools) {
-      const five = (school.top5 || []).map((uid) => nextInd.get(uid)).filter(Boolean);
+      // `.filter(Boolean)` does NOT narrow the type in TypeScript, and this is
+      // not a formality: a top5 naming a uid the standings document does not
+      // carry — precisely the thinned-list case documented on
+      // StandingsSnapshot.individuals — would reach `p.score` on undefined and
+      // take the whole emitter down mid-tournament. Narrow explicitly.
+      const five = (school.top5 || [])
+        .map((uid) => nextInd.get(uid))
+        .filter((p): p is IndividualStanding => !!p);
       const total = five.reduce((n, p) => n + (p.score || 0), 0);
       if (total <= 0) continue;
       const best = five.slice().sort((a, b) => b.score - a.score || a.uid.localeCompare(b.uid))[0];
+      // An empty five cannot carry anybody; `total > 0` above nearly implies a
+      // member exists, but "nearly" is how a live broadcast crashes.
+      if (!best) continue;
       const sharePct = (best.score / total) * 100;
       if (sharePct <= ARENA_CARRY_SHARE_PCT) continue;
       const beforeSchool = prevSchools.get(school.key);
-      const beforeFive = (beforeSchool?.top5 || []).map((uid) => prevInd.get(uid)).filter(Boolean);
+      const beforeFive = (beforeSchool?.top5 || [])
+        .map((uid) => prevInd.get(uid))
+        .filter((p): p is IndividualStanding => !!p);
       const beforeTotal = beforeFive.reduce((n, p) => n + (p.score || 0), 0);
       const beforeBest = beforeFive.slice().sort((a, b) => b.score - a.score || a.uid.localeCompare(b.uid))[0];
       const wasCarrying = beforeTotal > 0 && beforeBest

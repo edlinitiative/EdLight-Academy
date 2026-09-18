@@ -27,11 +27,18 @@ jobs:
       # real TS2322 through on api/chat.ts, where refactoring a return value
       # widened a literal union to string.
       #
-      # Note this is broader than the api/tsconfig.json check, which did NOT
-      # catch that error — run `npx tsc --noEmit` from the root when touching
-      # api/, not just the api project.
+      # Note this is broader than the api/tsconfig.json check for shared code —
+      # but it is NOT a superset: tsconfig.json includes only `src/**/*`, so
+      # api/ is invisible to it. Both steps are required, and for a while
+      # neither ran over api/, which meant "tsc clean" was being reported for
+      # serverless code nothing had ever type-checked.
       - name: Typecheck web
         run: npx tsc --noEmit
+      # api/ has its own project because it compiles to CommonJS for the
+      # @vercel/node runtime. Nothing else type-checks these files, and they
+      # are the ones holding answer keys and scoring prize money.
+      - name: Typecheck api
+        run: npx tsc --noEmit -p api/tsconfig.json
       # The jest suite is expected to pass.
       - name: Run web tests
         run: npm test -- --ci

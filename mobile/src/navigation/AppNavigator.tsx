@@ -14,6 +14,8 @@ import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ChallengeScreen from '../screens/ChallengeScreen';
 import TeachScreen from '../screens/TeachScreen';
 import SearchScreen from '../screens/SearchScreen';
+import ArenaLobbyScreen from '../screens/arena/ArenaLobbyScreen';
+import ArenaLiveScreen from '../screens/arena/ArenaLiveScreen';
 
 export type RootParamList = {
   Loading: undefined;
@@ -24,6 +26,16 @@ export type RootParamList = {
   Leaderboard: undefined;
   Teach: undefined;
   Defi: { code: string };
+  /*
+   * The Arena sits at the ROOT, not inside the Jeux tab.
+   *
+   * On tournament night this is the product, and anything that lets a student
+   * wander into Cours mid-round and lose their place is a defect. A root route
+   * takes the screen the way the exam runner already does — which is the
+   * precedent for a takeover screen in this app.
+   */
+  ArenaLobby: { tournamentId: string };
+  ArenaLive: { tournamentId: string };
 };
 
 const Stack = createNativeStackNavigator<RootParamList>();
@@ -209,6 +221,22 @@ export default function AppNavigator() {
                 name="Leaderboard"
                 component={LeaderboardModal}
                 options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="ArenaLobby"
+                component={ArenaLobbyScreen}
+                options={{ animation: 'slide_from_right' }}
+              />
+              <Stack.Screen
+                name="ArenaLive"
+                component={ArenaLiveScreen}
+                options={{
+                  animation: 'fade',
+                  // No swipe-back and no header: a student cannot gesture
+                  // themselves out of a live question by accident, and there is
+                  // nowhere to go until the round ends anyway.
+                  gestureEnabled: false,
+                }}
               />
               <Stack.Screen
                 name="Teach"

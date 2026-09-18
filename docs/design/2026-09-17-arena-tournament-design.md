@@ -305,7 +305,8 @@ minutes, bursting into the first ~5 seconds after each question opens.
 - **No counter is incremented globally.** The naive design — a running school
   total — is exactly the 500-writes/sec-per-document limit, hit instantly. It is
   avoided entirely by not keeping one.
-- **Standings are recomputed, not accumulated.** An aggregator runs every ~5s:
+- **Standings are recomputed, not accumulated.** The aggregator runs ONCE PER
+  QUESTION CLOSE, inside the pause, not on a timer — see the correction below:
   for each school, query the top 5 players by score (composite index on
   `schoolKey asc, score desc, totalMs asc`), compute the mean, diff against the
   previous standings, emit events, write one `standings/current` document.
@@ -852,3 +853,34 @@ Mitigations, all in phase 1:
 
 **Registration still matters** — it is what makes a school visible, drives the
 invite loop, and seeds the push list. It just is not the qualification test.
+
+
+---
+
+## Correction to section F — the aggregator has no scheduler
+
+Section F specified an aggregator "every ~5s". That cannot be a Vercel cron:
+**cron granularity is one minute**, twelve times too slow, and adding an
+external scheduler would mean a new always-on component in a product that has
+none — the exact thing the WebSocket argument was made to avoid.
+
+It also turns out to be unnecessary, and the reason is Decision 2.
+
+**Standings only change when answers land, and answers only land during a
+question window.** So there is nothing to recompute between questions except
+the moment a question closes. The aggregator runs once per close, in the pause
+— which is precisely where the design already wanted standings to settle and
+events to emit.
+
+So `advance` calls `aggregate` when it closes a question. No scheduler, no
+cron, no tick, and the cadence is exactly right by construction rather than by
+tuning. A Vercel cron remains as a slow safety net (one per minute during a
+live tournament) purely so a dropped `advance` cannot leave the board frozen.
+
+**One thing this does not cover, and should not.** The broadcast wants to show
+answers arriving *during* the window (sequence 4b — the count climbing, which
+is the most persuasive shot in the format). That is a counter, not a standing,
+and it does not need the aggregator: the spectator page can read a cheap
+per-question count that the answer endpoint increments on a sharded counter.
+Keeping it off the aggregator is what stops "show the count moving" from
+dragging a full recompute onto a five-second timer.
