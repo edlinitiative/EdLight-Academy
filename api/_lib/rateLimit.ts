@@ -46,6 +46,17 @@ const LIMITS: Record<string, Limit> = {
   // keyed by IP rather than uid (no auth wall). Not paid — fails OPEN; the
   // honeypot in the endpoint is the first line against bots.
   'instructor-apply': { max: 5, windowSec: 86400 },
+
+  // ── The Arena ────────────────────────────────────────────────────────────
+  // A tournament decides prize money, so these are the endpoints where an
+  // uncapped limiter is not a degraded feature but a compromised result.
+  // `arena-answer` is generous on purpose: a legitimate player submits once per
+  // question across ~25 questions, and a retry after a network timeout is both
+  // normal and idempotent — the cap exists to stop a script, not a bad
+  // connection.
+  'arena-register': { max: 10, windowSec: 3600 },
+  'arena-answer':   { max: 120, windowSec: 3600 },
+  'arena-presence': { max: 240, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't
@@ -73,7 +84,17 @@ export async function checkRateLimit(
   if (!isAdminConfigured()) return { allowed: true, remaining: 999, resetAt: 0 };
 
   const limit = LIMITS[endpoint];
-  if (!limit) return { allowed: true, remaining: 999, resetAt: 0 };
+  if (!limit) {
+    // An unconfigured bucket normally fails OPEN, so a feature never breaks
+    // because its limit was forgotten. That trade is wrong for the tournament:
+    // an uncapped arena endpoint is not a degraded feature, it is a result
+    // somebody can buy. Anything under the `arena-` prefix must be declared
+    // above or it does not run at all.
+    if (endpoint.startsWith('arena-')) {
+      return { allowed: false, remaining: 0, resetAt: Date.now() + 60_000 };
+    }
+    return { allowed: true, remaining: 999, resetAt: 0 };
+  }
 
   const now = Date.now();
   const windowMs = limit.windowSec * 1000;
@@ -112,7 +133,9 @@ export async function checkRateLimit(
   } catch (err) {
     // Cost endpoints fail CLOSED (deny) so a Firestore blip can't uncap paid
     // model spend; everything else stays lenient.
-    const failClosed = COST_ENDPOINTS.has(endpoint);
+    // Arena endpoints join the cost-bearing ones in failing closed: a limiter
+    // that is down during a tournament must not quietly become no limiter.
+    const failClosed = COST_ENDPOINTS.has(endpoint) || endpoint.startsWith('arena-');
     console.warn(
       `[rateLimit] Firestore error, ${failClosed ? 'DENYING' : 'allowing'} request:`,
       err,
