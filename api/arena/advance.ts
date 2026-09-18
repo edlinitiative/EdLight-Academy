@@ -562,6 +562,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(409).json({ error: outcome.error, state: outcome.state });
       return;
     }
+
+    // Sequence 5. Deliberately outside the transaction that closed the
+    // question — see `emitQuestionClosed`'s own comment for why its payload
+    // cannot be gathered inside one. A failure here is swallowed: the round
+    // clock advancing is the one thing this endpoint must never stop for, and
+    // a missing round-results scene is recoverable where a stalled tournament
+    // is not.
+    if (outcome.action === 'closed' && typeof outcome.index === 'number') {
+      try {
+        await emitQuestionClosed(db, tid, outcome.index, outcome.round ?? 0);
+      } catch (err) {
+        console.error('[arena/advance] emitQuestionClosed failed:', err);
+      }
+    }
+
     res.status(200).json({ ok: true, ...outcome, pauseMs: PAUSE_MS });
   } catch (err) {
     console.error('[arena/advance] error:', err);

@@ -39,6 +39,32 @@
  * claim"). Existing claims are never overwritten: re-running this must not
  * hand a student a fresh 72 hours or erase a verification.
  *
+ * ── The three broadcast events only this file can see ─────────────────────
+ * `shared/arena/events.ts` derives events from a change in the STANDINGS; it
+ * never sees a STATE transition, so `TOURNAMENT_OPEN`, `CHAMPION_SCHOOL` and
+ * `CHAMPION_INDIVIDUAL` have to be emitted from here, at the edges only this
+ * route drives:
+ *
+ *  · `TOURNAMENT_OPEN` on `doors -> live` ("start"). Priority 10, a 60s hold
+ *    -- the bridge moment where the pre-show (rendered directly, outside the
+ *    director, while the state is `registration`/`doors`) hands off to the
+ *    director for the rest of the night. `registrationCounts` is the one
+ *    Firestore scan this file allows itself: bounded like every other scan in
+ *    this engine, and safe here for the same reason it is unsafe everywhere
+ *    else -- this runs once, on a transition an admin presses by hand, never
+ *    on a tick.
+ *  · `CHAMPION_SCHOOL` / `CHAMPION_INDIVIDUAL` on `grading -> provisional`,
+ *    built from the SAME standings read that decides the placeholder claims
+ *    two paragraphs up -- one board, one podium, one set of prizes, so the
+ *    champion the broadcast reveals and the claims the students see can never
+ *    name a different order. Provisional, not final: nothing here asserts a
+ *    result. The scenes that render these payloads carry that line themselves.
+ *
+ * All three go through `appendEvents`, which will only accept a standings
+ * snapshot read INSIDE the same transaction that writes them -- see
+ * `api/arena/_events.ts` for why: a snapshot read anywhere else is the exact
+ * race that let one writer's event silently overwrite another's.
+ *
  * Requests (POST):
  *   { tournamentId, to, reason? }              → transition
  *   { action: 'create', tournamentId, … }      → create a `draft` tournament
@@ -63,6 +89,19 @@ import {
   toMillis,
 } from './_shared';
 import { CLAIM_WINDOW_MS } from './claim';
+import {
+  appendEvents,
+  boardOf,
+  championSchoolFrom,
+  podiumFrom,
+  registrationCounts,
+  type ArenaEventDraft,
+} from './_events';
+import type {
+  ChampionIndividualPayload,
+  ChampionSchoolPayload,
+  TournamentOpenPayload,
+} from '../../shared/arena/events';
 
 type Row = Record<string, unknown>;
 
@@ -305,6 +344,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     // Starting: every question must exist before the first one is delivered.
+    // `roster` is TOURNAMENT_OPEN's payload — counted here, once, rather than
+    // from inside the transaction below: it is a scan bounded by players, not
+    // by schools, and this route allows itself that ONLY because it runs once
+    // per tournament, on a transition an admin presses by hand.
+    let roster: { players: number; schools: number } | null = null;
     if (to === 'live') {
       const total = typeof tournament.questionCount === 'number' ? tournament.questionCount : 0;
       const authored = await authoredCount(db, String(tid));
@@ -312,6 +356,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         res.status(409).json({ error: 'questions_incomplete', authored, required: total });
         return;
       }
+      roster = await registrationCounts(db, String(tid));
     }
 
     // The podium: the board that will be announced must exist before we say it
@@ -338,6 +383,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       placeholders = placeholders.filter((c) => !claimed.has(c.uid));
     }
 
+    // Both event-emitting transitions need `standings/current` read INSIDE the
+    // transaction that writes — `appendEvents` allocates `seq` from exactly
+    // that snapshot, and a snapshot read anywhere else is the race
+    // `api/arena/_events.ts` exists to close. Read unconditionally rather than
+    // only when needed: a conditional read after a write aborts a Firestore
+    // transaction, and every other branch here is a no-op read on a document
+    // already open for this transaction.
+    const standingsRef = db.doc(`tournaments/${tid}/standings/current`);
+
     const outcome = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists) return { ok: false as const, error: 'not_found' as const };
@@ -349,6 +403,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return { ok: false as const, error: 'illegal_transition' as const, from: current };
       }
 
+      const standingsSnap = await tx.get(standingsRef);
+
       const patch: Row = {
         state: to,
         [`${to}At`]: Timestamp.fromMillis(now),
@@ -356,6 +412,80 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       };
       if (reason) patch.stateReason = reason;
       tx.update(ref, patch);
+
+      // ── The three events only this route can see ──────────────────────────
+      //
+      // Idempotence is inherited, not re-implemented: `canTransition(s, s)` is
+      // false for every state (`shared/arena/state.ts`, tested exhaustively in
+      // `src/utils/__tests__/arenaState.test.ts`), and the guard above already
+      // ran before this line. A retry that finds the tournament already `live`
+      // is refused as `illegal_transition` and never reaches this array — so
+      // TOURNAMENT_OPEN cannot be emitted twice by a scheduler or a
+      // double-pressed console button, for the same reason `ROUND_START`
+      // cannot in `advance.ts`: the only path to the emitting code is the one
+      // that actually performs the transition, and that transition happens
+      // exactly once by construction.
+      const drafts: ArenaEventDraft[] = [];
+
+      if (to === 'live' && roster) {
+        // Sequence 1's bridge moment — the pre-show hands off to the director
+        // right here. Priority 10, a 60s hold: this is the only scene the
+        // director shows before the first `ROUND_START`, so it earns the
+        // screen rather than sharing it.
+        drafts.push({
+          type: 'TOURNAMENT_OPEN',
+          payload: { schools: roster.schools, players: roster.players } satisfies TournamentOpenPayload,
+          round: 0,
+          questionIndex: -1,
+        });
+      }
+
+      if (to === 'provisional') {
+        // Read from the transaction's OWN fresh board, not from the
+        // `standings` fetched above for the claim placeholders — a tick
+        // could have moved the board in the gap between that read and this
+        // transaction, and the champion this reveals must be the champion
+        // the transaction is actually about to announce.
+        const { schools, individuals } = boardOf(
+          standingsSnap.exists ? (standingsSnap.data() as Row) : null,
+        );
+        const champion = championSchoolFrom(schools, individuals);
+        if (champion) {
+          drafts.push({
+            type: 'CHAMPION_SCHOOL',
+            payload: {
+              school: champion.school,
+              teamAvg: champion.teamAvg,
+              top5: champion.top5,
+            } satisfies ChampionSchoolPayload,
+            round: 0,
+            questionIndex: -1,
+          });
+        }
+        const podium = podiumFrom(individuals, 3);
+        if (podium.length > 0) {
+          drafts.push({
+            type: 'CHAMPION_INDIVIDUAL',
+            // The full standing row, not a hand-picked subset: `podiumFrom`
+            // already returns exactly ranks 1..3, and re-narrowing the fields
+            // here is a second, driftable copy of what `IndividualStanding`
+            // carries — the scene reads whatever fields it needs from it.
+            payload: { podium } satisfies ChampionIndividualPayload,
+            round: 0,
+            questionIndex: -1,
+          });
+        }
+        // A board with no ranked school or no ranked player at all is not an
+        // error — `championSchoolFrom`/`podiumFrom` already refuse to invent
+        // one — it is a tournament with no qualified competitors, and the
+        // transition still completes: `to === 'provisional'` already checked
+        // `standings/current` EXISTS above, which is the only thing that gates
+        // this move.
+      }
+
+      if (drafts.length > 0) {
+        appendEvents(tx, db, String(tid), standingsSnap, drafts, now);
+      }
 
       // Placeholders are created, never overwritten: a student who already
       // claimed must not be handed a fresh 72 hours, and a verified claim must
@@ -374,7 +504,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         });
       }
 
-      return { ok: true as const, from: current };
+      return { ok: true as const, from: current, eventsEmitted: drafts.length };
     });
 
     if (!outcome.ok) {
@@ -389,6 +519,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       from: outcome.from,
       to,
       claimsOpened: placeholders.length,
+      eventsEmitted: outcome.eventsEmitted,
     });
   } catch (err) {
     console.error('[arena/state] failed:', err);
