@@ -73,7 +73,21 @@
       // Rollback is this one line, back to edlight-academy.firebaseapp.com.
       authDomain: "academy.edlight.org",
       projectId: "edlight-academy",
-      storageBucket: "edlight-academy.firebasestorage.app",
+      // The Arena's parental consent forms, and nothing else, live here.
+      //
+      // NOT the default `edlight-academy.firebasestorage.app` bucket: that one
+      // has never been provisioned, and it cannot be created from gcloud — it
+      // carries a Google-owned domain name and GCS refuses a domain-named
+      // bucket without domain verification. So scripts/setup_arena_storage.sh
+      // creates a plainly named bucket and links it with `:addFirebase`, which
+      // is identical in every way that matters: Firebase rules govern it, the
+      // web SDK reads it under Firebase Auth, the Admin SDK signs URLs for it.
+      //
+      // If Storage is ever set up through the Firebase console instead ("Get
+      // Started" provisions the default bucket), this line goes back to
+      // "edlight-academy.firebasestorage.app" and FIREBASE_STORAGE_BUCKET in
+      // Vercel follows it. The two must always name the same bucket.
+      storageBucket: "edlight-academy-arena-consent",
       messagingSenderId: "618990331083",
       appId: "1:618990331083:web:1af6a46399f9251a35e74e",
       measurementId: "G-KNBX35H1X1"

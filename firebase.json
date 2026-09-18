@@ -64,7 +64,10 @@
       }
     ]
   },
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "storage": [
+    {
+      "target": "consent",
+      "rules": "storage.rules"
+    }
+  ]
 }
