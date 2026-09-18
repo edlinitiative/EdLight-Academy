@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { SCENES } from './scenes/registry';
 import type { StageData } from './sceneContract';
 import type { Scene } from '../../shared/arena/director';
+import { useReduceMotion } from './useReduceMotion';
 
 /**
  * The shell. It mounts whichever scene the director has chosen and does
@@ -27,19 +28,6 @@ export interface StageProps {
   elapsed: number;
   data: StageData;
   t: (fr: string, ht: string) => string;
-}
-
-/** The viewer's own setting, watched rather than read once. */
-function useReduceMotion(): boolean {
-  const [reduce, setReduce] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => setReduce(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
-  return reduce;
 }
 
 export default function Stage({ scene, elapsed, data, t }: StageProps) {

@@ -1,9 +1,11 @@
 import React, { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import useStore from '../contexts/store';
+import { useReduceMotion } from '../broadcast/useReduceMotion';
 import { useOnAir } from '../broadcast/useOnAir';
 import { useStage } from '../broadcast/useStage';
 import Stage from '../broadcast/Stage';
+import PreShow from '../broadcast/segments/PreShow';
 import '../broadcast/stage.css';
 import './Live.css';
 
@@ -23,6 +25,14 @@ import './Live.css';
  * has been the content of this page since it was built. A projector showing an
  * empty "no tournament" card for three weeks is a projector somebody unplugs.
  *
+ * **The evening has segments, and the director owns only one of them.** Before
+ * the first question there are no events to direct, so the pre-show is
+ * rendered straight — a countdown, the schools arriving, the map filling. Once
+ * the feed starts, the director takes over and this page stops deciding
+ * anything. Handing the pre-show to the director instead would mean inventing
+ * a synthetic event for "nothing has happened yet", which is a lie the whole
+ * event model is built to avoid.
+ *
  * **It owns the chrome; the director owns the content.** The rays, the horizon
  * and the header belong to the page and never change. What sits inside is
  * whatever `shared/arena/director.ts` says should be on screen — the board at
@@ -40,6 +50,7 @@ export default function Direct() {
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
+  const reduceMotion = useReduceMotion();
   const { tid, none, loading } = useOnAir(params.get('tid'));
   const stage = useStage(tid, { isCreole });
 
@@ -53,6 +64,10 @@ export default function Direct() {
   }
 
   const tournament = stage.data.tournament;
+
+  // `doors` is the ten minutes before the first question — the one stretch of
+  // the evening with no event feed to direct.
+  const atTheDoors = tournament?.state === 'doors' || tournament?.state === 'registration';
 
   return (
     <div className="live">
@@ -81,7 +96,18 @@ export default function Direct() {
           </span>
         </header>
 
-        <Stage scene={stage.scene} elapsed={stage.elapsed} data={stage.data} t={t} />
+        {atTheDoors ? (
+          <PreShow
+            data={stage.data}
+            elapsed={Math.max(0, stage.data.now - (tournament?.doorsAt || stage.data.now))}
+            reduceMotion={reduceMotion}
+            t={t}
+            /* The map lands here. Until then the pre-show widens the clock
+               rather than showing an empty frame. */
+          />
+        ) : (
+          <Stage scene={stage.scene} elapsed={stage.elapsed} data={stage.data} t={t} />
+        )}
       </div>
     </div>
   );
