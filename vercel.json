@@ -36,6 +36,14 @@
     {
       "path": "/api/arena/aggregate",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/arena/doors-close",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/arena/claim?action=sweep",
+      "schedule": "0 * * * *"
     }
   ],
   "rewrites": [

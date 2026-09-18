@@ -196,6 +196,20 @@ export interface SchoolInput {
   playerCorrect: number[];
   /** When the school reached `minPlayers`. Final tiebreaker; absent sorts last. */
   qualifiedAt?: number;
+  /**
+   * How many of this school's students were actually IN THE ROOM when doors
+   * closed — the frozen roster's count, not the fetched page's length.
+   *
+   * Qualification is measured on players present, not registered (Decision 3),
+   * and `playerScores` is a page capped at the pool size, so counting it would
+   * answer a different question twice over: it would qualify a school whose
+   * five registered and three turned up, and it would cap a large school's
+   * head count at the page size.
+   *
+   * Absent, it falls back to `playerScores.length` — which is right before
+   * doors close, when nobody is present yet and registration IS the count.
+   */
+  presentCount?: number;
 }
 
 export interface RankSchoolsOptions {
@@ -288,7 +302,9 @@ export function rankSchools(schools: SchoolInput[], opts: RankSchoolsOptions): S
 
   const standings: SchoolStanding[] = (schools || []).map((s) => {
     const best = bestPlayers(s, teamSize);
-    const members = (s.playerScores || []).length;
+    const members = typeof s.presentCount === 'number' && Number.isFinite(s.presentCount)
+      ? s.presentCount
+      : (s.playerScores || []).length;
     const counted = best.length;
     at.set(s.key, qualifiedAtOf(s));
     return {

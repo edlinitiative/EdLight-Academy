@@ -884,3 +884,58 @@ and it does not need the aggregator: the spectator page can read a cheap
 per-question count that the answer endpoint increments on a sharded counter.
 Keeping it off the aggregator is what stops "show the count moving" from
 dragging a full recompute onto a five-second timer.
+
+---
+
+## Correction to section L — the run console needed a door, not just controls
+
+Building the console surfaced the gap that made most of it decorative:
+**six of the seven moves in the state machine had no server route at all.**
+`firestore.rules` denies every client write under `tournaments/**` (correctly —
+the document that decides prize money is not one a browser session may mint),
+and `advance` performs exactly one transition, `live → grading`, as a side
+effect of the clock. Nothing served `draft → registration`, `registration →
+doors`, `doors → live`, `grading → provisional`, `provisional → final` or
+`* → void`, and nothing created the tournament document in the first place.
+
+`POST /api/arena/state` is that door. It never decides which transition is
+legal — `canTransition` remains the only definition, checked inside the same
+transaction that writes the new state, so two admins pressing "start" produce
+one start and one 409.
+
+### Two doors, one definition of who may drive the engine
+
+`advance` and `aggregate` authenticated with `CRON_SECRET` only, so the run
+console's "force close", "force next" and "recompute standings" would have
+returned 401 forever. The shared secret cannot be shipped to a browser: a page
+holding it hands the entire engine to whoever reads localStorage.
+
+So `authorizeCronOrAdmin` in `api/arena/_shared.ts` is now the single door for
+`advance`, `aggregate`, `state` and `doors-close` — cron secret, or a
+server-verified admin (`users/{uid}.role`, never a custom claim, and a failed
+lookup is never an admin). The cron path costs no Firestore read, because the
+scheduler calls `advance` every few seconds during a live tournament.
+
+### Two refusals the route adds on purpose
+
+- **`doors → live` counts the authored questions first.** `advance` treats a
+  missing `questions/{index}` as `missing_question` and stops — which on a
+  stream is a dead screen at question 14 with 300 students watching. One small
+  read before anything is live is the cheapest possible place to catch it.
+- **`grading → provisional` requires standings to exist**, and stamps the
+  placeholder claims (below). Publishing a podium of nobody would start three
+  claim windows against it.
+
+### The podium write section M assumed but nobody performed
+
+`rollDown` reads a MISSING claim document as "no deadline has passed" and
+leaves the prize where it is. Correct in isolation — and it meant an unclaimed
+first place would never roll down to anybody. claim.ts says so explicitly:
+*"the window still runs from the moment the podium was published, which the
+caller stamps onto a placeholder claim."* There was no caller.
+
+Entering `provisional` is that moment, so `state.ts` now writes an `open`
+placeholder for each paying rank as the podium is published. Existing claims
+are never overwritten — re-running must not hand a student a fresh 72 hours or
+reset a verification — and a **tie at a paying rank opens no placeholder at
+all**, because two placeholders at one rank is two students on one prize.

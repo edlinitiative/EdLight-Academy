@@ -42,6 +42,8 @@ const AdminVideos = lazyWithRetry(() => import('./pages/admin/AdminVideos'));
 const AdminQuizzes = lazyWithRetry(() => import('./pages/admin/AdminQuizzes'));
 const AdminExams = lazyWithRetry(() => import('./pages/admin/AdminExams'));
 const AdminTrivia = lazyWithRetry(() => import('./pages/admin/AdminTrivia'));
+const AdminArena = lazyWithRetry(() => import('./pages/admin/AdminArena'));
+const AdminArenaQuestions = lazyWithRetry(() => import('./pages/admin/AdminArenaQuestions'));
 const ExamLanding = lazyWithRetry(() => import('./pages/ExamLanding'));
 const ExamOverview = lazyWithRetry(() => import('./pages/ExamOverview'));
 const ExamSubject = lazyWithRetry(() => import('./pages/ExamSubject'));
@@ -141,6 +143,9 @@ export default function App() {
                 <Route path="content/quizzes" element={<AdminQuizzes />} />
                 <Route path="content/exams" element={<AdminExams />} />
                 <Route path="content/trivia" element={<AdminTrivia />} />
+                {/* Static segment first: "questions" must not be read as a tournament. */}
+                <Route path="content/arena/questions" element={<AdminArenaQuestions />} />
+                <Route path="content/arena" element={<AdminArena />} />
                 <Route path="content/verify" element={<AnswerVerification />} />
                 {/* Users */}
                 <Route path="users" element={<AdminUsers />} />

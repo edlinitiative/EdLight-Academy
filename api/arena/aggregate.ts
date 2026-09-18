@@ -27,9 +27,11 @@
  *  3. Events and the standings they describe are written in ONE batch, so a
  *     spectator never receives an event describing a board it cannot yet read.
  *
- * Security: same model as api/leaderboard/aggregate-snapshot.ts — Vercel
- * attaches `Authorization: Bearer <CRON_SECRET>`; we require it (also accepting
- * `x-cron-secret`) so the public cannot drive the engine.
+ * Security: two doors, one decision (`authorizeCronOrAdmin` in `_shared`).
+ * Vercel and `advance` attach `Authorization: Bearer <CRON_SECRET>` (or
+ * `x-cron-secret`); the run console's "recompute standings" presents a
+ * signed-in admin's ID token instead, because a browser must never hold that
+ * secret. Nothing else can drive the engine.
  *
  * Request  (POST):  { tid: string }
  * Response (200):   { ok, state, schools, players, events, seq }
@@ -60,6 +62,7 @@ import {
   type IndividualStanding,
 } from '../../shared/arena/events';
 import type { ArenaState } from '../../shared/arena/state';
+import { authorizeCronOrAdmin } from './_shared';
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 
@@ -142,6 +145,8 @@ export interface SchoolPool {
    * so a school of two hundred would otherwise be shown as a school of five.
    */
   members: number;
+  /** From the frozen roster: how many were in the room at doors close. */
+  presentCount?: number;
   /** Top `POOL` players, already ordered by the indexed query. */
   rows: PlayerRow[];
   /** Sticky once set — see `qualifiedAtFor`. */
@@ -260,6 +265,7 @@ export function buildSnapshot(pools: SchoolPool[], opts: BuildSnapshotOptions): 
     playerTotalMs: pool.rows.map((r) => r.totalMs),
     playerCorrect: pool.rows.map((r) => r.correct),
     qualifiedAt: pool.qualifiedAt,
+    presentCount: pool.presentCount,
   }));
 
   const byKey = new Map(pools.map((pool) => [pool.key, pool]));
@@ -354,23 +360,6 @@ export function qualifiedAtFor(
 
 // ── Firestore plumbing ──────────────────────────────────────────────────────
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i += 1) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return mismatch === 0;
-}
-
-function authorized(req: VercelRequest): boolean {
-  const secret = process.env.CRON_SECRET || '';
-  if (!secret) return false; // refuse to run unprotected
-  const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  const headerSecret = (req.headers['x-cron-secret'] as string) || '';
-  return (
-    (!!bearer && timingSafeEqual(bearer, secret))
-    || (!!headerSecret && timingSafeEqual(headerSecret, secret))
-  );
-}
 
 /** Bounded fan-out: `limit` promises in flight, results in input order. */
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -490,6 +479,13 @@ async function loadPool(
   previous: Map<string, SchoolStanding & { qualifiedAt?: number }>,
   minPlayers: number,
   now: number,
+  /**
+   * The frozen roster, keyed by school — written once by `doors-close` from
+   * who was actually in the room. Without it this function qualifies schools
+   * on REGISTRATIONS, which is precisely the rule Decision 3 overturned: a
+   * school with five registered and three present would be ranked.
+   */
+  roster: Map<string, { present: number; qualified: boolean }>,
 ): Promise<SchoolPool | null> {
   const players = db.collection(`tournaments/${tid}/players`).where('schoolKey', '==', key);
   const [top, counted] = await Promise.all([
@@ -502,15 +498,22 @@ async function loadPool(
 
   const before = previous.get(key);
   const label = str(rows[0].schoolLabel, before ? before.label : key);
+  const frozen = roster.get(key);
+  // Before doors close there is no roster and registration IS the count; after
+  // it, presence is the only count that decides anything.
+  const headCount = frozen ? frozen.present : num(counted.data().count, rows.length);
   return {
     key,
     label,
     shortName: str(rows[0].schoolShort, before ? before.shortName : label),
-    members: num(counted.data().count, rows.length),
+    members: headCount,
+    presentCount: frozen ? frozen.present : undefined,
     rows,
-    // Qualification is measured on players PRESENT, and the pool is at least
-    // `minPlayers` deep, so `rows.length` answers the threshold exactly.
-    qualifiedAt: qualifiedAtFor(before?.qualifiedAt, rows.length >= minPlayers, now),
+    qualifiedAt: qualifiedAtFor(
+      before?.qualifiedAt,
+      frozen ? frozen.qualified : rows.length >= minPlayers,
+      now,
+    ),
   };
 }
 
@@ -520,10 +523,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
-  if (!authorized(req)) {
-    res.status(401).json({ error: 'unauthorized' });
-    return;
-  }
+
+  // `advance` calls this at every question close with the cron secret; the run
+  // console's "recompute standings" calls it by hand. One door, two keys.
+  const db = getDb();
+  const actor = await authorizeCronOrAdmin(req, res, db, 'arena-control');
+  if (!actor) return;
 
   const body: Row = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const tid = str(body.tid, str(req.query.tid));
@@ -531,8 +536,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(400).json({ error: 'invalid_tid' });
     return;
   }
-
-  const db = getDb();
   const now = Date.now();
 
   try {
@@ -569,12 +572,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       (previous?.schools || []).map((s) => [s.key, s as SchoolStanding & { qualifiedAt?: number }]),
     );
 
+    /*
+     * The frozen roster, read once per tick.
+     *
+     * `doors-close` writes one small document per school saying how many of its
+     * students were actually in the room. Bounded by school count and read in
+     * one query, so it costs a page rather than a scan — and without it this
+     * whole aggregation ranks schools on REGISTRATIONS, which is the rule
+     * Decision 3 overturned.
+     *
+     * Empty before doors close, which is correct: until then registration IS
+     * the count, and every school is provisional anyway.
+     */
+    const rosterSnap = await db.collection(`tournaments/${tid}/roster`).get();
+    const roster = new Map<string, { present: number; qualified: boolean }>(
+      rosterSnap.docs.map((d) => {
+        const data = d.data() as Row;
+        return [d.id, { present: num(data.present, 0), qualified: data.qualified === true }];
+      }),
+    );
+
     // ── 3 · One indexed query per SCHOOL. Never one per player. ─────────────
     const { keys, cursorMs } = await discoverSchools(db, tid, previous);
     const pools = (await mapLimit(
       keys.slice(0, SCHOOL_CAP),
       QUERY_CONCURRENCY,
-      (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now),
+      (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
     )).filter((p): p is SchoolPool => p !== null);
 
     // ── 4 · Rank with the shared functions, then diff against the last board ─

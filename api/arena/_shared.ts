@@ -475,3 +475,100 @@ export async function enforceRateLimit(
   res.setHeader('X-RateLimit-Remaining', String(remaining));
   return true;
 }
+
+// ── Who may drive the engine ────────────────────────────────────────────────
+
+/**
+ * The Arena's scheduled endpoints were built for a cron and authenticate with
+ * a shared secret. The run console cannot hold that secret — a browser session
+ * that carries `CRON_SECRET` has handed the whole engine to whoever reads
+ * localStorage — so a human host needs a second door, and the two doors have
+ * to agree on what they open.
+ *
+ * That agreement lives here rather than in each endpoint, because the failure
+ * mode of three copies is not a crash: it is one route that quietly accepts a
+ * stale custom claim while the other two read the user document, and nobody
+ * notices until somebody who was demoted in March forces a question closed in
+ * September.
+ */
+
+export type ArenaActor =
+  | { kind: 'cron'; label: 'cron' }
+  | { kind: 'admin'; label: string; uid: string };
+
+/** Constant-time compare — the secret must not leak through response timing. */
+function secretsMatch(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i += 1) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
+}
+
+/** `Authorization: Bearer <CRON_SECRET>` or `x-cron-secret`. */
+export function cronAuthorized(req: VercelRequest): boolean {
+  const secret = process.env.CRON_SECRET || '';
+  if (!secret) return false; // refuse to run unprotected
+  const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const headerSecret = (req.headers['x-cron-secret'] as string) || '';
+  return (
+    (!!bearer && secretsMatch(bearer, secret))
+    || (!!headerSecret && secretsMatch(headerSecret, secret))
+  );
+}
+
+/**
+ * The same admin test `isAdmin()` makes in firestore.rules: `users/{uid}.role`.
+ *
+ * Read server-side rather than trusted from a custom claim, because this
+ * codebase has no admin custom claims — the role lives on the user document.
+ * A failed lookup is NOT an admin: everything behind this door touches money.
+ */
+export async function isAdminUid(db: Firestore, uid: string): Promise<boolean> {
+  try {
+    const snap = await db.doc(`users/${uid}`).get();
+    return snap.exists && (snap.data() as DocumentData | undefined)?.role === 'admin';
+  } catch (err) {
+    console.error('[arena] admin lookup failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Cron secret, or a signed-in admin. Writes its own 401/403/429 and returns
+ * null when the caller may not proceed.
+ *
+ * The cron check comes first and deliberately costs no Firestore read: the
+ * scheduler calls `advance` every few seconds during a live tournament, and
+ * making the hot path pay for a user lookup it can never satisfy is how a
+ * safety net becomes a bill.
+ *
+ * `requireAuthDecoded` is imported lazily so that a cron invocation does not
+ * pull the auth module into its cold start.
+ */
+export async function authorizeCronOrAdmin(
+  req: VercelRequest,
+  res: VercelResponse,
+  db: Firestore,
+  bucket: string,
+): Promise<ArenaActor | null> {
+  if (cronAuthorized(req)) return { kind: 'cron', label: 'cron' };
+
+  const { requireAuthDecoded } = await import('../_lib/requireAuth');
+  const decoded = await requireAuthDecoded(req, res);
+  if (!decoded) return null; // requireAuthDecoded has already answered 401
+
+  const { allowed, remaining, resetAt } = await checkRateLimit(decoded.uid, bucket);
+  if (!allowed) {
+    res.setHeader('X-RateLimit-Remaining', '0');
+    res.setHeader('Retry-After', String(Math.max(1, Math.ceil((resetAt - Date.now()) / 1000))));
+    res.status(429).json({ error: 'rate_limit_exceeded', message: 'Trop de requêtes. Réessayez plus tard.' });
+    return null;
+  }
+  res.setHeader('X-RateLimit-Remaining', String(remaining));
+
+  if (!(await isAdminUid(db, decoded.uid))) {
+    res.status(403).json({ error: 'not_admin' });
+    return null;
+  }
+  return { kind: 'admin', label: decoded.uid, uid: decoded.uid };
+}

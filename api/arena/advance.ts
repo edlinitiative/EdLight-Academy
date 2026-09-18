@@ -30,9 +30,11 @@
  *    open a question twice or skip one, so each step reads the document it is
  *    about to change inside the same transaction that changes it.
  *
- * Security: same shared-secret model as the other scheduled Arena endpoint —
- * `Authorization: Bearer <CRON_SECRET>` or `x-cron-secret`. The run console
- * calls it through the same door.
+ * Security: two doors, one decision (`authorizeCronOrAdmin` in `_shared`).
+ * The scheduler presents `Authorization: Bearer <CRON_SECRET>` or
+ * `x-cron-secret`; the run console's "force close" / "force next" present a
+ * signed-in admin's ID token. The console cannot be given the cron secret — a
+ * browser holding it hands the whole engine to whoever reads localStorage.
  *
  * Request  (POST): { tid: string, force?: boolean }
  * Response (200):  { ok: true, action, index?, state?, pauseMs }
@@ -43,6 +45,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore';
 import { getDb } from '../_lib/firebaseAdmin';
 import { canTransition, type ArenaState } from '../../shared/arena/state';
+import { authorizeCronOrAdmin } from './_shared';
 
 // ── The cycle's two clocks ──────────────────────────────────────────────────
 
@@ -215,24 +218,6 @@ export function planAdvance(input: AdvanceInput): AdvanceAction {
 
 // ── Firestore plumbing ──────────────────────────────────────────────────────
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i += 1) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return mismatch === 0;
-}
-
-function authorized(req: VercelRequest): boolean {
-  const secret = process.env.CRON_SECRET || '';
-  if (!secret) return false; // refuse to run unprotected
-  const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
-  const headerSecret = (req.headers['x-cron-secret'] as string) || '';
-  return (
-    (!!bearer && timingSafeEqual(bearer, secret))
-    || (!!headerSecret && timingSafeEqual(headerSecret, secret))
-  );
-}
-
 /** The round a question belongs to, from the tournament's `rounds` schedule. */
 export function roundOf(rounds: unknown, index: number): number {
   if (!Array.isArray(rounds) || rounds.length === 0) return 0;
@@ -257,10 +242,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
-  if (!authorized(req)) {
-    res.status(401).json({ error: 'unauthorized' });
-    return;
-  }
+
+  // The scheduler drives this endpoint every few seconds; the run console's
+  // "force close" / "force next" drive the same code by hand. Both doors, one
+  // decision — see `authorizeCronOrAdmin`.
+  const db = getDb();
+  const actor = await authorizeCronOrAdmin(req, res, db, 'arena-control');
+  if (!actor) return;
 
   const body: Row = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const tid = str(body.tid, str(req.query.tid));
@@ -270,7 +258,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
   const force = body.force === true;
 
-  const db = getDb();
   const tournamentRef = db.doc(`tournaments/${tid}`);
 
   try {

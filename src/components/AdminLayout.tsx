@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Video, Target, ClipboardList, CheckSquare, Gamepad2,
-  Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X,
+  Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X, Swords,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { getFirstName } from '../utils/shared';
@@ -25,6 +25,7 @@ const NAV: Array<{ section?: string; items: Array<{ to: string; end?: boolean; I
       { to: '/admin/content/quizzes', Icon: Target, label: 'Quiz' },
       { to: '/admin/content/exams', Icon: ClipboardList, label: 'Examens' },
       { to: '/admin/content/trivia', Icon: Gamepad2, label: 'Trivia' },
+      { to: '/admin/content/arena', Icon: Swords, label: 'Arena' },
       { to: '/admin/content/verify', Icon: CheckSquare, label: 'Vérification' },
     ],
   },
