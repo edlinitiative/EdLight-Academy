@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "edlight-academy"
-  }
+  },
+  "targets": {
+    "edlight-academy": {
+      "storage": {
+        "consent": [
+          "edlight-academy-arena-consent"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

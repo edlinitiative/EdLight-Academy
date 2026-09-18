@@ -45,13 +45,21 @@ ok "project: $PROJECT"
 # A GCS bucket needs billing on the project. Checked before anything is
 # created, because the failure otherwise lands in the middle of the run with a
 # message about permissions rather than about money.
+#
+# Asked over REST rather than through `gcloud beta billing`: the beta component
+# is not installed on every machine, and gcloud answers a missing component
+# with an interactive install prompt. In a script that prompt reads as "billing
+# is off" — which is how this check first reported a project whose billing was
+# fine.
 say "1 · Checking billing"
-if gcloud beta billing projects describe "$PROJECT" --format="value(billingEnabled)" 2>/dev/null | grep -qi true; then
+BILLING="$(curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://cloudbilling.googleapis.com/v1/projects/$PROJECT/billingInfo")"
+if printf '%s' "$BILLING" | grep -q '"billingEnabled": *true'; then
   ok "billing is enabled"
 else
-  no "Billing is not enabled on $PROJECT (or the billing API is off)."
-  no "Cloud Storage needs it. Enable it here, then re-run:"
+  no "Billing is not enabled on $PROJECT. Cloud Storage needs it."
   no "  https://console.cloud.google.com/billing/linkedaccount?project=$PROJECT"
+  printf '%s\n' "$BILLING" >&2
   exit 1
 fi
 
@@ -112,17 +120,17 @@ firebase deploy --only storage --project "$PROJECT"
 ok "rules deployed to gs://$BUCKET"
 
 # ── 6 · What is left, and it is not code ────────────────────────────────────
-say "Done. Two settings still to make, both outside this script:"
+say "Done. One setting still to make, and it is outside this script:"
 cat <<EOF
 
-  1. Vercel — the server needs the bucket name:
-       vercel env add FIREBASE_STORAGE_BUCKET production
-       (paste: $BUCKET)
-     then redeploy so the functions pick it up.
+  Vercel — the serverless functions need the bucket name to sign URLs:
+      vercel env add FIREBASE_STORAGE_BUCKET production
+      (paste: $BUCKET)
+    then redeploy so the functions pick it up.
 
-  2. src/index.html — window.EDLIGHT_FIREBASE_CONFIG.storageBucket must read
-       "$BUCKET"
-     It currently names the default bucket, which does not exist.
+  The browser side already names this bucket:
+  src/index.html → window.EDLIGHT_FIREBASE_CONFIG.storageBucket.
+  The two must always agree.
 
   Verify afterwards: claim a prize as a minor on a test account and upload a
   file. A refused upload means the rules did not land; a 503
