@@ -131,11 +131,13 @@ export default function PreShow({ data, elapsed, reduceMotion, t, mapSlot }: Pre
   const schoolCount = tournament?.counts.schools ?? schools.length;
 
   return (
+    // No ray element rendered here. The page's own `.live__rays` (Live.css)
+    // already turns once every four minutes at rest — the exact field
+    // section K asks for during the pre-show — so this segment inherits it
+    // rather than painting an identical second copy on top, out of phase
+    // with the first. See roundRhythm.css's header comment for the rest of
+    // this story.
     <div className="rp">
-      {/* The ray field, slow. One turn every four minutes: a still frame never
-          repeats and nothing on screen appears to move. */}
-      {reduceMotion ? null : <div className="rr-rays rr-rays--slow" aria-hidden="true" />}
-
       <header className="rp__head">
         <h1 className="rp__title">{tournament?.title || t('L’Arène', 'Arèn nan')}</h1>
         <span className="rp__doors">{t('Les portes sont ouvertes', 'Pòt yo louvri')}</span>

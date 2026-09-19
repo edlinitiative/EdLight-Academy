@@ -38,12 +38,16 @@ export default function RoundStart({ scene, data, elapsed, reduceMotion, t }: Sc
 
   if (opening) {
     return (
-      <div className="rr-scene">
-        {/* The rays accelerate once and settle. The only time in the broadcast
-            they change speed — the match starting is the only thing that earns
-            it. */}
-        {reduceMotion ? null : <div className="rr-rays rr-rays--accelerate" aria-hidden="true" />}
-
+      // The rays accelerate once and settle — the only time in the broadcast
+      // they change speed, because the match starting is the only thing that
+      // earns it. `.rr-scene--accelerate` is a marker, not an element: the
+      // page's OWN ray field (`.live__rays`) is what actually moves — see
+      // roundRhythm.css's `:has()` hook — so nothing here paints a second
+      // ray field on top of it. Held for exactly 1.6s, outside reduced
+      // motion; the class never appears when `reduceMotion` is true, which
+      // is what keeps the page's field in its resting rotation for a viewer
+      // who asked for less.
+      <div className={reduceMotion ? 'rr-scene' : 'rr-scene rr-scene--accelerate'}>
         <SceneFrame
           reduceMotion={reduceMotion}
           overline={t('Question', 'Kesyon')}

@@ -247,51 +247,51 @@
 /* ── Shared ray work ────────────────────────────────────────────────────── */
 
 /*
- * A scene-local ray field, so a sequence that needs the rays to DO something
- * (accelerate at the start, sweep while grading) can drive them without
- * reaching out of itself into the page that mounted it.
+ * THE RAY FIELD IS ONE ELEMENT, `.live__rays` IN src/pages/Live.css, AND THIS
+ * FILE DOES NOT RENDER A SECOND ONE.
  *
- * Same construction as `.live__rays`: one element, one animated property,
- * hard-edged spokes from an origin off the left edge.
+ * It used to: sequences 1 and 3 each mounted their own `.rr-rays` copy —
+ * identical geometry, identical conic gradient, identical mask — so that a
+ * sequence needing the rays to DO something could drive them "without
+ * reaching out of itself into the page that mounted it." That reasoning
+ * produced two independently-animated fields stacked on top of each other,
+ * each on its own clock, phase-drifting against the other — a moiré pattern
+ * on the one background element that is supposed to read as calm.
+ *
+ * The fix already existed one file over: `scenes/finale.css`'s ray-STOP for
+ * sequence 15 reaches the page's own `.live__rays` with a `:has()` selector
+ * and changes what it does, rather than painting a second one on top of it.
+ * The rules below do the same for sequences 1 and 3.
+ *
+ * Sequence 1 needs NOTHING here. `.live__rays`'s own resting animation —
+ * `live-rays 240s linear infinite`, one turn every four minutes — IS the slow
+ * field section K asks for; they were always the same keyframe under two
+ * names. The pre-show renders no ray element at all.
+ *
+ * Sequence 3 changes what the page's field is doing for exactly the 1.6s the
+ * opening scene holds the screen, then lets go. `RoundStart.tsx` raises
+ * `.rr-scene--accelerate` on its own root only on the opening question and
+ * only outside reduced motion; this selector picks it up.
+ *
+ * KNOWN RESIDUAL, same shape as the ray-stop's: switching FROM the page's
+ * 240s rotation INTO this 1600ms one, and switching back afterward, restarts
+ * the rotation from 0deg rather than continuing smoothly from wherever the
+ * slow field happened to be — CSS cannot hand off a live rotation value
+ * between two different `animation` declarations. That is one small,
+ * once-per-tournament discontinuity, at the single moment the whole broadcast
+ * is already cutting hardest (the match starting), against the alternative of
+ * driving the rotation from JavaScript for a background flourish nobody is
+ * reading numbers off. Accepted, not unnoticed.
  */
-.rr-rays {
-  position: absolute;
-  /* Behind the scene it lights. An absolutely positioned element paints above
-     its static siblings by default, which would put the ray field over the
-     type it is supposed to sit behind. */
-  z-index: 0;
-  left: calc(6vw - 85vmax);
-  top: 50%;
-  width: 170vmax;
-  height: 170vmax;
-  margin-top: -85vmax;
-  pointer-events: none;
-  opacity: 0.5;
-  background: repeating-conic-gradient(
-    from 0deg,
-    rgba(47, 128, 237, 0.20) 0deg 1.05deg,
-    transparent 1.05deg 9deg
-  );
-  -webkit-mask-image: radial-gradient(closest-side, #000 16%, rgba(0, 0, 0, 0.5) 44%, transparent 76%);
-  mask-image: radial-gradient(closest-side, #000 16%, rgba(0, 0, 0, 0.5) 44%, transparent 76%);
-}
-
-/* Sequence 1 — slow. The field turns once every four minutes; a still frame
-   never repeats and nothing on screen appears to move. */
-@keyframes rr-rays-slow {
-  to { transform: rotate(360deg); }
-}
-
-.rr-rays--slow { animation: rr-rays-slow 240s linear infinite; }
-
-/* Sequence 3 — the rays accelerate ONCE and settle. The ease does the work:
-   fast out of the gate, long tail into rest. */
 @keyframes rr-rays-accelerate {
   from { transform: rotate(0deg); }
   to   { transform: rotate(26deg); }
 }
 
-.rr-rays--accelerate { animation: rr-rays-accelerate 1600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.live:has(.rr-scene--accelerate) .live__rays,
+[data-stage-rays='accelerate'] .live__rays {
+  animation: rr-rays-accelerate 1600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 
 /* ── Sequence 3 · the start ─────────────────────────────────────────────── */
 
@@ -303,8 +303,13 @@
   overflow: hidden;
 }
 
-/* Everything except the ray field sits in front of it. */
-.rr-scene > *:not(.rr-rays),
+.rr-scene > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Grading's own sweep is scoped to its card, unlike the page-level ray field
+   this file used to duplicate — everything except that sweep sits above it. */
 .rg > *:not(.rg__sweep) {
   position: relative;
   z-index: 1;
@@ -541,12 +546,16 @@
   .rb-board--brighten,
   .rb-board--wipe .rb-lane,
   .rb-ambient,
-  .rr-rays,
   .rr-roll__track,
   .rr-cross,
   .rg__sweep {
     animation: none !important;
   }
+  /* `.live__rays` itself is Live.css's to silence under reduced motion; this
+     file's only obligation is to never SWITCH it into the accelerate
+     keyframe in the first place — `RoundStart.tsx` already gates
+     `.rr-scene--accelerate` on `!reduceMotion`, so the selector above simply
+     never matches. */
   .rr-cross { opacity: 1; }
   .rg__sweep { display: none; }
 }

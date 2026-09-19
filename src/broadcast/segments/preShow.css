@@ -8,8 +8,11 @@
  * seconds, nothing pulses, and nothing asks to be watched — a pre-show that
  * fidgets for thirty minutes is exhausting in a way a still one never is.
  *
- * The palette is inherited from `.live`; the ray field and the shared sweep
- * come from `../scenes/roundRhythm.css`.
+ * The palette is inherited from `.live`. The ray field is NOT: `.live__rays`
+ * lives behind `.rp` as a sibling in the page's own DOM (`src/pages/Live.css`
+ * / `Direct.tsx`), already turning at rest, and this segment renders none of
+ * its own — see `../scenes/roundRhythm.css`'s header comment for why that
+ * used to be two ray fields stacked on each other and now is not.
  */
 
 .rp {
@@ -22,8 +25,10 @@
   overflow: hidden;
 }
 
-/* The ray field is the only thing behind; everything else sits in front of it. */
-.rp > *:not(.rr-rays) {
+/* Lifted onto its own stacking context so `.rp`'s content sits above whatever
+   is painted behind the page (the ray field, the horizon) rather than at an
+   ambiguous layer relative to it. */
+.rp > * {
   position: relative;
   z-index: 1;
 }
