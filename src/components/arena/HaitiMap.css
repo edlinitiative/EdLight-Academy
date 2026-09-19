@@ -1,0 +1,442 @@
+/*
+ * The map's look, taken from the stage at /direct rather than invented:
+ * marine ground, one azure, hairlines instead of cards, tabular mono figures,
+ * coral spent on exactly one thing — what is live right now.
+ *
+ * Rules this file keeps, from the design doc's motion system:
+ *   - No gradients, no glass, no particles, no neon. The density steps are
+ *     five FLAT fills, pre-mixed against the ground, because a projector in a
+ *     school hall crushes a gradient into mud.
+ *   - Enter 320ms cubic-bezier(0.16,1,0.3,1) with 14px of travel; exit 180ms.
+ *   - transform and opacity only. Nothing here animates a layout property.
+ *
+ * Sizing: the stage box locks the viewBox's 1000x760 aspect so the SVG is
+ * never letterboxed. Height-first, because the broadcast case is 1920x1080
+ * and the map has to fit above the board. Override --hmap-height to give it
+ * more or less of the frame.
+ */
+
+.hmap {
+	--hmap-ground: #060E1C;
+	--hmap-ink: #EEF3FB;
+	--hmap-dim: #7C8EAC;
+	--hmap-faint: #3C4B67;
+	--hmap-rule: rgba(160, 190, 235, 0.14);
+	--hmap-azure: #2F80ED;
+	--hmap-azure-lit: #6FB0FF;
+	--hmap-coral: #FF5C39;
+
+	/* The sea. A shade off the ground so the coastline exists without a
+	   stroke doing all the work. */
+	--hmap-sea: #060E1C;
+	/* Five flat steps of azure over the ground, pre-mixed. Step 0 is bare
+	   land: "no data" is a different statement from "very few". */
+	--hmap-s0: #101D33;
+	--hmap-s1: #0F2138;
+	--hmap-s2: #142F52;
+	--hmap-s3: #1A3F74;
+	--hmap-s4: #2053A0;
+	--hmap-s5: #2970D0;
+
+	--hmap-height: 74vh;
+	--hmap-enter: 320ms cubic-bezier(0.16, 1, 0.3, 1);
+
+	display: flex;
+	flex-direction: column;
+	gap: clamp(10px, 1.6vh, 20px);
+	min-width: 0;
+	color: var(--hmap-ink);
+	font-family: var(--font-sans, 'Source Sans 3', system-ui, sans-serif);
+	margin: 0;
+}
+
+.hmap__stage {
+	position: relative;
+	width: 100%;
+	max-width: calc(var(--hmap-height) * 1000 / 760);
+	aspect-ratio: 1000 / 760;
+	margin-inline: auto;
+	min-width: 0;
+}
+
+.hmap__svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+/* ── Land ───────────────────────────────────────────────────────────────── */
+
+/*
+ * A hairline coast, not an outline: the same 1px rule the board uses between
+ * rows, so the country sits in the same drawing as the scores.
+ */
+.hmap__dept {
+	fill: var(--hmap-s0);
+	stroke: var(--hmap-sea);
+	stroke-width: 1.6;
+	stroke-linejoin: round;
+	transition: fill 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms linear;
+}
+
+.hmap__dept--s1 { fill: var(--hmap-s1); }
+.hmap__dept--s2 { fill: var(--hmap-s2); }
+.hmap__dept--s3 { fill: var(--hmap-s3); }
+.hmap__dept--s4 { fill: var(--hmap-s4); }
+.hmap__dept--s5 { fill: var(--hmap-s5); }
+
+/* Receding, not disappearing: spotlight keeps the rest of the country
+   present, because a lone commune floating in black is not a map. */
+.is-receded { opacity: 0.34; }
+.hmap__dept.is-receded { opacity: 0.5; }
+
+/* ── The crowd ──────────────────────────────────────────────────────────── */
+
+/*
+ * One disc per commune, AREA proportional to the number of students. The
+ * scale lives on a wrapper <g> so growth is a transform and nothing repaints
+ * the geometry; the stroke is non-scaling so an approximate mark's hairline
+ * stays a hairline at every size.
+ */
+.hmap__crowd-mark {
+	transform: scale(var(--hmap-scale, 1));
+	transition: transform var(--hmap-enter);
+}
+
+.hmap__crowd-mark circle {
+	fill: var(--hmap-azure);
+	fill-opacity: 0.62;
+	stroke: var(--hmap-azure-lit);
+	stroke-width: 1;
+	stroke-opacity: 0.55;
+}
+
+/* Placed at the département centroid, not a commune seat. Hollow, so the map
+   never claims a precision it does not have. */
+.hmap__crowd-mark.is-approx circle {
+	fill-opacity: 0.08;
+	stroke-dasharray: 3 3;
+	stroke-opacity: 0.85;
+}
+
+.hmap__crowd-mark.is-active circle {
+	fill: var(--hmap-coral);
+	fill-opacity: 0.8;
+	stroke: var(--hmap-coral);
+	stroke-opacity: 1;
+}
+
+.hmap__crowd-count {
+	fill: var(--hmap-ink);
+	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: 15px;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+	/* A halo, not a box: the figure has to survive sitting on the brightest
+	   density step as well as on bare land. */
+	paint-order: stroke;
+	stroke: var(--hmap-ground);
+	stroke-width: 3;
+	stroke-linejoin: round;
+}
+
+/* In density the shading carries the value, so the discs step back to rings
+   and let the fill through instead of stacking two encodings of one number. */
+.hmap--density .hmap__crowd-mark circle { fill-opacity: 0.1; stroke-opacity: 0.9; }
+
+/* ── The named actors ───────────────────────────────────────────────────── */
+
+/*
+ * A square, against the crowd's disc. Two shapes rather than two sizes means
+ * a school and a hundred players can share one commune and still be told
+ * apart at the back of a hall.
+ */
+.hmap__school-mark {
+	fill: var(--hmap-ink);
+	stroke: var(--hmap-ground);
+	stroke-width: 2;
+}
+
+.hmap__school.is-active .hmap__school-mark { fill: var(--hmap-coral); }
+.hmap__school.is-approx .hmap__school-mark { fill: none; stroke: var(--hmap-ink); stroke-width: 1.5; }
+
+/* The leader. A hairline with square ends, like the rays in the mark. */
+.hmap__stem {
+	fill: none;
+	stroke: var(--hmap-rule);
+	stroke-width: 1;
+}
+
+.hmap__school.is-active .hmap__stem { stroke: var(--hmap-coral); stroke-opacity: 0.8; }
+.hmap__school.is-approx .hmap__stem { stroke-dasharray: 3 3; }
+
+.hmap__school-label {
+	fill: var(--hmap-ink);
+	font-size: 17px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	paint-order: stroke;
+	stroke: var(--hmap-ground);
+	stroke-width: 3.5;
+	stroke-linejoin: round;
+}
+
+.hmap__school.is-active .hmap__school-label { fill: var(--hmap-coral); }
+
+/* Spotlight: the focused school is the only one at full weight. */
+.hmap--spotlight .hmap__school-label { font-size: 20px; }
+
+/* ── Entrances ──────────────────────────────────────────────────────────── */
+
+/*
+ * A new school or a new commune arriving is the whole point of the pre-show,
+ * so it gets the stage's enter: 320ms, 14px of travel (13 user units at the
+ * map's working scale), opacity from nothing. Existing marks never re-run it,
+ * because the element is keyed and only mounts once.
+ */
+/*
+ * `backwards`, never `both`: a finished animation with a forwards fill keeps
+ * writing opacity:1 at animation priority and would quietly beat .is-receded,
+ * so the spotlight would dim nothing. Backwards holds the hidden state through
+ * the stagger delay and then hands the element back to the cascade.
+ */
+.hmap__enter,
+.hmap__school {
+	animation: hmap-enter 320ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+	transition: opacity 180ms linear;
+}
+
+@keyframes hmap-enter {
+	from { opacity: 0; transform: translateY(13px); }
+	to   { opacity: 1; transform: none; }
+}
+
+/* ── The diaspora caption ───────────────────────────────────────────────── */
+
+/*
+ * Sits in the open sea north-west of the country — the one large empty area
+ * of the viewBox — so it reads as an annotation on the map rather than a pin
+ * pretending to be a place.
+ */
+.hmap__offmap {
+	position: absolute;
+	left: 1%;
+	top: 2%;
+	margin: 0;
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding-bottom: 5px;
+	border-bottom: 1px solid var(--hmap-rule);
+	color: var(--hmap-dim);
+	font-size: clamp(10px, 1.05vw, 14px);
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+}
+
+.hmap__offmap-figure {
+	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(14px, 1.7vw, 22px);
+	font-weight: 500;
+	letter-spacing: -0.03em;
+	color: var(--hmap-ink);
+}
+
+/* ── Readout ────────────────────────────────────────────────────────────── */
+
+.hmap__readout {
+	display: flex;
+	align-items: flex-end;
+	flex-wrap: wrap;
+	gap: clamp(14px, 3vw, 44px);
+	padding-top: clamp(8px, 1.4vh, 16px);
+	border-top: 1px solid var(--hmap-rule);
+	min-width: 0;
+}
+
+/* One number is the biggest thing on screen. Never two — every other figure
+   on this component is set at caption size on purpose. */
+.hmap__figure {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	min-width: 0;
+}
+
+.hmap__figure-value {
+	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(38px, 6vw, 96px);
+	font-weight: 500;
+	line-height: 0.86;
+	letter-spacing: -0.045em;
+}
+
+.hmap__figure-label {
+	font-size: clamp(11px, 1.15vw, 15px);
+	font-weight: 700;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: var(--hmap-dim);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.hmap--spotlight .hmap__figure-label {
+	color: var(--hmap-ink);
+	font-size: clamp(13px, 1.6vw, 24px);
+	letter-spacing: 0.06em;
+}
+
+.hmap__facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: clamp(12px, 2.4vw, 34px);
+	margin: 0;
+	min-width: 0;
+}
+
+.hmap__fact dt {
+	font-size: clamp(9px, 0.85vw, 11px);
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--hmap-faint);
+}
+
+.hmap__fact dd {
+	margin: 3px 0 0;
+	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(13px, 1.3vw, 18px);
+	letter-spacing: -0.02em;
+	color: var(--hmap-ink);
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+
+.hmap__legend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: clamp(8px, 1.2vw, 16px);
+	margin-left: auto;
+	/* Wrap to its own line rather than overflowing the frame on a narrow
+	   stage — it is the last thing that should push the figure off screen. */
+	flex: none;
+}
+
+.hmap__legend-step {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+/* Square, flat, no rounding — there is not a round corner anywhere in the
+   mark and there is not one here. */
+.hmap__swatch {
+	display: block;
+	width: clamp(12px, 1.3vw, 18px);
+	height: clamp(12px, 1.3vw, 18px);
+	background: var(--hmap-s1);
+}
+
+.hmap__swatch.hmap__dept--s1 { background: var(--hmap-s1); }
+.hmap__swatch.hmap__dept--s2 { background: var(--hmap-s2); }
+.hmap__swatch.hmap__dept--s3 { background: var(--hmap-s3); }
+.hmap__swatch.hmap__dept--s4 { background: var(--hmap-s4); }
+.hmap__swatch.hmap__dept--s5 { background: var(--hmap-s5); }
+
+.hmap__legend-step b {
+	font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(10px, 1vw, 13px);
+	font-weight: 500;
+	color: var(--hmap-dim);
+}
+
+/* ── Roster ─────────────────────────────────────────────────────────────── */
+
+/*
+ * The screen-reader path in every mode, and the visible fallback on a phone,
+ * where the map is too small to carry a label without covering the country.
+ */
+.hmap__roster {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* ── Phone ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+	.hmap {
+		--hmap-height: 52vh;
+	}
+
+	/* Names would cover half the country at this size, so the map keeps the
+	   marks and the roster below takes the names. */
+	.hmap__school-label,
+	.hmap__stem {
+		display: none;
+	}
+
+	.hmap__crowd-count { font-size: 19px; }
+
+	.hmap__roster {
+		position: static;
+		width: auto;
+		height: auto;
+		margin: 0;
+		clip-path: none;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px 14px;
+		list-style: none;
+		white-space: normal;
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--hmap-dim);
+	}
+
+	.hmap__roster li.is-active { color: var(--hmap-coral); }
+
+	.hmap__legend { margin-left: 0; }
+}
+
+/* ── Reduce motion ──────────────────────────────────────────────────────── */
+
+/*
+ * The 14px of travel is the only thing lost: everything here is legible
+ * standing still, so reduce-motion removes the movement rather than
+ * substituting something for it.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.hmap__enter,
+	.hmap__school {
+		animation: hmap-fade 320ms linear backwards;
+	}
+
+	@keyframes hmap-fade {
+		from { opacity: 0; }
+		to   { opacity: 1; }
+	}
+
+	.hmap__crowd-mark,
+	.hmap__dept {
+		transition: none;
+	}
+}

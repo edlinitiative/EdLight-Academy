@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Swords, ChevronLeft, RefreshCw, ListChecks, ShieldAlert, Plus,
+  Swords, ChevronLeft, RefreshCw, ListChecks, ShieldAlert, Plus, MapPin,
 } from 'lucide-react';
 import useStore from '../../contexts/store';
 import {
@@ -13,18 +13,21 @@ import {
   fetchConsentUrl,
   freezeRoster,
   listQuestions,
+  listSchoolsForLocation,
   listTournaments,
   nextBeat,
   postAdvance,
   postAggregate,
   requestTransition,
   reviewClaim,
+  setSchoolCommune,
   validateTournamentDraft,
   watchClaims,
   watchLiveQuestion,
   watchStandings,
   watchTournament,
   type AdminClaim,
+  type AdminSchoolRow,
   type ArenaControl,
   type ArenaLiveQuestion,
   type ArenaStandingsSummary,
@@ -34,6 +37,7 @@ import {
   type NewTournamentInput,
 } from '../../services/arenaAdminService';
 import { type ArenaState } from '../../../shared/arena/state';
+import { HAITI_DEPARTMENTS } from '../../data/haitiGeo';
 
 /**
  * AdminArena — the tournament list, and the run console a human drives on
@@ -104,6 +108,11 @@ const PRIMARY_CONTROLS: ArenaControl[] = [
   'openRegistration', 'openDoors', 'freezeRoster', 'start', 'publishProvisional', 'finalise',
 ];
 const OVERRIDE_CONTROLS: ArenaControl[] = ['forceClose', 'forceNext'];
+
+/** Accent- and case-insensitive search fold, so "leogane" finds Léogâne. */
+function fold(value: string): string {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, ' ').trim();
+}
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -574,6 +583,210 @@ function ClaimQueue({
   );
 }
 
+
+// ── Where the schools are ───────────────────────────────────────────────────
+
+/**
+ * SchoolLocationCard — the one place a human says where a school IS.
+ *
+ * The broadcast map needs a commune per school and there is no honest way to
+ * compute one. `shared/data/schools-seed.json` ships 94 schools with NO
+ * location on purpose: the version that had one derived it from applicants'
+ * "Addresse de residence", which is where the STUDENT lives, and Saint-Louis
+ * de Gonzague came out as two different schools because its applicants live all
+ * over Port-au-Prince. Students board, move and cross communes to get to
+ * school; the modal ville of forty players is a fact about forty players.
+ *
+ * So this screen is the entire data path, and its job is to make typing 94
+ * communes bearable rather than to be clever. It shows the honest headline
+ * ("94 écoles · 0 situées"), the most-attended schools first, and a commune
+ * picked from the SAME list students pick their ville from — free text here
+ * would produce a spelling the map cannot join and nobody would find out until
+ * the school failed to appear on stream.
+ *
+ * One `<select>` is mounted at a time, for the row being edited. Ninety-four
+ * selects of a hundred and forty communes is fourteen thousand DOM nodes on a
+ * page an admin opens to change one thing.
+ */
+function SchoolLocationCard({ t }: { t: (fr: string, ht: string) => string }) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<AdminSchoolRow[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [editing, setEditing] = useState<string | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [note, setNote] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      setRows(await listSchoolsForLocation());
+    } catch (err) {
+      setNote({ type: 'error', text: (err as Error)?.message || String(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open && rows === null && !loading) void load();
+  }, [open, rows, loading, load]);
+
+  const filtered = useMemo(() => {
+    const all = rows || [];
+    const needle = fold(query);
+    if (!needle) return all;
+    return all.filter((r) => fold(`${r.name} ${r.shortName || ''} ${r.commune || ''}`).includes(needle));
+  }, [rows, query]);
+
+  const located = (rows || []).filter((r) => r.commune).length;
+
+  const save = async (row: AdminSchoolRow, commune: string | null) => {
+    setSaving(row.key);
+    setNote(null);
+    try {
+      await setSchoolCommune(row.key, commune, row.name);
+      // Only after the server agreed. An optimistic row would show a location
+      // that is not stored anywhere, on the one screen whose entire purpose is
+      // to be the record of what somebody actually said.
+      setRows((prev) => (prev || []).map((r) => (
+        r.key === row.key ? { ...r, commune, stored: true } : r
+      )));
+      setEditing(null);
+    } catch (err) {
+      const e = err as ArenaAdminError;
+      setNote({
+        type: 'error',
+        text: e?.code === 'unauthorized'
+          ? t('Réservé aux administrateurs.', 'Se pou administratè sèlman.')
+          : (e?.message || String(err)),
+      });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const input: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: 8,
+    border: '1px solid var(--admin-border, #d9dde3)', fontSize: 13, background: '#fff',
+  };
+
+  return (
+    <div className="admin-card" style={{ padding: 16, marginBottom: 20 }}>
+      <button
+        type="button"
+        className="admin-btn admin-btn--ghost"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <MapPin size={14} aria-hidden="true" /> {t('Lieu des écoles', 'Kote lekòl yo ye')}
+      </button>
+
+      {open ? (
+        <>
+          <p className="admin-page__subtitle" style={{ marginTop: 12, marginBottom: 0, fontSize: 12 }}>
+            {loading && rows === null
+              ? t('Chargement des écoles…', 'Ap chaje lekòl yo…')
+              : t(
+                `${located} / ${(rows || []).length} écoles situées. Une école sans commune n’apparaît pas sur la carte — et ne doit jamais être devinée d’après le domicile de ses élèves.`,
+                `${located} / ${(rows || []).length} lekòl gen kote yo ye. Yon lekòl san komin pa parèt sou kat la — epi nou pa janm devine l ak kote elèv yo rete.`,
+              )}
+          </p>
+
+          {note ? (
+            <p style={{ marginTop: 10, marginBottom: 0, fontSize: 13, color: note.type === 'error' ? '#B42318' : '#067647' }}>
+              {note.text}
+            </p>
+          ) : null}
+
+          <div style={{ marginTop: 12 }}>
+            <input
+              type="search"
+              style={input}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('Chercher une école…', 'Chèche yon lekòl…')}
+              aria-label={t('Chercher une école', 'Chèche yon lekòl')}
+            />
+          </div>
+
+          <div className="admin-table__scroll" style={{ marginTop: 12, maxHeight: 420, overflowY: 'auto' }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>{t('École', 'Lekòl')}</th>
+                  <th>{t('Commune', 'Komin')}</th>
+                  <th aria-label={t('Actions', 'Aksyon')} />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row) => (
+                  <tr key={row.key}>
+                    <td>
+                      <strong>{row.name}</strong>
+                      {row.shortName ? (
+                        <span className="admin-role-pill" style={{ marginLeft: 6 }}>{row.shortName}</span>
+                      ) : null}
+                    </td>
+                    <td style={{ minWidth: 220 }}>
+                      {editing === row.key ? (
+                        <select
+                          style={input}
+                          defaultValue={row.commune || ''}
+                          disabled={saving === row.key}
+                          // The row's button was just pressed; focus follows it
+                          // into the control that replaced it, so the picker is
+                          // keyboard-usable across ninety-four rows.
+                          autoFocus
+                          onChange={(e) => void save(row, e.target.value || null)}
+                          aria-label={t('Commune de l’école', 'Komin lekòl la')}
+                        >
+                          <option value="">{t('— Lieu inconnu —', '— Nou pa konnen —')}</option>
+                          {HAITI_DEPARTMENTS.filter((d) => d.cities.length > 0).map((d) => (
+                            <optgroup key={d.name} label={d.name}>
+                              {d.cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                          ))}
+                        </select>
+                      ) : (
+                        <span style={{ color: row.commune ? 'inherit' : 'var(--asb-muted, #6B7A90)' }}>
+                          {row.commune || t('Inconnu', 'Nou pa konnen')}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {saving === row.key ? (
+                        <span className="admin-page__subtitle" style={{ fontSize: 12 }}>
+                          {t('Enregistrement…', 'Ap anrejistre…')}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--ghost"
+                          onClick={() => setEditing(editing === row.key ? null : row.key)}
+                        >
+                          {editing === row.key
+                            ? t('Annuler', 'Anile')
+                            : row.commune ? t('Modifier', 'Chanje') : t('Situer', 'Mete kote')}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {!loading && filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="admin-empty">{t('Aucune école.', 'Pa gen lekòl.')}</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 const CLAIM_STATE_COPY: Record<string, [string, string]> = {
   open: ['offert', 'ofri'],
   claimed: ['à vérifier', 'pou verifye'],
@@ -931,6 +1144,8 @@ export default function AdminArena() {
         </div>
 
         <NewTournamentCard t={t} onCreated={reloadList} />
+
+        <SchoolLocationCard t={t} />
 
         <div className="admin-card">
           {listLoading ? (

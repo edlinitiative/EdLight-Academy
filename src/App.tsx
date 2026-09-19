@@ -27,6 +27,7 @@ const DeleteAccount = lazyWithRetry(() => import('./pages/DeleteAccount'));
 const Terms = lazyWithRetry(() => import('./pages/Terms'));
 const Defi = lazyWithRetry(() => import('./pages/Defi'));
 const Live = lazyWithRetry(() => import('./pages/Live'));
+const Direct = lazyWithRetry(() => import('./pages/Direct'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
 const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
@@ -174,7 +175,10 @@ export default function App() {
                   printable document that reveals nothing. */}
               <Route path="/arena/reclamation" element={<ArenaClaim />} />
               <Route path="/arena/autorisation" element={<ArenaConsentForm />} />
-              <Route path="/direct" element={<Live />} />
+              {/* The projector page. It resolves its own tournament and falls
+                  back to the weekly school race between events — a screen in a
+                  school hall is never blank. */}
+              <Route path="/direct" element={<Direct />} />
               <Route path="/live" element={<Navigate to="/direct" replace />} />
             </Routes>
           </Suspense>

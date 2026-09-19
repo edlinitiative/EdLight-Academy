@@ -46,6 +46,21 @@ import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestor
 import { getDb } from '../_lib/firebaseAdmin';
 import { canTransition, type ArenaState } from '../../shared/arena/state';
 import { authorizeCronOrAdmin } from './_shared';
+import {
+  appendEvents,
+  atStakeFrom,
+  boardOf,
+  emitKeyedEvents,
+  loadQuestionStats,
+  nameFastest,
+  type ArenaEventDraft,
+} from './_events';
+import type {
+  FinalQuestionPayload,
+  GradingPayload,
+  QuestionClosedPayload,
+  RoundStartPayload,
+} from '../../shared/arena/events';
 
 // ── The cycle's two clocks ──────────────────────────────────────────────────
 
@@ -229,11 +244,83 @@ export function roundOf(rounds: unknown, index: number): number {
   return num((rounds[rounds.length - 1] as Row)?.index, rounds.length - 1);
 }
 
+/**
+ * The topic word the transition scene puts on screen.
+ *
+ * The authored question first, the round's own label second. Neither reveals
+ * anything: a category is "Histoire", not an answer. Empty is fine — the scene
+ * renders the index alone rather than an empty line.
+ */
+export function categoryOf(rounds: unknown, index: number, question: Row | null): string {
+  const fromQuestion = str(question?.category);
+  if (fromQuestion) return fromQuestion;
+  if (!Array.isArray(rounds) || rounds.length === 0) return '';
+  let seen = 0;
+  for (const raw of rounds) {
+    const round = (raw ?? {}) as Row;
+    seen += num(round.questionCount, 0);
+    if (index < seen) return str(round.category, str(round.label));
+  }
+  return '';
+}
+
+/** How many contenders `FINAL_QUESTION` names. More than this is a list, not a stake. */
+const AT_STAKE_LIMIT = 5;
+
 interface Outcome {
   action: 'waiting' | 'opened' | 'closed' | 'finished' | 'noop';
   index?: number;
   state?: ArenaState;
+  /** The round the affected question belongs to — the event envelope needs it. */
+  round?: number;
   error?: 'not_found' | 'missing_question' | 'illegal_transition';
+}
+
+/**
+ * `QUESTION_CLOSED`, after the close has committed.
+ *
+ * The one event that cannot be emitted inside the transaction that produced its
+ * edge: its payload summarises every answer to the question, and a transaction
+ * holding the standings lock while it read ten thousand documents would fight
+ * the aggregate tick for the whole pause. So it is emitted immediately
+ * afterwards, under an idempotence key, and a failure here is swallowed — the
+ * round clock is the one thing on this endpoint that must never stop, and a
+ * missing scene is recoverable where a stalled tournament is not.
+ */
+async function emitQuestionClosed(
+  db: FirebaseFirestore.Firestore,
+  tid: string,
+  index: number,
+  round: number,
+): Promise<void> {
+  const stats = await loadQuestionStats(db, tid, index);
+  // Null means the scan hit its cap: a percentage from an arbitrary page of the
+  // submissions would be a made-up statistic on a projector. No event instead.
+  if (!stats) return;
+
+  const standingsSnap = await db.doc(`tournaments/${tid}/standings/current`).get();
+  const { individuals } = boardOf(standingsSnap.exists ? (standingsSnap.data() as Row) : null);
+  const fastest = stats.fastest
+    ? await nameFastest(db, tid, stats.fastest.uid, individuals)
+    : null;
+
+  const payload: QuestionClosedPayload = {
+    index,
+    correctPct: stats.correctPct,
+    // Zero only ever travels WITH `fastest: null`, which the scene renders as
+    // "aucune bonne réponse" — a true sentence. A duration with no name beside
+    // it would be a number nobody can check.
+    fastestMs: fastest && stats.fastest ? stats.fastest.elapsedMs : 0,
+    fastest,
+  };
+
+  await emitKeyedEvents(
+    db,
+    tid,
+    `QUESTION_CLOSED__${index}`,
+    [{ type: 'QUESTION_CLOSED', payload, round, questionIndex: index }],
+    Date.now(),
+  );
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -298,6 +385,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         ? num((closingQuestionSnap.data() as Row).answerIndex, -1)
         : -1;
 
+      // The board, read INSIDE this transaction — unconditionally, and before
+      // any write, for the two reasons Firestore and `_events` respectively
+      // require. It is where event seqs are allocated from, and allocating from
+      // a value read anywhere else is the race that loses an event; it is also
+      // FINAL_QUESTION's payload. One document, on a call that already reads
+      // three.
+      const standingsRef = db.doc(`tournaments/${tid}/standings/current`);
+      const standingsSnap = await tx.get(standingsRef);
+
       const now = Date.now();
       const action = planAdvance({
         now,
@@ -343,7 +439,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           // counting `correct` on a submission past `closesAt`.
           ...(revealAnswerIndex >= 0 ? { answerIndex: revealAnswerIndex } : {}),
         });
-        return { action: 'closed', index, state };
+        // QUESTION_CLOSED is emitted after this commits — see
+        // `emitQuestionClosed`. Its figures come from `answers/*`, which cannot
+        // be read from inside a transaction at that scale.
+        return { action: 'closed', index, state, round: roundOf(tournament.rounds, index) };
       }
 
       if (action === 'finish') {
@@ -354,11 +453,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         // `currentQuestion` is deliberately left in place: the aggregator keeps
         // ticking through `grading` and still needs to know which question the
         // board it is settling belongs to.
+        const round = roundOf(tournament.rounds, index);
         tx.update(tournamentRef, {
           state: 'grading' satisfies ArenaState,
           gradingAt: FieldValue.serverTimestamp(),
         });
-        return { action: 'finished', index, state: 'grading' };
+        // Sequence 16, the deliberate withholding. Emitted from inside the
+        // transaction that performs `live → grading`, so it happens exactly as
+        // often as that transition does: once.
+        appendEvents(tx, db, tid, standingsSnap, [{
+          type: 'GRADING',
+          payload: { startedAt: now } satisfies GradingPayload,
+          round,
+          questionIndex: index,
+        }], now);
+        return { action: 'finished', index, state: 'grading', round };
       }
 
       // ── open ──────────────────────────────────────────────────────────────
@@ -393,8 +502,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         opensAt: Timestamp.fromMillis(opensAt),
         closesAt: Timestamp.fromMillis(closesAt),
       });
+      const round = roundOf(tournament.rounds, nextIndex);
       tx.update(tournamentRef, {
-        currentRound: roundOf(tournament.rounds, nextIndex),
+        currentRound: round,
         currentQuestion: {
           index: nextIndex,
           seq: payload.seq,
@@ -402,7 +512,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           closesAt: Timestamp.fromMillis(closesAt),
         },
       });
-      return { action: 'opened', index: nextIndex, state };
+
+      /*
+       * Sequences 3 and 4 — the opening, and every question transition.
+       *
+       * `index` IS ZERO-BASED, matching `currentQuestion.index` (which is why
+       * `useStage` defaults it to -1: 0 is a real question). The scenes add the
+       * one — `questionNumber()` in src/broadcast/rhythm.ts turns index 0 into
+       * "QUESTION 1 / 25" — and it has to be added in exactly one place. Emit a
+       * 1-based index here and the projector reads "QUESTION 2 / 25" over the
+       * first question of the night.
+       *
+       * Emitted inside the transaction that opens the question, so a retry that
+       * finds the question already open cannot emit a second opening: the only
+       * path to this line is the one that actually writes `live/{index}`.
+       */
+      const drafts: ArenaEventDraft[] = [{
+        type: 'ROUND_START',
+        payload: {
+          index: nextIndex,
+          total: totalQuestions,
+          category: categoryOf(tournament.rounds, nextIndex, nextQuestionSnap.data() as Row),
+        } satisfies RoundStartPayload,
+        round,
+        questionIndex: nextIndex,
+      }];
+
+      if (nextIndex === totalQuestions - 1) {
+        // Sequence 15. Priority 10, so it takes the screen from the transition
+        // it rides with — the last question is the only one that earns it.
+        const { schools } = boardOf(standingsSnap.exists ? (standingsSnap.data() as Row) : null);
+        drafts.push({
+          type: 'FINAL_QUESTION',
+          payload: { atStake: atStakeFrom(schools, AT_STAKE_LIMIT) } satisfies FinalQuestionPayload,
+          round,
+          questionIndex: nextIndex,
+        });
+      }
+
+      appendEvents(tx, db, tid, standingsSnap, drafts, now);
+      return { action: 'opened', index: nextIndex, state, round };
     });
 
     if (outcome.error === 'not_found') {
@@ -413,6 +562,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       res.status(409).json({ error: outcome.error, state: outcome.state });
       return;
     }
+
+    // Sequence 5. Deliberately outside the transaction that closed the
+    // question — see `emitQuestionClosed`'s own comment for why its payload
+    // cannot be gathered inside one. A failure here is swallowed: the round
+    // clock advancing is the one thing this endpoint must never stop for, and
+    // a missing round-results scene is recoverable where a stalled tournament
+    // is not.
+    if (outcome.action === 'closed' && typeof outcome.index === 'number') {
+      try {
+        await emitQuestionClosed(db, tid, outcome.index, outcome.round ?? 0);
+      } catch (err) {
+        console.error('[arena/advance] emitQuestionClosed failed:', err);
+      }
+    }
+
     res.status(200).json({ ok: true, ...outcome, pauseMs: PAUSE_MS });
   } catch (err) {
     console.error('[arena/advance] error:', err);

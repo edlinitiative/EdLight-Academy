@@ -18,6 +18,9 @@
  * overwrites one row instead of minting a second — the idempotency is in the
  * key, not in a check that could race with itself.
  *
+ * The player row also carries WHERE THE STUDENT IS — `city` and `department`,
+ * read server-side off their own leaderboard entry. See `playerGeography()`.
+ *
  * Request body (Authorization: Bearer <Firebase ID token>):
  *   { tournamentId: string, schoolKey: string, grade: string, deviceHash?: string }
  *
@@ -34,8 +37,10 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import type { Firestore } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
 import { getDb } from '../_lib/firebaseAdmin';
+import { findCommune, findDepartment } from '../../shared/haitiCommunes';
 import {
   DEFAULT_MIN_PLAYERS,
   asArenaState,
@@ -50,6 +55,75 @@ import {
   schoolCounts,
   schoolLabel,
 } from './_shared';
+
+/** Where a student is, as THEY stated it. Null is the common, honest answer. */
+interface PlayerGeography {
+  /** Their ville, folded onto the canonical spelling in haitiGeo.ts. */
+  city: string | null;
+  /** Their département, canonical. Present when the ville is, and sometimes
+   *  alone — the Diaspora entry has no ville list to pick from. */
+  department: string | null;
+}
+
+/**
+ * The registering student's own geography, read server-side.
+ *
+ * ── WHY IT IS COPIED ONTO THE PLAYER ROW AND NOT JOINED AT RENDER TIME ──────
+ *
+ * The broadcast reads ONE collection per tick — `tournaments/{tid}/players` —
+ * and turns it into a board and a map. Joining geography at render time means a
+ * per-uid read of `leaderboards/all-time/entries/*` for every player on every
+ * tick: a few hundred players at one tick a second is a fan-out that costs real
+ * money for the length of the tournament and adds a round-trip to the one part
+ * of the product that cannot be late. The row is written once, at registration,
+ * and read for free forever after.
+ *
+ * ── WHY IT IS READ HERE AND NOT ACCEPTED FROM THE CLIENT ────────────────────
+ *
+ * This goes on a public stream. A client-supplied `city` is a client-supplied
+ * caption on a broadcast, and the whole Arena is server-authoritative for
+ * exactly that reason. The student already chose this ville in their profile;
+ * we read what they chose rather than what their app says they chose.
+ *
+ * ── WHY NULL IS KEPT AS NULL ────────────────────────────────────────────────
+ *
+ * Most students have no ville on their profile — it is an optional field on the
+ * leaderboard form — and absent has to stay absent all the way to the map. The
+ * neighbouring temptation, filling a school's commune in from where its
+ * students live, is the mistake this product already shipped once and rebuilt
+ * `schools-seed.json` to undo. The inverse is just as wrong: a student's ville
+ * is never inferred from their school either. Unknown is a value.
+ *
+ * A free-typed legacy value ("Port au Prince", from before the picker existed)
+ * is FOLDED onto the canonical spelling rather than dropped or stored raw — the
+ * map joins on spelling, so an unfolded name is a pin that lands nowhere. A
+ * value that resolves to nothing at all stays null rather than travelling on as
+ * a name no map can place.
+ *
+ * Costs one document read. `publicDisplayName()` reads the same document a few
+ * lines above; the duplicate read is deliberate rather than reaching into
+ * `_shared.ts` to fuse them, because the alias rule is shared by four surfaces
+ * and must keep being written in exactly one place.
+ */
+async function playerGeography(db: Firestore, uid: string): Promise<PlayerGeography> {
+  try {
+    const entry = (await db.doc(`leaderboards/all-time/entries/${uid}`).get()).data();
+    if (!entry) return { city: null, department: null };
+
+    const resolved = findCommune(typeof entry.city === 'string' ? entry.city : null);
+    if (resolved) return { city: resolved.commune, department: resolved.department };
+
+    // No usable ville, but the département may still be stated — and for a
+    // student abroad it is the only geography there will ever be.
+    return { city: null, department: findDepartment(typeof entry.department === 'string' ? entry.department : null) };
+  } catch (err) {
+    // Best-effort, exactly like publicDisplayName: a student must never fail to
+    // register because the board entry we wanted to decorate their pin with
+    // could not be read.
+    console.error('[arena/register] geography lookup failed:', err);
+    return { city: null, department: null };
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
@@ -127,9 +201,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       ? tournament.minPlayers
       : DEFAULT_MIN_PLAYERS;
 
-    const [displayName, label] = await Promise.all([
+    const [displayName, label, geo] = await Promise.all([
       publicDisplayName(db, uid, tokenName),
       schoolLabel(db, schoolKey),
+      playerGeography(db, uid),
     ]);
 
     const regRef = db.doc(`tournamentRegistrations/${tournamentId}_${uid}`);
@@ -174,6 +249,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           schoolKey,
           schoolLabel: label,
           grade,
+          // Where the STUDENT is — never where their school is, and never the
+          // other way round. Written explicitly as null when unknown so the
+          // field exists on every row and the map's "unplaced" count is read
+          // off the data instead of off a missing key.
+          city: geo.city,
+          department: geo.department,
           score: 0,
           correct: 0,
           answered: 0,
@@ -194,11 +275,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         });
       } else {
         // Identity may change; the scoreboard never does on this path.
+        // Geography is refreshed too: a student who fills in their ville and
+        // then re-submits the sheet during `doors` should appear on the map,
+        // and a stale null here would leave them off it all night.
         tx.update(playerRef, {
           displayName,
           schoolKey,
           schoolLabel: label,
           grade,
+          city: geo.city,
+          department: geo.department,
         });
       }
     });

@@ -14,10 +14,24 @@
  *    reading conveyed nothing, so it cost four seconds and a rewind.
  *  - NOTHING HOLDS PAST `maxDwellMs`. A screen frozen on a celebration while
  *    the next question is already live is the audience watching the past.
- *  - PRIORITY 10 PREEMPTS, BUT NOT INSIDE minDwell. This is the subtle one: a
- *    burst of big events at the end of a round would otherwise cut each other
- *    every few milliseconds and the screen strobes through five moments the
- *    room never sees.
+ *  - PRIORITY 10 PREEMPTS, BUT NOT INSIDE minDwell, AND NOT A SCENE OF THE
+ *    SAME PRIORITY. This is the subtle one: a burst of big events at the end
+ *    of a round would otherwise cut each other every few milliseconds and the
+ *    screen strobes through five moments the room never sees. The "not the
+ *    same priority" half exists for `CHAMPION_SCHOOL` and
+ *    `CHAMPION_INDIVIDUAL` — both priority 10, emitted TOGETHER when
+ *    `provisional` is entered, and meant to play one after the other, each
+ *    with its own full dwell, not have the second steal the first's screen
+ *    the instant `minDwellMs` passes. A STRICTLY higher priority still cuts
+ *    in immediately — that is the actual breaking-news behaviour this rule
+ *    protects — but two events tied at 10 wait their turn like any other pair.
+ *  - SOME SCENES NEED LONGER THAN THE DEFAULT CEILING. `maxDwellByKind` is a
+ *    per-`SceneKind` override of `maxDwellMs`, because one global number
+ *    cannot be both "cut a quiet lead change after 7s" and "hold halftime for
+ *    two minutes" — the events that need the second number are named
+ *    explicitly in the TTL table's own comment ("structural moments hold
+ *    longer because the match is deliberately paused around them"), and a
+ *    scene not listed here simply falls back to `maxDwellMs`.
  *  - TWO EVENTS ABOUT ONE SCHOOL ARE ONE SCENE. A `PLAYER_ENTERS_TOP_5` and the
  *    `SCHOOL_OVERTAKE` it caused played in sequence is a notification feed;
  *    composed, it is a story — *she came into the five, so they passed three
@@ -56,8 +70,17 @@ export interface Scene {
 export interface DirectorOptions {
   /** A scene is never cut before it can be read. */
   minDwellMs?: number;
-  /** Nothing holds the screen forever. */
+  /** Nothing holds the screen forever, for a scene not named in `maxDwellByKind`. */
   maxDwellMs?: number;
+  /**
+   * Per-scene-kind override of `maxDwellMs`. Looked up by the CURRENT scene's
+   * own kind; a kind not listed uses `maxDwellMs`. `useStage.ts` supplies the
+   * defaults section K actually specifies — this module ships no opinion of
+   * its own about which scenes are "structural", to keep the product decision
+   * (which moments earn extra time) out of the pure engine that just enforces
+   * whatever it is told.
+   */
+  maxDwellByKind?: Partial<Record<SceneKind, number>>;
   /** Quiet board time before the page needs something to say. */
   idleMs?: number;
 }
@@ -79,7 +102,11 @@ export const PREEMPT_PRIORITY = 10;
 export function createDirector(opts: DirectorOptions = {}): Director {
   const minDwellMs = opts.minDwellMs ?? DEFAULT_MIN_DWELL_MS;
   const maxDwellMs = opts.maxDwellMs ?? DEFAULT_MAX_DWELL_MS;
+  const maxDwellByKind = opts.maxDwellByKind ?? {};
   const idleMs = opts.idleMs ?? DEFAULT_IDLE_MS;
+
+  /** This scene's ceiling — its own override, or the shared default. */
+  const maxDwellFor = (kind: SceneKind): number => maxDwellByKind[kind] ?? maxDwellMs;
 
   const queue: ArenaEvent[] = [];
   /**
@@ -174,12 +201,18 @@ export function createDirector(opts: DirectorOptions = {}): Director {
       // sequence instead of a strobe.
       if (elapsed < minDwellMs) return current;
 
-      if (queue.some((e) => e.priority >= PREEMPT_PRIORITY)) {
+      // A STRICTLY higher priority cuts in immediately — that is breaking
+      // news. Something tied with the CURRENT scene's own priority (both
+      // 10: CHAMPION_SCHOOL and CHAMPION_INDIVIDUAL, emitted together) waits
+      // its turn instead, so a scripted pair plays one after the other rather
+      // than the second stealing the first's screen at minDwell.
+      const currentPriority = current.event?.priority ?? -1;
+      if (queue.some((e) => e.priority >= PREEMPT_PRIORITY && e.priority > currentPriority)) {
         current = takeScene(now);
         return current;
       }
 
-      if (elapsed >= maxDwellMs) {
+      if (elapsed >= maxDwellFor(current.kind)) {
         // Straight into the next moment when one is waiting. A one-frame board
         // flash between two scenes reads as a glitch, not as a return to rest;
         // the board is where we go when there is nothing left to say.
