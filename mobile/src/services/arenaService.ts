@@ -21,7 +21,7 @@
  */
 
 import { Share } from 'react-native';
-import { doc, onSnapshot, Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, where, Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { getReferralCode } from './referralService';
 import type { ArenaState } from '../../../shared/arena/state';
@@ -261,6 +261,59 @@ export function subscribeTournament(
     (snap) => cb(snap.exists() ? toTournament(snap.id, snap.data()) : null),
     (err) => {
       console.error('[Arena] tournament listener error:', err);
+      onError?.(err);
+      cb(null);
+    },
+  );
+}
+
+/** `doors` is the more urgent moment — the room is filling right now. */
+const OPEN_STATE_PRIORITY = ['doors', 'registration'] as const;
+
+/**
+ * Which open tournament the Home tab should announce, if any.
+ *
+ * Pure and exported for tests, same reason the broadcast side's `pickOnAir`
+ * is: get the ordering wrong and either nothing gets announced while a room
+ * is filling, or last month's tournament outranks this month's.
+ */
+export function pickOpenTournament(rows: ArenaTournament[]): ArenaTournament | null {
+  for (const state of OPEN_STATE_PRIORITY) {
+    const inState = rows.filter((r) => r.state === state);
+    if (inState.length === 0) continue;
+    return inState.sort((a, b) => a.startsAt - b.startsAt)[0];
+  }
+  return null;
+}
+
+/**
+ * Is there a tournament open for sign-up right now?
+ *
+ * The registration screen (`ArenaLobbyScreen`) was fully built and worked
+ * from the day it shipped, and the ONLY link to it anywhere in the app was a
+ * button on the RESULTS screen of a tournament that had already finished — a
+ * student who had never played had no way in. This is the query the Home tab
+ * needed to fix that: it does not take a tid, because nobody browsing Home has
+ * one to give it.
+ *
+ * `registration`/`doors` only — `live` and anything after means sign-up has
+ * closed. When both states have a tournament (should not happen in practice;
+ * one event runs at a time) `doors` wins because the room is filling THIS
+ * minute, which is more urgent than an announcement for later.
+ */
+export function subscribeOpenTournament(
+  cb: (t: ArenaTournament | null) => void,
+  onError?: (err: unknown) => void,
+): Unsubscribe {
+  const q = query(collection(db, 'tournaments'), where('state', 'in', [...OPEN_STATE_PRIORITY]));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
+      cb(pickOpenTournament(rows));
+    },
+    (err) => {
+      console.error('[Arena] open-tournament listener error:', err);
       onError?.(err);
       cb(null);
     },

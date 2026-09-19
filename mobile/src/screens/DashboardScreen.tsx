@@ -29,6 +29,7 @@ import Leaderboard from '../components/Leaderboard';
 import ResumeBanner from '../components/ResumeBanner';
 import NextStepCard from '../components/NextStepCard';
 import TournamentCard from '../components/TournamentCard';
+import ArenaAnnounceCard from '../components/ArenaAnnounceCard';
 import StreakFlame from '../components/celebration/StreakFlame';
 import ReviewCard from '../components/ReviewCard';
 import ReviewSession from '../components/ReviewSession';
@@ -564,6 +565,14 @@ export default function DashboardScreen() {
             />
           </View>
         )}
+
+        {/* The Arena announcement, when one is open for sign-up, sits ABOVE the
+            weekly school board: a dated event with a closing window is more
+            urgent than an ongoing mechanic, and self-hides the rest of the
+            month when there is nothing to announce. */}
+        <View className="px-5 mb-4">
+          <ArenaAnnounceCard />
+        </View>
 
         {/* The school tournament sits directly above the personal board: the
             individual ranking is what a student cares about, and the collective

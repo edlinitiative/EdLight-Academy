@@ -32,6 +32,7 @@ import { useMutation } from '@tanstack/react-query';
 import useStore from '../contexts/store';
 import {
   subscribeTournament,
+  subscribeOpenTournament,
   subscribeLiveQuestion,
   subscribeRegistration,
   subscribeStandings,
@@ -100,6 +101,28 @@ export function useArenaTournament(tid: string | null | undefined): LiveValue<Ar
     );
     return () => { alive = false; unsub(); };
   }, [tid]);
+
+  return value;
+}
+
+/**
+ * Is there an Arena tournament open for sign-up right now?
+ *
+ * Home doesn't have a tid to watch a specific tournament with — this is the
+ * hook that finds one, or returns null when there is nothing to announce.
+ * `registration`/`doors` only; see `subscribeOpenTournament` for why.
+ */
+export function useOpenArenaTournament(): LiveValue<ArenaTournament> {
+  const [value, setValue] = useState<LiveValue<ArenaTournament>>(() => ({ data: null, loading: true, error: false }));
+
+  useEffect(() => {
+    let alive = true;
+    const unsub = subscribeOpenTournament(
+      (t) => { if (alive) setValue({ data: t, loading: false, error: false }); },
+      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
+    );
+    return () => { alive = false; unsub(); };
+  }, []);
 
   return value;
 }
