@@ -14,6 +14,7 @@ import DashHeroStrip from '../components/DashHeroStrip';
 import useStore from '../contexts/store';
 import SmartSuggestion from '../components/SmartSuggestion';
 import ReviewBanner from '../components/ReviewBanner';
+import ArenaBanner from '../components/ArenaBanner';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
@@ -412,6 +413,7 @@ export default function Dashboard() {
             ambient countdown/readiness. */}
         <div className="dash__next">
           <ReviewBanner />
+          <ArenaBanner />
           <SmartSuggestion />
           <DashHeroStrip />
         </div>
