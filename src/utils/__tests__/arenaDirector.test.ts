@@ -39,6 +39,12 @@ const substitution = (seq: number, schoolKey: string, over = {}) =>
   event(seq, 'PLAYER_ENTERS_TOP_5', { schoolKey, ...over });
 const leadChange = (seq: number, schoolKey: string, over = {}) =>
   event(seq, 'LEAD_CHANGE', { schoolKey, ...over });
+const championSchool = (seq: number, over = {}) =>
+  event(seq, 'CHAMPION_SCHOOL', { schoolKey: undefined, ...over });
+const championIndividual = (seq: number, over = {}) =>
+  event(seq, 'CHAMPION_INDIVIDUAL', { schoolKey: undefined, ...over });
+const halftime = (seq: number, over = {}) =>
+  event(seq, 'HALFTIME', { schoolKey: undefined, ...over });
 
 describe('director — the board is the resting state, not the only state', () => {
   it('opens on the board and returns the same scene while nothing has happened', () => {
@@ -111,6 +117,65 @@ describe('director — dwell', () => {
     expect(second.event?.seq).toBe(2);
     expect(second.since).toBe(7000);
     expect(director.tick(14000).kind).toBe('BOARD');
+  });
+
+  /*
+   * The champion reveal is two priority-10 events, emitted TOGETHER by
+   * api/arena/state.ts on grading → provisional, and meant to play one after
+   * the other — section K gives CHAMPION_SCHOOL ~15s and CHAMPION_INDIVIDUAL
+   * ~10s. Before this fix the second, already sitting in queue at the same
+   * priority, cut the first at minDwell (2.4s) regardless of maxDwell: any
+   * priority ≥ 10 in queue preempted, with no check against what was already
+   * playing.
+   */
+  it('does not let a same-priority scene steal the screen from another at minDwell', () => {
+    const director = createDirector();
+    director.push([championSchool(1), championIndividual(2)]);
+
+    const first = director.tick(0);
+    expect(first.kind).toBe('CHAMPION_SCHOOL');
+
+    // Past minDwell, with CHAMPION_INDIVIDUAL (same priority) still queued —
+    // the old bug fired exactly here.
+    expect(director.tick(2400).kind).toBe('CHAMPION_SCHOOL');
+    expect(director.tick(6999).kind).toBe('CHAMPION_SCHOOL');
+
+    // It still ends, at its own maxDwell, and hands off to what was waiting —
+    // same-priority events are not stuck forever, only not trampled early.
+    const second = director.tick(7000);
+    expect(second.kind).toBe('CHAMPION_INDIVIDUAL');
+    expect(second.since).toBe(7000);
+  });
+
+  it('still lets a STRICTLY higher priority cut in past minDwell — the same-priority rule does not become "nothing preempts"', () => {
+    const director = createDirector();
+    director.push([overtake(1, 'codosa')]); // priority 8
+    expect(director.tick(0).kind).toBe('SCHOOL_OVERTAKE');
+
+    director.push([leadChange(2, 'sldg')]); // priority 10
+    expect(director.tick(2400).kind).toBe('LEAD_CHANGE');
+  });
+});
+
+describe('director — per-kind dwell ceilings', () => {
+  it('holds a scene named in maxDwellByKind past the global ceiling', () => {
+    const director = createDirector({ maxDwellByKind: { HALFTIME: 120_000 } });
+    director.push([halftime(1)]);
+    expect(director.tick(0).kind).toBe('HALFTIME');
+
+    // Well past the GLOBAL default (7000ms) — still holding, because HALFTIME
+    // has its own ceiling.
+    expect(director.tick(60_000).kind).toBe('HALFTIME');
+    expect(director.tick(119_999).kind).toBe('HALFTIME');
+    expect(director.tick(120_000).kind).toBe('BOARD');
+  });
+
+  it('a kind with no override still falls back to the global maxDwellMs', () => {
+    const director = createDirector({ maxDwellByKind: { HALFTIME: 120_000 } });
+    director.push([overtake(1, 'codosa')]);
+    expect(director.tick(0).kind).toBe('SCHOOL_OVERTAKE');
+    expect(director.tick(6999).kind).toBe('SCHOOL_OVERTAKE');
+    expect(director.tick(7000).kind).toBe('BOARD');
   });
 });
 

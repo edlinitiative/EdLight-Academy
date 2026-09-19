@@ -72,8 +72,33 @@ export function useStage(tid: string | null | undefined, opts: UseStageOptions =
   // The director survives re-renders: it holds the seen-`seq` set and the
   // current scene's start time, and rebuilding it would restart the scene
   // underneath the viewer on every state change.
+  //
+  // `maxDwellByKind` is section K's own numbers for the moments the design
+  // calls "structural" — the ones the match is deliberately paused around,
+  // which a global ceiling built for a quiet lead change cannot also serve.
+  // Everything not listed here uses the director's default (7s).
   const directorRef = useRef<Director | null>(null);
-  if (directorRef.current === null) directorRef.current = createDirector();
+  if (directorRef.current === null) {
+    directorRef.current = createDirector({
+      maxDwellByKind: {
+        // "Priority 10, a 60s hold" — api/arena/state.ts's own comment on
+        // this event, matched here rather than left to the 7s default.
+        TOURNAMENT_OPEN: 60_000,
+        // Deliberately withholds. Typically 20–40s of real re-scoring; the
+        // ceiling is a safety net, not the reveal's actual clock — GRADING
+        // falls back to BOARD if it is reached first, and BOARD yields
+        // instantly to CHAMPION_SCHOOL/CHAMPION_INDIVIDUAL the moment an
+        // admin actually publishes, however long that review takes.
+        GRADING: 90_000,
+        CHAMPION_SCHOOL: 15_000,
+        CHAMPION_INDIVIDUAL: 10_000,
+        // "~2 min", own screen, top 3 + superlatives. Nothing else is
+        // fighting for the screen at this moment of a round, so it is safe
+        // to hold long without starving anything else.
+        HALFTIME: 120_000,
+      },
+    });
+  }
 
   // ── The tournament ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -92,6 +117,8 @@ export function useStage(tid: string | null | undefined, opts: UseStageOptions =
           state: str(d.state, 'draft'),
           startsAt: millis(d.startsAt),
           doorsAt: millis(d.doorsAt),
+          provisionalAt: millis(d.provisionalAt),
+          finalAt: millis(d.finalAt),
           questionCount: num(d.questionCount),
           currentIndex: num(d.currentQuestion?.index, -1),
           counts: {

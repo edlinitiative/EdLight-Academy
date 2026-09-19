@@ -73,6 +73,13 @@ export interface StageTournament {
   state: string;
   startsAt: number;
   doorsAt: number;
+  /** When `state.ts` wrote `grading → provisional`. 0 before it has. */
+  provisionalAt: number;
+  /** When `state.ts` wrote `provisional → final`. `PostGame`'s time origin,
+   *  the same way `doorsAt` is `PreShow`'s — a real stored moment, not "when
+   *  this component happened to mount", so reopening the page hours later
+   *  still shows the right beat rather than restarting the cycle from zero. */
+  finalAt: number;
   questionCount: number;
   currentIndex: number;
   counts: { schools: number; players: number; qualifiedSchools: number };
