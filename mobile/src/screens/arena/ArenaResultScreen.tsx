@@ -6,7 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Share2, Trophy, Target, Timer, Users } from 'lucide-react-native';
 import { useColors, useTheme, typeScale } from '../../theme/theme';
 import useStore from '../../contexts/store';
-import { useArenaResult } from '../../hooks/useArena';
+import { useArenaResult, useOpenArenaTournament } from '../../hooks/useArena';
 import StageEnter from '../../components/trivia/StageEnter';
 import ScoreCounter from '../../components/trivia/ScoreCounter';
 import PressableScale from '../../components/ui/PressableScale';
@@ -67,6 +67,15 @@ export default function ArenaResultScreen() {
     me, mySchool, schoolName, inTheFive, accuracyPct, avgMs, calculating, provisional,
     prizeCents, claimOpen,
   } = result;
+
+  // CORRECTION, from an external audit: "Prépare le prochain avec ton école"
+  // used to navigate('ArenaLobby', { tournamentId }) with THIS screen's own
+  // tournamentId — the event that had just ended. A student following that
+  // button landed back in the lobby for a tournament already over. The next
+  // one, if any is open for registration right now, is a different id this
+  // screen never had.
+  const nextOpen = useOpenArenaTournament();
+  const nextTournamentId = nextOpen.data && nextOpen.data.id !== tournamentId ? nextOpen.data.id : null;
 
   if (!tournamentId || result.absent) {
     return (
@@ -268,7 +277,17 @@ export default function ArenaResultScreen() {
             because a school needs five and that is not a favour to ask. */}
         <StageEnter playKey="result" index={5}>
           <PressableScale
-            onPress={() => { tapMedium(); navigation.navigate('ArenaLobby', { tournamentId }); }}
+            onPress={() => {
+              tapMedium();
+              if (nextTournamentId) {
+                navigation.navigate('ArenaLobby', { tournamentId: nextTournamentId });
+              } else {
+                // Nothing open yet — Home is where ArenaAnnounceCard will
+                // pick the next one up the moment it is, not a lobby for the
+                // event that just ended.
+                navigation.navigate('Main');
+              }
+            }}
             pressedScale={0.98}
             accessibilityRole="button"
             style={{

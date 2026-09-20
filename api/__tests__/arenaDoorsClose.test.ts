@@ -27,6 +27,7 @@ import {
   currentHolder,
   effectiveClaimState,
   parseClaimSubmission,
+  tiedAtUnclaimedRank,
   CLAIM_WINDOW_MS,
   FORBIDDEN_CLAIM_FIELDS,
   type ClaimRecord,
@@ -191,11 +192,41 @@ describe('summarize', () => {
 
 describe('planDoorsClose', () => {
   const plan = (over: Partial<Parameters<typeof planDoorsClose>[0]>) => planDoorsClose({
-    state: 'doors', frozenAt: null, freezeStartedAt: null, now: NOW, ...over,
+    state: 'doors', frozenAt: null, freezeStartedAt: null, startsAt: null, now: NOW, ...over,
   });
 
   it('freezes while the tournament is at `doors`', () => {
     expect(plan({})).toBe('freeze');
+  });
+
+  describe('CLOSED: a ten-minute waiting room can no longer freeze during its first minute', () => {
+    // The exact exploit the external audit found: the every-minute cron
+    // selects any tournament sitting in `doors`, and the old check was just
+    // `state === 'doors'` — true from the very first tick after
+    // `registration -> doors`, up to ten minutes before the room has
+    // actually filled.
+    const DOORS_OPENED = NOW - 60_000; // one cron tick after entering `doors`
+    const STARTS_AT = DOORS_OPENED + 10 * 60_000; // the scheduled first question
+
+    it('refuses to freeze one minute into a ten-minute doors window', () => {
+      expect(plan({ now: DOORS_OPENED, startsAt: STARTS_AT })).toBe('too_early');
+    });
+
+    it('still refuses with the room five minutes in — halfway is not doors close', () => {
+      expect(plan({ now: DOORS_OPENED + 5 * 60_000, startsAt: STARTS_AT })).toBe('too_early');
+    });
+
+    it('freezes the instant the scheduled start time arrives', () => {
+      expect(plan({ now: STARTS_AT, startsAt: STARTS_AT })).toBe('freeze');
+    });
+
+    it('freezes on a late cron tick after the scheduled start time', () => {
+      expect(plan({ now: STARTS_AT + 90_000, startsAt: STARTS_AT })).toBe('freeze');
+    });
+
+    it('fails open on a malformed legacy document with no startsAt, rather than wedging forever', () => {
+      expect(plan({ now: DOORS_OPENED, startsAt: null })).toBe('freeze');
+    });
   });
 
   it('is idempotent: a second run replays instead of re-freezing', () => {
@@ -505,6 +536,45 @@ describe('currentHolder', () => {
 
   it('is undefined when nobody was ever offered the prize', () => {
     expect(currentHolder([], 1, NOW)).toBeUndefined();
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// E8, from an external audit: a tie at a paying rank must stay a human
+// decision — the self-service claim fallback must never mint a second
+// competing claim for a rank someone else already has one at.
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('tiedAtUnclaimedRank', () => {
+  it('is false when nobody has claimed this rank at all', () => {
+    expect(tiedAtUnclaimedRank([], 2, 'w2')).toBe(false);
+  });
+
+  it('CLOSED: a tied finisher can no longer self-claim a rank someone else already holds', () => {
+    // podiumClaims wrote a placeholder for w1 only — w2, tied at rank 2, has
+    // no document of their own yet and is exactly who this guards against.
+    const claims = [claim({ uid: 'w1', rank: 2, state: 'open', expiresAt: NOW + CLAIM_WINDOW_MS })];
+    expect(tiedAtUnclaimedRank(claims, 2, 'w2')).toBe(true);
+  });
+
+  it('is false for the finisher who already holds the only claim at their own rank', () => {
+    // Not a collision with themselves — this is the ordinary, non-tied case.
+    const claims = [claim({ uid: 'w1', rank: 1, state: 'open', expiresAt: NOW + CLAIM_WINDOW_MS })];
+    expect(tiedAtUnclaimedRank(claims, 1, 'w1')).toBe(false);
+  });
+
+  it('still blocks even once the other claim has expired or was rejected — reassigning it is still a human call', () => {
+    expect(tiedAtUnclaimedRank(
+      [claim({ uid: 'w1', rank: 2, state: 'expired', expiresAt: NOW - 10_000 })], 2, 'w2',
+    )).toBe(true);
+    expect(tiedAtUnclaimedRank(
+      [claim({ uid: 'w1', rank: 2, state: 'rejected', expiresAt: NOW + CLAIM_WINDOW_MS })], 2, 'w2',
+    )).toBe(true);
+  });
+
+  it('ignores claims at a different rank entirely', () => {
+    const claims = [claim({ uid: 'w1', rank: 1, state: 'open', expiresAt: NOW + CLAIM_WINDOW_MS })];
+    expect(tiedAtUnclaimedRank(claims, 2, 'w2')).toBe(false);
   });
 });
 

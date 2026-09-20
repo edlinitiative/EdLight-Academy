@@ -11,7 +11,22 @@
  *    its answers, and that is exactly what a tournament cannot do.
  *  - The CLOCK is the server's. `clientShownAt` is a report, clamped by
  *    shared/arena/scoring.ts into [opensAt, opensAt + 3s]; the lie is bounded at
- *    three seconds and can never gain more.
+ *    three seconds and can never gain more — WITHIN an open window.
+ *  - LATENESS is decided from the LIVE DOCUMENT'S ACTUAL STATE
+ *    (`decideSubmission` in `_shared.ts`), not from the clock alone, and a
+ *    late submission scores ZERO POINTS UNCONDITIONALLY (enforced inside
+ *    `scoreAnswer`, gated on the same `late` flag `correct` already is).
+ *    CORRECTION, from an external audit: the 3-second clamp above bounds a
+ *    claim relative to `opensAt`, not relative to how late the submission
+ *    actually is, so a client that read the revealed key at close and
+ *    resubmitted within ~3s afterward — claiming the maximum render delay —
+ *    used to compute an elapsed time that still cleared the half-tier
+ *    boundary. A force-close made this worse: it reveals the key and writes
+ *    `closedAt` without moving the announced `closesAt`, so a submission
+ *    between a forced close and the original schedule was previously
+ *    classified on time and scored in FULL. Both close now, because lateness
+ *    is a fact about the live document, not an inference from a clock a
+ *    client partially controls.
  *  - TIERING and the clamp come from scoreAnswer(). Not re-implemented here.
  *    A scoring rule written twice is a rule that disagrees with itself at 18:40
  *    on a live stream.
@@ -21,7 +36,11 @@
  *     clientShownAt?: number, focusLosses?: number }
  *
  * Response 200:
- *   { ok: true, correct, tier, points, score, streak, late, duplicate }
+ *   { ok: true, recorded: true, duplicate }
+ *   CORRECTION, this comment used to list correct/tier/points/score/streak/late
+ *   as response fields — they are not sent. See "THE RESPONSE REVEALS NOTHING"
+ *   below for why: the reveal happens once, for the whole room, when the
+ *   question closes.
  *
  * Errors: 400 invalid input · 403 not_registered / not_eligible ·
  *         404 tournament_not_found / question_not_found ·
@@ -60,6 +79,16 @@ import {
 const MAX_CHOICES = 12;
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  // CORRECTION, from an external audit: this used to be taken after
+  // requireAuthDecoded() (a JWT signature verification) and enforceRateLimit()
+  // (a Firestore read-modify-write, now a transaction — see rateLimit.ts's own
+  // fix for why), both of which cost real milliseconds and neither of which
+  // has anything to do with the student's connection. A submission whose
+  // tier boundary those milliseconds happened to straddle was being charged
+  // for backend latency it never caused. Taken here, first line of the
+  // handler, it reflects only when the request actually arrived.
+  const serverReceivedAt = Date.now();
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' });
     return;
@@ -70,11 +99,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const { uid } = decoded;
 
   if (!(await enforceRateLimit(res, uid, 'arena-answer'))) return;
-
-  // The server's receipt time, taken as early as possible. Everything after
-  // this line — a slow Firestore read, a cold start — must not be charged to
-  // the student's tier, because none of it is their connection.
-  const serverReceivedAt = Date.now();
 
   // ── Validate input ──────────────────────────────────────────────────────
   const body = parseBody(req);
@@ -147,8 +171,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const live = liveSnap.data() ?? {};
     const opensAt = toMillis(live.opensAt);
     const closesAt = toMillis(live.closesAt);
+    // Present after ANY close, natural or forced — see `decideSubmission`'s
+    // own comment on why this, not `closesAt`, is what "actually closed"
+    // means once an admin can move it early.
+    const closedAt = toMillis(live.closedAt);
 
-    const decision = decideSubmission({ opensAt, closesAt, serverReceivedAt });
+    const decision = decideSubmission({ opensAt, closesAt, closedAt, serverReceivedAt });
     if (!decision.accept) {
       // `too_late` is past `closesAt + LATE_GRACE_MS` — by then the next
       // question is open, and accepting would let a client bank answers and
@@ -171,11 +199,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     // ── Score ─────────────────────────────────────────────────────────────
     // opensAt is non-null here: decideSubmission rejected the alternative.
+    //
+    // `late: decision.late` is what closes the CVE an external audit found:
+    // scoreAnswer hard-zeros points whenever this is true, rather than
+    // relying on the timing arithmetic to happen to land past a tier
+    // boundary — which a client controlling `clientShownAt` could defeat by
+    // claiming the maximum allowed render delay. `isImpossible` deliberately
+    // reads the UNGATED input: an early submission is impossible on the
+    // clock alone, regardless of lateness, and the two checks must not be
+    // allowed to cancel each other out.
     const scoreInput = {
       correct,
       opensAt: opensAt as number,
       clientShownAt,
       serverReceivedAt,
+      late: decision.late,
     };
     const scored = scoreAnswer(scoreInput);
     const impossible = isImpossible(scoreInput);
@@ -274,13 +312,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
        * rather than erased — Decision 2.
        *
        * Those two facts together are a hole: after the close, anyone can read
-       * the revealed key and submit it. The tier already scores that zero, so
-       * no points ride on it — but `correct` is school tiebreaker 3 and
-       * `fullTierCount` is individual tiebreaker 3, and a stream of "correct"
-       * late answers would move a school up a podium it did not earn.
+       * the revealed key and submit it. `scored.points` is already
+       * unconditionally zero for a late answer — enforced inside
+       * `scoreAnswer`, not by this endpoint's arithmetic happening to land
+       * there — but `correct` is school tiebreaker 3 and `fullTierCount` is
+       * individual tiebreaker 3, and a stream of "correct" late answers would
+       * move a school up a podium it did not earn even at zero points.
        *
-       * So a late submission is recorded in full, with its own flag, and
-       * contributes to nothing that ranks. It appears; it does not count.
+       * So a late submission is recorded in full, with its own flag, scores
+       * nothing, and contributes to nothing else that ranks either. It
+       * appears; it does not count.
        */
       const countsTowardRanking = !decision.late;
 
@@ -340,16 +381,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // NOTE — what is NOT in this response: `answerIndex`, the option text, or
     // anything else that would tell a client which choice was right. `correct`
     // is about the caller's own submission and nothing else.
-    //
-    // KNOWN RESIDUAL VECTOR, recorded here because the fix is not in this file:
-    // five colluding accounts can each submit a different option and infer the
-    // key from who was told `correct: true`, then feed it to a sixth. Suppressing
-    // `correct` here would not close it — Firestore rules let a player read
-    // their own `players/{uid}` row, so the score increment reveals the same bit
-    // in real time. Closing it means deferring the visible score until the
-    // window shuts (a rules/aggregation change, out of scope for these three
-    // endpoints). Priced, meanwhile, by the tier boundary: the round trip
-    // through five accounts lands well past 12s.
     /*
      * THE RESPONSE REVEALS NOTHING. Not whether the answer was right, not the
      * tier, not the points, not the running score.

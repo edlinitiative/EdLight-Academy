@@ -8,7 +8,7 @@
  * get the ordering wrong and either nothing gets announced while a room is
  * filling, or last month's tournament outranks this month's.
  */
-import { pickOpenTournament, type ArenaTournament } from '../../services/arenaService';
+import { pickOpenTournament, pickActiveTournament, type ArenaTournament } from '../../services/arenaService';
 
 jest.mock('../../services/firebase', () => ({ auth: {}, db: {} }));
 jest.mock('firebase/firestore', () => ({
@@ -53,5 +53,45 @@ describe('pickOpenTournament', () => {
       row('sooner', 'registration', 1000),
     ]);
     expect(result?.id).toBe('sooner');
+  });
+});
+
+/**
+ * CLOSED: ArenaAnnounceCard used to self-hide the instant a tournament left
+ * `doors`, removing the only way back for a student who registered, left the
+ * screen, and returned mid-event. `pickActiveTournament` is the query behind
+ * the fix — deliberately a DIFFERENT state set than pickOpenTournament's,
+ * because "can I sign up" and "is there somewhere I could get back to" are
+ * different questions with different answers once a tournament has started.
+ */
+describe('pickActiveTournament', () => {
+  it('is silent when nothing is in progress', () => {
+    expect(pickActiveTournament([])).toBeNull();
+    expect(pickActiveTournament([row('x', 'registration')])).toBeNull();
+    expect(pickActiveTournament([row('x', 'doors')])).toBeNull();
+    expect(pickActiveTournament([row('x', 'final')])).toBeNull();
+    expect(pickActiveTournament([row('x', 'draft')])).toBeNull();
+    expect(pickActiveTournament([row('x', 'void')])).toBeNull();
+  });
+
+  it('finds a tournament that is live', () => {
+    expect(pickActiveTournament([row('tonight', 'live')])?.id).toBe('tonight');
+  });
+
+  it('finds one being graded, and one awaiting review', () => {
+    expect(pickActiveTournament([row('g', 'grading')])?.id).toBe('g');
+    expect(pickActiveTournament([row('p', 'provisional')])?.id).toBe('p');
+  });
+
+  it('prefers a live question over grading over provisional — furthest along is most urgent', () => {
+    expect(pickActiveTournament([row('prov', 'provisional'), row('live', 'live')])?.id).toBe('live');
+    expect(pickActiveTournament([row('prov', 'provisional'), row('grad', 'grading')])?.id).toBe('grad');
+  });
+
+  it('never returns a tournament still open for sign-up, even alongside an active one', () => {
+    // Two events at once should not happen in practice, but if it did, this
+    // hook's whole point is re-entry into what has already started.
+    const result = pickActiveTournament([row('open', 'registration'), row('running', 'live')]);
+    expect(result?.id).toBe('running');
   });
 });

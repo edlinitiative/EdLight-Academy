@@ -93,6 +93,13 @@ const draft = (type: ArenaEventDraft['type'] = 'ROUND_START'): ArenaEventDraft =
 
 // ── The race ──────────────────────────────────────────────────────────────
 
+/** Unwraps commitBoard's discriminated result, failing loudly on an
+ *  unexpected supersede rather than silently reading undefined fields. */
+function committed(result: Awaited<ReturnType<typeof commitBoard>>) {
+  if (result.superseded) throw new Error('commitBoard unexpectedly reported superseded');
+  return result;
+}
+
 describe('commitBoard — seq allocation under a race with an emitter', () => {
   it('the OLD pattern (allocate once, write without a fresh read) collides and goes backwards', async () => {
     // Standings sit at seq 10 when a tick begins. This is what the OLD
@@ -140,7 +147,7 @@ describe('commitBoard — seq allocation under a race with an emitter', () => {
       seq: 0, computedAt: 0, schools: [school()], individuals: [player()],
     } as unknown as StoredStandings;
 
-    const result = await commitBoard(db, 't1', board, numberDrafts([draft('LEAD_CHANGE')], staleTopOfTickSeq, 0), staleTopOfTickSeq);
+    const result = committed(await commitBoard(db, 't1', board, numberDrafts([draft('LEAD_CHANGE')], staleTopOfTickSeq, 0), staleTopOfTickSeq, 0));
 
     // Allocated ABOVE the emitter's seq, from a FRESH read — not from the stale
     // value this tick started with.
@@ -161,13 +168,13 @@ describe('commitBoard — seq allocation under a race with an emitter', () => {
     const staleSeq = 6;
 
     const boardA: StoredStandings = { seq: 0, computedAt: 0, schools: [], individuals: [] } as unknown as StoredStandings;
-    const a = await commitBoard(db, 't1', boardA, numberDrafts([draft('LEAD_CHANGE')], staleSeq, 0), staleSeq);
+    const a = committed(await commitBoard(db, 't1', boardA, numberDrafts([draft('LEAD_CHANGE')], staleSeq, 0), staleSeq, 0));
     expect(a.seq).toBe(6);
 
     // A second tick that ALSO started from the seq-5 read (it ran concurrently
     // with the first, before either had written) must not repeat seq 6.
     const boardB: StoredStandings = { seq: 0, computedAt: 0, schools: [], individuals: [] } as unknown as StoredStandings;
-    const b = await commitBoard(db, 't1', boardB, numberDrafts([draft('SCHOOL_OVERTAKE')], staleSeq, 0), staleSeq);
+    const b = committed(await commitBoard(db, 't1', boardB, numberDrafts([draft('SCHOOL_OVERTAKE')], staleSeq, 0), staleSeq, 0));
     expect(b.seq).toBe(7);
     expect(b.events[0].seq).not.toBe(a.events[0].seq);
   });
@@ -175,10 +182,80 @@ describe('commitBoard — seq allocation under a race with an emitter', () => {
   it('never goes backwards even if the standings document is somehow missing at commit time', async () => {
     const db = makeFakeDb({});
     const board: StoredStandings = { seq: 0, computedAt: 0, schools: [], individuals: [] } as unknown as StoredStandings;
-    const result = await commitBoard(db, 't1', board, numberDrafts([draft()], 40, 0), 40);
+    const result = committed(await commitBoard(db, 't1', board, numberDrafts([draft()], 40, 0), 40, 0));
     // previousSeq is a FLOOR precisely for this case: a fresh-but-empty read
     // must not be read as "nothing has ever happened" and restart numbering at 1.
     expect(result.seq).toBeGreaterThanOrEqual(40);
+  });
+});
+
+/*
+ * E10, from an external audit: the seq fix above closes the RACE on event
+ * document ids, but never protected the BOARD CONTENTS from a slower race —
+ * two overlapping aggregation ticks (an admin's manual "recompute" pressed
+ * while the cron is mid-flight, or any overlapping invocation) where the one
+ * that STARTED SECOND finishes FIRST. Its board is complete and correct as of
+ * when IT read the schools; the other tick, still running its own older
+ * queries, would otherwise finish moments later and overwrite that fresher
+ * board with data read before it existed.
+ */
+describe('commitBoard — a stale board cannot overwrite a fresher one', () => {
+  it('refuses to write when a newer computedAt is already stored', async () => {
+    const db = makeFakeDb({
+      'tournaments/t1/standings/current': { seq: 5, computedAt: 2_000 },
+    });
+    // This tick started its queries when computedAt was still 1_000 — before
+    // the OTHER tick (computedAt 2_000, already stored above) committed.
+    const staleBoard: StoredStandings = {
+      seq: 0, computedAt: 1_000, schools: [], individuals: [],
+    } as unknown as StoredStandings;
+
+    const result = await commitBoard(db, 't1', staleBoard, numberDrafts([draft()], 6, 0), 5, 1_000);
+
+    expect(result.superseded).toBe(true);
+    // Nothing was written — the fresher board (and its seq) stand untouched.
+    expect((db as any)._store.get('tournaments/t1/standings/current').data.computedAt).toBe(2_000);
+    expect((db as any)._store.get('tournaments/t1/standings/current').data.seq).toBe(5);
+  });
+
+  it('proceeds normally when nothing else has committed since this tick started', async () => {
+    const db = makeFakeDb({
+      'tournaments/t1/standings/current': { seq: 5, computedAt: 1_000 },
+    });
+    const board: StoredStandings = {
+      seq: 0, computedAt: 1_000, schools: [school()], individuals: [],
+    } as unknown as StoredStandings;
+
+    // Same computedAt this tick started with — the ordinary case.
+    const result = committed(await commitBoard(db, 't1', board, numberDrafts([draft()], 6, 0), 5, 1_000));
+    expect(result.seq).toBe(6);
+    expect((db as any)._store.get('tournaments/t1/standings/current').data.computedAt).toBe(1_000);
+  });
+
+  it('the SECOND of two overlapping ticks to finish wins, and the first to finish afterward is superseded', async () => {
+    const db = makeFakeDb({
+      'tournaments/t1/standings/current': { seq: 5, computedAt: 1_000 },
+    });
+    // Both ticks read computedAt=1_000 before either committed.
+    const boardOld: StoredStandings = {
+      seq: 0, computedAt: 1_000, schools: [school({ key: 'stale-view' })], individuals: [],
+    } as unknown as StoredStandings;
+    const boardNew: StoredStandings = {
+      seq: 0, computedAt: 1_500, schools: [school({ key: 'fresh-view' })], individuals: [],
+    } as unknown as StoredStandings;
+
+    // The tick that started SECOND (fresher data) commits FIRST.
+    const first = committed(await commitBoard(db, 't1', boardNew, numberDrafts([draft('LEAD_CHANGE')], 6, 0), 5, 1_000));
+    expect(first.seq).toBe(6);
+
+    // The tick that started FIRST, still holding older data, finishes after —
+    // and must not clobber what just landed.
+    const second = await commitBoard(db, 't1', boardOld, numberDrafts([draft('SCHOOL_OVERTAKE')], 6, 0), 5, 1_000);
+    expect(second.superseded).toBe(true);
+
+    const finalBoard = (db as any)._store.get('tournaments/t1/standings/current').data;
+    expect(finalBoard.schools[0].key).toBe('fresh-view');
+    expect(finalBoard.computedAt).toBe(1_500);
   });
 });
 

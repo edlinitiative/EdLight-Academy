@@ -42,6 +42,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/arena/advance",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/arena/claim?action=sweep",
       "schedule": "0 * * * *"
     }

@@ -146,6 +146,14 @@ export interface DoorsClosePlanInput {
   frozenAt: number | null;
   /** `rosterFreezeStartedAt` in ms — an attempt currently holding the lease. */
   freezeStartedAt: number | null;
+  /**
+   * `startsAt` in ms — the scheduled moment doors close and the first
+   * question fires (`api/arena/state.ts`'s `open()` requires every
+   * tournament to carry one). `null` only for a malformed legacy document;
+   * treated as "no schedule to gate on" so a freeze is never blocked by data
+   * that predates this field, rather than wedging the tournament forever.
+   */
+  startsAt: number | null;
   now: number;
 }
 
@@ -160,8 +168,15 @@ export interface DoorsClosePlanInput {
  *     — that is what makes this endpoint safe to wire into a cron that retries.
  *  2. AN ATTEMPT IN FLIGHT backs off. Two concurrent scans during `doors` read
  *     different presence and would disagree.
- *  3. `doors` FREEZES. This is the only state where the answer is the one
- *     Decision 3 asks for: measured at doors close, on players present.
+ *  3. `doors` FREEZES, but only once the room has actually had its ten
+ *     minutes. CORRECTION, from an external audit: this used to freeze on the
+ *     very first cron tick after `registration -> doors`, because the check
+ *     was "is the state `doors`" with no awareness of how long the doors had
+ *     been open — so a ten-minute waiting room could have its qualification
+ *     decided during its first minute, on whoever happened to have loaded the
+ *     app already. Doors close, and qualification is measured, at the
+ *     tournament's scheduled `startsAt` — not at the first sight of the
+ *     `doors` state.
  *  4. ANYTHING PAST `doors` REFUSES. The board is already ranking, and a fresh
  *     freeze could hand a school a different verdict than the one announced.
  *     `void` refuses too: an event that did not count has no roster to publish.
@@ -170,7 +185,7 @@ export interface DoorsClosePlanInput {
  *     entire tournament.
  */
 export function planDoorsClose(input: DoorsClosePlanInput): DoorsClosePlan {
-  const { state, frozenAt, freezeStartedAt, now } = input;
+  const { state, frozenAt, freezeStartedAt, startsAt, now } = input;
 
   if (frozenAt !== null) return 'already_frozen';
 
@@ -178,7 +193,10 @@ export function planDoorsClose(input: DoorsClosePlanInput): DoorsClosePlan {
     return 'in_progress';
   }
 
-  if (state === 'doors') return 'freeze';
+  if (state === 'doors') {
+    if (startsAt !== null && now < startsAt) return 'too_early';
+    return 'freeze';
+  }
   if (state === 'draft' || state === 'registration' || state === null) return 'too_early';
   return 'too_late';
 }
@@ -575,6 +593,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         state,
         frozenAt: toMillis(tournament.rosterFrozenAt),
         freezeStartedAt: toMillis(tournament.rosterFreezeStartedAt),
+        startsAt: toMillis(tournament.startsAt),
         now,
       });
 
@@ -593,6 +612,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         plan,
         state,
         minPlayers,
+        startsAt: toMillis(tournament.startsAt),
         summary: (tournament.rosterSummary ?? null) as RosterSummary | null,
       };
     });
@@ -614,10 +634,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     if (claim.plan === 'too_early') {
+      // Two different reasons land here: the room has not opened at all yet
+      // (`state` before `doors`), or it is open but hasn't had its scheduled
+      // ten minutes (`state === 'doors'`, `now < startsAt`) — see planDoorsClose.
       res.status(409).json({
         error: 'doors_not_closed',
         state: claim.state,
-        message: 'Presence has not been collected yet; freezing now would unqualify every school.',
+        startsAt: claim.startsAt,
+        message: claim.state === 'doors'
+          ? 'The doors have not been open long enough yet; freezing now would catch the room only partly filled.'
+          : 'Presence has not been collected yet; freezing now would unqualify every school.',
       });
       return;
     }

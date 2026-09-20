@@ -91,6 +91,32 @@ export default function Direct() {
   const atTheDoors = tournament?.state === 'doors' || tournament?.state === 'registration';
   const isFinal = tournament?.state === 'final';
 
+  /*
+   * CORRECTION, from an external visual-design review: this badge used to say
+   * "EN DIRECT" for every state except `final` — including `registration`,
+   * `doors`, and `provisional`, none of which are anything actually being
+   * played live. "Do not use a permanent EN DIRECT badge to conceal stale
+   * data or a delayed event" is a direct, low-cost, truthfulness fix — the
+   * same principle the scoring fixes elsewhere in this pass are about,
+   * applied to a label instead of a number.
+   */
+  const badgeLabel = (() => {
+    switch (tournament?.state) {
+      case 'live':
+      case 'grading':
+        return t('EN DIRECT', 'AN DIRÈK');
+      case 'doors':
+      case 'registration':
+        return t('BIENTÔT', 'BYENTO');
+      case 'provisional':
+        return t('RÉSULTATS PROVISOIRES', 'REZILTA PWOVIZWA');
+      case 'final':
+        return t('TERMINÉ', 'FINI');
+      default:
+        return t('EN DIRECT', 'AN DIRÈK');
+    }
+  })();
+
   const mapElement = (
     <HaitiMap
       places={map.places}
@@ -129,8 +155,13 @@ export default function Direct() {
             </div>
           </div>
           <span className="live__onair">
-            <span className="live__onair-dot" />
-            {isFinal ? t('TERMINÉ', 'FINI') : t('EN DIRECT', 'AN DIRÈK')}
+            {/* The pulsing dot means "something is happening right now" — it
+                would contradict "BIENTÔT" or "TERMINÉ" next to it, so it only
+                renders for the two states that are actually live. */}
+            {tournament?.state === 'live' || tournament?.state === 'grading'
+              ? <span className="live__onair-dot" />
+              : null}
+            {badgeLabel}
           </span>
         </header>
 

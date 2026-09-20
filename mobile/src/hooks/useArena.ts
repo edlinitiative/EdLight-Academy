@@ -33,6 +33,7 @@ import useStore from '../contexts/store';
 import {
   subscribeTournament,
   subscribeOpenTournament,
+  subscribeActiveTournament,
   subscribeLiveQuestion,
   subscribeRegistration,
   subscribeStandings,
@@ -118,6 +119,28 @@ export function useOpenArenaTournament(): LiveValue<ArenaTournament> {
   useEffect(() => {
     let alive = true;
     const unsub = subscribeOpenTournament(
+      (t) => { if (alive) setValue({ data: t, loading: false, error: false }); },
+      () => { if (alive) setValue({ data: null, loading: false, error: true }); },
+    );
+    return () => { alive = false; unsub(); };
+  }, []);
+
+  return value;
+}
+
+/**
+ * Is there an in-progress tournament (past sign-up) at all, anywhere?
+ *
+ * Whether THIS student can get back into it is a separate question this hook
+ * cannot answer — it does not know who is asking. See ArenaAnnounceCard,
+ * which pairs this with `useArenaMyRegistration` before offering re-entry.
+ */
+export function useActiveArenaTournament(): LiveValue<ArenaTournament> {
+  const [value, setValue] = useState<LiveValue<ArenaTournament>>(() => ({ data: null, loading: true, error: false }));
+
+  useEffect(() => {
+    let alive = true;
+    const unsub = subscribeActiveTournament(
       (t) => { if (alive) setValue({ data: t, loading: false, error: false }); },
       () => { if (alive) setValue({ data: null, loading: false, error: true }); },
     );

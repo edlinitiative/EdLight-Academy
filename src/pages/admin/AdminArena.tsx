@@ -50,11 +50,18 @@ import { HAITI_DEPARTMENTS } from '../../data/haitiGeo';
  *
  * TWO THINGS THIS PAGE IS DELIBERATELY HONEST ABOUT.
  *
- * · **The advance is automated.** Per Decision 2 (2026-09-18) the round clock
- *   runs itself and the manual controls are a SAFETY OVERRIDE — styled as
- *   secondary, confirmed before they fire, and labelled as such. A console
- *   whose most prominent button is "next question" is a console someone drives
- *   by hand, and a tournament driven by hand desynchronises from the broadcast.
+ * · **The host paces the show; the scheduler is the floor under them.**
+ *   CORRECTION, from an external audit (E3). This used to say the round clock
+ *   "runs itself" and that the manual controls were a safety override — while
+ *   `vercel.json` scheduled no runner for `api/arena/advance` at all, so the
+ *   clock moved only when somebody pressed a button. It is scheduled now, but
+ *   Vercel's one-minute floor paces a question at about two minutes against a
+ *   designed cadence of 20s + 10s, so the cron is what guarantees a tournament
+ *   cannot STALL unattended, not what gives it its rhythm. Under a sub-minute
+ *   runner the original wording becomes true again and should come back with
+ *   it — see the note on `api/arena/advance.ts`. Until then a console that
+ *   tells the host their presses are an emergency measure is a console lying
+ *   to the one person who has to keep the show moving.
  *
  * · **A disabled control is refused, not broken.** Every state-changing
  *   control runs through `canTransition` before it is offered, and one that is
@@ -1107,12 +1114,12 @@ export default function AdminArena() {
         'Kòmanse tounwa a ? Kalifikasyon an evalye sou jwè ki prezan, pa sou moun ki enskri.',
       ));
     }
-    if (control === 'forceClose' || control === 'forceNext') {
-      return window.confirm(t(
-        'L’avance est automatique. Cette commande est une sécurité : elle désynchronise l’horloge du direct si vous la pressez au mauvais moment. Continuer ?',
-        'Avans la otomatik. Kòmand sa a se yon sekirite : li ka dekale revèy la ak dirèk la si w peze l nan move moman. Kontinye ?',
-      ));
-    }
+    // No confirmation on the two pacing controls. They used to be framed as an
+    // emergency override of an automatic clock — but that clock does not run at
+    // broadcast speed (see the note at the top of this file), so these are what
+    // actually moves a tournament through its questions. A modal in front of
+    // every press is roughly fifty modals a night, in front of the one person
+    // who cannot afford to be slowed down.
     return true;
   }, [tournament, t]);
 
@@ -1405,12 +1412,12 @@ export default function AdminArena() {
 
       <div className="admin-card" style={{ padding: 18, marginBottom: 18 }}>
         <div className="admin-tile__label" style={{ marginBottom: 6 }}>
-          {t('SÉCURITÉ — À N’UTILISER QU’EN CAS DE PROBLÈME', 'SEKIRITE — SÈLMAN SI GEN PWOBLÈM')}
+          {t('RYTHME DU DIRECT — C’EST VOUS QUI PILOTEZ', 'RITM DIRÈK LA — SE OU MENM K AP PILOTE')}
         </div>
         <p className="admin-page__subtitle" style={{ marginBottom: 12, fontSize: 12 }}>
           {t(
-            'L’avance des questions est automatique : la fenêtre se ferme toujours sur son minuteur, puis une pause d’environ 10 s laisse arriver les réponses tardives et révèle la bonne réponse. Ces commandes contournent ce minuteur, une étape à la fois.',
-            'Avans kesyon yo otomatik : fenèt la toujou fèmen sou revèy li, apre sa yon poz apeprè 10 s kite repons ki an reta yo rive epi montre bon repons lan. Kòmand sa yo kontoune revèy sa a, yon etap alafwa.',
+            'C’est vous qui donnez le rythme : ces commandes ferment la question en cours et ouvrent la suivante, une étape à la fois. La cadence prévue est de 20 s de question puis une pause d’environ 10 s, qui laisse arriver les réponses tardives et révèle la bonne réponse. Une tâche planifiée avance le tournoi une fois par minute : c’est un filet de sécurité pour qu’un tournoi ne se bloque jamais, pas l’horloge du direct — elle est trop lente pour ça.',
+            'Se ou menm ki bay ritm lan : kòmand sa yo fèmen kesyon an epi louvri pwochen an, yon etap alafwa. Kadans ki prevwa a se 20 s kesyon apre sa yon poz apeprè 10 s, ki kite repons an reta yo rive epi ki montre bon repons lan. Gen yon travay pwograme ki fè tounwa a avanse yon fwa chak minit : se yon filè sekirite pou tounwa a pa janm bloke, se pa revèy dirèk la — li twò lan pou sa.',
           )}
         </p>
         <div

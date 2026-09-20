@@ -47,6 +47,13 @@ export interface AnswerInput {
   clientShownAt: number;
   /** Server time the submission was received. The only trusted end of the span. */
   serverReceivedAt: number;
+  /**
+   * Landed after the question's window actually closed — `decideSubmission`'s
+   * call, made from the live document's real state, not from this function's
+   * own arithmetic. See the CORRECTION note on `scoreAnswer` for why this
+   * field exists at all.
+   */
+  late?: boolean;
 }
 
 export interface AnswerScore {
@@ -121,6 +128,24 @@ export function isImpossible(input: AnswerInput): boolean {
  * identical wrong-answer sequences across accounts are two of the strongest
  * cheating signals we have, and dropping the timing on wrong answers would
  * throw away half the evidence.
+ *
+ * CORRECTION, found in an external audit and confirmed by tracing the exploit
+ * by hand: a LATE answer must score exactly like a WRONG one — tier and
+ * elapsed reported honestly for the record, points hard-zeroed — and before
+ * this it did not. `RENDER_GRACE_MS` bounds `clientShownAt` from ABOVE at
+ * `opensAt + 3000`, not from below relative to `serverReceivedAt`; a client
+ * that reads the revealed key at close and resubmits within roughly three
+ * seconds afterward, claiming the maximum allowed render delay, computed an
+ * `elapsedMs` that still landed inside the half-tier boundary and was awarded
+ * 500 points. A comment near the call site asserted the tier math already
+ * made this "normally zero" — it did not, and the fix is not a tighter clamp
+ * (any fixed bound is still a number a client can hit exactly); it is that
+ * lateness must never reach the points calculation as a TIMING question at
+ * all. `late` is decided by `decideSubmission` from the live document's own
+ * state — including a forced early close, which reveals the key without
+ * moving the scheduled `closesAt` this function used to trust alone — and
+ * this function treats it exactly like `correct: false`: zero, unconditionally,
+ * whatever the clamp says.
  */
 export function scoreAnswer(input: AnswerInput): AnswerScore {
   const reported = clampShownAt(input.clientShownAt, input.opensAt);
@@ -141,7 +166,12 @@ export function scoreAnswer(input: AnswerInput): AnswerScore {
   const elapsedMs = input.serverReceivedAt - clampedShownAt;
 
   const tier = tierFor(elapsedMs);
-  return { tier, points: input.correct ? tierPoints(tier) : 0, elapsedMs, clampedShownAt };
+  // Tier and elapsed stay honest either way — a reviewer needs to see "this
+  // was a fast answer that arrived late" and a slow one that also arrived
+  // late are different findings. Only the points are gated, the same way a
+  // wrong answer's are: `correct` and `!late` both have to hold.
+  const points = (input.correct && !input.late) ? tierPoints(tier) : 0;
+  return { tier, points, elapsedMs, clampedShownAt };
 }
 
 // ── Team scoring ────────────────────────────────────────────────────────────

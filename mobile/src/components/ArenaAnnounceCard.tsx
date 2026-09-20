@@ -4,7 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Swords, ChevronRight } from 'lucide-react-native';
 import useStore from '../contexts/store';
-import { useOpenArenaTournament } from '../hooks/useArena';
+import { useOpenArenaTournament, useActiveArenaTournament, useArenaMyRegistration } from '../hooks/useArena';
+import type { ArenaTournament } from '../services/arenaService';
 import PressableScale from './ui/PressableScale';
 import { useColors, useTheme, typeScale } from '../theme/theme';
 import { tapLight } from '../utils/haptics';
@@ -38,33 +39,60 @@ export default function ArenaAnnounceCard() {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const { data: open } = useOpenArenaTournament();
-  if (!open) return null;
+  // CORRECTION, from an external audit: this card used to self-hide the
+  // instant a tournament left `doors`, which also removed the only way BACK
+  // for a student who registered, left the screen, and returned mid-event.
+  // Both hooks are called unconditionally, before any early return, the same
+  // rule ArenaLiveScreen's own map-places hook follows — the branch below
+  // must never change which hooks ran on the previous render.
+  const { data: active } = useActiveArenaTournament();
+  const activeId = !open && active ? active.id : null;
+  const { data: myRegistration } = useArenaMyRegistration(activeId);
+
+  const reentry = !open && active && myRegistration ? active : null;
+  const tournament: ArenaTournament | null = open ?? reentry;
+  if (!tournament) return null;
 
   // `ArenaTournament` carries only `title` — the tournament document's Kreyòl
   // title never made it into this type's parser. Worth fixing there if a
   // Kreyòl title is ever actually authored; today it always matches French.
-  const title = open.title;
+  const title = tournament.title;
 
   let dateStr = '';
-  if (open.startsAt) {
+  if (tournament.startsAt) {
     try {
       dateStr = new Intl.DateTimeFormat(isCreole ? 'fr-HT' : 'fr-FR', {
         day: 'numeric', month: 'long',
-      }).format(new Date(open.startsAt));
+      }).format(new Date(tournament.startsAt));
     } catch {
       dateStr = '';
     }
   }
 
-  const subtitle = open.state === 'doors'
-    ? t('Les portes sont ouvertes maintenant', 'Pòt yo louvri kounye a')
-    : dateStr
-      ? t(`Inscris ton école pour le ${dateStr}`, `Enskri lekòl ou pou ${dateStr}`)
-      : t('Inscris ton école dès maintenant', 'Enskri lekòl ou kounye a');
+  const subtitle = reentry
+    ? (reentry.state === 'provisional'
+      ? t('Tes résultats sont prêts', 'Rezilta ou yo pare')
+      : t('C’est en cours — reviens dans l’Arène', 'Li ap kontinye — retounen nan Arèn nan'))
+    : tournament.state === 'doors'
+      ? t('Les portes sont ouvertes maintenant', 'Pòt yo louvri kounye a')
+      : dateStr
+        ? t(`Inscris ton école pour le ${dateStr}`, `Enskri lekòl ou pou ${dateStr}`)
+        : t('Inscris ton école dès maintenant', 'Enskri lekòl ou kounye a');
+
+  const onPress = () => {
+    tapLight();
+    if (!reentry) {
+      navigation.navigate('ArenaLobby', { tournamentId: tournament.id });
+    } else if (reentry.state === 'provisional') {
+      navigation.navigate('ArenaResult', { tournamentId: reentry.id });
+    } else {
+      navigation.navigate('ArenaLive', { tournamentId: reentry.id });
+    }
+  };
 
   return (
     <PressableScale
-      onPress={() => { tapLight(); navigation.navigate('ArenaLobby', { tournamentId: open.id }); }}
+      onPress={onPress}
       pressedScale={0.98}
       accessibilityRole="button"
       accessibilityLabel={`${t('L’Arène', 'Arèn nan')} — ${title} — ${subtitle}`}

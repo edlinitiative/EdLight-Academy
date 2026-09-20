@@ -175,6 +175,15 @@ export default function App() {
                   printable document that reveals nothing. */}
               <Route path="/arena/reclamation" element={<ArenaClaim />} />
               <Route path="/arena/autorisation" element={<ArenaConsentForm />} />
+              {/* CORRECTION, from an external audit: bare /arena rendered
+                  "Page introuvable" — and it is exactly the link
+                  buildArenaInviteMessage() (mobile/src/services/arenaService.ts)
+                  puts in every "il manque N joueurs" share text. Arena
+                  gameplay is mobile-only (section A), so a friend who taps
+                  that link needs the app, not a web view of a tournament they
+                  cannot join from a browser — the same destination as every
+                  other "get the app" surface. */}
+              <Route path="/arena" element={<Navigate to="/download" replace />} />
               {/* The projector page. It resolves its own tournament and falls
                   back to the weekly school race between events — a screen in a
                   school hall is never blank. */}

@@ -23,6 +23,7 @@ import {
   FOCUS_LOSS_FLAG_MIN,
   LATE_GRACE_MS,
   boundedInt,
+  decidePresence,
   decideSubmission,
   defaultAlias,
   integrityFlags,
@@ -41,8 +42,9 @@ import { scoreAnswer } from '../../shared/arena/scoring';
 const OPENS = 1_800_000_000_000;
 const CLOSES = OPENS + 20_000;
 
+/** `closedAt: null` — the ordinary case: still on the announced schedule. */
 const at = (serverReceivedAt: number) =>
-  decideSubmission({ opensAt: OPENS, closesAt: CLOSES, serverReceivedAt });
+  decideSubmission({ opensAt: OPENS, closesAt: CLOSES, closedAt: null, serverReceivedAt });
 
 describe('the submission window', () => {
   it('accepts an ordinary in-window answer', () => {
@@ -65,10 +67,7 @@ describe('the submission window', () => {
     expect(at(CLOSES + LATE_GRACE_MS + 1).reason).toBe('too_late');
   });
 
-  it('gives a late answer nothing, because the tier clock does not stop for it', () => {
-    // Accepting late is not the same as paying for it. The whole reason the
-    // late window is safe is that scoreAnswer prices it at zero on its own —
-    // no special case here, and no way to farm the grace for points.
+  it('gives an HONEST late answer nothing — real elapsed time alone already fails the tier', () => {
     const scored = scoreAnswer({
       correct: true,
       opensAt: OPENS,
@@ -77,6 +76,49 @@ describe('the submission window', () => {
     });
     expect(scored.tier).toBe('none');
     expect(scored.points).toBe(0);
+  });
+
+  /*
+   * CVE reproduction, from an external audit, verified by tracing the exploit
+   * by hand before this test was written. `clampShownAt` bounds a client's
+   * claimed render time from ABOVE at `opensAt + RENDER_GRACE_MS` (3000ms) —
+   * not relative to how late the submission actually is — so a client that
+   * reads the revealed key at close and resubmits within ~3s afterward,
+   * claiming the maximum allowed render delay, computed an elapsedMs that
+   * still landed inside the half-tier boundary. This is the exact case the
+   * audit reproduced: opens 0, closes 20000, claimed render 3000, received
+   * 21000 → elapsed 18000 → 500 points, on a submission made entirely after
+   * the reveal. `late` did not previously reach `scoreAnswer` at all.
+   */
+  it('CLOSED: a dishonest render-time claim can no longer buy points on a late answer', () => {
+    const cheating = scoreAnswer({
+      correct: true,
+      opensAt: OPENS,
+      // Claims the question rendered at the last legal instant — the value a
+      // cheater picks specifically to minimise apparent elapsed time.
+      clientShownAt: OPENS + 3_000,
+      serverReceivedAt: CLOSES + 1_000, // one second after the real close
+      late: true, // what decideSubmission would say about this timestamp
+    });
+    expect(cheating.points).toBe(0);
+    // Tier/elapsed still report what the clamp actually computed — a
+    // reviewer needs to see this was a suspiciously well-timed late answer,
+    // which is exactly what a zeroed tier would hide.
+    expect(cheating.tier).toBe('half');
+    expect(cheating.elapsedMs).toBe(18_000);
+  });
+
+  it('a late answer with late unset behaves as the OLD code did — proving the fix is the `late` flag, not the clamp', () => {
+    // This is deliberately the exploit shape from above, without `late: true`
+    // — showing the clamp alone still permits the score. The protection is
+    // real only because answer.ts always passes decision.late through.
+    const withoutTheFix = scoreAnswer({
+      correct: true,
+      opensAt: OPENS,
+      clientShownAt: OPENS + 3_000,
+      serverReceivedAt: CLOSES + 1_000,
+    });
+    expect(withoutTheFix.points).toBe(500);
   });
 
   it('RECORDS an answer that arrives before the question opened instead of dropping it', () => {
@@ -92,9 +134,9 @@ describe('the submission window', () => {
   it('refuses to score against a window that is not there', () => {
     // A malformed live document is our bug. Inventing a clock would score
     // everybody at the full tier.
-    expect(decideSubmission({ opensAt: null, closesAt: CLOSES, serverReceivedAt: OPENS }).accept).toBe(false);
-    expect(decideSubmission({ opensAt: OPENS, closesAt: null, serverReceivedAt: OPENS }).reason).toBe('no_window');
-    expect(decideSubmission({ opensAt: OPENS, closesAt: CLOSES, serverReceivedAt: NaN }).accept).toBe(false);
+    expect(decideSubmission({ opensAt: null, closesAt: CLOSES, closedAt: null, serverReceivedAt: OPENS }).accept).toBe(false);
+    expect(decideSubmission({ opensAt: OPENS, closesAt: null, closedAt: null, serverReceivedAt: OPENS }).reason).toBe('no_window');
+    expect(decideSubmission({ opensAt: OPENS, closesAt: CLOSES, closedAt: null, serverReceivedAt: NaN }).accept).toBe(false);
   });
 });
 
@@ -212,6 +254,62 @@ describe('registration gates', () => {
     // rather than silently spanning a gap.
     expect(canTransition('registration', 'doors')).toBe(true);
   });
+});
+
+/*
+ * E4, from an external audit: presence used to stamp `duringDoors` from the
+ * STATE alone — `state === 'doors'` — and never look at whether
+ * `doors-close.ts` had already frozen the roster. The freeze happens on a
+ * cron tick part-way through `doors`, so a student first seen after it but
+ * before the state moved on was recorded as having made a cut-off that had
+ * already passed. `countsPresent()` reads that flag straight back out, and
+ * the live "N présents" the lobby renders would drift above the number the
+ * school was actually judged on.
+ *
+ * Being in the room and counting toward the five are different facts, and
+ * this is the function that keeps them apart.
+ */
+describe('decidePresence — E4: the freeze is the cut-off, not the state', () => {
+  const FROZEN = 1_770_000_000_000;
+
+  it('accepts and counts an arrival during doors, before the freeze', () => {
+    expect(decidePresence({ state: 'doors', rosterFrozenAt: null }))
+      .toEqual({ accept: true, countsTowardQualification: true });
+  });
+
+  it('CLOSED: an arrival after the freeze is still present, but no longer counts', () => {
+    // The exact gap: the state is STILL `doors`, so the old check said true.
+    expect(decidePresence({ state: 'doors', rosterFrozenAt: FROZEN }))
+      .toEqual({ accept: true, countsTowardQualification: false });
+  });
+
+  it('keeps accepting the heartbeat into `live`, but never counts it', () => {
+    // Accepted on purpose — the client keeps the heartbeat running across the
+    // transition, and rejecting it would spam an error at every player in the
+    // tournament. It just does not qualify anybody.
+    expect(decidePresence({ state: 'live', rosterFrozenAt: null }))
+      .toEqual({ accept: true, countsTowardQualification: false });
+    expect(decidePresence({ state: 'live', rosterFrozenAt: FROZEN }))
+      .toEqual({ accept: true, countsTowardQualification: false });
+  });
+
+  it('refuses outright before the doors open and after the tournament is scoring', () => {
+    for (const s of ['draft', 'registration', 'grading', 'provisional', 'final', 'void'] as const) {
+      expect(decidePresence({ state: s, rosterFrozenAt: null }).accept).toBe(false);
+    }
+  });
+
+  it('refuses a tournament whose state could not be read at all', () => {
+    expect(decidePresence({ state: null, rosterFrozenAt: null }).accept).toBe(false);
+  });
+
+  it('never counts a sighting it did not accept', () => {
+    // A rejected presence call must not leave `countsTowardQualification`
+    // true for a caller that only checked one of the two fields.
+    for (const s of ['draft', 'registration', 'grading', 'provisional', 'final', 'void', null] as const) {
+      expect(decidePresence({ state: s, rosterFrozenAt: null }).countsTowardQualification).toBe(false);
+    }
+  });
 
   it('turns away a post-bac student and nobody else', () => {
     expect(isEligibleGrade('POSTBAC')).toBe(false);
@@ -289,17 +387,22 @@ describe('a late answer appears but does not count', () => {
   const closesAt = opensAt + 20_000;
 
   it('still accepts it, because erasing an honest slow answer is worse', () => {
-    const d = decideSubmission({ opensAt, closesAt, serverReceivedAt: closesAt + 3_000 });
+    const d = decideSubmission({ opensAt, closesAt, closedAt: null, serverReceivedAt: closesAt + 3_000 });
     expect(d.accept).toBe(true);
     expect(d.late).toBe(true);
   });
 
-  it('scores it zero on the tier, so no points ride on the reveal', () => {
+  it('scores it zero, unconditionally — decideSubmission’s late flag reaches scoreAnswer', () => {
+    const decision = decideSubmission({ opensAt, closesAt, closedAt: null, serverReceivedAt: closesAt + 3_000 });
     const scored = scoreAnswer({
       correct: true,
       opensAt,
-      clientShownAt: opensAt,
+      // The dishonest render-time claim, on top of the honest-timing case —
+      // this is the actual shape answer.ts produces, decision piped straight
+      // into scoring.
+      clientShownAt: opensAt + 3_000,
       serverReceivedAt: closesAt + 3_000,
+      late: decision.late,
     });
     expect(scored.points).toBe(0);
   });
@@ -308,14 +411,72 @@ describe('a late answer appears but does not count', () => {
     // `correct` is school tiebreaker 3 and `fullTierCount` is the individual
     // one. A stream of post-reveal "correct" answers would move a school up a
     // podium it did not earn — which is why answer.ts gates both on !late.
-    const late = decideSubmission({ opensAt, closesAt, serverReceivedAt: closesAt + 5_000 });
-    const onTime = decideSubmission({ opensAt, closesAt, serverReceivedAt: closesAt - 1_000 });
+    const late = decideSubmission({ opensAt, closesAt, closedAt: null, serverReceivedAt: closesAt + 5_000 });
+    const onTime = decideSubmission({ opensAt, closesAt, closedAt: null, serverReceivedAt: closesAt - 1_000 });
     expect(late.late).toBe(true);
     expect(onTime.late).toBe(false);
   });
 
   it('refuses one that arrives past the grace window entirely', () => {
-    const d = decideSubmission({ opensAt, closesAt, serverReceivedAt: closesAt + 60_000 });
+    const d = decideSubmission({ opensAt, closesAt, closedAt: null, serverReceivedAt: closesAt + 60_000 });
     expect(d.accept).toBe(false);
+  });
+
+  /*
+   * CVE reproduction, from the same external audit: a force-close reveals the
+   * key and writes `closedAt` WITHOUT moving `closesAt`. Before this fix,
+   * `decideSubmission` trusted `closesAt` alone, so a submission arriving
+   * after a forced reveal — but before the ANNOUNCED close — was classified
+   * on time and scored in full, worse than the render-clamp exploit above
+   * because it was not even limited to the half tier.
+   */
+  describe('a question closed EARLY by an admin (force-close)', () => {
+    // Scheduled to run the full 20s, but an admin closed it at the 2s mark.
+    const forcedClosedAt = opensAt + 2_000;
+
+    it('treats a submission after the forced close as late, even though the SCHEDULED close is still minutes away', () => {
+      const d = decideSubmission({
+        opensAt, closesAt, closedAt: forcedClosedAt,
+        serverReceivedAt: forcedClosedAt + 500, // 2.5s in — the schedule said 20s
+      });
+      expect(d.accept).toBe(true);
+      expect(d.late).toBe(true);
+    });
+
+    it('scores that submission zero, regardless of how much of the announced window remained', () => {
+      const decision = decideSubmission({
+        opensAt, closesAt, closedAt: forcedClosedAt,
+        serverReceivedAt: forcedClosedAt + 500,
+      });
+      const scored = scoreAnswer({
+        correct: true,
+        opensAt,
+        clientShownAt: opensAt, // reported immediately — the "fastest" possible claim
+        serverReceivedAt: forcedClosedAt + 500,
+        late: decision.late,
+      });
+      expect(scored.points).toBe(0);
+    });
+
+    it('still measures the grace window from the ACTUAL close, not the announced one', () => {
+      const justInsideGrace = decideSubmission({
+        opensAt, closesAt, closedAt: forcedClosedAt,
+        serverReceivedAt: forcedClosedAt + LATE_GRACE_MS,
+      });
+      const justOutsideGrace = decideSubmission({
+        opensAt, closesAt, closedAt: forcedClosedAt,
+        serverReceivedAt: forcedClosedAt + LATE_GRACE_MS + 1,
+      });
+      expect(justInsideGrace.accept).toBe(true);
+      expect(justOutsideGrace.accept).toBe(false);
+    });
+
+    it('a submission before the forced close is still ordinary and on time', () => {
+      const d = decideSubmission({
+        opensAt, closesAt, closedAt: forcedClosedAt,
+        serverReceivedAt: forcedClosedAt - 500,
+      });
+      expect(d.late).toBe(false);
+    });
   });
 });

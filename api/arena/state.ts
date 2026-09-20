@@ -356,6 +356,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         res.status(409).json({ error: 'questions_incomplete', authored, required: total });
         return;
       }
+      // CORRECTION, from an external audit: starting used to have no
+      // dependency on the qualification roster at all, so an admin who
+      // pressed "start" before `api/arena/doors-close.ts` had run — or ran
+      // early, ahead of it — sent the tournament live with no frozen roster.
+      // Every school's `roster/{schoolKey}` doc, and the "N écoles qualifiées"
+      // count the review flow reads, would then be reporting a freeze that
+      // never happened. `rosterFrozenAt` is the one fact that can't be
+      // reconstructed after the room has emptied, so starting without it is
+      // refused rather than silently proceeding on an unfrozen roster.
+      if (toMillis(tournament.rosterFrozenAt) === null) {
+        res.status(409).json({
+          error: 'roster_not_frozen',
+          message: 'The qualification roster has not been frozen yet. Run doors-close before starting.',
+        });
+        return;
+      }
       roster = await registrationCounts(db, String(tid));
     }
 

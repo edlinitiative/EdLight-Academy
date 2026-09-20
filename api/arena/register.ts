@@ -25,9 +25,13 @@
  *   { tournamentId: string, schoolKey: string, grade: string, deviceHash?: string }
  *
  * Response 200:
- *   { ok: true, qualified, playersAtSchool, needed, basis, present, registered }
+ *   { ok: true, qualified, playersAtSchool, needed, basis, present, registered,
+ *     rosterFrozen }
  *   `basis` says WHICH count `qualified` was computed from — see below, it is
- *   the difference between a promise and a lie.
+ *   the difference between a promise and a lie. `rosterFrozen` says whether
+ *   `doors-close.ts` has already ruled: past that point `qualified` is the
+ *   STORED verdict rather than a live recount, because a recount taken after
+ *   the cut-off cannot overturn the document the board actually reads.
  *
  * Errors: 400 invalid input · 403 grade_not_eligible · 404 tournament_not_found ·
  *         409 registration_closed · 429 rate limited · 500 write_failed.
@@ -54,6 +58,7 @@ import {
   publicDisplayName,
   schoolCounts,
   schoolLabel,
+  toMillis,
 } from './_shared';
 
 /** Where a student is, as THEY stated it. Null is the common, honest answer. */
@@ -177,29 +182,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const db = getDb();
 
   try {
-    // ── The tournament must be open ───────────────────────────────────────
-    const tSnap = await db.doc(`tournaments/${tournamentId}`).get();
-    if (!tSnap.exists) {
+    // A pre-read, purely to fail fast and to shape the three lookups below —
+    // it decides NOTHING. The transaction re-reads the tournament and is the
+    // one that actually rules on whether registration is open; see the
+    // CORRECTION note on that transaction.
+    const preSnap = await db.doc(`tournaments/${tournamentId}`).get();
+    if (!preSnap.exists) {
       res.status(404).json({ error: 'tournament_not_found' });
       return;
     }
-    const tournament = tSnap.data() ?? {};
-    const state = asArenaState(tournament.state);
-    if (!state) {
+    const preState = asArenaState((preSnap.data() ?? {}).state);
+    if (!preState) {
       // A tournament whose state is not one of ours is a broken document, and
       // guessing would open registration on something an admin has not published.
-      console.error('[arena/register] unknown state on', tournamentId, ':', tournament.state);
+      console.error('[arena/register] unknown state on', tournamentId, ':', (preSnap.data() ?? {}).state);
       res.status(409).json({ error: 'registration_closed' });
       return;
     }
-    if (!isRegistrationOpen(state)) {
-      res.status(409).json({ error: 'registration_closed', state });
+    if (!isRegistrationOpen(preState)) {
+      res.status(409).json({ error: 'registration_closed', state: preState });
       return;
     }
-
-    const minPlayers = typeof tournament.minPlayers === 'number' && tournament.minPlayers > 0
-      ? tournament.minPlayers
-      : DEFAULT_MIN_PLAYERS;
 
     const [displayName, label, geo] = await Promise.all([
       publicDisplayName(db, uid, tokenName),
@@ -207,6 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       playerGeography(db, uid),
     ]);
 
+    const tournamentRef = db.doc(`tournaments/${tournamentId}`);
     const regRef = db.doc(`tournamentRegistrations/${tournamentId}_${uid}`);
     const playerRef = db.doc(`tournaments/${tournamentId}/players/${uid}`);
 
@@ -219,7 +223,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // of the first question, that is not hypothetical: it would delete points
     // a student had already earned, silently, on a request that looked like it
     // succeeded.
-    await db.runTransaction(async (tx) => {
+    //
+    // CORRECTION, from an external audit: the state gate above used to be the
+    // ONLY one, run against a read taken before this transaction — so a
+    // registration that passed the check could still land after `advance.ts`
+    // had moved the tournament to `live`, creating a player row for somebody
+    // with no `opensAt` to be timed against for the questions already gone.
+    // The gate is re-run here on a read from inside the transaction, which is
+    // the only version of it that can actually hold.
+    const outcome = await db.runTransaction(async (tx) => {
+      const tSnap = await tx.get(tournamentRef);
+      if (!tSnap.exists) return { kind: 'not_found' as const };
+
+      const tournament = tSnap.data() ?? {};
+      const state = asArenaState(tournament.state);
+      if (!state || !isRegistrationOpen(state)) {
+        return { kind: 'closed' as const, state };
+      }
+
+      const minPlayers = typeof tournament.minPlayers === 'number' && tournament.minPlayers > 0
+        ? tournament.minPlayers
+        : DEFAULT_MIN_PLAYERS;
+      // Whether `doors-close.ts` has already decided qualification. A student
+      // registering after it still plays and still scores — nothing here turns
+      // anybody away — but the response below must not tell their school it is
+      // safe on a count the frozen roster has already contradicted.
+      const rosterFrozen = toMillis(tournament.rosterFrozenAt) !== null;
+
       const playerSnap = await tx.get(playerRef);
       const now = Timestamp.now();
 
@@ -287,7 +317,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
           department: geo.department,
         });
       }
+
+      return { kind: 'ok' as const, state, minPlayers, rosterFrozen };
     });
+
+    if (outcome.kind === 'not_found') {
+      res.status(404).json({ error: 'tournament_not_found' });
+      return;
+    }
+
+    if (outcome.kind === 'closed') {
+      res.status(409).json({ error: 'registration_closed', state: outcome.state });
+      return;
+    }
+
+    const { state, minPlayers, rosterFrozen } = outcome;
 
     // ── Qualification progress, computed AFTER the write ──────────────────
     //
@@ -308,15 +352,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const basis: 'registered' | 'present' = state === 'doors' ? 'present' : 'registered';
     const playersAtSchool = basis === 'present' ? counts.present : counts.registered;
 
+    // CORRECTION, from an external audit: registration stays open through
+    // `doors`, and `doors-close.ts` can freeze the roster part-way through it
+    // — so a student registering afterwards used to be told, from a LIVE
+    // recount, that their school had its five, when the frozen roster had
+    // already ruled otherwise and is the document the board actually reads.
+    // That is the "school told it was safe" story this whole endpoint's
+    // `basis` field exists to prevent, one layer further in. Once frozen, the
+    // stored verdict is the answer; nothing recounted after the cut-off can
+    // overturn it.
+    const frozenVerdict = rosterFrozen
+      ? await db.doc(`tournaments/${tournamentId}/roster/${schoolKey}`).get()
+        .then((snap) => (snap.exists ? snap.data() ?? null : null))
+        .catch((err) => {
+          // A roster document we cannot read is not a reason to fail a
+          // registration — the student is registered either way. Fall back to
+          // the live count and say so via `rosterFrozen`.
+          console.error('[arena/register] frozen roster read failed:', err);
+          return null;
+        })
+      : null;
+
+    const qualified = frozenVerdict
+      ? frozenVerdict.qualified === true
+      : playersAtSchool >= minPlayers;
+
     res.status(200).json({
       ok: true,
-      qualified: playersAtSchool >= minPlayers,
+      qualified,
       playersAtSchool,
       needed: Math.max(0, minPlayers - playersAtSchool),
       basis,
       registered: counts.registered,
       present: counts.present,
       minPlayers,
+      // True once `doors-close.ts` has decided this tournament's rosters. A
+      // client showing "il manque 2 joueurs" past this point is showing a
+      // target nobody can still hit, so the lobby needs to be able to tell.
+      rosterFrozen,
       displayName,
       schoolLabel: label,
     });

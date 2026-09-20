@@ -2,10 +2,21 @@
  * POST /api/arena/aggregate — the Arena engine's heartbeat.
  * ─────────────────────────────────────────────────────────
  * Recomputes the standings of a live tournament and emits the typed broadcast
- * events that the difference implies. Invoked on a short cadence (~5s) while a
- * tournament is `live` or `grading`; the CALLER owns the schedule — a cron
- * entry, or the run console during a rehearsal — this endpoint only ever does
- * one tick's worth of work and returns.
+ * events that the difference implies. The CALLER owns the schedule — this
+ * endpoint only ever does one tick's worth of work and returns. In practice
+ * that is `advance.ts`, calling it directly the instant a question closes
+ * (restoring the cadence design §F always described — see the CORRECTION note
+ * on `aggregateOne` for the gap that existed until an external audit found
+ * it), with the once-a-minute cron as the safety net for a tick that call
+ * missed, never the primary driver.
+ *
+ * PUBLICATION IS GATED ON THE CURRENT QUESTION'S OWN STATE, not on the
+ * tournament's. A tick that lands while a question is still open (or a
+ * cron running purely on its own clock, unaware anything is mid-window)
+ * computes nothing and publishes nothing — `blocksPublication` is the actual
+ * enforcement. `standings/current` is public, and a fresh publish mid-question
+ * is exactly what let two colluding accounts, submitting different options,
+ * infer which one was correct before the reveal.
  *
  * THE SCALE PROPERTY THIS FILE EXISTS TO PRESERVE (design §F):
  * **nothing here accumulates a running total anywhere.** The naive design — a
@@ -71,6 +82,26 @@ import { highestSeq, nextSeq, renumber, seqAfter, writeEvents } from './_events'
 const AGGREGATE_STATES: ReadonlySet<string> = new Set<ArenaState>(['live', 'grading']);
 
 /**
+ * Would publishing right now show something about a question that has not
+ * closed yet?
+ *
+ * Pure and exported for tests — this is the actual fix for E2 (a mid-question
+ * standings leak an external audit found), and the property under test is a
+ * negative ("this call published nothing"), which is exactly the kind of
+ * thing a test suite has to assert explicitly or it silently rots the first
+ * time someone "simplifies" the caller.
+ *
+ * `null`/`undefined` (no live document, or a state string we don't
+ * recognise) blocks too — refusing to publish on a document we cannot read is
+ * the safe direction for a field this consequential; the caller's own
+ * `AGGREGATE_STATES` check already keeps this from firing before question 1
+ * exists at all.
+ */
+export function blocksPublication(liveQuestionState: string | null | undefined): boolean {
+  return liveQuestionState !== 'closed';
+}
+
+/**
  * Schools ranked per tick.
  *
  * `standings/current` is ONE document that every spectator subscribes to, and a
@@ -83,6 +114,58 @@ const AGGREGATE_STATES: ReadonlySet<string> = new Set<ArenaState>(['live', 'grad
 const SCHOOL_CAP = 250;
 
 /**
+ * How many over-cap school keys the board remembers by name.
+ *
+ * The exact TOTAL is always recorded as a number, whatever this is — only the
+ * list of names is bounded, so the count an operator reads can never be a
+ * guess even if the list is clipped.
+ */
+const OVERFLOW_KEYS_CAP = 250;
+
+export interface SchoolSelection {
+  /** The keys this tick actually queries and ranks. At most `cap`. */
+  selected: string[];
+  /** Keys that did not fit, carried on the board by name (bounded). */
+  overflow: string[];
+  /** How many schools the tournament has, truncated or not. Always exact. */
+  total: number;
+}
+
+/**
+ * Which schools fit on the board, and which are left over.
+ *
+ * CORRECTION, from an external audit (E10: "school aggregation silently
+ * slices to 250 schools"). The slice itself is a real capacity limit and
+ * stays — the board is one 1MB document, and a tournament that genuinely
+ * outgrows it needs paged standings, not a bigger constant. What was wrong is
+ * that the overflow was both INVISIBLE and PERMANENT:
+ *
+ *  · INVISIBLE. `keys.slice(0, SCHOOL_CAP)` dropped the tail with no record
+ *    anywhere that it had happened, so a 312-school tournament published a
+ *    250-school board that looked complete to every reader of it.
+ *  · PERMANENT, which is the worse half. `discoverSchools` seeds the next
+ *    tick's key set from `previous.schools` and rescans players only from
+ *    `rosterCursorMs` forward. A school dropped by the slice never entered
+ *    `previous.schools`, and by the next tick the cursor had already advanced
+ *    past its players — so it was not truncated for one tick, it was
+ *    unreachable for the rest of the tournament, with nothing naming it.
+ *
+ * So the overflow is now named and carried: `discoverSchools` re-seeds from it
+ * every tick, which keeps those schools findable however far the cursor moves.
+ * Membership is deliberately STABLE rather than rotated — incumbents come
+ * first because the key set is seeded from the ranked previous board — since
+ * cycling schools on and off the board between ticks would make `deriveEvents`
+ * emit a stream of arrivals and departures that never happened.
+ */
+export function selectSchools(keys: string[], cap: number): SchoolSelection {
+  return {
+    selected: keys.slice(0, cap),
+    overflow: keys.slice(cap, cap + OVERFLOW_KEYS_CAP),
+    total: keys.length,
+  };
+}
+
+/**
  * Players fetched per school.
  *
  * Never below `teamSize` (those are the five that score) and never below
@@ -91,6 +174,24 @@ const SCHOOL_CAP = 250;
  * unqualified and drop it out of the running.
  */
 const INDIVIDUAL_POOL = 5;
+
+/**
+ * Extra rows fetched past the pool size before filtering out `eligible: false`
+ * players, so an ineligible top scorer never truncates the pool below what it
+ * promised.
+ *
+ * A `where('eligible', ...)` clause would need a new composite index (and, for
+ * `!=`, would force `eligible` to be the first `orderBy`, ahead of the
+ * score/totalMs order every ranking tiebreak depends on) — a real
+ * schema change, not a one-line filter. This is the "second post-query pass
+ * with a backfill cushion" the fix was scoped to when E5 first found this gap
+ * and deliberately left it open rather than ship a half-fix alongside an
+ * unrelated change. Disqualifications are rare and reviewed by hand — a
+ * cushion this size comfortably covers every real tournament without a
+ * schema migration; if it is ever not enough, that is itself a signal
+ * something both frequent and undesirable is happening.
+ */
+const ELIGIBILITY_CUSHION = 15;
 
 /** Per-school queries in flight at once. Bounded so one tick cannot self-DDoS. */
 const QUERY_CONCURRENCY = 12;
@@ -178,6 +279,18 @@ export interface StoredStandings extends Omit<StandingsSnapshot, 'schools'> {
   rosterCursorMs?: number;
   /** Last question index whose cadence events (halftime, final five) fired. */
   cadenceIndex?: number;
+  /**
+   * How many schools the tournament has in total, whether or not they fit on
+   * this board. Equal to `schools.length` in the ordinary case; larger means
+   * the board is truncated and `overflowSchoolKeys` names who is missing.
+   */
+  schoolsTotal?: number;
+  /**
+   * Schools that did not fit under SCHOOL_CAP, by key. Re-seeded into the next
+   * tick's discovery so the roster cursor moving past them cannot make them
+   * unreachable — see selectSchools for why that used to happen.
+   */
+  overflowSchoolKeys?: string[];
 }
 
 /**
@@ -258,7 +371,19 @@ export function avgMsOf(row: PlayerRow): number {
  * list to a podium would cost events without any error to show for it; the
  * documentation on `StandingsSnapshot.individuals` says so explicitly.
  */
-export function buildSnapshot(pools: SchoolPool[], opts: BuildSnapshotOptions): StandingsSnapshot {
+export function buildSnapshot(
+  pools: SchoolPool[],
+  opts: BuildSnapshotOptions,
+  /**
+   * Players who may not be in ANY school's own top-`pool` rows but still
+   * belong in the national INDIVIDUAL ranking — see `loadNationalTop`.
+   * Deliberately a separate parameter rather than folded into `pools`:
+   * school ranking (`schools`, `top5`, `teamAvg`) must stay driven only by
+   * each school's own scoring pool, and conflating the two is the exact
+   * shape of the bug this parameter exists to fix.
+   */
+  extraIndividualRows: PlayerRow[] = [],
+): StandingsSnapshot {
   const { teamSize, minPlayers, seq, now } = opts;
 
   const schoolInputs: SchoolInput[] = pools.map((pool) => ({
@@ -291,7 +416,16 @@ export function buildSnapshot(pools: SchoolPool[], opts: BuildSnapshotOptions): 
       };
     });
 
-  const rows = pools.flatMap((pool) => pool.rows);
+  // The individual ranking's own input, separate from any school's scoring
+  // pool: every player already fetched via a school, UNION the national-top
+  // rows a school-scoped query would never see. Deduped by uid — the true #1
+  // nationally is almost always ALSO in their own school's pool already, and
+  // keeping the school-pool copy (rather than the national-top one) matters
+  // nowhere, since `toPlayerRow` produces the same shape from the same
+  // document regardless of which query found it.
+  const poolRows = pools.flatMap((pool) => pool.rows);
+  const seenUids = new Set(poolRows.map((row) => row.uid));
+  const rows = [...poolRows, ...extraIndividualRows.filter((row) => !seenUids.has(row.uid))];
   const byUid = new Map(rows.map((row) => [row.uid, row]));
   const playerInputs: PlayerInput[] = rows.map((row) => ({
     uid: row.uid,
@@ -402,6 +536,36 @@ function toPlayerRow(uid: string, data: Row): PlayerRow {
 }
 
 /**
+ * Score-ordered raw player docs → the top `limit` who are actually eligible.
+ *
+ * CORRECTION, from an external audit (E8): a player an admin marked
+ * `eligible: false` after a completed integrity review — the same flag
+ * answer.ts already refuses new submissions from, and claim.ts already skips
+ * when rolling down a prize — used to still rank, still show as a school's
+ * top scorer, even as the tournament CHAMPION, on the PUBLIC board. A review
+ * that disqualified someone for cheating would leave them standing on the
+ * result everyone sees while quietly denying them the prize behind the
+ * scenes — the kind of visible inconsistency a public broadcast cannot
+ * afford.
+ *
+ * Filtering happens here, in memory, on rows the caller already over-fetched
+ * by `ELIGIBILITY_CUSHION` — not as a `where('eligible', ...)` clause, which
+ * would need a new composite index and, for `!=`, would force `eligible`
+ * ahead of score/totalMs in the sort order every ranking tiebreak depends on.
+ * `docs` must already be sorted score desc / totalMs asc, exactly as both
+ * callers' Firestore queries return them — this function does not re-sort.
+ */
+export function selectEligibleTop(
+  docs: Array<{ uid: string; data: Row }>,
+  limit: number,
+): PlayerRow[] {
+  return docs
+    .filter(({ data }) => data.eligible !== false)
+    .slice(0, limit)
+    .map(({ uid, data }) => toPlayerRow(uid, data));
+}
+
+/**
  * Which schools have players, without ever scanning `players` again.
  *
  * Firestore has no DISTINCT, so the set of school keys has to come from
@@ -422,7 +586,14 @@ async function discoverSchools(
   tid: string,
   previous: StoredStandings | null,
 ): Promise<{ keys: string[]; cursorMs: number }> {
+  // Seeded from the ranked previous board FIRST, so incumbents keep their
+  // places when the cap bites, then from the schools that did not fit last
+  // tick. That second seed is what makes the overflow recoverable: the player
+  // rescan below starts at `rosterCursorMs`, which has long since advanced
+  // past those schools' registrations, so without their names carried forward
+  // they could never be rediscovered. See selectSchools.
   const keys = new Set<string>((previous?.schools || []).map((s) => s.key).filter(Boolean));
+  for (const key of previous?.overflowSchoolKeys || []) if (key) keys.add(key);
   let cursorMs = num(previous?.rosterCursorMs, 0);
 
   const base = db.collection(`tournaments/${tid}/players`)
@@ -492,11 +663,12 @@ async function loadPool(
 ): Promise<SchoolPool | null> {
   const players = db.collection(`tournaments/${tid}/players`).where('schoolKey', '==', key);
   const [top, counted] = await Promise.all([
-    players.orderBy('score', 'desc').orderBy('totalMs', 'asc').limit(pool).get(),
+    players.orderBy('score', 'desc').orderBy('totalMs', 'asc').limit(pool + ELIGIBILITY_CUSHION).get(),
     players.count().get(),
   ]);
 
-  const rows = top.docs.map((doc) => toPlayerRow(doc.id, doc.data() as Row));
+  // E8: see selectEligibleTop's own doc comment for why this isn't a `where`.
+  const rows = selectEligibleTop(top.docs.map((doc) => ({ uid: doc.id, data: doc.data() as Row })), pool);
   if (rows.length === 0) return null;
 
   const before = previous.get(key);
@@ -521,9 +693,58 @@ async function loadPool(
 }
 
 /**
+ * How many players ONE indexed query, unfiltered by school, is asked for.
+ *
+ * Generous on purpose and still cheap: this is a single range query
+ * regardless of tournament size, so the cost of asking for 50 instead of 10
+ * is negligible, while the cost of asking for too few is a real student
+ * missing from the national board. Comfortably covers a Top 10 broadcast mode
+ * with margin for ties and near-ties at the boundary.
+ */
+const NATIONAL_TOP_POOL = 50;
+
+/**
+ * The players who might be missing from every school's own scoring pool but
+ * still belong in the NATIONAL individual ranking.
+ *
+ * CORRECTION, from an external audit, and its own worked example: "if the six
+ * best national players attend one school, the sixth is absent." `individuals`
+ * used to be built EXCLUSIVELY from `pools.flatMap(pool => pool.rows)` — every
+ * school's own top `INDIVIDUAL_POOL` (5, by default) players, nothing else. A
+ * school fielding a sixth genuinely excellent player had that student simply
+ * never fetched, never ranked, and never shown a personal result at all — not
+ * a display bug, an absence from the data.
+ *
+ * The fix is not a bigger per-school pool — no fixed per-school number can
+ * guarantee completeness, since a school could in principle field more
+ * standouts than any pool size chosen. It is a SEPARATE query with no school
+ * filter at all: one indexed range on `score`/`totalMs` across every player in
+ * the tournament, ordered exactly the way `rankIndividuals` tiebreaks, bounded
+ * by a fixed constant rather than by school or player count. Cheaper than any
+ * one school's own pool query, and it closes the gap completely rather than
+ * making it merely less likely.
+ *
+ * Excludes `eligible: false` players the same way `loadPool` does (E8,
+ * fixed alongside it) — a cushion past the limit, filtered post-query,
+ * rather than a `where` clause that would need a new composite index and
+ * force `eligible` ahead of score/totalMs in the sort order every tiebreak
+ * depends on.
+ */
+async function loadNationalTop(db: Firestore, tid: string): Promise<PlayerRow[]> {
+  const snap = await db.collection(`tournaments/${tid}/players`)
+    .orderBy('score', 'desc')
+    .orderBy('totalMs', 'asc')
+    .limit(NATIONAL_TOP_POOL + ELIGIBILITY_CUSHION)
+    .get();
+  return selectEligibleTop(snap.docs.map((doc) => ({ uid: doc.id, data: doc.data() as Row })), NATIONAL_TOP_POOL);
+}
+
+/**
  * Write the board and the events it describes, numbering them at commit time.
  *
- * TWO properties, and the second is the one that was missing:
+ * THREE properties. The third is CORRECTION, from an external audit — the
+ * seq fix (property 2) closed the event-collision race, but never protected
+ * the BOARD CONTENTS themselves from a second, slower kind of race.
  *
  *  1. ONE TRANSACTION. Two writes would leave a window in which a spectator's
  *     listener has delivered "CODOSA just took the lead" while
@@ -537,6 +758,22 @@ async function loadPool(
  *     `standings.seq` set back below where the emitter had left it. Firestore
  *     aborts and retries whichever of the two transactions loses the race, so
  *     the retry reads the counter the winner moved.
+ *  3. A STALE BOARD CANNOT OVERWRITE A FRESHER ONE. `board` itself — the
+ *     ranked schools and individuals — is computed by the CALLER from a page
+ *     of per-school queries that run BEFORE this function is ever called, not
+ *     inside this transaction. If two ticks overlap (an admin's "recompute"
+ *     button pressed while the cron is mid-flight, or two overlapping
+ *     invocations for any reason) and the one that STARTED SECOND happens to
+ *     FINISH first, its `board` is complete and correct as of when it read
+ *     the schools — but the OTHER tick, still running its own older queries,
+ *     would otherwise finish moments later and blindly overwrite that fresher
+ *     board with data read before it. The seq allocation alone does not catch
+ *     this: it only stops two SETS OF EVENTS from colliding, not an entire
+ *     board from moving backwards. `startedFromComputedAt` is what THIS tick
+ *     saw as the current `computedAt` before it began its own queries; if the
+ *     fresh read inside this transaction shows a LATER `computedAt`, someone
+ *     else's tick has already published newer data, and this one writes
+ *     nothing rather than regress it.
  *
  * `previousSeq` is only a floor: it keeps the stored seq from going BACKWARDS
  * in the impossible-but-cheap-to-rule-out case of a standings document whose
@@ -548,12 +785,22 @@ export async function commitBoard(
   board: StoredStandings,
   events: ArenaEvent[],
   previousSeq: number,
-): Promise<{ events: ArenaEvent[]; seq: number }> {
+  startedFromComputedAt: number,
+): Promise<{ superseded: true } | { superseded: false; events: ArenaEvent[]; seq: number }> {
   const standingsRef = db.doc(`tournaments/${tid}/standings/current`);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(standingsRef);
+    const freshData = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+    const freshComputedAt = typeof freshData?.computedAt === 'number' && Number.isFinite(freshData.computedAt)
+      ? freshData.computedAt
+      : 0;
+
+    if (freshComputedAt > startedFromComputedAt) {
+      return { superseded: true as const };
+    }
+
     const allocated = Math.max(
-      highestSeq(snap.exists ? (snap.data() as Record<string, unknown>) : null),
+      highestSeq(freshData),
       Math.max(0, previousSeq - 1),
     );
     const numbered = renumber(events, allocated + 1);
@@ -565,7 +812,7 @@ export async function commitBoard(
       seq: seqAfter(numbered, allocated),
     };
     tx.set(standingsRef, { ...stored, updatedAt: FieldValue.serverTimestamp() });
-    return { events: numbered, seq: stored.seq };
+    return { superseded: false as const, events: numbered, seq: stored.seq };
   });
 }
 
@@ -576,8 +823,12 @@ export async function commitBoard(
  * Returns the response rather than writing it: the sweep handles several
  * tournaments in one invocation, and a function that writes to `res` can only
  * ever answer for the first.
+ *
+ * Exported so `advance.ts` can call it directly the moment it closes a
+ * question — see the CORRECTION note two paragraphs down for why that call
+ * did not exist until an external audit found the gap it left.
  */
-async function aggregateOne(
+export async function aggregateOne(
   db: Firestore,
   tid: string,
   now: number,
@@ -597,6 +848,45 @@ async function aggregateOne(
       // cadence. Rewriting standings in `provisional` would edit a board that
       // has already been announced on a stream.
       return { status: 200, body: { ok: true, skipped: 'state', state } };
+    }
+
+    /*
+     * CORRECTION, from an external audit: this tick used to publish
+     * `standings/current` whenever the TOURNAMENT'S state was `live`, with no
+     * regard for whether the CURRENT QUESTION was still open. `answer.ts`
+     * writes a player's score in the same transaction as recording the
+     * answer — immediately, mid-question — and the once-a-minute cron that
+     * was the ONLY thing calling this function (advance.ts never did, despite
+     * a comment on the handler claiming it "calls this at every question
+     * close") had no relationship to question boundaries at all. Two
+     * colluding accounts submitting different options during an open window
+     * could read the next cron tick's public board and infer which one
+     * scored.
+     *
+     * The fix is not a smarter diff — it is refusing to publish at all while
+     * the door is still open. `live/{index}.state` is the same field
+     * `decideSubmission` trusts for lateness (not the tournament's cached
+     * `currentQuestion.closesAt`, which a force-close can make stale without
+     * updating): if the question this tournament is currently on has not
+     * actually closed yet, this tick is a no-op, full stop, admin-recompute
+     * included — there is no legitimate reason for the LIVE STANDINGS to know
+     * anything about an in-progress window that a colluding pair could not
+     * also read.
+     *
+     * Once the question DOES close, `advance.ts` calls this function
+     * directly, in the same request that just wrote `live/{index}.state =
+     * 'closed'` — so by the time this check runs, the read is already
+     * correct, and standings settle in the pause exactly where section F of
+     * the design doc always said they should.
+     */
+    const currentForGate = (tournament.currentQuestion || null) as Row | null;
+    const gateIndex = currentForGate ? num(currentForGate.index, -1) : -1;
+    if (gateIndex >= 0) {
+      const liveGateSnap = await db.doc(`tournaments/${tid}/live/${gateIndex}`).get();
+      const liveGateState = liveGateSnap.exists ? str((liveGateSnap.data() as Row).state) : null;
+      if (blocksPublication(liveGateState)) {
+        return { status: 200, body: { ok: true, skipped: 'question_open', questionIndex: gateIndex } };
+      }
     }
 
     const teamSize = Math.max(1, num(tournament.teamSize, 5));
@@ -635,13 +925,30 @@ async function aggregateOne(
       }),
     );
 
-    // ── 3 · One indexed query per SCHOOL. Never one per player. ─────────────
+    // ── 3 · One indexed query per SCHOOL, plus ONE query for the true
+    //        national individual top. Never one per player. ──────────────────
+    //
+    // The school-pool queries alone are not enough for individuals — see the
+    // CORRECTION note on loadNationalTop. Run both in parallel: neither
+    // depends on the other's result.
     const { keys, cursorMs } = await discoverSchools(db, tid, previous);
-    const pools = (await mapLimit(
-      keys.slice(0, SCHOOL_CAP),
-      QUERY_CONCURRENCY,
-      (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
-    )).filter((p): p is SchoolPool => p !== null);
+    const selection = selectSchools(keys, SCHOOL_CAP);
+    if (selection.overflow.length > 0) {
+      // Loud, because the board about to be published is not the whole
+      // tournament and nothing else on the path would say so.
+      console.warn(
+        `[arena/aggregate] ${tid}: ${selection.total} schools exceeds the ${SCHOOL_CAP} the board holds; `
+        + `${selection.overflow.length} carried in overflow and NOT ranked.`,
+      );
+    }
+    const [pools, nationalTop] = await Promise.all([
+      mapLimit(
+        selection.selected,
+        QUERY_CONCURRENCY,
+        (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
+      ).then((rows) => rows.filter((p): p is SchoolPool => p !== null)),
+      loadNationalTop(db, tid),
+    ]);
 
     // ── 4 · Rank with the shared functions, then diff against the last board ─
     //
@@ -651,7 +958,7 @@ async function aggregateOne(
     // from; the real allocation happens at commit time in step 5, and the
     // events are renumbered there.
     const seq = nextSeq(previous);
-    const next = buildSnapshot(pools, { teamSize, minPlayers, seq, now });
+    const next = buildSnapshot(pools, { teamSize, minPlayers, seq, now }, nationalTop);
 
     const ctx: DeriveContext = {
       seq,
@@ -677,10 +984,25 @@ async function aggregateOne(
       })),
       rosterCursorMs: cursorMs,
       cadenceIndex: ctx.questionsRemaining >= 0 ? questionIndex : previous?.cadenceIndex,
+      schoolsTotal: selection.total,
+      // Written even when empty, so "no overflow" is a stated fact on the
+      // document rather than an absent field a reader has to interpret.
+      overflowSchoolKeys: selection.overflow,
     });
 
     // ── 5 · Events and the board they describe, in ONE transaction ──────────
-    const committed = await commitBoard(db, tid, board, events, seq);
+    const startedFromComputedAt = typeof previous?.computedAt === 'number' && Number.isFinite(previous.computedAt)
+      ? previous.computedAt
+      : 0;
+    const committed = await commitBoard(db, tid, board, events, seq, startedFromComputedAt);
+
+    if (committed.superseded) {
+      // Not an error: another tick — an overlapping cron invocation, or an
+      // admin's manual recompute — finished with newer underlying data while
+      // this one was still querying schools. That tick's board already
+      // stands; writing this one would move the public standings backwards.
+      return { status: 200, body: { ok: true, skipped: 'superseded' } };
+    }
 
     return {
       status: 200,
@@ -688,6 +1010,8 @@ async function aggregateOne(
         ok: true,
         state,
         schools: next.schools.length,
+        schoolsTotal: selection.total,
+        schoolsOverflow: selection.overflow.length,
         players: next.individuals.length,
         events: committed.events.length,
         seq: committed.seq,

@@ -53,7 +53,8 @@
  *
  * Errors: 400 invalid input · 401 unauthorized · 403 not_a_winner / not_admin ·
  *         404 tournament_not_found / claim_not_found · 409 wrong_state /
- *         claim_rejected · 410 claim_expired · 429 rate limited · 500.
+ *         claim_rejected / rank_pending_review · 410 claim_expired ·
+ *         429 rate limited · 500.
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
@@ -214,6 +215,27 @@ export function currentHolder(
   return [...pool].sort(
     (a, b) => (b.expiresAt - a.expiresAt) || a.uid.localeCompare(b.uid),
   )[0];
+}
+
+/**
+ * Would a fresh self-service claim at `rank` collide with someone else's?
+ *
+ * CORRECTION, from an external audit (E8): `podiumClaims` (state.ts)
+ * deliberately writes a placeholder for only the FIRST finisher at a paying
+ * rank — a tie there is "a human decision, not an automatic double payment,"
+ * and every OTHER tied finisher is left with no placeholder on purpose, for
+ * the review queue. The self-service claim fallback used to ignore that
+ * entirely: it derives `rank` from the student's OWN finishing position with
+ * no regard for whether somebody else already holds a claim on it, so a
+ * second student tied at the same rank could mint a competing claim document
+ * of their own — and both could clear admin review, paying the same prize
+ * twice. Any other claim at this rank, in ANY state (even one that later
+ * expired or was rejected — reassigning it is still the human decision
+ * podiumClaims deferred, not something this endpoint should infer on its
+ * own), means the tie is still unresolved.
+ */
+export function tiedAtUnclaimedRank(claims: ClaimRecord[], rank: number, uid: string): boolean {
+  return claims.some((c) => c.rank === rank && c.uid !== uid);
 }
 
 export interface RollDownInput {
@@ -726,6 +748,14 @@ async function handleClaim(ctx: {
       res.status(403).json({ error: 'not_a_winner' });
       return;
     }
+
+    // E8: see tiedAtUnclaimedRank's own doc comment for why this check exists.
+    const claims = await loadClaims(db, tid);
+    if (tiedAtUnclaimedRank(claims, me.rank, uid)) {
+      res.status(409).json({ error: 'rank_pending_review' });
+      return;
+    }
+
     rank = me.rank;
     finishRank = me.rank;
     prizeCents = cents;

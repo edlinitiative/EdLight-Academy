@@ -200,15 +200,32 @@ export type SubmissionRejection = 'no_window' | 'too_late';
 export interface SubmissionWindow {
   /** Server time the question window opened. */
   opensAt: number | null;
-  /** Server time the window closed. */
+  /** The SCHEDULED server time the window closes. Never moved by a force-close. */
   closesAt: number | null;
+  /**
+   * When the live document was actually marked `closed`, if it has been.
+   * Present for both a natural close and a forced one — and it is the only
+   * field that tells the truth after a force-close, because `advance.ts`
+   * reveals the key and writes this the moment an admin closes a question
+   * early WITHOUT moving `closesAt`. Trusting `closesAt` alone here is
+   * exactly the gap that let a submission arrive after a forced reveal and
+   * still be scored as on time.
+   */
+  closedAt: number | null;
   /** When WE received it. The only trusted end of the span. */
   serverReceivedAt: number;
 }
 
 export interface SubmissionDecision {
   accept: boolean;
-  /** Landed after `closesAt` but inside the pause. Recorded, almost always worth 0. */
+  /**
+   * Landed after the question actually closed — the schedule, or earlier if
+   * an admin forced it — but inside the pause. `answer.ts` passes this
+   * straight into `scoreAnswer`'s `late` flag, which hard-zeros points the
+   * same way it already does for a wrong answer. ALWAYS zero, not "almost
+   * always" — that phrase used to be here and was wrong; see the CORRECTION
+   * note on `scoreAnswer`.
+   */
   late: boolean;
   /** Landed before the question opened. Recorded and flagged, never silently dropped. */
   early: boolean;
@@ -221,11 +238,16 @@ export interface SubmissionDecision {
  * Three outcomes, and only one of them is a rejection:
  *
  *  - ACCEPTED, on time. The ordinary case.
- *  - ACCEPTED, late — after `closesAt`, within LATE_GRACE_MS. Decision 2: the
- *    pause is where late answers land. It scores what its timestamp earns
- *    (normally nothing) but it is recorded, shown, and counted toward the
- *    school's participation, because a student answering in good faith on a bad
- *    connection must appear in the record.
+ *  - ACCEPTED, late — after the question actually closed, within
+ *    LATE_GRACE_MS. Decision 2: the pause is where late answers land. It is
+ *    recorded, shown, and counted toward the school's participation, because
+ *    a student answering in good faith on a bad connection must appear in the
+ *    record — but it earns ZERO points, unconditionally, enforced in
+ *    `scoreAnswer` rather than left to the timing arithmetic to happen to
+ *    produce. "Actually closed" is `closedAt` when the live document has one,
+ *    not the announced `closesAt` — a force-close moves the first and not the
+ *    second, and a submission after a forced reveal is late regardless of
+ *    what the original schedule says.
  *  - ACCEPTED, early — received before `opensAt`. Section M's threat table says
  *    "server rejects"; section M's PRINCIPLES say "flag, don't block, in real
  *    time", and the principle wins. An answer that arrives before the question
@@ -234,12 +256,12 @@ export interface SubmissionDecision {
  *    scoreAnswer's isImpossible() path sees to that — so the student's outcome
  *    is identical and the audit trail is not empty.
  *
- * The single rejection is a submission more than LATE_GRACE_MS past the close.
- * By then the next question is open; accepting would let a client bank answers
- * and submit them against whichever window it preferred.
+ * The single rejection is a submission more than LATE_GRACE_MS past the actual
+ * close. By then the next question is open; accepting would let a client bank
+ * answers and submit them against whichever window it preferred.
  */
 export function decideSubmission(w: SubmissionWindow): SubmissionDecision {
-  const { opensAt, closesAt, serverReceivedAt } = w;
+  const { opensAt, closesAt, closedAt, serverReceivedAt } = w;
 
   // A live document with no usable window is our bug, not the student's — but
   // we cannot score against a clock that does not exist, and inventing one
@@ -248,15 +270,88 @@ export function decideSubmission(w: SubmissionWindow): SubmissionDecision {
     return { accept: false, late: false, early: false, reason: 'no_window' };
   }
 
-  if (serverReceivedAt > closesAt + LATE_GRACE_MS) {
+  // CORRECTION, from an external audit: a force-close reveals the key and
+  // writes `closedAt` WITHOUT moving `closesAt`, so a submission arriving
+  // after the forced reveal — but before the original schedule — used to be
+  // classified on time and scored in full. The door's real closing moment is
+  // `closedAt` when the live document has one; `closesAt` is only what we
+  // announced in advance, and after a close it may no longer be true.
+  const actualCloseAt = typeof closedAt === 'number' && Number.isFinite(closedAt) ? closedAt : closesAt;
+
+  if (serverReceivedAt > actualCloseAt + LATE_GRACE_MS) {
     return { accept: false, late: true, early: false, reason: 'too_late' };
   }
 
   return {
     accept: true,
-    late: serverReceivedAt > closesAt,
+    late: serverReceivedAt > actualCloseAt,
     early: serverReceivedAt < opensAt,
     reason: null,
+  };
+}
+
+// ── The presence window ─────────────────────────────────────────────────────
+
+export interface PresenceWindow {
+  /**
+   * The tournament's state — read INSIDE the write transaction, which is the
+   * whole point. Read before it, it is a fact about the past by the time the
+   * write lands.
+   */
+  state: ArenaState | null;
+  /**
+   * `rosterFrozenAt` in ms, or null while `doors-close` has not run yet.
+   *
+   * THE cut-off. Not the state, not a clock: `doors-close.ts` is built around
+   * "the answer is frozen rather than recomputed", so once it has written the
+   * roster, qualification is a stored fact and nothing arriving afterwards can
+   * change it.
+   */
+  rosterFrozenAt: number | null;
+}
+
+export interface PresenceDecision {
+  accept: boolean;
+  /**
+   * Does this sighting count toward the school's five? This is exactly the
+   * value stamped as `duringDoors`, and exactly what `countsPresent()` in
+   * `doors-close.ts` reads back out.
+   */
+  countsTowardQualification: boolean;
+}
+
+/**
+ * Is this student in the room, and does being here still count?
+ *
+ * Two separate questions, and conflating them is the bug this closes.
+ *
+ * ACCEPTANCE is unchanged and deliberately wide: `doors` is what presence is
+ * FOR, and `live` is accepted too because the client keeps the heartbeat
+ * running across the transition — rejecting it the instant the first question
+ * opens would spam an error at every player in the tournament.
+ *
+ * COUNTING is the narrow one. CORRECTION, from an external audit: presence
+ * used to stamp `duringDoors: state === 'doors'` and never look at the roster
+ * freeze at all, so a student first seen AFTER `doors-close.ts` had already
+ * frozen qualification — but while the state was still `doors` — was recorded
+ * as having made the cut-off. The frozen roster says otherwise and is the
+ * document that actually decides, so that row was a claim contradicted by the
+ * stored verdict, and the live "N présents" the lobby renders would drift
+ * above the number the school was actually judged on. A student arriving late
+ * is still marked present — they ARE in the room, and the doors screen's
+ * arrivals feed is real — but `duringDoors: false` records the truth, which is
+ * what "evaluated at doors close" has meant all along.
+ */
+export function decidePresence(w: PresenceWindow): PresenceDecision {
+  const { state, rosterFrozenAt } = w;
+
+  if (state !== 'doors' && state !== 'live') {
+    return { accept: false, countsTowardQualification: false };
+  }
+
+  return {
+    accept: true,
+    countsTowardQualification: state === 'doors' && rosterFrozenAt === null,
   };
 }
 
