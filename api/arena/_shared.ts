@@ -22,6 +22,7 @@ import type { DocumentData, Firestore } from 'firebase-admin/firestore';
 import { Timestamp } from 'firebase-admin/firestore';
 import { checkRateLimit } from '../_lib/rateLimit';
 import { ARENA_STATES, type ArenaState } from '../../shared/arena/state';
+import { seedSchoolByKey } from '../../shared/schools';
 
 // ── Windows and thresholds ──────────────────────────────────────────────────
 
@@ -524,24 +525,69 @@ export async function publicDisplayName(
   return defaultAlias(tokenName);
 }
 
+export interface ResolvedSchool {
+  /**
+   * Does this key name a school the picker could actually have offered —
+   * a seeded one, or a Firestore document somebody added through `addSchool`?
+   *
+   * False means the key came from a client that bypassed the picker, because
+   * those two sets are everything the picker can produce.
+   */
+  known: boolean;
+  /** What goes on the public board. Never empty. */
+  label: string;
+}
+
 /**
- * The school's display label, best-effort.
+ * Resolve a school key to what the broadcast should call it, and whether it
+ * names a real school at all.
  *
- * Never blocks a registration. A student whose school is mid-approval still
- * plays (section M: nobody is turned away), and falling back to the key keeps a
- * readable row instead of an empty one on the standings.
+ * CORRECTION, from an external audit (E9: "server label lookup ignores the
+ * bundled seed and does not enforce approved status"). This used to query the
+ * `schools` Firestore collection and nothing else, then fall back to the raw
+ * key. But Firestore holds only what the seed does not — `school-location.ts`
+ * says it outright, "a seeded school has no document yet" — so for most real
+ * registrations the lookup found nothing and the fallback fired. The board
+ * that exists to say CODOSA said `college dominique savio`: the grouping key,
+ * lowercased and accent-stripped, on a public stream.
+ *
+ * Order of preference, and each step is a deliberate choice:
+ *  1. A Firestore document, because an admin or the school's own students may
+ *     have supplied a short name the bundle never had.
+ *  2. The bundled seed, which is where the other 94 live.
+ *  3. The key itself — still the last resort, but now genuinely last rather
+ *     than the common case.
+ *
+ * `known` is reported separately from the label so the CALLER decides what to
+ * do about an unrecognised school. This function never throws and never
+ * blocks: a Firestore outage degrades to the seed rather than failing a
+ * registration.
  */
-export async function schoolLabel(db: Firestore, key: string): Promise<string> {
+export async function resolveSchool(db: Firestore, key: string): Promise<ResolvedSchool> {
+  const seeded = seedSchoolByKey(key);
+
   try {
     const snap = await db.collection('schools').where('key', '==', key).limit(1).get();
     const data = snap.docs[0]?.data();
-    const short = typeof data?.shortName === 'string' ? data.shortName.trim() : '';
-    const name = typeof data?.name === 'string' ? data.name.trim() : '';
-    return short || name || key;
+    if (data) {
+      const short = typeof data.shortName === 'string' ? data.shortName.trim() : '';
+      const name = typeof data.name === 'string' ? data.name.trim() : '';
+      return { known: true, label: short || name || seeded?.shortName || seeded?.name || key };
+    }
   } catch (err) {
+    // Degrade to the seed rather than fail. A student must never be unable to
+    // register because the decoration on their board row could not be read —
+    // and for a seeded school the seed is the better answer anyway.
     console.error('[arena] school lookup failed:', err);
-    return key;
+    if (seeded) return { known: true, label: seeded.shortName || seeded.name };
+    // Unverifiable rather than unknown: we could not ask. Treating a Firestore
+    // blip as "this school does not exist" would turn an outage into a wall of
+    // rejected registrations at 17:55.
+    return { known: true, label: key };
   }
+
+  if (seeded) return { known: true, label: seeded.shortName || seeded.name };
+  return { known: false, label: key };
 }
 
 // ── Rate limiting ───────────────────────────────────────────────────────────

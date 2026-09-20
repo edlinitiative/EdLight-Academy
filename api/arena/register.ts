@@ -33,8 +33,14 @@
  *   STORED verdict rather than a live recount, because a recount taken after
  *   the cut-off cannot overturn the document the board actually reads.
  *
- * Errors: 400 invalid input · 403 grade_not_eligible · 404 tournament_not_found ·
- *         409 registration_closed · 429 rate limited · 500 write_failed.
+ * Errors: 400 invalid input / unknown_school · 403 grade_not_eligible ·
+ *         404 tournament_not_found · 409 registration_closed ·
+ *         429 rate limited · 500 write_failed.
+ *
+ * `unknown_school` means the key named neither a bundled school nor a
+ * Firestore document — which no picker can produce, so it is a client that
+ * bypassed one. A school still awaiting approval HAS a document and registers
+ * exactly as before; see `resolveSchool` in `_shared.ts`.
  *
  * Rate limiting: the `arena-register` bucket, which FAILS CLOSED.
  */
@@ -56,8 +62,8 @@ import {
   normalizeDeviceHash,
   parseBody,
   publicDisplayName,
+  resolveSchool,
   schoolCounts,
-  schoolLabel,
   toMillis,
 } from './_shared';
 
@@ -204,11 +210,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       return;
     }
 
-    const [displayName, label, geo] = await Promise.all([
+    const [displayName, school, geo] = await Promise.all([
       publicDisplayName(db, uid, tokenName),
-      schoolLabel(db, schoolKey),
+      resolveSchool(db, schoolKey),
       playerGeography(db, uid),
     ]);
+
+    // CORRECTION, from an external audit (E9): registration validated the
+    // key's SHAPE and never asked whether it named a school at all, so a
+    // client bypassing the picker could invent one — and `aggregate.ts`
+    // discovers schools from player rows, so the invention went straight onto
+    // the public board. Most of this audience is under 18 and that board is on
+    // a stream, which makes arbitrary text on it a moderation problem as well
+    // as an integrity one.
+    //
+    // This does NOT narrow who may play. The picker can only ever offer a
+    // seeded school or a Firestore document, and `addSchool()` writes the
+    // document BEFORE the student can pick what they added — so every
+    // legitimate path already resolves. "Nobody is turned away" is about a
+    // school mid-approval still playing, and a `pending` school has a
+    // document, so it still registers exactly as before. What is refused is a
+    // key naming nothing, which no picker produced.
+    if (!school.known) {
+      res.status(400).json({
+        error: 'unknown_school',
+        message: 'Chwazi lekòl ou nan lis la.',
+      });
+      return;
+    }
+    const label = school.label;
 
     const tournamentRef = db.doc(`tournaments/${tournamentId}`);
     const regRef = db.doc(`tournamentRegistrations/${tournamentId}_${uid}`);

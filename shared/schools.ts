@@ -1,4 +1,5 @@
 import { normalizeName } from './leaderboardAgg';
+import seedDoc from './data/schools-seed.json';
 
 /**
  * Finding a school in a list, and deciding when two names are the same school.
@@ -87,8 +88,61 @@ export function shortNameKey(raw: string): string {
  * shipped inside the app, so nothing needs to approve it; only the two
  * explicit non-approved states are not.
  */
-function isApproved(school: School): boolean {
+export function isApproved(school: School): boolean {
   return (school.status ?? 'approved') === 'approved';
+}
+
+/**
+ * The 94 schools that ship inside the bundle, as `School` records.
+ *
+ * Lives here rather than in any one client because THE SERVER NEEDS IT TOO,
+ * and until it had it the Arena got school identity wrong in two ways at once
+ * (CORRECTION, from an external audit — E9):
+ *
+ *  · `api/arena/_shared.ts`'s label lookup queried the `schools` Firestore
+ *    collection and nothing else. But Firestore "holds only what the seed does
+ *    not: schools students add themselves" — a seeded school has no document
+ *    until an admin types its location in. So for most real registrations the
+ *    lookup found nothing and fell back to the raw key, and the board that is
+ *    supposed to say CODOSA said `college dominique savio`: lowercased,
+ *    accents stripped, on a public broadcast.
+ *  · Registration validated the key's SHAPE and never asked whether it named
+ *    a school at all, so a client bypassing the picker could invent one and
+ *    put it on the same broadcast.
+ *
+ * Derived lazily so this never depends on where it sits relative to
+ * `schoolKey()`'s own dependencies, and cached because the derivation is pure.
+ * The key is computed with `schoolKey()` — the same function the picker and
+ * the leaderboard group by — because a seed keyed any other way would be a
+ * second opinion about school identity, which is the bug this whole module
+ * exists to prevent.
+ */
+let seedCache: School[] | null = null;
+
+export function seedSchools(): School[] {
+  if (!seedCache) {
+    const rows = seedDoc.schools as Array<{ name: string; shortName?: string; applicants?: number }>;
+    seedCache = rows.map((s) => ({
+      key: schoolKey(s.name),
+      name: s.name,
+      // The seed records no location: its source is the student's home
+      // address, not the school's, so a school is one entry per name
+      // nationally. A commune only appears once a student adds one.
+      commune: '',
+      applicants: s.applicants,
+      // Only the schools whose short name someone actually told us carry one.
+      shortName: s.shortName,
+    }));
+  }
+  return seedCache;
+}
+
+let seedByKey: Map<string, School> | null = null;
+
+/** The seeded school a key names, or null when the seed does not have it. */
+export function seedSchoolByKey(key: string): School | null {
+  if (!seedByKey) seedByKey = new Map(seedSchools().map((s) => [s.key, s]));
+  return seedByKey.get(key) ?? null;
 }
 
 /**
