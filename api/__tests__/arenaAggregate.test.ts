@@ -24,6 +24,7 @@ import {
   withoutUndefined,
   blocksPublication,
   selectEligibleTop,
+  wasInTheRoom,
   selectSchools,
   type PlayerRow,
   type SchoolPool,
@@ -37,6 +38,7 @@ import {
   FORBIDDEN_LIVE_FIELDS,
 } from '../arena/advance';
 import { deriveEvents } from '../../shared/arena/events';
+import { countsPresent } from '../arena/doors-close';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -601,5 +603,95 @@ describe('the answer key becomes public exactly once', () => {
     const reveal = -1;
     const patch = { state: 'closed', ...(reveal >= 0 ? { answerIndex: reveal } : {}) };
     expect(patch).not.toHaveProperty('answerIndex');
+  });
+});
+
+
+/*
+ * E4, and Ted's decision of 2026-09-20: the counting five is the five who were
+ * IN THE ROOM.
+ *
+ * Qualification has always been measured at doors close on players present.
+ * The scoring pool was not — it was built from every REGISTERED player at the
+ * school, so a school could qualify on one five and be scored on a different
+ * five that included somebody who tapped in at question three. A late arrival
+ * still ranks individually; that comes from `loadNationalTop`, which stays
+ * unfiltered on purpose.
+ */
+describe('the counting five is the five who turned up', () => {
+  const doc = (
+    uid: string,
+    score: number,
+    presence: { presentAt?: number; duringDoors?: boolean } = {},
+  ): { uid: string; data: Record<string, unknown> } => ({
+    uid,
+    data: { schoolKey: 'codosa', score, totalMs: 1_000, ...presence },
+  });
+
+  const onTime = (uid: string, score: number) => doc(uid, score, { presentAt: 1_000, duringDoors: true });
+  const late = (uid: string, score: number) => doc(uid, score, { presentAt: 9_000, duringDoors: false });
+  const neverCame = (uid: string, score: number) => doc(uid, score);
+
+  it('keeps a late arrival out of the school pool once the roster is frozen', () => {
+    const rows = selectEligibleTop(
+      [onTime('a', 900), late('b', 850), onTime('c', 800)],
+      5,
+      { presentOnly: true },
+    );
+    expect(rows.map((r) => r.uid)).toEqual(['a', 'c']);
+  });
+
+  it('counts them before the freeze, when nobody is late yet', () => {
+    const rows = selectEligibleTop([onTime('a', 900), late('b', 850)], 5, { presentOnly: false });
+    expect(rows.map((r) => r.uid)).toEqual(['a', 'b']);
+  });
+
+  it('excludes somebody who never tapped in at all', () => {
+    const rows = selectEligibleTop([onTime('a', 900), neverCame('b', 850)], 5, { presentOnly: true });
+    expect(rows.map((r) => r.uid)).toEqual(['a']);
+  });
+
+  /*
+   * The cushion has to absorb the late arrivals too, or a school loses members
+   * of its real five to a page that filled up with people who were not there.
+   */
+  it('still fills five from a page thick with latecomers', () => {
+    const docs = [
+      late('l1', 999), late('l2', 998), late('l3', 997),
+      onTime('a', 900), onTime('b', 890), onTime('c', 880),
+      onTime('d', 870), onTime('e', 860), onTime('f', 850),
+    ];
+    const rows = selectEligibleTop(docs, 5, { presentOnly: true });
+    expect(rows.map((r) => r.uid)).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('still drops a disqualified player, present or not', () => {
+    const rows = selectEligibleTop(
+      [{ uid: 'x', data: { schoolKey: 'codosa', score: 999, totalMs: 1, presentAt: 1_000, duringDoors: true, eligible: false } },
+       onTime('a', 900)],
+      5,
+      { presentOnly: true },
+    );
+    expect(rows.map((r) => r.uid)).toEqual(['a']);
+  });
+
+  /*
+   * `wasInTheRoom` re-states doors-close's `countsPresent` rather than
+   * importing it, so that the aggregator does not depend on the freeze job.
+   * The two must never disagree — that is what this asserts, on the same
+   * fixtures.
+   */
+  it('agrees exactly with the test doors-close froze the roster on', () => {
+    const cases = [
+      { presentAt: 1_000, duringDoors: true },
+      { presentAt: 9_000, duringDoors: false },
+      { presentAt: 1_000 },
+      { duringDoors: true },
+      {},
+    ];
+    for (const c of cases) {
+      expect(wasInTheRoom(c as Record<string, unknown>))
+        .toBe(countsPresent(c as Parameters<typeof countsPresent>[0]));
+    }
   });
 });

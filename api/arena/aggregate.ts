@@ -558,11 +558,29 @@ function toPlayerRow(uid: string, data: Row): PlayerRow {
 export function selectEligibleTop(
   docs: Array<{ uid: string; data: Row }>,
   limit: number,
+  opts: { presentOnly?: boolean } = {},
 ): PlayerRow[] {
   return docs
     .filter(({ data }) => data.eligible !== false)
+    .filter(({ data }) => !opts.presentOnly || wasInTheRoom(data))
     .slice(0, limit)
     .map(({ uid, data }) => toPlayerRow(uid, data));
+}
+
+/**
+ * Was this student in the room when the doors closed?
+ *
+ * The same test `doors-close.ts` counts qualification on (`countsPresent`),
+ * re-stated here rather than imported so that `aggregate` does not depend on
+ * the freeze job — but it must stay identical to it, and the tests assert that
+ * on the same fixtures.
+ *
+ * `presentAt` alone is not enough: `presence.ts` accepts a tap-in during
+ * `live` too, and stamps `duringDoors: false` on it. That is precisely the
+ * late arrival this is about.
+ */
+export function wasInTheRoom(data: Row): boolean {
+  return !!data.presentAt && data.duringDoors === true;
 }
 
 /**
@@ -660,6 +678,11 @@ async function loadPool(
    * school with five registered and three present would be ranked.
    */
   roster: Map<string, { present: number; qualified: boolean }>,
+  /**
+   * True once `doors-close` has stamped `rosterFrozenAt`. Until then nobody is
+   * late, because the cut-off has not happened.
+   */
+  rosterFrozen: boolean,
 ): Promise<SchoolPool | null> {
   const players = db.collection(`tournaments/${tid}/players`).where('schoolKey', '==', key);
   const [top, counted] = await Promise.all([
@@ -667,8 +690,32 @@ async function loadPool(
     players.count().get(),
   ]);
 
-  // E8: see selectEligibleTop's own doc comment for why this isn't a `where`.
-  const rows = selectEligibleTop(top.docs.map((doc) => ({ uid: doc.id, data: doc.data() as Row })), pool);
+  /*
+   * E8: see selectEligibleTop's own doc comment for why this isn't a `where`.
+   *
+   * E4, and Ted's decision of 2026-09-20: THE COUNTING FIVE IS THE FIVE WHO
+   * WERE IN THE ROOM. Qualification has always been measured at doors close on
+   * players present — but this pool was built from every REGISTERED player at
+   * the school, so a school could qualify on one five and then be scored on a
+   * different five that included somebody who tapped in at question three. The
+   * rule deciding whether a school competes and the rule deciding how well it
+   * did were reading two different rosters.
+   *
+   * A late arrival still ranks INDIVIDUALLY and can still win the cash — that
+   * half comes from `loadNationalTop`, which is deliberately not filtered. The
+   * team is who turned up on time; the individual is whoever played.
+   *
+   * Filtered in memory on the same over-fetched window as `eligible`, and it
+   * needs no wider one: a student who never tapped in never answered, so they
+   * carry a zero score and sort to the BOTTOM of a score-ordered page, while a
+   * late arrival has by construction missed questions the present players
+   * answered. Neither displaces fifteen present students from the top of it.
+   */
+  const rows = selectEligibleTop(
+    top.docs.map((doc) => ({ uid: doc.id, data: doc.data() as Row })),
+    pool,
+    { presentOnly: rosterFrozen },
+  );
   if (rows.length === 0) return null;
 
   const before = previous.get(key);
@@ -917,6 +964,14 @@ export async function aggregateOne(
      * Empty before doors close, which is correct: until then registration IS
      * the count, and every school is provisional anyway.
      */
+    /*
+     * Has the roster actually been frozen? Not the same question as "is the
+     * roster map non-empty" — a tournament with no qualifying school freezes
+     * to an empty collection, and reading that as "not frozen yet" would put
+     * every late arrival back into the counting five.
+     */
+    const rosterFrozen = millis(tournament.rosterFrozenAt) !== null;
+
     const rosterSnap = await db.collection(`tournaments/${tid}/roster`).get();
     const roster = new Map<string, { present: number; qualified: boolean }>(
       rosterSnap.docs.map((d) => {
@@ -945,7 +1000,7 @@ export async function aggregateOne(
       mapLimit(
         selection.selected,
         QUERY_CONCURRENCY,
-        (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
+        (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster, rosterFrozen),
       ).then((rows) => rows.filter((p): p is SchoolPool => p !== null)),
       loadNationalTop(db, tid),
     ]);
