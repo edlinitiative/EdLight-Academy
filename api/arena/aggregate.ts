@@ -554,7 +554,9 @@ async function loadPool(
 /**
  * Write the board and the events it describes, numbering them at commit time.
  *
- * TWO properties, and the second is the one that was missing:
+ * THREE properties. The third is CORRECTION, from an external audit — the
+ * seq fix (property 2) closed the event-collision race, but never protected
+ * the BOARD CONTENTS themselves from a second, slower kind of race.
  *
  *  1. ONE TRANSACTION. Two writes would leave a window in which a spectator's
  *     listener has delivered "CODOSA just took the lead" while
@@ -568,6 +570,22 @@ async function loadPool(
  *     `standings.seq` set back below where the emitter had left it. Firestore
  *     aborts and retries whichever of the two transactions loses the race, so
  *     the retry reads the counter the winner moved.
+ *  3. A STALE BOARD CANNOT OVERWRITE A FRESHER ONE. `board` itself — the
+ *     ranked schools and individuals — is computed by the CALLER from a page
+ *     of per-school queries that run BEFORE this function is ever called, not
+ *     inside this transaction. If two ticks overlap (an admin's "recompute"
+ *     button pressed while the cron is mid-flight, or two overlapping
+ *     invocations for any reason) and the one that STARTED SECOND happens to
+ *     FINISH first, its `board` is complete and correct as of when it read
+ *     the schools — but the OTHER tick, still running its own older queries,
+ *     would otherwise finish moments later and blindly overwrite that fresher
+ *     board with data read before it. The seq allocation alone does not catch
+ *     this: it only stops two SETS OF EVENTS from colliding, not an entire
+ *     board from moving backwards. `startedFromComputedAt` is what THIS tick
+ *     saw as the current `computedAt` before it began its own queries; if the
+ *     fresh read inside this transaction shows a LATER `computedAt`, someone
+ *     else's tick has already published newer data, and this one writes
+ *     nothing rather than regress it.
  *
  * `previousSeq` is only a floor: it keeps the stored seq from going BACKWARDS
  * in the impossible-but-cheap-to-rule-out case of a standings document whose
@@ -579,12 +597,22 @@ export async function commitBoard(
   board: StoredStandings,
   events: ArenaEvent[],
   previousSeq: number,
-): Promise<{ events: ArenaEvent[]; seq: number }> {
+  startedFromComputedAt: number,
+): Promise<{ superseded: true } | { superseded: false; events: ArenaEvent[]; seq: number }> {
   const standingsRef = db.doc(`tournaments/${tid}/standings/current`);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(standingsRef);
+    const freshData = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+    const freshComputedAt = typeof freshData?.computedAt === 'number' && Number.isFinite(freshData.computedAt)
+      ? freshData.computedAt
+      : 0;
+
+    if (freshComputedAt > startedFromComputedAt) {
+      return { superseded: true as const };
+    }
+
     const allocated = Math.max(
-      highestSeq(snap.exists ? (snap.data() as Record<string, unknown>) : null),
+      highestSeq(freshData),
       Math.max(0, previousSeq - 1),
     );
     const numbered = renumber(events, allocated + 1);
@@ -596,7 +624,7 @@ export async function commitBoard(
       seq: seqAfter(numbered, allocated),
     };
     tx.set(standingsRef, { ...stored, updatedAt: FieldValue.serverTimestamp() });
-    return { events: numbered, seq: stored.seq };
+    return { superseded: false as const, events: numbered, seq: stored.seq };
   });
 }
 
@@ -754,7 +782,18 @@ export async function aggregateOne(
     });
 
     // ── 5 · Events and the board they describe, in ONE transaction ──────────
-    const committed = await commitBoard(db, tid, board, events, seq);
+    const startedFromComputedAt = typeof previous?.computedAt === 'number' && Number.isFinite(previous.computedAt)
+      ? previous.computedAt
+      : 0;
+    const committed = await commitBoard(db, tid, board, events, seq, startedFromComputedAt);
+
+    if (committed.superseded) {
+      // Not an error: another tick — an overlapping cron invocation, or an
+      // admin's manual recompute — finished with newer underlying data while
+      // this one was still querying schools. That tick's board already
+      // stands; writing this one would move the public standings backwards.
+      return { status: 200, body: { ok: true, skipped: 'superseded' } };
+    }
 
     return {
       status: 200,
