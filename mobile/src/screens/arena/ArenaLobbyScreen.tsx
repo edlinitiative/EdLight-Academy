@@ -162,7 +162,13 @@ export default function ArenaLobbyScreen() {
     .filter((r) => Number.isFinite(r.cents) && r.cents > 0)
     .map((r) => ({
       place: r.place,
-      amount: `$${Math.round(r.cents / 100)}`,
+      // Round dollars stay clean ("$100"); anything else keeps its cents.
+      // `Math.round(cents / 100)` printed a 50-cent prize as "$1" and a
+      // 25-cent one as "$0", which is how a tournament configured in the wrong
+      // unit looked plausible on the screen instead of obviously broken.
+      amount: r.cents % 100 === 0
+        ? `$${r.cents / 100}`
+        : `$${(r.cents / 100).toFixed(2)}`,
     })), [tournament?.prizes]);
 
   if (loading) {
