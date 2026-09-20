@@ -290,6 +290,71 @@ export function decideSubmission(w: SubmissionWindow): SubmissionDecision {
   };
 }
 
+// ── The presence window ─────────────────────────────────────────────────────
+
+export interface PresenceWindow {
+  /**
+   * The tournament's state — read INSIDE the write transaction, which is the
+   * whole point. Read before it, it is a fact about the past by the time the
+   * write lands.
+   */
+  state: ArenaState | null;
+  /**
+   * `rosterFrozenAt` in ms, or null while `doors-close` has not run yet.
+   *
+   * THE cut-off. Not the state, not a clock: `doors-close.ts` is built around
+   * "the answer is frozen rather than recomputed", so once it has written the
+   * roster, qualification is a stored fact and nothing arriving afterwards can
+   * change it.
+   */
+  rosterFrozenAt: number | null;
+}
+
+export interface PresenceDecision {
+  accept: boolean;
+  /**
+   * Does this sighting count toward the school's five? This is exactly the
+   * value stamped as `duringDoors`, and exactly what `countsPresent()` in
+   * `doors-close.ts` reads back out.
+   */
+  countsTowardQualification: boolean;
+}
+
+/**
+ * Is this student in the room, and does being here still count?
+ *
+ * Two separate questions, and conflating them is the bug this closes.
+ *
+ * ACCEPTANCE is unchanged and deliberately wide: `doors` is what presence is
+ * FOR, and `live` is accepted too because the client keeps the heartbeat
+ * running across the transition — rejecting it the instant the first question
+ * opens would spam an error at every player in the tournament.
+ *
+ * COUNTING is the narrow one. CORRECTION, from an external audit: presence
+ * used to stamp `duringDoors: state === 'doors'` and never look at the roster
+ * freeze at all, so a student first seen AFTER `doors-close.ts` had already
+ * frozen qualification — but while the state was still `doors` — was recorded
+ * as having made the cut-off. The frozen roster says otherwise and is the
+ * document that actually decides, so that row was a claim contradicted by the
+ * stored verdict, and the live "N présents" the lobby renders would drift
+ * above the number the school was actually judged on. A student arriving late
+ * is still marked present — they ARE in the room, and the doors screen's
+ * arrivals feed is real — but `duringDoors: false` records the truth, which is
+ * what "evaluated at doors close" has meant all along.
+ */
+export function decidePresence(w: PresenceWindow): PresenceDecision {
+  const { state, rosterFrozenAt } = w;
+
+  if (state !== 'doors' && state !== 'live') {
+    return { accept: false, countsTowardQualification: false };
+  }
+
+  return {
+    accept: true,
+    countsTowardQualification: state === 'doors' && rosterFrozenAt === null,
+  };
+}
+
 // ── Integrity flags ─────────────────────────────────────────────────────────
 
 export interface FlagInput {

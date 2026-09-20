@@ -16,6 +16,16 @@
  * "CODOSA · 5 inscrits · 3 présents" with the present count as the one that
  * matters, and the invite copy can shift from "register" to "come now".
  *
+ * BEING HERE AND COUNTING ARE DIFFERENT THINGS, and `decidePresence()`
+ * (`_shared.ts`) is where the two are kept apart. This endpoint keeps
+ * accepting heartbeats into `live` on purpose, so a client that crosses the
+ * transition is not spammed with errors — but `duringDoors` is stamped true
+ * only while the state is `doors` AND `doors-close.ts` has not yet frozen the
+ * roster. The freeze is the cut-off, not the state and not a clock: once the
+ * roster is a stored fact, a row claiming to have made a cut-off that has
+ * already passed would contradict the document qualification is actually
+ * judged on.
+ *
  * Request body (Authorization: Bearer <Firebase ID token>):
  *   { tournamentId: string }
  *
@@ -39,10 +49,12 @@ import { getDb } from '../_lib/firebaseAdmin';
 import {
   DEFAULT_MIN_PLAYERS,
   asArenaState,
+  decidePresence,
   enforceRateLimit,
   isValidTournamentId,
   parseBody,
   schoolCounts,
+  toMillis,
 } from './_shared';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -65,34 +77,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   const db = getDb();
 
+  const tournamentRef = db.doc(`tournaments/${tournamentId}`);
+  const playerRef = db.doc(`tournaments/${tournamentId}/players/${uid}`);
+
   try {
-    const tSnap = await db.doc(`tournaments/${tournamentId}`).get();
-    if (!tSnap.exists) {
-      res.status(404).json({ error: 'tournament_not_found' });
-      return;
-    }
-    const tournament = tSnap.data() ?? {};
-    const state = asArenaState(tournament.state);
-
-    // `doors` is what presence is FOR. `live` is accepted too, because the
-    // client keeps the heartbeat running across the transition and rejecting it
-    // the instant the first question opens would spam errors at every player in
-    // the tournament. A player first seen during `live` still gets a
-    // `presentAt` — they are in the room — but `duringDoors: false` records
-    // that they missed the qualification cut-off, so the aggregator can apply
-    // Decision 3 exactly ("evaluated at doors close") without re-deriving it
-    // from timestamps against a doorsAt that an admin may have moved.
-    if (state !== 'doors' && state !== 'live') {
-      res.status(409).json({ error: 'doors_not_open', state: state ?? null });
-      return;
-    }
-
-    const minPlayers = typeof tournament.minPlayers === 'number' && tournament.minPlayers > 0
-      ? tournament.minPlayers
-      : DEFAULT_MIN_PLAYERS;
-
-    const playerRef = db.doc(`tournaments/${tournamentId}/players/${uid}`);
-
     // ── Mark present, once ────────────────────────────────────────────────
     //
     // Transactional and first-write-wins. `presentAt` is when the student
@@ -100,37 +88,88 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     // turn the arrival time into "the last time their phone had signal" —
     // which is the wrong number for a tiebreaker and the wrong number for the
     // "SLDG vient d'entrer" moment the doors screen is built around.
-    const marked = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(playerRef);
-      if (!snap.exists) return null;
+    //
+    // CORRECTION, from an external audit: the tournament used to be read
+    // BEFORE this transaction and only the player row inside it, so the state
+    // and roster-freeze this write depends on were a snapshot of the past by
+    // the time it landed. `doors-close.ts` freezes the roster on a cron tick
+    // and `advance.ts` moves the state on another — both can fire in that gap,
+    // and a presence write stamping `duringDoors: true` from a stale read is a
+    // row claiming it made a cut-off that had already passed. Reading the
+    // tournament in the same transaction that writes closes the gap the way
+    // every other write in this codebase already does.
+    const outcome = await db.runTransaction(async (tx) => {
+      // Both reads before any write — Firestore's rule, and the ordering here
+      // also preserves the response precedence: a missing tournament is a 404
+      // before an unregistered player is a 403.
+      const tSnap = await tx.get(tournamentRef);
+      if (!tSnap.exists) return { kind: 'not_found' as const };
 
-      const player = snap.data() ?? {};
+      const tournament = tSnap.data() ?? {};
+      const state = asArenaState(tournament.state);
+      const decision = decidePresence({
+        state,
+        rosterFrozenAt: toMillis(tournament.rosterFrozenAt),
+      });
+
+      const minPlayers = typeof tournament.minPlayers === 'number' && tournament.minPlayers > 0
+        ? tournament.minPlayers
+        : DEFAULT_MIN_PLAYERS;
+
+      if (!decision.accept) return { kind: 'doors_not_open' as const, state };
+
+      const pSnap = await tx.get(playerRef);
+      // Presence is meaningless without a registration: there is no school to
+      // count them toward and no row to score them on.
+      if (!pSnap.exists) return { kind: 'not_registered' as const };
+
+      const player = pSnap.data() ?? {};
       const existingPresentAt = player.presentAt ?? null;
+      const now = Timestamp.now();
+      const schoolKey = String(player.schoolKey ?? '');
 
       if (!existingPresentAt) {
-        const now = Timestamp.now();
         tx.update(playerRef, {
           presentAt: now,
-          duringDoors: state === 'doors',
+          duringDoors: decision.countsTowardQualification,
           lastSeenAt: now,
         });
-        return { schoolKey: String(player.schoolKey ?? ''), presentAt: now, duringDoors: state === 'doors' };
+        return {
+          kind: 'ok' as const,
+          schoolKey,
+          presentAt: now,
+          duringDoors: decision.countsTowardQualification,
+          minPlayers,
+        };
       }
 
-      tx.update(playerRef, { lastSeenAt: Timestamp.now() });
+      tx.update(playerRef, { lastSeenAt: now });
       return {
-        schoolKey: String(player.schoolKey ?? ''),
+        kind: 'ok' as const,
+        schoolKey,
         presentAt: existingPresentAt as Timestamp,
         duringDoors: player.duringDoors === true,
+        minPlayers,
       };
     });
 
-    if (!marked) {
-      // Presence is meaningless without a registration: there is no school to
-      // count them toward and no row to score them on.
+    if (outcome.kind === 'not_found') {
+      res.status(404).json({ error: 'tournament_not_found' });
+      return;
+    }
+
+    if (outcome.kind === 'doors_not_open') {
+      res.status(409).json({ error: 'doors_not_open', state: outcome.state ?? null });
+      return;
+    }
+
+    if (outcome.kind === 'not_registered') {
       res.status(403).json({ error: 'not_registered' });
       return;
     }
+
+    const marked = outcome;
+    const minPlayers = outcome.minPlayers;
 
     const counts = marked.schoolKey
       ? await schoolCounts(db, tournamentId, marked.schoolKey)

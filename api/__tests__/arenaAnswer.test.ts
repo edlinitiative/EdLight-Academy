@@ -23,6 +23,7 @@ import {
   FOCUS_LOSS_FLAG_MIN,
   LATE_GRACE_MS,
   boundedInt,
+  decidePresence,
   decideSubmission,
   defaultAlias,
   integrityFlags,
@@ -252,6 +253,62 @@ describe('registration gates', () => {
     // them, this fails and the registration window has to be reconsidered
     // rather than silently spanning a gap.
     expect(canTransition('registration', 'doors')).toBe(true);
+  });
+});
+
+/*
+ * E4, from an external audit: presence used to stamp `duringDoors` from the
+ * STATE alone — `state === 'doors'` — and never look at whether
+ * `doors-close.ts` had already frozen the roster. The freeze happens on a
+ * cron tick part-way through `doors`, so a student first seen after it but
+ * before the state moved on was recorded as having made a cut-off that had
+ * already passed. `countsPresent()` reads that flag straight back out, and
+ * the live "N présents" the lobby renders would drift above the number the
+ * school was actually judged on.
+ *
+ * Being in the room and counting toward the five are different facts, and
+ * this is the function that keeps them apart.
+ */
+describe('decidePresence — E4: the freeze is the cut-off, not the state', () => {
+  const FROZEN = 1_770_000_000_000;
+
+  it('accepts and counts an arrival during doors, before the freeze', () => {
+    expect(decidePresence({ state: 'doors', rosterFrozenAt: null }))
+      .toEqual({ accept: true, countsTowardQualification: true });
+  });
+
+  it('CLOSED: an arrival after the freeze is still present, but no longer counts', () => {
+    // The exact gap: the state is STILL `doors`, so the old check said true.
+    expect(decidePresence({ state: 'doors', rosterFrozenAt: FROZEN }))
+      .toEqual({ accept: true, countsTowardQualification: false });
+  });
+
+  it('keeps accepting the heartbeat into `live`, but never counts it', () => {
+    // Accepted on purpose — the client keeps the heartbeat running across the
+    // transition, and rejecting it would spam an error at every player in the
+    // tournament. It just does not qualify anybody.
+    expect(decidePresence({ state: 'live', rosterFrozenAt: null }))
+      .toEqual({ accept: true, countsTowardQualification: false });
+    expect(decidePresence({ state: 'live', rosterFrozenAt: FROZEN }))
+      .toEqual({ accept: true, countsTowardQualification: false });
+  });
+
+  it('refuses outright before the doors open and after the tournament is scoring', () => {
+    for (const s of ['draft', 'registration', 'grading', 'provisional', 'final', 'void'] as const) {
+      expect(decidePresence({ state: s, rosterFrozenAt: null }).accept).toBe(false);
+    }
+  });
+
+  it('refuses a tournament whose state could not be read at all', () => {
+    expect(decidePresence({ state: null, rosterFrozenAt: null }).accept).toBe(false);
+  });
+
+  it('never counts a sighting it did not accept', () => {
+    // A rejected presence call must not leave `countsTowardQualification`
+    // true for a caller that only checked one of the two fields.
+    for (const s of ['draft', 'registration', 'grading', 'provisional', 'final', 'void', null] as const) {
+      expect(decidePresence({ state: s, rosterFrozenAt: null }).countsTowardQualification).toBe(false);
+    }
   });
 
   it('turns away a post-bac student and nobody else', () => {
