@@ -116,6 +116,66 @@ describe('building the standings snapshot from player rows', () => {
     }
   });
 
+  /*
+   * E5, from an external audit, in the audit's own words: "if the six best
+   * national players attend one school, the sixth is absent." Before this
+   * fix, `individuals` was built EXCLUSIVELY from pools.flatMap(pool =>
+   * pool.rows) — every school's own top-5 query result, nothing else. A
+   * school's sixth-best player was never fetched at all, so this is not a
+   * display bug: that student had no rank, no personal result, nothing.
+   */
+  describe('the national individual ranking — a school’s own top-5 pool is not the whole country', () => {
+    it('reproduces the audit’s own example and shows it fixed: a school’s 6th player is absent without the extra rows, present with them', () => {
+      // CODOSA fields six players who would ALL rank above every player at
+      // every other school — but the school's own scoring pool is capped at
+      // five (teamSize), so the sixth (score 850) is never in `pools` at all.
+      const codosaPool = pool('codosa', [1000, 950, 900, 880, 860]); // top 5 only, as loadPool would return
+      const otherSchool = pool('rival', [500, 400, 300, 200, 100]);
+
+      const withoutTheFix = buildSnapshot([codosaPool, otherSchool], OPTS);
+      expect(withoutTheFix.individuals.some((i) => i.uid === 'codosa-5')).toBe(false);
+
+      // The sixth player, as loadNationalTop's query would actually return
+      // them — same shape, just found by a school-independent query.
+      const sixthPlayer = player({ uid: 'codosa-5', schoolKey: 'codosa', score: 850, totalMs: 5_005 });
+      const withTheFix = buildSnapshot([codosaPool, otherSchool], OPTS, [sixthPlayer]);
+
+      const sixth = withTheFix.individuals.find((i) => i.uid === 'codosa-5');
+      expect(sixth).toBeDefined();
+      // Ranked correctly among the true top players nationally — 6th here,
+      // ahead of every player from the other school (whose best is 500).
+      expect(sixth!.rank).toBe(6);
+      expect(withTheFix.individuals).toHaveLength(11); // 10 pooled + the one extra
+    });
+
+    it('does not duplicate a player already present via their own school’s pool', () => {
+      const codosaPool = pool('codosa', [1000, 950, 900, 880, 860]);
+      // The SAME player codosa's own pool already returned — as if
+      // loadNationalTop's query also (correctly) found them, since they are
+      // genuinely near the top nationally too.
+      const duplicate = player({ uid: 'codosa-0', schoolKey: 'codosa', score: 1000, totalMs: 5_000 });
+
+      const snap = buildSnapshot([codosaPool], OPTS, [duplicate]);
+      expect(snap.individuals.filter((i) => i.uid === 'codosa-0')).toHaveLength(1);
+      expect(snap.individuals).toHaveLength(5); // still just the pool, nothing extra added
+    });
+
+    it('school ranking (teamAvg, top5, qualified) is UNCHANGED by the extra rows — they feed individuals only', () => {
+      const codosaPool = pool('codosa', [1000, 950, 900, 880, 860]);
+      const extra = player({ uid: 'codosa-5', schoolKey: 'codosa', score: 999_999, totalMs: 1 });
+
+      const without = buildSnapshot([codosaPool], OPTS);
+      const withExtra = buildSnapshot([codosaPool], OPTS, [extra]);
+
+      expect(withExtra.schools).toEqual(without.schools);
+    });
+
+    it('an empty extra-rows list changes nothing — the default, so every existing call site keeps working', () => {
+      const snap = buildSnapshot([pool('codosa', [1000, 900])], OPTS);
+      expect(snap.individuals).toHaveLength(2);
+    });
+  });
+
   it('names as top5 exactly the five that were counted, tie or no tie', () => {
     // Two team-mates level on score AND time: top5 must agree with the order
     // rankSchools counts in, or an overtake gets credited to a player the

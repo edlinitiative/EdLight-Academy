@@ -289,7 +289,19 @@ export function avgMsOf(row: PlayerRow): number {
  * list to a podium would cost events without any error to show for it; the
  * documentation on `StandingsSnapshot.individuals` says so explicitly.
  */
-export function buildSnapshot(pools: SchoolPool[], opts: BuildSnapshotOptions): StandingsSnapshot {
+export function buildSnapshot(
+  pools: SchoolPool[],
+  opts: BuildSnapshotOptions,
+  /**
+   * Players who may not be in ANY school's own top-`pool` rows but still
+   * belong in the national INDIVIDUAL ranking — see `loadNationalTop`.
+   * Deliberately a separate parameter rather than folded into `pools`:
+   * school ranking (`schools`, `top5`, `teamAvg`) must stay driven only by
+   * each school's own scoring pool, and conflating the two is the exact
+   * shape of the bug this parameter exists to fix.
+   */
+  extraIndividualRows: PlayerRow[] = [],
+): StandingsSnapshot {
   const { teamSize, minPlayers, seq, now } = opts;
 
   const schoolInputs: SchoolInput[] = pools.map((pool) => ({
@@ -322,7 +334,16 @@ export function buildSnapshot(pools: SchoolPool[], opts: BuildSnapshotOptions): 
       };
     });
 
-  const rows = pools.flatMap((pool) => pool.rows);
+  // The individual ranking's own input, separate from any school's scoring
+  // pool: every player already fetched via a school, UNION the national-top
+  // rows a school-scoped query would never see. Deduped by uid — the true #1
+  // nationally is almost always ALSO in their own school's pool already, and
+  // keeping the school-pool copy (rather than the national-top one) matters
+  // nowhere, since `toPlayerRow` produces the same shape from the same
+  // document regardless of which query found it.
+  const poolRows = pools.flatMap((pool) => pool.rows);
+  const seenUids = new Set(poolRows.map((row) => row.uid));
+  const rows = [...poolRows, ...extraIndividualRows.filter((row) => !seenUids.has(row.uid))];
   const byUid = new Map(rows.map((row) => [row.uid, row]));
   const playerInputs: PlayerInput[] = rows.map((row) => ({
     uid: row.uid,
@@ -552,6 +573,53 @@ async function loadPool(
 }
 
 /**
+ * How many players ONE indexed query, unfiltered by school, is asked for.
+ *
+ * Generous on purpose and still cheap: this is a single range query
+ * regardless of tournament size, so the cost of asking for 50 instead of 10
+ * is negligible, while the cost of asking for too few is a real student
+ * missing from the national board. Comfortably covers a Top 10 broadcast mode
+ * with margin for ties and near-ties at the boundary.
+ */
+const NATIONAL_TOP_POOL = 50;
+
+/**
+ * The players who might be missing from every school's own scoring pool but
+ * still belong in the NATIONAL individual ranking.
+ *
+ * CORRECTION, from an external audit, and its own worked example: "if the six
+ * best national players attend one school, the sixth is absent." `individuals`
+ * used to be built EXCLUSIVELY from `pools.flatMap(pool => pool.rows)` — every
+ * school's own top `INDIVIDUAL_POOL` (5, by default) players, nothing else. A
+ * school fielding a sixth genuinely excellent player had that student simply
+ * never fetched, never ranked, and never shown a personal result at all — not
+ * a display bug, an absence from the data.
+ *
+ * The fix is not a bigger per-school pool — no fixed per-school number can
+ * guarantee completeness, since a school could in principle field more
+ * standouts than any pool size chosen. It is a SEPARATE query with no school
+ * filter at all: one indexed range on `score`/`totalMs` across every player in
+ * the tournament, ordered exactly the way `rankIndividuals` tiebreaks, bounded
+ * by a fixed constant rather than by school or player count. Cheaper than any
+ * one school's own pool query, and it closes the gap completely rather than
+ * making it merely less likely.
+ *
+ * Still does NOT exclude `eligible: false` players — a separate, known,
+ * open gap (E8), not fixed here. Filtering it correctly needs either a second
+ * post-query pass with a backfill cushion or a composite index this file does
+ * not yet declare; folding it into this change would risk shipping a
+ * half-fix that looks complete and is not.
+ */
+async function loadNationalTop(db: Firestore, tid: string): Promise<PlayerRow[]> {
+  const snap = await db.collection(`tournaments/${tid}/players`)
+    .orderBy('score', 'desc')
+    .orderBy('totalMs', 'asc')
+    .limit(NATIONAL_TOP_POOL)
+    .get();
+  return snap.docs.map((doc) => toPlayerRow(doc.id, doc.data() as Row));
+}
+
+/**
  * Write the board and the events it describes, numbering them at commit time.
  *
  * THREE properties. The third is CORRECTION, from an external audit — the
@@ -737,13 +805,21 @@ export async function aggregateOne(
       }),
     );
 
-    // ── 3 · One indexed query per SCHOOL. Never one per player. ─────────────
+    // ── 3 · One indexed query per SCHOOL, plus ONE query for the true
+    //        national individual top. Never one per player. ──────────────────
+    //
+    // The school-pool queries alone are not enough for individuals — see the
+    // CORRECTION note on loadNationalTop. Run both in parallel: neither
+    // depends on the other's result.
     const { keys, cursorMs } = await discoverSchools(db, tid, previous);
-    const pools = (await mapLimit(
-      keys.slice(0, SCHOOL_CAP),
-      QUERY_CONCURRENCY,
-      (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
-    )).filter((p): p is SchoolPool => p !== null);
+    const [pools, nationalTop] = await Promise.all([
+      mapLimit(
+        keys.slice(0, SCHOOL_CAP),
+        QUERY_CONCURRENCY,
+        (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
+      ).then((rows) => rows.filter((p): p is SchoolPool => p !== null)),
+      loadNationalTop(db, tid),
+    ]);
 
     // ── 4 · Rank with the shared functions, then diff against the last board ─
     //
@@ -753,7 +829,7 @@ export async function aggregateOne(
     // from; the real allocation happens at commit time in step 5, and the
     // events are renumbered there.
     const seq = nextSeq(previous);
-    const next = buildSnapshot(pools, { teamSize, minPlayers, seq, now });
+    const next = buildSnapshot(pools, { teamSize, minPlayers, seq, now }, nationalTop);
 
     const ctx: DeriveContext = {
       seq,
