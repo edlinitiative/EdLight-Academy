@@ -123,6 +123,24 @@ const SCHOOL_CAP = 250;
  */
 const INDIVIDUAL_POOL = 5;
 
+/**
+ * Extra rows fetched past the pool size before filtering out `eligible: false`
+ * players, so an ineligible top scorer never truncates the pool below what it
+ * promised.
+ *
+ * A `where('eligible', ...)` clause would need a new composite index (and, for
+ * `!=`, would force `eligible` to be the first `orderBy`, ahead of the
+ * score/totalMs order every ranking tiebreak depends on) — a real
+ * schema change, not a one-line filter. This is the "second post-query pass
+ * with a backfill cushion" the fix was scoped to when E5 first found this gap
+ * and deliberately left it open rather than ship a half-fix alongside an
+ * unrelated change. Disqualifications are rare and reviewed by hand — a
+ * cushion this size comfortably covers every real tournament without a
+ * schema migration; if it is ever not enough, that is itself a signal
+ * something both frequent and undesirable is happening.
+ */
+const ELIGIBILITY_CUSHION = 15;
+
 /** Per-school queries in flight at once. Bounded so one tick cannot self-DDoS. */
 const QUERY_CONCURRENCY = 12;
 
@@ -454,6 +472,36 @@ function toPlayerRow(uid: string, data: Row): PlayerRow {
 }
 
 /**
+ * Score-ordered raw player docs → the top `limit` who are actually eligible.
+ *
+ * CORRECTION, from an external audit (E8): a player an admin marked
+ * `eligible: false` after a completed integrity review — the same flag
+ * answer.ts already refuses new submissions from, and claim.ts already skips
+ * when rolling down a prize — used to still rank, still show as a school's
+ * top scorer, even as the tournament CHAMPION, on the PUBLIC board. A review
+ * that disqualified someone for cheating would leave them standing on the
+ * result everyone sees while quietly denying them the prize behind the
+ * scenes — the kind of visible inconsistency a public broadcast cannot
+ * afford.
+ *
+ * Filtering happens here, in memory, on rows the caller already over-fetched
+ * by `ELIGIBILITY_CUSHION` — not as a `where('eligible', ...)` clause, which
+ * would need a new composite index and, for `!=`, would force `eligible`
+ * ahead of score/totalMs in the sort order every ranking tiebreak depends on.
+ * `docs` must already be sorted score desc / totalMs asc, exactly as both
+ * callers' Firestore queries return them — this function does not re-sort.
+ */
+export function selectEligibleTop(
+  docs: Array<{ uid: string; data: Row }>,
+  limit: number,
+): PlayerRow[] {
+  return docs
+    .filter(({ data }) => data.eligible !== false)
+    .slice(0, limit)
+    .map(({ uid, data }) => toPlayerRow(uid, data));
+}
+
+/**
  * Which schools have players, without ever scanning `players` again.
  *
  * Firestore has no DISTINCT, so the set of school keys has to come from
@@ -544,11 +592,12 @@ async function loadPool(
 ): Promise<SchoolPool | null> {
   const players = db.collection(`tournaments/${tid}/players`).where('schoolKey', '==', key);
   const [top, counted] = await Promise.all([
-    players.orderBy('score', 'desc').orderBy('totalMs', 'asc').limit(pool).get(),
+    players.orderBy('score', 'desc').orderBy('totalMs', 'asc').limit(pool + ELIGIBILITY_CUSHION).get(),
     players.count().get(),
   ]);
 
-  const rows = top.docs.map((doc) => toPlayerRow(doc.id, doc.data() as Row));
+  // E8: see selectEligibleTop's own doc comment for why this isn't a `where`.
+  const rows = selectEligibleTop(top.docs.map((doc) => ({ uid: doc.id, data: doc.data() as Row })), pool);
   if (rows.length === 0) return null;
 
   const before = previous.get(key);
@@ -604,19 +653,19 @@ const NATIONAL_TOP_POOL = 50;
  * one school's own pool query, and it closes the gap completely rather than
  * making it merely less likely.
  *
- * Still does NOT exclude `eligible: false` players — a separate, known,
- * open gap (E8), not fixed here. Filtering it correctly needs either a second
- * post-query pass with a backfill cushion or a composite index this file does
- * not yet declare; folding it into this change would risk shipping a
- * half-fix that looks complete and is not.
+ * Excludes `eligible: false` players the same way `loadPool` does (E8,
+ * fixed alongside it) — a cushion past the limit, filtered post-query,
+ * rather than a `where` clause that would need a new composite index and
+ * force `eligible` ahead of score/totalMs in the sort order every tiebreak
+ * depends on.
  */
 async function loadNationalTop(db: Firestore, tid: string): Promise<PlayerRow[]> {
   const snap = await db.collection(`tournaments/${tid}/players`)
     .orderBy('score', 'desc')
     .orderBy('totalMs', 'asc')
-    .limit(NATIONAL_TOP_POOL)
+    .limit(NATIONAL_TOP_POOL + ELIGIBILITY_CUSHION)
     .get();
-  return snap.docs.map((doc) => toPlayerRow(doc.id, doc.data() as Row));
+  return selectEligibleTop(snap.docs.map((doc) => ({ uid: doc.id, data: doc.data() as Row })), NATIONAL_TOP_POOL);
 }
 
 /**

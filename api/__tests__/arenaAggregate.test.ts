@@ -23,6 +23,7 @@ import {
   qualifiedAtFor,
   withoutUndefined,
   blocksPublication,
+  selectEligibleTop,
   type PlayerRow,
   type SchoolPool,
 } from '../arena/aggregate';
@@ -290,6 +291,55 @@ describe('the once-per-question guards', () => {
 
   it('drops undefined so Firestore never sees it', () => {
     expect(withoutUndefined({ a: 1, b: undefined, c: null })).toEqual({ a: 1, c: null });
+  });
+});
+
+/*
+ * E8, from an external audit: a player an admin marked `eligible: false`
+ * after a completed integrity review — the same flag answer.ts already
+ * refuses new submissions from, and claim.ts already skips when rolling down
+ * a prize — used to still rank on the PUBLIC board, potentially even as the
+ * tournament CHAMPION. `selectEligibleTop` is the fix both loadPool and
+ * loadNationalTop now share: fetch a cushion past the limit, filter, THEN
+ * trim to the limit — proving the cushion actually does its job (an
+ * ineligible player near the top must not truncate the real pool short) is
+ * the property that would silently break if someone "simplified" this to
+ * filter-then-fetch-limit instead.
+ */
+describe('selectEligibleTop — E8: a disqualified player can no longer rank on the public board', () => {
+  const doc = (uid: string, score: number, eligible?: boolean): { uid: string; data: Record<string, unknown> } => ({
+    uid,
+    data: { schoolKey: 'codosa', score, totalMs: 1_000, ...(eligible === undefined ? {} : { eligible }) },
+  });
+
+  it('passes through an all-eligible pool unchanged, in the order given', () => {
+    const docs = [doc('a', 1000), doc('b', 900), doc('c', 800)];
+    expect(selectEligibleTop(docs, 3).map((r) => r.uid)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('drops a player explicitly marked ineligible, even as the top scorer', () => {
+    const docs = [doc('cheater', 1000, false), doc('b', 900), doc('c', 800)];
+    expect(selectEligibleTop(docs, 2).map((r) => r.uid)).toEqual(['b', 'c']);
+  });
+
+  it('treats a missing `eligible` field as eligible — undefined is the default, not a flag', () => {
+    const docs = [doc('a', 1000), doc('b', 900)];
+    expect(selectEligibleTop(docs, 2).map((r) => r.uid)).toEqual(['a', 'b']);
+  });
+
+  it('CLOSED: an ineligible top scorer no longer truncates the pool short — the cushion does its job', () => {
+    // Exactly what a naive filter-after-limit(pool) would get wrong: fetch
+    // pool(3) + cushion, one of the top scorers is disqualified, and the
+    // caller still gets a full 3-deep pool rather than losing a slot to it.
+    const docs = [doc('cheater', 1000, false), doc('a', 900), doc('b', 850), doc('c', 800)];
+    const result = selectEligibleTop(docs, 3);
+    expect(result.map((r) => r.uid)).toEqual(['a', 'b', 'c']);
+    expect(result).toHaveLength(3);
+  });
+
+  it('never returns more than the limit, even with a large eligible pool', () => {
+    const docs = [doc('a', 1000), doc('b', 900), doc('c', 800), doc('d', 700)];
+    expect(selectEligibleTop(docs, 2).map((r) => r.uid)).toEqual(['a', 'b']);
   });
 });
 
