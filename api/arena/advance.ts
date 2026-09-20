@@ -71,7 +71,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestore';
 import { getDb } from '../_lib/firebaseAdmin';
 import { canTransition, type ArenaState } from '../../shared/arena/state';
-import { authorizeCronOrAdmin } from './_shared';
+import { authorizeCronOrAdmin, isValidTournamentId, tournamentsInStates } from './_shared';
 import { aggregateOne } from './aggregate';
 import {
   appendEvents,
@@ -351,8 +351,11 @@ async function emitQuestionClosed(
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+  // GET as well as POST: a Vercel cron fires a GET, exactly as the comments on
+  // `aggregate.ts` and `doors-close.ts` say of theirs. POST-only here was why
+  // scheduling this endpoint did nothing at all — every tick answered 405.
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     res.status(405).json({ error: 'method_not_allowed' });
     return;
   }
@@ -365,11 +368,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   if (!actor) return;
 
   const body: Row = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-  const tid = str(body.tid, str(req.query.tid));
+  let tid = str(body.tid, str(req.query.tid));
+
+  // A cron entry carries no arguments, so a scheduled call finds its own work
+  // — the same shape `doors-close.ts` uses. Only a `live` tournament has a
+  // clock to advance (the transaction below refuses every other state), so
+  // that is the only state worth looking for. One per tick is enough: this
+  // product runs one event at a time.
   if (!tid) {
+    const running = await tournamentsInStates(db, ['live']);
+    if (running.length === 0) {
+      res.status(200).json({ ok: true, action: 'nothing_live' });
+      return;
+    }
+    tid = running[0];
+  }
+
+  // Validated rather than trusted: `tid` is interpolated into a document path
+  // below, and a value carrying `/` would address a different document
+  // entirely. `doors-close.ts` applies the same check to the same kind of id.
+  if (!isValidTournamentId(tid)) {
     res.status(400).json({ error: 'invalid_tid' });
     return;
   }
+
+  // Only ever from a POST body, so a scheduled GET can never force a
+  // transition — the cron is a stall guard, not a way to skip the clock.
   const force = body.force === true;
 
   const tournamentRef = db.doc(`tournaments/${tid}`);
