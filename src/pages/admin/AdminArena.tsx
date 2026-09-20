@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Swords, ChevronLeft, RefreshCw, ListChecks, ShieldAlert, Plus, MapPin,
@@ -11,6 +11,10 @@ import {
   controlPermission,
   createTournament,
   fetchConsentUrl,
+  blockerLines,
+  decideReview,
+  fetchEvidence,
+  fetchReviewQueue,
   freezeRoster,
   listQuestions,
   listSchoolsForLocation,
@@ -34,8 +38,11 @@ import {
   type ArenaTournament,
   type ControlContext,
   type ControlReason,
+  type Evidence,
   type NewTournamentInput,
+  type ReviewRow,
 } from '../../services/arenaAdminService';
+import type { FinalBlocker } from '../../../shared/arena/review';
 import { type ArenaState } from '../../../shared/arena/state';
 import { HAITI_DEPARTMENTS } from '../../data/haitiGeo';
 
@@ -591,6 +598,298 @@ function ClaimQueue({
 }
 
 
+// ── The integrity review ────────────────────────────────────────────────────
+
+/**
+ * IntegrityQueue — who is worth reading, what the evidence says, and the
+ * verdict.
+ *
+ * Nothing in this product could mark a player ineligible before this panel
+ * existed, although four server files were already reading the flag. The
+ * queue comes from `/api/arena/review` rather than a Firestore listener like
+ * `ClaimQueue` above, and that difference is not stylistic: `players/**`,
+ * `answers/**` and `reviews/**` are server-only even for an admin's browser,
+ * because a player's own score leaks the answer key mid-question.
+ *
+ * The evidence is fetched ONE PLAYER AT A TIME, on a click. Same reasoning as
+ * the consent forms: a panel that pre-loads every child's answer log has read
+ * all of it before anyone decided to look.
+ *
+ * Shown from `grading` onward. Before that there is nothing to review and the
+ * endpoint would refuse the evidence anyway.
+ */
+function IntegrityQueue({
+  tid,
+  state,
+  t,
+  onChanged,
+}: {
+  tid: string;
+  state: ArenaState;
+  t: (fr: string, ht: string) => string;
+  onChanged?: () => void;
+}) {
+  const [rows, setRows] = useState<ReviewRow[]>([]);
+  const [blockers, setBlockers] = useState<FinalBlocker[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [openUid, setOpenUid] = useState<string | null>(null);
+  const [evidence, setEvidence] = useState<Evidence | null>(null);
+  const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [note, setNote] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const active = state === 'grading' || state === 'provisional' || state === 'final';
+
+  const load = useCallback(async () => {
+    if (!tid || !active) return;
+    setLoading(true);
+    try {
+      const queue = await fetchReviewQueue(tid);
+      setRows(queue.rows);
+      setBlockers(queue.blockers);
+    } catch (err) {
+      setNote({ type: 'error', text: (err as Error)?.message || String(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, [tid, active]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const openEvidence = useCallback(async (uid: string) => {
+    if (openUid === uid) { setOpenUid(null); setEvidence(null); return; }
+    setBusyUid(uid);
+    setNote(null);
+    try {
+      const found = await fetchEvidence(tid, uid);
+      setEvidence(found);
+      setOpenUid(uid);
+    } catch (err) {
+      setNote({ type: 'error', text: (err as Error)?.message || String(err) });
+    } finally {
+      setBusyUid(null);
+    }
+  }, [tid, openUid]);
+
+  const decide = useCallback(async (uid: string, decision: 'cleared' | 'disqualified') => {
+    let reason = '';
+    if (decision === 'disqualified') {
+      // Typed, not picked from a list. This sentence is what a parent is read
+      // months later, and a dropdown would make every disqualification say the
+      // same four words.
+      const typed = window.prompt(t(
+        'Pourquoi ? Cette phrase est la justification officielle — elle sera relue si la famille conteste.',
+        'Poukisa ? Fraz sa a se jistifikasyon ofisyèl la — y ap li l ankò si fanmi an konteste.',
+      ));
+      if (typed === null || typed.trim().length < 4) return;
+      reason = typed;
+    } else if (!window.confirm(t(
+      'Lever le signalement et rétablir ce joueur ?',
+      'Retire siyal la epi remèt jwè sa a ?',
+    ))) return;
+
+    setBusyUid(uid);
+    setNote(null);
+    try {
+      const result = await decideReview(tid, uid, decision, reason);
+      setNote({
+        type: 'success',
+        text: decision === 'disqualified'
+          ? (result.board === 'aggregated'
+              ? t('Disqualifié ; le classement a été recalculé.', 'Diskalifye ; klasman an rekalkile.')
+              : t(
+                  'Disqualifié. Le classement annoncé n’est pas réécrit — la correction est appliquée à la finalisation.',
+                  'Diskalifye. Klasman ki anonse a pa reekri — koreksyon an ap aplike lè w finalize.',
+                ))
+          : result.rolledDownAway
+            ? t(
+                'Rétabli — mais son prix est déjà passé à un autre élève. Cette réattribution ne s’annule pas toute seule.',
+                'Remèt — men pri li deja pase bay yon lòt elèv. Rebay sa a pa anile pou kont li.',
+              )
+            : t('Signalement levé.', 'Siyal la retire.'),
+      });
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setNote({ type: 'error', text: (err as Error)?.message || String(err) });
+    } finally {
+      setBusyUid(null);
+    }
+  }, [tid, t, load, onChanged]);
+
+  if (!active) return null;
+
+  return (
+    <div className="admin-card" style={{ padding: 18, marginBottom: 18 }}>
+      <div className="admin-tile__label" style={{ marginBottom: 4 }}>
+        {t('REVUE D’INTÉGRITÉ', 'REVI ENTEGRITE')}
+      </div>
+      <p className="admin-page__subtitle" style={{ marginTop: 0, fontSize: 12 }}>
+        {t(
+          'Un signalement n’est pas une preuve : une notification, un appel et une batterie faible ressemblent tous à une sortie d’application. Lisez les réponses avant de trancher.',
+          'Yon siyal pa yon prèv : yon notifikasyon, yon apèl ak yon batri ki fèb sanble tout ak soti nan aplikasyon an. Li repons yo anvan ou tranche.',
+        )}
+      </p>
+
+      {blockers.length > 0 ? (
+        <p style={{ fontSize: 13, color: '#B54708' }}>
+          {t('Finalisation bloquée — ', 'Finalizasyon bloke — ')}
+          {blockerLines(blockers, 'fr').join(' · ')}
+        </p>
+      ) : (
+        <p style={{ fontSize: 13, color: '#067647' }}>
+          {t('Rien ne bloque la finalisation.', 'Anyen pa bloke finalizasyon an.')}
+        </p>
+      )}
+
+      {note ? (
+        <p style={{ fontSize: 13, color: note.type === 'error' ? '#B42318' : '#067647' }}>{note.text}</p>
+      ) : null}
+
+      {loading && rows.length === 0 ? (
+        <div className="admin-empty">{t('Chargement…', 'Ap chaje…')}</div>
+      ) : rows.length === 0 ? (
+        <div className="admin-empty">{t('Personne à examiner.', 'Pa gen moun pou egzamine.')}</div>
+      ) : (
+        <div className="admin-table__scroll">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>{t('Rang', 'Ran')}</th>
+                <th>{t('Élève', 'Elèv')}</th>
+                <th>{t('Signalements', 'Siyal')}</th>
+                <th>{t('Statut', 'Estati')}</th>
+                <th aria-label={t('Actions', 'Aksyon')} />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <Fragment key={row.uid}>
+                  <tr>
+                    <td><strong>{row.rank ?? '—'}</strong></td>
+                    <td>
+                      {row.displayName || row.uid}
+                      <div className="admin-page__subtitle" style={{ fontSize: 11 }}>
+                        {row.schoolShort} · {row.score} pts
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 12 }}>
+                      {row.summary.total === 0 ? (
+                        <span className="admin-page__subtitle">{t('aucun', 'okenn')}</span>
+                      ) : (
+                        <>
+                          {row.summary.impossible > 0 ? (
+                            <span style={{ color: '#B42318', fontWeight: 600 }}>
+                              {t(`${row.summary.impossible} impossible`, `${row.summary.impossible} enposib`)}{' '}
+                            </span>
+                          ) : null}
+                          {row.summary.fast > 0 ? t(`${row.summary.fast} rapide `, `${row.summary.fast} rapid `) : ''}
+                          {row.summary.focus > 0
+                            ? t(
+                                `${row.summary.focus} sortie(s), max ${row.summary.worstFocusLosses}`,
+                                `${row.summary.focus} soti, maks ${row.summary.worstFocusLosses}`,
+                              )
+                            : ''}
+                        </>
+                      )}
+                    </td>
+                    <td style={{ fontSize: 12 }}>
+                      {row.decision === 'disqualified' ? (
+                        <span style={{ color: '#B42318', fontWeight: 600 }}>{t('disqualifié', 'diskalifye')}</span>
+                      ) : row.decision === 'cleared' ? (
+                        <span style={{ color: '#067647' }}>{t('examiné', 'egzamine')}</span>
+                      ) : (
+                        <span className="admin-page__subtitle">{t('à examiner', 'pou egzamine')}</span>
+                      )}
+                      {row.note ? (
+                        <div className="admin-page__subtitle" style={{ fontSize: 11 }}>{row.note}</div>
+                      ) : null}
+                    </td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost"
+                        disabled={busyUid === row.uid}
+                        onClick={() => { void openEvidence(row.uid); }}
+                      >
+                        {openUid === row.uid ? t('Fermer', 'Fèmen') : t('Réponses', 'Repons')}
+                      </button>{' '}
+                      {row.eligible ? (
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--danger"
+                          disabled={busyUid === row.uid || state === 'final'}
+                          onClick={() => { void decide(row.uid, 'disqualified'); }}
+                        >
+                          {t('Disqualifier', 'Diskalifye')}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="admin-btn"
+                          disabled={busyUid === row.uid || state === 'final'}
+                          onClick={() => { void decide(row.uid, 'cleared'); }}
+                        >
+                          {t('Rétablir', 'Remèt')}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                  {openUid === row.uid && evidence ? (
+                    <tr>
+                      <td colSpan={5} style={{ background: 'rgba(0,0,0,0.02)' }}>
+                        <table className="admin-table" style={{ fontSize: 12 }}>
+                          <thead>
+                            <tr>
+                              <th>Q</th>
+                              <th>{t('Réponse', 'Repons')}</th>
+                              <th>{t('Temps', 'Tan')}</th>
+                              <th>{t('Écart horloge', 'Diferans revèy')}</th>
+                              <th>{t('Sorties', 'Soti')}</th>
+                              <th>{t('Points', 'Pwen')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {evidence.answers.map((a) => (
+                              <tr key={a.index}>
+                                <td>{a.index + 1}</td>
+                                <td>
+                                  {String.fromCharCode(65 + Math.max(0, a.choice))}
+                                  {a.correct ? ' ✓' : ''}
+                                  {a.late ? t(' (tardive)', ' (an reta)') : ''}
+                                </td>
+                                <td style={{ color: a.impossible ? '#B42318' : undefined, fontWeight: a.impossible ? 600 : undefined }}>
+                                  {`${(a.elapsedMs / 1000).toFixed(1)}s`}
+                                </td>
+                                {/* What the phone claimed against what the server
+                                    stamped. The gap IS the finding in most of
+                                    these cases. */}
+                                <td>
+                                  {a.clientShownAt === null
+                                    ? '—'
+                                    : `${Math.round((a.clampedShownAt - a.clientShownAt) / 1000)}s`}
+                                </td>
+                                <td>{a.focusLosses || '—'}</td>
+                                <td>{a.points}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {evidence.answers.length === 0 ? (
+                          <div className="admin-empty">{t('Aucune réponse enregistrée.', 'Pa gen repons ki anrejistre.')}</div>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Where the schools are ───────────────────────────────────────────────────
 
 /**
@@ -951,6 +1250,16 @@ export default function AdminArena() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
+  /*
+   * What `final` was refused on, kept only until the next press.
+   *
+   * The override is deliberately UNREACHABLE until the host has been refused
+   * once and has read what they would be overriding. A button that offers to
+   * skip the check before anyone knows what the check found is not a gate with
+   * an escape hatch; it is two buttons that do the same thing.
+   */
+  const [refusedBlockers, setRefusedBlockers] = useState<FinalBlocker[] | null>(null);
+
   const report = useCallback((err: unknown) => {
     const e = err as ArenaAdminError;
     if (e?.code === 'not_implemented') {
@@ -985,6 +1294,26 @@ export default function AdminArena() {
       });
       return;
     }
+    /*
+     * `final` refused. The list IS the message: a host who is told
+     * "finalisation refused" has to go looking, and this is the press they
+     * make at the end of a long night.
+     */
+    if (e?.code === 'verification_incomplete') {
+      setRefusedBlockers(e.blockers ?? []);
+      setMessage({ type: 'error', text: t(
+        `Finalisation refusée — ${blockerLines(e.blockers ?? [], 'fr').join(' · ')}`,
+        `Refize finalize — ${blockerLines(e.blockers ?? [], 'ht').join(' · ')}`,
+      ) });
+      return;
+    }
+    if (e?.code === 'reason_required') {
+      setMessage({ type: 'error', text: t(
+        'Il faut une raison écrite.',
+        'Fòk gen yon rezon ki ekri.',
+      ) });
+      return;
+    }
     if (e?.code === 'illegal_transition') {
       setMessage({
         type: 'error',
@@ -1008,12 +1337,17 @@ export default function AdminArena() {
     setMessage({ type: 'error', text: (e?.message || String(err)) });
   }, [t]);
 
-  const runTransition = useCallback(async (control: ArenaControl, to: ArenaState) => {
+  const runTransition = useCallback(async (
+    control: ArenaControl,
+    to: ArenaState,
+    opts?: { reason?: string; override?: boolean },
+  ) => {
     if (!tournament) return;
     setBusy(control);
     setMessage(null);
+    setRefusedBlockers(null);
     try {
-      await requestTransition(tournament.id, tournament.state, to);
+      await requestTransition(tournament.id, tournament.state, to, opts?.reason, opts?.override);
       setMessage({ type: 'success', text: t('Transition appliquée.', 'Tranzisyon aplike.') });
     } catch (err) {
       report(err);
@@ -1302,6 +1636,25 @@ export default function AdminArena() {
       {message && (
         <div className={`form-message form-message--${message.type}`} style={{ marginBottom: 16 }}>
           {message.text}
+          {refusedBlockers && refusedBlockers.length > 0 ? (
+            <div style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="admin-btn admin-btn--danger"
+                disabled={busy === 'finalise'}
+                onClick={() => {
+                  const typed = window.prompt(t(
+                    'Finaliser malgré ces points non résolus ? Écrivez pourquoi — la raison et la liste exacte sont enregistrées sur le tournoi.',
+                    'Finalize malgre bagay sa yo ki pa rezoud ? Ekri poukisa — rezon an ak lis la ap anrejistre sou tounwa a.',
+                  ));
+                  if (typed === null || typed.trim().length < 4) return;
+                  void runTransition('finalise', 'final', { reason: typed.trim(), override: true });
+                }}
+              >
+                {t('Finaliser malgré tout', 'Finalize kanmenm')}
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -1451,6 +1804,8 @@ export default function AdminArena() {
           </div>
         </div>
       </div>
+
+      <IntegrityQueue tid={tid} state={tournament.state} t={t} />
 
       <ClaimQueue tid={tid} t={t} locale={locale} />
 
