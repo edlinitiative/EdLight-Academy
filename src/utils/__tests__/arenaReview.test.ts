@@ -10,6 +10,7 @@
 import {
   flagSummary,
   finalBlockers,
+  correctIndividuals,
   type FinalGateInput,
 } from '../../../shared/arena/review';
 import type { ClaimRecord } from '../../../shared/arena/claims';
@@ -223,5 +224,59 @@ describe('finalBlockers', () => {
       ],
     }));
     expect(blockers).toEqual([]);
+  });
+});
+
+describe('correctIndividuals', () => {
+  const board = [
+    { uid: 'a', rank: 1, schoolKey: 'codosa', score: 900 },
+    { uid: 'b', rank: 2, schoolKey: 'sldg', score: 800 },
+    { uid: 'c', rank: 3, schoolKey: 'cmdm', score: 700 },
+    { uid: 'd', rank: 4, schoolKey: 'codosa', score: 600 },
+  ];
+
+  it('leaves an untouched board alone', () => {
+    const out = correctIndividuals(board, new Set());
+    expect(out.individuals).toEqual(board);
+    expect(out.removed).toEqual([]);
+  });
+
+  it('closes the gap when the winner is removed', () => {
+    const out = correctIndividuals(board, new Set(['a']));
+    expect(out.individuals.map((r) => [r.uid, r.rank])).toEqual([['b', 1], ['c', 2], ['d', 3]]);
+    expect(out.removed.map((r) => r.uid)).toEqual(['a']);
+  });
+
+  it('never re-scores: the order is the announced order', () => {
+    const out = correctIndividuals(board, new Set(['b']));
+    expect(out.individuals.map((r) => r.uid)).toEqual(['a', 'c', 'd']);
+    expect(out.individuals.map((r) => r.score)).toEqual([900, 700, 600]);
+  });
+
+  /*
+   * A tie that was announced stays a tie. Re-deriving ranks from position
+   * would quietly break the two students apart, and the prize was paid on the
+   * board people watched.
+   */
+  it('keeps a shared rank shared after someone above is removed', () => {
+    const tied = [
+      { uid: 'a', rank: 1, schoolKey: 'codosa' },
+      { uid: 'b', rank: 2, schoolKey: 'sldg' },
+      { uid: 'c', rank: 2, schoolKey: 'cmdm' },
+      { uid: 'd', rank: 4, schoolKey: 'codosa' },
+    ];
+    const out = correctIndividuals(tied, new Set(['a']));
+    expect(out.individuals.map((r) => [r.uid, r.rank])).toEqual([['b', 1], ['c', 1], ['d', 3]]);
+  });
+
+  it('names the schools whose mean can no longer be trusted', () => {
+    const out = correctIndividuals(board, new Set(['a', 'd']));
+    expect(out.affectedSchools).toEqual(['codosa']);
+  });
+
+  it('survives every finisher being removed', () => {
+    const out = correctIndividuals(board, new Set(['a', 'b', 'c', 'd']));
+    expect(out.individuals).toEqual([]);
+    expect(out.removed).toHaveLength(4);
   });
 });

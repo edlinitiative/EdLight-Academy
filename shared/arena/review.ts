@@ -209,3 +209,64 @@ export function finalBlockers(input: FinalGateInput): FinalBlocker[] {
 
   return out;
 }
+
+// ── The corrected official board ────────────────────────────────────────────
+
+export interface CorrectedBoard<T extends { uid: string; rank: number; schoolKey?: string }> {
+  individuals: T[];
+  /** Who was taken off the board, in the order they appeared on it. */
+  removed: T[];
+  /**
+   * Schools that lost a scoring contributor. Their MEAN cannot be corrected
+   * from the announced board — it is the average of a best-five the board does
+   * not carry — so they are named rather than silently left wrong.
+   */
+  affectedSchools: string[];
+}
+
+/**
+ * The announced board, minus the disqualified, with the gaps closed.
+ *
+ * DERIVED FROM THE ANNOUNCED BOARD, not recomputed from the player rows. Two
+ * reasons, and the second is the important one:
+ *
+ *  · `aggregateOne` refuses to run in `provisional` on purpose — rewriting
+ *    `standings/current` there would edit a board that has already been read
+ *    out on a stream.
+ *  · Roll-down's whole defensibility rests on the prize moving DOWN THE BOARD
+ *    PEOPLE WATCHED. A re-derived board could order two students differently
+ *    from the one that was announced, and then the corrected result and the
+ *    prize that was paid would disagree about who finished third.
+ *
+ * So this removes rows and closes the gaps. It never re-scores anybody.
+ *
+ * Ties survive: two students who shared rank 2 on the announced board still
+ * share a rank after someone above them is removed. A tie group is detected by
+ * equal ORIGINAL rank, so the function needs no access to the tiebreak chain
+ * that produced it — which is exactly the point, since re-implementing that
+ * chain here is how the two copies drift.
+ */
+export function correctIndividuals<T extends { uid: string; rank: number; schoolKey?: string }>(
+  individuals: readonly T[],
+  disqualified: ReadonlySet<string>,
+): CorrectedBoard<T> {
+  const removed = individuals.filter((row) => disqualified.has(row.uid));
+  const kept = individuals.filter((row) => !disqualified.has(row.uid));
+
+  const out: T[] = [];
+  let previousOriginalRank: number | null = null;
+  let previousNewRank = 0;
+
+  kept.forEach((row, i) => {
+    const newRank = row.rank === previousOriginalRank ? previousNewRank : i + 1;
+    previousOriginalRank = row.rank;
+    previousNewRank = newRank;
+    out.push({ ...row, rank: newRank });
+  });
+
+  const affectedSchools = [...new Set(
+    removed.map((row) => row.schoolKey).filter((k): k is string => typeof k === 'string' && k !== ''),
+  )];
+
+  return { individuals: out, removed, affectedSchools };
+}
