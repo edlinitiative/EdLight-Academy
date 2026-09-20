@@ -493,7 +493,7 @@ function readClaim(uid: string, data: Row | undefined): ClaimRecord | undefined 
 }
 
 /** Every claim in the tournament. Three prizes deep, so never a large read. */
-async function loadClaims(db: Firestore, tid: string): Promise<ClaimRecord[]> {
+export async function loadClaims(db: Firestore, tid: string): Promise<ClaimRecord[]> {
   const snap = await db.collection(`tournaments/${tid}/claims`).get();
   const claims: ClaimRecord[] = [];
   for (const doc of snap.docs) {
@@ -1005,7 +1005,7 @@ async function handleSweep(ctx: {
  * rolled down" without a stated reason is the argument section M principle 4
  * exists to avoid having in public.
  */
-async function applyRollDown(ctx: {
+export async function applyRollDown(ctx: {
   db: Firestore;
   tid: string;
   rank: number;
