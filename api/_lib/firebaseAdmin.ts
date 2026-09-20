@@ -85,6 +85,31 @@ export function getAuthAdmin(): Auth {
 }
 
 /**
+ * Verify a Firebase App Check token — "this request came from our real app".
+ *
+ * Returns the decoded token, or null for ANY failure, including a token that
+ * is absent, malformed, expired or signed for another project. Null is not an
+ * error condition here: every install shipped before the client sends one, and
+ * a build from 2026 will still be on somebody's phone next year. The caller
+ * decides what a missing attestation means; this function only answers whether
+ * one is present and genuine.
+ */
+export async function verifyAppCheckToken(token: string | undefined): Promise<AppCheckDecoded | null> {
+  if (!token) return null;
+  try {
+    const { getAppCheck } = await import('firebase-admin/app-check');
+    return await getAppCheck(init()).verifyToken(token);
+  } catch {
+    return null;
+  }
+}
+
+export interface AppCheckDecoded {
+  appId: string;
+  token: { app_id: string; exp: number; iat: number; sub: string };
+}
+
+/**
  * The Cloud Storage bucket holding the Arena's parental consent forms.
  *
  * The bucket name is read from the environment rather than guessed from the

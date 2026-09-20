@@ -621,6 +621,7 @@ export interface EvidenceAnswer {
   flags: string[];
   appVersion: string | null;
   deviceHash: string | null;
+  attestation: 'valid' | 'invalid' | 'absent';
 }
 
 export interface Evidence {

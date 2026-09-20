@@ -36,6 +36,8 @@ import {
  *   focus:{questionIndex}:{losses}      the app lost focus mid-question
  *   device:{questionIndex}              this answer came from a different
  *                                       device than the previous one
+ *   attest:{questionIndex}              an App Check token was presented and
+ *                                       did not verify
  *
  * Parsed rather than trusted: a reviewer reads a count, and a count that
  * silently includes a flag shape nobody recognises is worse than one that
@@ -48,6 +50,8 @@ export interface FlagSummary {
   focus: number;
   /** Mid-tournament device switches. A dead phone looks like this too. */
   device: number;
+  /** Answers whose attestation was presented and failed. Absence is not here. */
+  attest: number;
   /** The largest single focus-loss reading, not the sum. */
   worstFocusLosses: number;
   /** Distinct question indices carrying at least one flag, ascending. */
@@ -55,7 +59,7 @@ export interface FlagSummary {
 }
 
 const EMPTY_SUMMARY: FlagSummary = {
-  total: 0, impossible: 0, fast: 0, focus: 0, device: 0, worstFocusLosses: 0, questions: [],
+  total: 0, impossible: 0, fast: 0, focus: 0, device: 0, attest: 0, worstFocusLosses: 0, questions: [],
 };
 
 const asIndex = (raw: string | undefined): number | null => {
@@ -79,6 +83,7 @@ export function flagSummary(flags: unknown): FlagSummary {
     if (kind === 'impossible') out.impossible += 1;
     else if (kind === 'fast') out.fast += 1;
     else if (kind === 'device') out.device += 1;
+    else if (kind === 'attest') out.attest += 1;
     else if (kind === 'focus') {
       out.focus += 1;
       const losses = Number(countPart);

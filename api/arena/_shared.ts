@@ -374,6 +374,12 @@ export interface FlagInput {
    * is always lit is a column a reviewer learns to skip.
    */
   deviceSwitched?: boolean;
+  /**
+   * An App Check token was presented and did NOT verify. Absence is not this:
+   * every build shipped before attestation existed sends nothing, and flagging
+   * all of them would bury the queue.
+   */
+  badAttestation?: boolean;
 }
 
 /**
@@ -413,6 +419,13 @@ export function integrityFlags(input: FlagInput): string[] {
    * never, on its own, worth a verdict.
    */
   if (input.deviceSwitched === true) flags.push(`device:${questionIndex}`);
+
+  /*
+   * A token that was sent and did not verify. The honest client sends a good
+   * one or sends none at all, so this is the one attestation state worth a
+   * reviewer's eye — and even this is a flag, never a refusal.
+   */
+  if (input.badAttestation === true) flags.push(`attest:${questionIndex}`);
 
   return flags;
 }

@@ -184,6 +184,15 @@ describe('integrity flags — flag, never block', () => {
     expect(integrityFlags(base)).toEqual([]);
   });
 
+  /*
+   * Absence is not a finding: every build shipped before attestation existed
+   * sends nothing, and flagging all of them buries the queue.
+   */
+  it('flags an attestation that failed, and says nothing about one never sent', () => {
+    expect(integrityFlags({ ...base, badAttestation: true })).toEqual(['attest:3']);
+    expect(integrityFlags({ ...base, badAttestation: false })).toEqual([]);
+  });
+
   it('stacks with the other flags rather than replacing them', () => {
     expect(integrityFlags({ ...base, elapsedMs: 10, focusLosses: 9, deviceSwitched: true }))
       .toEqual(['fast:3', 'focus:3:9', 'device:3']);

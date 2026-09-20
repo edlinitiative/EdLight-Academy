@@ -27,6 +27,7 @@ import { getReferralCode } from './referralService';
 import type { ArenaState } from '../../../shared/arena/state';
 import { TIER_FULL_MS, TIER_HALF_MS, type AnswerTier } from '../../../shared/arena/scoring';
 import { cachedDeviceHash } from '../utils/integrity';
+import { attestationToken } from '../utils/attestation';
 
 const API_BASE = 'https://academy.edlight.org/api/arena';
 const REGISTER_URL = `${API_BASE}/register`;
@@ -504,10 +505,28 @@ async function authedPost(url: string, payload: Record<string, unknown>): Promis
   } catch {
     return null;
   }
+  /*
+   * "This is the real app", when the device can say so (E7).
+   *
+   * Attached to every Arena write rather than only to answers: registration
+   * and presence are the two calls a script would use to build a fake roster,
+   * and they are cheap to attest because the token is cached.
+   *
+   * `attestationToken()` never throws and returns null on every failure path —
+   * an unsupported device, an outage, a provider not yet registered. No header
+   * then, and the request goes out exactly as it always has. The server reads
+   * absence as unknown and never blocks on it.
+   */
+  const attestation = await attestationToken();
+
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(attestation ? { 'X-Firebase-AppCheck': attestation } : {}),
+      },
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));

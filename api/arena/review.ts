@@ -355,6 +355,8 @@ async function handleEvidence(ctx: {
         flags: Array.isArray(a.flags) ? a.flags.filter((f): f is string => typeof f === 'string') : [],
         appVersion: str(a.appVersion, 40) || null,
         deviceHash: str(a.deviceHash, 80) || null,
+        // 'absent' for every answer written before the app attested at all.
+        attestation: str(a.attestation, 12) || 'absent',
       };
     })
     .sort((a, b) => a.index - b.index);

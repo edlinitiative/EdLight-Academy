@@ -56,7 +56,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import type { DocumentData } from 'firebase-admin/firestore';
 import { requireAuthDecoded } from '../_lib/requireAuth';
-import { getDb } from '../_lib/firebaseAdmin';
+import { getDb, verifyAppCheckToken } from '../_lib/firebaseAdmin';
 import { acceptsAnswers } from '../../shared/arena/state';
 import { isImpossible, scoreAnswer } from '../../shared/arena/scoring';
 import {
@@ -149,6 +149,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
    * as "did not say" rather than as a distinct device.
    */
   const submittedFrom = normalizeDeviceHash(body.deviceHash);
+
+  /*
+   * IS THIS THE REAL APP? (E7: "mobile-only participation is unenforced".)
+   *
+   * A Firebase ID token proves an ACCOUNT; it says nothing about what sent the
+   * request, so a script with a stolen or freely-created login is
+   * indistinguishable from the app. An App Check token is the other half: the
+   * device attested to Apple or Google, they vouched for it, and Firebase
+   * turned that into a token we can verify here.
+   *
+   * THREE STATES, AND THE MIDDLE ONE IS THE POINT:
+   *
+   *   present and valid  → attested. This is the app.
+   *   ABSENT             → unknown, and completely normal. Every install
+   *                        shipped so far sends nothing, and one of them will
+   *                        still be on a phone next year. Recorded, never
+   *                        flagged: a flag on every answer in the tournament
+   *                        is a flag a reviewer learns to scroll past.
+   *   present but BAD    → flagged. Nothing legitimate produces a malformed or
+   *                        foreign App Check token; the honest client either
+   *                        sends a good one or sends none.
+   *
+   * Never blocks, on Ted's standing decision for this whole area. Attestation
+   * fails for reasons that are not cheating — a jailbroken phone a student
+   * bought second-hand, a device Apple's service is down for, a Play Services
+   * that needs updating — and locking those students out of a tournament they
+   * registered for is a certain harm against a speculative one.
+   */
+  const appCheckToken = typeof req.headers['x-firebase-appcheck'] === 'string'
+    ? String(req.headers['x-firebase-appcheck'])
+    : undefined;
+  const attestation = appCheckToken
+    ? (await verifyAppCheckToken(appCheckToken) ? 'valid' : 'invalid')
+    : 'absent';
 
   const db = getDb();
 
@@ -300,6 +334,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         impossible,
         focusLosses,
         deviceSwitched,
+        badAttestation: attestation === 'invalid',
       });
 
       const prevScore = typeof player.score === 'number' ? player.score : 0;
@@ -334,6 +369,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         // client did not say, which an older build will not: a missing value
         // is "unknown", never "same as before".
         deviceHash: submittedFrom,
+        // 'valid' | 'invalid' | 'absent' — see where it is computed. Stored as
+        // the three states rather than a boolean, because "we did not ask yet"
+        // and "it failed" are not the same fact about a student.
+        attestation,
         createdAt: Timestamp.now(),
       });
 

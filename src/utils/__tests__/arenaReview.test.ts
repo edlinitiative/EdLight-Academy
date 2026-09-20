@@ -63,6 +63,11 @@ describe('flagSummary', () => {
     expect(s.questions).toEqual([2, 9, 14]);
   });
 
+  it('counts an attestation that was presented and failed', () => {
+    const s = flagSummary(['attest:4', 'device:4']);
+    expect(s).toMatchObject({ total: 2, attest: 1, device: 1 });
+  });
+
   it('ignores a flag it does not recognise rather than miscounting it', () => {
     const s = flagSummary(['fast:2', 'teleported:2', '', 'focus:notanumber:3']);
     expect(s.total).toBe(1);

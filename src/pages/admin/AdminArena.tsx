@@ -792,6 +792,14 @@ function IntegrityQueue({
                           {/* A dead phone and a borrowed tablet look exactly
                               like two people splitting the questions. Shown
                               plainly, weighted like nothing. */}
+                          {row.summary.attest > 0 ? (
+                            <div style={{ fontSize: 11, color: '#B42318', fontWeight: 600 }}>
+                              {t(
+                                `${row.summary.attest} attestation(s) invalide(s)`,
+                                `${row.summary.attest} atestasyon ki pa valab`,
+                              )}
+                            </div>
+                          ) : null}
                           {row.summary.device > 0 ? (
                             <div style={{ fontSize: 11 }}>
                               {t(

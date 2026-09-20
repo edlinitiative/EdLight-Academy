@@ -1,0 +1,48 @@
+[debug] [2026-09-20T19:19:18.005Z] ----------------------------------------------------------------------
+[debug] [2026-09-20T19:19:18.007Z] Command:       /opt/homebrew/Cellar/node/25.8.1/bin/node /opt/homebrew/bin/firebase projects:list
+[debug] [2026-09-20T19:19:18.008Z] CLI Version:   15.22.4
+[debug] [2026-09-20T19:19:18.008Z] Platform:      darwin
+[debug] [2026-09-20T19:19:18.008Z] Node Version:  v25.8.1
+[debug] [2026-09-20T19:19:18.008Z] Detected Agent: claude-code_2-1-278_agent
+[debug] [2026-09-20T19:19:18.008Z] Time:          Sun Sep 20 2026 15:19:18 GMT-0400 (Eastern Daylight Time)
+[debug] [2026-09-20T19:19:18.008Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-09-20T19:19:18.011Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-09-20T19:19:18.207Z] Field "/storage" in "firebase.json" is possibly invalid: must be object
+[debug] [2026-09-20T19:19:18.207Z] Object "/storage/0" in "firebase.json" is missing required property: {"missingProperty":"bucket"}
+[debug] [2026-09-20T19:19:18.207Z] Field "/storage" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[debug] [2026-09-20T19:19:18.212Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-09-20T19:19:18.212Z] > authorizing via signed-in user (info@edlight.org)
+[debug] [2026-09-20T19:19:18.214Z] Checked if tokens are valid: false, expires at: 1789762322487
+[debug] [2026-09-20T19:19:18.214Z] Checked if tokens are valid: false, expires at: 1789762322487
+[debug] [2026-09-20T19:19:18.214Z] > refreshing access token with scopes: []
+[debug] [2026-09-20T19:19:18.215Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-09-20T19:19:18.215Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-09-20T19:19:18.399Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-09-20T19:19:18.399Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-09-20T19:19:18.443Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-09-20T19:19:18.443Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-09-20T19:19:18.444Z] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-09-20T19:19:18.445Z] FirebaseError: Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+    at invalidCredentialError (/opt/homebrew/lib/node_modules/firebase-tools/lib/auth.js:176:12)
+    at refreshTokens (/opt/homebrew/lib/node_modules/firebase-tools/lib/auth.js:589:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getAccessToken (/opt/homebrew/lib/node_modules/firebase-tools/lib/apiv2.js:55:18)
+    at async Client.addAuthHeader (/opt/homebrew/lib/node_modules/firebase-tools/lib/apiv2.js:207:21)
+    at async Client.request (/opt/homebrew/lib/node_modules/firebase-tools/lib/apiv2.js:154:34)
+    at async getProjectPage (/opt/homebrew/lib/node_modules/firebase-tools/lib/management/projects.js:287:17)
+    at async getFirebaseProjectPage (/opt/homebrew/lib/node_modules/firebase-tools/lib/management/projects.js:304:23)
+    at async listFirebaseProjects (/opt/homebrew/lib/node_modules/firebase-tools/lib/management/projects.js:333:29)
+    at async Command.actionFn (/opt/homebrew/lib/node_modules/firebase-tools/lib/commands/projects-list.js:51:20)
+[error] 
+[error] Error: Failed to list Firebase projects. See firebase-debug.log for more info.
