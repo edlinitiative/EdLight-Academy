@@ -153,7 +153,10 @@ function Prompt({ blocks, widgets, response, onChange }: {
           return (
             <MathText
               key={`t${i}`}
-              text={mathToText(block.content)}
+              // Raw: MathText typesets delimited LaTeX and falls back to
+              // mathToText itself. Transforming first strips the `$…$` and
+              // makes the KaTeX path unreachable.
+              text={block.content}
               style={{ fontSize: 16, color: colors.ink, lineHeight: hasHole ? 32 : 24 }}
             />
           );

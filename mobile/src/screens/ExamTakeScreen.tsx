@@ -21,6 +21,7 @@ import { useContentContainerStyle } from '../components/ui/ContentContainer';
 import Button from '../components/ui/Button';
 import { select, tapMedium } from '../utils/haptics';
 import { mathToText } from '../utils/mathText';
+import { normalizeOptions } from '../utils/examOptions';
 import { LoadingState, ErrorState } from '../components/StateViews';
 import MathText from '../components/MathText';
 import ExamFigure from '../components/ExamFigure';
@@ -156,38 +157,6 @@ function QuestionNav({ current, total, answers, sections, onGoto }: {
   );
 }
 
-/**
- * Real exam data ships `options` in several shapes:
- *   - an object keyed by letter: { a: "both", b: "either", … }  (most common)
- *   - an array of strings
- *   - null / missing
- * Normalize everything to [{ key, label, value }] where `value` is what gets
- * stored as the answer (the letter key for object options — matching the
- * grader, which compares against `question.correct` like "c" — and the label
- * text for legacy array options).
- */
-function normalizeOptions(raw: any): { key: string; label: string; value: string }[] {
-  const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  if (Array.isArray(raw)) {
-    return raw
-      .filter((opt) => opt != null)
-      .map((opt, i) => {
-        // mathToText: quiz content carries LaTeX ("\frac{2}{7}") that RN can't
-        // typeset — render the readable Unicode form, grade on the raw value.
-        const raw = typeof opt === 'string' ? opt : String(opt?.text ?? opt?.label ?? opt);
-        return { key: letters[i] ?? String(i + 1), label: mathToText(raw), value: raw };
-      });
-  }
-  if (raw && typeof raw === 'object') {
-    return Object.entries(raw)
-      .filter(([, v]) => v != null)
-      .map(([k, v]) => {
-        const label = typeof v === 'string' ? v : String(v);
-        return { key: String(k), label: mathToText(label), value: String(k) };
-      });
-  }
-  return [];
-}
 
 function MCQQuestion({ question, answer, onAnswer, isCreole }: {
   question: any;
@@ -797,7 +766,22 @@ export default function ExamTakeScreen() {
   const blankCount = String(q?.type ?? '').toLowerCase() === 'fill_blank'
     ? countBlanks(rawQuestionText)
     : 0;
-  const questionText = mathToText(blankCount > 1 ? numberBlanks(rawQuestionText) : rawQuestionText);
+  /*
+   * RAW, on purpose — `MathText` does the routing itself.
+   *
+   * From TestFlight feedback on build 58 ("fix the display"), on a question
+   * whose source is properly delimited:
+   *   "Simplifier l'expression suivante $A = \sum_{k=1}^{n}\frac{k-e^{k}}{k!}$."
+   * It rendered as "∑_(k=1)^n (k-e^(k))/(k!)" — the `mathToText` fallback,
+   * on a string that should have been typeset.
+   *
+   * The cause was a DOUBLE TRANSFORM. This line ran `mathToText` first, which
+   * turns the LaTeX into Unicode and strips the `$…$` delimiters; `MathText`
+   * then asked `needsKatex()` about a string whose delimiters were already
+   * gone, correctly answered no, and faithfully rendered the degraded text.
+   * The KaTeX path was unreachable for every delimited question in the app.
+   */
+  const questionText = blankCount > 1 ? numberBlanks(rawQuestionText) : rawQuestionText;
   const rawAnswer = answers[safeIdx];
   const answerText = Array.isArray(rawAnswer) ? rawAnswer.join(', ') : String(rawAnswer ?? '');
 
