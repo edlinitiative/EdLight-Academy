@@ -43,6 +43,25 @@ export async function deviceHash(): Promise<string | null> {
 }
 
 /**
+ * `deviceHash()`, computed once per app launch.
+ *
+ * The answer path calls this with a question's clock running, twenty-five
+ * times a tournament. The underlying value is a per-install id that cannot
+ * change while the app is running, so asking the OS again on every submission
+ * buys nothing and spends time the student is being scored on.
+ *
+ * The rejected promise is cached as null rather than retried: a device that
+ * refused once will refuse again, and retrying on the submit path turns one
+ * silent failure into twenty-five.
+ */
+let devicePromise: Promise<string | null> | null = null;
+
+export function cachedDeviceHash(): Promise<string | null> {
+  if (!devicePromise) devicePromise = deviceHash().catch(() => null);
+  return devicePromise;
+}
+
+/**
  * Counts how often the app left the foreground during one question.
  *
  * iOS reports 'inactive' for the app switcher, Control Centre, a notification

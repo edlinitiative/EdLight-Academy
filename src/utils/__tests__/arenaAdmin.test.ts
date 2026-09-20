@@ -37,6 +37,7 @@ import {
   type ArenaQuestionDraft,
   type ControlContext,
   validateTournamentDraft,
+  blockerLines,
 } from '../../services/arenaAdminService';
 import { ARENA_STATES, type ArenaState } from '../../../shared/arena/state';
 
@@ -439,5 +440,39 @@ describe('validateTournamentDraft', () => {
     const fr = validateTournamentDraft({ ...base, title: '' }, false)[0].message;
     const ht = validateTournamentDraft({ ...base, title: '' }, true)[0].message;
     expect(fr).not.toBe(ht);
+  });
+});
+
+/*
+ * The finalise refusal a host reads at 22:40. "Finalisation refused" sends
+ * them looking; the rank and the reason are the whole message.
+ */
+describe('blockerLines', () => {
+  it('leads with the rank, in both languages', () => {
+    const [fr] = blockerLines([{ rank: 1, uids: ['w1'], why: 'claim_unresolved' }], 'fr');
+    const [ht] = blockerLines([{ rank: 1, uids: ['w1'], why: 'claim_unresolved' }], 'ht');
+    expect(fr).toBe('rang 1 : réclamation non vérifiée (1)');
+    expect(ht).toBe('ran 1 : reklamasyon ki pa verifye (1)');
+    expect(fr).not.toBe(ht);
+  });
+
+  it('says how many people a tie concerns', () => {
+    const [line] = blockerLines([{ rank: 2, uids: ['a', 'b'], why: 'tie_unresolved' }], 'fr');
+    expect(line).toContain('(2)');
+  });
+
+  it('has copy for every reason the gate can return', () => {
+    const reasons = [
+      'tie_unresolved', 'claim_unresolved', 'prize_unassigned',
+      'unreviewed_flags', 'disqualified_holder',
+    ] as const;
+    for (const why of reasons) {
+      const [fr] = blockerLines([{ rank: 1, uids: [], why }], 'fr');
+      expect(fr).not.toContain(why);
+    }
+  });
+
+  it('is empty when nothing blocks', () => {
+    expect(blockerLines([], 'fr')).toEqual([]);
   });
 });

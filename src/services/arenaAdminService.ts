@@ -31,6 +31,7 @@ import {
 } from 'firebase/firestore';
 import { db, authedFetch, getIdToken } from './firebase';
 import { canTransition, type ArenaState } from '../../shared/arena/state';
+import type { FinalBlocker, FlagSummary, ReviewDecision } from '../../shared/arena/review';
 import { schoolKey } from '../../shared/schools';
 import seedDoc from '../../shared/data/schools-seed.json';
 
@@ -136,12 +137,18 @@ export type ArenaAdminErrorCode =
   | 'no_standings'
   /** 409 — a tournament already exists at that id. */
   | 'already_exists'
+  /** 409 — `final` refused: the podium still has unresolved items. */
+  | 'verification_incomplete'
+  /** 400 — a disqualification, or an overridden finalisation, with no reason. */
+  | 'reason_required'
   | 'rate_limited'
   | 'not_found'
   | 'server_error';
 
 export class ArenaAdminError extends Error {
   code: ArenaAdminErrorCode;
+  /** Set only on `verification_incomplete`: exactly what `final` refused on. */
+  blockers?: FinalBlocker[];
 
   /** For `invalid_question`: which field the server rejected. */
   field?: string;
@@ -384,6 +391,22 @@ function stateError(res: Response, body: Row): ArenaAdminError {
     );
   }
   if (body.error === 'no_standings') return new ArenaAdminError('no_standings', 'no_standings');
+  /*
+   * `final` refused because the podium is not settled. The BLOCKERS are the
+   * whole message — "finalisation refused" tells a host nothing they can act
+   * on, the same reasoning `questions_incomplete` above is written for. They
+   * ride on the error so the console can list them without a second call.
+   */
+  if (body.error === 'verification_incomplete') {
+    const blockers = Array.isArray(body.blockers) ? body.blockers as FinalBlocker[] : [];
+    const err = new ArenaAdminError(
+      'verification_incomplete',
+      blockers.map((b) => `${b.rank}:${b.why}`).join(', ') || 'unresolved',
+    );
+    err.blockers = blockers;
+    return err;
+  }
+  if (body.error === 'reason_required') return new ArenaAdminError('reason_required', 'reason_required');
   if (body.error === 'already_exists') return new ArenaAdminError('already_exists', 'already_exists');
   if (body.error === 'illegal_transition') {
     return new ArenaAdminError('illegal_transition', `${str(body.from, '?')}->${str(body.to, '?')}`);
@@ -508,6 +531,155 @@ async function authedGet(url: string): Promise<Response> {
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   return fetch(url, { method: 'GET', headers });
+}
+
+// ── Integrity review ────────────────────────────────────────────────────────
+
+/**
+ * A blocker in the host's own words.
+ *
+ * Bilingual here rather than in the endpoint, for the same reason every other
+ * refusal in this service is: the server names WHAT is wrong in a stable code
+ * the tests can assert on, and the console decides how to say it to a person
+ * at 22:40. `rank` leads every line because that is what the host is looking
+ * at on the podium.
+ */
+export function blockerLines(blockers: readonly FinalBlocker[], lang: 'fr' | 'ht'): string[] {
+  const copy: Record<FinalBlocker['why'], [string, string]> = {
+    tie_unresolved: ['égalité non tranchée', 'egalite ki pa tranche'],
+    claim_unresolved: ['réclamation non vérifiée', 'reklamasyon ki pa verifye'],
+    prize_unassigned: ['prix sans titulaire', 'pri san mèt'],
+    unreviewed_flags: ['signalements non examinés', 'siyal ki pa egzamine'],
+    disqualified_holder: ['disqualifié qui détient encore le prix', 'moun diskalifye ki gen pri a toujou'],
+  };
+  return blockers.map((b) => {
+    const [fr, ht] = copy[b.why] ?? [b.why, b.why];
+    const who = b.uids.length > 0 ? ` (${b.uids.length})` : '';
+    return lang === 'fr' ? `rang ${b.rank} : ${fr}${who}` : `ran ${b.rank} : ${ht}${who}`;
+  });
+}
+
+/**
+ * One row of the review queue, as `/api/arena/review` returns it.
+ *
+ * Fetched through the endpoint rather than watched in Firestore, unlike the
+ * claim queue above. It has to be: `players/**`, `answers/**` and `reviews/**`
+ * are all server-only, including for an admin's browser, because a player's
+ * own score leaks the answer key mid-question. One logged door, not a rule
+ * that hands whole collections to every admin tab at once.
+ */
+export interface ReviewRow {
+  uid: string;
+  displayName: string;
+  schoolShort: string;
+  rank: number | null;
+  score: number;
+  eligible: boolean;
+  flags: string[];
+  summary: FlagSummary;
+  decision: ReviewDecision | null;
+  note: string | null;
+  reviewedBy: string | null;
+  reviewedAt: number | null;
+  claimState: string | null;
+  claimRank: number | null;
+}
+
+export interface ReviewQueue {
+  state: ArenaState;
+  rows: ReviewRow[];
+  /** Why `final` would be refused right now. Empty means it would go through. */
+  blockers: FinalBlocker[];
+}
+
+export async function fetchReviewQueue(tid: string): Promise<ReviewQueue> {
+  const res = await authedGet(`/api/arena/review?tournamentId=${encodeURIComponent(tid)}&action=queue`);
+  if (!res.ok) throw stateError(res, await readError(res));
+  const body = await res.json() as Partial<ReviewQueue>;
+  return {
+    state: (body.state ?? 'draft') as ArenaState,
+    rows: Array.isArray(body.rows) ? body.rows : [],
+    blockers: Array.isArray(body.blockers) ? body.blockers : [],
+  };
+}
+
+/** One answer of one player, as the evidence view shows it. */
+export interface EvidenceAnswer {
+  index: number;
+  choice: number;
+  correct: boolean;
+  late: boolean;
+  early: boolean;
+  impossible: boolean;
+  tier: string;
+  points: number;
+  elapsedMs: number;
+  clientShownAt: number | null;
+  clampedShownAt: number;
+  serverReceivedAt: number;
+  focusLosses: number;
+  flags: string[];
+  appVersion: string | null;
+  deviceHash: string | null;
+}
+
+export interface Evidence {
+  uid: string;
+  displayName: string;
+  schoolShort: string;
+  score: number;
+  eligible: boolean;
+  flags: string[];
+  summary: FlagSummary;
+  answers: EvidenceAnswer[];
+}
+
+/**
+ * One player's answers, with both ends of every timing span.
+ *
+ * Refused by the endpoint before `grading`, because every answer document
+ * carries `correct` and an admin door onto that field mid-tournament is the
+ * key-disclosure hole with a nicer login. The console does not pre-fetch these
+ * for the queue: it is evidence about a child, and a page that loads all of it
+ * to render a list has read every file nobody opened.
+ */
+export async function fetchEvidence(tid: string, uid: string): Promise<Evidence> {
+  const res = await authedGet(
+    `/api/arena/review?tournamentId=${encodeURIComponent(tid)}&action=evidence&uid=${encodeURIComponent(uid)}`,
+  );
+  if (!res.ok) throw stateError(res, await readError(res));
+  return await res.json() as Evidence;
+}
+
+export interface VerdictResult {
+  uid: string;
+  decision: ReviewDecision;
+  eligible: boolean;
+  board: 'aggregated' | 'deferred_to_final';
+  /** True when a reinstated player's prize had already moved on. */
+  rolledDownAway: boolean;
+}
+
+/**
+ * Record a verdict. A disqualification needs a reason; clearing does not.
+ *
+ * The asymmetry is the endpoint's, enforced there — this only avoids sending a
+ * request that will be refused.
+ */
+export async function decideReview(
+  tid: string,
+  uid: string,
+  decision: ReviewDecision,
+  note: string,
+): Promise<VerdictResult> {
+  if (decision === 'disqualified' && note.trim().length < 4) {
+    throw new ArenaAdminError('reason_required', 'note_required');
+  }
+  const res = await authedFetch('/api/arena/review', {
+    action: 'decide', tournamentId: tid, uid, decision, note: note.trim(),
+  });
+  if (!res.ok) throw stateError(res, await readError(res));
+  return await res.json() as VerdictResult;
 }
 
 /** The question table: every authored row, none of their answer keys. */
@@ -691,6 +863,7 @@ export async function requestTransition(
   from: ArenaState,
   to: ArenaState,
   reason?: string,
+  override?: boolean,
 ): Promise<void> {
   if (!canTransition(from, to)) {
     throw new ArenaAdminError('illegal_transition', `illegal_transition:${from}->${to}`);
@@ -701,6 +874,10 @@ export async function requestTransition(
     reason: to === 'void'
       ? (reason || 'Annulé depuis la console d’administration')
       : reason,
+    // Only ever sent for `final`, and only with a reason the host typed. The
+    // endpoint refuses an override without one; this never supplies a default,
+    // because a default reason is a reason nobody wrote.
+    ...(override && to === 'final' ? { override: true } : {}),
   });
   if (!res.ok) throw stateError(res, await readError(res));
 }

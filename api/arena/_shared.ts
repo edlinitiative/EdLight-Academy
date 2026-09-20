@@ -366,6 +366,14 @@ export interface FlagInput {
   impossible: boolean;
   /** How many times the app lost focus during this question, as reported. */
   focusLosses: number;
+  /**
+   * True when this answer came from a different device than the one the
+   * PREVIOUS answer came from. Not "different from the device they registered
+   * on" — a student who signed up on a friend's phone days ago and plays on
+   * their own would then flag on all twenty-five questions, and a column that
+   * is always lit is a column a reviewer learns to skip.
+   */
+  deviceSwitched?: boolean;
 }
 
 /**
@@ -395,6 +403,16 @@ export function integrityFlags(input: FlagInput): string[] {
   if (Number.isFinite(focusLosses) && focusLosses >= FOCUS_LOSS_FLAG_MIN) {
     flags.push(`focus:${questionIndex}:${focusLosses}`);
   }
+
+  /*
+   * The honest reading of this one is narrow, and saying so here is the point.
+   * It means the answers stopped arriving from one device and started arriving
+   * from another MID-TOURNAMENT. A phone that died and a tablet that took over
+   * looks exactly like two people splitting the questions between them. Which
+   * is precisely why it flags: the pattern is worth a reviewer's eye and is
+   * never, on its own, worth a verdict.
+   */
+  if (input.deviceSwitched === true) flags.push(`device:${questionIndex}`);
 
   return flags;
 }

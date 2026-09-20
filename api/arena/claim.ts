@@ -64,6 +64,13 @@ import { checkRateLimit } from '../_lib/rateLimit';
 import { getConsentBucket, getDb } from '../_lib/firebaseAdmin';
 import { sendConsentEmail } from '../_lib/arenaConsentEmail';
 import {
+  HOLDING_STATES,
+  effectiveClaimState,
+  currentHolder,
+  type ClaimState,
+  type ClaimRecord,
+} from '../../shared/arena/claims';
+import {
   asArenaState,
   cronAuthorized,
   isValidTournamentId,
@@ -101,10 +108,20 @@ export const FORBIDDEN_CLAIM_FIELDS = [
 
 // ── Pure logic (unit-tested in api/__tests__/arenaDoorsClose.test.ts) ────────
 
-export type ClaimState = 'open' | 'claimed' | 'verified' | 'rejected' | 'expired';
-
-/** States in which a prize is SPOKEN FOR and may not be offered to anyone else. */
-export const HOLDING_STATES: readonly ClaimState[] = ['open', 'claimed', 'verified'];
+/*
+ * The claim-state vocabulary lives in `shared/arena/claims.ts` and is
+ * re-exported here unchanged. It moved because the finalisation gate and the
+ * run console both have to ask "who holds prize 1, and is that resolved?", and
+ * `src/` cannot import from `api/`. Re-exported rather than relocated-and-
+ * rewritten so that every existing importer — including this file's own tests
+ * — keeps working against the same names.
+ */
+export {
+  HOLDING_STATES,
+  effectiveClaimState,
+  currentHolder,
+} from '../../shared/arena/claims';
+export type { ClaimState, ClaimRecord } from '../../shared/arena/claims';
 
 /**
  * A guardian, for a claimant under 18.
@@ -118,16 +135,6 @@ export interface GuardianContact {
   name: string;
   contact: string;
   relationship: string | null;
-}
-
-export interface ClaimRecord {
-  uid: string;
-  /** The PRIZE rank this claim is for. */
-  rank: number;
-  prizeCents: number;
-  state: ClaimState;
-  /** Epoch ms. The published deadline this claim must be completed by. */
-  expiresAt: number;
 }
 
 /** One finisher in the individual standings, ranked ascending from 1. */
@@ -165,56 +172,6 @@ export interface RollDownResult {
   reason: RollDownReason;
   /** Everybody passed over, in order, with why. This is the public record. */
   skipped: { uid: string; rank: number; why: SkipReason }[];
-}
-
-/**
- * An 'open' claim whose published window has passed is EXPIRED, whatever the
- * document still says.
- *
- * Derived rather than stored-and-trusted because the transition from open to
- * expired happens on a clock, not on a request: nobody calls an endpoint at the
- * 72-hour mark. The sweep writes the state down afterwards, but every decision
- * in this file reads it through here first, so a sweep that has not run yet can
- * never hand a prize to two people at once.
- */
-export function effectiveClaimState(claim: ClaimRecord | undefined, now: number): ClaimState | null {
-  if (!claim) return null;
-  if (claim.state === 'open' && now >= claim.expiresAt) return 'expired';
-  return claim.state;
-}
-
-/**
- * Which claim document currently owns prize `rank`?
- *
- * A prize that has rolled down leaves TWO documents carrying the same `rank`:
- * the vacated one (expired or rejected) and the new holder's. Taking whichever
- * the collection happened to return first would roll the prize down a second
- * time from somebody who never held it, and hand the same money to two
- * students — the single worst outcome this file can produce.
- *
- * So: a claim in a holding state owns the prize outright, because only one can
- * be. Otherwise the most recently OFFERED one wins, which is the greatest
- * `expiresAt` — every roll-down stamps a fresh 72-hour window, so the newest
- * offer always has the latest deadline. Uid breaks a tie, purely so the
- * function stays deterministic on a corrupt pair rather than picking at random.
- */
-export function currentHolder(
-  claims: ClaimRecord[],
-  rank: number,
-  now: number,
-): ClaimRecord | undefined {
-  const atRank = claims.filter((c) => c.rank === rank);
-  if (atRank.length <= 1) return atRank[0];
-
-  const holding = atRank.filter((c) => {
-    const state = effectiveClaimState(c, now);
-    return state !== null && HOLDING_STATES.includes(state);
-  });
-  const pool = holding.length > 0 ? holding : atRank;
-
-  return [...pool].sort(
-    (a, b) => (b.expiresAt - a.expiresAt) || a.uid.localeCompare(b.uid),
-  )[0];
 }
 
 /**
@@ -536,7 +493,7 @@ function readClaim(uid: string, data: Row | undefined): ClaimRecord | undefined 
 }
 
 /** Every claim in the tournament. Three prizes deep, so never a large read. */
-async function loadClaims(db: Firestore, tid: string): Promise<ClaimRecord[]> {
+export async function loadClaims(db: Firestore, tid: string): Promise<ClaimRecord[]> {
   const snap = await db.collection(`tournaments/${tid}/claims`).get();
   const claims: ClaimRecord[] = [];
   for (const doc of snap.docs) {
@@ -1048,7 +1005,7 @@ async function handleSweep(ctx: {
  * rolled down" without a stated reason is the argument section M principle 4
  * exists to avoid having in public.
  */
-async function applyRollDown(ctx: {
+export async function applyRollDown(ctx: {
   db: Firestore;
   tid: string;
   rank: number;

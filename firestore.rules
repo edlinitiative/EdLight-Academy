@@ -422,6 +422,22 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // The verdicts. Server-only, admins included — the same wall as
+      // `players` and `answers`, and for the same reason: a review record is
+      // read through `GET /api/arena/review`, which is one door that can be
+      // logged, rather than a rule that grants a whole collection to every
+      // admin browser at once.
+      //
+      // Not readable by the student it is about either. That is not secrecy
+      // about the outcome — a disqualified student is TOLD, by a person — it
+      // is that the record carries a reviewer's note and the raw flags of
+      // whoever was being compared against, and the way a fifteen-year-old
+      // learns their result was taken away should not be by reading a
+      // Firestore document.
+      match /reviews/{uid} {
+        allow read, write: if false;
+      }
+
       // What the broadcast reads. Public, because the broadcast is public, and
       // one document however many thousand people are watching.
       match /standings/{docId} {

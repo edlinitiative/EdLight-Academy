@@ -88,7 +88,9 @@ import {
   parseBody,
   toMillis,
 } from './_shared';
-import { CLAIM_WINDOW_MS } from './claim';
+import { CLAIM_WINDOW_MS, loadClaims } from './claim';
+import { blockersFor } from './review';
+import { correctIndividuals, type FinalBlocker } from '../../shared/arena/review';
 import {
   appendEvents,
   boardOf,
@@ -399,6 +401,111 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       placeholders = placeholders.filter((c) => !claimed.has(c.uid));
     }
 
+    /*
+     * ── The finalisation gate ────────────────────────────────────────────
+     *
+     * CORRECTION, from an external audit (E8): `provisional -> final` had no
+     * gate of any kind. `canTransition` allows it and nothing else looked, so
+     * the button that RELEASES THE PRIZE MONEY could be pressed with a claim
+     * window still running, a tie nobody had adjudicated, or a flagged
+     * finisher nobody had ruled on.
+     *
+     * `finalBlockers` is scoped to the paying ranks — see the reasoning in
+     * `shared/arena/review.ts`. A gate that fires on every flag in the
+     * tournament is a gate that gets overridden every time, and therefore
+     * protects nothing.
+     *
+     * The override is real, because a real night needs one: a prize nobody
+     * can be paid, a claim the student has abandoned by phone, an event that
+     * has to close tonight. It costs a stated reason, and the reason and the
+     * exact list it overrode are written onto the tournament. An escape hatch
+     * that cannot be used silently is a different object from no gate.
+     */
+    let blockers: FinalBlocker[] = [];
+    let corrected: ReturnType<typeof correctIndividuals> | null = null;
+    let announcedBoard: Row | null = null;
+
+    if (to === 'final') {
+      const [standingsSnap, claims, reviewsSnap] = await Promise.all([
+        db.doc(`tournaments/${tid}/standings/current`).get(),
+        loadClaims(db, String(tid)),
+        db.collection(`tournaments/${tid}/reviews`).get(),
+      ]);
+
+      announcedBoard = standingsSnap.exists ? (standingsSnap.data() as Row) : null;
+      const individuals = Array.isArray(announcedBoard?.individuals)
+        ? (announcedBoard?.individuals as Array<Row & { uid: string; rank: number }>)
+        : [];
+
+      const reviews = reviewsSnap.docs.map((doc) => ({
+        uid: doc.id,
+        decision: (doc.data() as Row).decision as 'cleared' | 'disqualified',
+        note: null,
+        reviewedBy: '',
+        reviewedAt: null,
+        flags: [],
+      })).filter((r) => r.decision === 'cleared' || r.decision === 'disqualified');
+
+      // Flags come off the player rows of everyone who could be paid. Bounded
+      // by the prize count and the claim list, never by the player count.
+      const uids = [...new Set([
+        ...individuals.slice(0, 25).map((row) => String(row.uid)),
+        ...claims.map((claim) => claim.uid),
+      ])].filter((uid) => uid !== '');
+      const players = uids.length > 0
+        ? await db.getAll(...uids.map((uid) => db.doc(`tournaments/${tid}/players/${uid}`)))
+        : [];
+
+      blockers = blockersFor({
+        tournament,
+        board: individuals.map((row) => ({
+          uid: String(row.uid),
+          rank: Math.trunc(Number(row.rank) || 0),
+          displayName: '',
+          schoolShort: '',
+          schoolKey: typeof row.schoolKey === 'string' ? row.schoolKey : '',
+          score: 0,
+        })).filter((row) => row.uid !== '' && row.rank > 0),
+        claims,
+        reviews,
+        players: players as unknown as Array<{ id: string; exists: boolean; data: () => Row | undefined }>,
+        now,
+      });
+
+      const override = body.override === true;
+      if (blockers.length > 0 && !override) {
+        res.status(409).json({
+          error: 'verification_incomplete',
+          blockers,
+          message: 'Resolve these, or finalise with `override` and a reason.',
+        });
+        return;
+      }
+      if (blockers.length > 0 && reason.length < 4) {
+        res.status(400).json({ error: 'reason_required', blockers });
+        return;
+      }
+
+      /*
+       * The corrected official board. `aggregateOne` refuses to run in
+       * `provisional` — that board has been read out on a stream — so the
+       * correction is applied here, once, by removing the disqualified rows
+       * and closing the gaps. The announced board is KEPT at
+       * `standings/provisional` rather than overwritten into nothing: it is
+       * what students watched, and a correction you cannot compare against
+       * the original is not a correction anybody can check.
+       */
+      const disqualified = new Set(
+        reviews.filter((r) => r.decision === 'disqualified').map((r) => r.uid),
+      );
+      if (disqualified.size > 0 && individuals.length > 0) {
+        corrected = correctIndividuals(
+          individuals as Array<{ uid: string; rank: number; schoolKey?: string }>,
+          disqualified,
+        );
+      }
+    }
+
     // Both event-emitting transitions need `standings/current` read INSIDE the
     // transaction that writes — `appendEvents` allocates `seq` from exactly
     // that snapshot, and a snapshot read anywhere else is the race
@@ -520,6 +627,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         });
       }
 
+      if (to === 'final') {
+        if (blockers.length > 0) {
+          // Overridden. What was overridden, by whom, and why — on the record.
+          tx.update(ref, {
+            finalOverride: {
+              by: actor.label,
+              reason,
+              at: Timestamp.fromMillis(now),
+              blockers: blockers.map((b) => ({ rank: b.rank, why: b.why, uids: b.uids })),
+            },
+          });
+        }
+        if (corrected && announcedBoard) {
+          tx.set(db.doc(`tournaments/${tid}/standings/provisional`), {
+            ...announcedBoard,
+            archivedAt: Timestamp.fromMillis(now),
+          });
+          tx.update(standingsRef, {
+            individuals: corrected.individuals,
+            correctedAt: Timestamp.fromMillis(now),
+            correctedRemoved: corrected.removed.map((row) => row.uid),
+            // Named, not adjusted: a school's standing is the mean of a
+            // best-five this board does not carry, so there is nothing here
+            // to recompute it with. See `correctIndividuals`.
+            schoolsNeedRecount: corrected.affectedSchools,
+          });
+        }
+      }
+
       return { ok: true as const, from: current, eventsEmitted: drafts.length };
     });
 
@@ -536,6 +672,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       to,
       claimsOpened: placeholders.length,
       eventsEmitted: outcome.eventsEmitted,
+      ...(to === 'final' ? {
+        overrode: blockers.length > 0 ? blockers : undefined,
+        removedFromBoard: corrected ? corrected.removed.map((row) => row.uid) : [],
+        schoolsNeedRecount: corrected ? corrected.affectedSchools : [],
+      } : {}),
     });
   } catch (err) {
     console.error('[arena/state] failed:', err);
