@@ -2,10 +2,21 @@
  * POST /api/arena/aggregate — the Arena engine's heartbeat.
  * ─────────────────────────────────────────────────────────
  * Recomputes the standings of a live tournament and emits the typed broadcast
- * events that the difference implies. Invoked on a short cadence (~5s) while a
- * tournament is `live` or `grading`; the CALLER owns the schedule — a cron
- * entry, or the run console during a rehearsal — this endpoint only ever does
- * one tick's worth of work and returns.
+ * events that the difference implies. The CALLER owns the schedule — this
+ * endpoint only ever does one tick's worth of work and returns. In practice
+ * that is `advance.ts`, calling it directly the instant a question closes
+ * (restoring the cadence design §F always described — see the CORRECTION note
+ * on `aggregateOne` for the gap that existed until an external audit found
+ * it), with the once-a-minute cron as the safety net for a tick that call
+ * missed, never the primary driver.
+ *
+ * PUBLICATION IS GATED ON THE CURRENT QUESTION'S OWN STATE, not on the
+ * tournament's. A tick that lands while a question is still open (or a
+ * cron running purely on its own clock, unaware anything is mid-window)
+ * computes nothing and publishes nothing — `blocksPublication` is the actual
+ * enforcement. `standings/current` is public, and a fresh publish mid-question
+ * is exactly what let two colluding accounts, submitting different options,
+ * infer which one was correct before the reveal.
  *
  * THE SCALE PROPERTY THIS FILE EXISTS TO PRESERVE (design §F):
  * **nothing here accumulates a running total anywhere.** The naive design — a
@@ -69,6 +80,26 @@ import { highestSeq, nextSeq, renumber, seqAfter, writeEvents } from './_events'
 
 /** Ticking outside these states would rewrite a board that has been announced. */
 const AGGREGATE_STATES: ReadonlySet<string> = new Set<ArenaState>(['live', 'grading']);
+
+/**
+ * Would publishing right now show something about a question that has not
+ * closed yet?
+ *
+ * Pure and exported for tests — this is the actual fix for E2 (a mid-question
+ * standings leak an external audit found), and the property under test is a
+ * negative ("this call published nothing"), which is exactly the kind of
+ * thing a test suite has to assert explicitly or it silently rots the first
+ * time someone "simplifies" the caller.
+ *
+ * `null`/`undefined` (no live document, or a state string we don't
+ * recognise) blocks too — refusing to publish on a document we cannot read is
+ * the safe direction for a field this consequential; the caller's own
+ * `AGGREGATE_STATES` check already keeps this from firing before question 1
+ * exists at all.
+ */
+export function blocksPublication(liveQuestionState: string | null | undefined): boolean {
+  return liveQuestionState !== 'closed';
+}
 
 /**
  * Schools ranked per tick.
@@ -576,8 +607,12 @@ export async function commitBoard(
  * Returns the response rather than writing it: the sweep handles several
  * tournaments in one invocation, and a function that writes to `res` can only
  * ever answer for the first.
+ *
+ * Exported so `advance.ts` can call it directly the moment it closes a
+ * question — see the CORRECTION note two paragraphs down for why that call
+ * did not exist until an external audit found the gap it left.
  */
-async function aggregateOne(
+export async function aggregateOne(
   db: Firestore,
   tid: string,
   now: number,
@@ -597,6 +632,45 @@ async function aggregateOne(
       // cadence. Rewriting standings in `provisional` would edit a board that
       // has already been announced on a stream.
       return { status: 200, body: { ok: true, skipped: 'state', state } };
+    }
+
+    /*
+     * CORRECTION, from an external audit: this tick used to publish
+     * `standings/current` whenever the TOURNAMENT'S state was `live`, with no
+     * regard for whether the CURRENT QUESTION was still open. `answer.ts`
+     * writes a player's score in the same transaction as recording the
+     * answer — immediately, mid-question — and the once-a-minute cron that
+     * was the ONLY thing calling this function (advance.ts never did, despite
+     * a comment on the handler claiming it "calls this at every question
+     * close") had no relationship to question boundaries at all. Two
+     * colluding accounts submitting different options during an open window
+     * could read the next cron tick's public board and infer which one
+     * scored.
+     *
+     * The fix is not a smarter diff — it is refusing to publish at all while
+     * the door is still open. `live/{index}.state` is the same field
+     * `decideSubmission` trusts for lateness (not the tournament's cached
+     * `currentQuestion.closesAt`, which a force-close can make stale without
+     * updating): if the question this tournament is currently on has not
+     * actually closed yet, this tick is a no-op, full stop, admin-recompute
+     * included — there is no legitimate reason for the LIVE STANDINGS to know
+     * anything about an in-progress window that a colluding pair could not
+     * also read.
+     *
+     * Once the question DOES close, `advance.ts` calls this function
+     * directly, in the same request that just wrote `live/{index}.state =
+     * 'closed'` — so by the time this check runs, the read is already
+     * correct, and standings settle in the pause exactly where section F of
+     * the design doc always said they should.
+     */
+    const currentForGate = (tournament.currentQuestion || null) as Row | null;
+    const gateIndex = currentForGate ? num(currentForGate.index, -1) : -1;
+    if (gateIndex >= 0) {
+      const liveGateSnap = await db.doc(`tournaments/${tid}/live/${gateIndex}`).get();
+      const liveGateState = liveGateSnap.exists ? str((liveGateSnap.data() as Row).state) : null;
+      if (blocksPublication(liveGateState)) {
+        return { status: 200, body: { ok: true, skipped: 'question_open', questionIndex: gateIndex } };
+      }
     }
 
     const teamSize = Math.max(1, num(tournament.teamSize, 5));

@@ -22,6 +22,7 @@ import {
   cadenceRemaining,
   qualifiedAtFor,
   withoutUndefined,
+  blocksPublication,
   type PlayerRow,
   type SchoolPool,
 } from '../arena/aggregate';
@@ -229,6 +230,43 @@ describe('the once-per-question guards', () => {
 
   it('drops undefined so Firestore never sees it', () => {
     expect(withoutUndefined({ a: 1, b: undefined, c: null })).toEqual({ a: 1, c: null });
+  });
+});
+
+/*
+ * E2, from an external audit: `standings/current` used to publish whenever the
+ * TOURNAMENT'S state was `live`, on a once-a-minute cron with no relationship
+ * to question boundaries. `answer.ts` writes a player's score in the same
+ * transaction as recording the answer — immediately, mid-question — so a cron
+ * tick landing inside an open window could publish scores that two colluding
+ * accounts, having just submitted different options, could read to infer
+ * which one was correct before the question ever closed.
+ *
+ * `blocksPublication` is the actual fix. The property under test is a
+ * negative — "this tick published nothing" — which is exactly the shape of
+ * bug that rots silently the first time a caller is "simplified".
+ */
+describe('blocksPublication — the actual fix for a mid-question standings leak', () => {
+  it('blocks while the question is genuinely open', () => {
+    expect(blocksPublication('open')).toBe(true);
+  });
+
+  it('blocks a question that has been delivered but not yet accepting — nothing to publish either way', () => {
+    expect(blocksPublication('pending')).toBe(true);
+  });
+
+  it('allows publication once the question has actually closed — natural close or forced, both write the same state', () => {
+    expect(blocksPublication('closed')).toBe(false);
+  });
+
+  it('fails CLOSED on a state it does not recognise, or no live document at all', () => {
+    // A missing/corrupt live document is not a green light — the safe
+    // direction for a field this consequential is to publish nothing rather
+    // than guess. `planAdvance` treats the same corruption the same way.
+    expect(blocksPublication(null)).toBe(true);
+    expect(blocksPublication(undefined)).toBe(true);
+    expect(blocksPublication('')).toBe(true);
+    expect(blocksPublication('some-future-state-nobody-wrote-yet')).toBe(true);
   });
 });
 

@@ -46,6 +46,7 @@ import { FieldValue, Timestamp, type Transaction } from 'firebase-admin/firestor
 import { getDb } from '../_lib/firebaseAdmin';
 import { canTransition, type ArenaState } from '../../shared/arena/state';
 import { authorizeCronOrAdmin } from './_shared';
+import { aggregateOne } from './aggregate';
 import {
   appendEvents,
   atStakeFrom,
@@ -574,6 +575,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         await emitQuestionClosed(db, tid, outcome.index, outcome.round ?? 0);
       } catch (err) {
         console.error('[arena/advance] emitQuestionClosed failed:', err);
+      }
+
+      /*
+       * CORRECTION, from an external audit: this call did not exist. A
+       * comment on aggregate.ts's own handler already claimed "advance calls
+       * this at every question close" — it never did, and the once-a-minute
+       * cron was the ONLY thing computing standings, with no relationship to
+       * question boundaries. That gap is what let `standings/current`
+       * publish mid-question in the first place; `aggregateOne` now refuses
+       * to publish while the live document it reads says the question is
+       * still open, but a tournament still needs SOMETHING to trigger the
+       * settle the moment it legitimately can, rather than waiting up to a
+       * minute for the next blind cron tick. This is that trigger — called
+       * after the close transaction has committed, so the read inside it
+       * already sees `live/{index}.state = 'closed'` and proceeds.
+       *
+       * Same failure posture as emitQuestionClosed: swallowed on error. The
+       * round clock advancing is the one thing this endpoint must never stop
+       * for, and a board that settles a minute late on the next cron tick is
+       * recoverable where a stalled tournament is not.
+       */
+      try {
+        await aggregateOne(db, tid, Date.now());
+      } catch (err) {
+        console.error('[arena/advance] aggregateOne failed:', err);
       }
     }
 
