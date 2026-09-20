@@ -6,10 +6,10 @@ import {
   mergeSchools,
   likelyDuplicate,
   validateShortName,
+  seedSchools as bundledSeedSchools,
   type School,
   type ShortNameReason,
 } from '../../../shared/schools';
-import seedDoc from '../../../shared/data/schools-seed.json';
 
 /**
  * The school list: a bundled seed plus whatever students have added.
@@ -25,18 +25,11 @@ import seedDoc from '../../../shared/data/schools-seed.json';
  * with the seed and nothing on screen breaks.
  */
 
-// The seed records no location: its source is the student's home address, not
-// the school's, so a school is one entry per name nationally. A commune only
-// appears once a student adds a school and types the school's own address.
-const SEED: School[] = (seedDoc.schools as { name: string; applicants?: number; shortName?: string }[])
-  .map((s) => ({
-    key: schoolKey(s.name),
-    name: s.name,
-    commune: '',
-    applicants: s.applicants,
-    // Only the schools whose short name someone actually told us carry one.
-    shortName: s.shortName,
-  }));
+// Derived in shared/schools.ts rather than here, because the SERVER needs the
+// same list (api/arena/_shared.ts resolves a school's board label from it) and
+// two mappings of the same JSON are two opinions about school identity waiting
+// to drift — which is precisely the class of bug this module exists to stop.
+const SEED: School[] = bundledSeedSchools();
 
 /** A Firestore school document, before we have checked anything about it. */
 type SchoolDoc = Record<string, unknown>;
