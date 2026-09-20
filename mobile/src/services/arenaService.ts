@@ -26,6 +26,7 @@ import { auth, db } from './firebase';
 import { getReferralCode } from './referralService';
 import type { ArenaState } from '../../../shared/arena/state';
 import { TIER_FULL_MS, TIER_HALF_MS, type AnswerTier } from '../../../shared/arena/scoring';
+import { cachedDeviceHash } from '../utils/integrity';
 
 const API_BASE = 'https://academy.edlight.org/api/arena';
 const REGISTER_URL = `${API_BASE}/register`;
@@ -587,12 +588,25 @@ export async function submitAnswer(opts: {
   clientShownAt: number;
   focusLosses?: number;
 }): Promise<ArenaWriteResult<{ recorded: boolean; duplicate: boolean }>> {
+  /*
+   * WHICH DEVICE THIS ANSWER IS COMING FROM, on every answer rather than once
+   * at registration (E7). The server compares it against the previous answer's
+   * and flags a mid-tournament switch — it never blocks, because a dead phone
+   * and a borrowed tablet are the common honest cases.
+   *
+   * Read through `cachedDeviceHash`, not `deviceHash()` directly: this sits on
+   * the submit path with a tiered clock running, and the native call is worth
+   * making once per launch rather than twenty-five times under time pressure.
+   * A failure resolves to null — a device that will not identify itself is not
+   * evidence of anything, and must never cost a student their answer.
+   */
   const data = await authedPost(ANSWER_URL, {
     tournamentId: opts.tournamentId,
     questionIndex: opts.questionIndex,
     choice: opts.choice,
     clientShownAt: opts.clientShownAt,
     focusLosses: opts.focusLosses ?? 0,
+    deviceHash: await cachedDeviceHash(),
   });
   if (!data) return failed('offline');
   if (!data.ok) return failed(String(data.error || 'unknown'));

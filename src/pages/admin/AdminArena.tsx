@@ -789,6 +789,17 @@ function IntegrityQueue({
                                 `${row.summary.focus} soti, maks ${row.summary.worstFocusLosses}`,
                               )
                             : ''}
+                          {/* A dead phone and a borrowed tablet look exactly
+                              like two people splitting the questions. Shown
+                              plainly, weighted like nothing. */}
+                          {row.summary.device > 0 ? (
+                            <div style={{ fontSize: 11 }}>
+                              {t(
+                                `${row.summary.device} changement(s) d’appareil`,
+                                `${row.summary.device} chanjman aparèy`,
+                              )}
+                            </div>
+                          ) : null}
                         </>
                       )}
                     </td>

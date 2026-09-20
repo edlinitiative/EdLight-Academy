@@ -64,6 +64,7 @@ import {
   MAX_QUESTION_INDEX,
   asArenaState,
   boundedInt,
+  normalizeDeviceHash,
   decideSubmission,
   enforceRateLimit,
   integrityFlags,
@@ -132,6 +133,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   // a broken number should still have its ANSWER recorded.
   const rawFocusLosses = boundedInt(body.focusLosses, 0, MAX_FOCUS_LOSSES);
   const focusLosses = rawFocusLosses ?? 0;
+
+  /*
+   * WHICH DEVICE IS ACTUALLY SUBMITTING THIS.
+   *
+   * CORRECTION, from an external audit (E7: "mobile-only participation is
+   * unenforced"). The answer document already had a `deviceHash` field, and it
+   * was copied off the PLAYER ROW — the device they registered on, weeks
+   * earlier, identical on every one of their twenty-five answers. A field
+   * shaped like per-answer evidence that is actually a constant is worse than
+   * no field: a reviewer comparing two answers would have concluded they came
+   * from the same phone no matter where they came from.
+   *
+   * Same normaliser as registration, so a client that sends nonsense is read
+   * as "did not say" rather than as a distinct device.
+   */
+  const submittedFrom = normalizeDeviceHash(body.deviceHash);
 
   const db = getDb();
 
@@ -218,16 +235,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     const scored = scoreAnswer(scoreInput);
     const impossible = isImpossible(scoreInput);
 
-    // FLAG, DO NOT BLOCK (section M principle 2). Nothing below stops the
-    // request: disqualifying a real student live, on a stream, is far worse
-    // than catching a cheat in review two days later.
-    const flags = integrityFlags({
-      questionIndex,
-      elapsedMs: scored.elapsedMs,
-      impossible,
-      focusLosses,
-    });
-
     const answerRef = db.doc(`tournaments/${tournamentId}/answers/${uid}_${questionIndex}`);
     const playerRef = db.doc(`tournaments/${tournamentId}/players/${uid}`);
 
@@ -272,6 +279,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         return { kind: 'error', status: 403, code: 'not_eligible' };
       }
 
+      /*
+       * FLAG, DO NOT BLOCK (section M principle 2). Nothing below stops the
+       * request: disqualifying a real student live, on a stream, is far worse
+       * than catching a cheat in review two days later.
+       *
+       * Computed HERE rather than before the transaction, unlike every other
+       * flag, because the device comparison needs the player row — and the row
+       * has to be the one this transaction read, not one fetched a moment
+       * earlier that a concurrent retry may already have moved.
+       */
+      const lastDevice = typeof player.playDeviceHash === 'string' ? player.playDeviceHash : null;
+      const deviceSwitched = submittedFrom !== null
+        && lastDevice !== null
+        && submittedFrom !== lastDevice;
+
+      const flags = integrityFlags({
+        questionIndex,
+        elapsedMs: scored.elapsedMs,
+        impossible,
+        focusLosses,
+        deviceSwitched,
+      });
+
       const prevScore = typeof player.score === 'number' ? player.score : 0;
       const prevStreak = typeof player.streak === 'number' ? player.streak : 0;
       const prevBest = typeof player.bestStreak === 'number' ? player.bestStreak : 0;
@@ -299,7 +329,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         focusLosses,
         flags,
         appVersion,
-        deviceHash: typeof player.deviceHash === 'string' ? player.deviceHash : null,
+        // The device that SENT this answer, not the one the account registered
+        // on — see the note where `submittedFrom` is parsed. Null when the
+        // client did not say, which an older build will not: a missing value
+        // is "unknown", never "same as before".
+        deviceHash: submittedFrom,
         createdAt: Timestamp.now(),
       });
 
@@ -343,6 +377,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         streak: countsTowardRanking ? streak : 0,
         bestStreak: countsTowardRanking ? Math.max(prevBest, streak) : prevBest,
         lastAnswerAt: Timestamp.now(),
+        // The device to compare the NEXT answer against. Always the most
+        // recent one, so a student ping-ponging between two phones flags on
+        // every switch rather than only the first.
+        ...(submittedFrom ? { playDeviceHash: submittedFrom } : {}),
         ...(flags.length ? { flags: FieldValue.arrayUnion(...flags) } : {}),
       });
 

@@ -168,6 +168,27 @@ describe('integrity flags — flag, never block', () => {
     expect(integrityFlags({ ...base, elapsedMs: -400, impossible: true })).toEqual(['impossible:3']);
   });
 
+  it('flags a device switch mid-tournament', () => {
+    expect(integrityFlags({ ...base, deviceSwitched: true })).toEqual(['device:3']);
+  });
+
+  /*
+   * The flag is about the CHANGE, not about which phone. An answer with no
+   * device reported, or the same device as last time, says nothing — a student
+   * who registered on a friend's phone and plays on their own would otherwise
+   * light up on all twenty-five questions, and a column that is always lit is
+   * one a reviewer learns to skip.
+   */
+  it('says nothing when the device did not change', () => {
+    expect(integrityFlags({ ...base, deviceSwitched: false })).toEqual([]);
+    expect(integrityFlags(base)).toEqual([]);
+  });
+
+  it('stacks with the other flags rather than replacing them', () => {
+    expect(integrityFlags({ ...base, elapsedMs: 10, focusLosses: 9, deviceSwitched: true }))
+      .toEqual(['fast:3', 'focus:3:9', 'device:3']);
+  });
+
   it('ignores a single focus loss and flags a second', () => {
     // One blur is a notification banner. Two inside a 20-second question is a
     // pattern. Flagging on one would flag half of Haiti and make the signal

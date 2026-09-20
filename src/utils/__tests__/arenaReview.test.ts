@@ -52,6 +52,17 @@ describe('flagSummary', () => {
     expect(flagSummary('focus:1:2').total).toBe(0);
   });
 
+  /*
+   * `device:` was added after this parser existed, and the parser drops shapes
+   * it does not know — so a flag the answer endpoint writes and the summary
+   * ignores is invisible in the very queue built to read it.
+   */
+  it('counts a mid-tournament device switch', () => {
+    const s = flagSummary(['device:9', 'device:14', 'fast:2']);
+    expect(s).toMatchObject({ total: 3, device: 2, fast: 1 });
+    expect(s.questions).toEqual([2, 9, 14]);
+  });
+
   it('ignores a flag it does not recognise rather than miscounting it', () => {
     const s = flagSummary(['fast:2', 'teleported:2', '', 'focus:notanumber:3']);
     expect(s.total).toBe(1);
