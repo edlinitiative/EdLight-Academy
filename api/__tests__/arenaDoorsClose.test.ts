@@ -27,6 +27,7 @@ import {
   currentHolder,
   effectiveClaimState,
   parseClaimSubmission,
+  tiedAtUnclaimedRank,
   CLAIM_WINDOW_MS,
   FORBIDDEN_CLAIM_FIELDS,
   type ClaimRecord,
@@ -535,6 +536,45 @@ describe('currentHolder', () => {
 
   it('is undefined when nobody was ever offered the prize', () => {
     expect(currentHolder([], 1, NOW)).toBeUndefined();
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// E8, from an external audit: a tie at a paying rank must stay a human
+// decision — the self-service claim fallback must never mint a second
+// competing claim for a rank someone else already has one at.
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('tiedAtUnclaimedRank', () => {
+  it('is false when nobody has claimed this rank at all', () => {
+    expect(tiedAtUnclaimedRank([], 2, 'w2')).toBe(false);
+  });
+
+  it('CLOSED: a tied finisher can no longer self-claim a rank someone else already holds', () => {
+    // podiumClaims wrote a placeholder for w1 only — w2, tied at rank 2, has
+    // no document of their own yet and is exactly who this guards against.
+    const claims = [claim({ uid: 'w1', rank: 2, state: 'open', expiresAt: NOW + CLAIM_WINDOW_MS })];
+    expect(tiedAtUnclaimedRank(claims, 2, 'w2')).toBe(true);
+  });
+
+  it('is false for the finisher who already holds the only claim at their own rank', () => {
+    // Not a collision with themselves — this is the ordinary, non-tied case.
+    const claims = [claim({ uid: 'w1', rank: 1, state: 'open', expiresAt: NOW + CLAIM_WINDOW_MS })];
+    expect(tiedAtUnclaimedRank(claims, 1, 'w1')).toBe(false);
+  });
+
+  it('still blocks even once the other claim has expired or was rejected — reassigning it is still a human call', () => {
+    expect(tiedAtUnclaimedRank(
+      [claim({ uid: 'w1', rank: 2, state: 'expired', expiresAt: NOW - 10_000 })], 2, 'w2',
+    )).toBe(true);
+    expect(tiedAtUnclaimedRank(
+      [claim({ uid: 'w1', rank: 2, state: 'rejected', expiresAt: NOW + CLAIM_WINDOW_MS })], 2, 'w2',
+    )).toBe(true);
+  });
+
+  it('ignores claims at a different rank entirely', () => {
+    const claims = [claim({ uid: 'w1', rank: 1, state: 'open', expiresAt: NOW + CLAIM_WINDOW_MS })];
+    expect(tiedAtUnclaimedRank(claims, 2, 'w2')).toBe(false);
   });
 });
 
