@@ -84,7 +84,8 @@
           "color": "#0857A6"
         }
       ],
-      "react-native-bottom-tabs"
+      "react-native-bottom-tabs",
+      "expo-screen-capture"
     ],
     "scheme": "edlight",
     "extra": {
