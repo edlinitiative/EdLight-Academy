@@ -155,8 +155,20 @@ export function useBlockScreenCapture(active: boolean) {
  */
 export function useScreenshotNotice(active: boolean, onAttempt: () => void) {
   useEffect(() => {
-    if (!active) return;
-    const sub = ScreenCapture.addScreenshotListener(onAttempt);
-    return () => sub.remove();
+    if (!active) return undefined;
+    // Wrapped, unlike the version this replaces. Android 14+ gates the
+    // screenshot listener behind DETECT_SCREEN_CAPTURE, and an unguarded
+    // throw here would take down the live screen in the middle of a question
+    // — losing a student their tournament to protect a courtesy message.
+    // `useBlockScreenCapture` above already catches for the same reason; this
+    // one did not, and it was never called, so nothing had surfaced it.
+    try {
+      const sub = ScreenCapture.addScreenshotListener(onAttempt);
+      return () => { try { sub.remove(); } catch { /* already gone */ } };
+    } catch {
+      // No listener on this platform or build. The capture BLOCK is the
+      // deterrent; this was only ever there to explain the blank file.
+      return undefined;
+    }
   }, [active, onAttempt]);
 }

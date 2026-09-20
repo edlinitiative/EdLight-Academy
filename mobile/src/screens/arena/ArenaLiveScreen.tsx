@@ -15,7 +15,7 @@ import ScoreCounter from '../../components/trivia/ScoreCounter';
 import CorrectFlash from '../../components/trivia/CorrectFlash';
 import { useArenaLive, useArenaAnswer } from '../../hooks/useArena';
 import { tierRing } from '../../services/arenaService';
-import { useFocusLossCounter } from '../../utils/integrity';
+import { useFocusLossCounter, useBlockScreenCapture, useScreenshotNotice } from '../../utils/integrity';
 import { classifyAnswerResult, type AnswerReceiptStatus } from '../../utils/arenaAnswerReceipt';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import { success, warn, tapMedium } from '../../utils/haptics';
@@ -89,6 +89,33 @@ export default function ArenaLiveScreen() {
   const shownAt = useRef<number>(Date.now());
   const takeFocusReading = useFocusLossCounter(answerable);
 
+  /*
+   * CORRECTION, from an external audit (E7): `useBlockScreenCapture` and
+   * `useScreenshotNotice` were written for this screen, documented as "scoped
+   * to the live screen ONLY, and that scope is the point", and then never
+   * called from anywhere. The dependency was declared and installed; only the
+   * call site was missing, so the deterrent the design describes did not exist.
+   *
+   * Gated on `answerable` rather than on the screen, which is a deliberate
+   * narrowing of even that scope. The window worth blocking is the one where a
+   * capture could still buy something — photograph the question, ask an AI,
+   * type the answer back. Once the key is revealed there is nothing left to
+   * protect, and the reveal is precisely the moment a student wants to screenshot
+   * their streak and send it to four friends. That referral loop is the growth
+   * mechanic this product runs on, and the hook's own comment warns against
+   * trading it away.
+   */
+  useBlockScreenCapture(answerable);
+
+  const [captureBlocked, setCaptureBlocked] = useState(false);
+  useScreenshotNotice(answerable, useCallback(() => {
+    // On iOS the file is already blank by the time this fires. Saying so is
+    // the whole point — a student who thinks the app is broken is worse off
+    // than one who knows the rule.
+    warn();
+    setCaptureBlocked(true);
+  }, []));
+
   // The mutation's own resolved value, not just "did the promise settle" —
   // submitAnswer() never throws, so a dropped connection or a window that
   // had already closed comes back as an ordinary `{ok:false}` result. See
@@ -104,6 +131,9 @@ export default function ArenaLiveScreen() {
     setChoice(null);
     setLocked(false);
     setReceipt(null);
+    // The capture notice belongs to the question it fired on, and must never
+    // outlive it onto the next one.
+    setCaptureBlocked(false);
     focusReadingRef.current = null;
     shownAt.current = Date.now();
   }, [index]);
@@ -264,6 +294,20 @@ export default function ArenaLiveScreen() {
 
             {locked && revealed == null ? (
               <AnswerReceiptLine receipt={receipt} onRetry={retry} t={t} />
+            ) : null}
+
+            {/* Only after they actually try. Announcing the rule up front
+                would read as an accusation to the overwhelming majority who
+                were never going to screenshot anything. */}
+            {captureBlocked ? (
+              <Text style={[typeScale.caption, {
+                color: colors.muted, marginTop: 14, textAlign: 'center',
+              }]}>
+                {t(
+                  'Les captures d’écran sont désactivées pendant une question. Tu pourras partager ton score à la fin.',
+                  'Kaptí ekran dezaktive pandan yon kesyon. W ap ka pataje nòt ou nan fen an.',
+                )}
+              </Text>
             ) : null}
           </>
         ) : null}
