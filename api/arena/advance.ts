@@ -36,6 +36,32 @@
  * signed-in admin's ID token. The console cannot be given the cron secret — a
  * browser holding it hands the whole engine to whoever reads localStorage.
  *
+ * ── WHAT ACTUALLY DRIVES THIS, AND WHAT DOES NOT ──────────────────────────
+ *
+ * CORRECTION, from an external audit (E3: "the interface promises automation
+ * but no working runner is present in repository configuration"). Everything
+ * above was written for a scheduler — the cron auth door, the transactional
+ * steps that tolerate a scheduler and a human arriving together — and the run
+ * console tells the host in as many words that "l'avance est automatique".
+ * There was no scheduler. `vercel.json` listed crons for `aggregate`,
+ * `doors-close` and the claim sweep and none for this endpoint, so the round
+ * clock only ever moved when an admin pressed a button: twenty-five questions,
+ * fifty clicks, timed by hand, live.
+ *
+ * `vercel.json` now schedules it every minute. Be precise about what that
+ * buys, because it is NOT the cadence drawn above: Vercel's scheduler has a
+ * one-minute floor, and one tick performs one transition, so a minute-granular
+ * cron alone paces a question at about two minutes rather than thirty seconds.
+ * What it guarantees is that a tournament CANNOT STALL unattended — the
+ * watchdog Phase 1 asks for — and that every question eventually opens,
+ * closes, reveals and settles without a human in the loop.
+ *
+ * Driving the real 20s/10s cadence needs a sub-minute runner, which is a
+ * deployment decision with a running cost attached (an external scheduler, or
+ * making one invocation hold the clock for its whole minute) rather than
+ * something this file can settle on its own. Until that is chosen, the host
+ * drives the pace from the console and this cron is the floor beneath them.
+ *
  * Request  (POST): { tid: string, force?: boolean }
  * Response (200):  { ok: true, action, index?, state?, pauseMs }
  *   action ∈ waiting | opened | closed | finished | noop
