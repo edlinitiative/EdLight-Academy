@@ -320,6 +320,58 @@ export function subscribeOpenTournament(
   );
 }
 
+/** Furthest along first — a question in progress is more urgent than a wait for review. */
+const ACTIVE_STATE_PRIORITY = ['live', 'grading', 'provisional'] as const;
+
+/**
+ * Which in-progress tournament the Home tab should offer a way back into.
+ *
+ * Same shape as `pickOpenTournament`, a different set of states and a
+ * different question: not "can I sign up" but "is there somewhere I already
+ * registered that I could still get back to."
+ */
+export function pickActiveTournament(rows: ArenaTournament[]): ArenaTournament | null {
+  for (const state of ACTIVE_STATE_PRIORITY) {
+    const inState = rows.filter((r) => r.state === state);
+    if (inState.length === 0) continue;
+    return inState.sort((a, b) => a.startsAt - b.startsAt)[0];
+  }
+  return null;
+}
+
+/**
+ * Is there a tournament past sign-up that a student could still re-enter?
+ *
+ * CORRECTION, from an external audit: `ArenaAnnounceCard` — Home's only door
+ * into the Arena — self-hides the moment a tournament leaves `doors`, on the
+ * reasoning that `live` and later means sign-up has closed. True for sign-up,
+ * but it also removed the only way BACK for a student who registered, left
+ * the screen (backgrounded the app, tapped a notification, answered a call),
+ * and returned to Home mid-tournament — exactly when they most need to find
+ * their way back to a question worth real points. This is the companion
+ * query: whoever is watching still has to confirm they actually registered
+ * for whatever this turns up (see ArenaAnnounceCard) — this alone doesn't
+ * know who is asking.
+ */
+export function subscribeActiveTournament(
+  cb: (t: ArenaTournament | null) => void,
+  onError?: (err: unknown) => void,
+): Unsubscribe {
+  const q = query(collection(db, 'tournaments'), where('state', 'in', [...ACTIVE_STATE_PRIORITY]));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const rows = snap.docs.map((d) => toTournament(d.id, d.data()));
+      cb(pickActiveTournament(rows));
+    },
+    (err) => {
+      console.error('[Arena] active-tournament listener error:', err);
+      onError?.(err);
+      cb(null);
+    },
+  );
+}
+
 /**
  * The one document a playing client watches during a question.
  *

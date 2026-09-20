@@ -123,11 +123,25 @@ function ChallengeModal({ navigation, route }: any) {
 // message) or https://academy.edlight.org/defi/<code> (the web landing's
 // "Ouvrir dans l'app" button). Other routes are deliberately unmapped — in-app
 // navigation for them already flows through navigationRef / notifications.
+//
+// CORRECTION, from an external audit: Arena's own share message
+// (buildArenaInviteMessage in services/arenaService.ts) hands out
+// https://academy.edlight.org/arena — and until this fix, that path matched
+// nothing here, so a friend with the app already installed who tapped an
+// Arena invite fell through to whatever screen the app happened to open on,
+// same as if the link had done nothing at all. It carries no tournament id
+// (the invite is "come play", not "open this specific tournament" — school
+// registration links a student to their school, not a single event), so it
+// resolves to Main: the Home tab is exactly where ArenaAnnounceCard lives for
+// whatever tournament is actually open right now, the same resolution the
+// web /direct page does for a viewer with no id in hand either.
 const linking = {
   prefixes: ['edlight://', 'https://academy.edlight.org'],
   config: {
     screens: {
       Defi: 'defi/:code',
+      Main: 'arena',
+      ArenaLobby: 'arena/:tournamentId',
     },
   },
 };
