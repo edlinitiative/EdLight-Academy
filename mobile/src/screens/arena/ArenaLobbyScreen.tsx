@@ -2,19 +2,25 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Check, School as SchoolIcon, Share2, Trophy, Users } from 'lucide-react-native';
+import { Check, GraduationCap, Pencil, School as SchoolIcon, Share2, Trophy, User as UserIcon, Users } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import SchoolPicker from '../../components/SchoolPicker';
 import PressableScale from '../../components/ui/PressableScale';
 import StageEnter from '../../components/trivia/StageEnter';
 import QualificationBar from '../../components/arena/QualificationBar';
 import { useArenaLobby, useArenaRegister } from '../../hooks/useArena';
+import { useTrivia } from '../../hooks/useTrivia';
 import { formatCountdown, shareArenaInvite } from '../../services/arenaService';
 import { logInviteSent } from '../../services/referralService';
 import { deviceHash } from '../../utils/integrity';
 import { useColors, useTheme, typeScale, displayScale } from '../../theme/theme';
 import { select, tapMedium } from '../../utils/haptics';
 import type { School } from '../../../../shared/schools';
+import { GRADES } from '../../../../shared/trackConfig';
+import { defaultAlias, isAcceptableAliasInput } from '../../../../shared/alias';
+import ArenaIdentityRow from '../../components/arena/ArenaIdentityRow';
+import ArenaNameSheet from '../../components/arena/ArenaNameSheet';
+import ArenaGradeSheet from '../../components/arena/ArenaGradeSheet';
 
 /**
  * The Lobby — from announcement to doors.
@@ -50,13 +56,69 @@ export default function ArenaLobbyScreen() {
   const [picker, setPicker] = useState(false);
   const [school, setSchool] = useState<School | null>(null);
   const [attested, setAttested] = useState(false);
+  const [nameSheet, setNameSheet] = useState(false);
+  const [gradeSheet, setGradeSheet] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const register = useArenaRegister(tid);
+
+  /*
+   * WHAT THE BOARD WILL CALL THEM, computed exactly as the server computes it
+   * (`publicDisplayName` → saved alias, else `defaultAlias` of the account
+   * name). Showing anything else here would be asking a student to confirm one
+   * name and then putting another on a public stream.
+   */
+  const user = useStore((st) => st.user);
+  const { profile, setLeaderboardOptIn } = useTrivia();
+  const savedAlias: string | null = (profile?.leaderboard as any)?.displayName || null;
+  const suggestedAlias = defaultAlias(user?.name);
+  const boardName = savedAlias || suggestedAlias;
+
+  const saveAlias = async (alias: string) => {
+    setSavingName(true);
+    try {
+      // Preserve the rest of the leaderboard entry: this sheet is about the
+      // name, and blanking someone's school or city as a side effect of
+      // renaming themselves would be its own bug report.
+      const lb: any = profile?.leaderboard || {};
+      await setLeaderboardOptIn({
+        optedIn: true,
+        displayName: alias.slice(0, 24),
+        school: lb.school ?? null,
+        city: lb.city ?? null,
+        department: lb.department ?? null,
+      });
+      setNameSheet(false);
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   // Attested, not proven — and prefilled, because the student already told us
   // in onboarding. POSTBAC is the one the server refuses: the Arena is a
   // primary-and-secondary tournament.
   const grade = useStore((s) => s.grade);
+  const setGrade = useStore((s) => s.setGrade);
+  const setGradeChosen = useStore((s) => s.setGradeChosen);
   const gradeEligible = !!grade && grade !== 'POSTBAC';
+  const gradeEntry = GRADES.find((g) => g.code === grade) || null;
+  const gradeLabel = gradeEntry ? (isCreole ? gradeEntry.labelHt : gradeEntry.label) : null;
+
+  /*
+   * The reason a row is blocking, ON the row. The previous version put one
+   * sentence under the button — "Ce championnat est réservé aux élèves du
+   * primaire et du secondaire" — which reads as a general notice rather than
+   * "YOUR profile says Préfac", and pointed at nothing the student could
+   * change from this screen. It was reported as the button being broken, which
+   * is exactly how it looked.
+   */
+  const gradeProblem = !grade
+    ? t('Choisis ta classe pour t’inscrire.', 'Chwazi klas ou pou w enskri.')
+    : grade === 'POSTBAC'
+      ? t(
+        'Ton profil indique « Après le Bac ». Le championnat est réservé au primaire et au secondaire.',
+        'Pwofil ou di « Apre Bak ». Chanpyona a se pou primè ak segondè.',
+      )
+      : null;
 
   // Once registered, the school is whatever the standings document says — the
   // picker's local choice is only ever the pre-registration draft.
@@ -89,10 +151,19 @@ export default function ArenaLobbyScreen() {
     });
   };
 
-  const prizeRows = useMemo(() => (tournament?.prizes ?? []).map((cents, i) => ({
-    place: i + 1,
-    amount: `$${Math.round(cents / 100)}`,
-  })), [tournament?.prizes]);
+  /*
+   * A rank that pays nothing is not a prize. The table used to render whatever
+   * the tournament document held, so a third place worth zero was published to
+   * students as "3 · $0" — which reads as a prize of nothing rather than as a
+   * tournament that pays two places.
+   */
+  const prizeRows = useMemo(() => (tournament?.prizes ?? [])
+    .map((cents, i) => ({ place: i + 1, cents }))
+    .filter((r) => Number.isFinite(r.cents) && r.cents > 0)
+    .map((r) => ({
+      place: r.place,
+      amount: `$${Math.round(r.cents / 100)}`,
+    })), [tournament?.prizes]);
 
   if (loading) {
     return (
@@ -172,22 +243,40 @@ export default function ArenaLobbyScreen() {
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              <PressableScale
-                onPress={() => { select(); setPicker(true); }}
-                pressedScale={0.98}
-                accessibilityRole="button"
-                accessibilityLabel={t('Choisir ton école', 'Chwazi lekòl ou')}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 10,
-                  padding: 13, borderRadius: radius.card,
-                  backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-                }}
-              >
-                <SchoolIcon color={colors.muted} size={16} />
-                <Text numberOfLines={1} style={[typeScale.label, { color: school ? colors.ink : colors.faint, flex: 1 }]}>
-                  {school ? (school.shortName || school.name) : t('Choisis ton école…', 'Chwazi lekòl ou…')}
-                </Text>
-              </PressableScale>
+              {/*
+                * WHO IS BEING REGISTERED — all three facts, each changeable here.
+                *
+                * The checkbox below says "je confirme que ces informations sont
+                * exactes". Until build 58 the only information on the screen was
+                * the school: the board name and the class that decides
+                * eligibility were invisible and unreachable, so the sentence was
+                * asking students to confirm something they could not see.
+                */}
+              <ArenaIdentityRow
+                icon={<UserIcon color={colors.muted} size={16} />}
+                label={t('Ton nom sur le tableau', 'Non ou sou tablo a')}
+                value={boardName}
+                placeholder={t('Ajoute un nom…', 'Mete yon non…')}
+                onPress={() => setNameSheet(true)}
+              />
+
+              <ArenaIdentityRow
+                icon={<GraduationCap color={gradeProblem ? colors.danger : colors.muted} size={16} />}
+                label={t('Ta classe', 'Klas ou')}
+                value={gradeLabel}
+                placeholder={t('Choisis ta classe…', 'Chwazi klas ou…')}
+                problem={gradeProblem}
+                onPress={() => setGradeSheet(true)}
+              />
+
+              <ArenaIdentityRow
+                icon={<SchoolIcon color={colors.muted} size={16} />}
+                label={t('Ton école', 'Lekòl ou')}
+                value={school ? (school.shortName || school.name) : null}
+                placeholder={t('Choisis ton école…', 'Chwazi lekòl ou…')}
+                problem={!school ? t('Choisis ton école pour t’inscrire.', 'Chwazi lekòl ou pou w enskri.') : null}
+                onPress={() => setPicker(true)}
+              />
 
               {/* The attestation. It costs nothing at signup and it is the whole
                   deterrent, because verification only ever touches winners. */}
@@ -235,21 +324,15 @@ export default function ArenaLobbyScreen() {
                   )}
               </PressableScale>
 
+              {/* Only what no row above is already saying. The class and school
+                  reasons live on their own rows now, where they can be acted on. */}
               {!signedIn ? (
                 <Text style={[typeScale.caption, { color: colors.muted }]}>
                   {t('Connecte-toi pour participer.', 'Konekte pou w patisipe.')}
                 </Text>
-              ) : !gradeEligible ? (
+              ) : gradeEligible && school && !attested ? (
                 <Text style={[typeScale.caption, { color: colors.muted }]}>
-                  {grade === 'POSTBAC'
-                    ? t(
-                      'Ce championnat est réservé aux élèves du primaire et du secondaire.',
-                      'Konkou sa a se pou elèv primè ak segondè.',
-                    )
-                    : t(
-                      'Indique ta classe dans ton profil pour participer.',
-                      'Mete klas ou nan pwofil ou pou w patisipe.',
-                    )}
+                  {t('Coche la case pour confirmer.', 'Tcheke kaz la pou konfime.')}
                 </Text>
               ) : null}
               {register.data && register.data.ok === false ? (
@@ -406,6 +489,24 @@ export default function ArenaLobbyScreen() {
         commune={null}
         onSelect={(s) => setSchool(s)}
         onClose={() => setPicker(false)}
+      />
+
+      <ArenaNameSheet
+        visible={nameSheet}
+        current={savedAlias}
+        suggestion={suggestedAlias}
+        isCreole={isCreole}
+        saving={savingName}
+        onSave={saveAlias}
+        onClose={() => setNameSheet(false)}
+      />
+
+      <ArenaGradeSheet
+        visible={gradeSheet}
+        current={grade}
+        isCreole={isCreole}
+        onPick={(code) => { setGrade(code); setGradeChosen(true); }}
+        onClose={() => setGradeSheet(false)}
       />
     </SafeAreaView>
   );

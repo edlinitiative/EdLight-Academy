@@ -1,0 +1,77 @@
+/**
+ * The name a student is shown by in public.
+ *
+ * This became load-bearing the moment the Arena lobby started asking students
+ * to CONFIRM their board name: the screen and the server must derive it
+ * identically, or the app shows one name and the broadcast carries another.
+ * There were four server copies and a fifth, DIFFERENT rule on mobile that
+ * returned the first name alone.
+ */
+import { defaultAlias, isValidAlias, isAcceptableAliasInput, isPlaceholderName } from '../../../shared/alias';
+
+describe('defaultAlias', () => {
+  it('is first name plus a last initial', () => {
+    expect(defaultAlias('Ted Olivier Jacquet')).toBe('Ted J.');
+    expect(defaultAlias('Marie Claire')).toBe('Marie C.');
+  });
+
+  it('leaves a single name alone rather than inventing an initial', () => {
+    expect(defaultAlias('Mika')).toBe('Mika');
+  });
+
+  it('is null when there is nothing usable — null is a real answer', () => {
+    // The standings render an empty name and the leaderboard prompts for one.
+    // A name we made up is worse on a broadcast than no name.
+    expect(defaultAlias('')).toBeNull();
+    expect(defaultAlias(undefined)).toBeNull();
+    expect(defaultAlias('   ')).toBeNull();
+    expect(defaultAlias('123')).toBeNull();
+  });
+
+  it('keeps accents, which most Haitian names carry', () => {
+    expect(defaultAlias('Andrée Pierre-Louis')).toBe('Andrée P.');
+  });
+
+  it('never leaks a full surname', () => {
+    expect(defaultAlias('Ted Jacquet')).not.toContain('Jacquet');
+  });
+});
+
+describe('isValidAlias', () => {
+  /* Deliberately the server's existing loose rule, moved not rewritten —
+     tightening it would drop names that are on boards today. */
+  it('accepts anything containing a letter', () => {
+    expect(isValidAlias('T')).toBe(true);
+    expect(isValidAlias('Ké')).toBe(true);
+  });
+
+  it('rejects what has no letter at all', () => {
+    expect(isValidAlias('123')).toBe(false);
+    expect(isValidAlias('')).toBe(false);
+    expect(isValidAlias(null)).toBe(false);
+  });
+});
+
+describe('isAcceptableAliasInput', () => {
+  it('is stricter than the stored rule, because a student just typed it', () => {
+    expect(isAcceptableAliasInput('T')).toBe(false);
+    expect(isAcceptableAliasInput('Ted J.')).toBe(true);
+  });
+
+  it('refuses a board row that would not be one line', () => {
+    expect(isAcceptableAliasInput('Ted\nJacquet')).toBe(false);
+  });
+
+  it('refuses something longer than a board row holds', () => {
+    expect(isAcceptableAliasInput('x'.repeat(25))).toBe(false);
+    expect(isAcceptableAliasInput('x'.repeat(24))).toBe(true);
+  });
+});
+
+describe('isPlaceholderName', () => {
+  it('knows the words the auth layer substitutes for a missing name', () => {
+    expect(isPlaceholderName('Élève')).toBe(true);
+    expect(isPlaceholderName('Elèv')).toBe(true);
+    expect(isPlaceholderName('Ted')).toBe(false);
+  });
+});
