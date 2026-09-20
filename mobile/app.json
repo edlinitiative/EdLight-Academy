@@ -32,10 +32,7 @@
       },
       "associatedDomains": [
         "applinks:academy.edlight.org"
-      ],
-      "entitlements": {
-        "com.apple.developer.devicecheck.appattest-environment": "production"
-      }
+      ]
     },
     "android": {
       "adaptiveIcon": {
