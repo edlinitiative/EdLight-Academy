@@ -24,6 +24,7 @@ import {
   withoutUndefined,
   blocksPublication,
   selectEligibleTop,
+  selectSchools,
   type PlayerRow,
   type SchoolPool,
 } from '../arena/aggregate';
@@ -340,6 +341,72 @@ describe('selectEligibleTop — E8: a disqualified player can no longer rank on 
   it('never returns more than the limit, even with a large eligible pool', () => {
     const docs = [doc('a', 1000), doc('b', 900), doc('c', 800), doc('d', 700)];
     expect(selectEligibleTop(docs, 2).map((r) => r.uid)).toEqual(['a', 'b']);
+  });
+});
+
+/*
+ * E10, from an external audit: "school aggregation silently slices to 250
+ * schools". The slice is a real capacity limit and stays — what was wrong is
+ * that the overflow was invisible AND permanent. `discoverSchools` seeds the
+ * next tick from `previous.schools` and rescans players only from
+ * `rosterCursorMs` forward, so a school the slice dropped never entered the
+ * board and, one tick later, sat behind a cursor that had already moved past
+ * its players: unreachable for the rest of the tournament, with nothing
+ * anywhere naming it.
+ */
+describe('selectSchools — E10: the board’s overflow is named, not silently dropped', () => {
+  const keys = (n: number, prefix = 's') => Array.from({ length: n }, (_, i) => `${prefix}${i}`);
+
+  it('passes a tournament under the cap through whole, with no overflow', () => {
+    const result = selectSchools(keys(94), 250);
+    expect(result.selected).toHaveLength(94);
+    expect(result.overflow).toEqual([]);
+    expect(result.total).toBe(94);
+  });
+
+  it('ranks exactly the cap and names the rest rather than discarding them', () => {
+    const result = selectSchools(keys(312), 250);
+    expect(result.selected).toHaveLength(250);
+    expect(result.overflow).toHaveLength(62);
+    // The count is the whole point: a 312-school tournament must never publish
+    // a 250-school board that reads as complete.
+    expect(result.total).toBe(312);
+  });
+
+  it('keeps incumbents: the selection is the FRONT of the list, which is the ranked board', () => {
+    // discoverSchools seeds its key set from `previous.schools` first, so the
+    // front of this list is last tick's ranking. Slicing the front keeps the
+    // schools already on the board on it, which is what stops deriveEvents
+    // emitting arrivals and departures that never happened.
+    const result = selectSchools(['a', 'b', 'c', 'd'], 2);
+    expect(result.selected).toEqual(['a', 'b']);
+    expect(result.overflow).toEqual(['c', 'd']);
+  });
+
+  it('CLOSED: the dropped schools are recoverable — every key is in one list or the other', () => {
+    // The permanence bug in one assertion. Nothing may fall out of both.
+    const all = keys(300);
+    const result = selectSchools(all, 250);
+    expect([...result.selected, ...result.overflow].sort()).toEqual([...all].sort());
+  });
+
+  it('is stable across ticks: re-running on the same key set selects the same schools', () => {
+    // Membership must not rotate. A school cycling on and off the board
+    // between ticks would emit a stream of phantom rank events.
+    const all = keys(400);
+    expect(selectSchools(all, 250).selected).toEqual(selectSchools(all, 250).selected);
+  });
+
+  it('bounds the stored overflow LIST but never the total it reports', () => {
+    // A pathological tournament must not blow the 1MB document with names,
+    // but the number an operator reads has to stay exact regardless.
+    const result = selectSchools(keys(1_000), 250);
+    expect(result.overflow.length).toBeLessThanOrEqual(250);
+    expect(result.total).toBe(1_000);
+  });
+
+  it('handles an empty tournament without inventing anything', () => {
+    expect(selectSchools([], 250)).toEqual({ selected: [], overflow: [], total: 0 });
   });
 });
 

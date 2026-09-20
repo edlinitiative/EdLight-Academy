@@ -114,6 +114,58 @@ export function blocksPublication(liveQuestionState: string | null | undefined):
 const SCHOOL_CAP = 250;
 
 /**
+ * How many over-cap school keys the board remembers by name.
+ *
+ * The exact TOTAL is always recorded as a number, whatever this is — only the
+ * list of names is bounded, so the count an operator reads can never be a
+ * guess even if the list is clipped.
+ */
+const OVERFLOW_KEYS_CAP = 250;
+
+export interface SchoolSelection {
+  /** The keys this tick actually queries and ranks. At most `cap`. */
+  selected: string[];
+  /** Keys that did not fit, carried on the board by name (bounded). */
+  overflow: string[];
+  /** How many schools the tournament has, truncated or not. Always exact. */
+  total: number;
+}
+
+/**
+ * Which schools fit on the board, and which are left over.
+ *
+ * CORRECTION, from an external audit (E10: "school aggregation silently
+ * slices to 250 schools"). The slice itself is a real capacity limit and
+ * stays — the board is one 1MB document, and a tournament that genuinely
+ * outgrows it needs paged standings, not a bigger constant. What was wrong is
+ * that the overflow was both INVISIBLE and PERMANENT:
+ *
+ *  · INVISIBLE. `keys.slice(0, SCHOOL_CAP)` dropped the tail with no record
+ *    anywhere that it had happened, so a 312-school tournament published a
+ *    250-school board that looked complete to every reader of it.
+ *  · PERMANENT, which is the worse half. `discoverSchools` seeds the next
+ *    tick's key set from `previous.schools` and rescans players only from
+ *    `rosterCursorMs` forward. A school dropped by the slice never entered
+ *    `previous.schools`, and by the next tick the cursor had already advanced
+ *    past its players — so it was not truncated for one tick, it was
+ *    unreachable for the rest of the tournament, with nothing naming it.
+ *
+ * So the overflow is now named and carried: `discoverSchools` re-seeds from it
+ * every tick, which keeps those schools findable however far the cursor moves.
+ * Membership is deliberately STABLE rather than rotated — incumbents come
+ * first because the key set is seeded from the ranked previous board — since
+ * cycling schools on and off the board between ticks would make `deriveEvents`
+ * emit a stream of arrivals and departures that never happened.
+ */
+export function selectSchools(keys: string[], cap: number): SchoolSelection {
+  return {
+    selected: keys.slice(0, cap),
+    overflow: keys.slice(cap, cap + OVERFLOW_KEYS_CAP),
+    total: keys.length,
+  };
+}
+
+/**
  * Players fetched per school.
  *
  * Never below `teamSize` (those are the five that score) and never below
@@ -227,6 +279,18 @@ export interface StoredStandings extends Omit<StandingsSnapshot, 'schools'> {
   rosterCursorMs?: number;
   /** Last question index whose cadence events (halftime, final five) fired. */
   cadenceIndex?: number;
+  /**
+   * How many schools the tournament has in total, whether or not they fit on
+   * this board. Equal to `schools.length` in the ordinary case; larger means
+   * the board is truncated and `overflowSchoolKeys` names who is missing.
+   */
+  schoolsTotal?: number;
+  /**
+   * Schools that did not fit under SCHOOL_CAP, by key. Re-seeded into the next
+   * tick's discovery so the roster cursor moving past them cannot make them
+   * unreachable — see selectSchools for why that used to happen.
+   */
+  overflowSchoolKeys?: string[];
 }
 
 /**
@@ -522,7 +586,14 @@ async function discoverSchools(
   tid: string,
   previous: StoredStandings | null,
 ): Promise<{ keys: string[]; cursorMs: number }> {
+  // Seeded from the ranked previous board FIRST, so incumbents keep their
+  // places when the cap bites, then from the schools that did not fit last
+  // tick. That second seed is what makes the overflow recoverable: the player
+  // rescan below starts at `rosterCursorMs`, which has long since advanced
+  // past those schools' registrations, so without their names carried forward
+  // they could never be rediscovered. See selectSchools.
   const keys = new Set<string>((previous?.schools || []).map((s) => s.key).filter(Boolean));
+  for (const key of previous?.overflowSchoolKeys || []) if (key) keys.add(key);
   let cursorMs = num(previous?.rosterCursorMs, 0);
 
   const base = db.collection(`tournaments/${tid}/players`)
@@ -861,9 +932,18 @@ export async function aggregateOne(
     // CORRECTION note on loadNationalTop. Run both in parallel: neither
     // depends on the other's result.
     const { keys, cursorMs } = await discoverSchools(db, tid, previous);
+    const selection = selectSchools(keys, SCHOOL_CAP);
+    if (selection.overflow.length > 0) {
+      // Loud, because the board about to be published is not the whole
+      // tournament and nothing else on the path would say so.
+      console.warn(
+        `[arena/aggregate] ${tid}: ${selection.total} schools exceeds the ${SCHOOL_CAP} the board holds; `
+        + `${selection.overflow.length} carried in overflow and NOT ranked.`,
+      );
+    }
     const [pools, nationalTop] = await Promise.all([
       mapLimit(
-        keys.slice(0, SCHOOL_CAP),
+        selection.selected,
         QUERY_CONCURRENCY,
         (key) => loadPool(db, tid, key, pool, previousByKey, minPlayers, now, roster),
       ).then((rows) => rows.filter((p): p is SchoolPool => p !== null)),
@@ -904,6 +984,10 @@ export async function aggregateOne(
       })),
       rosterCursorMs: cursorMs,
       cadenceIndex: ctx.questionsRemaining >= 0 ? questionIndex : previous?.cadenceIndex,
+      schoolsTotal: selection.total,
+      // Written even when empty, so "no overflow" is a stated fact on the
+      // document rather than an absent field a reader has to interpret.
+      overflowSchoolKeys: selection.overflow,
     });
 
     // ── 5 · Events and the board they describe, in ONE transaction ──────────
@@ -926,6 +1010,8 @@ export async function aggregateOne(
         ok: true,
         state,
         schools: next.schools.length,
+        schoolsTotal: selection.total,
+        schoolsOverflow: selection.overflow.length,
         players: next.individuals.length,
         events: committed.events.length,
         seq: committed.seq,
