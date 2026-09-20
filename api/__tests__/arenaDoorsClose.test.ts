@@ -191,11 +191,41 @@ describe('summarize', () => {
 
 describe('planDoorsClose', () => {
   const plan = (over: Partial<Parameters<typeof planDoorsClose>[0]>) => planDoorsClose({
-    state: 'doors', frozenAt: null, freezeStartedAt: null, now: NOW, ...over,
+    state: 'doors', frozenAt: null, freezeStartedAt: null, startsAt: null, now: NOW, ...over,
   });
 
   it('freezes while the tournament is at `doors`', () => {
     expect(plan({})).toBe('freeze');
+  });
+
+  describe('CLOSED: a ten-minute waiting room can no longer freeze during its first minute', () => {
+    // The exact exploit the external audit found: the every-minute cron
+    // selects any tournament sitting in `doors`, and the old check was just
+    // `state === 'doors'` — true from the very first tick after
+    // `registration -> doors`, up to ten minutes before the room has
+    // actually filled.
+    const DOORS_OPENED = NOW - 60_000; // one cron tick after entering `doors`
+    const STARTS_AT = DOORS_OPENED + 10 * 60_000; // the scheduled first question
+
+    it('refuses to freeze one minute into a ten-minute doors window', () => {
+      expect(plan({ now: DOORS_OPENED, startsAt: STARTS_AT })).toBe('too_early');
+    });
+
+    it('still refuses with the room five minutes in — halfway is not doors close', () => {
+      expect(plan({ now: DOORS_OPENED + 5 * 60_000, startsAt: STARTS_AT })).toBe('too_early');
+    });
+
+    it('freezes the instant the scheduled start time arrives', () => {
+      expect(plan({ now: STARTS_AT, startsAt: STARTS_AT })).toBe('freeze');
+    });
+
+    it('freezes on a late cron tick after the scheduled start time', () => {
+      expect(plan({ now: STARTS_AT + 90_000, startsAt: STARTS_AT })).toBe('freeze');
+    });
+
+    it('fails open on a malformed legacy document with no startsAt, rather than wedging forever', () => {
+      expect(plan({ now: DOORS_OPENED, startsAt: null })).toBe('freeze');
+    });
   });
 
   it('is idempotent: a second run replays instead of re-freezing', () => {
