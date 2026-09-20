@@ -16,6 +16,7 @@ import CorrectFlash from '../../components/trivia/CorrectFlash';
 import { useArenaLive, useArenaAnswer } from '../../hooks/useArena';
 import { tierRing } from '../../services/arenaService';
 import { useFocusLossCounter } from '../../utils/integrity';
+import { classifyAnswerResult, type AnswerReceiptStatus } from '../../utils/arenaAnswerReceipt';
 import { useColors, useTheme, typeScale, radius } from '../../theme/theme';
 import { success, warn, tapMedium } from '../../utils/haptics';
 import { useReduceMotion } from '../../utils/motion';
@@ -88,10 +89,22 @@ export default function ArenaLiveScreen() {
   const shownAt = useRef<number>(Date.now());
   const takeFocusReading = useFocusLossCounter(answerable);
 
+  // The mutation's own resolved value, not just "did the promise settle" —
+  // submitAnswer() never throws, so a dropped connection or a window that
+  // had already closed comes back as an ordinary `{ok:false}` result. See
+  // utils/arenaAnswerReceipt.ts for why that distinction matters here.
+  const [receipt, setReceipt] = useState<AnswerReceiptStatus | null>(null);
+  // Captured once per commit, not re-read on retry: useFocusLossCounter's
+  // takeReading() resets its counters when called, so calling it a second
+  // time for a retry would silently zero out the first attempt's reading.
+  const focusReadingRef = useRef<{ focusLosses: number; awayMs: number } | null>(null);
+
   useEffect(() => {
     if (index == null) return;
     setChoice(null);
     setLocked(false);
+    setReceipt(null);
+    focusReadingRef.current = null;
     shownAt.current = Date.now();
   }, [index]);
 
@@ -121,13 +134,37 @@ export default function ArenaLiveScreen() {
     tapMedium();
     setChoice(i);
     setLocked(true);
-    const reading = takeFocusReading();
-    answer.mutate({
-      questionIndex: index,
-      choice: i,
-      clientShownAt: shownAt.current,
-      focusLosses: reading.focusLosses,
-    });
+    setReceipt('sending');
+    focusReadingRef.current = takeFocusReading();
+    answer.mutate(
+      {
+        questionIndex: index,
+        choice: i,
+        clientShownAt: shownAt.current,
+        focusLosses: focusReadingRef.current.focusLosses,
+      },
+      { onSuccess: (result) => setReceipt(classifyAnswerResult(result)) },
+    );
+  };
+
+  /**
+   * The tap never reached the server, or the server couldn't tell why it
+   * failed — offline, a timeout, a 5xx. Retrying is safe: the composite
+   * answer id makes a second attempt a no-op if the first one actually
+   * landed (see submitAnswer's own doc comment).
+   */
+  const retry = () => {
+    if (receipt !== 'retryable' || choice == null || index == null) return;
+    setReceipt('sending');
+    answer.mutate(
+      {
+        questionIndex: index,
+        choice,
+        clientShownAt: shownAt.current,
+        focusLosses: focusReadingRef.current?.focusLosses ?? 0,
+      },
+      { onSuccess: (result) => setReceipt(classifyAnswerResult(result)) },
+    );
   };
 
   const schoolLine = useMemo(() => {
@@ -226,9 +263,7 @@ export default function ArenaLiveScreen() {
             </View>
 
             {locked && revealed == null ? (
-              <Text style={[typeScale.caption, { color: colors.muted, marginTop: 14, textAlign: 'center' }]}>
-                {t('Réponse envoyée. Pas de retour en arrière.', 'Repons ou ale. Pa gen retounen.')}
-              </Text>
+              <AnswerReceiptLine receipt={receipt} onRetry={retry} t={t} />
             ) : null}
           </>
         ) : null}
@@ -323,6 +358,75 @@ function TierRing({ ring, active, isCreole }: {
         {ring.tier === 'full' ? '1000' : ring.tier === 'half' ? '500' : '0'}
       </Text>
     </Animated.View>
+  );
+}
+
+// ── The answer receipt ──────────────────────────────────────────────────────
+
+/**
+ * The one line that used to always say "Réponse envoyée" no matter what
+ * actually happened to the tap. Four honest states instead of one reassuring
+ * one — see utils/arenaAnswerReceipt.ts for what decides between them.
+ */
+function AnswerReceiptLine({ receipt, onRetry, t }: {
+  receipt: AnswerReceiptStatus | null;
+  onRetry: () => void;
+  t: (fr: string, ht: string) => string;
+}) {
+  const colors = useColors();
+
+  if (receipt === 'accepted' || receipt === null) {
+    return (
+      <Text style={[typeScale.caption, { color: colors.muted, marginTop: 14, textAlign: 'center' }]}>
+        {t('Réponse envoyée. Pas de retour en arrière.', 'Repons ou ale. Pa gen retounen.')}
+      </Text>
+    );
+  }
+
+  if (receipt === 'sending') {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 14 }}>
+        <ActivityIndicator size="small" color={colors.muted} />
+        <Text style={[typeScale.caption, { color: colors.muted }]}>
+          {t('Envoi en cours…', 'N ap voye li…')}
+        </Text>
+      </View>
+    );
+  }
+
+  if (receipt === 'rejected') {
+    return (
+      <Text style={[typeScale.caption, { color: colors.danger, marginTop: 14, textAlign: 'center' }]}>
+        {t(
+          'Cette question est fermée — ta réponse n’a pas été comptée.',
+          'Kesyon sa a fèmen — repons ou pa konte.',
+        )}
+      </Text>
+    );
+  }
+
+  // 'retryable' — a dropped connection or an unrecognised error. The tap may
+  // not have reached the server at all, so the honest move is to say so and
+  // let the student send it again rather than leave them trusting a receipt
+  // that never arrived.
+  return (
+    <View style={{ alignItems: 'center', marginTop: 14, gap: 8 }}>
+      <Text style={[typeScale.caption, { color: colors.danger, textAlign: 'center' }]}>
+        {t('Ta réponse n’est pas passée. Vérifie ta connexion.', 'Repons ou pa pase. Tcheke koneksyon ou.')}
+      </Text>
+      <TouchableOpacity
+        onPress={onRetry}
+        accessibilityRole="button"
+        style={{
+          paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999,
+          backgroundColor: colors.dangerSoft, borderWidth: 1, borderColor: colors.danger,
+        }}
+      >
+        <Text style={[typeScale.label, { color: colors.danger }]}>
+          {t('Réessayer', 'Eseye ankò')}
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 

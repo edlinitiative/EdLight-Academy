@@ -36,7 +36,11 @@
  *     clientShownAt?: number, focusLosses?: number }
  *
  * Response 200:
- *   { ok: true, correct, tier, points, score, streak, late, duplicate }
+ *   { ok: true, recorded: true, duplicate }
+ *   CORRECTION, this comment used to list correct/tier/points/score/streak/late
+ *   as response fields — they are not sent. See "THE RESPONSE REVEALS NOTHING"
+ *   below for why: the reveal happens once, for the whole room, when the
+ *   question closes.
  *
  * Errors: 400 invalid input · 403 not_registered / not_eligible ·
  *         404 tournament_not_found / question_not_found ·
