@@ -8,8 +8,14 @@
  *  - One document per (user, endpoint) — keyed by uid + endpoint name.
  *  - The document stores a `windowStart` timestamp and a hit `count`.
  *  - When a new window begins the document is overwritten from scratch.
- *  - Uses `FieldValue.increment()` for the hot path so concurrent requests
- *    are handled atomically without a transaction.
+ *  - The check (is this request under the cap?) and the increment happen
+ *    inside one Firestore transaction — reading the count and writing it back
+ *    used to be two separate calls, which let concurrent requests each read a
+ *    count under the cap and each pass, overshooting `limit.max` by however
+ *    many raced. `FieldValue.increment()` still does the arithmetic (so a
+ *    transaction retry never double-applies a write it already queued), but
+ *    the DECISION now happens on a value read inside the same transaction as
+ *    the write, not on a snapshot read moments earlier.
  *  - Cost-bearing LLM endpoints (see COST_ENDPOINTS) FAIL CLOSED on any
  *    Firestore error — a broken limiter must never silently uncap paid model
  *    spend. Any other endpoint fails open (a blip shouldn't break the feature).
@@ -122,32 +128,44 @@ export async function checkRateLimit(
   try {
     const db = getDb();
     const ref = db.collection('_rateLimits').doc(`${uid}_${endpoint}`);
-    const snap = await ref.get();
-    const data = snap.data();
 
-    if (!data || data.windowStart !== windowStart) {
-      // First hit in this window — write the document
-      await ref.set({
-        uid,
-        endpoint,
-        count: 1,
-        windowStart,
+    // CORRECTION, from an external audit: the check (read the count) and the
+    // increment used to be two separate Firestore calls, `ref.get()` then
+    // `ref.update()`. `FieldValue.increment()` makes the WRITE atomic, but
+    // the DECISION above it was not: two requests arriving close enough
+    // together both read a count under the cap, both passed the check, and
+    // both then incremented — so the real ceiling was "however many
+    // concurrent requests happened to race", not `limit.max`. A single
+    // transaction makes the read and the write one atomic step: Firestore
+    // retries whichever one loses the race against fresh data instead of
+    // letting it commit against a snapshot the other has already moved past.
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const data = snap.data();
+
+      if (!data || data.windowStart !== windowStart) {
+        // First hit in this window — write the document
+        tx.set(ref, {
+          uid,
+          endpoint,
+          count: 1,
+          windowStart,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+        return { allowed: true, remaining: limit.max - 1, resetAt };
+      }
+
+      if (data.count >= limit.max) {
+        return { allowed: false, remaining: 0, resetAt };
+      }
+
+      tx.update(ref, {
+        count: FieldValue.increment(1),
         updatedAt: FieldValue.serverTimestamp(),
       });
-      return { allowed: true, remaining: limit.max - 1, resetAt };
-    }
 
-    if (data.count >= limit.max) {
-      return { allowed: false, remaining: 0, resetAt };
-    }
-
-    // Increment atomically
-    await ref.update({
-      count: FieldValue.increment(1),
-      updatedAt: FieldValue.serverTimestamp(),
+      return { allowed: true, remaining: limit.max - (data.count + 1), resetAt };
     });
-
-    return { allowed: true, remaining: limit.max - (data.count + 1), resetAt };
   } catch (err) {
     // Cost endpoints fail CLOSED (deny) so a Firestore blip can't uncap paid
     // model spend; everything else stays lenient.

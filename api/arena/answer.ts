@@ -79,6 +79,16 @@ import {
 const MAX_CHOICES = 12;
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  // CORRECTION, from an external audit: this used to be taken after
+  // requireAuthDecoded() (a JWT signature verification) and enforceRateLimit()
+  // (a Firestore read-modify-write, now a transaction — see rateLimit.ts's own
+  // fix for why), both of which cost real milliseconds and neither of which
+  // has anything to do with the student's connection. A submission whose
+  // tier boundary those milliseconds happened to straddle was being charged
+  // for backend latency it never caused. Taken here, first line of the
+  // handler, it reflects only when the request actually arrived.
+  const serverReceivedAt = Date.now();
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' });
     return;
@@ -89,11 +99,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const { uid } = decoded;
 
   if (!(await enforceRateLimit(res, uid, 'arena-answer'))) return;
-
-  // The server's receipt time, taken as early as possible. Everything after
-  // this line — a slow Firestore read, a cold start — must not be charged to
-  // the student's tier, because none of it is their connection.
-  const serverReceivedAt = Date.now();
 
   // ── Validate input ──────────────────────────────────────────────────────
   const body = parseBody(req);
