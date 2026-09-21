@@ -744,6 +744,24 @@ button.dash-activity__tag { cursor: pointer; }
   box-shadow: var(--st-shadow-btn) !important;
   transition: transform 0.09s ease, box-shadow 0.09s ease !important;
 }
+
+/*
+ * A WHITE BUTTON ON A WHITE CARD.
+ *
+ * The base `.dash-studyplan__btn` is `background: #fff` because the base card
+ * is a blue gradient. The scope above repaints that card as a light paper
+ * surface and recolours its title and text — but not the button, so it kept
+ * its white fill and became invisible against the card. All that rendered was
+ * `--st-shadow-btn` under it: on screen it reads as a pill with its top edge
+ * clipped off, which is how it was reported.
+ *
+ * It takes the accent fill here, the same treatment every other primary action
+ * in this scope gets.
+ */
+.dash--st .dash-studyplan__btn {
+  background: var(--st-accent) !important;
+  color: #fff !important;
+}
 .dash--st .button--primary:hover,
 .dash--st .dash-studyplan__btn:hover,
 .dash--st .readiness-card__cta:hover {

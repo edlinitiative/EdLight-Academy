@@ -444,7 +444,22 @@ export default function Dashboard() {
           {/* ───────────── MAIN COLUMN ───────────── */}
           <div className="dash__main">
 
-            {/* Continue learning */}
+            {/*
+              * Continue learning — ONLY when there is something to continue.
+              *
+              * With no enrolled courses this panel rendered "Aucun cours pour
+              * le moment" directly under a hero card showing "Chimie NS1", so
+              * the page said both "here is your course" and "you have no
+              * courses" in the same screen. Both statements were true — the
+              * hero falls back to a catalogue suggestion — but together they
+              * read as broken, and they put two identical "Explorer les cours"
+              * buttons a few hundred pixels apart.
+              *
+              * §6.1: "Do not show Continue if there is nothing to continue.
+              * New students should get a sensible subject starting point" —
+              * which is exactly what the hero already is.
+              */}
+            {enrolledCourses.length > 0 && (
             <section className="dash-panel">
               <div className="dash-panel__head">
                 <h2 className="dash-panel__title">
@@ -510,6 +525,7 @@ export default function Dashboard() {
                 </div>
               )}
             </section>
+            )}
 
             {/* Recent activity — quiz + exams side by side */}
             <div className="dash-activity-cols">
