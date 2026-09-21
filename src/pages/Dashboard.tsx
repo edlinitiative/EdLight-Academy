@@ -609,7 +609,19 @@ export default function Dashboard() {
                   items={(courses || []).slice(0, 4).map((c) => ({
                     to: `/courses/${c.id}`,
                     onClick: () => navigate(`/courses/${c.id}`),
-                    icon: <BookOpen size={17} aria-hidden="true" />,
+                    /*
+                      * The subject badge these rows share with the enrolled
+                      * ones above, not a repeated book glyph: four identical
+                      * icons told a student nothing and made the list read as
+                      * one thing listed four times. Chimie is teal, Économie
+                      * orange, Mathématiques violet — the same colours the
+                      * course rows, the catalogue and the exam pages use.
+                      */
+                    icon: (
+                      <span className="dash-course__badge" data-subject={subjectCode(c.subject)}>
+                        {subjectInitial(c.subject)}
+                      </span>
+                    ),
                     label: c.name || c.title || c.id,
                     sub: isCreole ? 'Kòmanse kou sa a' : 'Commencer ce cours',
                   }))}

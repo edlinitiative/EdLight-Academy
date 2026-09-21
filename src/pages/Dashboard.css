@@ -1018,3 +1018,13 @@ button.dash-activity__tag { cursor: pointer; }
 
 .dash--st .dash-suggest__row { background: var(--st-surface-2); border: none; }
 .dash--st .dash-suggest__icon { background: var(--primary-50); color: var(--st-accent); }
+
+/* A suggestion row carrying a subject badge rather than a generic glyph: the
+   badge brings its own 42px box, so the icon slot steps out of the way. */
+.dash-suggest__icon:has(.dash-course__badge) {
+  width: auto;
+  height: auto;
+  background: none;
+  border-radius: 0;
+}
+.dash-suggest__icon .dash-course__badge { width: 34px; height: 34px; border-radius: 10px; font-size: 0.82rem; }
