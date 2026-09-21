@@ -4,6 +4,8 @@ import { ArrowIcon, CatalogSubject, TFn, useCatalogSummary } from './content';
 
 /** One subject: its real levels, its real lesson count, its real units. */
 function SubjectRow({ subject, t }: { subject: CatalogSubject; t: TFn }) {
+  const openLevels = subject.levels.filter((l) => !l.comingSoon).length;
+
   return (
     <li className="lp-subject" data-reveal>
       <div className="lp-subject__head">
@@ -12,8 +14,9 @@ function SubjectRow({ subject, t }: { subject: CatalogSubject; t: TFn }) {
           {subject.comingSoon
             ? t('En préparation', 'N ap prepare l')
             : t(
-                `${subject.lessons} leçons · ${subject.levels.filter((l) => !l.comingSoon).length} niveaux`,
-                `${subject.lessons} leson · ${subject.levels.filter((l) => !l.comingSoon).length} nivo`,
+                // French marks the plural; Kreyòl does not.
+                `${subject.lessons} leçon${subject.lessons > 1 ? 's' : ''} · ${openLevels} niveau${openLevels > 1 ? 'x' : ''}`,
+                `${subject.lessons} leson · ${openLevels} nivo`,
               )}
         </p>
       </div>
@@ -36,7 +39,8 @@ function SubjectRow({ subject, t }: { subject: CatalogSubject; t: TFn }) {
               <Link className="lp-level" to={`/courses/${level.id}`}>
                 {level.label}
                 <small>
-                  {level.lessons} {t('leçons', 'leson')}
+                  {level.lessons}{' '}
+                  {level.lessons > 1 ? t('leçons', 'leson') : t('leçon', 'leson')}
                 </small>
               </Link>
             </li>

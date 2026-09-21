@@ -513,3 +513,85 @@
     transition: none;
   }
 }
+
+/* ── Contextual "Ask Sandra" (<AskSandra>) ────────────────────────────────
+   §6.9 prefers a contextual action from a lesson, an explanation or a review
+   over sending the student to a general chat. It sits INSIDE the task's own
+   flow — not floating over it — so it can never cover answer controls the way
+   the fixed launcher would, and it says what it will share before it shares
+   it. Azure (help with understanding), never the launcher's coral flourish:
+   one screen, one flourish. */
+.sandra-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.sandra-ask__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--primary-500);
+  border-radius: var(--r-btn);
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sandra-ask__btn:hover {
+  background: var(--primary-500);
+  color: #fff;
+}
+.sandra-ask__btn:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Collapsed by default: the student can check what leaves the screen without
+   the list competing with the lesson for attention. */
+.sandra-ask__shared {
+  max-width: 44rem;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+.sandra-ask__shared > summary {
+  cursor: pointer;
+  color: var(--text-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sandra-ask__shared > summary:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+.sandra-ask__shared > ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Protected screen: the reason, not an absence. §6.9 distinguishes help with
+   understanding from an exam/tournament restriction — a control that silently
+   disappears teaches the student nothing. */
+.sandra-ask__blocked {
+  margin: 0;
+  max-width: 44rem;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sandra-ask__btn { transition: none; }
+}
