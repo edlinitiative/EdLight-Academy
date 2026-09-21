@@ -4160,7 +4160,10 @@ textarea.input-field {
 }
 
 .network-banner--offline {
-	background: #2f2e2b;
+	/* Was #2f2e2b — a warm olive-black left over from the retired
+	   neo-brutalist layer, belonging to no current palette (§7 Color:
+	   "consistent semantic success/warning/error states"). */
+	background: var(--text-900);
 }
 
 .network-banner--reconnected {
@@ -4170,6 +4173,18 @@ textarea.input-field {
 /* When the bottom tab bar is present, lift the banner above it. */
 .app-shell:not(.app-shell--focused) .network-banner {
 	bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+}
+
+/* And make the page end above the banner rather than under it.
+   Lifting it clear of the tab bar was only half the job: the banner still
+   overlapped the last line of content, which §8 forbids. The attribute is set
+   by NetworkStatus while the banner is up. */
+[data-network-banner] .app-shell__main {
+	padding-bottom: 4rem;
+}
+
+[data-network-banner] .app-shell:not(.app-shell--focused) .app-shell__main {
+	padding-bottom: 7.5rem;
 }
 
 /* ── Low-data mode: drop decorative cost when the user saves data ─────────── */

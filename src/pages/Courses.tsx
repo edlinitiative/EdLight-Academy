@@ -2,7 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Target, Layers, Check, Search,
-  Sigma, Atom, FlaskConical, LineChart, BookOpen, GraduationCap, RefreshCw,
+  Sigma, Atom, FlaskConical, LineChart, BookOpen, GraduationCap, RefreshCw, WifiOff,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCourses } from '../hooks/useData';
@@ -105,6 +105,11 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
   const pct = stats?.pct ?? 0;
   const doneLessons = stats?.completed ?? 0;
   const totalLessons = stats?.total || lessonsCount || units.length || course.videoCount || 0;
+  // Three distinct states, never one "start" button for all of them: untouched
+  // (Commencer), in progress (Reprendre — resumes), finished (Revoir — says so
+  // and does not pretend there is something left to resume).
+  const finished = pct >= 100;
+  const started = pct > 0 && !finished;
 
   const formatDuration = (minutes) => {
     const totalMinutes = parseInt(minutes, 10) || 0;
@@ -126,7 +131,7 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
 
   const meta = [
     `${units.length} ${t('courses.modules')}`,
-    `${lessonsCount || course.videoCount} ${t('courses.lessons')}`,
+    t('courses.lessonsCount', { count: lessonsCount || course.videoCount }),
     formatDuration(course.duration),
     enrolled ? t('courses.enrolled') : '',
   ].filter(Boolean).join(' · ');
@@ -165,6 +170,12 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
         <span className="lrn-row__name">
           {name}
           {badge && <span className="lrn-row__badge">{badge}</span>}
+          {finished && (
+            <span className="lrn-row__done">
+              <Check size={12} aria-hidden="true" />
+              {t('courses.completed')}
+            </span>
+          )}
         </span>
         <span className="lrn-row__meta">{meta}</span>
         {/* Progress appears once there IS progress. A 0% bar on every row
@@ -182,8 +193,10 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
       {/* Deliberately a <span>: the whole row is the click target, so a
           nested <button> would be invalid markup and would announce two
           controls for one destination. */}
-      <span className={`lrn-row__cta${pct > 0 ? ' lrn-row__cta--resume' : ''}`}>
-        {pct > 0 ? L('Reprendre', 'Kontinye') : t('courses.startCourse')}
+      <span className={`lrn-row__cta${started ? ' lrn-row__cta--resume' : ''}`}>
+        {finished
+          ? L('Revoir', 'Revize')
+          : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')}
         <ArrowRight size={15} aria-hidden="true" />
       </span>
     </article>
@@ -212,7 +225,7 @@ function CatalogSubjectRow({ group, label, lessons, onOpen, t, L }) {
         <span className="lrn-row__meta">
           {[
             t('courses.levelCount', { count: group.items.length }),
-            lessons > 0 ? `${lessons} ${t('courses.lessons')}` : '',
+            lessons > 0 ? t('courses.lessonsCount', { count: lessons }) : '',
             group.enrolledCount > 0 ? `${group.enrolledCount} ${t('courses.enrolledShort')}` : '',
           ].filter(Boolean).join(' · ')}
         </span>
@@ -337,7 +350,26 @@ export default function Courses() {
   }, [queryClient]);
   const [filter, setFilter] = useState('all');
   const [subject, setSubject] = useState('all');
-  const { enrolledCourses, progress: storeProgress } = useStore();
+
+  /**
+   * Offline is its own state, not an error: react-query pauses rather than
+   * fails when the browser is offline, so a student with a cached catalog sees
+   * a page that looks perfectly fresh. We say what is actually usable instead.
+   */
+  const [online, setOnline] = useState(
+    () => typeof navigator === 'undefined' || navigator.onLine !== false,
+  );
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, []);
+  const enrolledCourses = useStore((s) => s.enrolledCourses);
   const grade = useStore((s) => s.grade);
   const setGrade = useStore((s) => s.setGrade);
   const setGradeChosen = useStore((s) => s.setGradeChosen);
@@ -372,19 +404,19 @@ export default function Courses() {
         remaining: Math.max(0, (total || 0) - completed),
       };
     }
-    const sp = storeProgress?.[course.id];
-    if (sp && sp.total) {
-      const spTotal = sp.total;
-      const completed = Math.min(sp.completed || 0, spTotal);
-      return {
-        pct: Math.min(100, Math.round((completed / spTotal) * 100)),
-        completed,
-        total: spTotal,
-        remaining: Math.max(0, spTotal - completed),
-      };
-    }
+    // No local fallback on purpose. There used to be one reading
+    // `storeProgress[course.id]` as `{completed, total}`, and it could never
+    // fire: the store's `progress` map is keyed by VIDEO id and holds
+    // `{completed: boolean, watchTime}` (see its own comment in
+    // contexts/store.ts), so `sp.total` was always undefined. It was also
+    // unreachable for a second reason — `logout()` clears `progress`, and
+    // index.tsx calls it on every signed-out auth callback.
+    //
+    // §10: "Reuse authoritative state rather than calculating a second
+    // contradictory progress model in components." Firestore progress via
+    // useAllProgress() is that state, and now it is the only one here.
     return { pct: 0, completed: 0, total, remaining: total };
-  }, [progressByCourseId, storeProgress]);
+  }, [progressByCourseId]);
 
   const coursePercent = useCallback((course) => courseStats(course).pct, [courseStats]);
 
@@ -450,11 +482,16 @@ export default function Courses() {
     return (
       <section className="section">
         <div className="container">
-          <div className="page-header" style={{ marginBottom: '2rem' }}>
-            <div>
-              <Skeleton width={120} height={22} radius={999} style={{ marginBottom: '0.75rem' }} />
-              <Skeleton width="60%" height={32} style={{ marginBottom: '0.5rem' }} />
-              <Skeleton width="40%" height={16} />
+          {/* Loading keeps the page's real identity — the student can already
+              read where they are instead of watching an anonymous grey page.
+              Only the list that is genuinely unknown is a skeleton. */}
+          <div className="page-header page-header--no-eyebrow courses-header">
+            <div className="courses-header__lead">
+              <span className="courses-header__eyebrow">{t('nav.learn')}</span>
+              <h1 className="courses-header__title">{t('courses.catalog')}</h1>
+              <p className="text-muted courses-header__sub" role="status">
+                {L('Chargement du catalogue…', 'N ap chaje katalòg la…')}
+              </p>
             </div>
           </div>
           {/* Row-shaped skeletons so the loading state has the shape of the
@@ -479,7 +516,21 @@ export default function Courses() {
     return (
       <section className="section">
         <div className="container">
-          <ErrorState onRetry={() => refetch()} retrying={isFetching} />
+          {/* The failure keeps the page's context, so a student knows what did
+              not load. ErrorState supplies the plain-language message (and the
+              offline variant of it) plus the retry; the second action keeps a
+              way forward instead of a dead end. */}
+          <div className="page-header page-header--no-eyebrow courses-header">
+            <div className="courses-header__lead">
+              <span className="courses-header__eyebrow">{t('nav.learn')}</span>
+              <h1 className="courses-header__title">{t('courses.catalog')}</h1>
+            </div>
+          </div>
+          <ErrorState
+            onRetry={() => refetch()}
+            retrying={isFetching}
+            action={{ label: t('nav.home'), onClick: () => navigate('/') }}
+          />
         </div>
       </section>
     );
@@ -637,9 +688,25 @@ export default function Courses() {
           />
         </div>
 
+        {/* Offline with a catalog on hand. The app-wide NetworkStatus banner
+            already announces "hors ligne", so this line does not repeat it: it
+            says what this page can still do and what needs the network. No
+            promise of offline lessons, because none is implemented. */}
+        {!online && courses.length > 0 && (
+          <p className="lrn-stale lrn-stale--offline" role="status">
+            <WifiOff size={15} aria-hidden="true" />
+            <span>
+              {L(
+                'Catalogue enregistré : vous pouvez parcourir les cours. La mise à jour de la liste et les vidéos des leçons demandent une connexion.',
+                'Katalòg ki sere a : ou ka gade kou yo. Mizajou lis la ak videyo leson yo mande koneksyon.',
+              )}
+            </span>
+          </p>
+        )}
+
         {/* Cached catalog with a failed refresh — say so rather than passing
             stale content off as fresh. */}
-        {isError && courses.length > 0 && (
+        {online && isError && courses.length > 0 && (
           <p className="lrn-stale" role="status">
             <span>
               {L(
@@ -814,12 +881,13 @@ export default function Courses() {
             {/* Grade known, but the catalog has nothing at that level yet */}
             {grade && myCourses.length === 0 && (
               <section className="lrn-ask lrn-ask--none" aria-labelledby="lrn-none-title">
+                {/* The grade is a badge, not part of the sentence: inlining it
+                    produced "pour la Après le Bac (Préfac)" for the grades
+                    whose label is not a feminine noun. */}
                 <h2 className="lrn-ask__title" id="lrn-none-title">
                   <GraduationCap size={18} aria-hidden="true" />
-                  {L(
-                    `Pas encore de cours pour la ${myGradeLabel}`,
-                    `Poko gen kou pou ${myGradeLabel}`,
-                  )}
+                  {L('Pas encore de cours pour votre classe', 'Poko gen kou pou klas ou')}
+                  <span className="lrn-badge">{myGradeLabel}</span>
                 </h2>
                 <p className="lrn-ask__sub">
                   {L(
