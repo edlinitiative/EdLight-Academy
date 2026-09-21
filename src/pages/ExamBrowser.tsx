@@ -12,6 +12,7 @@ import { examTopicTags } from '../../shared/examUtils';
 import CardCover from '../components/CardCover';
 import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { sessionRowName, yearRange } from '../utils/examNaming';
+import { URL_LEVEL_TO_RAW, RAW_LEVEL_TO_URL, LEVEL_SLUG_LABELS, levelToSlug } from '../utils/examLevels';
 import './ExamOverview.css'; // shared .exam-overview__crumbs (same trail as the subject/exam pages)
 import './ExamSubject.css'; // shared .exam-session row — the same list, one step down
 import './ExamBrowser.css';
@@ -78,27 +79,12 @@ function useExamCatalog() {
   });
 }
 
-/** Map URL path segments to the raw level values used in exam_catalog.json */
-const URL_LEVEL_TO_RAW = {
-  '9e': '9eme_af',
-  'terminale': 'baccalaureat',
-  'university': 'universite',
-};
-
-/** Display labels for level URL params */
-const LEVEL_LABELS = {
-  '9e': '9ème AF',
-  'terminale': 'Baccalauréat',
-  'university': 'Université',
-};
-
 /** gradeProfile().examLevel → this browser's level URL keys, so a student's
- *  grade can pick the default pool (POSTBAC → université concours, 9e → 9ème). */
-const EXAM_LEVEL_TO_ROUTE = {
-  baccalaureat: 'terminale',
-  universite: 'university',
-  '9eme_af': '9e',
-};
+ *  grade can pick the default pool (POSTBAC → université concours, 9e → 9ème).
+ *  The slug↔raw maps and the bilingual level names come from `examLevels` —
+ *  this file used to keep private copies, and its label map was French-only,
+ *  so the crumb and the h1 stayed "Baccalauréat" in Kreyòl. */
+const EXAM_LEVEL_TO_ROUTE = RAW_LEVEL_TO_URL;
 
 const ExamBrowser = () => {
   const { level } = useParams(); // Get level from URL
@@ -117,6 +103,13 @@ const ExamBrowser = () => {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
+  /** Bilingual name of a level slug ('' when the slug isn't one we know). */
+  const slugLabel = (slug) => LEVEL_SLUG_LABELS[slug || '']?.[isCreole ? 'ht' : 'fr'] || '';
+  /** Bilingual name of a RAW catalog level ('baccalaureat' → "Bakaloreya"). */
+  const rawLevelLabel = (raw) => slugLabel(RAW_LEVEL_TO_URL[raw || '']);
+  // Read at render time, not stored: a failed fetch while the browser reports
+  // no connection is a different state from a server/parse failure (§8).
+  const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
 
   // gradeProfile().examLevel is null for 7ᵉ, 8ᵉ and NS1–NS3: no national paper
   // maps to those classes. The pool stays browsable — a curious 8ᵉ may look —
@@ -292,22 +285,38 @@ const ExamBrowser = () => {
   // coefficient note on each subject header (track-first organisation).
   const activeTrack = isTerminale ? (trackFilter || userTrack || '') : '';
 
+  // Is the visible pool a single level? It is whenever the level chip resolves
+  // to one raw catalog level; it is NOT in the "all levels" escape, nor for an
+  // unmapped :level segment, where the index falls back to every exam.
+  const oneLevel = !!URL_LEVEL_TO_RAW[activeLevel || ''];
+
   // Group filtered exams into subject sections, ordered by the active track's
   // coefficient (most-weighted subject first), else a sensible default order.
+  //
+  // The bucket key carries the LEVEL as well as the subject whenever more than
+  // one level is in view. Ten of the seventeen catalog subjects exist at two or
+  // three levels (Mathématiques at 9ᵉ, Bac and université), and a subject row
+  // leads to a page that only ever lists one of them — so a single merged row
+  // would both over-count its papers and land on a level the student did not
+  // pick. With one level in view the key is just the subject, as before.
   const groups = useMemo(() => {
     if (!filtered.length) return [];
-    const bySubject = new Map();
+    const bucket = new Map();
     for (const e of filtered) {
-      const s = e._subject || 'Autre';
-      if (!bySubject.has(s)) bySubject.set(s, []);
-      bySubject.get(s).push(e);
+      const subject = e._subject || 'Autre';
+      const rawLevel = String(e.level || '');
+      const key = oneLevel ? subject : `${subject}\u0000${rawLevel}`;
+      if (!bucket.has(key)) bucket.set(key, { key, subject, rawLevel, exams: [] });
+      bucket.get(key).exams.push(e);
     }
-    const arr = [...bySubject.entries()].map(([subject, exams]) => {
+    const arr = [...bucket.values()].map(({ key, subject, rawLevel, exams }) => {
       // Within a subject we know the student's level in, order papers by
       // challenge fit (stretch the strong, on-ramp the rest); else year-desc.
       const a = ability[subject] ?? 0;
       return {
+        key,
         subject,
+        rawLevel,
         exams: a > 0 ? selectAdaptiveItems(exams, { ability: a }) : exams,
         adaptive: a > 0,
         color: subjectColor(subject),
@@ -328,7 +337,7 @@ const ExamBrowser = () => {
       return a.subject.localeCompare(b.subject);
     });
     return arr;
-  }, [filtered, activeTrack, ability]);
+  }, [filtered, activeTrack, ability, oneLevel]);
 
   // Default expansion: open the highest-priority section(s) up to a small card
   // budget, so the page opens as a scannable "table of contents".
@@ -337,7 +346,7 @@ const ExamBrowser = () => {
     let budget = PAGE_SIZE;
     for (const g of groups) {
       if (set.size === 0 || budget > 0) {
-        set.add(g.subject);
+        set.add(g.key);
         budget -= g.exams.length;
       }
     }
@@ -354,21 +363,21 @@ const ExamBrowser = () => {
   // results are never hidden behind a collapsed header.
   const forceOpen = !!subjectFilter || !!search.trim();
   const isSectionOpen = useCallback(
-    (subject) => forceOpen || openSet.has(subject),
+    (key) => forceOpen || openSet.has(key),
     [forceOpen, openSet]
   );
-  const toggleSection = useCallback((subject) => {
+  const toggleSection = useCallback((key) => {
     setOpenSubjects((prev) => {
       const base = openTouched ? prev : defaultOpen;
       const next = new Set(base);
-      if (next.has(subject)) next.delete(subject); else next.add(subject);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
     setOpenTouched(true);
   }, [openTouched, defaultOpen]);
-  const allOpen = groups.length > 0 && groups.every((g) => openSet.has(g.subject));
+  const allOpen = groups.length > 0 && groups.every((g) => openSet.has(g.key));
   const setAllOpen = useCallback((open) => {
-    setOpenSubjects(open ? new Set(groups.map((g) => g.subject)) : new Set());
+    setOpenSubjects(open ? new Set(groups.map((g) => g.key)) : new Set());
     setOpenTouched(true);
   }, [groups]);
 
@@ -418,13 +427,21 @@ const ExamBrowser = () => {
             <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
           </div>
           {/* Plain language + a safe recovery action, instead of the raw
-              exception text (§8). */}
+              exception text (§8). Offline is its own state: the service worker
+              keeps this index in DATA_CACHE (stale-while-revalidate), so once
+              it has been loaded once the list really does work offline — which
+              is what the second message promises, and only that. */}
           <div className="card card--message">
             <p>
-              {t(
-                'Nous n’avons pas pu charger le catalogue d’examens. Vérifiez votre connexion, puis réessayez.',
-                'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.',
-              )}
+              {isOffline
+                ? t(
+                    'Vous êtes hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connectez-vous une fois pour la charger : ensuite elle reste consultable hors ligne.',
+                    'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.',
+                  )
+                : t(
+                    'Nous n’avons pas pu charger le catalogue d’examens. Vérifiez votre connexion, puis réessayez.',
+                    'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.',
+                  )}
             </p>
             <button className="button button--primary" type="button" onClick={() => refetch()}>
               {t('Réessayer', 'Eseye ankò')}
@@ -447,7 +464,7 @@ const ExamBrowser = () => {
           <span>
             {activeLevel === 'all'
               ? t('Tous les niveaux', 'Tout nivo')
-              : (LEVEL_LABELS[activeLevel] || t('Examens Nationaux', 'Egzamen Nasyonal'))}
+              : (slugLabel(activeLevel) || t('Examens Nationaux', 'Egzamen Nasyonal'))}
           </span>
         </nav>
 
@@ -456,7 +473,7 @@ const ExamBrowser = () => {
           <h1 className="page-header__title">
             {activeLevel === 'all'
               ? t('Tous les examens', 'Tout egzamen')
-              : (LEVEL_LABELS[activeLevel] || t('Examens Nationaux', 'Egzamen Nasyonal'))}
+              : (slugLabel(activeLevel) || t('Examens Nationaux', 'Egzamen Nasyonal'))}
           </h1>
           {/* The level is already the h1 and the last crumb — repeating it here
               was a third copy of the same word (§13 "duplicate headings"). */}
@@ -482,7 +499,7 @@ const ExamBrowser = () => {
             <span className="exam-browser__level-note-body">
               <strong>
                 {activeLevel === curatedLevel
-                  ? (LEVEL_LABELS[curatedLevel] || '')
+                  ? slugLabel(curatedLevel)
                   : t('Tous les niveaux', 'Tout nivo')}
               </strong>
               <span>
@@ -724,17 +741,24 @@ const ExamBrowser = () => {
                 return typeof p === 'number' && p > mx ? p : mx;
               }, -1);
               const span = yearRange(g.exams);
+              // The row's own level, not the :level segment. A 9ᵉ student whose
+              // grade curated this page away from the default Bac pool used to
+              // be sent to /exams/terminale/matiere/… — Bac papers under a 9ᵉ
+              // heading, which is the steering §6.4 rules out.
+              const groupSlug = RAW_LEVEL_TO_URL[g.rawLevel] || activeLevel || level;
+              const groupLevel = oneLevel ? '' : rawLevelLabel(g.rawLevel);
               return (
-                <li key={g.subject}>
+                <li key={g.key}>
                   <button
                     type="button"
                     className="exam-subject-row"
-                    onClick={() => navigate(`/exams/${level}/matiere/${encodeURIComponent(g.subject)}`)}
+                    onClick={() => navigate(`/exams/${groupSlug}/matiere/${encodeURIComponent(g.subject)}`)}
                   >
                     <CardCover className="exam-subject-row__cover" glyph={SUBJECT_GLYPHS[g.subject] || 'book'} color={g.color} />
                     <span className="exam-subject-row__body">
                       <span className="exam-subject-row__name">{g.subject}</span>
                       <span className="exam-subject-row__meta">
+                        {groupLevel ? `${groupLevel} · ` : ''}
                         {g.exams.length} {g.exams.length === 1 ? t('épreuve officielle', 'egzamen ofisyèl') : t('épreuves officielles', 'egzamen ofisyèl')}
                         {span ? ` · ${span}` : ''}
                         {g.coef != null ? ` · ${t('coef.', 'koef.')} ${g.coef}` : ''}
@@ -817,19 +841,21 @@ const ExamBrowser = () => {
             </div>
 
             {groups.map((g) => {
-              const open = isSectionOpen(g.subject);
+              const open = isSectionOpen(g.key);
+              const groupLevel = oneLevel ? '' : rawLevelLabel(g.rawLevel);
               return (
-                <section key={g.subject} className="exam-section">
+                <section key={g.key} className="exam-section">
                   <button
                     type="button"
                     className="exam-section__head"
-                    onClick={() => toggleSection(g.subject)}
+                    onClick={() => toggleSection(g.key)}
                     aria-expanded={open}
                     disabled={forceOpen}
                   >
                     <span className="exam-section__swatch" style={{ background: g.color }} aria-hidden="true" />
                     <span className="exam-section__name">{g.subject}</span>
                     <span className="exam-section__count">{g.exams.length}</span>
+                    {groupLevel && <span className="exam-section__coef">{groupLevel}</span>}
                     {g.coef != null && <span className="exam-section__coef">{t('Coef.', 'Koef.')} {g.coef}</span>}
                     {g.adaptive && <span className="exam-section__coef">✨ {t('trié pour ton niveau', 'klase pou nivo ou')}</span>}
                     <svg
@@ -847,7 +873,11 @@ const ExamBrowser = () => {
                           key={exam.exam_id || exam._idx}
                           exam={exam}
                           attempt={attempts[examKeyOf(exam)]}
-                          onClick={() => navigate(`/exams/${level}/${examKeyOf(exam)}`)}
+                          // The paper's own level, so the overview's crumb and
+                          // its "Tous les examens …" back link name the level
+                          // the paper actually belongs to (ExamOverview reads
+                          // the :level segment in preference to exam.level).
+                          onClick={() => navigate(`/exams/${levelToSlug(exam.level) || level}/${examKeyOf(exam)}`)}
                         />
                       ))}
                     </ul>

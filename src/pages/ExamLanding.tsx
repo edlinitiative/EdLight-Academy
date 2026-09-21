@@ -606,10 +606,17 @@ const ExamLanding = () => {
       {catalogError && (
         <section className="exam-landing__section">
           <div className="card card--message">
+            {/* Offline is its own state: the service worker keeps this index in
+                DATA_CACHE (stale-while-revalidate), so after one online load
+                the list genuinely is available without a connection. */}
             <p>
-              {ht
-                ? 'Nou pa t ka chaje lis egzamen yo. Tcheke koneksyon ou, epi eseye ankò.'
-                : 'Nous n’avons pas pu charger la liste des examens. Vérifiez votre connexion, puis réessayez.'}
+              {typeof navigator !== 'undefined' && navigator.onLine === false
+                ? (ht
+                    ? 'Ou pa sou entènèt e lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.'
+                    : 'Vous êtes hors ligne et la liste des examens n’est pas encore enregistrée sur cet appareil. Connectez-vous une fois pour la charger : ensuite elle reste consultable hors ligne.')
+                : (ht
+                    ? 'Nou pa t ka chaje lis egzamen yo. Tcheke koneksyon ou, epi eseye ankò.'
+                    : 'Nous n’avons pas pu charger la liste des examens. Vérifiez votre connexion, puis réessayez.')}
             </p>
             <button className="button button--primary" type="button" onClick={() => { void refetchCatalog(); }}>
               {ht ? 'Eseye ankò' : 'Réessayer'}

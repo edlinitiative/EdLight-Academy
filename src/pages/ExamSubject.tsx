@@ -154,17 +154,27 @@ export default function ExamSubject() {
   }
 
   // A failed fetch is not an empty catalog — say so, and offer a retry rather
-  // than the misleading "aucune épreuve" below (§8: truthful states).
+  // than the misleading "aucune épreuve" below (§8: truthful states). Offline
+  // is a third state: the service worker keeps this index in DATA_CACHE, so
+  // after one online load the list really is available offline.
   if (isError) {
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     return (
       <section className="section exam-subject">
         <div className="container exam-subject__container">
           <EmptyState
-            title={L('Catalogue indisponible', 'Katalòg la pa disponib')}
-            message={L(
-              'Nous n’avons pas pu charger les épreuves. Vérifiez votre connexion, puis réessayez.',
-              'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.',
-            )}
+            title={offline
+              ? L('Hors ligne', 'Pa sou entènèt')
+              : L('Catalogue indisponible', 'Katalòg la pa disponib')}
+            message={offline
+              ? L(
+                  'La liste des épreuves n’est pas encore enregistrée sur cet appareil. Connectez-vous une fois pour la charger : ensuite elle reste consultable hors ligne.',
+                  'Lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.',
+                )
+              : L(
+                  'Nous n’avons pas pu charger les épreuves. Vérifiez votre connexion, puis réessayez.',
+                  'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.',
+                )}
             action={{ label: L('Réessayer', 'Eseye ankò'), onClick: () => { void refetch(); } }}
           />
         </div>

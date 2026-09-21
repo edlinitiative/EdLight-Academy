@@ -290,3 +290,23 @@
 .exam-subject__terms-link:hover {
   color: var(--primary-600);
 }
+
+/* Narrow screens: the sentences are longer than the row, so flex stranded the
+   leading icon alone on its own line. Inline flow instead — the icon sits in
+   the text it belongs to and the line wraps normally. */
+@media (max-width: 560px) {
+  .exam-subject__terms {
+    display: block;
+  }
+
+  .exam-subject__terms > svg {
+    display: inline;
+    vertical-align: -0.16em;
+    /* Both sides: block flow has no `gap`, so the icon needs its own air. */
+    margin: 0 0.3rem;
+  }
+
+  .exam-subject__terms-link {
+    margin-left: 0.3rem;
+  }
+}
