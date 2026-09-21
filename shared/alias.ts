@@ -40,27 +40,34 @@ export function isAcceptableAliasInput(name: unknown): boolean {
   if (typeof name !== 'string') return false;
   const trimmed = name.trim();
   if (trimmed.length < 2 || trimmed.length > 24) return false;
+  // A board row is one line: reject control characters and line breaks.
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001F\u007F]/.test(trimmed)) return false;
   return isValidAlias(trimmed);
 }
 
 /**
- * "Ted Olivier Jacquet" → "Ted J."
+ * "Ted Olivier Jacquet" → "Ted"
  *
- * First name plus a last initial: enough for a student to recognise
- * themselves on a board, not enough for a stranger watching a stream to
- * identify a child.
+ * THE FIRST NAME ALONE. Ted's call, 2026-09-21, on the registration sheet:
+ * "you should ask them to put their full name, but we show them what the
+ * audience will see — just first name."
+ *
+ * It used to append a last initial ("Ted J."). Dropping it is the more
+ * protective rule for an audience this young: on a public broadcast a first
+ * name is a person greeting their school, and a surname initial is the start
+ * of identifying a specific child. Two students sharing a first name at one
+ * school is the cost, and a student who wants to be distinguished can type a
+ * name of their own — the field exists for exactly that.
  *
  * Returns null when there is nothing usable, and null is a real answer — the
  * standings render an empty name and the leaderboard prompts for one rather
  * than inventing it. A name we made up is worse on a broadcast than no name.
  */
 export function defaultAlias(name: string | undefined | null): string | null {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length || !isValidAlias(parts[0])) return null;
-  const first = parts[0].slice(0, 30);
-  const lastInitial = parts.length > 1 ? ` ${parts[parts.length - 1][0].toUpperCase()}.` : '';
-  return `${first}${lastInitial}`;
+  const first = String(name || '').trim().split(/\s+/).filter(Boolean)[0];
+  if (!first || !isValidAlias(first) || isPlaceholderName(first)) return null;
+  return first.slice(0, 24);
 }
 
 /**

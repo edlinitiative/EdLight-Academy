@@ -3,40 +3,40 @@ import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import PressableScale from '../ui/PressableScale';
-import { isAcceptableAliasInput } from '../../../../shared/alias';
+import { defaultAlias, isAcceptableAliasInput } from '../../../../shared/alias';
 import { useColors, typeScale, radius } from '../../theme/theme';
 import { tapMedium } from '../../utils/haptics';
 
 /**
- * Edit the name that will appear on the Arena board.
+ * Confirm the student's name before a tournament.
  *
- * NOT the account name. What a public board shows is the leaderboard alias —
- * `leaderboards/all-time/entries/{uid}.displayName` — falling back to "Ted J."
- * derived from the account. This sheet writes that alias, which is the only
- * field a student can actually change about how they are named in public, and
- * the same one the weekly leaderboard uses. One name, one place.
+ * ASKS FOR THE FULL NAME, SHOWS WHAT THE AUDIENCE WILL SEE. Ted's call,
+ * 2026-09-21, on the first version of this sheet — which asked for the public
+ * name directly: "you should ask them to put their full name, but we show them
+ * what the audience will see — just first name."
  *
- * The default is shown as a suggestion rather than silently accepted, because
- * a student about to be on a stream in front of their school should get to
- * decide whether their surname initial is on it.
+ * The two serve different purposes and the split is the point:
+ *  · the FULL name is held because a prize winner has to prove their identity,
+ *    and "Sandra" is not something anyone can prove;
+ *  · the FIRST name is all that reaches a public broadcast, because most of
+ *    this audience is under 18.
+ *
+ * The preview is live, so nobody discovers what the stream showed afterwards.
  */
 export default function ArenaNameSheet({
   visible,
-  current,
-  suggestion,
+  fullName,
   isCreole,
   saving,
   onSave,
   onClose,
 }: {
   visible: boolean;
-  /** The alias on file, or null when there is none yet. */
-  current: string | null;
-  /** What the board would show if they saved nothing — may be null. */
-  suggestion: string | null;
+  /** The full name on the account, or null when it has never been set. */
+  fullName: string | null;
   isCreole: boolean;
   saving: boolean;
-  onSave: (alias: string) => void;
+  onSave: (fullName: string) => void;
   onClose: () => void;
 }) {
   const colors = useColors();
@@ -44,10 +44,13 @@ export default function ArenaNameSheet({
   const [value, setValue] = useState('');
 
   useEffect(() => {
-    if (visible) setValue(current ?? suggestion ?? '');
-  }, [visible, current, suggestion]);
+    if (visible) setValue(fullName ?? '');
+  }, [visible, fullName]);
 
-  const ok = isAcceptableAliasInput(value);
+  // Exactly the server's derivation, so the preview cannot promise one thing
+  // and the broadcast carry another.
+  const audienceName = defaultAlias(value);
+  const ok = !!audienceName && isAcceptableAliasInput(audienceName);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -70,30 +73,44 @@ export default function ArenaNameSheet({
           }}
         >
           <Text style={[typeScale.title, { color: colors.ink }]}>
-            {t('Ton nom sur le tableau', 'Non ou sou tablo a')}
+            {t('Ton nom complet', 'Non konplè ou')}
           </Text>
           <Text style={[typeScale.caption, { color: colors.muted }]}>
             {t(
-              'C’est ce que le public verra pendant la diffusion. Pas ton nom complet.',
-              'Se sa piblik la ap wè pandan difizyon an. Pa non konplè ou.',
+              'Si tu gagnes, tu devras prouver ton identité — écris ton nom tel qu’il est sur tes papiers.',
+              'Si w genyen, w ap gen pou pwouve ki moun ou ye — ekri non ou jan li ye sou papye ou yo.',
             )}
           </Text>
 
           <TextInput
             value={value}
             onChangeText={setValue}
-            maxLength={24}
+            maxLength={80}
             autoCapitalize="words"
             autoCorrect={false}
-            placeholder={suggestion ?? t('Ton prénom', 'Prenon ou')}
+            placeholder={t('Prénom et nom', 'Prenon ak siyati')}
             placeholderTextColor={colors.faint}
-            accessibilityLabel={t('Nom affiché', 'Non ki parèt')}
+            accessibilityLabel={t('Nom complet', 'Non konplè')}
             style={{
               borderWidth: 1, borderColor: colors.border, borderRadius: radius.card,
               padding: 14, color: colors.ink, backgroundColor: colors.surface,
               fontSize: 16,
             }}
           />
+
+          {/* What the stream will actually show. Live, and never the full name. */}
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 8,
+            padding: 12, borderRadius: radius.card,
+            backgroundColor: colors.azureSoft, borderWidth: 1, borderColor: colors.azureBorder,
+          }}>
+            <Text style={[typeScale.caption, { color: colors.muted, flex: 1 }]}>
+              {t('Le public verra', 'Piblik la ap wè')}
+            </Text>
+            <Text style={[typeScale.label, { color: audienceName ? colors.azure : colors.faint }]}>
+              {audienceName ?? t('—', '—')}
+            </Text>
+          </View>
 
           <PressableScale
             onPress={() => { if (ok && !saving) { tapMedium(); onSave(value.trim()); } }}

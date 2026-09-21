@@ -9,6 +9,7 @@ import PressableScale from '../../components/ui/PressableScale';
 import StageEnter from '../../components/trivia/StageEnter';
 import QualificationBar from '../../components/arena/QualificationBar';
 import { useArenaLobby, useArenaRegister } from '../../hooks/useArena';
+import { updateUserFullName } from '../../services/firebase';
 import { useTrivia } from '../../hooks/useTrivia';
 import { formatCountdown, shareArenaInvite } from '../../services/arenaService';
 import { logInviteSent } from '../../services/referralService';
@@ -17,7 +18,7 @@ import { useColors, useTheme, typeScale, displayScale } from '../../theme/theme'
 import { select, tapMedium } from '../../utils/haptics';
 import type { School } from '../../../../shared/schools';
 import { GRADES } from '../../../../shared/trackConfig';
-import { defaultAlias, isAcceptableAliasInput } from '../../../../shared/alias';
+import { defaultAlias } from '../../../../shared/alias';
 import ArenaIdentityRow from '../../components/arena/ArenaIdentityRow';
 import ArenaNameSheet from '../../components/arena/ArenaNameSheet';
 import ArenaGradeSheet from '../../components/arena/ArenaGradeSheet';
@@ -62,31 +63,51 @@ export default function ArenaLobbyScreen() {
   const register = useArenaRegister(tid);
 
   /*
-   * WHAT THE BOARD WILL CALL THEM, computed exactly as the server computes it
-   * (`publicDisplayName` → saved alias, else `defaultAlias` of the account
-   * name). Showing anything else here would be asking a student to confirm one
-   * name and then putting another on a public stream.
+   * TWO NAMES, AND THEY ARE NOT THE SAME NAME.
+   *
+   * The FULL name lives on the account (`user.name`, mirrored to the ID token
+   * and `users/{uid}.full_name`) and exists because a prize winner has to
+   * prove their identity. The AUDIENCE name is the first name alone, derived
+   * exactly as the server derives it in `publicDisplayName`, and it is the only
+   * one that reaches a public broadcast.
+   *
+   * Ted, 2026-09-21: "ask them to put their full name, but we show them what
+   * the audience will see — just first name."
    */
   const user = useStore((st) => st.user);
+  const setUser = useStore((st) => st.setUser);
   const { profile, setLeaderboardOptIn } = useTrivia();
+  const fullName: string | null = user?.name || user?.displayName || null;
   const savedAlias: string | null = (profile?.leaderboard as any)?.displayName || null;
-  const suggestedAlias = defaultAlias(user?.name);
-  const boardName = savedAlias || suggestedAlias;
+  const boardName = savedAlias || defaultAlias(fullName);
 
-  const saveAlias = async (alias: string) => {
+  const saveFullName = async (next: string) => {
     setSavingName(true);
     try {
-      // Preserve the rest of the leaderboard entry: this sheet is about the
-      // name, and blanking someone's school or city as a side effect of
-      // renaming themselves would be its own bug report.
-      const lb: any = profile?.leaderboard || {};
-      await setLeaderboardOptIn({
-        optedIn: true,
-        displayName: alias.slice(0, 24),
-        school: lb.school ?? null,
-        city: lb.city ?? null,
-        department: lb.department ?? null,
-      });
+      const uid = user?.uid || user?.id;
+      if (uid) await updateUserFullName(uid, next);
+      setUser({ ...(user || {}), name: next, displayName: next });
+
+      /*
+       * Also publish the derived first name as the board alias, so the preview
+       * the student just approved is literally what the board shows. Without
+       * this an older saved alias would keep winning inside
+       * `publicDisplayName` and the confirmation would be a lie.
+       *
+       * The rest of the leaderboard entry is preserved: blanking someone's
+       * school or city as a side effect of writing their name is its own bug.
+       */
+      const audience = defaultAlias(next);
+      if (audience) {
+        const lb: any = profile?.leaderboard || {};
+        await setLeaderboardOptIn({
+          optedIn: true,
+          displayName: audience,
+          school: lb.school ?? null,
+          city: lb.city ?? null,
+          department: lb.department ?? null,
+        });
+      }
       setNameSheet(false);
     } finally {
       setSavingName(false);
@@ -96,9 +117,9 @@ export default function ArenaLobbyScreen() {
   // Attested, not proven — and prefilled, because the student already told us
   // in onboarding. POSTBAC is the one the server refuses: the Arena is a
   // primary-and-secondary tournament.
-  const grade = useStore((s) => s.grade);
-  const setGrade = useStore((s) => s.setGrade);
-  const setGradeChosen = useStore((s) => s.setGradeChosen);
+  const grade = useStore((st) => st.grade);
+  const setGrade = useStore((st) => st.setGrade);
+  const setGradeChosen = useStore((st) => st.setGradeChosen);
   const gradeEligible = !!grade && grade !== 'POSTBAC';
   const gradeEntry = GRADES.find((g) => g.code === grade) || null;
   const gradeLabel = gradeEntry ? (isCreole ? gradeEntry.labelHt : gradeEntry.label) : null;
@@ -262,7 +283,10 @@ export default function ArenaLobbyScreen() {
                 icon={<UserIcon color={colors.muted} size={16} />}
                 label={t('Ton nom sur le tableau', 'Non ou sou tablo a')}
                 value={boardName}
-                placeholder={t('Ajoute un nom…', 'Mete yon non…')}
+                placeholder={t('Ajoute ton nom…', 'Mete non ou…')}
+                problem={!boardName
+                  ? t('Ajoute ton nom pour apparaître au tableau.', 'Mete non ou pou w parèt sou tablo a.')
+                  : null}
                 onPress={() => setNameSheet(true)}
               />
 
@@ -499,11 +523,10 @@ export default function ArenaLobbyScreen() {
 
       <ArenaNameSheet
         visible={nameSheet}
-        current={savedAlias}
-        suggestion={suggestedAlias}
+        fullName={fullName}
         isCreole={isCreole}
         saving={savingName}
-        onSave={saveAlias}
+        onSave={saveFullName}
         onClose={() => setNameSheet(false)}
       />
 

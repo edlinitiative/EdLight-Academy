@@ -395,10 +395,22 @@ describe('untrusted input', () => {
 });
 
 describe('the name that reaches a public board', () => {
-  it('publishes a first name and a last initial, never a full name', () => {
-    // Most of this audience is under 18 and the standings go on a stream.
-    expect(defaultAlias('Ted Olivier Jacquet')).toBe('Ted J.');
+  it('publishes the first name alone, never a surname or an initial of one', () => {
+    /*
+     * CHANGED 2026-09-21, Ted's call on the Arena registration sheet: the rule
+     * was first-name-plus-last-initial ("Ted J."), and this test pinned it.
+     * The standings go on a stream watched by schools and most of this
+     * audience is under 18 — a surname initial is where identifying a specific
+     * child starts. A student who wants to be distinguished from a namesake
+     * types a name of their own; the field exists for that.
+     */
+    expect(defaultAlias('Ted Olivier Jacquet')).toBe('Ted');
     expect(defaultAlias('Ted')).toBe('Ted');
+    expect(defaultAlias('Sandra Pierre-Louis')).toBe('Sandra');
+  });
+
+  it('refuses the placeholder the auth layer substitutes for a missing name', () => {
+    expect(defaultAlias('Élève')).toBeNull();
   });
 
   it('returns null rather than inventing something', () => {

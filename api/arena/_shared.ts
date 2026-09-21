@@ -507,28 +507,14 @@ export async function schoolCounts(
 // ── Public display name ─────────────────────────────────────────────────────
 
 /** A public alias must contain at least one letter (matches leaderboardService). */
-export function isValidAlias(name: unknown): boolean {
-  return /\p{L}/u.test(String(name ?? ''));
-}
-
-/**
- * Privacy-safe default alias from a verified account name — the SAME derivation
- * as api/challenges/create.ts and api/leaderboard/award.ts ("Ted Olivier
- * Jacquet" → "Ted J.").
- *
- * Copied deliberately rather than generalised, so the rule is identical on
- * every surface that publishes a name. Most of this audience is under 18 and
- * the Arena standings go on a public stream: a minor's full name must never
- * reach a board, and a board that derives names slightly differently from the
- * others is how one eventually does.
+/*
+ * Both moved to `shared/arena/../alias.ts` and re-exported. The Arena lobby now
+ * asks a student to CONFIRM the name that will appear on the board, and a
+ * confirmation screen computing it differently from the server that publishes
+ * it shows them one thing and streams another.
  */
-export function defaultAlias(name: string | undefined): string | null {
-  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-  if (!parts.length || !isValidAlias(parts[0])) return null;
-  const first = parts[0].slice(0, 30);
-  const lastInitial = parts.length > 1 ? ` ${parts[parts.length - 1][0].toUpperCase()}.` : '';
-  return `${first}${lastInitial}`;
-}
+export { isValidAlias, defaultAlias } from '../../shared/alias';
+import { isValidAlias, defaultAlias } from '../../shared/alias';
 
 /**
  * The name that may appear on the Arena standings: the student's stored board

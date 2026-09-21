@@ -500,6 +500,13 @@ export default function QuizzesScreen() {
   const { shadow } = useTheme();
   const centerColumn = useContentContainerStyle('readable');
   const isCreole = language === 'ht';
+  /*
+   * "1 chapitres" was on every level with a single chapter. French
+   * pluralises, Creole does not ("1 chapit", "5 chapit"), so the `s` belongs
+   * to the French branch alone rather than to the number.
+   */
+  const countOf = (n: number, fr: string, ht: string) => `${n} ${isCreole ? ht : fr + (n > 1 ? 's' : '')}`;
+
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const [state, setState] = useState<QuizState>('list');
@@ -663,7 +670,7 @@ export default function QuizzesScreen() {
           <View className="flex-1">
             <Text style={[typeScale.h1, { color: colors.ink }]}>{headerTitle}</Text>
             <Text style={[typeScale.label, { color: colors.muted, marginTop: 2 }]}>
-              {activeLevel.chapters.length} {t('chapitres', 'chapit')} · {activeLevel.questionCount} {t('questions', 'kesyon')}
+              {countOf(activeLevel.chapters.length, 'chapitre', 'chapit')} · {countOf(activeLevel.questionCount, 'question', 'kesyon')}
             </Text>
           </View>
         </View>
@@ -694,7 +701,6 @@ export default function QuizzesScreen() {
 
   // ── Level 2: grade levels within the chosen subject ────────────────────────
   if (activeBase) {
-    const tint = subjectColor(activeBase.baseName);
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.bg }} edges={['top']}>
         <View className="flex-row items-center px-4 pt-6 pb-3" style={{ gap: 8 }}>
@@ -714,15 +720,16 @@ export default function QuizzesScreen() {
               activeOpacity={0.82}
               style={cardStyle}
               accessibilityRole="button"
-              accessibilityLabel={`${lvl.levelLabel ?? lvl.name}, ${lvl.chapters.length} ${t('chapitres', 'chapit')}`}
+              accessibilityLabel={`${lvl.levelLabel ?? lvl.name}, ${countOf(lvl.chapters.length, 'chapitre', 'chapit')}`}
             >
-              <View style={{ width: 44, height: 44, borderRadius: radius.tile, backgroundColor: tint + '22', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontFamily: typeScale.overline.fontFamily, fontSize: 13, color: tint }}>{lvl.levelLabel ?? '•'}</Text>
-              </View>
+              {/* The pale tile used to print `levelLabel` — the SAME string as
+                  the row title beside it, so every row said "NSI" twice.
+                  Reported from TestFlight as "this is redundant", and the same
+                  note the Examens rows got earlier. */}
               <View style={{ flex: 1 }}>
                 <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{lvl.levelLabel ?? lvl.name}</Text>
                 <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-                  {lvl.chapters.length} {t('chapitres', 'chapit')} · {lvl.questionCount} {t('questions', 'kesyon')}
+                  {countOf(lvl.chapters.length, 'chapitre', 'chapit')} · {countOf(lvl.questionCount, 'question', 'kesyon')}
                 </Text>
               </View>
               <ChevronRight color={colors.faint} size={18} />
@@ -791,7 +798,7 @@ export default function QuizzesScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[typeScale.titleSm, { color: colors.ink }]} numberOfLines={1}>{b.baseName}</Text>
                   <Text style={[typeScale.caption, { color: colors.muted, marginTop: 2 }]}>
-                    {levelSummary}{b.chapterCount} {t('chapitres', 'chapit')} · {b.questionCount} {t('questions', 'kesyon')}
+                    {levelSummary}{countOf(b.chapterCount, 'chapitre', 'chapit')} · {countOf(b.questionCount, 'question', 'kesyon')}
                   </Text>
                 </View>
                 <ChevronRight color={colors.faint} size={18} />

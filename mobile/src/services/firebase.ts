@@ -173,6 +173,37 @@ export async function updateUserGrade(uid: string, grade: string | null) {
   }
 }
 
+/**
+ * Set the student's real full name.
+ *
+ * Writes BOTH the Firebase Auth `displayName` and `users/{uid}.full_name`,
+ * because the server derives a public alias from the ID TOKEN's name claim
+ * (`publicDisplayName` → `defaultAlias`) while the rest of the app reads the
+ * Firestore document. One of the two being stale means the board shows a name
+ * the profile does not have.
+ *
+ * The full name never reaches a public surface — see `shared/alias.ts`. It is
+ * held because a prize winner has to prove their identity, and "Sandra" is not
+ * something anyone can prove.
+ */
+export async function updateUserFullName(uid: string, fullName: string) {
+  const clean = String(fullName || '').trim().slice(0, 80);
+  if (!uid || !clean) return;
+  try {
+    if (auth.currentUser) await updateProfile(auth.currentUser, { displayName: clean });
+  } catch (err) {
+    console.warn('[firebase] updateProfile(displayName) failed:', err);
+  }
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      full_name: clean,
+      updated_at: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('[firebase] updateUserFullName failed:', err);
+  }
+}
+
 export async function updateUserTrack(uid: string, trackCode: string) {
   const userRef = doc(db, 'users', uid);
   await setDoc(userRef, {

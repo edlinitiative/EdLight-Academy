@@ -10,13 +10,26 @@
 import { defaultAlias, isValidAlias, isAcceptableAliasInput, isPlaceholderName } from '../../../shared/alias';
 
 describe('defaultAlias', () => {
-  it('is first name plus a last initial', () => {
-    expect(defaultAlias('Ted Olivier Jacquet')).toBe('Ted J.');
-    expect(defaultAlias('Marie Claire')).toBe('Marie C.');
+  /*
+   * Ted's call, 2026-09-21: the audience sees the FIRST NAME ALONE. It used to
+   * append a last initial; on a broadcast watched by schools, a surname
+   * initial is the start of identifying a specific child.
+   */
+  it('is the first name, alone', () => {
+    expect(defaultAlias('Ted Olivier Jacquet')).toBe('Ted');
+    expect(defaultAlias('Marie Claire')).toBe('Marie');
   });
 
-  it('leaves a single name alone rather than inventing an initial', () => {
+  it('leaves a single name alone', () => {
     expect(defaultAlias('Mika')).toBe('Mika');
+  });
+
+  it('never carries a surname or an initial of one', () => {
+    expect(defaultAlias('Sandra Pierre-Louis')).toBe('Sandra');
+  });
+
+  it('refuses the placeholder the auth layer substitutes', () => {
+    expect(defaultAlias('Élève')).toBeNull();
   });
 
   it('is null when there is nothing usable — null is a real answer', () => {
@@ -29,7 +42,7 @@ describe('defaultAlias', () => {
   });
 
   it('keeps accents, which most Haitian names carry', () => {
-    expect(defaultAlias('Andrée Pierre-Louis')).toBe('Andrée P.');
+    expect(defaultAlias('Andrée Pierre-Louis')).toBe('Andrée');
   });
 
   it('never leaks a full surname', () => {
