@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { History, ChevronRight, PlayCircle, Target, ArrowRight, Lightbulb } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
+import { listRecentExamAttempts } from '../services/userActivity';
 import { loadDueReviewIds } from '../services/reviewService';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { subjectColor, examDisplayTitle } from '../utils/examUtils';
@@ -100,6 +101,26 @@ export default function ExamHistory() {
   });
   const [localDrafts] = useState(readLocalDrafts);
 
+  /*
+   * THE DRAFTS THAT ARE NOT ON THIS DEVICE.
+   *
+   * This page originally read only the `edlight-exam-draft-*` localStorage
+   * mirror, on the belief that no bulk reader existed for the remote ones.
+   * One does — `listRecentExamAttempts`, which the Dashboard has been using
+   * all along. The consequence was visible on the live site: the dashboard
+   * listed three exams in progress while this page, for the same account in
+   * the same browser, said "Aucun résultat pour le moment".
+   *
+   * Same query key as the Dashboard so the two share one cached answer and can
+   * never disagree again.
+   */
+  const { data: remoteAttempts = [] } = useQuery({
+    queryKey: ['dashboard-exam-attempts', userId],
+    queryFn: () => listRecentExamAttempts(userId!, 25),
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+
   const formatDate = (ms: number | null | undefined) =>
     ms ? new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 
@@ -127,14 +148,38 @@ export default function ExamHistory() {
 
   const drafts = useMemo(() => {
     if (!catalog) return [];
-    return localDrafts
-      .map((d) => {
-        const meta = describe(d.examKey);
+
+    /*
+     * Remote first, then anything this device knows that the server does not
+     * yet — a draft saved while offline, or one from before the account was
+     * signed in. Keyed by exam id so the same paper never appears twice, and
+     * the local answered-count wins when both exist because it is the one
+     * written on every keystroke.
+     */
+    const merged = new Map<string, { answered: number; updatedAtMs: number | null }>();
+    for (const a of (remoteAttempts as any[])) {
+      if (a?.status !== 'in_progress' || !a?.exam_id) continue;
+      merged.set(String(a.exam_id), {
+        answered: typeof a.answered_count === 'number' ? a.answered_count : 0,
+        updatedAtMs: a.updated_at_ms ?? null,
+      });
+    }
+    for (const d of localDrafts) {
+      const prev = merged.get(d.examKey);
+      merged.set(d.examKey, {
+        answered: d.answered || prev?.answered || 0,
+        updatedAtMs: d.updatedAtMs ?? prev?.updatedAtMs ?? null,
+      });
+    }
+
+    return [...merged.entries()]
+      .map(([examKey, d]) => {
+        const meta = describe(examKey);
         return meta ? { ...meta, answered: d.answered, updatedAtMs: d.updatedAtMs } : null;
       })
       .filter(Boolean) as any[];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalog, byKey, localDrafts, ht]);
+  }, [catalog, byKey, localDrafts, remoteAttempts, ht]);
 
   const rows = useMemo(() => {
     if (!catalog) return [];
