@@ -53,6 +53,26 @@ export default function NetworkStatus() {
   // Nothing to show while steadily online.
   const visible = status !== 'online';
 
+  /**
+   * Tell the document the banner is up, so the page can make room for it.
+   *
+   * The banner is FIXED to the bottom centre and, while offline, persistent —
+   * not a toast that passes. At 390px it therefore sat on top of the last line
+   * of page content, which redesign plan §8 forbids ("no clipped critical text
+   * or covered actions") and §13 calls out as a floating control covering task
+   * content. `pointer-events: none` meant it never blocked a click, so this
+   * only ever looked like the page was cut off — the quietest kind of bug.
+   *
+   * An attribute rather than `:has()` so the coupling is greppable from both
+   * sides, and it is cleaned up on unmount.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    if (visible) root.setAttribute('data-network-banner', status);
+    else root.removeAttribute('data-network-banner');
+    return () => root.removeAttribute('data-network-banner');
+  }, [visible, status]);
+
   return (
     <div
       className={`network-banner network-banner--${status} ${visible ? 'is-visible' : ''}`}

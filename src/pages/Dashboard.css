@@ -576,7 +576,6 @@ button.dash-activity__tag { cursor: pointer; }
   --st-warn: var(--warning-500);
   --st-crit: var(--danger-500);
   --st-dot: var(--primary-50);
-  --st-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --st-editorial: var(--font-display, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
   /* Limyè: no ink borders — surfaces are held by soft light. */
   --st-border: transparent;
@@ -627,7 +626,7 @@ button.dash-activity__tag { cursor: pointer; }
 /* Status line */
 .dash--st .dash__statusline {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  font-family: var(--st-mono); text-transform: uppercase; letter-spacing: 0.09em;
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.09em;
   font-size: 11px; color: var(--st-muted); margin-bottom: 14px;
 }
 .dash--st .dash__status-dot {
@@ -720,16 +719,16 @@ button.dash-activity__tag { cursor: pointer; }
 .dash--st .dash-kpi--amber .dash-kpi__icon { color: var(--st-warn); }
 
 /* Course progress bar + percentage */
-.dash--st .dash-course__pct { font-family: var(--st-mono); font-weight: 600; color: var(--st-accent); }
+.dash--st .dash-course__pct { font-family: var(--font-mono); font-weight: 600; color: var(--st-accent); }
 .dash--st .dash-course__bar { background: var(--st-line); border-radius: 3px; }
 .dash--st .dash-course__bar > span { background: var(--st-accent); border-radius: 3px; }
-.dash--st .dash-course__meta { font-family: var(--st-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--st-muted); }
+.dash--st .dash-course__meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--st-muted); }
 .dash--st .dash-course__badge { border-radius: 5px; }
 
 /* Activity rows → mono date, semantic tag chips (rounded) */
-.dash--st .dash-activity__date { font-family: var(--st-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--st-muted); }
+.dash--st .dash-activity__date { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em; color: var(--st-muted); }
 .dash--st .dash-activity__tag {
-  border-radius: 999px !important; font-family: var(--st-mono); font-weight: 600; font-size: 12px;
+  border-radius: 999px !important; font-family: var(--font-mono); font-weight: 600; font-size: 12px;
 }
 .dash--st .dash-activity__tag--success { color: var(--st-good) !important; }
 .dash--st .dash-activity__tag--error { color: var(--st-crit) !important; }

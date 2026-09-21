@@ -32,8 +32,10 @@ export default function HeroSection({ t }: { t: TFn }) {
             </p>
 
             {/* Signed out, the sign-up card beside this is the primary action,
-                so these step down to secondary — two competing primaries just
-                split the click. */}
+                so this steps down to secondary — two competing primaries just
+                split the click — and it is the only other thing to click
+                (§6.10: one clear entry point). Signed in there is nothing to
+                sign up for, so both learning destinations are offered. */}
             <div className="lp-hero__actions">
               <button
                 className={isAuthenticated ? 'lp-btn lp-btn--primary' : 'lp-btn lp-btn--ghost'}
@@ -42,9 +44,11 @@ export default function HeroSection({ t }: { t: TFn }) {
                 <span>{t('Voir les cours', 'Gade kou yo')}</span>
                 {isAuthenticated && <ArrowIcon />}
               </button>
-              <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/practice')}>
-                {t('Choisir une pratique', 'Chwazi yon pratik')}
-              </button>
+              {isAuthenticated && (
+                <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/practice')}>
+                  {t('Choisir une pratique', 'Chwazi yon pratik')}
+                </button>
+              )}
             </div>
 
             {/* Trust line: verifiable facts only — invented counts and

@@ -93,6 +93,25 @@
   }
 }
 
+/* Focused task (a lesson, a live practice question). The launcher is not
+   rendered there — a fixed bubble bottom-right lands exactly on a phone's
+   answer controls (§6.9) — and the bottom tab bar is gone too, so the panel,
+   which only opens on an explicit "Ask Sandra" from the task, reclaims that
+   space instead of floating above an empty strip. */
+.app-shell--focused .sandra-panel {
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+}
+@media (max-width: 767px) {
+  .app-shell--focused .sandra-panel {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    height: min(520px, calc(var(--vvh, 1vh) * 100 - var(--navbar-height, 60px) - 3rem));
+  }
+  .app-shell--focused .sandra-panel--expanded {
+    bottom: env(safe-area-inset-bottom);
+    height: auto;
+  }
+}
+
 /* ── Header ── */
 .sandra-panel__header {
   display: flex;
@@ -281,6 +300,78 @@
   }
 }
 
+/* ── Welcome block ──
+   First open: who Sandra is, where her help stops, and three openers so the
+   student never faces an empty composer (§8: an empty state explains itself
+   and offers an action). */
+.sandra-welcome {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.sandra-welcome__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  border-bottom-left-radius: 6px;
+  background: var(--surface-muted);
+}
+.sandra-welcome__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-900);
+}
+.sandra-welcome__text {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--text-700);
+}
+/* The integrity boundary, said plainly rather than discovered by a student
+   whose assistant disappeared mid-exam (§6.9). */
+.sandra-welcome__rule {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-500);
+}
+.sandra-welcome__prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.sandra-welcome__prompt {
+  max-width: 100%;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  color: var(--primary-600);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.sandra-welcome__prompt:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+.sandra-welcome__prompt:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
 /* ── Error row ── */
 .sandra-error {
   display: flex;
@@ -421,4 +512,86 @@
     transform: none;
     transition: none;
   }
+}
+
+/* ── Contextual "Ask Sandra" (<AskSandra>) ────────────────────────────────
+   §6.9 prefers a contextual action from a lesson, an explanation or a review
+   over sending the student to a general chat. It sits INSIDE the task's own
+   flow — not floating over it — so it can never cover answer controls the way
+   the fixed launcher would, and it says what it will share before it shares
+   it. Azure (help with understanding), never the launcher's coral flourish:
+   one screen, one flourish. */
+.sandra-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.sandra-ask__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--primary-500);
+  border-radius: var(--r-btn);
+  background: var(--primary-50);
+  color: var(--primary-600);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sandra-ask__btn:hover {
+  background: var(--primary-500);
+  color: #fff;
+}
+.sandra-ask__btn:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Collapsed by default: the student can check what leaves the screen without
+   the list competing with the lesson for attention. */
+.sandra-ask__shared {
+  max-width: 44rem;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+.sandra-ask__shared > summary {
+  cursor: pointer;
+  color: var(--text-600);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sandra-ask__shared > summary:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+.sandra-ask__shared > ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+/* Protected screen: the reason, not an absence. §6.9 distinguishes help with
+   understanding from an exam/tournament restriction — a control that silently
+   disappears teaches the student nothing. */
+.sandra-ask__blocked {
+  margin: 0;
+  max-width: 44rem;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-500);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sandra-ask__btn { transition: none; }
 }

@@ -22,12 +22,12 @@ import './ExamHistory.css';
  * should I do next.
  *
  *   1. "Examens commencés" — unfinished drafts first, because an abandoned
- *      attempt is more actionable than a score already earned. Source is the
- *      SAME synchronous localStorage mirror ExamTake writes and ExamOverview
- *      reads (`edlight-exam-draft-<examId>`), with ExamOverview's exact
- *      "has progress" predicate — no second progress model. It is device-local
- *      by construction (there is no bulk reader for the Firestore drafts), so
- *      the section says so rather than implying cross-device coverage.
+ *      attempt is more actionable than a score already earned. Two sources are
+ *      merged (see the `drafts` memo): the Firestore attempts from
+ *      `listRecentExamAttempts` and the synchronous localStorage mirror
+ *      ExamTake writes and ExamOverview reads (`edlight-exam-draft-<examId>`),
+ *      with ExamOverview's exact "has progress" predicate — no second progress
+ *      model.
  *   2. "Examens corrigés" — the most recent result gets a featured surface
  *      with its review action; older ones stay compact rows.
  *   3. "Et maintenant ?" — the same next-step logic ExamResults ends on, fed
@@ -36,6 +36,39 @@ import './ExamHistory.css';
  *
  * Anonymous visitors see their session results (sessionStorage); signing in
  * adds the cross-device history.
+ *
+ * EVERY NUMBER THIS PAGE SHOWS (redesign plan §6.6, "define the source and
+ * meaning of each displayed number"):
+ *
+ *   rows.length         How many exams have a saved correction. One Firestore
+ *                       document per exam (users/{uid}/examResults/{examId}),
+ *                       plus anything in this session's sessionStorage — so it
+ *                       counts PAPERS with a correction, not sittings.
+ *   r.percentage        `summary.percentage` off that saved correction, i.e.
+ *                       the score of the correction the row opens. Via
+ *                       useExamAttempts, which keeps the higher of the saved
+ *                       document and this session's result for the same exam.
+ *                       Labelled as the score of that correction, never as a
+ *                       "best score" across attempts — only one correction per
+ *                       exam is ever stored, so no such history exists.
+ *   r.submittedAtMs     `submitted_at_ms` on that same correction. It is when
+ *                       the correction this row opens was submitted, which is
+ *                       also what the list is sorted by.
+ *   d.answered          Answers recorded on an unfinished attempt:
+ *                       `answered_count` from the Firestore attempt, or the
+ *                       size of the local draft's answers map, whichever this
+ *                       device knows better (local wins — it is written on
+ *                       every keystroke).
+ *   dueCount            `loadDueReviewIds` → users/{uid}/mastery/review, the
+ *                       ONE shared review doc mobile also writes. These are
+ *                       QUIZ-BANK questions missed in exercises; exam
+ *                       questions are not written to that doc, so the copy
+ *                       names the source instead of implying exam mistakes.
+ *
+ * NOT SHOWN: any average, trend, readiness or mastery figure. Readiness is
+ * computed elsewhere (services/readinessService.ts) from a wider input set and
+ * is displayed on /exams and /profile; restating a partial version of it here
+ * would be a second, contradictory model.
  */
 
 const DRAFT_PREFIX = 'edlight-exam-draft-';
@@ -91,7 +124,7 @@ export default function ExamHistory() {
   const ht = language === 'ht';
   const L = (fr: string, kr: string) => (ht ? kr : fr);
 
-  const { data: catalog, isPending } = useExamCatalogIndex();
+  const { data: catalog, isPending, isError, refetch } = useExamCatalogIndex();
   const attempts = useExamAttempts();
   // Same query key as the Practice hub, so the two share one cached answer.
   const { data: dueIds = [] } = useQuery({
@@ -226,7 +259,9 @@ export default function ExamHistory() {
                 `${rows.length} examen${frS(rows.length)} corrigé${frS(rows.length)}`,
                 `${rows.length} egzamen korije`,
               )}
-              {latest?.submittedAtMs ? ` · ${L('dernier le', 'dènye a')} ${formatDate(latest.submittedAtMs)}` : ''}
+              {latest?.submittedAtMs
+                ? ` · ${L('dernière correction le', 'dènye koreksyon an')} ${formatDate(latest.submittedAtMs)}`
+                : ''}
             </p>
           )}
         </header>
@@ -239,11 +274,23 @@ export default function ExamHistory() {
                 <PlayCircle size={18} aria-hidden />
                 {L('Examens commencés', 'Egzamen ou kòmanse')}
               </h2>
+              {/*
+                This note said "saved on this device" back when the list read
+                localStorage only. It now merges the account's Firestore
+                attempts too, so it has to tell the truth for whichever
+                sources the visitor actually has (§8, offline/cached: name
+                what is available).
+              */}
               <p className="exam-history__block-note">
-                {L(
-                  'Enregistrés sur cet appareil. Reprenez là où vous vous êtes arrêté.',
-                  'Anrejistre sou aparèy sa a. Kontinye kote ou te rete a.',
-                )}
+                {isAuthenticated
+                  ? L(
+                      'Enregistrés sur votre compte et sur cet appareil. Reprenez là où vous vous êtes arrêté.',
+                      'Anrejistre sou kont ou ak sou aparèy sa a. Kontinye kote ou te rete a.',
+                    )
+                  : L(
+                      'Enregistrés sur cet appareil uniquement. Reprenez là où vous vous êtes arrêté.',
+                      'Anrejistre sou aparèy sa a sèlman. Kontinye kote ou te rete a.',
+                    )}
               </p>
             </div>
 
@@ -298,6 +345,25 @@ export default function ExamHistory() {
                 <Skeleton key={i} width="100%" height={72} radius={16} />
               ))}
             </div>
+          ) : isError ? (
+            /*
+             * Every row on this page is built by joining a stored result to the
+             * exam catalog index. When that index cannot be fetched there is
+             * nothing to join against, and the page used to answer with
+             * "Aucun résultat pour le moment" — telling a student their work
+             * was gone because a JSON file had not downloaded. §8: an error
+             * says what happened, in plain language, and offers a retry.
+             */
+            <EmptyState
+              icon={<History size={28} strokeWidth={1.75} aria-hidden />}
+              title={L('Liste des examens indisponible', 'Lis egzamen yo pa disponib')}
+              message={L(
+                'Vos résultats sont enregistrés, mais la liste des examens n’a pas pu être chargée — souvent une connexion coupée. Réessayez.',
+                'Rezilta ou yo anrejistre, men lis egzamen yo pa t ka chaje — anpil fwa se koneksyon an. Eseye ankò.',
+              )}
+              action={{ label: L('Réessayer', 'Eseye ankò'), onClick: () => { void refetch(); } }}
+              secondaryAction={{ label: L('Choisir un examen', 'Chwazi yon egzamen'), onClick: () => navigate('/exams') }}
+            />
           ) : rows.length === 0 ? (
             <EmptyState
               icon={<History size={28} strokeWidth={1.75} aria-hidden />}
@@ -327,8 +393,15 @@ export default function ExamHistory() {
           ) : (
             <>
               {latest && (
+                /*
+                  No tone modifier on the surface itself: the score value is
+                  already coloured and labelled, and a second tinted surface
+                  would be the same state said twice (§7 wants semantic colour
+                  reinforced by text, not repeated). The left border carries
+                  the SUBJECT colour via --exam-accent.
+                */
                 <div
-                  className={`exam-history__feature exam-history__feature--${scoreTone(latest.percentage)}`}
+                  className="exam-history__feature"
                   style={{ '--exam-accent': latest.color } as React.CSSProperties}
                 >
                   <div className="exam-history__feature-main">
@@ -345,7 +418,14 @@ export default function ExamHistory() {
                   {latest.percentage != null && (
                     <p className={`exam-history__feature-score exam-history__feature-score--${scoreTone(latest.percentage)}`}>
                       <span className="exam-history__feature-score-value">{latest.percentage}%</span>
-                      <span className="exam-history__feature-score-label">{L('Meilleur score', 'Pi bon nòt')}</span>
+                      {/*
+                        Not "best score": only one correction per exam is ever
+                        stored, so there is no series to take a maximum of.
+                        This is the score of the correction the button opens.
+                      */}
+                      <span className="exam-history__feature-score-label">
+                        {L('Score de cette correction', 'Nòt koreksyon sa a')}
+                      </span>
                     </p>
                   )}
                   <div className="exam-history__feature-actions">
@@ -407,10 +487,15 @@ export default function ExamHistory() {
                 {L('Et maintenant', 'E kounye a')}&nbsp;?
               </h2>
               <p className="exam-history__next-sub">
+                {/*
+                  dueCount is quiz-bank questions missed in EXERCISES (the
+                  shared review doc). Naming the source keeps it from reading
+                  as "N questions from your exams", which it is not.
+                */}
                 {dueCount > 0
                   ? L(
-                      `Vous avez ${dueCount} question${frS(dueCount)} à revoir. Reprendre ses erreurs fait progresser plus vite qu’un nouvel examen.`,
-                      `Ou gen ${dueCount} kesyon pou revize. Travay sou erè ou yo fè ou pwogrese pi vit pase yon lòt egzamen.`,
+                      `${dueCount} question${frS(dueCount)} ratée${frS(dueCount)} dans vos exercices attend${dueCount > 1 ? 'ent' : ''} d’être revue${frS(dueCount)}. Reprendre ses erreurs fait progresser plus vite qu’un nouvel examen.`,
+                      `${dueCount} kesyon ou rate nan egzèsis yo ap tann pou w revize yo. Travay sou erè ou yo fè ou pwogrese pi vit pase yon lòt egzamen.`,
                     )
                   : L(
                       'Passez un nouvel examen blanc pour voir où vous en êtes, ou retravaillez une correction déjà ouverte.',
@@ -420,7 +505,8 @@ export default function ExamHistory() {
               <div className="exam-history__next-actions">
                 {dueCount > 0 && (
                   <Link className="button button--primary button--sm" to="/revision">
-                    <Target size={15} aria-hidden /> {L('Revoir mes erreurs', 'Revize erè m yo')} ({dueCount})
+                    <Target size={15} aria-hidden />{' '}
+                    {L('Revoir mes erreurs d’exercices', 'Revize erè egzèsis mwen')} ({dueCount})
                   </Link>
                 )}
                 <Link className={`button button--${dueCount > 0 ? 'ghost' : 'primary'} button--sm`} to="/exams">

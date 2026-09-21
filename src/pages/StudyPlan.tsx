@@ -2,7 +2,8 @@
  * StudyPlan Page
  * ──────────────
  * Full-screen study plan UI with:
- *   • Auto-generation on first visit (if track is set & no plan exists)
+ *   • Generation ON REQUEST only — never to populate the screen (see the
+ *     "NO AUTO-GENERATION" note below)
  *   • Today's tasks list with SRS due dates
  *   • Subject mastery radar / bar chart
  *   • Upcoming week preview
@@ -142,9 +143,21 @@ export default function StudyPlan() {
     });
   }, [allExams, track, coefficients]);
 
-  // ── Auto-generate on first visit ──────────────────────────────────
-  const shouldAutoGenerate =
-    isAuthenticated && track && !hasPlan && !planLoading && !generating && !examsLoading && trackExams.length > 0;
+  /*
+   * NO AUTO-GENERATION.
+   *
+   * This page used to build a plan the moment a student with a track first
+   * opened it — an AI call and a written Firestore document, unasked, so the
+   * screen would not look empty. §6.1/§6.4 draw a line there: a plan the
+   * student made and a recommendation the product made are different things,
+   * and a plan is only the first if the student asked for it. §3 says the
+   * same from the other side — do not manufacture content to populate a
+   * screen.
+   *
+   * The empty state below already explains what a plan is and offers the
+   * button, which is the §8 contract for Empty. Nothing else changes: the
+   * same `handleGenerate` runs, with the same inputs and the same writes.
+   */
 
   // Record streak when viewing the study plan (user is actively studying)
   useEffect(() => {
@@ -152,13 +165,6 @@ export default function StudyPlan() {
       recordStreakActivity();
     }
   }, [isAuthenticated, hasPlan, recordStreakActivity]);
-
-  useEffect(() => {
-    if (shouldAutoGenerate) {
-      handleGenerate();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldAutoGenerate]);
 
   // ── Generate plan handler ─────────────────────────────────────────
   const handleGenerate = useCallback(async () => {
@@ -202,11 +208,17 @@ export default function StudyPlan() {
       });
     } catch (err) {
       console.error('Plan generation failed:', err);
-      setGenError('Erreur lors de la génération du plan. Réessayez.');
+      // Plain language, both languages, and a safe recovery (§8): nothing was
+      // written, so pressing the button again is the whole fix.
+      setGenError(
+        isCreole
+          ? 'Nou pa rive kreye plan an. Pa gen anyen ki anrejistre — eseye ankò.'
+          : 'Nous n’avons pas pu créer le plan. Rien n’a été enregistré — réessayez.',
+      );
     } finally {
       setGenerating(false);
     }
-  }, [track, trackExams, coefficients, existingResults, allExams, generatePlan, quizBankIndex, courses]);
+  }, [track, trackExams, coefficients, existingResults, allExams, generatePlan, quizBankIndex, courses, isCreole]);
 
   // ── ICS calendar download ─────────────────────────────────────────
   // Tasks are dated via the SRS field `nextReviewMs` (studyPlanService).
@@ -227,6 +239,9 @@ export default function StudyPlan() {
   }, [plan]);
 
   // ── Not authenticated ─────────────────────────────────────────────
+  // §8: explain WHY, and preserve the destination. Sign-in happens in a modal
+  // on this route, so a student who signs in is already on their plan — the
+  // dead end here used to be a locked page with nothing to press.
   if (!isAuthenticated) {
     return (
       <div className="sp">
@@ -235,9 +250,17 @@ export default function StudyPlan() {
           <h2>{isCreole ? 'Konekte pou wè plan ou' : 'Connectez-vous pour voir votre plan'}</h2>
           <p>
             {isCreole
-              ? 'Ou bezwen konekte pou kreye yon plan etid pèsonalize.'
-              : 'Vous devez être connecté pour créer un plan d\'étude personnalisé.'}
+              ? 'Yon plan etid se yon lis travay ki anrejistre nan kont ou, pou li rete menm sou telefòn ou ak sou òdinatè a. Se poutèt sa ou bezwen yon kont.'
+              : 'Un plan d\'étude est une liste de tâches enregistrée sur votre compte, pour qu\'elle soit la même sur votre téléphone et sur l\'ordinateur. C\'est pourquoi un compte est nécessaire.'}
           </p>
+          <div className="track-selector__actions">
+            <button className="button button--primary" onClick={() => useStore.getState().toggleAuthModal()}>
+              {isCreole ? 'Konekte' : 'Se connecter'}
+            </button>
+            <Link className="button button--ghost" to="/practice">
+              {isCreole ? 'Pratike san kont' : 'S\'entraîner sans compte'}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -247,13 +270,13 @@ export default function StudyPlan() {
   // Offer both paths; in préfac season the concours plan leads.
   if (!track) {
     const prefacBtn = (
-      <button className="btn btn--primary" onClick={() => setTrack('PREFAC')}>
+      <button className="button button--primary" onClick={() => setTrack('PREFAC')}>
         {isCreole ? "Preparasyon konkou (Prefak)" : 'Préparer les concours (Préfac)'}
       </button>
     );
     const bacBtn = (
       <button
-        className={prefacSeason ? 'btn btn--ghost' : 'btn btn--primary'}
+        className={prefacSeason ? 'button button--ghost' : 'button button--primary'}
         onClick={() => navigate('/exams/terminale')}
       >
         {isCreole ? 'Chwazi filyè Bak' : 'Choisir ma filière du Bac'}
@@ -326,20 +349,41 @@ export default function StudyPlan() {
 
   // ── No plan yet (auto-gen didn't trigger) ─────────────────────────
   if (!hasPlan) {
+    const noExams = trackExams.length === 0;
     return (
       <div className="sp">
         <div className="sp-empty">
           <span className="sp-empty__icon"><ClipboardList size={40} /></span>
           <h2>{isCreole ? 'Pa gen plan etid ankò' : 'Pas encore de plan d\'étude'}</h2>
-          <p>
+          <p style={{ maxWidth: '52ch' }}>
             {isCreole
-              ? 'Kreye yon plan pèsonalize baze sou filiyè ou ak pèfòmans ou.'
-              : 'Créez un plan personnalisé basé sur votre filière et vos performances.'}
+              ? 'Yon plan se yon lis travay — egzamen, egzèsis ak videyo — ki soti nan filyè ou ak rezilta egzamen ou yo. Ou menm ki mande l, epi ou ka chanje l oswa efase l nenpòt lè.'
+              : 'Un plan est une liste de tâches — examens, exercices et vidéos — construite à partir de votre filière et de vos résultats d\'examens. C\'est vous qui le demandez, et vous pouvez le régénérer ou le supprimer à tout moment.'}
+          </p>
+          {/* Purpose · expected time · timed? · saved? — §6.4, on the one
+              entry point this page has. The 90 min is `dailyTargetMinutes`,
+              the default the generator writes. */}
+          <p style={{ maxWidth: '52ch', color: 'var(--text-500)', fontSize: 'var(--text-xs)', lineHeight: 1.6 }}>
+            {isCreole
+              ? 'Objektif: ~90 minit pa jou · pa gen kwonomèt · plan an anrejistre nan kont ou'
+              : 'Objectif : environ 90 minutes par jour · aucun chronomètre · le plan est enregistré sur votre compte'}
           </p>
           {genError && <p className="sp-error">{genError}</p>}
-          <button className="btn btn--primary" onClick={handleGenerate}>
-            {isCreole ? 'Kreye Plan' : 'Créer mon Plan'}
-          </button>
+          {noExams && (
+            <p className="sp-error" role="status">
+              {isCreole
+                ? 'Nou pa jwenn egzamen pou filyè sa a pou kounye a, kidonk nou pa ka bati yon plan.'
+                : 'Nous ne trouvons aucun examen pour cette filière pour le moment, donc nous ne pouvons pas bâtir de plan.'}
+            </p>
+          )}
+          <div className="track-selector__actions">
+            <button className="button button--primary" onClick={handleGenerate} disabled={noExams}>
+              {isCreole ? 'Kreye Plan' : 'Créer mon Plan'}
+            </button>
+            <Link className="button button--ghost" to="/practice">
+              {isCreole ? 'Pratike san plan' : 'S\'entraîner sans plan'}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -398,6 +442,26 @@ export default function StudyPlan() {
           </button>
         </div>
       </header>
+
+      {/* §6.1/§6.4: a plan the student asked for is not a recommendation, and
+          the page has to say which it is. It names who made it, from what, and
+          that nothing here is timed — the tasks lead to timed activities, the
+          plan itself never is. */}
+      <p
+        className="sp-provenance"
+        style={{
+          maxWidth: '1120px',
+          margin: '0 auto',
+          padding: '0 1.25rem 0.25rem',
+          color: 'var(--text-500)',
+          fontSize: 'var(--text-xs)',
+          lineHeight: 1.6,
+        }}
+      >
+        {isCreole
+          ? `Plan ou mande${plan.created_at_ms ? `, kreye ${formatDate(plan.created_at_ms, true)}` : ''} ak filyè ou${trackInfo ? ` (${trackInfo.shortLabel})` : ''} ak rezilta egzamen ou yo · pa gen kwonomèt sou plan an · anrejistre nan kont ou`
+          : `Plan que vous avez demandé${plan.created_at_ms ? `, créé le ${formatDate(plan.created_at_ms, false)}` : ''} à partir de votre filière${trackInfo ? ` (${trackInfo.shortLabel})` : ''} et de vos résultats d'examens · le plan n'est pas chronométré · enregistré sur votre compte`}
+      </p>
 
       {/* ── Dashboard grid ─────────────────────────────────── */}
       <div className="sp-dashboard">
@@ -593,10 +657,10 @@ export default function StudyPlan() {
             <h3>{isCreole ? 'Efase plan sa a?' : 'Supprimer ce plan ?'}</h3>
             <p>{isCreole ? 'Aksyon sa a pa ka defèt.' : 'Cette action est irréversible.'}</p>
             <div className="sp-modal__actions">
-              <button className="btn btn--outline" onClick={() => setShowConfirmDelete(false)}>
+              <button className="button button--secondary" onClick={() => setShowConfirmDelete(false)}>
                 {isCreole ? 'Anile' : 'Annuler'}
               </button>
-              <button className="btn btn--danger" onClick={async () => { await deletePlan(); setShowConfirmDelete(false); }}>
+              <button className="button button--danger" onClick={async () => { await deletePlan(); setShowConfirmDelete(false); }}>
                 {isCreole ? 'Efase' : 'Supprimer'}
               </button>
             </div>

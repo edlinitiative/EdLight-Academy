@@ -333,7 +333,10 @@ export default function ExamOverview() {
                   <li>
                     <CheckCircle2 size={16} aria-hidden />
                     <span>
-                      <strong>{L('Correction immédiate', 'Koreksyon touswit')}</strong>
+                      {/* Not "immédiate": the body says it happens after the
+                          paper is handed in, which is what the grader does in
+                          the default feedback mode. */}
+                      <strong>{L('Correction automatique', 'Koreksyon otomatik')}</strong>
                       {ht
                         ? `${autoGradable} kesyon korije otomatikman apre ou voye egzamen an.`
                         : `${autoGradable} question${autoGradable !== 1 ? 's' : ''} corrigée${autoGradable !== 1 ? 's' : ''} automatiquement après l’envoi.`}

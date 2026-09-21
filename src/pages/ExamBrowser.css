@@ -463,8 +463,93 @@
   /* The bar would squeeze the subject name out; keep the honest count only. */
   .exam-subject-row__progress { width: auto; }
   .exam-subject-row__progress-bar { display: none; }
+
+  /* At 390px the one-line meta ellipsised its own content — in the all-levels
+     view "Baccalauréat · 67 épreuves officielles · 2010 – 2025" was cut to
+     "· 201…". Let it wrap instead; §11 forbids clipping text this row needs. */
+  .exam-subject-row__meta {
+    white-space: normal;
+    overflow: visible;
+    line-height: 1.4;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .exam-subject-row { transition: none; }
+}
+
+/* ── What the rows lead to, and whether the result is kept ──────────────────
+   A plain line under the header, not a fourth boxed callout (§7). */
+.exam-browser__terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-600);
+}
+
+.exam-browser__terms > svg {
+  flex: none;
+  color: var(--primary-500);
+}
+
+.exam-browser__terms-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary-500);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.exam-browser__terms-link:hover {
+  color: var(--primary-600);
+}
+
+/* ── Papers inside an open subject section ──────────────────────────────────
+   The same .exam-session rows as the subject page (imported from
+   ExamSubject.css), so a paper looks identical wherever it is found. This
+   replaced `.grid--exams` + `.exam-card`, whose equal-weight cards could not
+   tell two papers of the same session apart. */
+.exam-section__list {
+  margin: 0.15rem 0 1.5rem;
+}
+
+/* Row as a <button>: reset the UA chrome the <a> version never had. */
+.exam-session--button {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.exam-session--button:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Narrow screens: the sentences are longer than the row, so flex stranded the
+   leading icon alone on its own line. Inline flow instead — the icon sits in
+   the text it belongs to and the line wraps normally. */
+@media (max-width: 560px) {
+  .exam-browser__terms {
+    display: block;
+  }
+
+  .exam-browser__terms > svg {
+    display: inline;
+    vertical-align: -0.16em;
+    /* Both sides: block flow has no `gap`, so the icon needs its own air. */
+    margin: 0 0.3rem;
+  }
+
+  .exam-browser__terms-link {
+    margin-left: 0.3rem;
+  }
 }

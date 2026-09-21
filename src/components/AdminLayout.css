@@ -11,7 +11,6 @@
   --asb-line: var(--border, #E3EAF4);
   --asb-accent: var(--primary, #1B6FE0);
   --asb-ground: var(--background, #F4F7FB);
-  --asb-mono: var(--font-mono, "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace);
   --asb-editorial: var(--font-display, "Plus Jakarta Sans", "Inter", system-ui, sans-serif);
   --asb-btn-edge: var(--primary-700, #114A99);
   --asb-btn-edge-danger: #B02525;
@@ -41,7 +40,7 @@
 .admin-sidebar__logo { font-family: var(--asb-editorial); font-weight: 800; letter-spacing: -0.02em; }
 /* The one coral flourish per admin screen: the sunrise Admin badge. */
 .admin-sidebar__badge {
-  font-family: var(--asb-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em;
   background: color-mix(in srgb, var(--coral, #FF5C39) 14%, transparent);
   color: var(--coral-deep, #E04524);
   border-radius: 999px; padding: 3px 8px; margin-left: auto;
@@ -49,7 +48,7 @@
 .admin-sidebar__nav { flex: 1; padding: 12px 12px 16px; }
 .admin-sidebar__group { margin-bottom: 14px; }
 .admin-sidebar__section {
-  font-family: var(--asb-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.11em;
+  font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.11em;
   color: var(--asb-muted); padding: 8px 12px 5px;
 }
 .admin-sidebar__link {
@@ -90,7 +89,7 @@
 
 /* ── Shared admin page primitives ── */
 .admin-page__head { margin-bottom: 22px; }
-.admin-page__eyebrow { font-family: var(--asb-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--asb-muted); display: flex; align-items: center; gap: 7px; }
+.admin-page__eyebrow { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--asb-muted); display: flex; align-items: center; gap: 7px; }
 .admin-page__title { font-family: var(--asb-editorial); font-weight: 800; letter-spacing: -0.02em; font-size: clamp(24px, 3.4vw, 34px); margin: 6px 0 4px; }
 .admin-page__subtitle { color: var(--asb-muted); font-size: 14px; margin: 0; }
 .admin-card {
@@ -104,10 +103,10 @@ a.admin-card, button.admin-card { transition: transform 0.15s ease, box-shadow 0
 a.admin-card:hover, button.admin-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
 .admin-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
 .admin-tile { padding: 18px; }
-.admin-tile__label { font-family: var(--asb-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--asb-muted); }
+.admin-tile__label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--asb-muted); }
 .admin-tile__value { font-family: var(--asb-editorial); font-weight: 800; font-size: 30px; letter-spacing: -0.02em; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.admin-table th { text-align: left; font-family: var(--asb-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--asb-muted); padding: 10px 12px; border-bottom: 1px solid var(--asb-line); font-weight: 500; }
+.admin-table th { text-align: left; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--asb-muted); padding: 10px 12px; border-bottom: 1px solid var(--asb-line); font-weight: 500; }
 .admin-table td { padding: 11px 12px; border-bottom: 1px solid var(--asb-line); }
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: color-mix(in srgb, var(--asb-accent) 4%, transparent); }
@@ -136,6 +135,6 @@ a.admin-card:hover, button.admin-card:hover { transform: translateY(-3px); box-s
 }
 .admin-input { font: inherit; padding: 9px 13px; border: 1px solid var(--asb-line); border-radius: 12px; background: var(--asb-bg); color: var(--asb-ink); width: 100%; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .admin-input:focus { outline: none; border-color: var(--asb-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--asb-accent) 18%, transparent); }
-.admin-role-pill { font-family: var(--asb-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--asb-line); color: var(--asb-muted); }
+.admin-role-pill { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--asb-line); color: var(--asb-muted); }
 .admin-role-pill--admin { color: var(--asb-accent); border-color: color-mix(in srgb, var(--asb-accent) 40%, transparent); background: color-mix(in srgb, var(--asb-accent) 8%, transparent); }
 .admin-empty { padding: 40px 20px; text-align: center; color: var(--asb-muted); }

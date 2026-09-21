@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Target, PenLine, BarChart3 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import useStore from '../../contexts/store';
 
 /** Bilingual translate helper: pick Haitian Creole when active, else French. */
@@ -20,97 +20,203 @@ export const subjectThumbs: Record<string, string> = {
   ECON: '/assets/economy-thumb.webp',
 };
 
-export interface FeaturedCourse {
+/* ── The catalogue, as it actually is ──────────────────────────────────────
+   The landing page used to advertise four hand-written course cards with
+   hand-written lesson counts ("Physique NS I · 24 leçons"), a hand-written
+   "490+ examens" line, and a mock dashboard showing 82% mastery and a 12-day
+   streak for a student who does not exist. Redesign plan §3 forbids inventing
+   counts, mastery or activity, and §6.10 asks marketing to explain EdLight
+   *concretely*. So the page reads the same committed catalogue snapshot the
+   /courses listing paints from, and states only what is in it.
+
+   `/catalog.json` (scripts/export_catalog.mjs) is a static file the Layout
+   already warms on idle, so this costs no Firestore round-trip and — unlike
+   importing the data service — keeps the Firebase SDK out of the landing
+   bundle. Firestore stays the source of truth for the app itself. */
+
+export type SubjectCode = 'MATH' | 'PHYS' | 'CHEM' | 'ECON';
+
+/** Stable fallback order; subjects are then sorted by what is actually open. */
+export const SUBJECT_ORDER: SubjectCode[] = ['MATH', 'ECON', 'CHEM', 'PHYS'];
+
+const SUBJECT_NAMES: Record<SubjectCode, { fr: string; ht: string }> = {
+  MATH: { fr: 'Mathématiques', ht: 'Matematik' },
+  PHYS: { fr: 'Physique', ht: 'Fizik' },
+  CHEM: { fr: 'Chimie', ht: 'Chimi' },
+  ECON: { fr: 'Économie', ht: 'Ekonomi' },
+};
+
+const LEVEL_LABELS: Record<string, string> = {
+  ns1: 'NS I',
+  ns2: 'NS II',
+  ns3: 'NS III',
+  ns4: 'NS IV',
+};
+
+export interface CatalogLevel {
+  /** Course id — the real `/courses/:courseId` destination. */
   id: string;
+  /** "NS I" … "NS IV". */
+  label: string;
+  /** Lessons in that course, from the catalogue (0 when not published yet). */
+  lessons: number;
+  /** Published but not yet opened to students. */
+  comingSoon: boolean;
+}
+
+export interface CatalogSubject {
+  code: SubjectCode;
   name: string;
-  desc: string;
-  subject: keyof typeof subjectThumbs | string;
-  level: string;
+  /** Levels present in the catalogue, NS I → NS IV. */
+  levels: CatalogLevel[];
+  /** Lessons a student can open today. */
+  lessons: number;
+  /** Real unit titles from the first open course — what the course covers. */
+  units: string[];
+  /** True when every level of the subject is still coming soon. */
+  comingSoon: boolean;
+}
+
+export interface CatalogSummary {
+  subjects: CatalogSubject[];
+  /** Courses open to students. */
+  courses: number;
+  /** Video lessons open to students. */
   lessons: number;
 }
 
-export interface Pillar {
-  eyebrow: string;
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-}
-
-export interface Stat {
-  value: string;
-  label: string;
-}
-
-export interface Testimonial {
-  quote: string;
-  name: string;
-  role: string;
-}
-
-export const getFeatured = (t: TFn): FeaturedCourse[] => [
-  { id: 'phys-ns1', name: t('Physique NS I', 'Fizik NS I'), desc: t('Mécanique · Forces · Énergie', 'Mekanik · Fòs · Enèji'), subject: 'PHYS', level: 'NS I', lessons: 24 },
-  { id: 'math-ns1', name: t('Mathématiques NS I', 'Matematik NS I'), desc: t('Algèbre · Fonctions · Équations', 'Aljèb · Fonksyon · Ekwasyon'), subject: 'MATH', level: 'NS I', lessons: 30 },
-  { id: 'chem-ns1', name: t('Chimie NS I', 'Chimi NS I'), desc: t('Atomes · Molécules · Réactions', 'Atòm · Molekil · Reyaksyon'), subject: 'CHEM', level: 'NS I', lessons: 20 },
-  { id: 'econ-ns1', name: t('Économie NS I', 'Ekonomi NS I'), desc: t('Marché · Demande · PIB', 'Mache · Demann · PIB'), subject: 'ECON', level: 'NS I', lessons: 18 },
-];
-
-export const getPillars = (t: TFn): Pillar[] => [
-  { eyebrow: '01', icon: <BookOpen size={22} strokeWidth={1.8} />, title: t('Cours structurés', 'Kou estriktire'), desc: t('Une progression claire du NS I au NS IV, alignée sur les programmes officiels.', 'Yon pwogresyon klè soti NS I rive NS IV, daprè pwogram ofisyèl yo.') },
-  { eyebrow: '02', icon: <Target size={22} strokeWidth={1.8} />, title: t('Quiz adaptatifs', 'Quiz adaptatif'), desc: t('Des questions ciblées qui s’ajustent à votre niveau et renforcent vos lacunes.', 'Kesyon vize ki ajiste ak nivo ou epi ranfòse pwen fèb ou yo.') },
-  { eyebrow: '03', icon: <PenLine size={22} strokeWidth={1.8} />, title: t('Examens blancs', 'Egzamen blan'), desc: t('Simulez le Bac dans des conditions réelles, avec correction détaillée.', 'Antrene w pou Bak la nan kondisyon reyèl, ak koreksyon detaye.') },
-  { eyebrow: '04', icon: <BarChart3 size={22} strokeWidth={1.8} />, title: t('Suivi premium', 'Swivi premye klas'), desc: t('Tableaux de bord, streaks et plans d’étude personnalisés.', 'Tablodbò, seri jou ak plan etid pèsonalize.') },
-];
-
-/**
- * Hero stats.
- *
- * Two problems with the old version: the numbers were hardcoded strings that
- * quietly drifted from what the catalogue actually holds, and every one of them
- * counted *inventory*. A visitor deciding whether to revise here wants to know
- * other students are already inside — Code leads with "200+ LEARNERS" and it is
- * the more persuasive number by a distance.
- *
- * `live` comes from siteStats and arrives a moment after paint, so the static
- * values stay as immediate fallbacks — this is the first screen on a slow
- * connection and it must never wait on Firestore to show something true.
- */
-export const getStats = (
-  t: TFn,
-  live?: { activeStudentsThisTerm?: number | null; exams?: number | null; videos?: number | null },
-): Stat[] => {
-  const stats: Stat[] = [];
-
-  if (Number.isFinite(live?.activeStudentsThisTerm) && (live!.activeStudentsThisTerm as number) > 0) {
-    stats.push({
-      value: `${live!.activeStudentsThisTerm}+`,
-      label: t('élèves inscrits', 'elèv enskri'),
-    });
-  }
-
-  stats.push({
-    value: Number.isFinite(live?.exams) ? `${live!.exams}+` : '490+',
-    label: t('examens blancs', 'egzamen blan'),
-  });
-  stats.push({
-    value: Number.isFinite(live?.videos) ? `${live!.videos}+` : '300+',
-    label: t('leçons vidéo', 'leson videyo'),
-  });
-  stats.push({ value: 'NS I–IV', label: t('niveaux couverts', 'nivo ki kouvri') });
-
-  // Four tiles is the widest the row lays out cleanly; "gratuit" is already
-  // said in the eyebrow above, so it is the one that yields to the students.
-  if (stats.length < 4) {
-    stats.push({ value: '100%', label: t('gratuit', 'gratis') });
-  }
-
-  return stats;
+type RawUnit = { title?: string; lessons?: unknown[] };
+type RawCourse = {
+  id?: string;
+  hidden?: boolean;
+  coming_soon?: boolean;
+  number_of_lessons?: number;
+  units?: RawUnit[];
 };
 
-export const getTestimonials = (t: TFn): Testimonial[] => [
-  { quote: t('« EdLight a transformé ma préparation au Bac. Les corrections détaillées ont fait toute la différence. »', '« EdLight chanje preparasyon Bak mwen. Koreksyon detaye yo fè yon gwo diferans. »'), name: 'Carline J.', role: t('Élève NS IV, Port-au-Prince', 'Elèv NS IV, Pòtoprens') },
-  { quote: t('« Les quiz interactifs rendent l’apprentissage addictif. Je viens chaque jour. »', '« Quiz entèaktif yo rann aprantisaj la trè enteresan. Mwen vini chak jou. »'), name: 'Jean P.', role: t('Élève NS III, Cap-Haïtien', 'Elèv NS III, Okap') },
-  { quote: t('« Une plateforme moderne, pensée pour les élèves haïtiens. Enfin ! »', '« Yon platfòm modèn, ki fèt pou elèv ayisyen yo. Anfen ! »'), name: 'Mme Pierre', role: t('Enseignante, Les Cayes', 'Pwofesè, Okay') },
-];
+const SUBJECT_BY_PREFIX: Record<string, SubjectCode> = {
+  math: 'MATH',
+  phys: 'PHYS',
+  chem: 'CHEM',
+  econ: 'ECON',
+};
+
+/**
+ * Fold the catalogue snapshot into per-subject facts.
+ *
+ * Mirrors the data service's two filters so the page can never advertise
+ * something the catalogue hides: `hidden` courses (un-migrated levels) are
+ * dropped entirely, and `coming_soon` courses are shown as such rather than
+ * counted as available content.
+ */
+export function summarizeCatalog(raw: unknown, t: TFn): CatalogSummary | null {
+  const courses = (raw as { courses?: RawCourse[] })?.courses;
+  if (!Array.isArray(courses) || courses.length === 0) return null;
+
+  const buckets = new Map<SubjectCode, CatalogLevel[]>();
+  const unitsBySubject = new Map<SubjectCode, string[]>();
+
+  for (const course of courses) {
+    if (!course?.id || course.hidden) continue;
+    const [prefix, levelKey] = String(course.id).split('-');
+    const code = SUBJECT_BY_PREFIX[prefix];
+    const label = LEVEL_LABELS[levelKey];
+    if (!code || !label) continue;
+
+    const units = Array.isArray(course.units) ? course.units : [];
+    const counted = units.reduce(
+      (n, u) => n + (Array.isArray(u?.lessons) ? u.lessons.length : 0),
+      0,
+    );
+    const lessons = Number.isFinite(course.number_of_lessons)
+      ? Math.max(Number(course.number_of_lessons), counted)
+      : counted;
+    const comingSoon = !!course.coming_soon;
+
+    if (!buckets.has(code)) buckets.set(code, []);
+    buckets.get(code)!.push({ id: String(course.id), label, lessons, comingSoon });
+
+    // Unit titles come from the first open level — a real table of contents
+    // beats a slogan about "cours structurés".
+    if (!comingSoon && !unitsBySubject.has(code)) {
+      const titles = units
+        .map((u) => (typeof u?.title === 'string' ? u.title.trim() : ''))
+        .filter(Boolean)
+        .slice(0, 3);
+      if (titles.length) unitsBySubject.set(code, titles);
+    }
+  }
+
+  const order = Object.keys(LEVEL_LABELS);
+  const subjects: CatalogSubject[] = SUBJECT_ORDER.filter((code) => buckets.has(code)).map(
+    (code) => {
+      const levels = buckets
+        .get(code)!
+        .slice()
+        .sort(
+          (a, b) =>
+            order.findIndex((k) => LEVEL_LABELS[k] === a.label) -
+            order.findIndex((k) => LEVEL_LABELS[k] === b.label),
+        );
+      const open = levels.filter((l) => !l.comingSoon);
+      return {
+        code,
+        name: t(SUBJECT_NAMES[code].fr, SUBJECT_NAMES[code].ht),
+        levels,
+        lessons: open.reduce((n, l) => n + l.lessons, 0),
+        units: unitsBySubject.get(code) ?? [],
+        comingSoon: open.length === 0,
+      };
+    },
+  );
+
+  if (subjects.length === 0) return null;
+
+  // What a student can open today leads; subjects still in preparation close
+  // the list rather than being hidden or dressed up as available.
+  subjects.sort((a, b) => Number(a.comingSoon) - Number(b.comingSoon) || b.lessons - a.lessons);
+
+  return {
+    subjects,
+    courses: subjects.reduce((n, s) => n + s.levels.filter((l) => !l.comingSoon).length, 0),
+    lessons: subjects.reduce((n, s) => n + s.lessons, 0),
+  };
+}
+
+/**
+ * The catalogue snapshot, shared by every section of the landing page.
+ *
+ * Fetched after first paint (never blocking the hero) and cached by
+ * react-query, so the two sections that use it issue one request between them.
+ * On failure the sections keep their headings and say so — they never guess a
+ * number.
+ */
+export function useCatalogSummary(t: TFn) {
+  const query = useQuery({
+    queryKey: ['homeCatalog'],
+    queryFn: async () => {
+      const res = await fetch('/catalog.json');
+      if (!res.ok) throw new Error(`catalog ${res.status}`);
+      return res.json();
+    },
+    staleTime: 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 1,
+  });
+
+  const summary = React.useMemo(
+    () => (query.data ? summarizeCatalog(query.data, t) : null),
+    [query.data, t],
+  );
+
+  return {
+    summary,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    /** Loaded, but the catalogue holds nothing showable. */
+    isEmpty: !query.isLoading && !query.isError && !summary,
+  };
+}
 
 /** Inline arrow glyph reused across hero CTA and section links. */
 export function ArrowIcon({ size = 18 }: { size?: number }) {

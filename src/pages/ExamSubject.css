@@ -134,17 +134,20 @@
 .exam-session__title {
   font-weight: 700;
   font-size: var(--text-sm);
-  white-space: nowrap;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
+/* Wraps rather than clips: the row carries the série, the question count and
+   the timing, and §11 forbids losing critical text on a small screen. */
 .exam-session__meta {
   font-size: var(--text-xs);
+  line-height: 1.45;
   color: var(--text-500);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .exam-session__diff {
@@ -220,8 +223,20 @@
     align-items: flex-start;
   }
 
-  .exam-session__diff {
-    display: none;
+  /* The difficulty chip used to be hidden here, which dropped one of the few
+     facts that separate two papers of the same session. The row wraps instead:
+     the body takes the full width and the status chips flow underneath. */
+  .exam-session {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.6rem;
+  }
+
+  .exam-session__body {
+    flex: 1 0 100%;
+  }
+
+  .exam-session__chevron {
+    margin-left: auto;
   }
 }
 
@@ -242,4 +257,56 @@
   font-size: 0.72rem;
   line-height: 1.5;
   white-space: nowrap;
+}
+
+/* ── What an exam is here, and whether the result is kept ─────────────────── */
+.exam-subject__terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-600);
+}
+
+.exam-subject__terms > svg {
+  flex: none;
+  color: var(--primary-500);
+}
+
+.exam-subject__terms-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary-500);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.exam-subject__terms-link:hover {
+  color: var(--primary-600);
+}
+
+/* Narrow screens: the sentences are longer than the row, so flex stranded the
+   leading icon alone on its own line. Inline flow instead — the icon sits in
+   the text it belongs to and the line wraps normally. */
+@media (max-width: 560px) {
+  .exam-subject__terms {
+    display: block;
+  }
+
+  .exam-subject__terms > svg {
+    display: inline;
+    vertical-align: -0.16em;
+    /* Both sides: block flow has no `gap`, so the icon needs its own air. */
+    margin: 0 0.3rem;
+  }
+
+  .exam-subject__terms-link {
+    margin-left: 0.3rem;
+  }
 }

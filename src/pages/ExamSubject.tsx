@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, CheckCircle2, PlayCircle } from 'lucide-react';
+import { ChevronRight, CheckCircle2, PlayCircle, Clock, Save, LogIn } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -33,6 +33,32 @@ const DIFFICULTY_DOT: Record<number, { fr: string; ht: string; cls: string }> = 
   4: { fr: 'Difficile', ht: 'Difisil', cls: 'hard' },
   5: { fr: 'Difficile', ht: 'Difisil', cls: 'hard' },
 };
+
+/**
+ * The filière/série a paper was set for — the distinguisher that was on the
+ * floor.
+ *
+ * Eleven maths papers rendered as identical rows because `sessionRowName`
+ * looks at `tracks`, and `tracks` is `['ALL']` on essentially every catalog
+ * entry. `_series` (parsed off the records-office title by `buildExamIndex`)
+ * is what actually separates same-session papers: "SVT, MATH" vs "SES, MATH"
+ * vs "SMP, MATH" for the four July 2025 maths sujets. Only shown when `tracks`
+ * carries nothing, so the two never repeat each other.
+ */
+function seriesLabel(exam: any, ht: boolean): string {
+  const tracks = (Array.isArray(exam?.tracks) ? exam.tracks : []).filter(
+    (tr: string) => tr && tr !== 'ALL',
+  );
+  if (tracks.length > 0) return '';
+  const raw = String(exam?._series || '').trim();
+  if (!raw) return '';
+  const parts = [...new Set(
+    raw.split(/[,·/]+/).map((x) => x.trim().toUpperCase()).filter(Boolean),
+  )].slice(0, 3);
+  if (parts.length === 0) return '';
+  const label = ht ? 'Seri' : parts.length > 1 ? 'Séries' : 'Série';
+  return `${label} ${parts.join(' · ')}`;
+}
 
 function useExamCatalog() {
   return useQuery({
@@ -74,6 +100,9 @@ export default function ExamSubject() {
   const language = useStore((s) => s.language);
   const ht = language === 'ht';
   const L = (fr: string, kr: string) => (ht ? kr : fr);
+
+  const userId = useStore((s) => s.user?.uid);
+  const setShowAuthModal = useStore((s) => s.setShowAuthModal);
 
   const subject = decodeURIComponent(subjectParam || '');
   const { data: allExams, isPending, isError, refetch } = useExamCatalog();
@@ -125,17 +154,27 @@ export default function ExamSubject() {
   }
 
   // A failed fetch is not an empty catalog — say so, and offer a retry rather
-  // than the misleading "aucune épreuve" below (§8: truthful states).
+  // than the misleading "aucune épreuve" below (§8: truthful states). Offline
+  // is a third state: the service worker keeps this index in DATA_CACHE, so
+  // after one online load the list really is available offline.
   if (isError) {
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     return (
       <section className="section exam-subject">
         <div className="container exam-subject__container">
           <EmptyState
-            title={L('Catalogue indisponible', 'Katalòg la pa disponib')}
-            message={L(
-              'Nous n’avons pas pu charger les épreuves. Vérifiez votre connexion, puis réessayez.',
-              'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.',
-            )}
+            title={offline
+              ? L('Hors ligne', 'Pa sou entènèt')
+              : L('Catalogue indisponible', 'Katalòg la pa disponib')}
+            message={offline
+              ? L(
+                  'La liste des épreuves n’est pas encore enregistrée sur cet appareil. Connectez-vous une fois pour la charger : ensuite elle reste consultable hors ligne.',
+                  'Lis egzamen yo poko anrejistre sou aparèy sa a. Konekte yon fwa pou chaje l : apre sa ou ka gade l san entènèt.',
+                )
+              : L(
+                  'Nous n’avons pas pu charger les épreuves. Vérifiez votre connexion, puis réessayez.',
+                  'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.',
+                )}
             action={{ label: L('Réessayer', 'Eseye ankò'), onClick: () => { void refetch(); } }}
           />
         </div>
@@ -187,6 +226,28 @@ export default function ExamSubject() {
           </div>
         </header>
 
+        {/* What these rows are, and what happens to a result — stated once for
+            the list rather than repeated on every row (§6.4). Both lines are
+            read from real behaviour: each row prints its own duration or says
+            it has none, and ExamTake's save effect returns early without a
+            uid, so a signed-out attempt genuinely is not kept. */}
+        <p className="exam-subject__terms">
+          <Clock size={14} aria-hidden />
+          {L(
+            'Épreuves officielles complètes — chaque ligne indique sa durée, ou qu’elle n’est pas chronométrée.',
+            'Epwèv ofisyèl konplè — chak liy montre dire li, oswa li di li pa gen kwonomèt.',
+          )}
+          {userId ? <Save size={14} aria-hidden /> : <LogIn size={14} aria-hidden />}
+          {userId
+            ? L('Vos résultats sont enregistrés.', 'Rezilta ou yo anrejistre.')
+            : L('Résultats non enregistrés hors connexion.', 'Rezilta pa anrejistre si ou pa konekte.')}
+          {!userId && (
+            <button type="button" className="exam-subject__terms-link" onClick={() => setShowAuthModal(true)}>
+              {L('Se connecter', 'Konekte')}
+            </button>
+          )}
+        </p>
+
         {/* Status filter — the same segmented control as the level browser, so
             the two steps of the path read as one screen family. Counts are
             real (attempt records), never estimated. */}
@@ -232,6 +293,7 @@ export default function ExamSubject() {
                     <span className="exam-session__meta">
                       {[
                         name.subtitle,
+                        seriesLabel(e, ht),
                         e._questionCount ? `${e._questionCount} ${L('questions', 'kesyon')}` : '',
                         e.duration_minutes
                           ? `${e.duration_minutes} min`

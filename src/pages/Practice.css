@@ -40,6 +40,114 @@
   line-height: 1.65;
 }
 
+/* ── The one suggestion ──────────────────────────────────────────────────
+   A panel, not a card, so it never reads as a fifth choice. `--lead` is the
+   variant used only when there is real evidence behind it; the honest
+   "not enough yet" and the outage states stay quiet on purpose — a tinted
+   banner would dress up an absence of information. */
+
+.practice-suggest {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-md, 14px);
+  background: var(--surface-muted);
+}
+
+.practice-suggest--lead {
+  border-left-color: var(--primary-500);
+  background: var(--primary-50);
+}
+
+.practice-suggest__eyebrow {
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.practice-suggest--lead .practice-suggest__eyebrow { color: var(--primary-600); }
+
+.practice-suggest__body {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--text-700);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.practice-suggest__action {
+  appearance: none;
+  border: 1px solid var(--primary-500);
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+  background: transparent;
+  color: var(--primary-600);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.practice-suggest__action:hover {
+  background: var(--primary-500);
+  color: #fff;
+}
+
+.practice-suggest__action:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* ── Groups: the statement that a quiz is not an exam ────────────────────
+   §6.4 forbids presenting the two as interchangeable. A heading and a purpose
+   line per group carry that, because the grouping survives skim-reading in a
+   way one sentence in the page intro does not. */
+
+.practice-group {
+  margin-bottom: 2rem;
+}
+
+.practice-group__head {
+  max-width: 68ch;
+  margin-bottom: 0.9rem;
+}
+
+.practice-group__title {
+  margin: 0 0 0.35rem;
+  color: var(--text-900);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+
+.practice-group__purpose {
+  margin: 0;
+  color: var(--text-600);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.practice-group__aside {
+  max-width: 68ch;
+  margin: 0.8rem 0 0;
+  color: var(--text-500);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+/* Quieted, never hidden: at a grade whose `examLevel` is null the official
+   papers are not the errand, but §11 says nothing becomes unreachable. */
+.practice-group--quiet .practice-choice {
+  background: var(--surface-muted);
+}
+
 /* ── One markup, two presentations ────────────────────────────────────────
    Cards on a wide screen, where four of them are taken in at a glance; rows
    on a phone, where the same four as cards is a long scroll for a four-way
@@ -83,6 +191,27 @@
   font-size: 0.83rem;
 }
 
+/* ── The four facts ──────────────────────────────────────────────────────
+   Purpose, expected time when known, timed/untimed, whether results are
+   saved. They are the whole reason to pick one entry over another, so they
+   render at EVERY width — a phone gets them wrapped, not cut. */
+
+.practice-choice__facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 1.5;
+}
+
+/* Inline, not flex: the line has to reflow mid-fact on a narrow phone rather
+   than push the chevron off the card. */
+.practice-choice__facts li { display: inline; }
+
+.practice-choice__facts li + li::before {
+  content: ' · ';
+  opacity: 0.6;
+}
+
 .practice-choice--primary {
   background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
   border-color: transparent;
@@ -121,20 +250,26 @@
   .practice-choice__icon { grid-area: icon; display: grid; place-items: center; color: var(--primary-600); }
   .practice-choice--primary .practice-choice__icon { color: #fff; }
   .practice-choice__title { grid-area: title; font-size: 1rem; font-weight: 650; }
-  .practice-choice__footer { grid-area: note; }
-  .practice-choice__footer span { font-size: 0.82rem; }
+  .practice-choice__footer { grid-area: note; align-items: flex-start; }
+  .practice-choice__footer > svg { margin-top: 0.15rem; flex: 0 0 auto; }
+  .practice-choice__facts { font-size: 0.8rem; }
   .practice-choice__eyebrow,
   .practice-choice__desc { display: none; }
   .practice-choice:hover { background: var(--surface-muted); }
   .practice-choice--primary:hover { background: linear-gradient(135deg, var(--primary-500), var(--primary-700)); }
 }
 
-/* ── Desktop: four cards ─────────────────────────────────────────────────── */
+/* ── Desktop: cards ─────────────────────────────────────────────────────── */
 @media (min-width: 860px) {
   .practice-hub__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
   }
+
+  /* The exam block holds one choice: a half-width card next to empty space
+     reads like a missing sibling. */
+  .practice-hub__grid--single { grid-template-columns: minmax(0, 1fr); }
+  .practice-hub__grid--single .practice-choice { min-height: 0; }
 
   .practice-choice {
     grid-template-rows: auto auto auto 1fr auto;
@@ -184,7 +319,60 @@
   }
 }
 
+/* ── Planning: a row, not a fifth card ──────────────────────────────────── */
+
+.practice-plan {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.05rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 14px);
+  background: var(--surface);
+  color: var(--text-900);
+  text-decoration: none;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.practice-plan:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.practice-plan:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 3px;
+}
+
+.practice-plan__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--primary-600);
+}
+
+.practice-plan__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.practice-plan__title {
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.practice-plan__note {
+  color: var(--text-500);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.practice-plan > svg { flex: 0 0 auto; color: var(--text-500); }
+
 @media (prefers-reduced-motion: reduce) {
-  .practice-choice { transition: none; }
+  .practice-choice,
+  .practice-plan { transition: none; }
   .practice-choice:hover { transform: none; }
 }

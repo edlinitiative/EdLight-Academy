@@ -1,23 +1,386 @@
+/* /exams/:level/:id/results — exam correction.
+   ─────────────────────────────────────────────
+   Redesign plan §6.6: score and correctness clearly, then actionable review,
+   then one next step. The bulk of this page's styling still lives in
+   src/index.css (not owned by this change), so everything here either
+   overrides an index.css rule that reads wrong, or styles a class that only
+   exists on this page.
+
+   Tokens only — no new custom properties, no new fonts, no new dependencies.
+   Every rule that paints a surface has a dark-theme answer below. */
+
 .exam-results .exam-results__header {
   text-align: left;
   align-items: flex-start;
 }
-.exam-results .exam-results__stat-card {
-  padding: 0.75rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+
+/* ── Score overview ─────────────────────────────────────────────────────────
+   index.css paints this surface with a hard-coded white glass and has no dark
+   override, so in the dark theme it was light text on white. Tokens fix it in
+   both themes at once. */
+.exam-results .exam-results__overview {
+  background: var(--surface);
+  border-color: var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: var(--shadow-sm);
+  align-items: start;
 }
-.exam-results .exam-results__stat-card:hover {
-  transform: none;
-  box-shadow: none;
+
+/* The ring's unfilled track is an inline `stroke` attribute (rgba black),
+   which disappears on a dark background. A CSS `stroke` beats a presentation
+   attribute, so this is the one place it can be corrected. */
+.exam-results .exam-results__ring-svg circle:first-of-type {
+  stroke: var(--border-strong);
 }
-.exam-results .exam-results__stat-number {
-  font-size: clamp(1.35rem, 3vw, 1.8rem);
+
+.exam-results .exam-results__score-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--text-600);
 }
+
+/* ── Summary column: points, then verdicts, then caveats ─────────────────── */
+
+.exam-results__summary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exam-results__points {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.exam-results__points-value {
+  color: var(--text-900);
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-results__points-total {
+  color: var(--text-500);
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-results__points-label {
+  flex: 1 1 100%;
+  color: var(--text-600);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+/* Compact row of per-question verdicts — replaces six equal-weight cards. */
+.exam-results__tally {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  margin: 0;
+  padding: 0.6rem 0 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.exam-results__tally-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--text-700);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.exam-results__tally-item strong {
+  color: var(--text-900);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-results__tally-item svg {
+  flex: none;
+}
+
+.exam-results__tally-item--right svg,
+.exam-results__tally-item--right strong { color: var(--success-500); }
+.exam-results__tally-item--wrong svg,
+.exam-results__tally-item--wrong strong { color: var(--danger-500); }
+.exam-results__tally-item--partial,
+.exam-results__tally-item--partial strong { color: var(--warning-500); }
+.exam-results__tally-item--pending svg,
+.exam-results__tally-item--pending strong { color: var(--primary-600); }
+
+.exam-results__tally-total {
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The one thing that can still move the score, as a sentence. */
+.exam-results__caveat {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--primary-100);
+  border-radius: var(--radius-sm);
+  background: var(--primary-50);
+  color: var(--text-700);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.exam-results__caveat svg {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--primary-600);
+}
+
+/* Coefficient-weighted score: one row where a titled sub-card used to be. */
+.exam-results__weighted-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  color: var(--text-600);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.exam-results__weighted-line svg {
+  flex: none;
+  color: var(--text-400);
+}
+
+.exam-results .exam-results__coeff-badge {
+  margin-left: 0;
+}
+
+/* "Comment ce score est calculé" — §6.6 asks that each number's meaning be
+   legible to the student, not only documented in the source. */
+.exam-results__how {
+  font-size: var(--text-xs);
+}
+
+.exam-results__how > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  padding: 0.2rem 0;
+  color: var(--primary-600);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.exam-results__how > summary:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.exam-results__how-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--text-600);
+}
+
+.exam-results__how-list li {
+  margin-bottom: 0.3rem;
+  line-height: 1.55;
+}
+
+/* ── "Où vous avez perdu des points" ──────────────────────────────────────── */
+
+.exam-results__breakdown {
+  margin: 1.5rem 0 1.25rem;
+  padding: 1.35rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.exam-results__breakdown-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text-900);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.exam-results__breakdown-title svg {
+  flex: none;
+  color: var(--text-400);
+}
+
+.exam-results__breakdown-source {
+  max-width: 62ch;
+  margin: 0.4rem 0 1.15rem;
+  color: var(--text-600);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+
+.exam-results__breakdown-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem 1.75rem;
+}
+
+.exam-results__breakdown-col {
+  min-width: 0;
+}
+
+.exam-results__breakdown-sub {
+  margin: 0 0 0.8rem;
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The bar track is a hard-coded rgba black in index.css — invisible on the
+   dark canvas. Tokenised here so both themes show the unfilled remainder. */
+.exam-results .exam-results__mastery-track {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+/* THE MIDDLE TONE WAS GREY, NOT AMBER. Browser-verified on a real 63% group:
+   the bar and the number both painted near-black. index.css writes the middle
+   tone as `var(--warning-600, #5d5b54)` and `#5d5b54` — but --warning-600 has
+   never existed (only --warning-500 does), so both always fell through to that
+   literal, a leftover of the retired neo-brutalist layer. "Good" has the same
+   flaw via --success-600. §7 asks for consistent semantic states; a warning
+   painted the colour of body text is not one, and in the dark theme #5d5b54 is
+   nearly invisible. Remapped onto the tokens that do exist — no new ones. */
+.exam-results .exam-results__mastery-pct--good { color: var(--success-500); }
+.exam-results .exam-results__mastery-pct--mid { color: var(--warning-500); }
+.exam-results .exam-results__mastery-pct--low { color: var(--danger-500); }
+
+.exam-results .exam-results__mastery-fill--good { background: var(--success-500); }
+.exam-results .exam-results__mastery-fill--mid { background: var(--warning-500); }
+.exam-results .exam-results__mastery-fill--low { background: var(--danger-500); }
+
+.exam-results .exam-results__mastery-label {
+  white-space: normal;
+}
+
+.exam-results .exam-results__mastery-meta {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── "Et maintenant ?" — one block, one primary action ───────────────────── */
+
 .exam-results .exam-results__next {
+  margin-top: 0;
   background: var(--surface);
   border: 1px solid var(--border);
+  border-left: 4px solid var(--next-accent, var(--primary-500));
   box-shadow: none;
+  align-items: flex-start;
+}
+
+/* The flex child that holds the title, the sentence and the note. Without
+   `min-width: 0` a long section name inside <strong> (exam sections are
+   authored, not truncated) refuses to wrap and pushes the block wider than
+   the container at ~390px. */
+.exam-results__next-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.exam-results__next-note {
+  margin: 0.5rem 0 0;
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.exam-results__local-note {
+  margin: 0.9rem 0 0;
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+/* ── Foot actions: both secondary, the primary lives above ───────────────── */
+
+.exam-results .exam-results__actions {
+  margin-top: 1.75rem;
+}
+
+/* ── Small screens (~390px) ──────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .exam-results .exam-results__overview {
+    justify-items: center;
+    text-align: left;
+  }
+
+  .exam-results__summary {
+    width: 100%;
+  }
+
+  .exam-results__tally {
+    gap: 0.35rem 0.7rem;
+  }
+
+  .exam-results__breakdown {
+    padding: 1.1rem 1rem;
+  }
+
+  .exam-results .exam-results__next-actions .button {
+    width: 100%;
+  }
+
+  /* index.css floors this row at 260px, which at ~390px minus the container
+     padding leaves the icon and the text fighting over the same line. */
+  .exam-results .exam-results__next-head {
+    min-width: 0;
+  }
+}
+
+/* ── Dark theme ──────────────────────────────────────────────────────────── */
+
+[data-theme="dark"] .exam-results .exam-results__overview,
+[data-theme="dark"] .exam-results__breakdown,
+[data-theme="dark"] .exam-results .exam-results__next {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .exam-results .exam-results__next {
+  border-left-color: var(--next-accent, var(--primary-500));
+}
+
+[data-theme="dark"] .exam-results__caveat {
+  background: var(--primary-50);
+  border-color: var(--primary-100);
+  color: var(--text-800);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exam-results .exam-results__mastery-fill,
+  .exam-results .exam-results__ring-svg circle {
+    transition: none;
+  }
 }

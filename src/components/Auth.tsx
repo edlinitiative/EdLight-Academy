@@ -38,6 +38,60 @@ export function AuthModal({ onClose }) {
   // for these new strings; the app-wide fr/ht `language` flag drives them).
   const tb = (fr, ht) => (language === 'ht' ? ht : fr);
 
+  /**
+   * WHY the student is being asked to sign in, and what happens to where they
+   * were. Read from the route the sheet opened on, not passed in: the modal is
+   * global (Layout renders it as a sibling of the routed <Outlet>), so every
+   * page that flips `showAuthModal` would otherwise have to hand it a reason.
+   *
+   * That same structure IS the destination guarantee: signing in does not
+   * navigate, the page underneath stays mounted, and a half-filled form (the
+   * /arena school + classe, for instance) is still there when the sheet
+   * closes. The copy says so rather than leaving the student to hope.
+   *
+   * `window.location`, not useLocation(), because this modal is rendered
+   * outside a Router in its unit test and a hook would throw there.
+   */
+  const [openedOn] = useState(() => (typeof window !== 'undefined' ? window.location.pathname : '/'));
+  const purpose = React.useMemo(() => {
+    const path = openedOn || '/';
+    const on = (p) => path === p || path.startsWith(`${p}/`);
+    if (on('/arena')) {
+      return tb(
+        'Inscrire votre école demande un compte : votre place au championnat y est rattachée. Vous reviendrez à ce formulaire — ce que vous avez déjà rempli est conservé.',
+        'Enskri lekòl ou mande yon kont : plas ou nan chanpyona a mare avè l. Ou pral tounen nan fòm sa a — sa ou deja ranpli rete la.',
+      );
+    }
+    if (on('/courses')) {
+      return tb(
+        'Un compte enregistre votre progression dans ce cours. Vous reviendrez à cette leçon.',
+        'Yon kont anrejistre pwogrè ou nan kou sa a. Ou pral tounen nan leson sa a.',
+      );
+    }
+    if (on('/exams') || on('/quizzes') || on('/practice') || on('/revision')) {
+      return tb(
+        'Un compte garde vos résultats et les questions à revoir. Vous reviendrez à cette page.',
+        'Yon kont kenbe rezilta ou ak kesyon pou w revize. Ou pral tounen nan paj sa a.',
+      );
+    }
+    if (on('/classement') || on('/jeux') || on('/defi')) {
+      return tb(
+        'Un compte garde vos XP et votre place au classement. Vous reviendrez à cette page.',
+        'Yon kont kenbe XP ou ak plas ou nan klasman an. Ou pral tounen nan paj sa a.',
+      );
+    }
+    if (on('/dashboard') || on('/profile') || on('/study-plan')) {
+      return tb(
+        'Un compte retrouve votre progression, votre série et votre plan sur tous vos appareils.',
+        'Yon kont jwenn pwogrè ou, seri ou ak plan ou sou tout aparèy ou.',
+      );
+    }
+    return tb(
+      'Les cours et les vidéos restent accessibles sans compte. Un compte garde votre progression, votre série et votre place au classement.',
+      'Kou yo ak videyo yo rete disponib san kont. Yon kont kenbe pwogrè ou, seri ou ak plas ou nan klasman an.',
+    );
+  }, [openedOn, language]);
+
   /** Gentle localized note for a redeem rejection. */
   const reasonNote = (reason) => {
     switch (reason) {
@@ -161,7 +215,10 @@ export function AuthModal({ onClose }) {
         setSuccess(t('auth.signedIn'));
         setTimeout(() => onClose(), 1000);
       } else {
-        setSuccess('Compte créé ! Vérifiez votre boîte mail pour activer votre compte.');
+        setSuccess(tb(
+          'Compte créé ! Vérifiez votre boîte mail pour activer votre compte.',
+          'Kont kreye ! Tcheke bwat imel ou pou aktive kont ou.',
+        ));
         // Best-effort referral redemption — never blocks or fails signup.
         const attempted = await redeemForNewUser();
         setTimeout(() => onClose(), attempted ? 3200 : 2500);
@@ -309,6 +366,12 @@ export function AuthModal({ onClose }) {
               </button>
             </div>
 
+            {/* Why an account is being asked for, and where the student lands
+                afterwards. Stated before the fields, not after them. */}
+            <p className="text-muted" style={{ margin: '0 0 0.9rem', fontSize: '0.875rem', lineHeight: 1.5 }}>
+              {purpose}
+            </p>
+
             {/* Google Sign-In */}
             <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
               <button
@@ -448,6 +511,8 @@ export function AuthModal({ onClose }) {
 
 export function UserDropdown({ user, onLogout }) {
   const track = useStore((s) => s.track);
+  const language = useStore((s) => s.language);
+  const tb = (fr, ht) => (language === 'ht' ? ht : fr);
   const [showTrackSelector, setShowTrackSelector] = React.useState(false);
 
   const trackInfo = React.useMemo(() => {
@@ -467,13 +532,13 @@ export function UserDropdown({ user, onLogout }) {
           className="dropdown__item"
           onClick={() => useStore.getState().setShowUserDropdown(false)}
         >
-          <User size={14} /> Mon profil
+          <User size={14} /> {tb('Mon profil', 'Pwofil mwen')}
         </Link>
         {trackInfo && (
           <>
             <div className="dropdown__divider" />
             <div className="dropdown__item dropdown__track">
-              <span>Filière</span>
+              <span>{tb('Filière', 'Filyè')}</span>
               <span className="dropdown__track-badge" style={{ color: trackInfo.color }}>
                 {trackInfo.icon} {trackInfo.shortLabel}
               </span>
@@ -488,11 +553,13 @@ export function UserDropdown({ user, onLogout }) {
             setShowTrackSelector(true);
           }}
         >
-          {track ? <><RefreshCw size={14} /> Changer de filière</> : <><GraduationCap size={14} /> Choisir ma filière</>}
+          {track
+            ? <><RefreshCw size={14} /> {tb('Changer de filière', 'Chanje filyè')}</>
+            : <><GraduationCap size={14} /> {tb('Choisir ma filière', 'Chwazi filyè mwen')}</>}
         </button>
         <div className="dropdown__divider" />
         <button className="dropdown__item" onClick={onLogout}>
-          <LogOut size={14} /> Déconnexion
+          <LogOut size={14} /> {tb('Déconnexion', 'Dekonekte')}
         </button>
       </div>
       {showTrackSelector && (
