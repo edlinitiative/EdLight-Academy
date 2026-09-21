@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Check, GraduationCap, Pencil, School as SchoolIcon, Share2, Trophy, User as UserIcon, Users } from 'lucide-react-native';
+import { Check, GraduationCap, School as SchoolIcon, Share2, Trophy, User as UserIcon, Users, Zap } from 'lucide-react-native';
 import useStore from '../../contexts/store';
 import SchoolPicker from '../../components/SchoolPicker';
 import PressableScale from '../../components/ui/PressableScale';
@@ -22,6 +22,8 @@ import { defaultAlias } from '../../../../shared/alias';
 import ArenaIdentityRow from '../../components/arena/ArenaIdentityRow';
 import ArenaNameSheet from '../../components/arena/ArenaNameSheet';
 import ArenaGradeSheet from '../../components/arena/ArenaGradeSheet';
+import ArenaWarmUp from '../../components/arena/ArenaWarmUp';
+import ArenaDemoLoop from '../../components/arena/ArenaDemoLoop';
 
 /**
  * The Lobby — from announcement to doors.
@@ -60,6 +62,7 @@ export default function ArenaLobbyScreen() {
   const [nameSheet, setNameSheet] = useState(false);
   const [gradeSheet, setGradeSheet] = useState(false);
   const [savingName, setSavingName] = useState(false);
+  const [warming, setWarming] = useState(false);
   const register = useArenaRegister(tid);
 
   /*
@@ -385,6 +388,41 @@ export default function ArenaLobbyScreen() {
               minPlayers={tournament.minPlayers}
               isCreole={isCreole}
             />
+          </StageEnter>
+        ) : null}
+
+        {/*
+          * The wait, made into practice — same pair as the doors screen.
+          *
+          * Only once REGISTERED: before that the job of this screen is to get
+          * them in, and a game sitting above the register button competes with
+          * it. The demo loop is the empty state; a student who wants to play
+          * does not have to watch anything first.
+          */}
+        {registered ? (
+          <StageEnter playKey="lobby" index={2}>
+            {warming ? (
+              <ArenaWarmUp isCreole={isCreole} onExit={() => setWarming(false)} />
+            ) : (
+              <View style={{ gap: 10 }}>
+                <ArenaDemoLoop isCreole={isCreole} />
+                <PressableScale
+                  onPress={() => { tapMedium(); setWarming(true); }}
+                  pressedScale={0.98}
+                  accessibilityRole="button"
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    paddingVertical: 14, borderRadius: radius.card,
+                    borderWidth: 1, borderColor: colors.azureBorder, backgroundColor: colors.azureSoft,
+                  }}
+                >
+                  <Zap color={colors.azure} size={15} />
+                  <Text style={[typeScale.label, { color: colors.azure }]}>
+                    {t('S’échauffer en attendant', 'Chofe kò w pandan w ap tann')}
+                  </Text>
+                </PressableScale>
+              </View>
+            )}
           </StageEnter>
         ) : null}
 

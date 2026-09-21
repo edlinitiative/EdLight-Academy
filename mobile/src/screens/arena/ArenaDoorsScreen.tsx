@@ -1,14 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Users, School as SchoolIcon } from 'lucide-react-native';
+import { Users, School as SchoolIcon, Share2, Zap } from 'lucide-react-native';
 import { useColors, useTheme, typeScale } from '../../theme/theme';
 import useStore from '../../contexts/store';
 import { useArenaDoors } from '../../hooks/useArena';
-import { formatCountdown } from '../../services/arenaService';
+import { formatCountdown, shareArenaInvite } from '../../services/arenaService';
+import { logInviteSent } from '../../services/referralService';
 import QualificationBar from '../../components/arena/QualificationBar';
+import ArenaWarmUp from '../../components/arena/ArenaWarmUp';
+import ArenaDemoLoop from '../../components/arena/ArenaDemoLoop';
+import PressableScale from '../../components/ui/PressableScale';
+import { tapMedium } from '../../utils/haptics';
 import StageEnter from '../../components/trivia/StageEnter';
 import ScoreCounter from '../../components/trivia/ScoreCounter';
 import type { RootParamList } from '../../navigation/AppNavigator';
@@ -40,8 +45,31 @@ export default function ArenaDoorsScreen() {
   const language = useStore((s) => s.language);
   const t = (fr: string, ht: string) => (language === 'ht' ? ht : fr);
 
+  const [warming, setWarming] = useState(false);
+
   const doors = useArenaDoors(tournamentId);
   const { started, msToStart, counts, qualification, arrivals, roomSchools, roomPlayers, schoolName } = doors;
+
+  /*
+   * The share, on the screen where being short is actually visible. The line
+   * under the qualification bar told a student to "tell them to open the app"
+   * and then gave them nothing to tell them WITH. The message is built around
+   * the SCHOOL — "il manque 2 joueurs à CODOSA" is a fact about something the
+   * reader already belongs to, where "viens jouer avec moi" is a favour.
+   */
+  const invite = useCallback(async () => {
+    if (!doors.qualification) return;
+    tapMedium();
+    // Same bucket as the lobby's Arena invite — one surface in the
+    // referral counters, not two that have to be added up later.
+    logInviteSent('champion');
+    await shareArenaInvite({
+      schoolName: doors.schoolName || (language === 'ht' ? 'lekòl ou' : 'ton école'),
+      qualification: doors.qualification,
+      lang: language === 'ht' ? 'ht' : 'fr',
+      url: 'https://academy.edlight.org/arena',
+    });
+  }, [doors.qualification, doors.schoolName, language]);
 
   // The handover is automatic and replaces this screen rather than stacking on
   // it: a student must not be able to swipe back out of a live question into
@@ -129,19 +157,69 @@ export default function ArenaDoorsScreen() {
               isCreole={language === 'ht'}
             />
             {short ? (
-              <Text style={[typeScale.caption, { color: colors.warn, marginTop: 8 }]}>
-                {t(
-                  'Dis-leur d’ouvrir l’app maintenant — il reste quelques minutes.',
-                  'Di yo louvri app la kounye a — gen kèk minit ki rete.',
-                )}
-              </Text>
+              <View style={{ gap: 8, marginTop: 8 }}>
+                <Text style={[typeScale.caption, { color: colors.warn }]}>
+                  {t(
+                    'Dis-leur d’ouvrir l’app maintenant — il reste quelques minutes.',
+                    'Di yo louvri app la kounye a — gen kèk minit ki rete.',
+                  )}
+                </Text>
+                <PressableScale
+                  onPress={() => { void invite(); }}
+                  pressedScale={0.98}
+                  accessibilityRole="button"
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    paddingVertical: 12, borderRadius: radius.card, backgroundColor: colors.azure,
+                  }}
+                >
+                  <Share2 color="#fff" size={15} />
+                  <Text style={[typeScale.label, { color: '#fff' }]}>
+                    {t('Appeler mon école', 'Rele lekòl mwen')}
+                  </Text>
+                </PressableScale>
+              </View>
             ) : null}
           </StageEnter>
         ) : null}
 
+        {/*
+          * The wait, made into practice.
+          *
+          * The demo loop is the empty state and the warm-up is the thing
+          * itself; a student who wants to play does not have to watch anything
+          * first. Both disappear the moment `started` flips, because this
+          * whole screen is replaced by the live question — no timer here
+          * outlives it.
+          */}
+        <StageEnter playKey="doors" index={3}>
+          {warming ? (
+            <ArenaWarmUp isCreole={language === 'ht'} onExit={() => setWarming(false)} />
+          ) : (
+            <View style={{ gap: 10 }}>
+              <ArenaDemoLoop isCreole={language === 'ht'} />
+              <PressableScale
+                onPress={() => { tapMedium(); setWarming(true); }}
+                pressedScale={0.98}
+                accessibilityRole="button"
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  paddingVertical: 14, borderRadius: radius.card,
+                  borderWidth: 1, borderColor: colors.azureBorder, backgroundColor: colors.azureSoft,
+                }}
+              >
+                <Zap color={colors.azure} size={15} />
+                <Text style={[typeScale.label, { color: colors.azure }]}>
+                  {t('S’échauffer en attendant', 'Chofe kò w pandan w ap tann')}
+                </Text>
+              </PressableScale>
+            </View>
+          )}
+        </StageEnter>
+
         {/* Arrivals. A number climbing is data; a name arriving is an event. */}
         {arrivals.length > 0 ? (
-          <StageEnter playKey="doors" index={3}>
+          <StageEnter playKey="doors" index={4}>
             <Text style={[typeScale.overline, { color: colors.muted, marginBottom: 8 }]}>
               {t('Ils viennent d’entrer', 'Yo fèk antre')}
             </Text>
