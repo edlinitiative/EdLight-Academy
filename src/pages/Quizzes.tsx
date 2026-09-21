@@ -7,6 +7,7 @@ import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
 import useStore from '../contexts/store';
+import { GRADES, gradeProfile } from '../config/trackConfig';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
 import './Quizzes.css';
@@ -24,6 +25,29 @@ import './Quizzes.css';
  * line below states exactly that and nothing more — no invented durations.
  */
 const QUIZ_LENGTH = 10;
+
+/**
+ * A student's class → the catalog level that carries their programme. Only the
+ * four secondary years map onto a level: 7ᵉ, 8ᵉ, 9ᵉ and Post-Bac have no
+ * `NS*` courses of their own, so they keep the first available level.
+ *
+ * The same four-entry literal already lives in Courses.tsx, which owns the
+ * /courses picker. It is a label mapping, not state — nothing is derived or
+ * remembered here, so this is not a second progress model (§10). The
+ * authoritative grade itself is read from the store, never guessed.
+ */
+const GRADE_TO_LEVEL: Record<string, string> = {
+  NS1: 'NSI', NS2: 'NSII', NS3: 'NSIII', NS4: 'NSIV',
+};
+
+/** gradeProfile().examLevel → the level path, so the exam link lands on the
+ *  student's own papers rather than the generic browser. Mirrors the map in
+ *  Practice.tsx, which sends students here in the first place. */
+const EXAM_LEVEL_TO_PATH: Record<string, string> = {
+  baccalaureat: '/exams/terminale',
+  universite: '/exams/university',
+  '9eme_af': '/exams/9e',
+};
 
 /** A fixed deck for the quiz mode: distinct rows from the unit, shuffled. */
 function buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow) {
@@ -58,6 +82,15 @@ const Quizzes = () => {
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
   const userId = useStore((state) => state.user?.uid);
+  // §5 requires the grade-appropriate emphasis to survive the redesign, and
+  // this page is where it was missing: an NS4 student used to land on NS I
+  // because that is simply the first level in the catalog.
+  const grade = useStore((state) => state.grade);
+  const profile = gradeProfile(grade);
+  /** `examLevel: null` (7ᵉ, 8ᵉ, NS1–NS3) — no national paper is theirs to sit. */
+  const examsRelevant = profile.examLevel !== null;
+  const examHref = (profile.examLevel && EXAM_LEVEL_TO_PATH[profile.examLevel]) || '/exams';
+  const myLevel = grade ? GRADE_TO_LEVEL[grade] : '';
 
   // Every pre-existing string keeps its i18next key (FR + Kreyòl both live in
   // src/utils/i18n.ts, which this page must not edit). The handful of genuinely
@@ -66,6 +99,18 @@ const Quizzes = () => {
   // silently render French to Kreyòl readers, which is worse than this.
   const isCreole = String(i18n.language || '').toLowerCase().startsWith('ht');
   const tx = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  /**
+   * The student's own class, short enough to sit inside a sentence. The picker
+   * labels carry a qualifier ("NS4 · Terminale (Bac)") that would nest a
+   * parenthesis inside a parenthesis here, so the qualifier is trimmed — the
+   * label itself is never rewritten, only cut at its own separator.
+   */
+  const myGradeLabel = React.useMemo(() => {
+    const g = GRADES.find((x) => x.code === grade);
+    if (!g) return '';
+    return (isCreole ? g.labelHt : g.label).split(' · ')[0].split(' (')[0].trim();
+  }, [grade, isCreole]);
 
   // Selection state
   const [subjectBase, setSubjectBase] = useState('');
@@ -131,7 +176,27 @@ const Quizzes = () => {
     setQueryDefaultsApplied(true);
   }, [queryDefaultsApplied, queryDefaults, subjectOptions]);
 
-  // Generic default — first available subject.
+  /**
+   * The subject to open on: the first one that actually ships a course at the
+   * student's own class.
+   *
+   * Without this half of the rule the level default below can never fire.
+   * Chimie is the first subject in the catalog and ships NS1 only, so an NS4
+   * student opened this page on "Chimie · NS I" — the level dropdown had a
+   * single option and their class never got a look in. Skipping subjects that
+   * have nothing at their level is the smallest honest fix; when none does
+   * (7ᵉ, 8ᵉ, 9ᵉ, Post-Bac have no `NS*` courses of their own) the first
+   * subject stands, exactly as before.
+   */
+  const defaultSubject = useMemo(() => {
+    if (!subjectOptions.length) return '';
+    const mine = myLevel
+      ? subjectOptions.find((o) => courses.some((c) => c.subject === o.value && c.level === myLevel))
+      : undefined;
+    return (mine || subjectOptions[0]).value;
+  }, [subjectOptions, courses, myLevel]);
+
+  // Generic default.
   //
   // Gated on `queryDefaultsApplied` so it can never clobber a deep link: both
   // effects run in the same commit once `subjectOptions` first arrives, and
@@ -140,8 +205,8 @@ const Quizzes = () => {
   // and /quizzes?course=MATH landed on the first subject alphabetically.
   useEffect(() => {
     if (!queryDefaultsApplied) return;
-    if (!subjectBase && subjectOptions[0]) setSubjectBase(subjectOptions[0].value);
-  }, [queryDefaultsApplied, subjectOptions, subjectBase]);
+    if (!subjectBase && defaultSubject) setSubjectBase(defaultSubject);
+  }, [queryDefaultsApplied, defaultSubject, subjectBase]);
 
   const levelOptions = useMemo(() => {
     const lvls = new Set(courses.filter((c) => c.subject === subjectBase).map((c) => c.level));
@@ -169,9 +234,13 @@ const Quizzes = () => {
     }
 
     if (!levelOptions.find((o) => o.value === level)?.value) {
-      setLevel(levelOptions[0]?.value || '');
+      // The student's own class first, the first available level only as a
+      // fallback. A deep link has already returned above, so this never
+      // overrides ?course=MATH-NSII.
+      const mine = myLevel && levelOptions.some((o) => o.value === myLevel) ? myLevel : '';
+      setLevel(mine || levelOptions[0]?.value || '');
     }
-  }, [levelOptions, level, pendingLevel]);
+  }, [levelOptions, level, pendingLevel, myLevel]);
 
   const courseCode = subjectBase && level ? `${subjectBase}-${level}` : '';
   const unitOptions = useMemo(() => {
@@ -607,10 +676,15 @@ const Quizzes = () => {
 
           <div className="qz-setup">
             <p className="qz-hint" style={{ marginTop: 0 }}>
-              {tx(
-                'Un quiz mesure ce que vous savez aujourd’hui sur une unité. Pour une épreuve entière, chronométrée et enregistrée, passez un examen blanc.',
-                'Yon kwiz mezire sa ou konnen jodi a sou yon inite. Pou yon eprèv antye, ak kwonomèt epi ki anrejistre, pase yon egzamen blan.',
-              )}
+              {examsRelevant
+                ? tx(
+                  'Un quiz mesure ce que vous savez aujourd’hui sur une unité. Pour une épreuve entière, chronométrée et enregistrée, passez un examen blanc.',
+                  'Yon kwiz mezire sa ou konnen jodi a sou yon inite. Pou yon eprèv antye, ak kwonomèt epi ki anrejistre, pase yon egzamen blan.',
+                )
+                : tx(
+                  'Un quiz mesure ce que vous savez aujourd’hui sur une unité. À votre niveau, refaire un quiz ou changer d’unité vaut mieux qu’une épreuve officielle.',
+                  'Yon kwiz mezire sa ou konnen jodi a sou yon inite. Nan nivo ou, refè yon kwiz oswa chanje inite pi bon pase yon eprèv ofisyèl.',
+                )}
             </p>
             <div className="qz-done-actions">
               <button type="button" className="button button--primary" onClick={startQuiz}>
@@ -627,13 +701,15 @@ const Quizzes = () => {
             </div>
           </div>
 
-          <p className="qz-crosslink">
-            {tx('Besoin de conditions d’examen ?', 'Ou bezwen kondisyon egzamen?')}{' '}
-            <Link to="/exams">{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
-            <span className="qz-crosslink__note">
-              {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
-            </span>
-          </p>
+          {examsRelevant && (
+            <p className="qz-crosslink">
+              {tx('Besoin de conditions d’examen ?', 'Ou bezwen kondisyon egzamen?')}{' '}
+              <Link to={examHref}>{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
+              <span className="qz-crosslink__note">
+                {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
+              </span>
+            </p>
+          )}
         </div>
       </section>
     );
@@ -760,6 +836,19 @@ const Quizzes = () => {
             <div className="qz-setup">
               {subjectBase && subjectStrip}
 
+              {/* Why this level, when it is the student's own (§5, §8 "Grade
+                  change"). Stated as a fact about their class rather than a
+                  claim that we personalised anything — and it only appears
+                  when the level really does match, never as flattery. */}
+              {myLevel && level === myLevel && myGradeLabel && (
+                <p className="qz-level-why">
+                  {tx(
+                    `Ce niveau correspond à votre classe (${myGradeLabel}). Vous pouvez en choisir un autre.`,
+                    `Nivo sa a koresponn ak klas ou (${myGradeLabel}). Ou ka chwazi yon lòt.`,
+                  )}
+                </p>
+              )}
+
               {selectors}
 
               {!hasQuestions && (
@@ -825,10 +914,26 @@ const Quizzes = () => {
                 'Un quiz n’est pas un examen : ici rien n’est chronométré et aucune note n’est gardée. Un examen blanc est une épreuve officielle entière, chronométrée, et la tentative reste dans votre historique.',
                 'Yon kwiz se pa yon egzamen : isit la pa gen kwonomèt epi pa gen nòt ki rete. Yon egzamen blan se yon eprèv ofisyèl antye, ak kwonomèt, epi tantativ la rete nan istorik ou.',
               )}{' '}
-              <Link to="/exams">{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
-              <span className="qz-crosslink__note">
-                {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
-              </span>
+              {/* The distinction above is for everyone; the invitation is not.
+                  §5: a 7ᵉ or NS1–NS3 student has no national paper to sit, so
+                  the link stays reachable (§11) but stops being a call to
+                  action — the same wording the /practice hub uses. */}
+              {examsRelevant ? (
+                <>
+                  <Link to={examHref}>{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
+                  <span className="qz-crosslink__note">
+                    {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
+                  </span>
+                </>
+              ) : (
+                <span className="qz-crosslink__note">
+                  {tx(
+                    'Les épreuves officielles couvrent la 9ᵉ, le Baccalauréat et les concours. À votre niveau, ces exercices sont plus utiles — ',
+                    'Egzamen ofisyèl yo se pou 9yèm, Bakaloreya ak konkou yo. Nan nivo ou, egzèsis sa yo pi itil — ',
+                  )}
+                  <Link to={examHref}>{tx('l’accès reste ouvert', 'aksè a rete ouvè')}</Link>.
+                </span>
+              )}
             </p>
           </>
         )}

@@ -577,3 +577,12 @@
     transition: none;
   }
 }
+
+/* Why the level dropdown opens on this level: the class on the account. Quiet
+   by design — it explains a default, it is not an instruction. */
+.qz-level-why {
+  margin: 0.6rem 0 -0.35rem;
+  font-size: var(--text-xs);
+  line-height: 1.55;
+  color: var(--text-500);
+}
