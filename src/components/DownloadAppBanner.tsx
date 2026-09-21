@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import {
   getMobilePlatform,
@@ -11,6 +12,26 @@ import useStore from '../contexts/store';
 
 const DISMISS_KEY = 'edlight:dl-banner-dismissed';
 const DISMISS_DAYS = 14;
+
+/**
+ * Where the DESKTOP corner card is allowed to appear.
+ *
+ * Redesign plan §13 removes "floating controls that cover task content", and
+ * §11 requires that "important actions remain clear of tab bars, keyboards,
+ * safe areas, and floating help". The card is fixed to the bottom-right, and
+ * on a task surface that is where the task's own content sits — on /practice
+ * it landed on top of a choice card. It had already been pushed past the
+ * landing hero once for exactly this reason (see the scroll gate below); the
+ * general rule is the same one.
+ *
+ * So: this is a prompt for a VISITOR deciding whether EdLight is for them, not
+ * for a student who has already started working. It shows on the public pages
+ * and stays out of the way everywhere else. The mobile strip is unaffected —
+ * it is a top bar, it covers nothing, and a phone visitor is the actual target.
+ */
+const MARKETING_PATHS = new Set([
+  '/', '/about', '/faq', '/help', '/enseigner', '/contact', '/privacy', '/terms',
+]);
 
 function wasDismissed(): boolean {
   try {
@@ -38,6 +59,7 @@ function track(platform: string) {
  * Hidden when already running as the installed app, and after dismissal.
  */
 export default function DownloadAppBanner() {
+  const { pathname } = useLocation();
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -56,6 +78,7 @@ export default function DownloadAppBanner() {
     // someone to install the app before they have an account is also the wrong
     // order. Hold it until they've scrolled past the hero and shown interest.
     if (p === null) {
+      if (!MARKETING_PATHS.has(pathname)) return;
       const reveal = () => {
         if (window.scrollY < window.innerHeight * 0.9) return;
         setVisible(true);
@@ -67,7 +90,13 @@ export default function DownloadAppBanner() {
     }
 
     setVisible(true);
-  }, []);
+  }, [pathname]);
+
+  // Leaving a marketing page for a task page must take the card with it —
+  // the effect above only decides whether to START showing it.
+  useEffect(() => {
+    if (platform === null && !MARKETING_PATHS.has(pathname)) setVisible(false);
+  }, [pathname, platform]);
 
   const dismiss = () => {
     try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch { /* ignore */ }

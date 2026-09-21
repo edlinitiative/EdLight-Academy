@@ -164,7 +164,7 @@ export default function Revision() {
         {t('Révision', 'Revizyon')}
       </h1>
       <p className="page-header__subtitle text-muted">
-        {t('Les questions que tu as ratées — jusqu\'à ce que tu les maîtrises.',
+        {t('Les questions que vous avez ratées — jusqu\'à ce que vous les maîtrisiez.',
           'Kesyon ou te rate yo — jiskaske ou metrize yo.')}
       </p>
     </div>
@@ -182,8 +182,8 @@ export default function Revision() {
   if (!user?.uid) {
     return shell(
       <EmptyState
-        title={t('Connecte-toi pour réviser', 'Konekte pou revize')}
-        message={t('Connecte-toi pour retrouver les questions que tu as ratées.',
+        title={t('Connectez-vous pour réviser', 'Konekte pou revize')}
+        message={t('Connectez-vous pour retrouver les questions que vous avez ratées.',
           'Konekte pou w jwenn kesyon ou te rate yo.')}
         action={{
           label: t('Se connecter', 'Konekte'),
@@ -233,7 +233,7 @@ export default function Revision() {
         icon={<span style={{ fontSize: '1.6rem' }} aria-hidden>✓</span>}
         title={t('Rien à réviser pour le moment',
           'Anyen pou revize kounye a')}
-        message={t('Les questions que tu rates dans les exercices arrivent ici, jusqu\'à ce que tu les réussisses.',
+        message={t('Les questions que vous ratez dans les exercices arrivent ici, jusqu\'à ce que vous les réussissiez.',
           'Kesyon ou rate nan egzèsis yo ap vini isit la, jiskaske ou reyisi yo.')}
         action={{ label: t('Faire des exercices', 'Fè egzèsis'), href: '/quizzes' }}
         secondaryAction={{ label: t('Retour au tableau de bord', 'Tounen sou tablo a'), href: '/dashboard' }}
