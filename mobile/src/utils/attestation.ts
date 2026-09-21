@@ -28,12 +28,36 @@
  * outage, a Play Services that needs updating. The server treats absence as
  * unknown and never blocks on it.
  *
- * ── STATE OF THIS CODE ──────────────────────────────────────────────────────
+ * ── DISABLED, 2026-09-21 ────────────────────────────────────────────────────
  *
- * The exchange endpoints refuse until the two providers are registered for
- * this Firebase project (App Attest for iOS, Play Integrity for Android).
- * Until that is done every call here fails closed and the app behaves exactly
- * as it did before. It has NOT been exercised against a live provider yet.
+ * TestFlight build 59 crashed with "when i tried to register my school it
+ * crashed" — EXC_BAD_ACCESS, an NSException raised inside a VOID TurboModule
+ * method whose error conversion then touched the Hermes runtime off the JS
+ * thread and segfaulted the GC. No application frames survive in that stack,
+ * so the log names the mechanism and not the module: THIS IS NOT PROVEN TO BE
+ * the culprit.
+ *
+ * It is the suspect on three counts: it is the newest native code on the
+ * registration path, build 59 was the first build where that button could
+ * actually be pressed (58 disabled it), and the crash landed eleven seconds
+ * after a screenshot of that screen.
+ *
+ * A native exception cannot be caught by the try/catch below — that is the
+ * whole problem with proving this from JS. So the call is switched OFF at the
+ * top of `attestationToken` rather than reasoned about further, and
+ * registration goes back to exactly the request it made in build 55, which
+ * worked.
+ *
+ * TO RE-ENABLE, three things, in order:
+ *   1. Exercise it on a real device — registration and one answered question —
+ *      before it reaches anybody else. It must never be turned back on by a
+ *      reviewer who assumes it was disabled for a shipping deadline.
+ *   2. Move it OFF the critical path: warm the token when an Arena screen
+ *      mounts, and have `authedPost` read the cache only. Nothing native
+ *      should ever sit between a student pressing a button and the request
+ *      going out, because a native crash there costs them the tournament and
+ *      no JS try/catch can prevent it.
+ *   3. Only then flip ATTESTATION_ENABLED.
  */
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,6 +79,14 @@ const REFRESH_MARGIN_MS = 5 * 60_000;
 const RETRY_AFTER_FAILURE_MS = 10 * 60_000;
 
 interface CachedToken { token: string; expiresAt: number }
+
+/**
+ * OFF. See the header — a crash on the registration path is under
+ * investigation and this is the suspect. While false, nothing here touches a
+ * native module and every Arena request goes out exactly as it did before
+ * attestation existed.
+ */
+const ATTESTATION_ENABLED = false;
 
 let cached: CachedToken | null = null;
 let failedUntil = 0;
@@ -195,6 +227,7 @@ async function androidToken(native: NonNullable<ReturnType<typeof nativeModule>>
  * after a failure.
  */
 export async function attestationToken(): Promise<string | null> {
+  if (!ATTESTATION_ENABLED) return null;
   if (cached && cached.expiresAt - REFRESH_MARGIN_MS > Date.now()) return cached.token;
   if (Date.now() < failedUntil) return null;
   if (inFlight) return inFlight;
