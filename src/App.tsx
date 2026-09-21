@@ -128,6 +128,27 @@ export default function App() {
                 <Route path="trivia" element={<Navigate to="/jeux" replace />} />
                 <Route path="trivia/:gameId" element={<Navigate to="/jeux" replace />} />
                 <Route path="profile" element={<Profile />} />
+                {/* Bare /arena is the link buildArenaInviteMessage()
+                    (mobile/src/services/arenaService.ts) puts in every "il
+                    manque N joueurs" share text, so it is the most-followed
+                    championship URL there is. It rendered "Page introuvable",
+                    then a redirect to /download — a QR code with no
+                    explanation, which Ted hit twice.
+
+                    Now it is the real page. Ted, 2026-09-21: "only the play is
+                    now allowed on website, everything else is" — so a student
+                    registers here and installs the app to play. PLAYING stays
+                    mobile-only (section A): that is where the integrity
+                    controls live, and no browser can offer an equivalent.
+
+                    INSIDE Layout, unlike /direct and /arena/reclamation next
+                    to it below. Layout is what renders <AuthModal>, so a page
+                    outside it can flip `showAuthModal` and nothing appears —
+                    which is exactly what "Se connecter" did here. It also owns
+                    the navbar, the footer and the install prompts, and a page
+                    asking a visitor to sign in and then install the app needs
+                    all three. */}
+                <Route path="arena" element={<Arena />} />
                 <Route path="classement" element={<Classement />} />
                 <Route path="leaderboard" element={<Navigate to="/classement" replace />} />
                 <Route path="*" element={<NotFound />} />
@@ -178,19 +199,6 @@ export default function App() {
                   printable document that reveals nothing. */}
               <Route path="/arena/reclamation" element={<ArenaClaim />} />
               <Route path="/arena/autorisation" element={<ArenaConsentForm />} />
-              {/* Bare /arena is the link buildArenaInviteMessage()
-                  (mobile/src/services/arenaService.ts) puts in every "il
-                  manque N joueurs" share text, so it is the most-followed
-                  championship URL there is. It rendered "Page introuvable",
-                  then a redirect to /download — a QR code with no explanation,
-                  which Ted hit twice.
-
-                  Now it is the real page. Ted, 2026-09-21: "only the play is
-                  now allowed on website, everything else is" — so a student
-                  registers here and installs the app to play. PLAYING stays
-                  mobile-only (section A): that is where the integrity controls
-                  live, and no browser can offer an equivalent. */}
-              <Route path="/arena" element={<Arena />} />
               {/* The projector page. It resolves its own tournament and falls
                   back to the weekly school race between events — a screen in a
                   school hall is never blank. */}
