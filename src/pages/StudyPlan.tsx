@@ -673,7 +673,17 @@ function HeroTypeBadge({ task, isCreole }) {
 }
 
 function TaskCard({ task, isCreole, compact, onNavigate }) {
-  const overdue = task.nextReviewMs && task.nextReviewMs < Date.now();
+  /*
+   * Late means BEFORE TODAY, not before this instant.
+   *
+   * Several task creators in `studyPlanService` set `nextReviewMs: now`
+   * ("due immediately"), and this compared against `Date.now()` — so a task
+   * was tagged late one millisecond after the plan generated it, and a fresh
+   * plan opened with every item already scolding the student. A task due today
+   * is due today.
+   */
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
+  const overdue = !!task.nextReviewMs && task.nextReviewMs < startOfToday;
   const lastScore =
     task.history?.length > 0 ? task.history[task.history.length - 1].scorePct : null;
   const taskType = task.type || 'exam';
@@ -709,7 +719,10 @@ function TaskCard({ task, isCreole, compact, onNavigate }) {
         <div className="sp-task__top-row">
           <span className="sp-task__type-icon" style={{ color: meta.color }}><TypeIcon size={15} /></span>
           <span className="sp-task__subject" style={{ color: subjectColor(task.subject) }}>{task.subject}</span>
-          {overdue && <span className="sp-task__overdue-tag">{isCreole ? 'Anreta' : 'En retard'}</span>}
+          {/* "À rattraper", not "En retard". The plan is a tool, not a report
+              card: naming the action a student can take beats naming their
+              failure, and it reads better to a bilingual audience. */}
+          {overdue && <span className="sp-task__overdue-tag">{isCreole ? 'Pou ratrape' : 'À rattraper'}</span>}
         </div>
         <span className="sp-task__title">{displayTitle}</span>
         {(secondaryInfo || task.aiFocusArea) && (
