@@ -268,18 +268,24 @@ export default function Revision() {
         </p>
         <p className="text-muted" style={{ margin: '0.5rem 0 0' }}>
           {missed > 0
-            ? t(`Les ${missed} autre${missed > 1 ? 's' : ''} reviendront — c'est comme ça qu'on apprend.`,
-              `${missed} lòt yo ap tounen — se konsa nou aprann.`)
-            : t('Chacune de ces questions quitte ta liste de révision, sur le web comme sur le téléphone.',
+            ? t(
+              // "Les 1 autre reviendront" was the singular before this.
+              missed > 1
+                ? `Les ${missed} autres reviendront — c'est comme ça qu'on apprend.`
+                : 'L\'autre reviendra — c\'est comme ça qu\'on apprend.',
+              missed > 1
+                ? `${missed} lòt yo ap tounen — se konsa nou aprann.`
+                : 'Lòt la ap tounen — se konsa nou aprann.')
+            : t('Chacune de ces questions quitte votre liste de révision, sur le web comme sur le téléphone.',
               'Chak kesyon sa yo soti nan lis revizyon ou, sou web la tankou sou telefòn lan.')}
         </p>
         {/* What is left — stated only once it has actually been re-read. */}
         {remainingDue != null && (
           <p className="text-muted" style={{ margin: '0.35rem 0 1rem', fontWeight: 600 }}>
             {remainingDue > 0
-              ? t(`Il te reste ${remainingDue} question${remainingDue > 1 ? 's' : ''} à revoir.`,
+              ? t(`Il vous reste ${remainingDue} question${remainingDue > 1 ? 's' : ''} à revoir.`,
                 `Ou gen ${remainingDue} kesyon ki rete pou revize.`)
-              : t('Ta liste de révision est vide pour le moment.', 'Lis revizyon ou vid kounye a.')}
+              : t('Votre liste de révision est vide pour le moment.', 'Lis revizyon ou vid kounye a.')}
           </p>
         )}
         {remainingDue == null && <div style={{ height: '1rem' }} />}

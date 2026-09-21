@@ -393,8 +393,15 @@ export default function ExamHistory() {
           ) : (
             <>
               {latest && (
+                /*
+                  No tone modifier on the surface itself: the score value is
+                  already coloured and labelled, and a second tinted surface
+                  would be the same state said twice (§7 wants semantic colour
+                  reinforced by text, not repeated). The left border carries
+                  the SUBJECT colour via --exam-accent.
+                */
                 <div
-                  className={`exam-history__feature exam-history__feature--${scoreTone(latest.percentage)}`}
+                  className="exam-history__feature"
                   style={{ '--exam-accent': latest.color } as React.CSSProperties}
                 >
                   <div className="exam-history__feature-main">

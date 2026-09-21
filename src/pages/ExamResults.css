@@ -264,6 +264,22 @@
   border: 1px solid var(--border);
 }
 
+/* THE MIDDLE TONE WAS GREY, NOT AMBER. Browser-verified on a real 63% group:
+   the bar and the number both painted near-black. index.css writes the middle
+   tone as `var(--warning-600, #5d5b54)` and `#5d5b54` — but --warning-600 has
+   never existed (only --warning-500 does), so both always fell through to that
+   literal, a leftover of the retired neo-brutalist layer. "Good" has the same
+   flaw via --success-600. §7 asks for consistent semantic states; a warning
+   painted the colour of body text is not one, and in the dark theme #5d5b54 is
+   nearly invisible. Remapped onto the tokens that do exist — no new ones. */
+.exam-results .exam-results__mastery-pct--good { color: var(--success-500); }
+.exam-results .exam-results__mastery-pct--mid { color: var(--warning-500); }
+.exam-results .exam-results__mastery-pct--low { color: var(--danger-500); }
+
+.exam-results .exam-results__mastery-fill--good { background: var(--success-500); }
+.exam-results .exam-results__mastery-fill--mid { background: var(--warning-500); }
+.exam-results .exam-results__mastery-fill--low { background: var(--danger-500); }
+
 .exam-results .exam-results__mastery-label {
   white-space: normal;
 }
@@ -281,6 +297,15 @@
   border-left: 4px solid var(--next-accent, var(--primary-500));
   box-shadow: none;
   align-items: flex-start;
+}
+
+/* The flex child that holds the title, the sentence and the note. Without
+   `min-width: 0` a long section name inside <strong> (exam sections are
+   authored, not truncated) refuses to wrap and pushes the block wider than
+   the container at ~390px. */
+.exam-results__next-copy {
+  min-width: 0;
+  flex: 1;
 }
 
 .exam-results__next-note {
@@ -325,6 +350,12 @@
 
   .exam-results .exam-results__next-actions .button {
     width: 100%;
+  }
+
+  /* index.css floors this row at 260px, which at ~390px minus the container
+     padding leaves the icon and the text fighting over the same line. */
+  .exam-results .exam-results__next-head {
+    min-width: 0;
   }
 }
 

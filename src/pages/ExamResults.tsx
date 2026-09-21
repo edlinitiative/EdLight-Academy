@@ -17,6 +17,7 @@ import { CountUp } from '../hooks/useCountUp';
 import { TRACK_BY_CODE } from '../config/trackConfig';
 import { isNumericId, fetchSingleExam } from '../utils/examCatalog';
 import { loadExamResult } from '../services/examResults';
+import { loadDueReviewIds } from '../services/reviewService';
 import {
   flattenQuestions,
   gradeExam,
@@ -56,6 +57,12 @@ const MASTERED = new Set(['correct', 'scaffold-complete']);
  *   results[i].result.awarded / .maxPoints
  *                       Per-question points, which is what the per-group
  *                       percentages below are built from.
+ *   dueCount            `loadDueReviewIds` → users/{uid}/mastery/review, the
+ *                       ONE shared review doc mobile also writes. These are
+ *                       QUIZ-BANK questions missed in EXERCISES — exam
+ *                       questions are never written there — so the copy that
+ *                       shows it always names that source. Signed out it is
+ *                       not fetched at all and nothing about it is claimed.
  *
  * DELIBERATELY NOT SHOWN
  *   summary.correctCount / summary.incorrectCount — `correctCount` is a
@@ -246,6 +253,23 @@ const ExamResults = () => {
     staleTime: Infinity,
   });
 
+  /*
+   * QUIZ-BANK QUESTIONS STILL DUE, from the ONE shared review document
+   * (users/{uid}/mastery/review — the same doc mobile writes). Used for a
+   * single purpose: when this paper leaves nothing to review, the honest best
+   * next action is the mistakes the student already has on file. The copy
+   * always names that source ("dans vos exercices"), because these are NOT
+   * exam questions — nothing writes exam mistakes to that document.
+   *
+   * Same query key as /exams/resultats and the Practice hub, so all three
+   * share one cached answer and can never quote different totals.
+   */
+  const { data: dueIds = [] } = useQuery({
+    queryKey: ['due-review-ids', userId],
+    queryFn: () => loadDueReviewIds(userId!),
+    enabled: !!userId,
+  });
+
   // Legacy numeric routes still resolve to the saved result index.
   const idx = useMemo(() => (isNumericId(examId) ? parseInt(examId, 10) : null), [examId]);
   const examKey = exam?.exam_id || (Number.isFinite(idx) ? String(idx) : null);
@@ -254,6 +278,16 @@ const ExamResults = () => {
   // Start as true so we show "Chargement…" on first render rather than
   // "Aucun résultat trouvé" before the sessionStorage/Firestore check runs.
   const [remoteLoading, setRemoteLoading] = useState(true);
+  /*
+   * A FAILED READ IS NOT AN ABSENT RESULT (§8: an error says what happened
+   * and offers a safe recovery). The Firestore read below used to sit in a
+   * try/finally with no catch: a dropped connection left `stored` null and the
+   * page answered "Aucun résultat trouvé pour cet examen" — telling a student
+   * their correction did not exist because a request timed out. This is the
+   * same failure ExamHistory was fixed for. `reloadKey` drives the retry.
+   */
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   // Detail list filter: 'all' | 'review' (mistakes) | 'mastered'
   const [reviewFilter, setReviewFilter] = useState('all');
   // Practice-your-mistakes session modal
@@ -289,6 +323,7 @@ const ExamResults = () => {
     }
     let cancelled = false;
     setRemoteLoading(true);
+    setLoadError(false);
     (async () => {
       try {
         const docData = await loadExamResult(userId, examKey);
@@ -330,6 +365,9 @@ const ExamResults = () => {
           result: { ...result, summary, results: mergedResults },
           timestamp: docData.submitted_at_ms || Date.now(),
         });
+      } catch {
+        // Offline, a Firestore rule refusal, or a corrupt stored document.
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setRemoteLoading(false);
       }
@@ -338,7 +376,7 @@ const ExamResults = () => {
     return () => {
       cancelled = true;
     };
-  }, [examId, examKey, idx, userId, exam]);
+  }, [examId, examKey, idx, userId, exam, reloadKey]);
 
   if (!stored) {
     if (remoteLoading) {
@@ -367,14 +405,58 @@ const ExamResults = () => {
         </section>
       );
     }
+    if (loadError) {
+      return (
+        <section className="section">
+          <div className="container">
+            <EmptyState
+              title={t('Correction indisponible pour le moment', 'Koreksyon an pa disponib kounye a')}
+              message={t(
+                'Votre correction n’a pas pu être chargée — souvent une connexion coupée. Elle n’est pas perdue : réessayez.',
+                'Koreksyon ou a pa t ka chaje — anpil fwa se koneksyon an. Li pa pèdi : eseye ankò.',
+              )}
+              action={{
+                label: t('Réessayer', 'Eseye ankò'),
+                onClick: () => setReloadKey((k) => k + 1),
+              }}
+              secondaryAction={{
+                label: t('Mes résultats', 'Rezilta mwen'),
+                onClick: () => navigate('/exams/resultats'),
+              }}
+            />
+          </div>
+        </section>
+      );
+    }
     return (
       <section className="section">
         <div className="container">
           <EmptyState
             title={t('Aucun résultat trouvé', 'Nou pa jwenn okenn rezilta')}
-            message={t('Aucun résultat trouvé pour cet examen. Passez-le pour voir votre correction détaillée ici.',
-              'Nou pa jwenn okenn rezilta pou egzamen sa a. Pase li pou wè koreksyon detaye ou isit la.')}
-            action={{
+            message={
+              userId
+                ? t('Aucune correction enregistrée pour cet examen. Passez-le pour voir votre correction détaillée ici.',
+                  'Pa gen koreksyon anrejistre pou egzamen sa a. Pase li pou wè koreksyon detaye ou isit la.')
+                : /*
+                   * Signed out, the correction only ever lived in this tab's
+                   * sessionStorage — so "nothing here" can simply mean a new
+                   * tab. §8: explain why, then offer the action that fixes it.
+                   */
+                  t('Sans connexion, une correction reste dans l’onglet où vous avez passé l’examen. Connectez-vous pour retrouver vos corrections partout.',
+                    'Si ou pa konekte, yon koreksyon rete nan onglè kote ou te fè egzamen an. Konekte pou jwenn koreksyon ou yo tout kote.')
+            }
+            action={
+              userId
+                ? {
+                    label: t('Passer cet examen', 'Fè egzamen sa a'),
+                    onClick: () => navigate(`/exams/${level || ''}/${examId}`),
+                  }
+                : {
+                    label: t('Se connecter', 'Konekte'),
+                    onClick: () => useStore.getState().toggleAuthModal(),
+                  }
+            }
+            secondaryAction={{
               label: t('Retour aux examens', 'Retounen nan egzamen yo'),
               onClick: () => navigate(`/exams/${level || ''}`),
             }}
@@ -406,7 +488,17 @@ const ExamResults = () => {
   // ── Where the points went on this paper ───────────────────────────────────
   const scoreBySection = computeGroupScores(results, (r) => r.question?.sectionTitle || 'Questions');
   const scoreByType = computeGroupScores(results, (r) => questionTypeMeta(r.question?.type).label);
+  /*
+   * A ONE-ROW BREAKDOWN IS THE SCORE SAID TWICE. Browser-verified on a real
+   * paper whose five questions are all "réponse courte": the type column
+   * printed a single bar reading 25%, 25/100 — character for character the
+   * score already shown above it. §6.6 forbids exactly that ("avoid a wall of
+   * equal-weight statistics"), so a grouping only appears when it actually
+   * splits the paper into more than one group.
+   */
   const showSectionScores = scoreBySection.length > 1;
+  const showTypeScores = scoreByType.length > 1;
+  const showBreakdown = showSectionScores || showTypeScores;
 
   // ── Review focus filter ───────────────────────────────────────────────────
   const indexedResults = results.map((r, i) => ({ r, i }));
@@ -435,8 +527,11 @@ const ExamResults = () => {
   // A group is only named as a weak point when at least FOCUS_MIN_QUESTIONS
   // questions sit in it; below that the paper simply does not say enough, and
   // the copy falls back to the subject instead of inventing a diagnosis.
-  const weakestGroup = (showSectionScores ? scoreBySection : scoreByType)[0]
-    || scoreByType[0] || null;
+  // When no grouping splits the paper (see `showBreakdown`), there is no weak
+  // AREA to name — only a weak paper — and the copy must not pretend otherwise.
+  const weakestGroup = showSectionScores
+    ? scoreBySection[0]
+    : showTypeScores ? scoreByType[0] : null;
   const focusGroup = weakestGroup && weakestGroup.count >= FOCUS_MIN_QUESTIONS && weakestGroup.pct < 80
     ? weakestGroup
     : null;
@@ -446,6 +541,20 @@ const ExamResults = () => {
   // Readiness is rendered on /exams (ExamLanding) and /profile — not on the
   // dashboard, which is where this button used to send people.
   const readinessTarget = '/exams';
+  /*
+   * THE READINESS CLAIM IS ONLY TRUE WHEN SIGNED IN. `useReadiness` feeds off
+   * `listRecentExamResults`, i.e. users/{uid}/examResults — and
+   * services/examResults.ts refuses to write without a Firebase session. A
+   * signed-out correction lives in sessionStorage and contributes nothing, so
+   * promising it "counts toward your Bac readiness" would be inventing student
+   * activity (§3). Signed out, the device-local note below is the whole truth.
+   */
+  const showsReadiness = !!userId;
+  // Exercise mistakes already on file — see the `dueIds` note above.
+  const dueCount = dueIds.length;
+  // Nothing left to review on this paper, but mistakes waiting elsewhere:
+  // that queue is a better next action than another fresh drill.
+  const offerDueReview = reviewCount === 0 && dueCount > 0;
 
   /** The one caveat that can move the score, as a sentence rather than a figure. */
   const pendingNote = tally.pending > 0
@@ -619,38 +728,42 @@ const ExamResults = () => {
         The section prints its own source line so the numbers are legible to
         the student, not only to whoever reads this file.
       */}
-      <section className="exam-results__breakdown" aria-labelledby="exam-results-breakdown">
-        <h2 id="exam-results-breakdown" className="exam-results__breakdown-title">
-          <Target size={18} aria-hidden /> {t('Où vous avez perdu des points', 'Kote ou pèdi pwen')}
-        </h2>
-        <p className="exam-results__breakdown-source">
-          {t(
-            'Points obtenus ÷ points possibles, dans cette épreuve uniquement. Le classement va du plus faible au plus solide.',
-            'Pwen ou genyen ÷ pwen ki te posib, nan eprèv sa a sèlman. Lis la kòmanse ak sa ki pi fèb.',
-          )}
-        </p>
+      {showBreakdown && (
+        <section className="exam-results__breakdown" aria-labelledby="exam-results-breakdown">
+          <h2 id="exam-results-breakdown" className="exam-results__breakdown-title">
+            <Target size={18} aria-hidden /> {t('Où vous avez perdu des points', 'Kote ou pèdi pwen')}
+          </h2>
+          <p className="exam-results__breakdown-source">
+            {t(
+              'Points obtenus ÷ points possibles, dans cette épreuve uniquement. Le classement va du plus faible au plus solide.',
+              'Pwen ou genyen ÷ pwen ki te posib, nan eprèv sa a sèlman. Lis la kòmanse ak sa ki pi fèb.',
+            )}
+          </p>
 
-        <div className="exam-results__breakdown-lists">
-          <div className="exam-results__breakdown-col">
-            <h3 className="exam-results__breakdown-sub">
-              {t('Par type de question', 'Dapre kalite kesyon')}
-            </h3>
-            {scoreByType.map((g) => (
-              <GroupScoreBar key={g.key} label={g.key} pct={g.pct} earned={g.earned} total={g.total} count={g.count} review={g.review} />
-            ))}
+          <div className="exam-results__breakdown-lists">
+            {showTypeScores && (
+              <div className="exam-results__breakdown-col">
+                <h3 className="exam-results__breakdown-sub">
+                  {t('Par type de question', 'Dapre kalite kesyon')}
+                </h3>
+                {scoreByType.map((g) => (
+                  <GroupScoreBar key={g.key} label={g.key} pct={g.pct} earned={g.earned} total={g.total} count={g.count} review={g.review} />
+                ))}
+              </div>
+            )}
+            {showSectionScores && (
+              <div className="exam-results__breakdown-col">
+                <h3 className="exam-results__breakdown-sub">
+                  {t('Par section de l’épreuve', 'Dapre seksyon eprèv la')}
+                </h3>
+                {scoreBySection.map((g) => (
+                  <GroupScoreBar key={g.key} label={g.key} pct={g.pct} earned={g.earned} total={g.total} count={g.count} review={g.review} />
+                ))}
+              </div>
+            )}
           </div>
-          {showSectionScores && (
-            <div className="exam-results__breakdown-col">
-              <h3 className="exam-results__breakdown-sub">
-                {t('Par section de l’épreuve', 'Dapre seksyon eprèv la')}
-              </h3>
-              {scoreBySection.map((g) => (
-                <GroupScoreBar key={g.key} label={g.key} pct={g.pct} earned={g.earned} total={g.total} count={g.count} review={g.review} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+        </section>
+      )}
 
       {/*
         3. WHAT NEXT? — ONE block, ONE primary action.
@@ -679,18 +792,24 @@ const ExamResults = () => {
                 isCreole
                   ? <>Gen <strong>{reviewCount} kesyon</strong> ou pa fin reyisi. Refè yo kounye a — se konsa ou pwogrese pi vit.</>
                   : <>Il reste <strong>{reviewCount} question{reviewCount !== 1 ? 's' : ''}</strong> non réussie{reviewCount !== 1 ? 's' : ''}. Reprenez-les maintenant — c’est ce qui fait progresser le plus vite.</>
+              ) : offerDueReview ? (
+                isCreole
+                  ? <>Pa gen anyen pou revize nan eprèv sa a. Men gen <strong>{dueCount} kesyon</strong> ou rate nan egzèsis ou yo k ap tann.</>
+                  : <>Rien à revoir sur cette épreuve. En revanche, <strong>{dueCount} question{dueCount !== 1 ? 's' : ''}</strong> ratée{dueCount !== 1 ? 's' : ''} dans vos exercices attend{dueCount !== 1 ? 'ent' : ''} encore.</>
               ) : (
                 isCreole
                   ? <>Kontinye antrene nan <strong>{subject}</strong>.</>
                   : <>Continuez à vous entraîner en <strong>{subject}</strong>.</>
               )}
             </p>
-            <p className="exam-results__next-note">
-              {t(
-                'Ce résultat compte dans votre score de préparation au Bac, sur la page Examens.',
-                'Rezilta sa a konte nan nòt preparasyon Bak ou, sou paj Egzamen an.',
-              )}
-            </p>
+            {showsReadiness && (
+              <p className="exam-results__next-note">
+                {t(
+                  'Ce résultat compte dans votre score de préparation au Bac, sur la page Examens.',
+                  'Rezilta sa a konte nan nòt preparasyon Bak ou, sou paj Egzamen an.',
+                )}
+              </p>
+            )}
           </div>
         </div>
         <div className="exam-results__next-actions">
@@ -706,15 +825,30 @@ const ExamResults = () => {
                 <Eye size={16} aria-hidden /> {t('Voir la correction', 'Wè koreksyon an')}
               </button>
             </>
+          ) : offerDueReview ? (
+            <>
+              {/* Labelled by source: these are exercise mistakes, not exam ones. */}
+              <button className="button button--primary" onClick={() => navigate('/revision')} type="button">
+                <Target size={16} aria-hidden />{' '}
+                {isCreole
+                  ? `Revize ${dueCount} erè egzèsis`
+                  : `Revoir ${dueCount} erreur${dueCount !== 1 ? 's' : ''} d’exercices`}
+              </button>
+              <button className="button button--ghost" onClick={() => navigate(studyTarget)} type="button">
+                {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
+              </button>
+            </>
           ) : (
             <button className="button button--primary" onClick={() => navigate(studyTarget)} type="button">
               <Target size={16} aria-hidden />{' '}
               {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
             </button>
           )}
-          <button className="button button--ghost" onClick={() => navigate(readinessTarget)} type="button">
-            <BarChart3 size={16} aria-hidden /> {t('Voir ma préparation au Bac', 'Wè preparasyon Bak mwen')}
-          </button>
+          {showsReadiness && (
+            <button className="button button--ghost" onClick={() => navigate(readinessTarget)} type="button">
+              <BarChart3 size={16} aria-hidden /> {t('Voir ma préparation au Bac', 'Wè preparasyon Bak mwen')}
+            </button>
+          )}
         </div>
       </div>
 
