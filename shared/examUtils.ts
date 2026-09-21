@@ -2310,3 +2310,39 @@ export function stripExamHallBoilerplate(text: string | null | undefined): strin
   const hits = EXAM_HALL_MARKERS.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0);
   return hits >= 2 ? '' : text;
 }
+
+/**
+ * The topic tags worth showing next to an exam row.
+ *
+ * `topics` in the catalogue is a mixed bag: real subject areas ("Dérivées",
+ * "Algèbre linéaire", "Fonctions exp/log") sit alongside fragments of the
+ * paper's own section instructions ("A.- Recopier et compléter les phrases
+ * suivantes", "B.- Traiter trois (3) des cinq (5) exercices"). Printing the
+ * raw list would show a student an instruction where a topic belongs.
+ *
+ * This is needed because a session's papers are otherwise indistinguishable:
+ * eleven Baccalauréat 2025 maths papers all render as "Session de juillet
+ * 2025 · 13 questions · 180 min", and `tracks` is `['ALL']` on every one of
+ * them. What actually differs is the mathematics inside.
+ *
+ * Conservative on purpose — when in doubt a tag is dropped, because a wrong
+ * topic is worse than one fewer.
+ */
+export function examTopicTags(topics: unknown, max = 2): string[] {
+  if (!Array.isArray(topics)) return [];
+  const out: string[] = [];
+  for (const raw of topics) {
+    if (typeof raw !== 'string') continue;
+    const t = raw.trim();
+    if (t.length < 3 || t.length > 28) continue;
+    // "A.- …", "B - …", "PARTIE A", or a lone letter — a section heading.
+    if (/^(partie\s)?[A-E]\s*[.\-–)]/i.test(t)) continue;
+    if (/^partie\s+[a-e]\b/i.test(t) || /^[A-E]$/i.test(t)) continue;
+    // Instruction verbs and counts give away the section rubric.
+    if (/recopier|compl[ée]ter|traiter|obligatoire|r[ée]pondre|choisir|\(\d/i.test(t)) continue;
+    if (out.some((x) => x.toLowerCase() === t.toLowerCase())) continue;
+    out.push(t);
+    if (out.length >= max) break;
+  }
+  return out;
+}

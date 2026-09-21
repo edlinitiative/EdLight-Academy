@@ -224,3 +224,22 @@
     display: none;
   }
 }
+
+/* Topic tags — what is actually in this paper. The only thing distinguishing
+   a session's otherwise identical rows. */
+.exam-session__topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.exam-session__topic {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-600);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}

@@ -6,6 +6,7 @@ import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, subjectColor } from '../utils/examUtils';
+import { examTopicTags } from '../../shared/examUtils';
 import { sessionRowName, yearRange } from '../utils/examNaming';
 import { URL_LEVEL_TO_RAW, LEVEL_SLUG_LABELS } from '../utils/examLevels';
 import CardCover from '../components/CardCover';
@@ -218,6 +219,7 @@ export default function ExamSubject() {
             const tone = pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
             const diff = DIFFICULTY_DOT[e.difficulty as number];
             const answered = drafts[key];
+            const topicTags = examTopicTags(e.topics);
             const inProgress = !attempt && answered !== undefined;
             return (
               <li key={key}>
@@ -236,6 +238,24 @@ export default function ExamSubject() {
                           : L('non chronométré', 'san kwonomèt'),
                       ].filter(Boolean).join(' · ')}
                     </span>
+                    {/*
+                      * What is actually IN this paper.
+                      *
+                      * Without it a session's papers are indistinguishable:
+                      * eleven Baccalauréat 2025 maths papers all render as
+                      * "Session de juillet 2025 · 13 questions · 180 min", and
+                      * `tracks` is `['ALL']` on every one. The topics are the
+                      * only thing that differs, filtered by `examTopicTags`
+                      * because the raw list mixes real subject areas with the
+                      * paper's own section instructions.
+                      */}
+                    {topicTags.length > 0 && (
+                      <span className="exam-session__topics">
+                        {topicTags.map((tag) => (
+                          <span key={tag} className="exam-session__topic">{tag}</span>
+                        ))}
+                      </span>
+                    )}
                   </span>
                   {diff && (
                     <span className={`exam-session__diff exam-session__diff--${diff.cls}`}>
