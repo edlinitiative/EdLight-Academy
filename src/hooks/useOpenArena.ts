@@ -57,8 +57,17 @@ export function pickOpenArena(
   return null;
 }
 
-export function useOpenArena(): OpenArena | null {
-  const [open, setOpen] = useState<OpenArena | null>(null);
+/**
+ * `undefined` while the answer is unknown, `null` once we know there is none.
+ *
+ * The distinction matters because the /arena page renders the answer: starting
+ * at `null` made it say "Aucune édition ouverte aux inscriptions" to every
+ * visitor for the length of a Firestore round-trip, which on a slow Haitian
+ * connection is long enough to read, believe and leave. A banner can treat
+ * both as "show nothing" (`if (!open) return null`) and is unaffected.
+ */
+export function useOpenArena(): OpenArena | null | undefined {
+  const [open, setOpen] = useState<OpenArena | null | undefined>(undefined);
 
   useEffect(() => {
     const q = query(collection(db, 'tournaments'), where('state', 'in', WATCHED_STATES));

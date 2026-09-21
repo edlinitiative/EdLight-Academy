@@ -137,6 +137,49 @@ export function seedSchools(): School[] {
   return seedCache;
 }
 
+/**
+ * Read a stored school document into a School.
+ *
+ * Shared because BOTH clients read the same `schools` collection, and the web
+ * and mobile services had every reason to grow their own mapping — which is
+ * "two opinions about school identity waiting to drift", the thing this module
+ * exists to stop. A document whose status is unreadable is treated as approved:
+ * those were written before short names existed, their schools are already on
+ * the live board, and demoting them to pending would strip schools students
+ * have been playing under for months.
+ *
+ * Returns null for a document that cannot name a school at all — there is
+ * nothing a picker could usefully do with it.
+ */
+export function schoolFromDoc(raw: unknown): School | null {
+  const v = (raw ?? {}) as Record<string, unknown>;
+  const str = (x: unknown): string => (typeof x === 'string' ? x : '');
+
+  const name = str(v.name);
+  const key = str(v.key) || schoolKey(name);
+  if (!name || !key) return null;
+
+  const status = v.status === 'pending' || v.status === 'merged' || v.status === 'approved'
+    ? (v.status as School['status'])
+    : undefined;
+
+  const aliases = Array.isArray(v.aliases)
+    ? v.aliases.filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+    : [];
+
+  return {
+    key,
+    name,
+    commune: str(v.commune),
+    address: str(v.address) || undefined,
+    city: str(v.city) || undefined,
+    shortName: shortNameKey(str(v.shortName)) || undefined,
+    aliases: aliases.length ? aliases : undefined,
+    status,
+    mergedInto: str(v.mergedInto) || undefined,
+  };
+}
+
 let seedByKey: Map<string, School> | null = null;
 
 /** The seeded school a key names, or null when the seed does not have it. */
@@ -155,6 +198,22 @@ export function seedSchoolByKey(key: string): School | null {
  * invisible entry already took the name. Collisions between pending schools are
  * an admin's problem at approval time, where a human can see both.
  */
+/**
+ * Why a short-name check failed, or null when it passed.
+ *
+ * `ShortNameCheck` is a discriminated union, and the WEB app compiles with
+ * `strictNullChecks: false`, under which TypeScript will not narrow one — a
+ * web caller reading `.reason` off the union gets an error and reaches for a
+ * cast. This accessor gives both apps one way to ask the question that the
+ * compiler can check either way.
+ */
+export function shortNameFailure(check: ShortNameCheck | null): ShortNameReason | null {
+  if (!check || check.ok) return null;
+  // The one cast, here rather than at every call site — `ok: false` is already
+  // established above, and the web compiler simply cannot see it.
+  return (check as { ok: false; reason: ShortNameReason }).reason;
+}
+
 export function validateShortName(raw: string, existing: School[]): ShortNameCheck {
   const value = shortNameKey(raw);
   if (value.length < SHORT_NAME_MIN) return { ok: false, reason: 'too-short' };

@@ -709,21 +709,21 @@ function GamesHub({ isCreole }) {
         * with a stray button is what made this block read as a mistake (§7:
         * reduce nested cards).
         *
-        * The button is gone as well: the banner ALREADY links to
-        * `/download?from=arena`, so the block offered one destination twice.
-        * The inline link stays because it is the only path when no tournament
-        * is open — the banner hides itself then, and the section would
-        * otherwise describe a championship with no way to reach it.
+        * The button is gone as well: the banner ALREADY links to `/arena`,
+        * so the block offered one destination twice. The inline link stays
+        * because it is the only path when no tournament is open — the banner
+        * hides itself then, and the section would otherwise describe a
+        * championship with no way to reach it.
         */}
       <section className="games-hub__championship" aria-labelledby="championship-title">
         <h2 id="championship-title">{isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}</h2>
         <p>
           {isCreole
-            ? 'Enskripsyon ak patisipasyon fèt nan aplikasyon mobil la. Pwen chanpyona yo separe ak XP jwèt yo.'
-            : 'Inscription et participation dans l’application mobile. Les scores du championnat sont distincts des XP des jeux.'}
+            ? 'Enskri lekòl ou isit la. Jou a, kesyon yo jwe nan aplikasyon an. Pwen chanpyona yo separe ak XP jwèt yo.'
+            : 'Inscrivez votre école ici. Le jour J, les questions se jouent dans l’application. Les scores du championnat sont distincts des XP des jeux.'}
           {' '}
-          <Link to="/download?from=arena" className="games-hub__championship-link">
-            {isCreole ? 'Jwenn aplikasyon an' : 'Accéder à l’application'}
+          <Link to="/arena" className="games-hub__championship-link">
+            {isCreole ? 'Enskri lekòl mwen' : 'Inscrire mon école'}
             <ChevronRight size={14} aria-hidden="true" />
           </Link>
         </p>

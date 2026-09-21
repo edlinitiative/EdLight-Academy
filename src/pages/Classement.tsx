@@ -88,15 +88,15 @@ export default function Classement() {
               </p>
               <p className="classement__kind-text">
                 {t(
-                  'Ses scores sont comptés séparément et donnent de vrais prix. Inscription et participation dans l’application.',
-                  'Pwen li yo konte apa epi yo bay vre pri. Enskripsyon ak patisipasyon nan aplikasyon an.',
+                  'Ses scores sont comptés séparément et donnent de vrais prix. Inscription ici, participation dans l’application.',
+                  'Pwen li yo konte apa epi yo bay vre pri. Enskri isit la, jwe nan aplikasyon an.',
                 )}
               </p>
-              {/* Same `?from=arena` as every other championship entry point, so
-                  the landing page explains itself instead of showing a generic
-                  app advert with no way back. */}
-              <Link to="/download?from=arena" className="classement__kind-link">
-                {t('Accéder à l’application', 'Jwenn aplikasyon an')}
+              {/* /arena, like every other championship entry point: the page
+                  that explains the event and takes a registration, rather than
+                  a QR code with no way back. */}
+              <Link to="/arena" className="classement__kind-link">
+                {t('Voir le championnat', 'Gade chanpyona a')}
                 <ChevronRight size={15} aria-hidden="true" />
               </Link>
             </div>

@@ -29,6 +29,7 @@ const Terms = lazyWithRetry(() => import('./pages/Terms'));
 const Defi = lazyWithRetry(() => import('./pages/Defi'));
 const Live = lazyWithRetry(() => import('./pages/Live'));
 const Direct = lazyWithRetry(() => import('./pages/Direct'));
+const Arena = lazyWithRetry(() => import('./pages/Arena'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
 const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
@@ -177,17 +178,19 @@ export default function App() {
                   printable document that reveals nothing. */}
               <Route path="/arena/reclamation" element={<ArenaClaim />} />
               <Route path="/arena/autorisation" element={<ArenaConsentForm />} />
-              {/* CORRECTION, from an external audit: bare /arena rendered
-                  "Page introuvable" — and it is exactly the link
-                  buildArenaInviteMessage() (mobile/src/services/arenaService.ts)
-                  puts in every "il manque N joueurs" share text. Arena
-                  gameplay is mobile-only (section A), so a friend who taps
-                  that link needs the app, not a web view of a tournament they
-                  cannot join from a browser — the same destination as every
-                  other "get the app" surface. */}
-              {/* Arena gameplay is mobile-only; `from=arena` makes the landing
-                  page explain that rather than showing a generic app advert. */}
-              <Route path="/arena" element={<Navigate to="/download?from=arena" replace />} />
+              {/* Bare /arena is the link buildArenaInviteMessage()
+                  (mobile/src/services/arenaService.ts) puts in every "il
+                  manque N joueurs" share text, so it is the most-followed
+                  championship URL there is. It rendered "Page introuvable",
+                  then a redirect to /download — a QR code with no explanation,
+                  which Ted hit twice.
+
+                  Now it is the real page. Ted, 2026-09-21: "only the play is
+                  now allowed on website, everything else is" — so a student
+                  registers here and installs the app to play. PLAYING stays
+                  mobile-only (section A): that is where the integrity controls
+                  live, and no browser can offer an equivalent. */}
+              <Route path="/arena" element={<Arena />} />
               {/* The projector page. It resolves its own tournament and falls
                   back to the weekly school race between events — a screen in a
                   school hall is never blank. */}

@@ -23,8 +23,17 @@ import { Swords, ChevronRight } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 
+/**
+ * The start date, but only while it is still ahead.
+ *
+ * A tournament sits in `registration` until an admin advances it, so its start
+ * time can slip into the past with sign-up still open — and the banner then
+ * reads "Inscris ton école pour le 18 septembre" on the 21st, which sounds
+ * like an event that already happened. The undated wording is the honest one:
+ * sign-up IS open, whatever the calendar says.
+ */
 function formatStart(ms: number, locale: string): string {
-  if (!ms) return '';
+  if (!ms || ms <= Date.now()) return '';
   try {
     return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' }).format(new Date(ms));
   } catch {
@@ -51,7 +60,7 @@ export default function ArenaBanner() {
 
   return (
     <Link
-      to="/download?from=arena"
+      to="/arena"
       className="card"
       style={{
         display: 'flex',

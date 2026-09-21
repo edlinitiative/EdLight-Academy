@@ -5,6 +5,8 @@ import {
   likelyDuplicate,
   mergeSchools,
   validateShortName,
+  schoolFromDoc,
+  shortNameFailure,
   type School,
 } from '../../../shared/schools';
 
@@ -285,5 +287,65 @@ describe('a school added a minute ago', () => {
     ];
     expect(searchSchools(withPending, 'Jean-Jacques Dessalines')[0].name)
       .toBe('Lycée Jean-Jacques Dessalines');
+  });
+});
+
+describe('reading a stored school document', () => {
+  // Both apps read the same `schools` collection through this one mapping, so
+  // these are the cases where the web and mobile pickers could have disagreed
+  // about what a school IS.
+
+  it('keeps a pending school pending', () => {
+    // The caller decides what to do with it; the mapping must not launder a
+    // student submission into a canonical school.
+    expect(schoolFromDoc({ name: 'Collège Test', status: 'pending' })?.status).toBe('pending');
+  });
+
+  it('treats an unreadable status as approved', () => {
+    // Documents written before short names existed carry no status, and their
+    // schools are already on the live board. Demoting them to pending would
+    // strip schools students have been playing under for months.
+    expect(schoolFromDoc({ name: 'Collège Test' })?.status).toBeUndefined();
+    expect(schoolFromDoc({ name: 'Collège Test', status: 'whatever' })?.status).toBeUndefined();
+  });
+
+  it('derives the grouping key when the document has none', () => {
+    // The key IS the grouping on the school board. A document missing it must
+    // land on the same key the rest of the app would compute.
+    expect(schoolFromDoc({ name: 'Collège Dominique Savio' })?.key)
+      .toBe(schoolKey('Collège Dominique Savio'));
+  });
+
+  it('normalises a stored short name the way the validator does', () => {
+    expect(schoolFromDoc({ name: 'Collège Test', shortName: ' codosa ' })?.shortName).toBe('CODOSA');
+  });
+
+  it('refuses a document that cannot name a school', () => {
+    // Nothing a picker could usefully show, and an entry with a blank name
+    // would sit in the list forever.
+    expect(schoolFromDoc({ commune: 'Delmas' })).toBeNull();
+    expect(schoolFromDoc(null)).toBeNull();
+  });
+
+  it('drops empty strings rather than storing them as values', () => {
+    const school = schoolFromDoc({ name: 'Collège Test', address: '', city: '', aliases: ['', ' '] });
+    expect(school?.address).toBeUndefined();
+    expect(school?.city).toBeUndefined();
+    expect(school?.aliases).toBeUndefined();
+  });
+});
+
+describe('shortNameFailure', () => {
+  // The web compiles with strictNullChecks off and cannot narrow the union
+  // validateShortName returns, so both apps ask through this accessor.
+
+  it('is null when the short name is fine', () => {
+    expect(shortNameFailure(validateShortName('LTL', LIST))).toBeNull();
+    expect(shortNameFailure(null)).toBeNull();
+  });
+
+  it('reports the rule that was broken', () => {
+    expect(shortNameFailure(validateShortName('A', LIST))).toBe('too-short');
+    expect(shortNameFailure(validateShortName('ABCDEFGHI', LIST))).toBe('too-long');
   });
 });

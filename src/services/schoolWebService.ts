@@ -1,3 +1,18 @@
+/**
+ * The school list on the web: a bundled seed plus whatever students have added.
+ *
+ * Mirrors mobile/src/services/schoolService.ts, and deliberately so — both
+ * read the same `schools` collection and both feed the same school board, so
+ * the parts where they could disagree about school identity (the document
+ * mapping, the duplicate test, short-name validation, the merge) all live in
+ * shared/schools.ts and are called from here rather than reimplemented.
+ *
+ * Why the web needed this at all: the /arena page shipped searching only the
+ * bundled 94-school seed, so a student whose school had been ADDED by someone
+ * else could not find it, and a student whose school was in neither place had
+ * no way forward — "arène does not let me register my school". The seed is
+ * four years of ESLP applicants; it was never the whole country.
+ */
 import { addDoc, collection, getDocs, limit, query, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import {
@@ -6,29 +21,15 @@ import {
   mergeSchools,
   likelyDuplicate,
   validateShortName,
+  shortNameFailure,
   seedSchools as bundledSeedSchools,
   type School,
   type ShortNameReason,
-} from '../../../shared/schools';
+} from '../../shared/schools';
 
-/**
- * The school list: a bundled seed plus whatever students have added.
- *
- * The seed is 105 schools pulled from four years of ESLP applications, and it
- * ships INSIDE the app on purpose. The picker has to work on the first launch,
- * on a bad connection, before any Firestore read returns — because a student
- * who sees an empty list types their own spelling, and the school board groups
- * by spelling. An empty picker is how the rankings fragment.
- *
- * Firestore holds only what the seed does not: schools students add themselves.
- * If that read fails, or its rules are not deployed yet, the picker still works
- * with the seed and nothing on screen breaks.
- */
-
-// Derived in shared/schools.ts rather than here, because the SERVER needs the
-// same list (api/arena/_shared.ts resolves a school's board label from it) and
-// two mappings of the same JSON are two opinions about school identity waiting
-// to drift — which is precisely the class of bug this module exists to stop.
+// From shared/, not mapped again here: the SERVER resolves a school's board
+// label from the same list (api/arena/_shared.ts), and a second mapping of the
+// same JSON is how the board ends up with two entries for one school.
 const SEED: School[] = bundledSeedSchools();
 
 /** Bound the read: the list is a picker, not an archive. */
@@ -39,14 +40,17 @@ let cache: School[] | null = null;
 /** Every school the picker can offer — seed first, then anything added. */
 export async function loadSchools(): Promise<School[]> {
   if (cache) return cache;
+
+  // `schools` is readable only to a signed-in user (firestore.rules), and the
+  // /arena picker renders for signed-out visitors too. Asking anyway would
+  // spend a round-trip to be denied and log an error on every anonymous page
+  // load. Nothing is cached in that case, so the read happens once they sign
+  // in — which is before they can register anyway.
+  if (!auth.currentUser) return mergeSchools(SEED, []);
+
   let added: School[] = [];
   try {
     const snap = await getDocs(query(collection(db, 'schools'), limit(MAX_ADDED)));
-    // schoolFromDoc lives in shared/schools.ts because the WEB reads the same
-    // collection (src/services/schoolWebService.ts). It carries `status`
-    // through rather than dropping it: a caller that shows a pending school
-    // has to be able to say so, and the Arena has to be able to refuse a short
-    // name a pending school has not earned yet.
     added = snap.docs
       .map((d) => schoolFromDoc(d.data()))
       // A pending school stays in the picker — the student who just added
@@ -55,7 +59,8 @@ export async function loadSchools(): Promise<School[]> {
       // offering it again re-splits the points the merge just brought together.
       .filter((s): s is School => !!s && s.status !== 'merged');
   } catch (err) {
-    // Rules not deployed, offline, or signed out — the seed is enough to pick from.
+    // Rules not deployed, offline, or signed out — the seed is enough to pick
+    // from, and a picker that works offline is the point of bundling it.
     console.error('[Schools] load error:', err);
   }
   cache = mergeSchools(SEED, added);
@@ -67,18 +72,22 @@ export function seedSchools(): School[] {
   return SEED;
 }
 
-export type AddResult =
-  | { ok: true; school: School }
-  | { ok: false; reason: 'duplicate'; existing: School }
-  | { ok: false; reason: 'short-name'; detail: ShortNameReason }
-  | { ok: false; reason: 'signed-out' | 'invalid' | 'failed' };
+export interface AddSchoolResult {
+  ok: boolean;
+  school?: School;
+  reason?: 'duplicate' | 'short-name' | 'signed-out' | 'invalid' | 'failed';
+  /** On 'duplicate': the school the student should pick instead. */
+  existing?: School;
+  /** On 'short-name': which rule the typed short name broke. */
+  detail?: ShortNameReason;
+}
 
 /**
  * Add a school a student could not find.
  *
  * The duplicate check runs here as well as in the UI: the list can have grown
- * between the search and the tap, and on launch night two students at the same
- * school will do this within a minute of each other.
+ * between the search and the click, and on launch night two students at the
+ * same school will do this within a minute of each other.
  */
 export async function addSchool(input: {
   name: string;
@@ -89,7 +98,7 @@ export async function addSchool(input: {
    *  blank, and an admin asks later. Demanding one here is how invented short
    *  names get created. */
   shortName?: string;
-}): Promise<AddResult> {
+}): Promise<AddSchoolResult> {
   const name = input.name.trim();
   const key = schoolKey(name);
   if (!auth.currentUser) return { ok: false, reason: 'signed-out' };
@@ -102,12 +111,13 @@ export async function addSchool(input: {
   // Re-validated here and not only in the form, for the same reason the
   // duplicate check is: the list can have grown between the two, and a short
   // name is the one field where a second student getting through would put two
-  // schools behind one bar on the stage.
+  // schools behind one bar on the tournament stage.
   let shortName: string | undefined;
   if (input.shortName?.trim()) {
     const check = validateShortName(input.shortName, all);
-    if (!check.ok) return { ok: false, reason: 'short-name', detail: check.reason };
-    shortName = check.value;
+    const failure = shortNameFailure(check);
+    if (failure) return { ok: false, reason: 'short-name', detail: failure };
+    shortName = (check as { ok: true; value: string }).value;
   }
 
   const school: School = {
@@ -137,9 +147,4 @@ export async function addSchool(input: {
   }
   cache = mergeSchools(cache ?? SEED, [school]);
   return { ok: true, school };
-}
-
-/** Drop the cache so a newly added school shows up for the next picker. */
-export function invalidateSchools(): void {
-  cache = null;
 }
