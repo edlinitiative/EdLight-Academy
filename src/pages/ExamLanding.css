@@ -855,3 +855,14 @@
     grid-template-columns: minmax(80px, 110px) minmax(0, 1fr) 38px;
   }
 }
+
+/* The honest subtitle under "Pour commencer" — shown only when there are no
+   attempts to reason from, so the list is coefficient order rather than a
+   diagnosis (plan §6.4). */
+.exam-landing__section-note {
+  max-width: 62ch;
+  margin: -0.35rem 0 0.9rem;
+  color: var(--text-500);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}

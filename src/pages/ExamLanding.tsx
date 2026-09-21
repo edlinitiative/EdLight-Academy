@@ -208,6 +208,21 @@ const ExamLanding = () => {
     }).filter((r) => !!r.exam);
   }, [enriched, attempts, grade, userTrack]);
 
+  /*
+   * Is any of that actually a RECOMMENDATION?
+   *
+   * The list is "weakest subjects first, then ones never attempted". With no
+   * attempts on file — a signed-out visitor, or a new student — nothing is
+   * weak and the list degrades to "subjects in coefficient order", which is a
+   * sensible place to start but is not personalised to anybody. Calling it
+   * "Recommandé pour vous" there claims a diagnosis we have not made, which
+   * §6.4 of the redesign plan rules out in those words.
+   */
+  const hasAttemptEvidence = useMemo(
+    () => Object.values(attempts || {}).some((a: any) => typeof a?.percentage === 'number'),
+    [attempts],
+  );
+
   // ── My level ──────────────────────────────────────────────────────────────
   // An NS4 student has no business browsing 9e papers by default. When we know
   // the grade, the page scopes to that level and the others move behind a
@@ -363,7 +378,18 @@ const ExamLanding = () => {
       {/* ── Recommandé pour vous ─────────────────────────────────────────── */}
       {recommendations.length > 0 && (
         <section className="exam-landing__section">
-          <h2 className="exam-landing__section-title">{t('examLanding.sectionRecommended')}</h2>
+          <h2 className="exam-landing__section-title">
+            {hasAttemptEvidence
+              ? t('examLanding.sectionRecommended')
+              : ht ? 'Pou kòmanse' : 'Pour commencer'}
+          </h2>
+          {!hasAttemptEvidence && (
+            <p className="exam-landing__section-note">
+              {ht
+                ? 'Matyè ki gen plis pwa nan filyè a. Lè ou fin fè kèk egzamen, n ap montre sa pou w ranfòse.'
+                : 'Les matières au plus fort coefficient. Après quelques examens, nous indiquerons celles à renforcer.'}
+            </p>
+          )}
           <div className="exam-landing__cards">
             {recommendations.map(({ subject, exam, weak }) => {
               const name = sessionRowName(exam, ht ? 'ht' : 'fr');
