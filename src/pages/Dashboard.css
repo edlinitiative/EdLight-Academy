@@ -959,3 +959,16 @@ button.dash-activity__tag { cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .dash-focus__cta { transition: none; }
 }
+
+/* The hero's kicker — used when the lead is a half-finished exam rather than a
+   course, so the card says WHAT it is before it says which one. */
+.dash-focus__eyebrow {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--primary-600);
+  font-size: var(--text-xs);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dash--st .dash-focus__eyebrow { color: var(--st-accent); }

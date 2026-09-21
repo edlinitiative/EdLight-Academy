@@ -210,6 +210,28 @@ export default function Dashboard() {
     return { inProgress, submitted, lastMs };
   }, [recentExamAttempts]);
 
+  /*
+   * THE UNFINISHED EXAM OUTRANKS A COURSE SUGGESTION.
+   *
+   * A paper a student stopped halfway through is the most actionable thing
+   * this page can offer — it is work they already started, with a known place
+   * to return to (§4.6, continuity). The hero used to lead with a course
+   * instead, and when nothing was in progress it fell back to the FIRST
+   * course in the catalogue, so a student with three half-finished exams was
+   * shown "Chimie NS1 — vous n'avez pas encore commencé ce cours".
+   *
+   * Only `in_progress`, only with the two fields needed to route back to it,
+   * most recently touched first. Nothing is invented: the title comes from the
+   * catalogue and the date from the attempt.
+   */
+  const resumeExam = React.useMemo(() => {
+    const attempts = Array.isArray(recentExamAttempts) ? recentExamAttempts : [];
+    const open = attempts
+      .filter((a) => a?.status === 'in_progress' && a?.exam_id && levelToUrl(a?.level))
+      .sort((a, b) => (b?.updated_at_ms || 0) - (a?.updated_at_ms || 0));
+    return open[0] || null;
+  }, [recentExamAttempts]);
+
   const [dueReviewCount, setDueReviewCount] = React.useState(0);
   React.useEffect(() => {
     let alive = true;
@@ -310,7 +332,53 @@ export default function Dashboard() {
             The streak sits beside it because it is the only thing here that
             decays; together they say "do this, and don't break that". */}
         <div className="dash-lead">
-          {resume ? (
+          {resumeExam ? (
+            <section className="dash-focus" aria-label={isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen"}>
+              {(() => {
+                const catalogExam = examByKey.get(String(resumeExam.exam_id));
+                const subject = catalogExam?._subject || '';
+                const cover = subject ? subjectCover(subject) : null;
+                const named = catalogExam ? sessionRowName(catalogExam, isCreole ? 'ht' : 'fr') : null;
+                const title = named
+                  ? `${subject ? `${subject} · ` : ''}${named.title}`
+                  : (isCreole ? 'Egzamen an kou' : 'Examen en cours');
+                const urlLevel = levelToUrl(resumeExam.level);
+                return (
+                  <>
+                    {cover && (
+                      <img
+                        className="dash-focus__wash"
+                        src={cover}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    )}
+                    <div className="dash-focus__inner">
+                      <span className="dash-focus__eyebrow">
+                        {isCreole ? 'Egzamen an kou' : 'Examen en cours'}
+                      </span>
+                      <h2 className="dash-focus__title">{title}</h2>
+                      <p className="dash-focus__sub">
+                        {isCreole
+                          ? 'Ou te kite l nan mitan. Ou ka kontinye kote ou te ye a.'
+                          : 'Vous l’avez laissé en cours. Reprenez où vous en étiez.'}
+                      </p>
+                      <button
+                        type="button"
+                        className="dash-focus__cta"
+                        onClick={() => navigate(`/exams/${urlLevel}/${resumeExam.exam_id}/take`, { state: { autostart: true } })}
+                      >
+                        <PlayCircle size={19} aria-hidden="true" />
+                        {isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen"}
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </section>
+          ) : resume ? (
             <section className="dash-focus" aria-label={isCreole ? 'Kontinye' : 'Reprendre'}>
               {subjectCover(resume.course.subject) && (
                 <img
