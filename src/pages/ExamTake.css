@@ -30,12 +30,56 @@
 }
 
 /* The header block (top bar + progress bar + state strip) travels as one unit
-   so the submit action and the remaining time are always reachable. */
+   so the submit action and the remaining time are always reachable.
+   `.exam-take__topbar` in index.css is ALREADY sticky, so this wrapper only
+   exists to carry the progress bar and the state strip along with it. */
 .exam-take__header {
 	position: sticky;
 	top: 0;
 	z-index: 51;
 	background: var(--background);
+}
+
+/* …but not on a phone. Measured at 390 × 844: the wrapper is 227px tall (the
+   top bar wraps to two rows and the state sentence to two lines), so 27% of the
+   viewport was permanently occupied by chrome on the one screen where the
+   question and its answers must dominate (§6.5), and every question opened with
+   158px of itself — the whole section header — parked underneath it.
+   `display: contents` drops the wrapper's box, which both frees the space and
+   restores `.exam-take__topbar` as the sticky element (a sticky child is
+   confined to its parent's box, so the compact bar could not otherwise outlive
+   the wrapper). Timer, answered count and Soumettre stay pinned; the progress
+   bar and the state strip scroll with the paper.
+   The same applies to any short viewport — a landscape phone has no room to
+   spare either. */
+@media (max-width: 640px), (max-height: 560px) {
+	.exam-take__header {
+		display: contents;
+	}
+}
+
+/* `scrollIntoView({ block: 'start' })` on question change aligns the content to
+   the viewport top, which knows nothing about the pinned bar above it. Give the
+   content a scroll margin so a new question opens BELOW the chrome instead of
+   behind it. Sized for the tallest pinned bar at each width, measured in the
+   browser: ~117px phone (top bar alone), ~165px desktop (whole header). */
+.exam-take__content {
+	scroll-margin-top: 8rem;
+}
+
+@media (max-width: 640px) {
+	.exam-take__content {
+		scroll-margin-top: 7.75rem;
+	}
+}
+
+/* The question card fades in on every mount, i.e. on every question change.
+   Honour a reduced-motion preference on the screen where the content matters
+   most (§7: preserve reduced-motion behaviour and information equivalence). */
+@media (prefers-reduced-motion: reduce) {
+	.exam-take__question-card {
+		animation: none;
+	}
 }
 
 /* ──────────────────────────────────────────────────────────────────────────

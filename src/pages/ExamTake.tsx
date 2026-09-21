@@ -401,6 +401,9 @@ const ExamTake = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  // Non-null when grading or the results hand-off threw. Never cleared by a
+  // navigation, so the student cannot walk away thinking the paper was filed.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Feedback mode: 'end' (default — see all results after submit)
   //                'immediate' (see per-question result after answering)
@@ -1148,27 +1151,42 @@ const ExamTake = () => {
     setSubmitted(true);
     setSubmitting(false);
 
-    const result = gradeExam(
-      questions, answers,
-      preGraded,
-      { track: currentTrack, subject: examSubject }
-    );
+    // Grading and the hand-off to the results page are the two steps that can
+    // throw on a malformed question or a full/blocked sessionStorage, and a
+    // throw here used to end the attempt in silence: no results page, no
+    // message, and the draft already cleared above. Say so instead, and let the
+    // student try again — the answers are still in this component's state
+    // (§8: submitting must differentiate confirmed from failed).
+    // Nothing inside is changed: same gradeExam call, same inputs, same payload.
+    let result;
+    try {
+      result = gradeExam(
+        questions, answers,
+        preGraded,
+        { track: currentTrack, subject: examSubject }
+      );
 
-    // Store in sessionStorage for ExamResults page
-    sessionStorage.setItem(
-      `exam-result-${examKey}`,
-      JSON.stringify({
-        examIndex: idx,
-        examId: examKey,
-        examTitle: normalizeExamTitle(exam),
-        subject: examSubject,
-        level: normalizeLevel(exam.level),
-        track: currentTrack,
-        result,
-        aiGradeFailures,
-        timestamp: Date.now(),
-      })
-    );
+      // Store in sessionStorage for ExamResults page
+      sessionStorage.setItem(
+        `exam-result-${examKey}`,
+        JSON.stringify({
+          examIndex: idx,
+          examId: examKey,
+          examTitle: normalizeExamTitle(exam),
+          subject: examSubject,
+          level: normalizeLevel(exam.level),
+          track: currentTrack,
+          result,
+          aiGradeFailures,
+          timestamp: Date.now(),
+        })
+      );
+    } catch (e) {
+      console.error('[ExamTake] Submission failed while grading/storing:', e);
+      setShowConfirm(false);
+      setSubmitError(e instanceof Error ? e.message : String(e));
+      return;
+    }
 
     // Persist to Firestore for cross-device results/resume (best-effort)
     if (userId && examKey) {
@@ -2205,7 +2223,17 @@ const ExamTake = () => {
                         setShowConfirm(false);
                       }}
                       type="button"
-                      aria-label={`${t('Aller à la question', 'Ale nan kesyon')} ${formatQuestionLabel(questions[i], i)}`}
+                      /* Authored numbers restart in every section, so three
+                         different questions can all be labelled "1" in this
+                         flat list. The section name is what tells them apart. */
+                      title={[
+                        `${t('Question', 'Kesyon')} ${formatQuestionLabel(questions[i], i)}`,
+                        questions[i].sectionTitle,
+                      ].filter(Boolean).join(' — ')}
+                      aria-label={[
+                        `${t('Aller à la question', 'Ale nan kesyon')} ${formatQuestionLabel(questions[i], i)}`,
+                        questions[i].sectionTitle,
+                      ].filter(Boolean).join(' — ')}
                     >
                       {formatNavLabel(questions[i], i)}
                     </button>
@@ -2227,6 +2255,46 @@ const ExamTake = () => {
                 ) : (
                   t('Soumettre maintenant', 'Soumèt kounye a')
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Submission failed ─────────────────────────────────────────────────
+          The one state this screen must never fake. No "enregistré", no
+          navigation to a results page that has nothing to show: a plain-language
+          statement of what happened, a retry, and an honest warning that the
+          answers live only in this window until the retry succeeds (§8, §13). */}
+      {submitError && (
+        <div className="exam-take__overlay">
+          <div
+            className="exam-take__modal card"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="exam-submit-error-title"
+            aria-describedby="exam-submit-error-desc"
+          >
+            <h3 id="exam-submit-error-title">
+              {t("L'examen n'a pas pu être remis", 'Egzamen an pa t ka remèt')}
+            </h3>
+            <p id="exam-submit-error-desc">
+              {t(
+                'La correction n’a pas abouti, donc votre copie n’est pas enregistrée. Vos réponses sont encore dans cette fenêtre : ne la fermez pas et réessayez.',
+                'Koreksyon an pa t fèt, donk kopi ou pa anrejistre. Repons ou yo toujou nan fenèt sa a : pa fèmen l epi eseye ankò.',
+              )}
+            </p>
+            <p className="exam-take__modal-warning">{submitError}</p>
+            <div className="exam-take__modal-actions">
+              <button
+                className="button button--primary"
+                type="button"
+                disabled={submitting}
+                onClick={() => { setSubmitError(null); handleSubmit(); }}
+              >
+                {submitting
+                  ? <><span className="loading-spinner loading-spinner--inline" /> {t('Nouvelle tentative…', 'N ap eseye ankò…')}</>
+                  : t('Réessayer la remise', 'Eseye remèt ankò')}
               </button>
             </div>
           </div>
@@ -3778,6 +3846,11 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                 )}
 
                 {/* Math input */}
+                {/* Same reason as MCQInput: a locked card is only
+                    pointer-events: none, so every control that WRITES the
+                    answer has to be disabled too or the note promising the
+                    answer is final is false for keyboard users. Hint reveal is
+                    deliberately left enabled — it doesn't change the answer. */}
                 <textarea
                   className="ka-step__input"
                   value={step.math}
@@ -3785,6 +3858,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                   placeholder={isDone ? '' : t('Écrivez votre expression ici…', 'Ekri ekspresyon ou an isit la…')}
                   rows={1}
                   spellCheck="false"
+                  disabled={disabled}
                 />
 
                 {/* Live KaTeX preview */}
@@ -3798,6 +3872,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                 <JustificationPicker
                   value={step.justification}
                   onChange={(val) => setStepField(i, 'justification', val)}
+                  disabled={disabled}
                 />
 
                 {/* Remove button */}
@@ -3807,6 +3882,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
                     className="ka-step__remove"
                     onClick={() => removeStep(i)}
                     aria-label={t('Supprimer cette étape', 'Efase etap sa a')}
+                    disabled={disabled}
                   >
                     ✕
                   </button>
@@ -3819,7 +3895,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
 
       {/* Bottom actions */}
       <div className="ka-proof__actions">
-        <button type="button" className="ka-proof__add-btn" onClick={addStep}>
+        <button type="button" className="ka-proof__add-btn" onClick={addStep} disabled={disabled}>
           + {t('Ajouter une étape', 'Ajoute yon etap')}
         </button>
         {canRevealHint && (
@@ -3843,6 +3919,7 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
             value={finalAnswer}
             onChange={(e) => setFinalAnswer(e.target.value)}
             placeholder={t(`Votre ${(subtype.finalLabel || 'résultat').toLowerCase()}…`, `${(subtype.finalLabel || 'rezilta').toLowerCase()} ou…`)}
+            disabled={disabled}
           />
           {finalAnswer && (/\$/.test(finalAnswer) || /\\[a-zA-Z]/.test(finalAnswer)) && katexReady && (
             <div className="ka-proof__answer-preview">
@@ -3856,14 +3933,14 @@ function ProofInput({ question, index, value, onChange, disabled = false }) {
 }
 
 /** Collapsible justification picker — click to expand, minimal when collapsed */
-function JustificationPicker({ value, onChange }) {
+function JustificationPicker({ value, onChange, disabled = false }) {
   const language = useStore((s) => s.language);
   const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const [open, setOpen] = useState(false);
 
   if (!open && !value) {
     return (
-      <button type="button" className="ka-justify__toggle" onClick={() => setOpen(true)}>
+      <button type="button" className="ka-justify__toggle" onClick={() => setOpen(true)} disabled={disabled}>
         + {t('Justification', 'Jistifikasyon')}
       </button>
     );
@@ -3882,6 +3959,7 @@ function JustificationPicker({ value, onChange }) {
             onChange(val);
           }
         }}
+        disabled={disabled}
       >
         <option value="">{t('— Choisir —', '— Chwazi —')}</option>
         {JUSTIFICATION_OPTIONS.slice(1).map(opt => (
@@ -3895,6 +3973,7 @@ function JustificationPicker({ value, onChange }) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={t('Justification personnalisée…', 'Jistifikasyon pèsonèl…')}
+          disabled={disabled}
         />
       )}
       {!value && (
@@ -3904,7 +3983,14 @@ function JustificationPicker({ value, onChange }) {
   );
 }
 
-function MCQInput({ question, index, value, onChange, disabled }) {
+/**
+ * Multiple choice — by far the most common question type in the corpus.
+ *
+ * Exported for the locked-answer regression test: the screen tells the student
+ * a checked answer "ne peut plus être modifiée", and the only thing that makes
+ * that true for a keyboard user is `disabled` reaching these radios.
+ */
+export function MCQInput({ question, index, value, onChange, disabled }) {
   const language = useStore((s) => s.language);
   const t = (fr, ht) => (language === 'ht' ? ht : fr);
   const options = question.options || {};
@@ -3920,6 +4006,7 @@ function MCQInput({ question, index, value, onChange, disabled }) {
           value={value}
           onChange={(e) => onChange(index, e.target.value)}
           placeholder={t('Votre réponse…', 'Repons ou…')}
+          disabled={disabled}
         />
       </div>
     );
@@ -3934,6 +4021,12 @@ function MCQInput({ question, index, value, onChange, disabled }) {
             key={key}
             className={`exam-take__mcq-option ${isSelected ? 'exam-take__mcq-option--selected' : ''}`}
           >
+            {/* `disabled` is what actually makes a locked answer locked. The
+                locked card only sets `pointer-events: none`, so without this a
+                keyboard user could still tab in and arrow to another option
+                after checking — changing the SAVED answer while the recorded
+                grade stayed the one already awarded, and making the on-screen
+                "cette réponse ne peut plus être modifiée" untrue. */}
             <input
               type="radio"
               name={`q-${index}`}
@@ -3941,6 +4034,7 @@ function MCQInput({ question, index, value, onChange, disabled }) {
               checked={isSelected}
               onChange={() => onChange(index, key)}
               className="exam-take__mcq-radio"
+              disabled={disabled}
             />
             <span className="exam-take__mcq-key">{key.toUpperCase()}</span>
             <span className="exam-take__mcq-text"><MathText text={text} /></span>
@@ -3984,6 +4078,7 @@ function MultiSelectInput({ question, index, value, onChange, disabled }) {
           value={value}
           onChange={(e) => onChange(index, e.target.value)}
           placeholder={t('Votre réponse…', 'Repons ou…')}
+          disabled={disabled}
         />
       </div>
     );
