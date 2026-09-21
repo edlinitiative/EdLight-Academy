@@ -15,6 +15,31 @@
 }
 
 /* ── Page header ── */
+.exam-landing__intro {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto 1.5rem;
+}
+.exam-landing__back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--primary-600);
+  font-size: var(--text-sm);
+}
+.exam-landing__intro h1 {
+  margin: 0 0 0.75rem;
+  color: var(--text-900);
+  font-size: clamp(1.65rem, 4vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.exam-landing__intro p {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--text-600);
+  line-height: 1.6;
+}
+
 .exam-landing__header {
   text-align: center;
   margin-bottom: 1.25rem;

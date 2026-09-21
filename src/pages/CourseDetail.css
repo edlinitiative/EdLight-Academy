@@ -1,0 +1,98 @@
+.lesson-card__eyebrow {
+  color: var(--primary-600);
+  font-size: var(--text-xs);
+  font-weight: 750;
+  letter-spacing: 0.075em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.course-detail .lesson-card {
+  gap: 1.15rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.course-detail .lesson-card__title {
+  margin: 0;
+  max-width: 32ch;
+  color: var(--text-900);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.course-detail .lesson-card__description {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--text-600);
+}
+
+.course-detail .lesson-card__nav {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 0.25rem;
+}
+
+.course-detail .lesson-card__mastery { order: 1; margin-bottom: 0; }
+.course-detail .lesson-card__nav-group--actions { order: 2; justify-content: flex-start; }
+.course-detail .lesson-card__chapter-test { order: 3; }
+.course-detail .lesson-card__nav-group--navigation {
+  order: 4;
+  width: 100%;
+  justify-content: space-between;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.course-detail .lesson-card__nav-group--navigation .button {
+  min-width: auto;
+  padding: 0.55rem 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.course-detail .lesson-card__nav-group--navigation .button:hover:not(:disabled) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--primary-700);
+  transform: none;
+}
+
+.course-detail .lesson-card__nav-group--actions .button:hover {
+  transform: none;
+}
+
+.course-detail .lesson-card--comments {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+.course-overview + .course-instructors,
+.course-overview .course-instructors {
+  margin-top: 2rem;
+}
+
+@media (max-width: 700px) {
+  .course-detail .lesson-card {
+    padding: 0.9rem;
+    border-radius: 16px;
+  }
+  .course-detail .lesson-card__nav-group--actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+  .course-detail .lesson-card__nav-group--actions .button:first-child {
+    grid-column: 1 / -1;
+  }
+  .course-detail .lesson-card__nav-group--actions .button {
+    justify-content: center;
+  }
+}

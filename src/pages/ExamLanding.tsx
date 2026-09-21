@@ -269,6 +269,13 @@ const ExamLanding = () => {
 
   return (
     <div className="exam-landing">
+      <header className="exam-landing__intro">
+        <Link to="/practice" className="exam-landing__back">← {ht ? 'Pratik' : 'Pratique'}</Link>
+        <h1>{ht ? 'Prepare pwochen egzamen ou' : 'Préparez votre prochain examen'}</h1>
+        <p>{ht
+          ? 'Kontinye yon egzamen ou te kòmanse oswa chwazi nivo ak matyè ou. Dire ak enstriksyon yo parèt anvan ou kòmanse.'
+          : 'Reprenez un examen en cours ou choisissez votre niveau et votre matière. La durée et les consignes sont affichées avant de commencer.'}</p>
+      </header>
       <div className="exam-landing__toolbar">
         {knowsLevel ? (
           <span className="exam-landing__level-context">

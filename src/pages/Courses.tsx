@@ -97,9 +97,6 @@ function CatalogCourseCard({ course, stats = null }) {
         {isEnrolled && <span className="ccat-card__enrolled-chip">{t('courses.enrolled')}</span>}
       </span>
       <span className="ccat-card__body">
-        <span className="ccat-card__provider">
-          <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
-        </span>
         <h3 className="ccat-card__title">{title}</h3>
         {description && <p className="ccat-card__desc">{description}</p>}
         <span className="ccat-card__meta">
@@ -393,7 +390,7 @@ export default function Courses() {
     .map((c) => ({ course: c, stats: courseStats(c) }))
     .filter(({ stats }) => stats.pct > 0 && stats.pct < 100)
     .sort((a, b) => b.stats.pct - a.stats.pct)
-    .slice(0, 3);
+    .slice(0, 1);
 
   return (
     <section className="section">
@@ -401,6 +398,7 @@ export default function Courses() {
         {/* Header — adapts to the active view (picker / level / search) */}
         <div className="page-header page-header--no-eyebrow courses-header">
           <div className="courses-header__lead">
+            <span className="courses-header__eyebrow">{t('nav.learn')}</span>
             {activeGroup ? (
               <>
                 <button type="button" className="courses-breadcrumb" onClick={goToSubjects}>
@@ -504,7 +502,7 @@ export default function Courses() {
               </div>
             )}
 
-            <div className="ccat-grid">
+            <div className="ccat-grid ccat-grid--subjects">
               {subjectGroups.map((g) => {
                 const label = t(`subjects.${g.code}`, { defaultValue: g.code });
                 const accentStyle = { '--accent': g.accent } as React.CSSProperties;
@@ -521,7 +519,7 @@ export default function Courses() {
                   return (
                     <div
                       key={g.code}
-                      className="ccat-card ccat-card--soon"
+                      className="ccat-card ccat-card--subject ccat-card--soon"
                       style={accentStyle}
                       aria-disabled="true"
                       aria-label={`${label} — ${t('courses.comingSoon', 'Bientôt disponible')}`}
@@ -531,9 +529,6 @@ export default function Courses() {
                         <span className="ccat-card__soon-badge">{t('courses.comingSoon', 'Bientôt disponible')}</span>
                       </span>
                       <span className="ccat-card__body">
-                        <span className="ccat-card__provider">
-                          <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
-                        </span>
                         <h3 className="ccat-card__title">{label}</h3>
                         <span className="ccat-card__meta">{t('courses.comingSoonSub', 'Cours en préparation')}</span>
                       </span>
@@ -545,16 +540,13 @@ export default function Courses() {
                   <button
                     key={g.code}
                     type="button"
-                    className="ccat-card"
+                    className="ccat-card ccat-card--subject"
                     style={accentStyle}
                     onClick={() => { setSubject(g.code); setFilter('all'); }}
                     aria-label={label}
                   >
                     <CardCoverImage code={g.code} label={label} />
                     <span className="ccat-card__body">
-                      <span className="ccat-card__provider">
-                        <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
-                      </span>
                       <h3 className="ccat-card__title">{label}</h3>
                       <span className="ccat-card__meta">{metaLine}</span>
                       {/* Only once there IS progress — a 0% bar on every

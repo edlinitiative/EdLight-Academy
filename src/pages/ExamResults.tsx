@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './ExamResults.css';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Trophy, ThumbsUp, Dumbbell, BarChart3, Clock, Lightbulb, RefreshCw, PenLine, Target, Check, X, Eye } from 'lucide-react';
@@ -456,6 +457,39 @@ const ExamResults = () => {
             ))}
           </div>
         )}
+        {/* Next step — close the loop: weak area → targeted practice → readiness */}
+        <div className="exam-results__next" style={{ '--next-accent': color } as React.CSSProperties}>
+          <div className="exam-results__next-head">
+            <span className="exam-results__next-icon"><Lightbulb size={20} /></span>
+            <div className="exam-results__next-copy">
+              <h2 className="exam-results__next-title">{t('Et maintenant', 'E kounye a')}&nbsp;?</h2>
+              <p className="exam-results__next-sub">
+                {masteredSubject ? (
+                  isCreole
+                    ? <>Bèl travay nan <strong>{subject}</strong> — kenbe ritm nan pou konsolide nòt preparasyon Bac ou.</>
+                    : <>Excellent travail en <strong>{subject}</strong> — gardez le rythme pour consolider votre score de préparation au Bac.</>
+                ) : weakestArea ? (
+                  isCreole
+                    ? <>Pwen fèb ou nan egzamen sa a&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Ranfòse l pou fè nòt preparasyon Bac ou monte.</>
+                    : <>Votre point faible sur cet examen&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Renforcez-le pour faire monter votre score de préparation au Bac.</>
+                ) : (
+                  isCreole
+                    ? <>Kontinye antrene nan <strong>{subject}</strong> pou fè nòt preparasyon Bac ou monte.</>
+                    : <>Continuez à vous entraîner en <strong>{subject}</strong> pour faire monter votre score de préparation au Bac.</>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="exam-results__next-actions">
+            <button className={`button ${reviewCount > 0 ? 'button--secondary' : 'button--primary'}`} onClick={() => navigate(studyTarget)} type="button">
+              <Target size={16} /> {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
+            </button>
+            <button className="button button--ghost" onClick={() => navigate('/dashboard')} type="button">
+              <BarChart3 size={16} /> {t('Voir mon score de préparation', 'Wè nòt preparasyon mwen')}
+            </button>
+          </div>
+        </div>
+
         {reviewCount > 0 && (
           <div className="exam-results__focus-cta">
             <div className="exam-results__focus-text">
@@ -472,39 +506,6 @@ const ExamResults = () => {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Next step — close the loop: weak area → targeted practice → readiness */}
-      <div className="exam-results__next" style={{ '--next-accent': color } as React.CSSProperties}>
-        <div className="exam-results__next-head">
-          <span className="exam-results__next-icon"><Lightbulb size={20} /></span>
-          <div className="exam-results__next-copy">
-            <h2 className="exam-results__next-title">{t('Et maintenant', 'E kounye a')}&nbsp;?</h2>
-            <p className="exam-results__next-sub">
-              {masteredSubject ? (
-                isCreole
-                  ? <>Bèl travay nan <strong>{subject}</strong> — kenbe ritm nan pou konsolide nòt preparasyon Bac ou.</>
-                  : <>Excellent travail en <strong>{subject}</strong> — gardez le rythme pour consolider votre score de préparation au Bac.</>
-              ) : weakestArea ? (
-                isCreole
-                  ? <>Pwen fèb ou nan egzamen sa a&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Ranfòse l pou fè nòt preparasyon Bac ou monte.</>
-                  : <>Votre point faible sur cet examen&nbsp;: <strong>{weakestArea.key}</strong> ({weakestArea.pct}%). Renforcez-le pour faire monter votre score de préparation au Bac.</>
-              ) : (
-                isCreole
-                  ? <>Kontinye antrene nan <strong>{subject}</strong> pou fè nòt preparasyon Bac ou monte.</>
-                  : <>Continuez à vous entraîner en <strong>{subject}</strong> pour faire monter votre score de préparation au Bac.</>
-              )}
-            </p>
-          </div>
-        </div>
-        <div className="exam-results__next-actions">
-          <button className="button button--primary" onClick={() => navigate(studyTarget)} type="button">
-            <Target size={16} /> {courseCode ? t(`S'entraîner en ${subject}`, `Antrene nan ${subject}`) : t('Réviser cette matière', 'Revize matyè sa a')}
-          </button>
-          <button className="button button--ghost" onClick={() => navigate('/dashboard')} type="button">
-            <BarChart3 size={16} /> {t('Voir mon score de préparation', 'Wè nòt preparasyon mwen')}
-          </button>
-        </div>
       </div>
 
       {/* Detailed results */}

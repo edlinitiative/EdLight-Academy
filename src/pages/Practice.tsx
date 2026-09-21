@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Brain, ChevronRight, ClipboardCheck, ListChecks, Sparkles } from 'lucide-react';
 import useStore from '../contexts/store';
+import { loadDueReviewIds } from '../services/reviewService';
 import './Practice.css';
 
 type PracticeChoice = {
@@ -16,6 +18,12 @@ type PracticeChoice = {
 
 export default function Practice() {
   const language = useStore((state) => state.language);
+  const userId = useStore((state) => state.user?.uid);
+  const { data: dueIds = [] } = useQuery({
+    queryKey: ['due-review-ids', userId],
+    queryFn: () => loadDueReviewIds(userId!),
+    enabled: !!userId,
+  });
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
@@ -29,8 +37,10 @@ export default function Practice() {
         'Retrouvez les questions ratées et travaillez-les jusqu’à les maîtriser.',
         'Jwenn kesyon ou te rate yo epi travay sou yo jiskaske ou metrize yo.',
       ),
-      note: t('Session ciblée · jusqu’à 10 questions', 'Sesyon vize · jiska 10 kesyon'),
-      primary: true,
+      note: dueIds.length > 0
+        ? t(`${dueIds.length} question${dueIds.length === 1 ? '' : 's'} à revoir`, `${dueIds.length} kesyon pou revize`)
+        : t('Retrouvez ici vos erreurs après une pratique', 'Jwenn erè ou yo isit la apre yon pratik'),
+      primary: dueIds.length > 0,
     },
     {
       href: '/quizzes',
@@ -41,12 +51,13 @@ export default function Practice() {
         'Choisissez une matière ou une leçon et obtenez une correction immédiate.',
         'Chwazi yon matyè oswa yon leson epi jwenn koreksyon touswit.',
       ),
-      note: t('Non chronométré · résultats enregistrés', 'San kwonomèt · rezilta anrejistre'),
+      note: t('Non chronométré · correction après chaque réponse', 'San kwonomèt · koreksyon apre chak repons'),
+      primary: dueIds.length === 0,
     },
     {
       href: '/exams',
       icon: <ClipboardCheck size={23} aria-hidden="true" />,
-      eyebrow: t('Préparation au Bac', 'Preparasyon Bak'),
+      eyebrow: t('Préparation aux examens', 'Preparasyon egzamen'),
       title: t('Passer un examen blanc', 'Pase yon egzamen blan'),
       description: t(
         'Choisissez un examen officiel, consultez les consignes, puis travaillez en conditions d’examen.',
@@ -63,7 +74,7 @@ export default function Practice() {
         'Transformez vos objectifs et disponibilités en étapes de travail claires.',
         'Transfòme objektif ak tan ou genyen an etap travay ki klè.',
       ),
-      note: t('Votre plan reste distinct des recommandations', 'Plan pa w rete separe ak rekòmandasyon yo'),
+      note: t('Selon vos objectifs et votre temps disponible', 'Dapre objektif ou ak tan ou genyen'),
     },
   ];
 
@@ -82,7 +93,7 @@ export default function Practice() {
         </header>
 
         <div className="practice-hub__grid">
-          {choices.map((choice) => (
+          {[...choices].sort((a, b) => Number(!!b.primary) - Number(!!a.primary)).map((choice) => (
             <Link
               key={choice.href}
               to={choice.href}

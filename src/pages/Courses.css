@@ -188,11 +188,11 @@
   margin-top: 0.7rem;
   align-self: flex-start;
   font-size: var(--text-sm);
-  font-weight: 600;
-  color: #fff;
-  background: var(--primary-500);
-  border-radius: var(--r-btn);
-  padding: 0.55rem 1.1rem;
+  font-weight: 700;
+  color: var(--accent, var(--primary-600));
+  background: transparent;
+  border-radius: 0;
+  padding: 0.35rem 0;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -201,13 +201,41 @@
 
 .ccat-card:hover .ccat-card__cta,
 .ccat-card:focus-visible .ccat-card__cta {
-  background: var(--primary-700);
+  background: transparent;
+  color: var(--primary-700);
 }
 
 /* The coming-soon card has no destination, so its CTA must not look tappable. */
 .ccat-card--soon .ccat-card__cta {
-  background: var(--surface-muted);
+  background: transparent;
   color: var(--text-500);
+}
+
+.courses-header__eyebrow {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--primary-600);
+  font-size: var(--text-xs);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 760px) {
+  .ccat-grid--subjects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ccat-card--subject {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    min-height: 180px;
+  }
+  .ccat-card--subject > .ccat-card__cover,
+  .ccat-card--subject > span[style] {
+    height: 100%;
+  }
+  .ccat-card--subject .ccat-card__cover {
+    height: 100%;
+    aspect-ratio: auto;
+  }
 }
 
 /* Lesson counts under the bar ("3/19 leçons") — the bar shows the shape of

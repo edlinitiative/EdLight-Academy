@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import LessonComplete from '../components/LessonComplete';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Target, Flame, Check, X, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
+import { Check, X, BookOpen, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useAppData, useCourses } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
@@ -21,6 +21,7 @@ import { useCourseMastery } from '../hooks/useMastery';
 import MasteryBadge from '../components/MasteryBadge';
 import ChapterTestCard from '../components/ChapterTestCard';
 import { useTranslation } from 'react-i18next';
+import './CourseDetail.css';
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
 // Persist the last playback second per lesson in localStorage so reopening a
@@ -83,7 +84,7 @@ export default function CourseDetail() {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
   const [showComments, setShowComments] = useState(false); // Mobile comments toggle
-  const { isAuthenticated, enrolledCourses, user } = useStore();
+  const { isAuthenticated, enrolledCourses, user, setSandraAsk } = useStore();
   const freeVideoIds = useStore((s) => s.freeVideoIds);
   const recordActivity = useStore((s) => s.recordActivity);
   const { progress } = useCourseProgress(courseId);
@@ -532,25 +533,24 @@ export default function CourseDetail() {
             <article className="lesson-card">
               <header className="lesson-card__header">
                 <div className="lesson-card__header-content">
+                  <span className="lesson-card__eyebrow">
+                    {activeModuleData?.title || course.name}
+                    {lessonBreakdown.length > 0
+                      ? ` · ${t('courses.lessonPosition', {
+                          current: activeLesson + 1,
+                          total: lessonBreakdown.length,
+                          defaultValue: isCreole
+                            ? `Leson ${activeLesson + 1} sou ${lessonBreakdown.length}`
+                            : `Leçon ${activeLesson + 1} sur ${lessonBreakdown.length}`,
+                        })}`
+                      : ''}
+                  </span>
                   <h1
                     className="lesson-card__title"
                     onClick={() => setShowSidebar(true)}
                   >
                     {activeLessonData?.title || activeModuleData?.title || course.name}
                   </h1>
-                  {isEnrolled && progress && (
-                    <div className="lesson-card__progress-badges lesson-card__progress-badges--desktop">
-                      {progress.totalPoints > 0 && (
-                        <span className="chip chip--primary"><Target size={14} /> {progress.totalPoints} {t('common.pointsShort', 'pts')}</span>
-                      )}
-                      {progress.currentStreak > 0 && (
-                        <span className="chip chip--warning"><Flame size={14} /> {progress.currentStreak} {t('courses.dayStreak', 'jours de série')}</span>
-                      )}
-                      {progress.completedLessons?.length > 0 && (
-                        <span className="chip chip--success"><Check size={14} /> {progress.completedLessons.length} {t('courses.completedLower', 'terminés')}</span>
-                      )}
-                    </div>
-                  )}
                 </div>
                 
                 {/* Mobile: Show Course Content toggle button */}
@@ -653,6 +653,89 @@ export default function CourseDetail() {
               )}
 
               <div className="lesson-card__nav">
+                {/* The next step for this lesson. Sits directly above the
+                    actions so the guidance and the button that satisfies it are
+                    read together. Hidden entirely at `none` — telling someone
+                    who just opened a lesson to "regarde la leçon" is noise, the
+                    video is already playing in front of them. */}
+                {isEnrolled && activeLessonData?.type !== 'quiz' && activeLessonLevel !== 'none' && (
+                  <div className="lesson-card__mastery">
+                    <MasteryBadge level={activeLessonLevel} isCreole={isCreole} />
+                    <span className="lesson-card__mastery-next">
+                      {nextStepLabel || t('courses.masteryDone', 'Rien à revoir ici.')}
+                    </span>
+                    {activeLessonLevel === 'proficient' && (
+                      <button
+                        type="button"
+                        className="lesson-card__mastery-cta"
+                        onClick={startChapterTest}
+                      >
+                        {t('courses.goToChapterTest', 'Test du chapitre')}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="lesson-card__nav-group lesson-card__nav-group--actions">
+                  {activeLessonData?.type !== 'quiz' && isEnrolled && (
+                    <button
+                      className={`button button--sm ${isLessonCompleted ? 'button--success' : 'button--primary'}`}
+                      onClick={handleMarkComplete}
+                      disabled={isLessonCompleted}
+                    >
+                      {isLessonCompleted ? <><Check size={14} /> {t('courses.completed', 'Terminé')}</> : t('courses.markComplete', 'Marquer comme terminé')}
+                    </button>
+                  )}
+                  {hasQuiz && (
+                    <>
+                      <button
+                        className="button button--ghost button--sm lesson-card__nav-flat"
+                        onClick={() => setShowFlashcards(true)}
+                        title={t('courses.flashcardsTitle', 'Étudier avec des flashcards')}
+                      >
+                        <span className="button-text">{t('courses.flashcards', 'Flashcards')}</span>
+                      </button>
+                      <button
+                        className={`button button--sm ${isEnrolled ? 'button--ghost lesson-card__nav-flat' : 'button--primary'}`}
+                        onClick={() => setShowQuiz(true)}
+                        title={t('courses.practiceTitle', 'S\'entraîner avec un quiz')}
+                      >
+                        <span className="button-text">{t('courses.practice', 'Exercices')}</span>
+                      </button>
+                    </>
+                  )}
+                  {isAuthenticated && activeLessonData?.type !== 'quiz' && (
+                    <button
+                      type="button"
+                      className="button button--ghost button--sm lesson-card__nav-flat"
+                      onClick={() => setSandraAsk(
+                        isCreole
+                          ? `Ede m konprann leson sa a: ${activeLessonData?.title || activeModuleData?.title || course.name}`
+                          : `Aide-moi à comprendre cette leçon : ${activeLessonData?.title || activeModuleData?.title || course.name}`
+                      )}
+                    >
+                      <MessageCircle size={15} aria-hidden="true" />
+                      {isCreole ? 'Mande Sandra' : 'Demander à Sandra'}
+                    </button>
+                  )}
+                </div>
+
+                {/* The chapter test for this unit — the only route to
+                    `mastered`. A unit-level action rather than a row in the
+                    lesson list: adding a lesson would inflate every course's
+                    lesson denominator and drop existing students' progress
+                    percentages, and a test isn't a lesson anyway. */}
+                {isEnrolled && activeLessonData?.type !== 'quiz' && !showChapterTest && (
+                  <div className="lesson-card__chapter-test">
+                    <ChapterTestCard
+                      summary={unitMastery}
+                      unitTitle={activeModuleData?.title}
+                      onStart={startChapterTest}
+                    />
+                  </div>
+                )}
+
                 {/* Previous/Next Navigation */}
                 {(prevTarget || nextTarget) && (
                   <div className="lesson-card__nav-group lesson-card__nav-group--navigation">
@@ -685,72 +768,6 @@ export default function CourseDetail() {
                   </div>
                 )}
 
-                {/* The next step for this lesson. Sits directly above the
-                    actions so the guidance and the button that satisfies it are
-                    read together. Hidden entirely at `none` — telling someone
-                    who just opened a lesson to "regarde la leçon" is noise, the
-                    video is already playing in front of them. */}
-                {isEnrolled && activeLessonData?.type !== 'quiz' && activeLessonLevel !== 'none' && (
-                  <div className="lesson-card__mastery">
-                    <MasteryBadge level={activeLessonLevel} isCreole={isCreole} />
-                    <span className="lesson-card__mastery-next">
-                      {nextStepLabel || t('courses.masteryDone', 'Rien à revoir ici.')}
-                    </span>
-                    {activeLessonLevel === 'proficient' && (
-                      <button
-                        type="button"
-                        className="lesson-card__mastery-cta"
-                        onClick={startChapterTest}
-                      >
-                        {t('courses.goToChapterTest', 'Test du chapitre')}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* The chapter test for this unit — the only route to
-                    `mastered`. A unit-level action rather than a row in the
-                    lesson list: adding a lesson would inflate every course's
-                    lesson denominator and drop existing students' progress
-                    percentages, and a test isn't a lesson anyway. */}
-                {isEnrolled && activeLessonData?.type !== 'quiz' && !showChapterTest && (
-                  <ChapterTestCard
-                    summary={unitMastery}
-                    unitTitle={activeModuleData?.title}
-                    onStart={startChapterTest}
-                  />
-                )}
-
-                {/* Action Buttons */}
-                <div className="lesson-card__nav-group lesson-card__nav-group--actions">
-                  {activeLessonData?.type !== 'quiz' && isEnrolled && (
-                    <button
-                      className={`button button--sm ${isLessonCompleted ? 'button--success' : 'button--secondary'}`}
-                      onClick={handleMarkComplete}
-                      disabled={isLessonCompleted}
-                    >
-                      {isLessonCompleted ? <><Check size={14} /> {t('courses.completed', 'Terminé')}</> : t('courses.markComplete', 'Marquer comme terminé')}
-                    </button>
-                  )}
-                  {hasQuiz && (
-                    <>
-                      <button
-                        className="button button--ghost button--sm lesson-card__nav-flat"
-                        onClick={() => setShowFlashcards(true)}
-                        title={t('courses.flashcardsTitle', 'Étudier avec des flashcards')}
-                      >
-                        <span className="button-text">{t('courses.flashcards', 'Flashcards')}</span>
-                      </button>
-                      <button
-                        className="button button--primary button--sm"
-                        onClick={() => setShowQuiz(true)}
-                        title={t('courses.practiceTitle', 'S\'entraîner avec un quiz')}
-                      >
-                        <span className="button-text">{t('courses.practice', 'Exercices')}</span>
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
             </article>
 

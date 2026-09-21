@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, CalendarCheck } from 'lucide-react';
 import { subjectCover } from '../utils/subjectCovers';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
@@ -10,10 +10,7 @@ import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { useStreak } from '../hooks/useStreak';
-import DashHeroStrip from '../components/DashHeroStrip';
 import useStore from '../contexts/store';
-import SmartSuggestion from '../components/SmartSuggestion';
-import ReviewBanner from '../components/ReviewBanner';
 import ArenaBanner from '../components/ArenaBanner';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import { StatTile, StatTileRow } from '../components/StatTile';
@@ -22,6 +19,7 @@ import StreakRail from '../components/StreakRail';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
+import { loadDueReviewIds } from '../services/reviewService';
 import './Dashboard.css';
 
 const SUBJECT_CODES = ['PHYS', 'CHEM', 'MATH', 'ECON'] as const;
@@ -235,6 +233,19 @@ export default function Dashboard() {
 
   const { myRank } = useLeaderboard(50);
 
+  const [dueReviewCount, setDueReviewCount] = React.useState(0);
+  React.useEffect(() => {
+    let alive = true;
+    if (!user?.uid) {
+      setDueReviewCount(0);
+      return undefined;
+    }
+    loadDueReviewIds(user.uid)
+      .then((ids) => { if (alive) setDueReviewCount(ids.length); })
+      .catch(() => { if (alive) setDueReviewCount(0); });
+    return () => { alive = false; };
+  }, [user?.uid]);
+
   const firstName = getFirstName(user);
   const greeting = timeGreeting(isCreole);
 
@@ -404,19 +415,53 @@ export default function Dashboard() {
           <StreakRail />
         </div>
 
-        {/* ── "What's next" region ──
-            Three components that all answer the same question used to stack as
-            three unrelated banners. They still self-hide independently (each
-            returns null), so this wrapper carries no chrome of its own — it
-            collapses to nothing when they all opt out. Ordered most-concrete
-            first: questions actually waiting, then a contextual nudge, then
-            ambient countdown/readiness. */}
-        <div className="dash__next">
-          <ReviewBanner />
-          <ArenaBanner />
-          <SmartSuggestion />
-          <DashHeroStrip />
-        </div>
+        <section className="dash-today" aria-labelledby="dash-today-title">
+          <div className="dash-today__head">
+            <div>
+              <span className="dash-today__eyebrow">{isCreole ? 'Jodi a' : "Aujourd'hui"}</span>
+              <h2 id="dash-today-title">{isCreole ? 'Twa etap klè' : 'Trois étapes claires'}</h2>
+            </div>
+            <span className="dash-today__note">
+              {isCreole ? 'Fè youn oswa kontinye ak tout twa.' : 'Faites-en une, ou avancez sur les trois.'}
+            </span>
+          </div>
+          <div className="dash-today__tasks">
+            <button type="button" className="dash-task" onClick={() => navigate(dueReviewCount > 0 ? '/revision' : '/practice')}>
+              <span className="dash-task__icon"><Brain size={19} aria-hidden="true" /></span>
+              <span className="dash-task__body">
+                <strong>{dueReviewCount > 0
+                  ? (isCreole ? 'Revize erè ou yo' : 'Réviser vos erreurs')
+                  : (isCreole ? 'Chwazi yon pratik' : 'Choisir une pratique')}</strong>
+                <span>{dueReviewCount > 0
+                  ? (isCreole ? `${dueReviewCount} kesyon ap tann ou` : `${dueReviewCount} question${dueReviewCount === 1 ? '' : 's'} à revoir`)
+                  : (isCreole ? 'Quiz, revizyon oswa egzamen' : 'Quiz, révision ou examen')}</span>
+              </span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
+            <button type="button" className="dash-task" onClick={() => navigate('/exams')}>
+              <span className="dash-task__icon"><ListChecks size={19} aria-hidden="true" /></span>
+              <span className="dash-task__body">
+                <strong>{examSummary.inProgress > 0
+                  ? (isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen")
+                  : (isCreole ? 'Prepare yon egzamen' : 'Préparer un examen')}</strong>
+                <span>{examSummary.inProgress > 0
+                  ? (isCreole ? 'Yon egzamen poko fini' : 'Une tentative reste en cours')
+                  : (isCreole ? 'Chwazi nivo ak matyè ou' : 'Choisissez votre niveau et votre matière')}</span>
+              </span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
+            <button type="button" className="dash-task" onClick={() => navigate('/study-plan')}>
+              <span className="dash-task__icon"><CalendarCheck size={19} aria-hidden="true" /></span>
+              <span className="dash-task__body">
+                <strong>{isCreole ? 'Òganize semèn ou' : 'Organiser votre semaine'}</strong>
+                <span>{isCreole ? 'Gade oswa ajiste plan etid ou' : "Consultez ou ajustez votre plan d'étude"}</span>
+              </span>
+              <ChevronRight size={17} aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+
+        <div className="dash__event"><ArenaBanner /></div>
 
         <div className="dash__body">
           {/* ───────────── MAIN COLUMN ───────────── */}

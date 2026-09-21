@@ -162,8 +162,6 @@ export default function CourseOverview({
         </div>
       </header>
 
-      <CourseInstructors courseId={course.id} />
-
       {totalModules > 0 && (
         <section className="course-overview__content">
           <h2 className="course-overview__content-title">
@@ -218,6 +216,8 @@ export default function CourseOverview({
           </ol>
         </section>
       )}
+
+      <CourseInstructors courseId={course.id} />
     </div>
   );
 }

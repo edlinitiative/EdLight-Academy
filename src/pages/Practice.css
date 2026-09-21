@@ -1,19 +1,17 @@
 .practice-hub {
   min-height: 70vh;
-  background:
-    radial-gradient(circle at 85% 5%, color-mix(in srgb, var(--primary-500) 10%, transparent), transparent 32rem),
-    var(--background);
+  background: var(--background);
 }
 
 .practice-hub__container {
   max-width: 1080px;
-  padding-top: clamp(2rem, 6vw, 5rem);
+  padding-top: clamp(1rem, 3vw, 2rem);
   padding-bottom: clamp(3rem, 8vw, 6rem);
 }
 
 .practice-hub__header {
   max-width: 720px;
-  margin-bottom: clamp(2rem, 5vw, 3.5rem);
+  margin-bottom: 1.75rem;
 }
 
 .practice-hub__eyebrow,
@@ -26,12 +24,11 @@
 }
 
 .practice-hub__header h1 {
-  max-width: 17ch;
+  max-width: 26ch;
   margin: 0.7rem 0 1rem;
   color: var(--text-900);
-  font-family: var(--font-serif);
-  font-size: clamp(2.1rem, 5.5vw, 4rem);
-  line-height: 1.02;
+  font-size: clamp(1.65rem, 4vw, 2.4rem);
+  line-height: 1.15;
   letter-spacing: -0.035em;
 }
 
@@ -51,7 +48,7 @@
 
 .practice-choice {
   display: flex;
-  min-height: 280px;
+  min-height: 220px;
   flex-direction: column;
   align-items: flex-start;
   padding: clamp(1.25rem, 3vw, 1.8rem);
@@ -65,7 +62,6 @@
 }
 
 .practice-choice:hover {
-  transform: translateY(-3px);
   border-color: color-mix(in srgb, var(--primary-500) 36%, var(--border));
   box-shadow: var(--shadow-md);
 }
@@ -87,7 +83,7 @@
   justify-content: center;
   width: 46px;
   height: 46px;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.7rem;
   border-radius: 13px;
   background: var(--primary-50);
   color: var(--primary-600);
@@ -139,7 +135,7 @@
 
 @media (max-width: 680px) {
   .practice-hub__grid { grid-template-columns: 1fr; }
-  .practice-choice { min-height: 240px; }
+  .practice-choice { min-height: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

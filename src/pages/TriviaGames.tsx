@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
@@ -12,6 +12,7 @@ import { drawAndRemember } from '../utils/questionRotation';
 import { todayStr } from '../services/streakService';
 import { GAMES, GAME_ICONS, getGameById } from '../data/games';
 import Leaderboard from '../components/Leaderboard';
+import ArenaBanner from '../components/ArenaBanner';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -670,6 +671,7 @@ function GamesHub({ isCreole }) {
     <div className="games-hub">
       <div className="games-hub__hero">
         <div className="games-hub__hero-text">
+          <span className="games-hub__eyebrow">{isCreole ? 'Defye' : 'Défier'}</span>
           <h1 className="games-hub__title">
             {isCreole ? 'Aprann pandan w ap jwe' : 'Apprenez en jouant'}
           </h1>
@@ -700,6 +702,17 @@ function GamesHub({ isCreole }) {
         )}
       </div>
 
+      <section className="games-hub__championship" aria-labelledby="championship-title">
+        <div>
+          <h2 id="championship-title">{isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}</h2>
+          <p>{isCreole
+            ? 'Enskripsyon ak patisipasyon fèt nan aplikasyon mobil la. Pwen chanpyona yo separe ak XP jwèt yo.'
+            : 'Inscription et participation dans l’application mobile. Les scores du championnat sont distincts des XP des jeux.'}</p>
+        </div>
+        <ArenaBanner />
+        <Link to="/download" className="button button--secondary button--sm">{isCreole ? 'Jwenn aplikasyon an' : 'Accéder à l’application'}</Link>
+      </section>
+
       <DailyChallengeBanner
         daily={daily}
         isCreole={isCreole}
@@ -708,6 +721,7 @@ function GamesHub({ isCreole }) {
 
       <div className="games-hub__layout">
         <div className="games-hub__main">
+          <h2 className="games-hub__section-title">{isCreole ? 'Chwazi yon jwèt' : 'Choisir un jeu'}</h2>
           <div className="games-hub__grid">
             {GAMES.map((g) => {
               const Icon = GAME_ICONS[g.id];
@@ -741,6 +755,7 @@ function GamesHub({ isCreole }) {
           </div>
         </div>
         <aside className="games-hub__side">
+          <h2 className="games-hub__section-title">{isCreole ? 'Klasman XP jwèt yo' : 'Classement XP des jeux'}</h2>
           <Leaderboard variant="full" max={25} periodToggle />
           <GameRecords isCreole={isCreole} />
         </aside>

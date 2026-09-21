@@ -245,6 +245,58 @@ export default function Profile() {
           </div>
         </div>
 
+        {/* ── Mon espace — icon tile grid ── */}
+        <div className="profile-area profile-area--monespace">
+          <div className="profile-card">
+            <div className="profile-card__header">
+              <h2 className="profile-card__title"><Target size={18} /> {t('Préférences et compte', 'Preferans ak kont')}</h2>
+              <div className="profile-espace-toggles">
+                <button
+                  type="button"
+                  className="profile-toggle-btn"
+                  onClick={() => toggleTheme()}
+                  title={theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
+                >
+                  {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+                <button
+                  type="button"
+                  className="profile-toggle-btn"
+                  onClick={() => setLanguage(isCreole ? 'fr' : 'ht')}
+                  title={isCreole ? 'Passer en français' : 'Pase an kreyòl'}
+                >
+                  <Languages size={15} />
+                </button>
+              </div>
+            </div>
+            <div className="profile-espace-grid">
+              <Link to="/dashboard" className="profile-espace-tile">
+                <LayoutDashboard size={22} />
+                <span>{t('Tableau', 'Tablodbò')}</span>
+              </Link>
+              <Link to="/study-plan" className="profile-espace-tile">
+                <CalendarCheck size={22} />
+                <span>{t('Plan étude', 'Plan etid')}</span>
+              </Link>
+              <Link to="/practice" className="profile-espace-tile">
+                <Brain size={22} />
+                <span>{t('Pratique', 'Pratik')}</span>
+              </Link>
+              <button type="button" className="profile-espace-tile" onClick={() => setShowNotifications(true)}>
+                <Bell size={22} />
+                <span>{t('Alertes', 'Notifikasyon')}</span>
+              </button>
+              <Link to="/about" className="profile-espace-tile">
+                <Info size={22} />
+                <span>{t('À propos', 'Sou nou')}</span>
+              </Link>
+            </div>
+            <button type="button" className="profile-link profile-link--danger" onClick={handleLogout}>
+              <LogOut size={18} /> {t('Déconnexion', 'Dekonekte')}<ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
         {/* ── Readiness (main column) ── */}
         <div className="profile-area profile-area--readiness">
           <ReadinessCard />
@@ -312,58 +364,6 @@ export default function Profile() {
         {/* ── Invite friends (two-sided referral) ── */}
         <div className="profile-area profile-area--invite">
           <InviteCard lang={isCreole ? 'ht' : 'fr'} />
-        </div>
-
-        {/* ── Mon espace — icon tile grid ── */}
-        <div className="profile-area profile-area--monespace">
-          <div className="profile-card">
-            <div className="profile-card__header">
-              <h2 className="profile-card__title"><Target size={18} /> {t('Mon espace', 'Espas mwen')}</h2>
-              <div className="profile-espace-toggles">
-                <button
-                  type="button"
-                  className="profile-toggle-btn"
-                  onClick={() => toggleTheme()}
-                  title={theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
-                >
-                  {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                </button>
-                <button
-                  type="button"
-                  className="profile-toggle-btn"
-                  onClick={() => setLanguage(isCreole ? 'fr' : 'ht')}
-                  title={isCreole ? 'Passer en français' : 'Pase an kreyòl'}
-                >
-                  <Languages size={15} />
-                </button>
-              </div>
-            </div>
-            <div className="profile-espace-grid">
-              <Link to="/dashboard" className="profile-espace-tile">
-                <LayoutDashboard size={22} />
-                <span>{t('Tableau', 'Tablodbò')}</span>
-              </Link>
-              <Link to="/study-plan" className="profile-espace-tile">
-                <CalendarCheck size={22} />
-                <span>{t('Plan étude', 'Plan etid')}</span>
-              </Link>
-              <Link to="/quizzes" className="profile-espace-tile">
-                <Brain size={22} />
-                <span>{t('Quiz', 'Quiz')}</span>
-              </Link>
-              <button type="button" className="profile-espace-tile" onClick={() => setShowNotifications(true)}>
-                <Bell size={22} />
-                <span>{t('Alertes', 'Notifikasyon')}</span>
-              </button>
-              <Link to="/about" className="profile-espace-tile">
-                <Info size={22} />
-                <span>{t('À propos', 'Sou nou')}</span>
-              </Link>
-            </div>
-            <button type="button" className="profile-link profile-link--danger" onClick={handleLogout}>
-              <LogOut size={18} /> {t('Déconnexion', 'Dekonekte')}<ChevronRight size={16} />
-            </button>
-          </div>
         </div>
 
         {/* ── Certificates (future) ── */}

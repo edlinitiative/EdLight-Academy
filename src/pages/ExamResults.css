@@ -1,0 +1,23 @@
+.exam-results .exam-results__header {
+  text-align: left;
+  align-items: flex-start;
+}
+.exam-results .exam-results__stat-card {
+  padding: 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.exam-results .exam-results__stat-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+.exam-results .exam-results__stat-number {
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+.exam-results .exam-results__next {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
