@@ -37,9 +37,9 @@
   margin-top: 0.25rem;
 }
 
-.course-detail .lesson-card__mastery { order: 1; margin-bottom: 0; }
-.course-detail .lesson-card__nav-group--actions { order: 2; justify-content: flex-start; }
-.course-detail .lesson-card__chapter-test { order: 3; }
+/* The lesson's own actions now live in .lesson-stage__next (order: 1) and its
+   practice in the .lesson-practice section below the card; what remains in
+   this row is lesson-to-lesson paging. */
 .course-detail .lesson-card__nav-group--navigation {
   order: 4;
   width: 100%;
@@ -64,10 +64,6 @@
   transform: none;
 }
 
-.course-detail .lesson-card__nav-group--actions .button:hover {
-  transform: none;
-}
-
 .course-detail .lesson-card--comments {
   border: 1px solid var(--border);
   background: var(--surface);
@@ -84,15 +80,301 @@
     padding: 0.9rem;
     border-radius: 16px;
   }
-  .course-detail .lesson-card__nav-group--actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+}
+
+/* ── Lesson stage ─────────────────────────────────────────────────────────
+   §6.3 of the redesign plan: the lesson content is the dominant region, and
+   everything around it — title, state, next action, practice, discussion —
+   is ordered so the student reads one thing at a time. These rules only
+   re-weight the existing lesson-card markup; the shared component styles
+   stay in index.css. */
+
+.course-detail .lesson-stage {
+  gap: 1rem;
+}
+
+/* The media block leads the card, so it loses the inner inset it used to
+   need under a title. */
+.course-detail .lesson-stage .lesson-card__media {
+  margin-top: 0;
+}
+
+/* Identity + state: clear, and quieter than the lesson itself. */
+.course-detail .lesson-stage__head {
+  gap: 0.5rem;
+}
+
+.course-detail .lesson-stage__state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.course-detail .lesson-stage__state-text {
+  color: var(--text-600);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.course-detail .lesson-stage__mastery {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.course-detail .lesson-stage__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.course-detail .lesson-stage__chip--done {
+  background: var(--success-50);
+  color: var(--success-500);
+}
+
+.course-detail .lesson-stage__chip--locked {
+  background: var(--warning-50);
+  color: var(--warning-500);
+}
+
+/* Continuity + connectivity notices: one quiet line, never a banner that
+   competes with the video above it. */
+.course-detail .lesson-stage__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0;
+  color: var(--text-600);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.course-detail .lesson-stage__notice--offline {
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--warning-50);
+  color: var(--text-700);
+}
+
+.course-detail .lesson-stage__notice-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary-600);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.course-detail .lesson-stage__notice-link:hover {
+  color: var(--primary-700);
+}
+
+/* The explanation: a readable measure and comfortable leading, and the shared
+   math renderer inherits both. */
+.course-detail .lesson-stage__text {
+  max-width: 68ch;
+  color: var(--text-700);
+  font-size: var(--text-base);
+  line-height: 1.7;
+}
+
+.course-detail .lesson-stage__text .instruction-renderer {
+  line-height: inherit;
+}
+
+.course-detail .lesson-stage__text .katex {
+  font-size: 1.05em;
+}
+
+/* Sandra, in lesson context: the action, then what she is told. */
+.course-detail .lesson-stage__sandra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  max-width: 68ch;
+}
+
+.course-detail .lesson-stage__sandra-note {
+  flex: 1 1 22ch;
+  min-width: 0;
+  color: var(--text-500);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+/* One primary action for the lesson, and the truth about saving it. */
+.course-detail .lesson-stage__next {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.course-detail .lesson-stage__next-primary {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-height: 44px;
+  max-width: 100%;
+  text-align: left;
+}
+
+.course-detail .lesson-stage__next-sub {
+  display: block;
+  max-width: 34ch;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.3;
+  opacity: 0.85;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-detail .lesson-stage__save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.45rem;
+  max-width: 60ch;
+  margin: 0;
+  color: var(--text-600);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.course-detail .lesson-stage__save--pending { color: var(--text-700); }
+.course-detail .lesson-stage__save--failed { color: var(--danger-500); }
+
+/* Empty media region: explain, then offer the next step. */
+.course-detail .lesson-stage__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.course-detail .lesson-stage__placeholder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* ── Practice, after the lesson ───────────────────────────────────────── */
+.course-detail .lesson-practice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.course-detail .lesson-practice__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--text-900);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.course-detail .lesson-practice__title svg { color: var(--primary-500); }
+
+.course-detail .lesson-practice__note {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--text-600);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.course-detail .lesson-practice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.course-detail .lesson-practice__actions .button { min-height: 44px; }
+
+/* ── Discussion: secondary, and collapsed until asked for on every size ── */
+.course-detail .lesson-card--comments {
+  padding: 0;
+  overflow: hidden;
+}
+
+.course-detail .lesson-card__comments-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.course-detail .lesson-card__comments-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-800);
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+.course-detail .lesson-card__comments-chevron {
+  color: var(--text-500);
+  font-size: 0.7rem;
+}
+
+.course-detail .lesson-card--comments .lesson-card__comments-content { display: none; }
+
+.course-detail .lesson-card--comments-open .lesson-card__comments-content {
+  display: block;
+  padding: 0 1.1rem 1.1rem;
+}
+
+@media (max-width: 700px) {
+  .course-detail .lesson-stage__next-primary,
+  .course-detail .lesson-practice__actions .button {
     width: 100%;
-  }
-  .course-detail .lesson-card__nav-group--actions .button:first-child {
-    grid-column: 1 / -1;
-  }
-  .course-detail .lesson-card__nav-group--actions .button {
     justify-content: center;
+    text-align: center;
   }
+
+  .course-detail .lesson-stage__next-primary { align-items: center; }
+
+  .course-detail .lesson-practice {
+    padding: 0.9rem;
+    border-radius: 16px;
+  }
+
+  /* Keep the last actions clear of the floating help button and the home
+     indicator on phones. */
+  .course-detail .lesson-card--comments { margin-bottom: calc(3.5rem + env(safe-area-inset-bottom)); }
 }

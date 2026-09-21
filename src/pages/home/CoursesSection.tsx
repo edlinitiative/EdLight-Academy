@@ -1,10 +1,65 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowIcon, getFeatured, subjectThumbs, TFn } from './content';
+import { Link, useNavigate } from 'react-router-dom';
+import { ArrowIcon, CatalogSubject, TFn, useCatalogSummary } from './content';
 
+/** One subject: its real levels, its real lesson count, its real units. */
+function SubjectRow({ subject, t }: { subject: CatalogSubject; t: TFn }) {
+  return (
+    <li className="lp-subject" data-reveal>
+      <div className="lp-subject__head">
+        <h3 className="lp-subject__name">{subject.name}</h3>
+        <p className="lp-subject__meta">
+          {subject.comingSoon
+            ? t('En préparation', 'N ap prepare l')
+            : t(
+                `${subject.lessons} leçons · ${subject.levels.filter((l) => !l.comingSoon).length} niveaux`,
+                `${subject.lessons} leson · ${subject.levels.filter((l) => !l.comingSoon).length} nivo`,
+              )}
+        </p>
+      </div>
+
+      {subject.units.length > 0 && (
+        <p className="lp-subject__units">{subject.units.join(' · ')}</p>
+      )}
+
+      <ul className="lp-subject__levels">
+        {subject.levels.map((level) =>
+          level.comingSoon ? (
+            <li key={level.id}>
+              <span className="lp-level lp-level--soon">
+                {level.label}
+                <small>{t('bientôt', 'talè')}</small>
+              </span>
+            </li>
+          ) : (
+            <li key={level.id}>
+              <Link className="lp-level" to={`/courses/${level.id}`}>
+                {level.label}
+                <small>
+                  {level.lessons} {t('leçons', 'leson')}
+                </small>
+              </Link>
+            </li>
+          ),
+        )}
+      </ul>
+    </li>
+  );
+}
+
+/**
+ * The catalogue, stated rather than illustrated.
+ *
+ * Previously four equal-weight image cards with hand-written lesson counts,
+ * all four linking to the same `/courses` page. Now one open section of
+ * compact subject rows read from the catalogue snapshot (§7: compact rows over
+ * repeated cards), where every number is the catalogue's own and every level
+ * links to that actual course. Levels not yet open say so instead of being
+ * quietly counted in.
+ */
 export default function CoursesSection({ t }: { t: TFn }) {
   const navigate = useNavigate();
-  const featured = getFeatured(t);
+  const { summary, isLoading, isError, isEmpty } = useCatalogSummary(t);
 
   return (
     <section className="lp-section lp-courses">
@@ -13,9 +68,17 @@ export default function CoursesSection({ t }: { t: TFn }) {
           <div>
             <span className="lp-eyebrow">
               <span className="lp-eyebrow__dot" />
-              {t('Catalogue', 'Katalòg')}
+              {t('Le programme', 'Pwogram lan')}
             </span>
-            <h2 className="lp-section__title lp-section__title--sm">{t('Commencez par une matière', 'Kòmanse ak yon matyè')}</h2>
+            <h2 className="lp-section__title lp-section__title--sm">
+              {t('Quatre matières, du NS I au NS IV', 'Kat matyè, soti NS I rive NS IV')}
+            </h2>
+            <p className="lp-section__lede">
+              {t(
+                'Des leçons en vidéo, des quiz et des examens blancs, sur le programme du Nouveau Secondaire. L’application est en français et en créole.',
+                'Leson an videyo, quiz ak egzamen blan, sou pwogram Nouvo Segondè a. Aplikasyon an an franse ak an kreyòl.',
+              )}
+            </p>
           </div>
           <button className="lp-link" onClick={() => navigate('/courses')}>
             {t('Voir tout le catalogue', 'Wè tout katalòg la')}
@@ -23,38 +86,33 @@ export default function CoursesSection({ t }: { t: TFn }) {
           </button>
         </header>
 
-        <div className="lp-courses__grid">
-          {featured.map((c, i) => (
-            <button
-              key={c.id}
-              type="button"
-              className="lp-course"
-              data-reveal
-              style={{ transitionDelay: `${i * 60}ms` }}
-              onClick={() => navigate('/courses')}
-              aria-label={`${t('Découvrir', 'Dekouvri')} ${c.name}`}
-            >
-              <div className="lp-course__media">
-                <img
-                  src={subjectThumbs[c.subject]}
-                  alt={c.name}
-                  width={760}
-                  height={425}
-                  loading="eager"
-                  decoding="async"
-                />
-              </div>
-              <div className="lp-course__body">
-                <h3 className="lp-course__title">{c.name}</h3>
-                <p className="lp-course__desc">{c.desc}</p>
-                <div className="lp-course__foot">
-                  <span>{t('Programme secondaire', 'Pwogram segondè')}</span>
-                  <span className="lp-course__cta">{t('Découvrir →', 'Dekouvri →')}</span>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
+        {/* §8: loading keeps the section's meaning; a failure says what
+            happened and still offers the catalogue. */}
+        {isLoading && (
+          <p className="lp-subjects__note" role="status">
+            {t('Chargement du programme…', 'N ap chaje pwogram lan…')}
+          </p>
+        )}
+
+        {(isError || isEmpty) && (
+          <p className="lp-subjects__note">
+            {t(
+              'Le détail du programme n’a pas pu être chargé. Le catalogue complet reste accessible.',
+              'Nou pa t ka chaje detay pwogram lan. Tout katalòg la toujou disponib.',
+            )}{' '}
+            <Link className="lp-link lp-link--inline" to="/courses">
+              {t('Ouvrir le catalogue', 'Louvri katalòg la')}
+            </Link>
+          </p>
+        )}
+
+        {summary && (
+          <ul className="lp-subjects">
+            {summary.subjects.map((subject) => (
+              <SubjectRow key={subject.code} subject={subject} t={t} />
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

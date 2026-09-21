@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { History, PlayCircle, ChevronRight, ChevronDown } from 'lucide-react';
+import { History, PlayCircle, ChevronRight, ChevronDown, FileText, Clock, Save, LogIn } from 'lucide-react';
 import useStore from '../contexts/store';
-import { TRACKS, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
+import { TRACKS, GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import CardCover from '../components/CardCover';
+import { Skeleton } from '../components/Skeleton';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { levelToSlug, RAW_LEVEL_TO_URL, LEVEL_SLUG_LABELS } from '../utils/examLevels';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -45,6 +46,25 @@ function useExamCatalog() {
     },
     staleTime: Infinity,
   });
+}
+
+/**
+ * The facts a row can honestly state about one paper: how many questions it
+ * holds and whether it is timed.
+ *
+ * `duration_minutes` is genuinely absent on 83 of the 530 catalog entries, and
+ * ExamTake starts no countdown when it is 0/null (`durationMin || 0`), so an
+ * absent duration is reported as "sans chronomètre" — the real behaviour —
+ * and never as an invented number.
+ */
+function examRowFacts(exam: any, ht: boolean): string {
+  if (!exam) return '';
+  const q = exam._questionCount || 0;
+  const dur = exam.duration_minutes || 0;
+  const parts: string[] = [];
+  if (q > 0) parts.push(`${q} ${ht ? 'kesyon' : q === 1 ? 'question' : 'questions'}`);
+  parts.push(dur > 0 ? `${dur} min` : (ht ? 'san kwonomèt' : 'sans chronomètre'));
+  return parts.join(' · ');
 }
 
 interface DraftRow {
@@ -93,11 +113,12 @@ const ExamLanding = () => {
   const language = useStore((s) => s.language);
   const setTrack = useStore((s) => s.setTrack);
   const setOnboardingCompleted = useStore((s) => s.setOnboardingCompleted);
+  const setShowAuthModal = useStore((s) => s.setShowAuthModal);
   const ht = language === 'ht';
 
   // Lead with the level that matches the student's grade so the relevant path
-  // is the top card; everyone else keeps the default order. The Bac (Terminale)
-  // card still carries the filière quick-pick wherever it lands.
+  // is the top row; everyone else keeps the default order. The Bac (Terminale)
+  // row still carries the filière quick-pick wherever it lands.
   const myLevelPath = EXAM_LEVEL_TO_PATH[gradeProfile(grade).examLevel ?? ''] ?? null;
   const orderedLevels = myLevelPath
     ? [...LEVELS].sort((a, b) => (a.to === myLevelPath ? -1 : b.to === myLevelPath ? 1 : 0))
@@ -109,8 +130,22 @@ const ExamLanding = () => {
     navigate('/exams/terminale');
   };
 
-  const { data: catalog } = useExamCatalog();
+  const { data: catalog, isPending: catalogPending, isError: catalogError, refetch: refetchCatalog } = useExamCatalog();
   const attempts = useExamAttempts();
+
+  // ── Is any national exam relevant to this student's class? ────────────────
+  // gradeProfile().examLevel is null for 7ᵉ, 8ᵉ and NS1–NS3: those classes sit
+  // below the first national paper (9ᵉ AF). The plan is explicit that exams are
+  // then DE-EMPHASIZED — a 7ᵉ student must not be steered at the Bac — so the
+  // page stops leading with papers, says why, and points at what does apply.
+  // The levels stay one tap away; nothing is hidden.
+  const myLevelRaw = gradeProfile(grade).examLevel || null;
+  const knowsLevel = !!grade && !!myLevelRaw;
+  const offLevel = !!grade && !myLevelRaw;
+  const gradeLabel = useMemo(() => {
+    const g = GRADES.find((x: any) => x.code === grade);
+    return g ? (ht ? g.labelHt : g.label) : '';
+  }, [grade, ht]);
 
   // The full, enriched index — keyed by exam_id so every section (in
   // progress / recommended / recent) resolves the SAME title/subject.
@@ -163,6 +198,10 @@ const ExamLanding = () => {
   // ── "Recommandé pour vous" — subjects to reinforce, then fresh top-coef ──
   const recommendations = useMemo(() => {
     if (enriched.length === 0) return [];
+    // No relevant level for this class → suggest nothing. The previous
+    // `examLevel || 'baccalaureat'` fallback pushed Baccalauréat papers at 7ᵉ,
+    // 8ᵉ and NS1–NS3 students, which is exactly the steering §6.4 forbids.
+    if (offLevel) return [];
     const examLevel = gradeProfile(grade).examLevel || 'baccalaureat';
     const bySubject = new Map<string, any[]>();
     for (const e of enriched) {
@@ -206,7 +245,7 @@ const ExamLanding = () => {
       const exam = sorted.find((e) => !attemptedIds.has(String(e.exam_id ?? e._idx))) || sorted[0];
       return { subject, exam, weak: weak.includes(subject) };
     }).filter((r) => !!r.exam);
-  }, [enriched, attempts, grade, userTrack]);
+  }, [enriched, attempts, grade, userTrack, offLevel]);
 
   /*
    * Is any of that actually a RECOMMENDATION?
@@ -228,8 +267,6 @@ const ExamLanding = () => {
   // the grade, the page scopes to that level and the others move behind a
   // disclosure; with no grade set (signed out, or never asked) we still show
   // the picker, because we genuinely don't know what they're preparing.
-  const myLevelRaw = gradeProfile(grade).examLevel || null;
-  const knowsLevel = !!grade && !!myLevelRaw;
   const mySlug = myLevelRaw ? (RAW_LEVEL_TO_URL[myLevelRaw] || 'terminale') : null;
   const myLevelLabel = mySlug ? (LEVEL_SLUG_LABELS[mySlug]?.[ht ? 'ht' : 'fr'] || mySlug) : '';
   const [showOtherLevels, setShowOtherLevels] = useState(false);
@@ -286,10 +323,16 @@ const ExamLanding = () => {
     <div className="exam-landing">
       <header className="exam-landing__intro">
         <Link to="/practice" className="exam-landing__back">← {ht ? 'Pratik' : 'Pratique'}</Link>
-        <h1>{ht ? 'Prepare pwochen egzamen ou' : 'Préparez votre prochain examen'}</h1>
-        <p>{ht
-          ? 'Kontinye yon egzamen ou te kòmanse oswa chwazi nivo ak matyè ou. Dire ak enstriksyon yo parèt anvan ou kòmanse.'
-          : 'Reprenez un examen en cours ou choisissez votre niveau et votre matière. La durée et les consignes sont affichées avant de commencer.'}</p>
+        <h1>{offLevel
+          ? (ht ? 'Egzamen nasyonal yo' : 'Les examens nationaux')
+          : (ht ? 'Prepare pwochen egzamen ou' : 'Préparez votre prochain examen')}</h1>
+        <p>{offLevel
+          ? (ht
+              ? 'Yon egzamen isit la se yon sijè ofisyèl MENFP konplè — se pa yon ti kiz. Premye yo kòmanse nan 9yèm ane.'
+              : 'Ici, un examen est un sujet officiel du MENFP complet — pas un quiz rapide. Les premières épreuves nationales arrivent en 9ᵉ AF.')
+          : (ht
+              ? 'Chak egzamen se yon sijè ofisyèl konplè, se pa yon ti kiz. Kontinye yonn ou te kòmanse oswa chwazi matyè ou. Dire ak enstriksyon yo parèt anvan ou kòmanse.'
+              : 'Chaque examen est un sujet officiel complet, pas un quiz rapide. Reprenez-en un en cours ou choisissez votre matière. La durée et les consignes sont affichées avant de commencer.')}</p>
       </header>
       <div className="exam-landing__toolbar">
         {knowsLevel ? (
@@ -302,6 +345,80 @@ const ExamLanding = () => {
           <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
         </Link>
       </div>
+
+      {/* ── Not your class yet ────────────────────────────────────────────────
+          7ᵉ, 8ᵉ, NS1–NS3 have no national paper (gradeProfile().examLevel is
+          null). Say so plainly, hand them the surface that does apply, and
+          leave the papers browsable below rather than hiding them. */}
+      {offLevel && (
+        <section className="exam-landing__offlevel">
+          <h2>{ht
+            ? 'Egzamen nasyonal poko pou klas ou'
+            : 'Pas encore d’examen national pour votre classe'}</h2>
+          <p>{ht
+            ? `${gradeLabel ? `Nan ${gradeLabel}, ` : ''}kiz yo ak kou yo pi itil pou kounye a. Ou ka toujou gade epwèv yo pi ba a si ou vle.`
+            : `${gradeLabel ? `En ${gradeLabel}, ` : ''}les quiz et les cours sont plus utiles pour le moment. Vous pouvez tout de même consulter les épreuves plus bas.`}</p>
+          <div className="exam-landing__offlevel-actions">
+            <Link to="/quizzes" className="button button--primary">
+              {ht ? 'Fè yon kiz' : 'Faire un quiz'}
+            </Link>
+            <Link to="/courses" className="button button--ghost">
+              {ht ? 'Wè kou mwen yo' : 'Voir mes cours'}
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* ── What taking an exam here involves ────────────────────────────────
+          Purpose, timing and whether the result is kept — stated once, on the
+          page where a student decides whether to open a paper at all (§6.4).
+          Each line is read from real behaviour: the countdown only exists when
+          the paper carries a duration, and ExamTake's save effect returns
+          early without a uid, so a signed-out attempt really is not kept. */}
+      <ul className="exam-landing__facts">
+        <li>
+          <FileText size={15} aria-hidden="true" />
+          <span>
+            <strong>{ht ? 'Epwèv ofisyèl konplè' : 'Épreuves officielles complètes'}</strong>
+            {ht
+              ? ' — sijè MENFP yo, ak tout kesyon yo, se pa yon ti kiz.'
+              : ' — les sujets du MENFP, avec toutes leurs questions, pas un quiz rapide.'}
+          </span>
+        </li>
+        <li>
+          <Clock size={15} aria-hidden="true" />
+          <span>
+            <strong>{ht ? 'Dire reyèl la' : 'Durée réelle'}</strong>
+            {ht
+              ? ' — chak epwèv montre dire li anvan ou kòmanse ; kwonomèt la mache sèlman lè sijè a bay yon dire.'
+              : ' — chaque épreuve affiche sa durée avant de commencer ; le chronomètre ne démarre que si le sujet en indique une.'}
+          </span>
+        </li>
+        <li>
+          {userId ? <Save size={15} aria-hidden="true" /> : <LogIn size={15} aria-hidden="true" />}
+          <span>
+            <strong>{userId
+              ? (ht ? 'Rezilta yo konsève' : 'Résultats conservés')
+              : (ht ? 'Rezilta yo pa konsève' : 'Résultats non conservés')}</strong>
+            {userId
+              ? (ht
+                  ? ' — repons ou yo anrejistre pandan w ap travay epi nòt ou rete nan istwa ou.'
+                  : ' — vos réponses sont enregistrées pendant l’épreuve et le score reste dans votre historique.')
+              : (ht
+                  ? ' — konekte pou anrejistre repons ou yo, kontinye pita epi jwenn nòt ou ankò.'
+                  : ' — connectez-vous pour enregistrer vos réponses, reprendre plus tard et retrouver votre score.')}
+            {!userId && (
+              <button
+                type="button"
+                className="exam-landing__facts-link"
+                onClick={() => setShowAuthModal(true)}
+              >
+                {ht ? 'Konekte' : 'Se connecter'}
+              </button>
+            )}
+          </span>
+        </li>
+      </ul>
 
       {/* ── Reprendre ─────────────────────────────────────────────────────── */}
       {drafts.length > 0 && (
@@ -324,7 +441,11 @@ const ExamLanding = () => {
                   <span className="exam-mini-card__body">
                     <span className="exam-mini-card__title">{name.title}</span>
                     <span className="exam-mini-card__meta">
-                      {subject}{d.answered > 0 ? ` · ${t('examLanding.resumeAnswered', { count: d.answered })}` : ''}
+                      {[
+                        subject,
+                        examRowFacts(exam, ht),
+                        d.answered > 0 ? t('examLanding.resumeAnswered', { count: d.answered }) : '',
+                      ].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                   <span className="exam-mini-card__cta"><PlayCircle size={15} aria-hidden="true" /> {t('examLanding.resume')}</span>
@@ -335,8 +456,12 @@ const ExamLanding = () => {
         </section>
       )}
 
-      {/* ── Votre préparation (performance) ──────────────────────────────── */}
-      {readiness.hasData && (
+      {/* ── Votre préparation (performance) ────────────────────────────────
+          Exam readiness is coefficient-weighted against the Bac and its top
+          band reads "Prêt pour le Bac", so it is meaningless — and misleading
+          — for a class with no national paper. Hidden there, never recomputed
+          into something else. */}
+      {readiness.hasData && !offLevel && (
         <section className="exam-landing__section">
           <div className="exam-landing__section-head">
             <h2 className="exam-landing__section-title">{t('examLanding.sectionPreparation')}</h2>
@@ -390,26 +515,34 @@ const ExamLanding = () => {
                 : 'Les matières au plus fort coefficient. Après quelques examens, nous indiquerons celles à renforcer.'}
             </p>
           )}
-          <div className="exam-landing__cards">
+          {/* Compact rows, not a second grid of covers: the covers here
+              repeated the subject colour already carried by the swatch, and
+              four equal-weight cards competed with "Reprendre" above (§7). */}
+          <ul className="exam-landing__rows">
             {recommendations.map(({ subject, exam, weak }) => {
               const name = sessionRowName(exam, ht ? 'ht' : 'fr');
               const slug = levelToSlug(exam.level);
               const key = String(exam.exam_id ?? exam._idx);
+              const facts = examRowFacts(exam, ht);
               return (
-                <Link key={key} to={`/exams/${slug}/${key}`} className="exam-mini-card">
-                  <CardCover className="exam-mini-card__cover" glyph={SUBJECT_GLYPHS[subject] || 'book'} color={subjectColor(subject)} />
-                  <span className="exam-mini-card__body">
-                    <span className={`exam-mini-card__reason exam-mini-card__reason--${weak ? 'weak' : 'new'}`}>
-                      {weak ? t('examLanding.reasonWeak') : t('examLanding.reasonNew')}
+                <li key={key}>
+                  <Link to={`/exams/${slug}/${key}`} className="exam-landing__row">
+                    <span className="exam-landing__row-swatch" style={{ background: subjectColor(subject) }} aria-hidden="true" />
+                    <span className="exam-landing__row-body">
+                      <span className={`exam-landing__row-reason exam-landing__row-reason--${weak ? 'weak' : 'new'}`}>
+                        {weak ? t('examLanding.reasonWeak') : t('examLanding.reasonNew')}
+                      </span>
+                      <span className="exam-landing__row-title">{name.title}</span>
+                      <span className="exam-landing__row-meta">
+                        {[subject, name.subtitle, facts].filter(Boolean).join(' · ')}
+                      </span>
                     </span>
-                    <span className="exam-mini-card__title">{name.title}</span>
-                    <span className="exam-mini-card__meta">{subject}</span>
-                  </span>
-                  <ChevronRight size={16} className="exam-mini-card__chevron" aria-hidden="true" />
-                </Link>
+                    <ChevronRight size={16} className="exam-landing__row-chevron" aria-hidden="true" />
+                  </Link>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </section>
       )}
 
@@ -443,30 +576,75 @@ const ExamLanding = () => {
         </section>
       )}
 
-      {/* ── Vos matières — the subjects of MY level, not a level picker ───── */}
+      {/* ── Catalog states (§8) ──────────────────────────────────────────────
+          The subject list, the suggestions and the results rows all come from
+          one static index. It used to fail silently: a dropped fetch simply
+          erased those sections and left the level picker looking like the whole
+          page. Keep the context above, then say what is happening. */}
+      {knowsLevel && catalogPending && (
+        <section className="exam-landing__section" aria-busy="true">
+          <h2 className="exam-landing__section-title">{t('examLanding.sectionSubjects')}</h2>
+          <p className="exam-landing__section-note">
+            {ht ? 'Ap chaje matyè yo…' : 'Chargement des matières…'}
+          </p>
+          <ul className="exam-landing__rows">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <li key={i}>
+                <span className="exam-landing__row exam-landing__row--skeleton">
+                  <Skeleton width={8} height={40} radius={999} />
+                  <span className="exam-landing__row-body">
+                    <Skeleton width="38%" height={14} />
+                    <Skeleton width="56%" height={12} style={{ marginTop: '0.4rem' }} />
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {catalogError && (
+        <section className="exam-landing__section">
+          <div className="card card--message">
+            <p>
+              {ht
+                ? 'Nou pa t ka chaje lis egzamen yo. Tcheke koneksyon ou, epi eseye ankò.'
+                : 'Nous n’avons pas pu charger la liste des examens. Vérifiez votre connexion, puis réessayez.'}
+            </p>
+            <button className="button button--primary" type="button" onClick={() => { void refetchCatalog(); }}>
+              {ht ? 'Eseye ankò' : 'Réessayer'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ── Vos matières — the subjects of MY level, not a level picker ─────
+          One compact row per subject. This was a grid of 16:9 covers whose
+          only content was the subject colour the swatch now carries (§7:
+          fewer decorative icon containers). */}
       {knowsLevel && mySubjects.length > 0 && (
         <section className="exam-landing__section">
           <div className="exam-landing__section-head">
             <h2 className="exam-landing__section-title">{t('examLanding.sectionSubjects')}</h2>
             <Link to={`/exams/${mySlug}`} className="exam-landing__see-all">{t('examLanding.seeAll')} →</Link>
           </div>
-          <div className="exam-landing__subjects">
+          <ul className="exam-landing__rows">
             {mySubjects.map(({ subject, count }) => (
-              <Link
-                key={subject}
-                to={`/exams/${mySlug}/matiere/${encodeURIComponent(subject)}`}
-                className="exam-subject-tile"
-              >
-                <CardCover
-                  className="exam-subject-tile__cover"
-                  glyph={SUBJECT_GLYPHS[subject] || 'book'}
-                  color={subjectColor(subject)}
-                />
-                <span className="exam-subject-tile__name">{subject}</span>
-                <span className="exam-subject-tile__count">{t('examLanding.subjectExams', { count })}</span>
-              </Link>
+              <li key={subject}>
+                <Link
+                  to={`/exams/${mySlug}/matiere/${encodeURIComponent(subject)}`}
+                  className="exam-landing__row"
+                >
+                  <span className="exam-landing__row-swatch" style={{ background: subjectColor(subject) }} aria-hidden="true" />
+                  <span className="exam-landing__row-body">
+                    <span className="exam-landing__row-title">{subject}</span>
+                    <span className="exam-landing__row-meta">{t('examLanding.subjectExams', { count })}</span>
+                  </span>
+                  <ChevronRight size={16} className="exam-landing__row-chevron" aria-hidden="true" />
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
@@ -475,14 +653,16 @@ const ExamLanding = () => {
           default view — an NS4 shouldn't have to scroll past 9e papers. With no
           grade set it stays open, because then the picker IS the page. */}
       <section className="exam-landing__section">
-        {knowsLevel ? (
+        {grade ? (
           <button
             type="button"
             className="exam-landing__levels-toggle"
             onClick={() => setShowOtherLevels((v) => !v)}
             aria-expanded={showOtherLevels}
           >
-            <span>{t('examLanding.otherLevels')}</span>
+            <span>{offLevel
+              ? (ht ? 'Egzamen nasyonal ki disponib' : 'Les examens nationaux disponibles')
+              : t('examLanding.otherLevels')}</span>
             <span className="exam-landing__levels-toggle-cta">
               {showOtherLevels ? t('examLanding.otherLevelsClose') : t('examLanding.otherLevelsOpen')}
               <ChevronDown size={15} aria-hidden="true" className={showOtherLevels ? 'is-open' : ''} />
@@ -491,31 +671,42 @@ const ExamLanding = () => {
         ) : (
           hasPersonalData && <h2 className="exam-landing__section-title">{t('examLanding.browseByLevel')}</h2>
         )}
-        <div className="exam-landing__grid" hidden={knowsLevel && !showOtherLevels}>
+        {/* Compact level rows. Three stacked cards with 16:9 covers, a blurb
+            and a footer CTA made the picker ~720px tall on a phone and gave
+            every level the same visual weight as the student's own; the row
+            keeps the same information and marks which one is theirs (§7). */}
+        <ul className="exam-landing__level-rows" hidden={!!grade && !showOtherLevels}>
           {orderedLevels.map((level) => {
             const heading = t(`examLanding.${level.key}Heading`);
             const desc = t(`examLanding.${level.key}Desc`);
-
-            // The Terminale (Baccalauréat) card embeds the filière quick-pick so the
-            // whole "choose your level / choose your série" flow fits one screen
-            // without a separate section forcing the page to scroll.
-            if (level.to === '/exams/terminale') {
-              return (
-                <div
-                  key={level.to}
-                  className="level-card level-card--bac"
-                  style={{ '--level-color': level.color } as React.CSSProperties}
+            const isMine = !!myLevelRaw && level.raw === myLevelRaw;
+            return (
+              <li key={level.to} className="exam-landing__level-item">
+                <Link
+                  to={level.to}
+                  className={`exam-landing__row exam-landing__row--level${isMine ? ' is-mine' : ''}`}
                 >
-                  <Link to={level.to} className="level-card__link">
-                    <CardCover className="level-card__cover" glyph={level.glyph} color={level.color} />
-                    <div className="level-card__body">
-                      <h2 className="level-card__heading">{heading}</h2>
-                    </div>
-                  </Link>
+                  <span className="exam-landing__row-swatch" style={{ background: level.color }} aria-hidden="true" />
+                  <span className="exam-landing__row-body">
+                    <span className="exam-landing__row-title">
+                      {heading}
+                      {isMine && (
+                        <span className="exam-landing__row-badge">
+                          {ht ? 'Nivo ou' : 'Votre niveau'}
+                        </span>
+                      )}
+                    </span>
+                    <span className="exam-landing__row-meta exam-landing__row-meta--wrap">{desc}</span>
+                  </span>
+                  <ChevronRight size={16} className="exam-landing__row-chevron" aria-hidden="true" />
+                </Link>
 
-                  <div className="level-card__tracks" aria-label={t('examLanding.chooseTrackAria')}>
-                    <span className="level-card__tracks-label">{t('examLanding.chooseTrack')}</span>
-                    <div className="level-card__chips">
+                {/* The Baccalauréat row keeps the filière quick-pick beneath it,
+                    so "choose the level / choose the série" stays one step. */}
+                {level.to === '/exams/terminale' && (
+                  <div className="exam-landing__tracks" aria-label={t('examLanding.chooseTrackAria')}>
+                    <span className="exam-landing__tracks-label">{t('examLanding.chooseTrack')}</span>
+                    <div className="exam-landing__chips">
                       {TRACKS.map((track) => {
                         const active = userTrack === track.code;
                         return (
@@ -535,33 +726,11 @@ const ExamLanding = () => {
                       })}
                     </div>
                   </div>
-
-                  <div className="level-card__footer">
-                    <Link to={level.to} className="level-card__cta">{t('examLanding.explore')} →</Link>
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={level.to}
-                to={level.to}
-                className="level-card"
-                style={{ '--level-color': level.color } as React.CSSProperties}
-              >
-                <CardCover className="level-card__cover" glyph={level.glyph} color={level.color} />
-                <div className="level-card__body">
-                  <h2 className="level-card__heading">{heading}</h2>
-                  <p className="level-card__desc">{desc}</p>
-                </div>
-                <div className="level-card__footer">
-                  <span className="level-card__cta">{t('examLanding.explore')} →</span>
-                </div>
-              </Link>
+                )}
+              </li>
             );
           })}
-        </div>
+        </ul>
       </section>
     </div>
   );

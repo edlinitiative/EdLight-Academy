@@ -19,17 +19,28 @@ export default function CtaSection({ t }: { t: TFn }) {
               <span className="lp-text-accent">{t('est déjà prête.', 'deja pare.')}</span>
             </h2>
             <p className="lp-cta__desc">
-              {t(
-                'Créez votre espace pour retrouver vos cours, vos erreurs à revoir et votre progression sur chaque appareil.',
-                'Kreye espas ou pou jwenn kou ou, erè pou revize ak pwogrè ou sou chak aparèy.'
-              )}
+              {isAuthenticated
+                ? t(
+                    'Vos cours, vos erreurs à revoir et votre progression vous attendent sur votre tableau de bord.',
+                    'Kou ou, erè pou revize ak pwogrè ou ap tann ou nan tablodbò ou.'
+                  )
+                : t(
+                    'Créez votre espace pour retrouver vos cours, vos erreurs à revoir et votre progression sur chaque appareil.',
+                    'Kreye espas ou pou jwenn kou ou, erè pou revize ak pwogrè ou sou chak aparèy.'
+                  )}
             </p>
+            {/* The page's single closing action. It used to sit beside a
+                second, equally large button (§13: competing calls to action),
+                and it invited a signed-in student to "create a free account"
+                they already had. */}
             <div className="lp-hero__actions">
-              <button className="lp-btn lp-btn--primary lp-btn--lg" onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}>
-                {t('Créer un compte gratuit', 'Kreye yon kont gratis')}
-              </button>
-              <button className="lp-btn lp-btn--ghost lp-btn--lg" onClick={() => navigate('/practice')}>
-                {t('Découvrir la pratique', 'Dekouvri pratik la')}
+              <button
+                className="lp-btn lp-btn--primary lp-btn--lg"
+                onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}
+              >
+                {isAuthenticated
+                  ? t('Reprendre mon apprentissage', 'Kontinye aprann')
+                  : t('Créer un compte gratuit', 'Kreye yon kont gratis')}
               </button>
             </div>
           </div>

@@ -1,10 +1,9 @@
 import React from 'react';
-import { BookOpen, Brain, CheckCircle2, ChevronRight, PlayCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { TFn } from './content';
+import { BookOpen, Brain, CheckCircle2 } from 'lucide-react';
+import { TFn, useCatalogSummary } from './content';
 
 export default function LearningJourneySection({ t }: { t: TFn }) {
-  const navigate = useNavigate();
+  const { summary, isLoading } = useCatalogSummary(t);
 
   const steps = [
     {
@@ -35,6 +34,33 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
       ),
     },
   ];
+
+  /* What the panel used to be: a mock app screenshot with a "Synchronisé"
+     badge, a half-filled progress bar and "Reprenez exactement où vous étiez"
+     — a student's progress invented for a visitor who has none (§3), under a
+     heading the closing section already used word for word (§13). It is now
+     the catalogue's own totals: the useful context a wide layout should carry,
+     and nothing a visitor cannot verify by opening /courses. */
+  const facts = summary
+    ? [
+        {
+          value: String(summary.lessons),
+          label: t('leçons vidéo disponibles', 'leson videyo disponib'),
+        },
+        {
+          value: String(summary.courses),
+          label: t('cours ouverts', 'kou ki louvri'),
+        },
+        {
+          value: String(summary.subjects.length),
+          label: t('matières', 'matyè'),
+        },
+        {
+          value: 'NS I–IV',
+          label: t('niveaux du Nouveau Secondaire', 'nivo Nouvo Segondè'),
+        },
+      ]
+    : [];
 
   return (
     <section className="lp-section lp-journey">
@@ -72,29 +98,36 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
             ))}
           </ol>
 
-          <div className="lp-product-preview" data-reveal aria-label={t('Aperçu du parcours étudiant', 'Apèsi chemen elèv la')}>
-            <div className="lp-product-preview__top">
-              <span>{t('Votre prochaine étape', 'Pwochen etap ou')}</span>
-              <span className="lp-product-preview__status">{t('Synchronisé', 'Senkronize')}</span>
-            </div>
-            <div className="lp-product-preview__focus">
-              <span className="lp-product-preview__subject">{t('Continuer le cours', 'Kontinye kou a')}</span>
-              <strong>{t('Reprenez exactement où vous étiez', 'Kontinye egzakteman kote ou te rete')}</strong>
-              <span className="lp-product-preview__line"><span /></span>
-              <button type="button" onClick={() => navigate('/courses')}>
-                <PlayCircle size={18} aria-hidden="true" />
-                {t('Voir les cours', 'Gade kou yo')}
-              </button>
-            </div>
-            <button className="lp-product-preview__row" type="button" onClick={() => navigate('/revision')}>
-              <Brain size={20} aria-hidden="true" />
-              <span>
-                <strong>{t('Réviser mes erreurs', 'Revize erè mwen yo')}</strong>
-                <small>{t('Une session ciblée à partir de vos réponses', 'Yon sesyon vize apati repons ou yo')}</small>
-              </span>
-              <ChevronRight size={18} aria-hidden="true" />
-            </button>
-          </div>
+          <aside className="lp-facts" data-reveal>
+            <h3 className="lp-facts__title">
+              {t('Dans le catalogue aujourd’hui', 'Nan katalòg la jodi a')}
+            </h3>
+            {facts.length > 0 ? (
+              <dl className="lp-facts__list">
+                {facts.map((fact) => (
+                  <div key={fact.label} className="lp-facts__item">
+                    <dt className="lp-facts__value">{fact.value}</dt>
+                    <dd className="lp-facts__label">{fact.label}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="lp-facts__note" role={isLoading ? 'status' : undefined}>
+                {isLoading
+                  ? t('Chargement du catalogue…', 'N ap chaje katalòg la…')
+                  : t(
+                      'Les chiffres du catalogue n’ont pas pu être chargés.',
+                      'Nou pa t ka chaje chif katalòg la.',
+                    )}
+              </p>
+            )}
+            <p className="lp-facts__foot">
+              {t(
+                'Et les annales du Bac haïtien, corrigées question par question.',
+                'Ak ansyen egzamen Bak ayisyen an, korije kesyon pa kesyon.',
+              )}
+            </p>
+          </aside>
         </div>
       </div>
     </section>

@@ -1,17 +1,19 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ChevronRight, Clock, Save, LogIn } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { useExamAttempts } from '../hooks/useExamAttempts';
-import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
+import { buildExamIndex, subjectColor } from '../utils/examUtils';
+import { examTopicTags } from '../../shared/examUtils';
 import CardCover from '../components/CardCover';
 import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
-import { yearRange } from '../utils/examNaming';
+import { sessionRowName, yearRange } from '../utils/examNaming';
 import './ExamOverview.css'; // shared .exam-overview__crumbs (same trail as the subject/exam pages)
+import './ExamSubject.css'; // shared .exam-session row — the same list, one step down
 import './ExamBrowser.css';
 import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
@@ -38,6 +40,26 @@ const DIFFICULTY_LABEL_HT = { easy: 'Fasil', medium: 'Mwayen', hard: 'Difisil' }
 
 function difficultyMeta(d) {
   return DIFFICULTY_META[d] || null;
+}
+
+/**
+ * The filière/série a paper was set for.
+ *
+ * `tracks` is `['ALL']` on essentially every catalog entry, so the filière that
+ * `sessionRowName` would print is usually empty — and eight Bac 2022 maths
+ * papers came out as eight rows reading "Bac permanent". `_series` (parsed off
+ * the records-office title in `buildExamIndex`) is the real separator. Shown
+ * only when `tracks` is empty so the two never duplicate each other.
+ */
+function seriesLabel(exam, isCreole) {
+  const tracks = (Array.isArray(exam?.tracks) ? exam.tracks : []).filter((tr) => tr && tr !== 'ALL');
+  if (tracks.length > 0) return '';
+  const raw = String(exam?._series || '').trim();
+  if (!raw) return '';
+  const parts = [...new Set(raw.split(/[,·/]+/).map((x) => x.trim().toUpperCase()).filter(Boolean))].slice(0, 3);
+  if (parts.length === 0) return '';
+  const label = isCreole ? 'Seri' : parts.length > 1 ? 'Séries' : 'Série';
+  return `${label} ${parts.join(' · ')}`;
 }
 
 /** Fetch and cache the slim browse index (metadata only, ~280 KB).
@@ -90,9 +112,16 @@ const ExamBrowser = () => {
   const grade = useStore((s) => s.grade);
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const userId = useStore((s) => s.user?.uid);
+  const setShowAuthModal = useStore((s) => s.setShowAuthModal);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
+
+  // gradeProfile().examLevel is null for 7ᵉ, 8ᵉ and NS1–NS3: no national paper
+  // maps to those classes. The pool stays browsable — a curious 8ᵉ may look —
+  // but the page says so instead of presenting the Bac as their exam (§6.4).
+  const offLevel = !!grade && !gradeProfile(grade).examLevel;
 
   // ── Grade-based curation ───────────────────────────────────────────────────
   // Map the student's grade to an exam level; when it differs from the browser's
@@ -431,8 +460,13 @@ const ExamBrowser = () => {
           </h1>
           {/* The level is already the h1 and the last crumb — repeating it here
               was a third copy of the same word (§13 "duplicate headings"). */}
+          {/* An exam here is not a quiz, and the subtitle is where that has to
+              be said — the rows below all lead to a full paper (§6.4). */}
           <p className="page-header__subtitle">
-            {t("Banque d'examens officiels du MENFP", 'Bank egzamen ofisyèl MENFP')}
+            {t(
+              "Banque d'examens officiels du MENFP — des épreuves complètes, pas des quiz rapides.",
+              'Bank egzamen ofisyèl MENFP — epwèv konplè, se pa ti kiz.',
+            )}
           </p>
           {/* The count moved into the toolbar, next to the filters that change
               it (it used to float here, far above the controls). */}
@@ -468,6 +502,44 @@ const ExamBrowser = () => {
             </button>
           </div>
         )}
+
+        {/* Not this student's level — explain, point at what is, keep browsing. */}
+        {offLevel && (
+          <div className="exam-browser__level-note" role="status">
+            <span className="exam-browser__level-note-body">
+              <strong>{t('Pas encore votre niveau', 'Poko nivo ou')}</strong>
+              <span>
+                {t(
+                  'Les examens nationaux commencent en 9ᵉ AF. Vous pouvez consulter ces épreuves librement.',
+                  'Egzamen nasyonal yo kòmanse nan 9yèm ane. Ou lib pou gade epwèv sa yo.',
+                )}
+              </span>
+            </span>
+            <Link to="/quizzes" className="button button--ghost">
+              {t('Faire un quiz', 'Fè yon kiz')}
+            </Link>
+          </div>
+        )}
+
+        {/* What these rows lead to, and whether a result is kept — once for the
+            list, not on every row. ExamTake's save effect returns early without
+            a uid, so signed out the result really is not stored. */}
+        <p className="exam-browser__terms">
+          <Clock size={14} aria-hidden="true" />
+          {t(
+            'Chaque épreuve indique sa durée, ou qu’elle n’est pas chronométrée.',
+            'Chak epwèv montre dire li, oswa li di li pa gen kwonomèt.',
+          )}
+          {userId ? <Save size={14} aria-hidden="true" /> : <LogIn size={14} aria-hidden="true" />}
+          {userId
+            ? t('Vos résultats sont enregistrés.', 'Rezilta ou yo anrejistre.')
+            : t('Résultats non enregistrés hors connexion.', 'Rezilta pa anrejistre si ou pa konekte.')}
+          {!userId && (
+            <button type="button" className="exam-browser__terms-link" onClick={() => setShowAuthModal(true)}>
+              {t('Se connecter', 'Konekte')}
+            </button>
+          )}
+        </p>
 
         {/* ── Browse toolbar ──────────────────────────────────────────────────
             One horizontal row (Coursera's browse pattern): a constrained
@@ -769,16 +841,16 @@ const ExamBrowser = () => {
                     </svg>
                   </button>
                   {open && (
-                    <div className="grid grid--exams exam-section__grid">
+                    <ul className="exam-subject__list exam-section__list">
                       {g.exams.map((exam) => (
-                        <ExamCard
+                        <ExamRow
                           key={exam.exam_id || exam._idx}
                           exam={exam}
                           attempt={attempts[examKeyOf(exam)]}
                           onClick={() => navigate(`/exams/${level}/${examKeyOf(exam)}`)}
                         />
                       ))}
-                    </div>
+                    </ul>
                   )}
                 </section>
               );
@@ -804,70 +876,77 @@ const ExamBrowser = () => {
   );
 };
 
-// ── Exam Card Component ──────────────────────────────────────────────────────
+// ── Exam Row Component ──────────────────────────────────────────────────────
 
 /**
- * Flat, editorial exam card. Because cards live inside a subject section, the
- * subject already appears in the section header — so the card leads with the
- * distinct topic / session (the real differentiator between same-subject papers)
- * and surfaces year, filière, length and difficulty as quiet metadata.
+ * One compact row per paper — the same row the subject page uses, so the two
+ * steps of the path (niveau → matière → épreuve) read as one list.
+ *
+ * It replaced a grid of equal-weight cards (§7). The cards also could not tell
+ * same-session papers apart: eight Bac 2022 maths sujets all headed "Bac
+ * permanent", six July 2025 ones all "Bac régulier · Juillet". The row leads
+ * with the session name INCLUDING its year and then states the série, the
+ * question count, the real timing and the topics actually in the paper.
+ *
+ * Nothing here is estimated: a paper with no `duration_minutes` says it has no
+ * timer, which is what ExamTake does with it.
  */
-function ExamCard({ exam, onClick, attempt }) {
+function ExamRow({ exam, onClick, attempt }) {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
   const subject = exam._subject || 'Examen';
-  // The section header already carries the subject and the card shows the year
-  // as a chip, so the heading leads with the real differentiator (topic) and
-  // falls back to a clean session/type label — never a bare year or "Épreuve".
-  const { heading, sub } = examCardName({
-    topic: exam._topic || '',
-    session: exam._session || '',
-    examType: exam._examType || '',
-  });
+  const name = sessionRowName(exam, isCreole ? 'ht' : 'fr');
 
   const qCount = exam._questionCount || 0;
   const duration = exam.duration_minutes || 0;
   const diff = difficultyMeta(exam.difficulty);
-  const tracks = (exam.tracks || [])
-    .filter((t) => t && t !== 'ALL')
-    .map((t) => TRACK_BY_CODE[t]?.shortLabel || t);
+  const topicTags = examTopicTags(exam.topics);
+
+  const meta = [
+    name.subtitle,
+    seriesLabel(exam, isCreole),
+    qCount > 0 ? `${qCount} ${t('question', 'kesyon')}${qCount !== 1 ? t('s', '') : ''}` : '',
+    duration > 0 ? `${duration} min` : t('non chronométré', 'san kwonomèt'),
+  ].filter(Boolean).join(' · ');
 
   const pct = attempt && typeof attempt.percentage === 'number' ? attempt.percentage : null;
-  const scoreTone = pct == null ? '' : pct >= 60 ? '--good' : pct >= 40 ? '--mid' : '--low';
+  const tone = pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
 
   return (
-    <button
-      className={`card exam-card ${attempt ? 'exam-card--done' : ''}`}
-      onClick={onClick}
-      type="button"
-      aria-label={`${subject} — ${heading}${exam._year ? `, ${exam._year}` : ''}${attempt ? t(', déjà fait', ', deja fèt') : ''}`}
-    >
-      <div className="exam-card__top">
-        <span className="exam-card__year">{exam._year || '—'}</span>
-        {attempt && (
-          <span className={`exam-card__score exam-card__score${scoreTone}`}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-            {pct != null ? `${pct}%` : t('Fait', 'Fèt')}
+    <li>
+      <button
+        type="button"
+        className="exam-session exam-session--button"
+        onClick={onClick}
+        aria-label={`${subject} — ${name.title}${attempt ? t(', déjà fait', ', deja fèt') : ''}`}
+      >
+        <span className="exam-session__body">
+          <span className="exam-session__title">{name.title}</span>
+          <span className="exam-session__meta">{meta}</span>
+          {topicTags.length > 0 && (
+            <span className="exam-session__topics">
+              {topicTags.map((tag) => (
+                <span key={tag} className="exam-session__topic">{tag}</span>
+              ))}
+            </span>
+          )}
+        </span>
+        {diff && (
+          <span className={`exam-session__diff exam-session__diff--${diff.tier}`}>
+            {t(diff.label, DIFFICULTY_LABEL_HT[diff.tier])}
           </span>
         )}
-      </div>
-
-      <h3 className="exam-card__heading" title={heading}>{heading}</h3>
-      {sub && <p className="exam-card__sub" title={sub}>{sub}</p>}
-
-      <div className="exam-card__meta">
-        <span>{qCount} {t('question', 'kesyon')}{qCount !== 1 ? t('s', '') : ''}</span>
-        {duration > 0 && <span>{duration} min</span>}
-        {diff && <span className={`exam-card__diff exam-card__diff--${diff.tier}`}>{t(diff.label, DIFFICULTY_LABEL_HT[diff.tier])}</span>}
-      </div>
-
-      {tracks.length > 0 && (
-        <p className="exam-card__tracks">{t('Filière', 'Filyè')} : {tracks.join(' · ')}</p>
-      )}
-
-      <span className="exam-card__cta">{t('Voir l’examen', 'Gade egzamen an')} →</span>
-    </button>
+        {attempt ? (
+          <span className={`exam-session__score exam-session__score--${tone}`}>
+            {pct != null ? `${pct}%` : '✓'}
+          </span>
+        ) : (
+          <span className="exam-session__todo">{t('À faire', 'Pou fè')}</span>
+        )}
+        <ChevronRight size={17} className="exam-session__chevron" aria-hidden="true" />
+      </button>
+    </li>
   );
 }
 

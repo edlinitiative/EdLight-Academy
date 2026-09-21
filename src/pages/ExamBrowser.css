@@ -468,3 +468,59 @@
 @media (prefers-reduced-motion: reduce) {
   .exam-subject-row { transition: none; }
 }
+
+/* ── What the rows lead to, and whether the result is kept ──────────────────
+   A plain line under the header, not a fourth boxed callout (§7). */
+.exam-browser__terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-600);
+}
+
+.exam-browser__terms > svg {
+  flex: none;
+  color: var(--primary-500);
+}
+
+.exam-browser__terms-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary-500);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.exam-browser__terms-link:hover {
+  color: var(--primary-600);
+}
+
+/* ── Papers inside an open subject section ──────────────────────────────────
+   The same .exam-session rows as the subject page (imported from
+   ExamSubject.css), so a paper looks identical wherever it is found. This
+   replaced `.grid--exams` + `.exam-card`, whose equal-weight cards could not
+   tell two papers of the same session apart. */
+.exam-section__list {
+  margin: 0.15rem 0 1.5rem;
+}
+
+/* Row as a <button>: reset the UA chrome the <a> version never had. */
+.exam-session--button {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font-family: var(--font-sans);
+  cursor: pointer;
+}
+
+.exam-session--button:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}

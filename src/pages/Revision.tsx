@@ -10,6 +10,30 @@
  *
  * The deck is FROZEN when the session starts: answering mutates the review
  * map, and a live-recomputed deck would reshuffle under the student.
+ *
+ * EVERY NUMBER THIS PAGE SHOWS (redesign plan §6.6):
+ *
+ *   items.length   Questions in THIS session's frozen deck. Due ids from the
+ *                  review map, intersected with the quiz bank (an id whose
+ *                  question has left the bank is skipped), essays dropped
+ *                  because they cannot be auto-resolved, capped at
+ *                  SESSION_LIMIT. So it is "how many you will see now", not
+ *                  "how many you have missed".
+ *   idx + 1        Position in that deck.
+ *   score          Questions answered correctly in this session — counted
+ *                  once per question, on the first correct answer
+ *                  (`handleScore` guards with canAdvance). Each one is also
+ *                  resolved in the shared review map by DirectBankQuiz, so it
+ *                  leaves the pile everywhere, phone included.
+ *   attemptsLeft   MAX_ATTEMPTS from DirectBankQuiz, which owns the rule.
+ *   remainingDue   Re-read from the review map AFTER the session, so the
+ *                  completion screen states what is actually left rather than
+ *                  subtracting an assumption. Null while unknown, and the copy
+ *                  then says nothing about a remainder.
+ *
+ * No mastery, streak or readiness figure appears here: nothing on this page
+ * establishes one. The review map records "missed / resolved", not mastery —
+ * that lives in users/{uid}/mastery/lessons, keyed by lesson.
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -60,18 +84,56 @@ export default function Revision() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reviewMap, rows, items]);
 
+  /**
+   * Reviewable questions left, counted the same way the deck is built: due in
+   * the review map AND still present in the bank AND auto-gradable. Anything
+   * else would be a number the student cannot act on.
+   */
+  const countReviewable = (map: ReviewMap, bankRows: any[]): number => {
+    const byId = new Map<string, any>();
+    for (const row of bankRows) if (row?.id) byId.set(String(row.id), row);
+    let n = 0;
+    for (const id of dueQuestionIds(map)) {
+      const row = byId.get(id);
+      if (!row) continue;
+      const item = toDirectItemFromRow(row);
+      if (item && item.kind !== 'essay') n += 1;
+    }
+    return n;
+  };
+
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
   const [outcome, setOutcome] = useState<null | 'correct' | 'out'>(null);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [finished, setFinished] = useState(false);
+  // What is still due once the session ends — re-read, never inferred.
+  // `null` = not known yet, and the copy then makes no claim about it.
+  const [remainingDue, setRemainingDue] = useState<number | null>(null);
 
   useEffect(() => {
     setCanAdvance(false);
     setOutcome(null);
     setAttemptsLeft(MAX_ATTEMPTS);
   }, [idx]);
+
+  /*
+   * A finished session must lead somewhere (§8: "meaningful completion and
+   * next action, not an unexplained dead end"), and what it should lead to
+   * depends on whether anything is still due. DirectBankQuiz has already
+   * resolved each correct answer into the shared review map, so re-reading it
+   * here is both cheap (module cache) and the only truthful source.
+   */
+  useEffect(() => {
+    if (!finished || !user?.uid) return undefined;
+    let alive = true;
+    loadReviewMap(user.uid)
+      .then((map) => { if (alive) setRemainingDue(countReviewable(map, rows)); })
+      .catch(() => { if (alive) setRemainingDue(null); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished, user?.uid, rows]);
 
   const handleScore = (evt: any) => {
     if (!evt) return;
@@ -154,43 +216,83 @@ export default function Revision() {
   }
 
   if (items.length === 0) {
+    /*
+     * An empty deck is NOT proof that nothing is due. `loadReviewMap` swallows
+     * a failed Firestore read and returns {} (services/reviewService.ts), and a
+     * due id whose question has left the quiz bank is skipped here, so this
+     * branch covers "nothing due", "we could not read your review list" and
+     * "your due questions are no longer in the bank" alike.
+     *
+     * The old copy picked the flattering one — "tu as corrigé toutes tes
+     * erreurs !" — which §13 lists as a generic success message before
+     * confirmation. "Nothing to review right now" is true in all three cases,
+     * and the next action works in all three too.
+     */
     return shell(
       <EmptyState
-        icon={<span style={{ fontSize: '1.6rem' }} aria-hidden>🎉</span>}
-        title={t('Rien à réviser — tu as corrigé toutes tes erreurs !',
-          'Anyen pou revize — ou korije tout erè ou yo !')}
-        message={t('Les questions ratées dans les exercices apparaîtront ici.',
-          'Kesyon ou rate nan egzèsis yo ap parèt isit la.')}
+        icon={<span style={{ fontSize: '1.6rem' }} aria-hidden>✓</span>}
+        title={t('Rien à réviser pour le moment',
+          'Anyen pou revize kounye a')}
+        message={t('Les questions que tu rates dans les exercices arrivent ici, jusqu\'à ce que tu les réussisses.',
+          'Kesyon ou rate nan egzèsis yo ap vini isit la, jiskaske ou reyisi yo.')}
         action={{ label: t('Faire des exercices', 'Fè egzèsis'), href: '/quizzes' }}
+        secondaryAction={{ label: t('Retour au tableau de bord', 'Tounen sou tablo a'), href: '/dashboard' }}
       />,
     );
   }
 
   if (finished) {
     const resolved = score;
+    const missed = items.length - resolved;
+    // Only offer another session when there is something to put in it. The
+    // button used to appear unconditionally and could open an empty deck.
+    const canContinue = remainingDue == null || remainingDue > 0;
+    const startNewSession = () => {
+      setItems(null);
+      setReviewMap(null);
+      setIdx(0);
+      setScore(0);
+      setFinished(false);
+      setRemainingDue(null);
+      loadReviewMap(user.uid).then((m) => setReviewMap({ ...m }));
+    };
+
     return shell(
       <div className="card" style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }} aria-hidden>
           {resolved === items.length ? '🎉' : '💪'}
         </div>
         <p style={{ margin: 0, fontWeight: 600 }}>
-          {t(`${resolved} question${resolved > 1 ? 's' : ''} corrigée${resolved > 1 ? 's' : ''} sur ${items.length}.`,
-            `${resolved} kesyon korije sou ${items.length}.`)}
+          {t(`${resolved} question${resolved > 1 ? 's' : ''} réussie${resolved > 1 ? 's' : ''} sur ${items.length}.`,
+            `${resolved} kesyon reyisi sou ${items.length}.`)}
         </p>
-        <p className="text-muted" style={{ margin: '0.5rem 0 1rem' }}>
-          {resolved === items.length
-            ? t('Tout est réglé pour aujourd\'hui.', 'Tout bagay regle pou jodi a.')
-            : t('Celles que tu as ratées reviendront — c\'est comme ça qu\'on apprend.',
-              'Sa ou rate yo ap tounen — se konsa nou aprann.')}
+        <p className="text-muted" style={{ margin: '0.5rem 0 0' }}>
+          {missed > 0
+            ? t(`Les ${missed} autre${missed > 1 ? 's' : ''} reviendront — c'est comme ça qu'on apprend.`,
+              `${missed} lòt yo ap tounen — se konsa nou aprann.`)
+            : t('Chacune de ces questions quitte ta liste de révision, sur le web comme sur le téléphone.',
+              'Chak kesyon sa yo soti nan lis revizyon ou, sou web la tankou sou telefòn lan.')}
         </p>
-        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-          <button
-            type="button"
-            className="button button--primary button--sm"
-            onClick={() => { setItems(null); setReviewMap(null); setIdx(0); setScore(0); setFinished(false); loadReviewMap(user.uid).then((m) => setReviewMap({ ...m })); }}
-          >
-            {t('Nouvelle session', 'Nouvo sesyon')}
-          </button>
+        {/* What is left — stated only once it has actually been re-read. */}
+        {remainingDue != null && (
+          <p className="text-muted" style={{ margin: '0.35rem 0 1rem', fontWeight: 600 }}>
+            {remainingDue > 0
+              ? t(`Il te reste ${remainingDue} question${remainingDue > 1 ? 's' : ''} à revoir.`,
+                `Ou gen ${remainingDue} kesyon ki rete pou revize.`)
+              : t('Ta liste de révision est vide pour le moment.', 'Lis revizyon ou vid kounye a.')}
+          </p>
+        )}
+        {remainingDue == null && <div style={{ height: '1rem' }} />}
+        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {canContinue ? (
+            <button type="button" className="button button--primary button--sm" onClick={startNewSession}>
+              {t('Continuer la révision', 'Kontinye revizyon an')}
+            </button>
+          ) : (
+            <Link className="button button--primary button--sm" to="/quizzes">
+              {t('Faire des exercices', 'Fè egzèsis')}
+            </Link>
+          )}
           <Link className="button button--ghost button--sm" to="/dashboard">
             {t('Retour au tableau de bord', 'Tounen sou tablo a')}
           </Link>

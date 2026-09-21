@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, SlidersHorizontal, RotateCcw } from 'lucide-react';
-import DirectBankQuiz from '../components/DirectBankQuiz';
+import { Check, ChevronDown, ChevronLeft, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useAppData } from '../hooks/useData';
@@ -10,6 +10,45 @@ import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
 import './Quizzes.css';
+
+/**
+ * Two activities live on this page, and §6.4 requires them to be told apart:
+ *
+ *   • DRILL — one question at a time, as many as you like, three tries with
+ *     hints. Nothing is scored. This is "practice a subject or skill".
+ *   • QUIZ — a fixed set of QUIZ_LENGTH questions from the chosen unit, start
+ *     to finish, with a score at the end. This is "take a short quiz".
+ *
+ * Neither is timed and neither writes a grade anywhere; both feed the Revizyon
+ * review map through DirectBankQuiz when a student is signed in. Every fact
+ * line below states exactly that and nothing more — no invented durations.
+ */
+const QUIZ_LENGTH = 10;
+
+/** A fixed deck for the quiz mode: distinct rows from the unit, shuffled. */
+function buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow) {
+  const unitKey = unit && courseCode ? `${courseCode}|${unit}` : '';
+  const pool = (unitKey && quizBank?.byUnit?.[unitKey]) || quizBank?.bySubject?.[courseCode] || [];
+  const rows = [...pool];
+  // Fisher-Yates: a stable `sort(() => Math.random() - 0.5)` is not a shuffle.
+  for (let i = rows.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [rows[i], rows[j]] = [rows[j], rows[i]];
+  }
+  const deck = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const id = row?.id ? String(row.id) : '';
+    if (id && seen.has(id)) continue;
+    const item = toDirectItemFromRow(row);
+    // Essays cannot be auto-scored, so they would break the score at the end.
+    if (!item || item.kind === 'essay') continue;
+    if (id) seen.add(id);
+    deck.push(item);
+    if (deck.length >= QUIZ_LENGTH) break;
+  }
+  return deck;
+}
 
 // Quizzes page: curriculum practice only (Course/Grade/Unit), polished layout
 const Quizzes = () => {
@@ -56,8 +95,13 @@ const Quizzes = () => {
     return {
       course: (params.get('course') || '').trim(),
       unit: (params.get('unit') || '').trim(),
+      // /practice sends ?mode=quiz for "take a short quiz". It only decides
+      // which button leads; both activities stay available either way.
+      mode: (params.get('mode') || '').trim().toLowerCase(),
     };
   }, [location.search]);
+
+  const preferQuiz = queryDefaults.mode === 'quiz';
 
   // Apply deep-link defaults once (e.g. /quizzes?course=CHEM-NSII&unit=U3).
   // The subject is validated against the options we actually have: a stale or
@@ -178,9 +222,31 @@ const Quizzes = () => {
   // so switching unit mid-session never means leaving the page.
   const [showSelectors, setShowSelectors] = useState(false);
 
+  // ── Quiz mode (a fixed deck of QUIZ_LENGTH) ──────────────────────────────
+  // The deck is frozen when the session starts; the selectors are not touched
+  // mid-quiz, so "question 4 / 10" keeps meaning what it said.
+  const [quizDeck, setQuizDeck] = useState(null);
+  const [quizIdx, setQuizIdx] = useState(0);
+  const [quizScore, setQuizScore] = useState(0);
+  const [quizMissed, setQuizMissed] = useState(0);
+  const [canAdvance, setCanAdvance] = useState(false);
+  const [outcome, setOutcome] = useState(null);
+  const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
+  const [quizFinished, setQuizFinished] = useState(false);
+
+  useEffect(() => {
+    setCanAdvance(false);
+    setOutcome(null);
+    setAttemptsLeft(MAX_ATTEMPTS);
+  }, [quizIdx]);
+
+  const inQuiz = !!quizDeck && !quizFinished;
+
   // Taking a practice question is a focused task: hide the bottom tab bar +
-  // footer while one is on screen so it reads like a dedicated quiz.
-  useFocusMode(!!bankDirectItem);
+  // footer while one is on screen so it reads like a dedicated quiz. The
+  // completion screen releases it — that screen's whole job is to offer the
+  // next action, and the nav is part of that.
+  useFocusMode(!!bankDirectItem || inQuiz);
 
   const generateCurriculumPractice = async () => {
     try {
@@ -227,6 +293,66 @@ const Quizzes = () => {
     setShowSelectors(false);
   };
 
+  const resetQuiz = () => {
+    setQuizDeck(null);
+    setQuizIdx(0);
+    setQuizScore(0);
+    setQuizMissed(0);
+    setQuizFinished(false);
+    setCanAdvance(false);
+    setOutcome(null);
+    setAttemptsLeft(MAX_ATTEMPTS);
+  };
+
+  const startQuiz = () => {
+    setBankDirectItem(null);
+    setBankMessage('');
+    setShowSelectors(false);
+    resetQuiz();
+    if (!quizBank || !courseCode || !unit) {
+      setBankMessage(t('quizzes.selectToBegin', 'Choisissez un cours, un niveau et une unité pour commencer.'));
+      return;
+    }
+    let deck = [];
+    try {
+      const { toDirectItemFromRow } = require('../services/quizBank');
+      deck = buildQuizDeck(quizBank, courseCode, unit, toDirectItemFromRow);
+    } catch (e) {
+      console.error('Quiz build failed', e);
+      setBankMessage(t('quizzes.unableToLoad', 'Impossible de charger les exercices pour le moment.'));
+      return;
+    }
+    if (deck.length === 0) {
+      setBankMessage(t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.'));
+      return;
+    }
+    setQuizDeck(deck);
+  };
+
+  /** DirectBankQuiz reports every attempt; only the resolved ones move the deck. */
+  const handleQuizScore = (evt) => {
+    if (!evt) return;
+    if (evt.message === 'correct') {
+      if (!canAdvance) setQuizScore((s) => s + 1);
+      setCanAdvance(true);
+      setOutcome('correct');
+    } else if (evt.message === 'exhausted_attempts') {
+      if (!canAdvance) setQuizMissed((m) => m + 1);
+      setCanAdvance(true);
+      setOutcome('out');
+      setAttemptsLeft(0);
+    } else if (typeof evt.attemptsLeft === 'number') {
+      setAttemptsLeft(evt.attemptsLeft);
+    }
+  };
+
+  const goNextQuizQuestion = () => {
+    if (!canAdvance) return;
+    const next = quizIdx + 1;
+    if (next >= (quizDeck?.length ?? 0)) setQuizFinished(true);
+    else setQuizIdx(next);
+  };
+
   const subjectLabel = subjectOptions.find((o) => o.value === subjectBase)?.label || subjectBase;
   const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
   const unitLabel = unitOptions.find((o) => o.value === unit)?.label || '';
@@ -242,19 +368,35 @@ const Quizzes = () => {
   const pageTitle = t('quizzes.curriculumPractice', 'Quiz du programme');
 
   /**
-   * What this activity actually is — §6.4 asks for purpose, timed/untimed and
-   * whether results are saved, so a quiz is never mistaken for an exam. Every
-   * line below is a fact about the code on this page: `DirectBankQuiz` has no
-   * timer, corrects on submit, reveals the explanation on the third try, and
-   * persists no score. It does feed the review map, but only for a signed-in
-   * user (`recordReviewOutcome` no-ops without a uid), so that line is gated.
+   * What these activities actually are — §6.4 asks for purpose, expected time
+   * when known, timed/untimed and whether results are saved, so a quiz is
+   * never mistaken for an exam. Every line below is a fact about the code on
+   * this page: `DirectBankQuiz` has no timer, gives MAX_ATTEMPTS tries with
+   * hints, reveals the explanation on the last one, and persists no score. It
+   * does feed the Revizyon review map, but only for a signed-in user
+   * (`recordReviewOutcome` no-ops without a uid), so that line is gated.
+   *
+   * No duration is claimed for either mode: nothing on this page measures or
+   * limits time, and a made-up "≈15 min" is exactly what §6.4 forbids.
    */
-  const facts = [
+  const sharedFacts = [
     tx('Non chronométré', 'San kwonomèt'),
+    tx('Aucune note enregistrée', 'Pa gen nòt ki anrejistre'),
+    ...(userId
+      ? [tx('Les erreurs reviennent dans Révision', 'Erè yo ap tounen nan Revizyon')]
+      : [tx('Connectez-vous pour garder la trace de vos erreurs', 'Konekte pou kenbe mak erè ou yo')]),
+  ];
+
+  const drillFacts = [
+    tx('Une question à la fois, autant que vous voulez', 'Yon kesyon alafwa, otan ou vle'),
     t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse'),
     t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai'),
-    tx('Aucune note enregistrée', 'Pa gen nòt ki anrejistre'),
-    ...(userId ? [tx('Les erreurs reviennent dans Révision', 'Erè yo ap tounen nan Revizyon')] : []),
+  ];
+
+  const quizFacts = [
+    tx(`${QUIZ_LENGTH} questions de l’unité choisie`, `${QUIZ_LENGTH} kesyon nan inite ou chwazi a`),
+    tx('Du début à la fin, score affiché à l’arrivée', 'Depi kòmansman jiska fen, nòt parèt nan fen an'),
+    tx('Le score n’est pas enregistré', 'Nòt la pa anrejistre'),
   ];
 
   /** The three dropdowns — shared by the setup card and the in-practice disclosure. */
@@ -366,6 +508,137 @@ const Quizzes = () => {
     );
   }
 
+  // ── Quiz mode: the fixed deck, then a completion screen ──────────────────
+  if (quizDeck && !quizFinished) {
+    const item = quizDeck[quizIdx];
+    const isLast = quizIdx === quizDeck.length - 1;
+    return (
+      <section className="section qz qz--taking">
+        <div className="container qz__container">
+          <h1 className="qz__sr-only">{pageTitle}</h1>
+
+          <div className="qz-context">
+            <div className="qz-context__text">
+              <span className="qz-context__subject">
+                {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}
+              </span>
+              {unitLabel && <span className="qz-context__unit">{unitLabel}</span>}
+            </div>
+            <span className="qz-progress" aria-label={tx('Progression', 'Pwogrè')}>
+              {quizIdx + 1} / {quizDeck.length}
+            </span>
+          </div>
+
+          {/* A progress bar, because "4 / 10" alone does not show how much is
+              left at a glance. Both carry the same fact (§7). */}
+          <div className="qz-bar" role="presentation">
+            <div className="qz-bar__fill" style={{ width: `${((quizIdx + 1) / quizDeck.length) * 100}%` }} />
+          </div>
+
+          <div className="qz-quizmeta">
+            <span className="qz-quizmeta__item">
+              {outcome === 'correct'
+                ? <><Check size={14} aria-hidden="true" /> {t('quizzes.correctChip', 'Correct')}</>
+                : outcome === 'out'
+                  ? t('quizzes.outOfTries', 'Plus d\'essais')
+                  : t('quizzes.triesLeft', '{{count}} essai restant', { count: attemptsLeft })}
+            </span>
+            <span className="qz-quizmeta__item">
+              {tx(`${quizScore} bonne${quizScore === 1 ? '' : 's'} réponse${quizScore === 1 ? '' : 's'}`, `${quizScore} bon repons`)}
+            </span>
+            <span className="qz-quizmeta__item">{tx('Non chronométré', 'San kwonomèt')}</span>
+          </div>
+
+          <div className="qz-question">
+            <DirectBankQuiz item={item} onScore={handleQuizScore} onNext={undefined} onClose={undefined} />
+          </div>
+
+          <div className="qz-next">
+            <button
+              type="button"
+              onClick={goNextQuizQuestion}
+              className="button button--primary qz-next__primary"
+              disabled={!canAdvance}
+            >
+              {isLast
+                ? tx('Voir mon score', 'Wè nòt mwen')
+                : t('quizzes.nextQuestion', 'Question suivante')}
+            </button>
+            <button type="button" onClick={resetQuiz} className="qz-next__end">
+              {tx('Quitter le quiz', 'Kite kwiz la')}
+            </button>
+          </div>
+          <p className="qz-hint">
+            {canAdvance
+              ? tx('Rien n’est enregistré : quitter maintenant ne perd aucune note.', 'Pa gen anyen ki anrejistre : si ou kite kounye a ou pa pèdi okenn nòt.')
+              : tx('Répondez pour continuer. Vous avez trois essais avec des indices.', 'Reponn pou kontinye. Ou gen twa esè ak endis.')}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (quizDeck && quizFinished) {
+    const total = quizDeck.length;
+    return (
+      <section className="section qz">
+        <div className="container qz__container">
+          <header className="qz__head">
+            <Link className="qz__back" to="/practice">
+              <ChevronLeft size={15} aria-hidden="true" />
+              {t('nav.practice', 'Pratiquer')}
+            </Link>
+            <h1 className="qz__title">{tx('Quiz terminé', 'Kwiz fini')}</h1>
+            <p className="qz__subtitle">
+              {tx(
+                `${quizScore} bonne${quizScore === 1 ? '' : 's'} réponse${quizScore === 1 ? '' : 's'} du premier coup sur ${total} questions, en ${subjectLabel}${unitLabel ? ` — ${unitLabel}` : ''}.`,
+                `${quizScore} bon repons premye fwa sou ${total} kesyon, nan ${subjectLabel}${unitLabel ? ` — ${unitLabel}` : ''}.`,
+              )}
+            </p>
+            <ul className="qz-facts">
+              <li className="qz-facts__item">{tx('Ce score n’est pas enregistré', 'Nòt sa a pa anrejistre')}</li>
+              <li className="qz-facts__item">
+                {userId
+                  ? tx('Les questions ratées sont dans Révision', 'Kesyon ou rate yo nan Revizyon')
+                  : tx('Connectez-vous pour retrouver vos erreurs plus tard', 'Konekte pou jwenn erè ou yo pita')}
+              </li>
+            </ul>
+          </header>
+
+          <div className="qz-setup">
+            <p className="qz-hint" style={{ marginTop: 0 }}>
+              {tx(
+                'Un quiz mesure ce que vous savez aujourd’hui sur une unité. Pour une épreuve entière, chronométrée et enregistrée, passez un examen blanc.',
+                'Yon kwiz mezire sa ou konnen jodi a sou yon inite. Pou yon eprèv antye, ak kwonomèt epi ki anrejistre, pase yon egzamen blan.',
+              )}
+            </p>
+            <div className="qz-done-actions">
+              <button type="button" className="button button--primary" onClick={startQuiz}>
+                {tx('Refaire un quiz', 'Refè yon kwiz')}
+              </button>
+              {quizMissed > 0 && userId && (
+                <Link className="button button--ghost" to="/revision">
+                  {tx('Revoir mes erreurs', 'Revize erè m yo')}
+                </Link>
+              )}
+              <button type="button" className="button button--ghost" onClick={() => { resetQuiz(); }}>
+                {tx('Changer d’unité', 'Chanje inite')}
+              </button>
+            </div>
+          </div>
+
+          <p className="qz-crosslink">
+            {tx('Besoin de conditions d’examen ?', 'Ou bezwen kondisyon egzamen?')}{' '}
+            <Link to="/exams">{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
+            <span className="qz-crosslink__note">
+              {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
+            </span>
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={`section qz${bankDirectItem ? ' qz--taking' : ''}`}>
       <div className="container qz__container">
@@ -464,7 +737,7 @@ const Quizzes = () => {
                 {t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}
               </p>
               <ul className="qz-facts">
-                {facts.map((fact) => (
+                {sharedFacts.map((fact) => (
                   <li key={fact} className="qz-facts__item">{fact}</li>
                 ))}
               </ul>
@@ -496,23 +769,62 @@ const Quizzes = () => {
                 </p>
               )}
 
-              <button
-                type="button"
-                onClick={generateCurriculumPractice}
-                className="button button--primary qz-cta"
-                disabled={isLoadingBank}
-              >
-                {ctaLabel}
-              </button>
+              {/* ── Two activities, told apart (§6.4) ──────────────────────
+                    Same unit, different errands: an open drill you leave when
+                    you want, and a fixed set of QUIZ_LENGTH that ends with a
+                    score. Each states its own facts, and `?mode=quiz` from
+                    /practice decides which one leads. */}
+              <div className={`qz-modes${preferQuiz ? ' qz-modes--quiz-first' : ''}`}>
+                <div className="qz-mode qz-mode--drill">
+                  <h2 className="qz-mode__title">{tx('S’entraîner', 'Pratike')}</h2>
+                  <ul className="qz-mode__facts">
+                    {drillFacts.map((fact) => (
+                      <li key={fact}>{fact}</li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={generateCurriculumPractice}
+                    className={`button qz-cta ${preferQuiz ? 'button--ghost' : 'button--primary'}`}
+                    disabled={isLoadingBank}
+                  >
+                    {ctaLabel}
+                  </button>
+                </div>
+
+                <div className="qz-mode qz-mode--quiz">
+                  <h2 className="qz-mode__title">
+                    {tx(`Quiz de ${QUIZ_LENGTH} questions`, `Kwiz ${QUIZ_LENGTH} kesyon`)}
+                  </h2>
+                  <ul className="qz-mode__facts">
+                    {quizFacts.map((fact) => (
+                      <li key={fact}>{fact}</li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={startQuiz}
+                    className={`button qz-cta ${preferQuiz ? 'button--primary' : 'button--ghost'}`}
+                    disabled={isLoadingBank || !hasQuestions}
+                  >
+                    {tx('Commencer le quiz', 'Kòmanse kwiz la')}
+                  </button>
+                </div>
+              </div>
 
               <p className="qz-hint" role={bankMessage ? 'status' : undefined}>
                 {bankMessage || t('quizzes.readyBody', 'Choisissez un cours, un niveau et une unité, puis cliquez sur « Commencer » pour démarrer.')}
               </p>
             </div>
 
-            {/* §6.4: a quiz and an exam are not the same errand. */}
+            {/* §6.4: a quiz and an exam are not the same errand, and saying so
+                once in plain words is cheaper than a student discovering it
+                halfway through a timed paper. */}
             <p className="qz-crosslink">
-              {tx('Besoin de conditions d’examen ?', 'Ou bezwen kondisyon egzamen?')}{' '}
+              {tx(
+                'Un quiz n’est pas un examen : ici rien n’est chronométré et aucune note n’est gardée. Un examen blanc est une épreuve officielle entière, chronométrée, et la tentative reste dans votre historique.',
+                'Yon kwiz se pa yon egzamen : isit la pa gen kwonomèt epi pa gen nòt ki rete. Yon egzamen blan se yon eprèv ofisyèl antye, ak kwonomèt, epi tantativ la rete nan istorik ou.',
+              )}{' '}
               <Link to="/exams">{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
               <span className="qz-crosslink__note">
                 {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}

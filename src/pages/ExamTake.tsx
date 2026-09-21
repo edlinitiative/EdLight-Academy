@@ -9,7 +9,7 @@ import InstructionRenderer from '../components/InstructionRenderer';
 import MathKeyboard from '../components/MathKeyboard';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
-import { authedFetch } from '../services/firebase';
+import { authedFetch, auth } from '../services/firebase';
 import { saveExamResult } from '../services/examResults';
 import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
 import {
@@ -26,6 +26,7 @@ import {
 } from '../utils/examUtils';
 import { compileQuestion, isSerializable, responseToStored, storedToResponse } from '../utils/question';
 import { Skeleton } from '../components/Skeleton';
+import './ExamTake.css';
 
 /** Per-question grading result stored in the `questionResults` map (immediate
  *  feedback mode). Loosely typed — the grading payload is dynamic. */
@@ -224,6 +225,53 @@ function hasInlineBlanks(text) {
   return /_{4,}|\.{4,}/.test(text);
 }
 
+/**
+ * Is this stored answer value a real answer?
+ *
+ * Proof / scaffold answers are persisted as JSON (`{ steps, finalAnswer }`),
+ * so an untouched proof question holds a non-empty *string* that contains no
+ * answer at all. A bare `!= null && !== ''` test therefore calls it answered.
+ *
+ * Exported and used for EVERY "answered?" surface on the screen (the counter,
+ * the submit dialog's unanswered list, the sidebar buttons and the per-section
+ * badges), because the sidebar previously used the naive test while the
+ * counter used this one: the same question could be a filled square in the nav
+ * and still be listed as "sans réponse" when the student pressed Soumettre.
+ * Display only — grading reads `answers` directly and is untouched.
+ */
+export function isAnswerFilled(v) {
+  if (v == null || v === '') return false;
+  // Proof steps stored as JSON — count as answered if any step has content or final answer
+  if (typeof v === 'string' && (v.startsWith('{') || v.startsWith('['))) {
+    try {
+      const parsed = JSON.parse(v);
+      // New format: { steps, finalAnswer }
+      if (parsed && parsed.steps) {
+        return parsed.steps.some((s) => s.math?.trim()) || !!parsed.finalAnswer?.trim();
+      }
+      // Legacy array format
+      if (Array.isArray(parsed)) {
+        return parsed.some((s) => s.math?.trim());
+      }
+    } catch {
+      /* not JSON */
+    }
+  }
+  return true;
+}
+
+/**
+ * The next unanswered question index at or after `from`, wrapping around once.
+ * Returns null when every question has an answer. Powers the sidebar's
+ * "aller à la suivante sans réponse" jump, so a candidate can sweep the gaps
+ * instead of hunting the grid.
+ */
+export function nextUnansweredIndex(unanswered, from) {
+  if (!Array.isArray(unanswered) || unanswered.length === 0) return null;
+  const ahead = unanswered.find((i) => i > from);
+  return ahead != null ? ahead : unanswered[0];
+}
+
 /** Fetch ONLY the exam being opened (a few KB) instead of the full 27 MB catalog. */
 function useExam(examIdParam) {
   return useQuery({
@@ -390,6 +438,38 @@ const ExamTake = () => {
   const startedAtMsRef = useRef(Date.now());
   // Gate draft saving until the resume decision is settled (see save effect).
   const [draftChecked, setDraftChecked] = useState(false);
+
+  // ── Draft save state (§8: pending / confirmed / failed / uncertain) ───────
+  // 'idle'      nothing written yet this session
+  // 'pending'   a change is queued or in flight — NOT saved
+  // 'saved'     Firestore acknowledged the write (setDoc resolved)
+  // 'failed'    the write rejected; the local mirror is all we have
+  // 'uncertain' the write can't be confirmed (offline, or Firebase Auth no
+  //             longer holds a user — saveExamAttemptDraft resolves without
+  //             writing in that case, so a resolved promise is NOT proof)
+  const [saveState, setSaveState] = useState<'idle' | 'pending' | 'saved' | 'failed' | 'uncertain'>('idle');
+  const [savedAtMs, setSavedAtMs] = useState<number | null>(null);
+  // Only the newest write may report its outcome (an earlier slow write must
+  // not overwrite a newer 'pending' with 'saved').
+  const saveSeqRef = useRef(0);
+  // Last content handed to a write — lets the save effect tell a real answer
+  // change from the periodic timer-only re-save.
+  const lastSavedContentRef = useRef<{ answers: any; questionResults: any; currentQ: number; feedbackMode: string }>({
+    answers: null, questionResults: null, currentQ: -1, feedbackMode: '',
+  });
+  const [isOnline, setIsOnline] = useState(
+    () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
+  );
+  useEffect(() => {
+    const up = () => setIsOnline(true);
+    const down = () => setIsOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, []);
 
   // Refs mirror the latest state so the leave/unmount handlers persist fresh
   // values instead of a stale closure.
@@ -663,12 +743,39 @@ const ExamTake = () => {
     draftRef.current = payload;   // for the leave/unmount flush handlers
     persistLocal(payload);        // synchronous mirror (survives background/kill)
 
-    // Debounce the Firestore write so we don't write on every keystroke
+    // Debounce the Firestore write so we don't write on every keystroke.
+    // The outcome drives the visible save chip: until setDoc resolves the
+    // answer is only on this device, and the UI must say so rather than
+    // imply the account copy is up to date (§8).
     if (saveDraftTimerRef.current) clearTimeout(saveDraftTimerRef.current);
+    const seq = ++saveSeqRef.current;
+    // This effect also re-runs on the 15-second timer bucket, which writes the
+    // remaining time but changes nothing the student typed. Only real content
+    // changes flip the chip back to "pending" — otherwise it would blink every
+    // 15 s on a timed paper for a write the student didn't cause.
+    const prev = lastSavedContentRef.current;
+    const contentChanged =
+      prev.answers !== answers ||
+      prev.questionResults !== compactQuestionResults ||
+      prev.currentQ !== currentQ ||
+      prev.feedbackMode !== feedbackMode;
+    lastSavedContentRef.current = { answers, questionResults: compactQuestionResults, currentQ, feedbackMode };
+    if (contentChanged) setSaveState('pending');
     saveDraftTimerRef.current = setTimeout(() => {
-      saveExamAttemptDraft(userId, examKey, payload).catch((e) => {
-        console.warn('[ExamAttempt] Save draft failed:', e);
-      });
+      saveExamAttemptDraft(userId, examKey, payload)
+        .then(() => {
+          if (saveSeqRef.current !== seq) return;   // superseded by a newer change
+          // saveExamAttemptDraft() resolves WITHOUT writing when Firebase Auth
+          // has no current user, so resolution alone can't be called success.
+          if (!auth.currentUser) { setSaveState('uncertain'); return; }
+          setSavedAtMs(Date.now());
+          setSaveState('saved');
+        })
+        .catch((e) => {
+          console.warn('[ExamAttempt] Save draft failed:', e);
+          if (saveSeqRef.current !== seq) return;
+          setSaveState('failed');
+        });
     }, 800);
 
     return () => {
@@ -690,6 +797,48 @@ const ExamTake = () => {
     answers,
     compactQuestionResults,
   ]);
+
+  // Retry a failed draft write on demand (§8: errors offer a recovery action).
+  const retrySaveDraft = useCallback(() => {
+    if (!userId || !examKey || !draftRef.current) return;
+    const seq = ++saveSeqRef.current;
+    setSaveState('pending');
+    saveExamAttemptDraft(userId, examKey, draftRef.current)
+      .then(() => {
+        if (saveSeqRef.current !== seq) return;
+        if (!auth.currentUser) { setSaveState('uncertain'); return; }
+        setSavedAtMs(Date.now());
+        setSaveState('saved');
+      })
+      .catch(() => { if (saveSeqRef.current === seq) setSaveState('failed'); });
+  }, [userId, examKey]);
+
+  /**
+   * What the save chip may claim, in order of certainty. Signed out there is
+   * NO draft at all (the save effect returns early without a uid and the
+   * resume loader needs one too), so the screen says that plainly instead of
+   * implying work is kept. Offline, the local mirror exists but the account
+   * copy does not — that is 'uncertain', never 'saved'.
+   */
+  const saveDisplay: 'none' | 'anonymous' | 'pending' | 'saved' | 'failed' | 'uncertain' = !userId
+    ? 'anonymous'
+    : !isOnline && saveState !== 'failed'
+      ? 'uncertain'
+      : saveState === 'idle'
+        ? 'none'
+        : saveState;
+
+  // The site keeps `overflow-x: hidden` on <body>, which makes <body> a scroll
+  // container and silently defeats `position: sticky` for the exam top bar —
+  // measured at 390px, the bar (timer + answered count + Soumettre) scrolled
+  // 315px out of view. `overflow-x: clip` clips horizontally WITHOUT creating
+  // a scroll container, so the bar docks again. Scoped to the live paper and
+  // removed on unmount; browsers without `clip` keep the previous behaviour.
+  useEffect(() => {
+    if (viewState !== 'active') return;
+    document.body.classList.add('exam-take-live');
+    return () => document.body.classList.remove('exam-take-live');
+  }, [viewState]);
 
   // Auto-submit when timer hits 0
   useEffect(() => {
@@ -836,33 +985,23 @@ const ExamTake = () => {
     }
   }, [questions, answers, questionResults, subject]);
 
-  const isAnswerFilled = (v) => {
-    if (v == null || v === '') return false;
-    // Proof steps stored as JSON — count as answered if any step has content or final answer
-    if (typeof v === 'string' && (v.startsWith('{') || v.startsWith('['))) {
-      try {
-        const parsed = JSON.parse(v);
-        // New format: { steps, finalAnswer }
-        if (parsed && parsed.steps) {
-          return parsed.steps.some((s) => s.math?.trim()) || !!parsed.finalAnswer?.trim();
-        }
-        // Legacy array format
-        if (Array.isArray(parsed)) {
-          return parsed.some((s) => s.math?.trim());
-        }
-      } catch {
-        /* not JSON */
-      }
-    }
-    return true;
-  };
-
   const answeredCount = Object.keys(answers).filter((k) => isAnswerFilled(answers[k])).length;
   const unansweredIndices = [];
   for (let i = 0; i < questions.length; i += 1) {
     if (!isAnswerFilled(answers[i])) unansweredIndices.push(i);
   }
   const progressPct = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
+
+  // Jump to the next question with no answer (wraps). Moves to the START of
+  // its group, exactly like the nav grid and the submit dialog do, so a
+  // grouped sub-exercise still opens on its directive.
+  const goToNextUnanswered = useCallback(() => {
+    const target = nextUnansweredIndex(unansweredIndices, currentQ);
+    if (target == null) return;
+    const grp = questionGroups.find((g) => target >= g.start && target <= g.end);
+    setCurrentQ(grp ? grp.start : target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unansweredIndices.join(','), currentQ, questionGroups]);
 
   // Keyboard navigation (move by group)
   useEffect(() => {
@@ -1258,7 +1397,9 @@ const ExamTake = () => {
                       <span className="exam-cover__feedback-icon">⚡</span>
                       <div>
                         <strong>{t('Résultat immédiat', 'Rezilta imedyat')}</strong>
-                        <p>{t('Voir la correction après chaque question', 'Wè koreksyon an apre chak kesyon')}</p>
+                        {/* State the consequence up front: checking a question
+                            locks it, which is what the code does. */}
+                        <p>{t('Voir la correction après chaque question. Une réponse vérifiée est verrouillée.', 'Wè koreksyon an apre chak kesyon. Yon repons ou verifye pa ka chanje ankò.')}</p>
                       </div>
                     </div>
                   </label>
@@ -1278,7 +1419,7 @@ const ExamTake = () => {
                       <span className="exam-cover__feedback-icon">📋</span>
                       <div>
                         <strong>{t('Résultat à la fin', 'Rezilta nan fen an')}</strong>
-                        <p>{t("Voir tous les résultats après avoir soumis l'examen", 'Wè tout rezilta yo apre ou fin soumèt egzamen an')}</p>
+                        <p>{t("Voir tous les résultats après avoir soumis l'examen. Vous pouvez modifier vos réponses jusqu'à la remise.", 'Wè tout rezilta yo apre ou fin soumèt egzamen an. Ou ka chanje repons ou yo jiskaske ou remèt.')}</p>
                       </div>
                     </div>
                   </label>
@@ -1439,7 +1580,14 @@ const ExamTake = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </button>
-              <p className="exam-take__preview-cta-hint">{t('Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀', 'Kwonomèt la ap kòmanse lè ou klike sou bouton sa a. Bòn chans ! 🍀')}</p>
+              {/* Don't announce a chronometer on a paper that has none:
+                  duration_minutes is 0/absent for a large part of the
+                  catalogue, and the timer is only rendered when it is set. */}
+              <p className="exam-take__preview-cta-hint">
+                {durationMin > 0
+                  ? t('Le chronomètre démarrera quand vous cliquerez sur ce bouton. Bonne chance ! 🍀', 'Kwonomèt la ap kòmanse lè ou klike sou bouton sa a. Bòn chans ! 🍀')
+                  : t('Cette épreuve n’est pas chronométrée : prenez le temps qu’il vous faut. Bonne chance ! 🍀', 'Egzamen sa a pa gen kwonomèt : pran tan ou bezwen an. Bòn chans ! 🍀')}
+              </p>
             </div>
           </div>
 
@@ -1484,6 +1632,11 @@ const ExamTake = () => {
   return (
     <section className="section exam-take">
       <div className="container">
+        {/* Sticky header block: identity, progress, the timer (only when the
+            paper is timed), Soumettre, and the honest state strip. Grouped in
+            one sticky element so the submit action and the remaining time stay
+            on screen while the student scrolls a long question (§6.5). */}
+        <div className="exam-take__header">
         {/* Top bar */}
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
@@ -1525,6 +1678,81 @@ const ExamTake = () => {
           <div className="exam-take__progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
 
+        {/* ── State strip: can I change my answer, and is it saved? ──────────
+            Both lines describe what this component actually does. In 'end'
+            mode nothing is locked until Soumettre; in 'immediate' mode a
+            checked question renders with pointer-events disabled and cannot be
+            edited again. The save chip mirrors the real write outcome. */}
+        <div className="exam-take__state-strip">
+          <span className="exam-take__state-policy">
+            {feedbackMode === 'immediate'
+              ? t(
+                  'Vous pouvez modifier une réponse jusqu’à ce que vous la vérifiiez — après, elle est verrouillée.',
+                  'Ou ka chanje yon repons jiskaske ou verifye l — apre sa, li fèmen.',
+                )
+              : t(
+                  'Vous pouvez revenir et modifier vos réponses jusqu’à la remise.',
+                  'Ou ka tounen chanje repons ou yo jiskaske ou remèt.',
+                )}
+          </span>
+          {durationMin === 0 && (
+            <span className="exam-take__state-untimed">{t('Sans chronomètre', 'San kwonomèt')}</span>
+          )}
+          {saveDisplay !== 'none' && (
+            <span
+              className={`exam-take__save exam-take__save--${saveDisplay}`}
+              role="status"
+              aria-live="polite"
+            >
+              {saveDisplay === 'anonymous' && (
+                <>
+                  <span aria-hidden="true">⚠</span>{' '}
+                  {t(
+                    'Réponses non enregistrées — connectez-vous pour pouvoir reprendre plus tard.',
+                    'Repons yo pa anrejistre — konekte pou ou ka kontinye pita.',
+                  )}
+                </>
+              )}
+              {saveDisplay === 'pending' && (
+                <>
+                  <span aria-hidden="true">•</span> {t('Enregistrement…', 'Ap anrejistre…')}
+                </>
+              )}
+              {saveDisplay === 'saved' && (
+                <>
+                  <span aria-hidden="true">✓</span>{' '}
+                  {t('Enregistré', 'Anrejistre')}
+                  {savedAtMs
+                    ? ` ${t('à', 'a')} ${new Date(savedAtMs).toLocaleTimeString(isCreole ? 'fr-HT' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+                    : ''}
+                </>
+              )}
+              {saveDisplay === 'uncertain' && (
+                <>
+                  <span aria-hidden="true">⚠</span>{' '}
+                  {t(
+                    'Hors ligne : enregistré sur cet appareil seulement, pas encore sur votre compte.',
+                    'San entènèt : anrejistre sou aparèy sa a sèlman, poko sou kont ou.',
+                  )}
+                </>
+              )}
+              {saveDisplay === 'failed' && (
+                <>
+                  <span aria-hidden="true">⚠</span>{' '}
+                  {t(
+                    'Enregistrement échoué. Vos réponses restent sur cet appareil.',
+                    'Anrejistreman an echwe. Repons ou yo rete sou aparèy sa a.',
+                  )}
+                  <button type="button" className="exam-take__save-retry" onClick={retrySaveDraft}>
+                    {t('Réessayer', 'Eseye ankò')}
+                  </button>
+                </>
+              )}
+            </span>
+          )}
+        </div>
+        </div>
+
         {/* Main area: sidebar + question */}
         <div className="exam-take__body">
           {/* Question navigation sidebar */}
@@ -1551,15 +1779,32 @@ const ExamTake = () => {
               </div>
             </div>
 
+            {/* What is still missing, before the submit dialog has to say it.
+                Counted with isAnswerFilled — the same test the dialog uses. */}
+            {unansweredIndices.length > 0 ? (
+              <button type="button" className="exam-take__nav-gap" onClick={goToNextUnanswered}>
+                <span className="exam-take__nav-gap-count">{unansweredIndices.length}</span>
+                <span className="exam-take__nav-gap-label">
+                  {unansweredIndices.length > 1
+                    ? t('questions sans réponse', 'kesyon san repons')
+                    : t('question sans réponse', 'kesyon san repons')}
+                  <small>{t('Aller à la suivante →', 'Ale nan pwochen an →')}</small>
+                </span>
+              </button>
+            ) : (
+              <p className="exam-take__nav-complete">
+                <span aria-hidden="true">✓</span> {t('Toutes les questions ont une réponse.', 'Tout kesyon yo gen repons.')}
+              </p>
+            )}
+
             <div className="exam-take__nav-divider" />
 
             <div className="exam-take__nav-sections" role="navigation" aria-label={t('Navigation des questions par section', 'Navigasyon kesyon yo pa seksyon')}>
               {sectionGroups.map((sec) => {
                 const isCurrentSection = currentQ >= sec.start && currentQ <= sec.end;
-                const secAnswered = Array.from({ length: sec.count }).filter((_, off) => {
-                  const a = answers[sec.start + off];
-                  return a != null && a !== '';
-                }).length;
+                const secAnswered = Array.from({ length: sec.count }).filter(
+                  (_, off) => isAnswerFilled(answers[sec.start + off]),
+                ).length;
                 const secDone = secAnswered === sec.count;
                 return (
                   <div key={`${sec.start}-${sec.end}-${sec.title}`} className={`exam-take__nav-section ${isCurrentSection ? 'exam-take__nav-section--active' : ''}`}>
@@ -1573,7 +1818,7 @@ const ExamTake = () => {
                       {Array.from({ length: sec.count }).map((_, offset) => {
                         const i = sec.start + offset;
                         const q = questions[i];
-                        const hasAnswer = answers[i] != null && answers[i] !== '';
+                        const hasAnswer = isAnswerFilled(answers[i]);
                         const isInCurrentGroup = i >= currentGrp.start && i <= currentGrp.end;
                         const qResult = questionResults[i];
                         let cls = 'exam-take__nav-btn';
@@ -1589,9 +1834,10 @@ const ExamTake = () => {
                             key={i}
                             className={cls}
                             onClick={() => setCurrentQ(targetGroup ? targetGroup.start : i)}
-                            title={`${t('Question', 'Kesyon')} ${formatQuestionLabel(q, i)}`}
+                            title={`${t('Question', 'Kesyon')} ${formatQuestionLabel(q, i)} — ${hasAnswer ? t('répondu', 'reponn') : t('sans réponse', 'san repons')}`}
                             type="button"
-                            aria-label={`${t('Aller à la question', 'Ale nan kesyon')} ${formatQuestionLabel(q, i)}`}
+                            aria-current={isInCurrentGroup ? 'true' : undefined}
+                            aria-label={`${t('Aller à la question', 'Ale nan kesyon')} ${formatQuestionLabel(q, i)} — ${hasAnswer ? t('répondu', 'reponn') : t('sans réponse', 'san repons')}`}
                           >
                             {label}
                             {hasAnswer && !isInCurrentGroup && <span className="exam-take__nav-btn-check" aria-hidden="true" />}
@@ -1603,6 +1849,35 @@ const ExamTake = () => {
                 );
               })}
             </div>
+
+            {/* Legend — the grid's colours carry the "what's left" information,
+                so they are spelled out instead of having to be guessed. */}
+            <ul className="exam-take__nav-legend">
+              <li>
+                <span className="exam-take__nav-legend-key exam-take__nav-legend-key--current" aria-hidden="true" />
+                {t('Question ouverte', 'Kesyon ouvè')}
+              </li>
+              <li>
+                <span className="exam-take__nav-legend-key exam-take__nav-legend-key--answered" aria-hidden="true" />
+                {t('Répondu', 'Reponn')}
+              </li>
+              <li>
+                <span className="exam-take__nav-legend-key exam-take__nav-legend-key--todo" aria-hidden="true" />
+                {t('Sans réponse', 'San repons')}
+              </li>
+              {feedbackMode === 'immediate' && (
+                <>
+                  <li>
+                    <span className="exam-take__nav-legend-key exam-take__nav-legend-key--correct" aria-hidden="true" />
+                    {t('Vérifié : correct', 'Verifye : kòrèk')}
+                  </li>
+                  <li>
+                    <span className="exam-take__nav-legend-key exam-take__nav-legend-key--incorrect" aria-hidden="true" />
+                    {t('Vérifié : incorrect', 'Verifye : pa kòrèk')}
+                  </li>
+                </>
+              )}
+            </ul>
           </aside>
 
           {/* Question content */}
@@ -1810,6 +2085,21 @@ const ExamTake = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Say it, rather than leaving the student to discover that the
+                    inputs stopped responding: a checked question is rendered
+                    with pointer-events disabled and is never re-gradable
+                    (gradeQuestionImmediate returns early once a result
+                    exists), so the answer really is final. */}
+                {isLocked && (
+                  <p className="exam-take__locked-note">
+                    <span aria-hidden="true">🔒</span>{' '}
+                    {t(
+                      'Réponse vérifiée — elle ne peut plus être modifiée.',
+                      'Repons ou verifye — ou pa ka chanje l ankò.',
+                    )}
+                  </p>
+                )}
 
                 {/* ── Inline result (immediate mode) ── */}
                 {feedbackMode === 'immediate' && questionResults[qIdx] && (

@@ -1,0 +1,284 @@
+/**
+ * ExamTake — styles owned by the exam-taking screen.
+ *
+ * The bulk of `.exam-take__*` lives in src/index.css (shared with ExamResults
+ * and DirectBankQuiz). This file only holds what the §6.5 "focus and
+ * dependable state" pass added, plus two scoped corrections to the existing
+ * layout, so the shared stylesheet is not churned for one screen.
+ *
+ * Only existing custom properties from index.css are used, and every colour
+ * resolves through a token so the dark theme keeps working with no extra rule.
+ */
+
+/* ──────────────────────────────────────────────────────────────────────────
+   1. Make the exam top bar actually stick
+   ──────────────────────────────────────────────────────────────────────────
+   `body` carries `overflow-x: hidden`, which turns it into a scroll container
+   and quietly breaks `position: sticky` for everything inside it: measured at
+   390px, the exam top bar (answered count, timer, Soumettre) scrolled 315px
+   off screen. `overflow-x: clip` clips the same way but does NOT create a
+   scroll container, so sticky works again. Applied only while the live paper
+   is mounted (ExamTake adds/removes the class), and guarded so a browser
+   without `clip` simply keeps the old behaviour instead of gaining a
+   horizontal scrollbar.
+   ────────────────────────────────────────────────────────────────────────── */
+@supports (overflow-x: clip) {
+	body.exam-take-live {
+		overflow-x: clip;
+		overflow-y: visible;
+	}
+}
+
+/* The header block (top bar + progress bar + state strip) travels as one unit
+   so the submit action and the remaining time are always reachable. */
+.exam-take__header {
+	position: sticky;
+	top: 0;
+	z-index: 51;
+	background: var(--background);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   2. State strip — "can I change this?" and "is it saved?"
+   ────────────────────────────────────────────────────────────────────────── */
+.exam-take__state-strip {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.35rem 0.75rem;
+	padding: 0.4rem 0 0.5rem;
+	border-bottom: 1px solid var(--border);
+	font-size: var(--text-xs);
+	line-height: 1.35;
+}
+
+.exam-take__state-policy {
+	color: var(--text-500);
+	min-width: 0;
+}
+
+.exam-take__state-untimed {
+	flex-shrink: 0;
+	padding: 0.1rem 0.5rem;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	color: var(--text-500);
+	font-weight: 600;
+}
+
+.exam-take__save {
+	display: inline-flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	margin-left: auto;
+	padding: 0.1rem 0.5rem;
+	border-radius: 999px;
+	font-weight: 600;
+	/* The chip's text changes length as the state changes; tabular figures keep
+	   the clock in "Enregistré à 14:32" from jittering. */
+	font-variant-numeric: tabular-nums;
+}
+
+.exam-take__save--pending {
+	color: var(--text-500);
+	background: var(--surface-muted);
+}
+
+.exam-take__save--saved {
+	color: var(--success-500);
+	background: var(--success-50);
+}
+
+/* Offline / unconfirmed and signed-out both mean "your account does not have
+   this yet" — warning, never success. */
+.exam-take__save--uncertain,
+.exam-take__save--anonymous {
+	color: var(--warning-500);
+	background: var(--warning-50);
+}
+
+.exam-take__save--failed {
+	color: var(--danger-500);
+	background: var(--danger-50);
+}
+
+.exam-take__save-retry {
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	background: none;
+	padding: 0 0.45rem;
+	font: inherit;
+	font-weight: 700;
+	color: inherit;
+	cursor: pointer;
+}
+
+.exam-take__save-retry:hover {
+	background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+/* At phone width the strip stacks; the save chip should not be pushed into a
+   lonely right-hand column. */
+@media (max-width: 640px) {
+	.exam-take__save {
+		margin-left: 0;
+	}
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   3. Unanswered summary + legend in the question sidebar
+   ────────────────────────────────────────────────────────────────────────── */
+.exam-take__nav-gap {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	width: 100%;
+	margin-top: 0.6rem;
+	padding: 0.5rem 0.6rem;
+	border: 1px solid var(--warning-500);
+	border-radius: var(--radius-sm);
+	background: var(--warning-50);
+	color: var(--text-700);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.exam-take__nav-gap:hover {
+	background: color-mix(in srgb, var(--warning-500) 14%, var(--warning-50));
+}
+
+.exam-take__nav-gap-count {
+	flex-shrink: 0;
+	min-width: 1.6rem;
+	padding: 0.05rem 0.3rem;
+	border-radius: 999px;
+	background: var(--warning-500);
+	color: #fff;
+	font-size: 0.78rem;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+
+.exam-take__nav-gap-label {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	font-size: 0.72rem;
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.exam-take__nav-gap-label small {
+	font-size: 0.68rem;
+	font-weight: 700;
+	color: var(--primary-600);
+}
+
+.exam-take__nav-complete {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: 0.6rem 0 0;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--success-500);
+}
+
+.exam-take__nav-legend {
+	list-style: none;
+	margin: 0.9rem 0 0;
+	padding: 0.75rem 0 0;
+	border-top: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	font-size: 0.68rem;
+	color: var(--text-500);
+}
+
+.exam-take__nav-legend li {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.exam-take__nav-legend-key {
+	flex-shrink: 0;
+	width: 14px;
+	height: 14px;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	background: var(--surface);
+}
+
+/* Swatches mirror the .exam-take__nav-btn--* states in index.css. */
+.exam-take__nav-legend-key--current {
+	background: var(--nav-accent, var(--primary-500));
+	border-color: var(--nav-accent, var(--primary-500));
+}
+
+.exam-take__nav-legend-key--answered {
+	background: rgba(34, 197, 94, 0.08);
+	border-color: rgba(34, 197, 94, 0.25);
+}
+
+.exam-take__nav-legend-key--correct {
+	background: rgba(34, 197, 94, 0.12);
+	border-color: rgba(34, 197, 94, 0.35);
+}
+
+.exam-take__nav-legend-key--incorrect {
+	background: rgba(239, 68, 68, 0.10);
+	border-color: rgba(239, 68, 68, 0.30);
+}
+
+@media (max-width: 640px) {
+	/* The sidebar sits BELOW the paper on a phone, where the vertical list of
+	   legend rows is wasted height — lay it out inline instead. */
+	.exam-take__nav-legend {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0.3rem 0.8rem;
+	}
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   4. Locked-answer note (immediate mode)
+   ────────────────────────────────────────────────────────────────────────── */
+.exam-take__locked-note {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	margin: 0;
+	font-size: var(--text-xs);
+	font-weight: 600;
+	color: var(--text-500);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   5. Scoped layout corrections
+   ────────────────────────────────────────────────────────────────────────── */
+/* `.exam-cover__body` is a grid whose items take their automatic minimum size
+   from content, so the Structure panel measured 380px inside a 307px column at
+   390px width and the per-section question counts were clipped off screen
+   (§11: no clipped critical text). */
+.exam-take .exam-cover__body > .exam-cover__panel {
+	min-width: 0;
+}
+
+/* Long authored expressions in MCQ options and scaffold labels can be wider
+   than a phone; let them scroll inside their own row rather than pushing the
+   answer control out of reach. */
+.exam-take__mcq-text,
+.exam-take__tf-option,
+.exam-take__preview-question-inline-text {
+	min-width: 0;
+}
+
+.exam-take__mcq-text {
+	overflow-x: auto;
+	overflow-y: hidden;
+}

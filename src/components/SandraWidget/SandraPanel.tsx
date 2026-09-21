@@ -260,6 +260,14 @@ export default function SandraPanel({ open, onClose }: SandraPanelProps) {
             <div className="sandra-welcome__body">
               <p className="sandra-welcome__title">{t('sandra.welcomeTitle')}</p>
               <p className="sandra-welcome__text">{t('sandra.welcomeBody')}</p>
+              {/* Understanding and grading are different situations (§6.9), so
+                  the boundary is stated once, here, where the student meets
+                  Sandra — rather than letting her quietly vanish mid-exam. */}
+              <p className="sandra-welcome__rule">
+                {i18n.language === 'ht'
+                  ? 'Sandra la pou esplike ak korije. Li pa reponn pandan yon egzamen ak chronomèt ni pandan yon match konpetisyon.'
+                  : 'Sandra explique et corrige. Elle ne répond pas pendant une épreuve chronométrée ni pendant un match de compétition.'}
+              </p>
               <div className="sandra-welcome__prompts">
                 {[t('sandra.suggest1'), t('sandra.suggest2'), t('sandra.suggest3')].map((p) => (
                   <button
