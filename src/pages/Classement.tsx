@@ -92,7 +92,10 @@ export default function Classement() {
                   'Pwen li yo konte apa epi yo bay vre pri. Enskripsyon ak patisipasyon nan aplikasyon an.',
                 )}
               </p>
-              <Link to="/download" className="classement__kind-link">
+              {/* Same `?from=arena` as every other championship entry point, so
+                  the landing page explains itself instead of showing a generic
+                  app advert with no way back. */}
+              <Link to="/download?from=arena" className="classement__kind-link">
                 {t('Accéder à l’application', 'Jwenn aplikasyon an')}
                 <ChevronRight size={15} aria-hidden="true" />
               </Link>

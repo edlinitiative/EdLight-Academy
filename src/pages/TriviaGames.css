@@ -1106,7 +1106,13 @@
   line-height: 1.45;
   color: var(--text-500);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  /* Three, not two. At two every one of the six cards cut its own sentence
+     mid-word ("sur 15 catégories du…", "décidez vite s…"), so the page showed
+     six broken phrases and explained none of the games. Three lines fit the
+     longest French AND Kreyòl description here without clipping, and the cards
+     are on a row grid that stretches to the tallest, so nothing shifts.
+     Plan §11: long content must not break the layout. */
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

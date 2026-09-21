@@ -710,7 +710,10 @@ function GamesHub({ isCreole }) {
             : 'Inscription et participation dans l’application mobile. Les scores du championnat sont distincts des XP des jeux.'}</p>
         </div>
         <ArenaBanner />
-        <Link to="/download" className="button button--secondary button--sm">{isCreole ? 'Jwenn aplikasyon an' : 'Accéder à l’application'}</Link>
+        {/* `?from=arena` so the download page says WHY you are there. Without
+            it the championship CTA lands on a generic "scan this QR" card with
+            no mention of the tournament and no way back. */}
+        <Link to="/download?from=arena" className="button button--secondary button--sm">{isCreole ? 'Jwenn aplikasyon an' : 'Accéder à l’application'}</Link>
       </section>
 
       <DailyChallengeBanner

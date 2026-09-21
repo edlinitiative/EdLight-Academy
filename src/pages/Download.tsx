@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   getMobilePlatform,
   storeUrlFor,
@@ -13,12 +14,49 @@ import useStore from '../contexts/store';
  *  • On desktop: shows a clean card with both store badges + a QR code so the
  *    visitor can grab it on their phone.
  * Standalone route (no app shell) so a scanned QR resolves instantly.
+ *
+ * ── WHY IT TAKES A `?from=` ─────────────────────────────────────────────────
+ *
+ * Reported from the live site: clicking "Accéder à l'application" under
+ * *Championnat interscolaire* on /jeux landed here, and the page said
+ * "Emporte EdLight partout · Scanne le code" — nothing about the championship,
+ * and, because this route deliberately renders WITHOUT the app shell, no
+ * navigation and no way back. A student who wanted to enter a tournament got a
+ * generic advert and a dead end.
+ *
+ * The QR case still needs the generic copy, so the reason travels in the URL
+ * instead: `?from=arena` explains that the championship is played in the app,
+ * and every caller offers a way back to where they came from. Redesign plan
+ * §8 — a screen must explain why you are on it and offer a safe way onward.
  */
+
+/** Where the visitor came from, and what to tell them about it. */
+const ORIGINS: Record<string, {
+  title: [string, string];
+  body: [string, string];
+  backTo: string;
+  backLabel: [string, string];
+}> = {
+  arena: {
+    title: [
+      'Le championnat se joue dans l’application',
+      'Chanpyona a jwe nan aplikasyon an',
+    ],
+    body: [
+      'L’inscription, les questions en direct et les résultats du championnat interscolaire sont dans l’application mobile. Installe-la, connecte-toi avec le même compte, et ton école t’attend.',
+      'Enskripsyon, kesyon yo an dirèk ak rezilta chanpyona ant lekòl yo nan aplikasyon mobil la. Enstale l, konekte ak menm kont lan, epi lekòl ou ap tann ou.',
+    ],
+    backTo: '/jeux',
+    backLabel: ['Retour aux jeux', 'Tounen nan jwèt yo'],
+  },
+};
 export default function Download() {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const [platform] = useState(() => getMobilePlatform());
+  const [params] = useSearchParams();
+  const origin = ORIGINS[params.get('from') ?? ''] ?? null;
 
   useEffect(() => {
     if (!platform) return;
@@ -69,14 +107,16 @@ export default function Download() {
         }}
       >
         <img src="/assets/logo.png" alt="EdLight Academy" style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 8px' }}>
-          {t('Emporte EdLight partout', 'Pote EdLight tout kote')}
+        <h1 style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.25, margin: '0 0 10px' }}>
+          {origin ? t(origin.title[0], origin.title[1]) : t('Emporte EdLight partout', 'Pote EdLight tout kote')}
         </h1>
         <p style={{ fontSize: 14, color: 'var(--text-500)', lineHeight: 1.5, margin: '0 0 24px' }}>
-          {t(
-            'Scanne le code avec ton téléphone pour installer l’application.',
-            'Eskane kòd la ak telefòn ou pou enstale aplikasyon an.',
-          )}
+          {origin
+            ? t(origin.body[0], origin.body[1])
+            : t(
+              'Scanne le code avec ton téléphone pour installer l’application.',
+              'Eskane kòd la ak telefòn ou pou enstale aplikasyon an.',
+            )}
         </p>
         <div
           style={{
@@ -99,6 +139,20 @@ export default function Download() {
             <img src="/assets/googleplay-badge.png" alt="Get it on Google Play" style={{ height: 48 }} />
           </a>
         </div>
+
+        {/* This route renders without the app shell, so it has no back button
+            unless it brings one. Without this the page is a dead end. */}
+        <Link
+          to={origin ? origin.backTo : '/'}
+          style={{
+            display: 'inline-block', marginTop: 20, fontSize: 14,
+            color: 'var(--primary-600)', textDecoration: 'underline',
+          }}
+        >
+          {origin
+            ? t(origin.backLabel[0], origin.backLabel[1])
+            : t('Retour au site', 'Tounen sou sit la')}
+        </Link>
       </div>
     </div>
   );

@@ -78,6 +78,9 @@ export default function Practice() {
     },
   ];
 
+  // Mistakes first when there are any to fix, otherwise a short practice.
+  const ordered = [...choices].sort((a, b) => Number(!!b.primary) - Number(!!a.primary));
+
   return (
     <section className="section practice-hub">
       <div className="container practice-hub__container">
@@ -92,23 +95,43 @@ export default function Practice() {
           </p>
         </header>
 
-        <div className="practice-hub__grid">
-          {[...choices].sort((a, b) => Number(!!b.primary) - Number(!!a.primary)).map((choice) => (
-            <Link
-              key={choice.href}
-              to={choice.href}
-              className={`practice-choice${choice.primary ? ' practice-choice--primary' : ''}`}
-            >
-              <span className="practice-choice__icon">{choice.icon}</span>
-              <span className="practice-choice__eyebrow">{choice.eyebrow}</span>
-              <h2>{choice.title}</h2>
-              <p>{choice.description}</p>
-              <span className="practice-choice__footer">
-                <span>{choice.note}</span>
-                <ChevronRight size={19} aria-hidden="true" />
+        {/*
+          * ONE LEAD, THEN ROWS — not four cards of equal weight.
+          *
+          * Seen on the live page: four near-identical cards in a 2×2 grid left
+          * a large dead band above the footer on desktop and a long scroll on
+          * a phone, and nothing in the composition said which choice matters
+          * today. The hub has one answer that is right most of the time —
+          * unfinished mistakes if there are any, otherwise a short practice —
+          * so that one gets the surface and the rest get compact rows.
+          * Redesign plan §4.1 (one primary task), §7 (compact rows + selective
+          * featured surfaces, fewer decorative icon containers).
+          */}
+        <div className="practice-hub__stack">
+          {ordered.map((choice, i) => (i === 0 ? (
+            <Link key={choice.href} to={choice.href} className="practice-lead">
+              <span className="practice-lead__icon">{choice.icon}</span>
+              <span className="practice-lead__body">
+                <span className="practice-choice__eyebrow">{choice.eyebrow}</span>
+                <h2>{choice.title}</h2>
+                <p>{choice.description}</p>
+                <span className="practice-lead__note">{choice.note}</span>
               </span>
+              <ChevronRight size={20} aria-hidden="true" className="practice-lead__chev" />
             </Link>
-          ))}
+          ) : (
+            <Link key={choice.href} to={choice.href} className="practice-row">
+              <span className="practice-row__icon">{choice.icon}</span>
+              <span className="practice-row__body">
+                <span className="practice-row__title">{choice.title}</span>
+                {/* The row keeps the NOTE, not the description: the note is the
+                    fact a student chooses on (timed? corrected when? how many
+                    waiting?), the description only restates the title. */}
+                <span className="practice-row__note">{choice.note}</span>
+              </span>
+              <ChevronRight size={18} aria-hidden="true" />
+            </Link>
+          )))}
         </div>
       </div>
     </section>

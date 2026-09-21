@@ -185,7 +185,9 @@ export default function App() {
                   that link needs the app, not a web view of a tournament they
                   cannot join from a browser — the same destination as every
                   other "get the app" surface. */}
-              <Route path="/arena" element={<Navigate to="/download" replace />} />
+              {/* Arena gameplay is mobile-only; `from=arena` makes the landing
+                  page explain that rather than showing a generic app advert. */}
+              <Route path="/arena" element={<Navigate to="/download?from=arena" replace />} />
               {/* The projector page. It resolves its own tournament and falls
                   back to the weekly school race between events — a screen in a
                   school hall is never blank. */}

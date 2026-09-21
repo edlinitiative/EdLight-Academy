@@ -51,7 +51,7 @@ export default function ArenaBanner() {
 
   return (
     <Link
-      to="/download"
+      to="/download?from=arena"
       className="card"
       style={{
         display: 'flex',

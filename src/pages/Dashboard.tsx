@@ -8,12 +8,9 @@ import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
 import { sessionRowName } from '../utils/examNaming';
 import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
-import { useLeaderboard } from '../hooks/useLeaderboard';
-import { useStreak } from '../hooks/useStreak';
 import useStore from '../contexts/store';
 import ArenaBanner from '../components/ArenaBanner';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
-import { StatTile, StatTileRow } from '../components/StatTile';
 import Leaderboard from '../components/Leaderboard';
 import StreakRail from '../components/StreakRail';
 import { ErrorState } from '../components/StateViews';
@@ -194,16 +191,6 @@ export default function Dashboard() {
       }));
 
   const quizzesTaken = quizAttemptsForStats.length;
-  // Average only over attempts that actually have a numeric score. Dividing by
-  // every attempt (incl. ungraded short-answer / local fallbacks with no
-  // percentage) treated those as 0% and dragged the average down.
-  const gradedAttempts = quizAttemptsForStats.filter((a) => typeof a.percentage === 'number');
-  const avgScore = gradedAttempts.length
-    ? Math.round(
-        gradedAttempts.reduce((sum, a) => sum + a.percentage, 0) / gradedAttempts.length
-      )
-    : 0;
-
   const recentQuizActivityRows = React.useMemo(() => {
     if (recentQuizAttempts.length) return recentQuizAttempts.slice(0, 5);
     return fallbackQuizAttemptsList.slice(0, 5).map((a) => ({
@@ -222,16 +209,6 @@ export default function Dashboard() {
     const lastMs = last?.updated_at_ms || last?.submitted_at_ms || null;
     return { inProgress, submitted, lastMs };
   }, [recentExamAttempts]);
-
-  // The global streak — the same source the navbar badge and the streak rail
-  // read. This tile used to take the highest per-course streak out of
-  // allProgress instead, so the page showed two different numbers under the
-  // same word: a per-course figure here and the cross-course one beside the
-  // focus card. streaks/global is what "Série" means everywhere else.
-  const { streak: globalStreak } = useStreak();
-  const currentStreak = globalStreak?.currentStreak || 0;
-
-  const { myRank } = useLeaderboard(50);
 
   const [dueReviewCount, setDueReviewCount] = React.useState(0);
   React.useEffect(() => {
@@ -658,41 +635,6 @@ export default function Dashboard() {
           </aside>
         </div>
 
-        {/* ── Your numbers, last ──
-            Four stat tiles used to sit above the fold, so the page opened as a
-            status report you couldn't act on. Stats are for looking back;
-            they belong after the learning content. */}
-        <section className="dash__tiles" aria-label={isCreole ? 'Pwogrè ou' : 'Votre progression'}>
-          <h2 className="dash__tiles-title">{isCreole ? 'Pwogrè ou' : 'Votre progression'}</h2>
-          <StatTileRow>
-            <StatTile
-              label={isCreole ? 'Seri' : 'Série'}
-              value={currentStreak}
-              unit={isCreole ? 'jou' : 'j'}
-              tone={currentStreak > 0 ? 'good' : 'muted'}
-              delta={isCreole ? 'jou youn dèyè lòt' : 'jours consécutifs'}
-            />
-            <StatTile
-              label={isCreole ? 'Quiz fini' : 'Quiz faits'}
-              value={quizzesTaken}
-              tone="accent"
-              delta={isCreole ? 'total' : 'au total'}
-            />
-            <StatTile
-              label={isCreole ? 'Mwayèn' : 'Score moyen'}
-              value={quizzesTaken ? `${avgScore}` : '—'}
-              unit={quizzesTaken ? '%' : undefined}
-              tone={avgScore >= 70 ? 'good' : avgScore >= 50 ? 'warn' : 'muted'}
-              delta={isCreole ? 'sou tout quiz yo' : 'sur tous les quiz'}
-            />
-            <StatTile
-              label={isCreole ? 'Klasman' : 'Rang · classe'}
-              value={myRank ? `#${myRank}` : '—'}
-              tone="accent"
-              delta={isCreole ? 'semèn sa a' : 'cette semaine'}
-            />
-          </StatTileRow>
-        </section>
       </div>
     </section>
   );
