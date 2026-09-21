@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, Sparkles } from 'lucide-react';
-import { ArrowIcon, getStats, TFn } from './content';
+import { ArrowIcon, TFn } from './content';
 import HeroSignup from './HeroSignup';
 import useStore from '../../contexts/store';
-import { useSiteHeadlineStats } from '../../hooks/useSiteStats';
 
 export default function HeroSection({ t }: { t: TFn }) {
   const navigate = useNavigate();
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const [heroSrc, setHeroSrc] = useState('/assets/landing-hero.webp');
-  // One document read for the student count; the rest of the row is static
-  // copy that renders immediately, so nothing here waits on Firestore.
-  const live = useSiteHeadlineStats();
-  const stats = getStats(t, live);
 
   return (
     <section className="lp-hero">
@@ -22,19 +16,18 @@ export default function HeroSection({ t }: { t: TFn }) {
           <div className="lp-hero__copy">
             <span className="lp-eyebrow">
               <span className="lp-eyebrow__dot" />
-              {t('Préparation au Bac · 100% gratuit', 'Preparasyon Bak · 100% gratis')}
+              {t('Apprendre · pratiquer · progresser', 'Aprann · pratike · pwogrese')}
             </span>
 
             <h1 className="lp-hero__title">
-              {t('Maîtrisez le ', 'Metrize ')}
-              <span className="lp-hero__title-accent lp-text-accent">Bac</span>
-              {t(' avec une rigueur digne d’une école d’élite.', ' ak rigè tankou yon lekòl elit.')}
+              {t('Avancez dans vos cours. ', 'Avanse nan kou ou yo. ')}
+              <span className="lp-text-accent">{t('Pratiquez là où ça compte.', 'Pratike kote sa enpòtan.')}</span>
             </h1>
 
             <p className="lp-hero__lede">
               {t(
-                'Cours, quiz adaptatifs et examens blancs alignés sur le programme officiel, pensés pour les élèves haïtiens et conçus comme une expérience premium.',
-                'Kou, quiz adaptatif ak egzamen blan ki swiv pwogram ofisyèl la, pou elèv ayisyen, epi ki fèt tankou yon eksperyans premye klas.'
+                'Des cours bilingues, des exercices ciblés et des examens blancs alignés sur le programme haïtien — réunis dans un parcours qui vous montre toujours la prochaine étape.',
+                'Kou nan de lang, egzèsis vize ak egzamen blan ki swiv pwogram ayisyen an — nan yon chemen ki toujou montre w pwochen etap la.'
               )}
             </p>
 
@@ -46,11 +39,11 @@ export default function HeroSection({ t }: { t: TFn }) {
                 className={isAuthenticated ? 'lp-btn lp-btn--primary' : 'lp-btn lp-btn--ghost'}
                 onClick={() => navigate('/courses')}
               >
-                <span>{t('Explorer les cours', 'Eksplore kou yo')}</span>
+                <span>{t('Voir les cours', 'Gade kou yo')}</span>
                 {isAuthenticated && <ArrowIcon />}
               </button>
-              <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/exams')}>
-                {t('Passer un examen blanc', 'Pase yon egzamen blan')}
+              <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/practice')}>
+                {t('Choisir une pratique', 'Chwazi yon pratik')}
               </button>
             </div>
 
@@ -58,12 +51,8 @@ export default function HeroSection({ t }: { t: TFn }) {
                 decorative star ratings read as the opposite of premium. */}
             <div className="lp-hero__trust">
               <span>
-                {t('Un programme d’', 'Yon pwogram ')}
-                <strong>EdLight Initiative</strong>
-                {t(
-                  ', organisation à but non lucratif · Disponible sur le web, iOS et Android',
-                  ', yon òganizasyon san bi likratif · Disponib sou wèb, iOS ak Android'
-                )}
+                <strong>{t('Gratuit pour les élèves', 'Gratis pou elèv yo')}</strong>
+                {t(' · Français et créole haïtien · Web, iOS et Android', ' · Fransè ak kreyòl ayisyen · Wèb, iOS ak Android')}
               </span>
             </div>
           </div>
@@ -97,32 +86,10 @@ export default function HeroSection({ t }: { t: TFn }) {
               />
             </div>
 
-            <div className="lp-hero__float lp-hero__float--a" aria-hidden="true">
-              <span className="lp-hero__float-icon"><Flame size={18} strokeWidth={2.4} /></span>
-              <span className="lp-hero__float-text">
-                <span className="lp-hero__float-label">{t('Série', 'Seri')}</span>
-                <span className="lp-hero__float-value">12 {t('jours', 'jou')}</span>
-              </span>
-            </div>
-            <div className="lp-hero__float lp-hero__float--b" aria-hidden="true">
-              <span className="lp-hero__float-icon"><Sparkles size={18} strokeWidth={2.4} /></span>
-              <span className="lp-hero__float-text">
-                <span className="lp-hero__float-label">{t('Maîtrise', 'Metrize')}</span>
-                <span className="lp-hero__float-value">82%</span>
-              </span>
-            </div>
           </div>
           )}
         </div>
 
-        <div className="lp-hero__stats" data-reveal>
-          {stats.map((s) => (
-            <div className="lp-stat" key={s.label}>
-              <div className="lp-stat__value">{s.value}</div>
-              <div className="lp-stat__label">{s.label}</div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );

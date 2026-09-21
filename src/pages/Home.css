@@ -91,9 +91,10 @@
    blue→violet→red gradient across its three letters, which at display size
    read as clip-art — the opposite of the "rigueur digne d'une école d'élite"
    the sentence is claiming. Solid azure, the same azure as everything else. */
-.lp-text-accent {
-  color: var(--lp-accent);
-  -webkit-text-fill-color: var(--lp-accent);
+.lp .lp-text-accent {
+  background: none !important;
+  color: var(--lp-accent) !important;
+  -webkit-text-fill-color: var(--lp-accent) !important;
 }
 
 /* Eyebrow / pill badge */
@@ -454,6 +455,204 @@
 }
 
 .resume-banner-wrap { margin-top: 2.5rem; }
+
+/* ==========================================================
+   LEARNING JOURNEY
+   ========================================================== */
+.lp-journey {
+  background: var(--lp-surface-2);
+  border-top: 1px solid var(--lp-border);
+  border-bottom: 1px solid var(--lp-border);
+}
+
+.lp-journey__intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 2rem;
+  align-items: end;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
+}
+
+.lp-journey__intro .lp-section__lede { margin: 0; }
+
+.lp-journey__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: center;
+}
+
+.lp-journey__steps {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-journey-step {
+  display: grid;
+  grid-template-columns: 2rem 2.75rem minmax(0, 1fr);
+  gap: 0.9rem;
+  padding: 1.35rem 0;
+  border-bottom: 1px solid var(--lp-border);
+}
+
+.lp-journey-step:first-child { padding-top: 0; }
+.lp-journey-step:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.lp-journey-step__number {
+  padding-top: 0.25rem;
+  color: var(--lp-ink-mute);
+  font-family: var(--lp-mono);
+  font-size: 0.67rem;
+  letter-spacing: 0.12em;
+}
+
+.lp-journey-step__icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--lp-accent) 12%, transparent);
+  color: var(--lp-accent);
+}
+
+.lp-journey-step strong,
+.lp-journey-step > span:last-child > span {
+  display: block;
+}
+
+.lp-journey-step strong {
+  margin-bottom: 0.4rem;
+  color: var(--lp-ink);
+  font-size: 1rem;
+}
+
+.lp-journey-step > span:last-child > span {
+  color: var(--lp-ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.lp-product-preview {
+  overflow: hidden;
+  padding: clamp(0.9rem, 2vw, 1.2rem);
+  border: 1px solid var(--lp-border);
+  border-radius: var(--lp-r-lg);
+  background: var(--lp-surface);
+  box-shadow: var(--lp-shadow-lg);
+}
+
+.lp-product-preview__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.2rem 1rem;
+  color: var(--lp-ink-mute);
+  font-family: var(--lp-mono);
+  font-size: 0.67rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lp-product-preview__status {
+  color: var(--success-500);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.lp-product-preview__focus {
+  display: grid;
+  gap: 0.85rem;
+  padding: clamp(1.3rem, 4vw, 2rem);
+  border-radius: 20px;
+  background: linear-gradient(145deg, #0f3f7e, var(--lp-accent));
+  color: #fff;
+}
+
+.lp-product-preview__subject {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.74;
+}
+
+.lp-product-preview__focus strong {
+  max-width: 20ch;
+  font-family: var(--lp-serif);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  line-height: 1.15;
+}
+
+.lp-product-preview__line {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lp-product-preview__line span {
+  display: block;
+  width: 58%;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+}
+
+.lp-product-preview__focus button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+  padding: 0.72rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #0f4f9a;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.lp-product-preview__row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.9rem;
+  padding: 1rem 0.8rem 0.2rem;
+  border: 0;
+  background: none;
+  color: var(--lp-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lp-product-preview__row > svg:first-child { color: var(--lp-accent); }
+.lp-product-preview__row > svg:last-child { margin-left: auto; color: var(--lp-ink-mute); }
+.lp-product-preview__row span { flex: 1; }
+.lp-product-preview__row strong,
+.lp-product-preview__row small { display: block; }
+.lp-product-preview__row strong { margin-bottom: 0.18rem; font-size: 0.92rem; }
+.lp-product-preview__row small { color: var(--lp-ink-mute); font-size: 0.75rem; }
+
+@media (max-width: 820px) {
+  .lp-journey__intro,
+  .lp-journey__layout { grid-template-columns: 1fr; }
+  .lp-journey__intro { align-items: start; }
+}
+
+@media (max-width: 480px) {
+  .lp-journey-step { grid-template-columns: 2.5rem minmax(0, 1fr); }
+  .lp-journey-step__number { display: none; }
+}
 
 /* ==========================================================
    PILLARS

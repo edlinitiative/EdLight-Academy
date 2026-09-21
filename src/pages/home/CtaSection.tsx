@@ -14,22 +14,22 @@ export default function CtaSection({ t }: { t: TFn }) {
           <div className="lp-cta__glow" aria-hidden="true" />
           <div className="lp-cta__content">
             <h2 className="lp-cta__title">
-              {t('Commencez aujourd’hui.', 'Kòmanse jodi a.')}
+              {t('Votre prochaine étape', 'Pwochen etap ou')}
               <br />
-              <span className="lp-text-accent">{t('Réussissez demain.', 'Reyisi demen.')}</span>
+              <span className="lp-text-accent">{t('est déjà prête.', 'deja pare.')}</span>
             </h2>
             <p className="lp-cta__desc">
               {t(
-                'Rejoignez les milliers d’élèves qui préparent leur avenir avec EdLight Academy.',
-                'Rejwenn plizyè milye elèv k ap prepare avni yo ak EdLight Academy.'
+                'Créez votre espace pour retrouver vos cours, vos erreurs à revoir et votre progression sur chaque appareil.',
+                'Kreye espas ou pou jwenn kou ou, erè pou revize ak pwogrè ou sou chak aparèy.'
               )}
             </p>
             <div className="lp-hero__actions">
               <button className="lp-btn lp-btn--primary lp-btn--lg" onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}>
                 {t('Créer un compte gratuit', 'Kreye yon kont gratis')}
               </button>
-              <button className="lp-btn lp-btn--ghost lp-btn--lg" onClick={() => navigate('/courses')}>
-                {t('Parcourir les cours', 'Parkouri kou yo')}
+              <button className="lp-btn lp-btn--ghost lp-btn--lg" onClick={() => navigate('/practice')}>
+                {t('Découvrir la pratique', 'Dekouvri pratik la')}
               </button>
             </div>
           </div>

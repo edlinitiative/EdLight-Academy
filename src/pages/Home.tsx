@@ -3,10 +3,8 @@ import './Home.css';
 import { useT } from './home/content';
 import ResumeBanner from '../components/ResumeBanner';
 import HeroSection from './home/HeroSection';
-import PillarsSection from './home/PillarsSection';
+import LearningJourneySection from './home/LearningJourneySection';
 import CoursesSection from './home/CoursesSection';
-import ExperienceSection from './home/ExperienceSection';
-import TestimonialsSection from './home/TestimonialsSection';
 import CtaSection from './home/CtaSection';
 
 /**
@@ -26,10 +24,8 @@ export default function Home() {
       <div className="container resume-banner-wrap">
         <ResumeBanner />
       </div>
-      <PillarsSection t={t} />
+      <LearningJourneySection t={t} />
       <CoursesSection t={t} />
-      <ExperienceSection t={t} />
-      <TestimonialsSection t={t} />
       <CtaSection t={t} />
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Home, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react';
 
 /**
@@ -14,15 +15,16 @@ import { Home, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react';
  * Hidden on >= 768px via CSS (see mobile-premium.css).
  */
 const TABS = [
-  { to: '/', label: 'Accueil', icon: Home, exact: true },
-  { to: '/courses', label: 'Cours', icon: BookOpen },
-  { to: '/exams', label: 'Examens', icon: ClipboardList },
-  { to: '/jeux', label: 'Jeux', icon: Gamepad2 },
-  { to: '/profile', label: 'Profil', icon: User },
+  { to: '/', labelKey: 'nav.home', icon: Home, exact: true },
+  { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
+  { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
+  { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
+  { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 
 export default function BottomNav() {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
 
   // Auto-hide the bar to give content more room: slide it away when the user
   // scrolls DOWN into content, bring it back when they scroll UP (or reach the
@@ -108,7 +110,7 @@ export default function BottomNav() {
   return (
     <nav className={`bottom-nav ${hidden ? 'is-hidden' : ''}`} aria-label="Navigation principale">
       <div className="bottom-nav__inner">
-        {TABS.map(({ to, label, icon: Icon, exact }) => {
+        {TABS.map(({ to, labelKey, icon: Icon, exact }) => {
           const active = isActive(to, exact);
           return (
             <Link
@@ -121,7 +123,7 @@ export default function BottomNav() {
               <span className="bottom-nav__icon">
                 <Icon size={22} strokeWidth={active ? 2.4 : 2} aria-hidden="true" />
               </span>
-              <span className="bottom-nav__label">{label}</span>
+              <span className="bottom-nav__label">{t(labelKey)}</span>
             </Link>
           );
         })}

@@ -14,6 +14,7 @@ import { captureRefFromUrl } from './services/referralService';
 const Courses = lazyWithRetry(() => import('./pages/Courses'));
 const CourseDetail = lazyWithRetry(() => import('./pages/CourseDetail'));
 const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const Practice = lazyWithRetry(() => import('./pages/Practice'));
 const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'));
 const Revision = lazyWithRetry(() => import('./pages/Revision'));
 const About = lazyWithRetry(() => import('./pages/About'));
@@ -98,6 +99,7 @@ export default function App() {
                 <Route path="courses/:courseId" element={<CourseDetail />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="quizzes" element={<Quizzes />} />
+                <Route path="practice" element={<Practice />} />
                 <Route path="revision" element={<Revision />} />
                 <Route path="about" element={<About />} />
                 <Route path="contact" element={<Contact />} />

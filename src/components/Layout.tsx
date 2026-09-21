@@ -21,7 +21,7 @@ import DownloadAppBanner from './DownloadAppBanner';
 const NotificationCenter = lazyWithRetry(() => import('./NotificationCenter'));
 
 export function Layout() {
-  const { showAuthModal, toggleAuthModal, language, theme, showNotifications, setShowNotifications, focusMode } = useStore();
+  const { isAuthenticated, showAuthModal, toggleAuthModal, language, theme, showNotifications, setShowNotifications, focusMode } = useStore();
   const { t } = useTranslation();
   const isCreole = language === 'ht';
   const queryClient = useQueryClient();
@@ -140,7 +140,7 @@ export function Layout() {
           </div>
         </Suspense>
       )}
-      <SandraWidget />
+      {isAuthenticated && <SandraWidget />}
       <SearchOverlay />
       <StreakMilestoneModal isCreole={isCreole} />
     </div>

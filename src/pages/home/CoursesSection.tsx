@@ -15,7 +15,7 @@ export default function CoursesSection({ t }: { t: TFn }) {
               <span className="lp-eyebrow__dot" />
               {t('Catalogue', 'Katalòg')}
             </span>
-            <h2 className="lp-section__title lp-section__title--sm">{t('Cours phares de la rentrée', 'Kou ki pi enpòtan')}</h2>
+            <h2 className="lp-section__title lp-section__title--sm">{t('Commencez par une matière', 'Kòmanse ak yon matyè')}</h2>
           </div>
           <button className="lp-link" onClick={() => navigate('/courses')}>
             {t('Voir tout le catalogue', 'Wè tout katalòg la')}
@@ -48,7 +48,7 @@ export default function CoursesSection({ t }: { t: TFn }) {
                 <h3 className="lp-course__title">{c.name}</h3>
                 <p className="lp-course__desc">{c.desc}</p>
                 <div className="lp-course__foot">
-                  <span>{c.lessons} {t('leçons', 'leson')}</span>
+                  <span>{t('Programme secondaire', 'Pwogram segondè')}</span>
                   <span className="lp-course__cta">{t('Découvrir →', 'Dekouvri →')}</span>
                 </div>
               </div>

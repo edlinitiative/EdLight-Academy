@@ -37,6 +37,11 @@ const DESCRIPTIONS: Record<string, Partial<Record<Lang, string>>> = {
     fr: 'Entraînez-vous avec des quiz interactifs par matière, niveau et unité pour préparer le Baccalauréat haïtien.',
     ht: 'Antrene ak quiz entèraktif pa matyè, nivo ak inite pou prepare Bakaloreya ayisyen an.',
   },
+  practice: {
+    fr: 'Choisissez comment pratiquer sur EdLight Academy : révision des erreurs, quiz par matière, examens blancs ou plan d’étude.',
+    ht: 'Chwazi kijan pou pratike sou EdLight Academy : revize erè, quiz pa matyè, egzamen blan oswa plan etid.',
+    en: 'Choose how to practice on EdLight Academy: review mistakes, subject quizzes, mock exams or a study plan.',
+  },
   exams: {
     fr: 'Passez des examens blancs du Baccalauréat haïtien avec correction détaillée, par niveau et par matière.',
     ht: 'Fè egzamen blan Bakaloreya ayisyen an ak koreksyon detaye, pa nivo ak pa matyè.',
@@ -89,6 +94,7 @@ function metaKeyForPath(pathname: string): string | null {
   const table: Array<[RegExp, string]> = [
     [/^\/courses(\/|$)/, 'courses'],
     [/^\/dashboard(\/|$)/, 'dashboard'],
+    [/^\/practice(\/|$)/, 'practice'],
     [/^\/quizzes(\/|$)/, 'quizzes'],
     [/^\/exams(\/|$)/, 'exams'],
     [/^\/study-plan(\/|$)/, 'studyPlan'],

@@ -106,6 +106,7 @@ function staticItems(lang: Lang): SearchItem[] {
       keywords: 'plan etude study plan planifye revision ia ai',
     },
     { type: 'page', title: L('Examens blancs', 'Egzamen blan'), to: '/exams', keywords: 'exams bac bak menfp epreuves' },
+    { type: 'page', title: L('Choisir une pratique', 'Chwazi yon pratik'), to: '/practice', keywords: 'pratique practice revizyon quiz egzamen plan etid' },
     { type: 'page', title: L('Quiz et exercices', 'Quiz ak egzèsis'), to: '/quizzes', keywords: 'quiz pratique practice egzesis' },
     { type: 'page', title: L('Révision', 'Revizyon'), to: '/revision', keywords: 'revision revizyon srs reviser' },
     { type: 'page', title: L('Jeux', 'Jwèt'), to: '/jeux', keywords: 'jeux games jwet arcade trivia' },

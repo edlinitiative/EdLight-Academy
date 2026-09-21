@@ -6,7 +6,6 @@ import {
   BookOpen,
   ClipboardList,
   Gamepad2,
-  User,
   LayoutDashboard,
   CalendarCheck,
   LogOut,
@@ -29,10 +28,9 @@ import './Navbar.css';
  *  Kept identical to the PWA bottom bar (BottomNav) so web + app agree. */
 const NAV_ITEMS = [
   { to: '/', labelKey: 'nav.home', icon: Home, exact: true },
-  { to: '/courses', labelKey: 'nav.courses', icon: BookOpen },
-  { to: '/exams', labelKey: 'nav.exams', icon: ClipboardList },
-  { to: '/jeux', labelKey: 'nav.games', icon: Gamepad2 },
-  { to: '/profile', labelKey: 'nav.profile', icon: User },
+  { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
+  { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
+  { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
 ];
 
 export function Navbar() {
