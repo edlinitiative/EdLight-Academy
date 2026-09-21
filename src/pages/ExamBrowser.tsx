@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';
@@ -11,6 +11,7 @@ import { buildExamIndex, subjectColor, examCardName } from '../utils/examUtils';
 import CardCover from '../components/CardCover';
 import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { yearRange } from '../utils/examNaming';
+import './ExamOverview.css'; // shared .exam-overview__crumbs (same trail as the subject/exam pages)
 import './ExamBrowser.css';
 import { deriveSignals, selectAdaptiveItems, type AttemptEvent } from '../services/adaptiveEngine';
 import { Skeleton } from '../components/Skeleton';
@@ -81,7 +82,7 @@ const ExamBrowser = () => {
   const { level } = useParams(); // Get level from URL
   const navigate = useNavigate();
 
-  const { data: allExams, isPending: isLoading, error } = useExamCatalog();
+  const { data: allExams, isPending: isLoading, error, refetch } = useExamCatalog();
   const attempts = useExamAttempts();
 
   // Track state
@@ -362,23 +363,19 @@ const ExamBrowser = () => {
             <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
             <p className="page-header__subtitle">{t('Chargement du catalogue…', 'Ap chaje katalòg la…')}</p>
           </div>
-          <div className="grid grid--exams" style={{ marginTop: '1.5rem' }}>
-            {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="card exam-card exam-card--skeleton">
-                <div className="skeleton-row skeleton-row--between">
-                  <Skeleton width={54} height={16} radius={999} />
-                  <Skeleton width={40} height={16} radius={999} />
+          {/* The skeleton mirrors the subject ROWS this page actually opens
+              with, so the layout doesn't jump when the catalog lands. */}
+          <ul className="exam-subject-rows" style={{ marginTop: '1.5rem' }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <li key={i} className="exam-subject-row exam-subject-row--skeleton">
+                <Skeleton width={44} height={44} radius={12} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Skeleton width="42%" height={16} />
+                  <Skeleton width="62%" height={13} style={{ marginTop: '0.45rem' }} />
                 </div>
-                <Skeleton width="85%" height={20} style={{ marginTop: '0.75rem' }} />
-                <Skeleton width="55%" height={14} style={{ marginTop: '0.6rem' }} />
-                <div className="skeleton-row" style={{ marginTop: '0.9rem' }}>
-                  <Skeleton width={70} height={22} radius={999} />
-                  <Skeleton width={58} height={22} radius={999} />
-                </div>
-                <Skeleton width={64} height={14} style={{ marginTop: '1rem' }} />
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
     );
@@ -391,8 +388,18 @@ const ExamBrowser = () => {
           <div className="page-header">
             <h1 className="page-header__title">{t('Examens', 'Egzamen')}</h1>
           </div>
+          {/* Plain language + a safe recovery action, instead of the raw
+              exception text (§8). */}
           <div className="card card--message">
-            <p>{t('Erreur', 'Erè')}: {error.message}</p>
+            <p>
+              {t(
+                'Nous n’avons pas pu charger le catalogue d’examens. Vérifiez votre connexion, puis réessayez.',
+                'Nou pa t ka chaje katalòg egzamen an. Tcheke koneksyon ou, epi eseye ankò.',
+              )}
+            </p>
+            <button className="button button--primary" type="button" onClick={() => refetch()}>
+              {t('Réessayer', 'Eseye ankò')}
+            </button>
           </div>
         </div>
       </section>
@@ -402,6 +409,19 @@ const ExamBrowser = () => {
   return (
     <section className="section">
       <div className="container">
+        {/* Same trail as the subject and exam pages, so the four steps of the
+            exam path (landing → niveau → matière → épreuve) read as one
+            journey and every step back is one tap. */}
+        <nav className="exam-overview__crumbs" aria-label={t('Fil d’Ariane', 'Chemen')}>
+          <Link to="/exams">{t('Examens', 'Egzamen')}</Link>
+          <span aria-hidden>›</span>
+          <span>
+            {activeLevel === 'all'
+              ? t('Tous les niveaux', 'Tout nivo')
+              : (LEVEL_LABELS[activeLevel] || t('Examens Nationaux', 'Egzamen Nasyonal'))}
+          </span>
+        </nav>
+
         {/* Header — reflects the effective (grade-curated) level, not just the URL */}
         <div className="page-header exam-browser__header">
           <h1 className="page-header__title">
@@ -409,9 +429,10 @@ const ExamBrowser = () => {
               ? t('Tous les examens', 'Tout egzamen')
               : (LEVEL_LABELS[activeLevel] || t('Examens Nationaux', 'Egzamen Nasyonal'))}
           </h1>
+          {/* The level is already the h1 and the last crumb — repeating it here
+              was a third copy of the same word (§13 "duplicate headings"). */}
           <p className="page-header__subtitle">
             {t("Banque d'examens officiels du MENFP", 'Bank egzamen ofisyèl MENFP')}
-            {activeLevel && activeLevel !== 'all' && LEVEL_LABELS[activeLevel] ? `, ${LEVEL_LABELS[activeLevel]}` : ''}
           </p>
           {/* The count moved into the toolbar, next to the filters that change
               it (it used to float here, far above the controls). */}
@@ -419,29 +440,18 @@ const ExamBrowser = () => {
 
         {/* Grade-curated level context — shown only when the student's grade
             implies a different pool than the default Bac papers. Gives a one-tap
-            escape to browse every level, then back to their own. */}
+            escape to browse every level, then back to their own. Styled from
+            tokens now — the inline rgba()/#1558B8 it used to carry ignored the
+            dark theme. */}
         {curatedLevel && (
-          <div
-            className="exam-browser__level-note"
-            role="status"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.65rem 0.85rem',
-              margin: '0 0 1rem',
-              borderRadius: 12,
-              background: 'var(--st-accent-soft, rgba(21,88,184,0.08))',
-              border: '1px solid rgba(21,88,184,0.22)',
-            }}
-          >
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <strong style={{ display: 'block', color: 'var(--st-accent, #1558B8)' }}>
+          <div className="exam-browser__level-note" role="status">
+            <span className="exam-browser__level-note-body">
+              <strong>
                 {activeLevel === curatedLevel
                   ? (LEVEL_LABELS[curatedLevel] || '')
                   : t('Tous les niveaux', 'Tout nivo')}
               </strong>
-              <span className="text-muted" style={{ fontSize: '0.85em' }}>
+              <span>
                 {activeLevel === curatedLevel
                   ? t('Adapté à ton profil', 'Adapte pou pwofil ou')
                   : t('Affichage de tous les examens', 'N ap montre tout egzamen')}
@@ -627,46 +637,80 @@ const ExamBrowser = () => {
           )}
         </div>
 
-        {/* Clean browse: one card per subject (Coursera-style entities) */}
+        {/* Clean browse: one compact ROW per subject. This used to be a grid of
+            equal-weight cards, each with a 16:8 cover and a repeated "EdLight
+            Academy" byline — a wall to read rather than a list to scan (§6.2:
+            compact rows with title, relevant progress and one clear action).
+            Every figure below comes from the catalog or the student's own
+            attempts; nothing is estimated. */}
         {subjectCardView && groups.length > 0 && (
-          <div className="exam-subjects-grid">
+          <ul className="exam-subject-rows">
             {groups.map((g) => {
               const done = g.exams.reduce((n, e) => n + (attempts[examKeyOf(e)] ? 1 : 0), 0);
               const best = g.exams.reduce((mx, e) => {
                 const p = attempts[examKeyOf(e)]?.percentage;
                 return typeof p === 'number' && p > mx ? p : mx;
               }, -1);
+              const span = yearRange(g.exams);
               return (
-                <button
-                  key={g.subject}
-                  type="button"
-                  className="exam-subject-card"
-                  onClick={() => navigate(`/exams/${level}/matiere/${encodeURIComponent(g.subject)}`)}
-                >
-                  <CardCover className="exam-subject-card__cover" glyph={SUBJECT_GLYPHS[g.subject] || 'book'} color={g.color} />
-                  <span className="exam-subject-card__body">
-                    <span className="exam-subject-card__provider">
-                      <img src="/assets/logo.png" alt="" loading="lazy" /> EdLight Academy
+                <li key={g.subject}>
+                  <button
+                    type="button"
+                    className="exam-subject-row"
+                    onClick={() => navigate(`/exams/${level}/matiere/${encodeURIComponent(g.subject)}`)}
+                  >
+                    <CardCover className="exam-subject-row__cover" glyph={SUBJECT_GLYPHS[g.subject] || 'book'} color={g.color} />
+                    <span className="exam-subject-row__body">
+                      <span className="exam-subject-row__name">{g.subject}</span>
+                      <span className="exam-subject-row__meta">
+                        {g.exams.length} {g.exams.length === 1 ? t('épreuve officielle', 'egzamen ofisyèl') : t('épreuves officielles', 'egzamen ofisyèl')}
+                        {span ? ` · ${span}` : ''}
+                        {g.coef != null ? ` · ${t('coef.', 'koef.')} ${g.coef}` : ''}
+                      </span>
                     </span>
-                    <span className="exam-subject-card__name">{g.subject}</span>
-                    <span className="exam-subject-card__meta">
-                      {g.exams.length} {g.exams.length === 1 ? t('épreuve officielle', 'egzamen ofisyèl') : t('épreuves officielles', 'egzamen ofisyèl')}
-                      {yearRange(g.exams) ? ` · ${yearRange(g.exams)}` : ''}
-                    </span>
-                    <span className="exam-subject-card__foot">
-                      {done > 0 ? (
-                        <span className="exam-subject-card__done">
-                          {done}/{g.exams.length} {t('terminées', 'fini')}{best >= 0 ? ` · ${best}%` : ''}
+                    {done > 0 && (
+                      <span className="exam-subject-row__progress">
+                        <span className="exam-subject-row__progress-bar" aria-hidden="true">
+                          <span style={{ width: `${Math.round((done / g.exams.length) * 100)}%` }} />
                         </span>
-                      ) : (
-                        <span className="exam-subject-card__new">{t('Commencer', 'Kòmanse')} →</span>
-                      )}
-                      {g.coef != null && <span className="exam-subject-card__coef">{t('Coef.', 'Koef.')} {g.coef}</span>}
-                    </span>
-                  </span>
-                </button>
+                        <span className="exam-subject-row__progress-text">
+                          {done}/{g.exams.length} {t('terminées', 'fini')}
+                          {best >= 0 ? ` · ${t('meilleur', 'pi bon')} ${best}%` : ''}
+                        </span>
+                      </span>
+                    )}
+                    <ChevronRight size={18} className="exam-subject-row__chevron" aria-hidden="true" />
+                  </button>
+                </li>
               );
             })}
+          </ul>
+        )}
+
+        {/* An empty pool used to render nothing at all — a blank page that
+            looked like a failure. Say what happened and offer a way out (§8). */}
+        {subjectCardView && groups.length === 0 && (
+          <div className="card card--message exam-browser__empty">
+            <p>
+              {trackFilter
+                ? t(
+                    'Aucune épreuve pour cette filière à ce niveau.',
+                    'Pa gen egzamen pou filyè sa a nan nivo sa a.',
+                  )
+                : t(
+                    'Aucune épreuve disponible pour ce niveau pour le moment.',
+                    'Pa gen egzamen disponib pou nivo sa a pou kounye a.',
+                  )}
+            </p>
+            {trackFilter ? (
+              <button className="button button--ghost" type="button" onClick={() => setTrackFilter('')}>
+                {t('Voir toutes les filières', 'Wè tout filyè yo')}
+              </button>
+            ) : (
+              <button className="button button--ghost" type="button" onClick={() => navigate('/exams')}>
+                {t('Choisir un autre niveau', 'Chwazi yon lòt nivo')}
+              </button>
+            )}
           </div>
         )}
 

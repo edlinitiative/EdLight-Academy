@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Crown, Medal, Flame, ChevronRight, ChevronDown, ShieldCheck, Pencil } from 'lucide-react';
+import { Trophy, Crown, Medal, Flame, ChevronRight, ChevronDown, ShieldCheck, Pencil, WifiOff, RotateCw } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
@@ -55,7 +55,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
   const t = (fr, ht) => (isCreole ? ht : fr);
 
   const [period, setPeriod] = useState('week'); // 'week' | 'all'
-  const { entries, myEntry, myRank, isLoading, refetch } = useLeaderboard(
+  const { entries, myEntry, myRank, isLoading, isError, refetch } = useLeaderboard(
     variant === 'compact' ? 5 : max,
     periodToggle ? (period as any) : 'week',
   );
@@ -173,8 +173,17 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
         <h3 className="leaderboard__title">
           <Trophy size={17} />{' '}
           {periodToggle && period === 'all'
-            ? t('Classement général', 'Klasman jeneral')
-            : t('Classement de la semaine', 'Klasman semèn nan')}
+            /*
+             * "XP" belongs IN the title, not only in the copy around it. This
+             * component is embedded on the Dashboard, the Jeux hub and the
+             * rankings page; wherever the surrounding text does not spell out
+             * the difference, a student sees "Classement" next to the Arena's
+             * cash championship and reasonably reads them as one thing.
+             * Redesign plan §6.7: tournament scores must never be visually
+             * confused with practice XP.
+             */
+            ? t('Classement XP général', 'Klasman XP jeneral')
+            : t('Classement XP de la semaine', 'Klasman XP semèn nan')}
         </h3>
         {compact && (
           <button className="leaderboard__more" onClick={() => navigate('/classement')}>
@@ -355,6 +364,29 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
           })}
         </ol>
       ) : (
+        isError ? (
+          /*
+           * A FAILED FETCH IS NOT AN EMPTY BOARD. Before this branch existed
+           * both rendered the sample ranking below, so a student whose
+           * connection dropped was told "gagnez des XP cette semaine pour
+           * apparaître ici" — about a board that may be full and that they may
+           * already be on. Redesign plan §8: offline and empty are different
+           * states, and an error gets a plain-language message and a safe
+           * recovery action.
+           */
+          <div className="leaderboard__empty leaderboard__empty--error">
+            <p className="leaderboard__error-note">
+              <WifiOff size={14} aria-hidden="true" />{' '}
+              {t(
+                'Classement indisponible — vérifiez votre connexion.',
+                'Klasman an pa disponib — tcheke koneksyon ou.',
+              )}
+            </p>
+            <button type="button" className="button button--ghost button--sm" onClick={() => refetch()}>
+              <RotateCw size={14} aria-hidden="true" /> {t('Réessayer', 'Eseye ankò')}
+            </button>
+          </div>
+        ) : (
         <div className="leaderboard__empty leaderboard__empty--sample">
           <ol className="leaderboard__list leaderboard__list--sample" aria-hidden="true">
             {SAMPLE_LEADERBOARD.slice(0, compact ? 3 : 5).map((e) => (
@@ -370,6 +402,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             {t('Exemple — gagnez des XP cette semaine pour apparaître ici.', 'Egzanp — ranmase XP semèn sa a pou parèt isit la.')}
           </p>
         </div>
+        )
       )}
 
       {/* Viewer's own rank line (national board only) when off-slice */}

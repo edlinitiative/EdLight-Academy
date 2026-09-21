@@ -2,7 +2,9 @@
  * useLeaderboard — weekly XP leaderboard
  * ──────────────────────────────────────
  * Reads the current ISO-week's top entries and locates the signed-in user's
- * rank within them. Degrades gracefully to an empty list offline.
+ * rank within them. A failed fetch surfaces as `isError`, NOT as an empty
+ * list: the two mean different things to a student and the board renders them
+ * differently.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -16,7 +18,7 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const id = weekId();
   const periodId = period === 'all' ? 'all-time' : id;
 
-  const { data: entries, isPending: isLoading, refetch, isFetching } = useQuery({
+  const { data: entries, isPending: isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['leaderboard-weekly', periodId, max],
     queryFn: () => (period === 'all' ? getAllTimeTop(max) : getWeeklyTop(max, id)),
     staleTime: 2 * 60 * 1000,
@@ -52,6 +54,15 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
     myEntry,
     myRank,
     isLoading,
+    /*
+     * Exposed so the board can tell "we could not reach the server" apart from
+     * "nobody has played yet". Without it both collapse to an empty list, and
+     * the component answers a connection failure with a sample ranking and
+     * "gagnez des XP cette semaine pour apparaître ici" — which tells a
+     * student the board is empty when it may be full. §8 of the redesign plan
+     * requires offline and empty to be different states.
+     */
+    isError,
     isFetching,
     refetch,
     weekId: id,

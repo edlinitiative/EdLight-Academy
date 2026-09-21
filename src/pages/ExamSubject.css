@@ -45,28 +45,55 @@
   font-weight: 600;
 }
 
+/* Segmented status control — same shape as the level browser's, so the two
+   steps of the exam path use one control language (§7 "polish is
+   consistency"). */
 .exam-subject__filters {
-  display: flex;
-  gap: 0.5rem;
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
   margin-bottom: 1rem;
+  background: var(--surface-muted);
+  border-radius: var(--r-btn);
 }
 
 .exam-subject__chip {
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 0;
+  background: transparent;
   color: var(--text-600);
-  border-radius: 999px;
-  padding: 0.4rem 0.95rem;
+  border-radius: calc(var(--r-btn) - 3px);
+  padding: 0.4rem 0.8rem;
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.exam-subject__chip:hover:not(:disabled) { color: var(--text-900); }
+
+.exam-subject__chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .exam-subject__chip.is-active {
-  background: var(--primary-50);
-  border-color: var(--primary-500);
+  background: var(--surface);
   color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
 }
+
+.exam-subject__chip-count {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.exam-subject__chip.is-active .exam-subject__chip-count { color: var(--primary-500); }
 
 .exam-subject__list {
   list-style: none;
@@ -150,6 +177,32 @@
   font-weight: 600;
   color: var(--text-400);
   flex: none;
+}
+
+/* Unfinished draft: the row says "reprendre", and the left edge carries the
+   azure so the one resumable paper is findable in a long list. */
+.exam-session__resume {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--primary-600);
+  background: var(--primary-50);
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  flex: none;
+  white-space: nowrap;
+}
+
+.exam-session--resume {
+  box-shadow: inset 3px 0 0 var(--primary-500), var(--shadow-sm);
+}
+
+/* .exam-session:hover is (0,2,0) and would drop the inset marker, so the
+   resume row restates it at the same weight. */
+.exam-session--resume:hover {
+  box-shadow: inset 3px 0 0 var(--primary-500), var(--shadow-md);
 }
 
 .exam-session__chevron {

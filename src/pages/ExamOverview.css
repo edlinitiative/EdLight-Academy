@@ -8,7 +8,8 @@
 .exam-overview__crumbs {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
   font-size: var(--text-sm);
   color: var(--text-400);
   margin-bottom: 1.1rem;
@@ -101,35 +102,67 @@
   align-items: start;
 }
 
-.exam-overview__stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+/* Key facts — one quiet strip. Four shadowed tiles made the counts look as
+   important as the exam itself; here they read as metadata and the page has
+   one card rhythm (§7 "surfaces and spacing"). */
+.exam-overview__facts {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 1.35rem;
+  margin: 0 0 1.1rem;
+  padding: 0;
 }
 
-.exam-overview__stat {
+.exam-overview__facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--text-sm);
+  color: var(--text-600);
+  white-space: nowrap;
+}
+
+.exam-overview__facts svg { color: var(--exam-accent, var(--primary-500)); flex: none; }
+
+.exam-overview__facts strong {
+  color: var(--text-900);
+  font-size: var(--text-base);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Avant de commencer" — timing, saving and correction, stated before the
+   start action (§6.4). */
+.exam-overview__brief-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  padding: 0.9rem 1rem;
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  gap: 0.85rem;
 }
 
-.exam-overview__stat svg { color: var(--exam-accent, var(--primary-500)); }
-.exam-overview__stat strong { font-size: var(--text-lg); color: var(--text-900); }
-.exam-overview__stat span { font-size: var(--text-xs); color: var(--text-500); }
-
-.exam-overview__autograde {
+.exam-overview__brief-list li {
   display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0 0 1rem;
+  align-items: flex-start;
+  gap: 0.7rem;
   font-size: var(--text-sm);
-  color: var(--success-500);
+  color: var(--text-600);
+  line-height: 1.55;
+}
+
+.exam-overview__brief-list svg {
+  color: var(--text-400);
+  flex: none;
+  margin-top: 0.15rem;
+}
+
+.exam-overview__brief-list strong {
+  display: block;
+  color: var(--text-900);
+  font-weight: 700;
 }
 
 .exam-overview__block {

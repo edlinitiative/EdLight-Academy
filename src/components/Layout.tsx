@@ -140,7 +140,18 @@ export function Layout() {
           </div>
         </Suspense>
       )}
-      {isAuthenticated && <SandraWidget />}
+      {/*
+        * Hidden in focus mode, not just styled around.
+        *
+        * The launcher is `position: fixed` bottom-right at z-index 990 and was
+        * rendered on every authenticated screen, including a live exam
+        * question and a quiz answer. Redesign plan §6.5: "avoid chat bubbles
+        * or global navigation covering response controls", and §6.9: do not
+        * introduce assistant access into protected competition just to keep
+        * global UI consistent. `isFocused` already covers exam-taking and the
+        * transient focus flag the quiz and lesson flows set.
+        */}
+      {isAuthenticated && !isFocused && <SandraWidget />}
       <SearchOverlay />
       <StreakMilestoneModal isCreole={isCreole} />
     </div>

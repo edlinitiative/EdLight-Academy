@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { ChevronDown, SlidersHorizontal, RotateCcw, Target, Lightbulb, BookOpen } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronDown, ChevronLeft, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import DirectBankQuiz from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useAppData } from '../hooks/useData';
 import { useFocusMode } from '../hooks/useFocusMode';
+import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 import { subjectThumbs } from './home/content';
 import './Quizzes.css';
@@ -17,6 +18,15 @@ const Quizzes = () => {
   const { data: appData, isLoading, isError, isFetching, refetch } = useAppData();
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
+  const userId = useStore((state) => state.user?.uid);
+
+  // Every pre-existing string keeps its i18next key (FR + Kreyòl both live in
+  // src/utils/i18n.ts, which this page must not edit). The handful of genuinely
+  // new lines the redesign needs are written inline the way the sibling
+  // /practice hub does it — `fallbackLng: 'fr'` means a brand-new key would
+  // silently render French to Kreyòl readers, which is worse than this.
+  const isCreole = String(i18n.language || '').toLowerCase().startsWith('ht');
+  const tx = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   // Selection state
   const [subjectBase, setSubjectBase] = useState('');
@@ -182,11 +192,19 @@ const Quizzes = () => {
         return;
       }
       const { pickRandomQuestion, toDirectItemFromRow } = require('../services/quizBank');
-      let row = pickRandomQuestion(quizBank.byUnit, courseCode, unit, quizBank.bySubject);
-      if (!row && Array.isArray(quizBank.rows) && quizBank.rows.length > 0) {
-        const idx = Math.floor(Math.random() * quizBank.rows.length);
-        row = quizBank.rows[idx];
-      }
+      /*
+       * No whole-bank fallback. This used to reach for
+       * `quizBank.rows[random]` when the selection came back empty, which
+       * served a question from AN UNRELATED SUBJECT to a student who had just
+       * chosen Chimie NS2 — and made the honest "aucun exercice disponible"
+       * message below unreachable, because a row was always found.
+       *
+       * The sensible fallback already exists one layer down:
+       * `pickRandomQuestion` tries the exact unit, then any question in the
+       * SAME subject, and returns null only when the subject itself is empty.
+       * That is precisely when a student should be told so.
+       */
+      const row = pickRandomQuestion(quizBank.byUnit, courseCode, unit, quizBank.bySubject);
       if (!row) {
         setBankMessage(t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.'));
         return;
@@ -202,16 +220,42 @@ const Quizzes = () => {
     }
   };
 
+  /** Leave the question and return to the selection screen (also restores nav chrome). */
+  const endPractice = () => {
+    setBankDirectItem(null);
+    setBankMessage('');
+    setShowSelectors(false);
+  };
+
   const subjectLabel = subjectOptions.find((o) => o.value === subjectBase)?.label || subjectBase;
   const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
   const unitLabel = unitOptions.find((o) => o.value === unit)?.label || '';
   const countLabel = t('quizzes.questionsAvailable', '{{count}} question disponible', { count: counts.count });
+  const hasQuestions = counts.count > 0;
 
   const ctaLabel = isLoadingBank
     ? t('common.loading', 'Chargement…')
     : bankDirectItem
       ? t('quizzes.nextQuestion', 'Question suivante')
       : t('quizzes.startPractice', 'Commencer');
+
+  const pageTitle = t('quizzes.curriculumPractice', 'Quiz du programme');
+
+  /**
+   * What this activity actually is — §6.4 asks for purpose, timed/untimed and
+   * whether results are saved, so a quiz is never mistaken for an exam. Every
+   * line below is a fact about the code on this page: `DirectBankQuiz` has no
+   * timer, corrects on submit, reveals the explanation on the third try, and
+   * persists no score. It does feed the review map, but only for a signed-in
+   * user (`recordReviewOutcome` no-ops without a uid), so that line is gated.
+   */
+  const facts = [
+    tx('Non chronométré', 'San kwonomèt'),
+    t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse'),
+    t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai'),
+    tx('Aucune note enregistrée', 'Pa gen nòt ki anrejistre'),
+    ...(userId ? [tx('Les erreurs reviennent dans Révision', 'Erè yo ap tounen nan Revizyon')] : []),
+  ];
 
   /** The three dropdowns — shared by the setup card and the in-practice disclosure. */
   const selectors = (
@@ -267,6 +311,28 @@ const Quizzes = () => {
     </div>
   );
 
+  /** Subject/level/unit + how many questions back it. Same strip in both states. */
+  const subjectStrip = (
+    <div className="qz-strip">
+      <img
+        className="qz-strip__thumb"
+        src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
+        alt=""
+        width={112}
+        height={80}
+        loading="lazy"
+        decoding="async"
+      />
+      <div className="qz-strip__text">
+        <span className="qz-strip__subject">
+          {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}
+        </span>
+        {unitLabel && <span className="qz-strip__unit">{unitLabel}</span>}
+      </div>
+      <span className="qz-strip__count">{countLabel}</span>
+    </div>
+  );
+
   if (isError && !appData) {
     return (
       <section className="section qz">
@@ -281,10 +347,10 @@ const Quizzes = () => {
     return (
       <section className="section qz">
         <div className="container qz__container" aria-busy="true">
-          <Skeleton width={260} height={32} style={{ marginBottom: '0.75rem' }} />
+          <Skeleton width={260} height={34} style={{ marginBottom: '0.75rem' }} />
           <SkeletonText lines={2} lastWidth="60%" />
-          <div className="qz-card" style={{ marginTop: '1.5rem' }}>
-            <Skeleton width="100%" height={132} radius={12} style={{ marginBottom: '1.25rem' }} />
+          <div className="qz-setup" style={{ marginTop: '1.75rem' }}>
+            <Skeleton width="100%" height={56} radius={12} style={{ marginBottom: '1.25rem' }} />
             <div className="qz-fields">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="qz-field">
@@ -301,19 +367,16 @@ const Quizzes = () => {
   }
 
   return (
-    <section className="section qz">
+    <section className={`section qz${bankDirectItem ? ' qz--taking' : ''}`}>
       <div className="container qz__container">
-        <header className="qz__head">
-          <h1 className="qz__title">{t('quizzes.curriculumPractice', 'Quiz du programme')}</h1>
-          <p className="qz__subtitle">
-            {t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}
-          </p>
-        </header>
-
         {bankDirectItem ? (
-          /* ── In practice: the question owns the column; the selection sits
-                above it as a compact, re-openable context bar. ── */
+          /* ── In practice (§6.5): the question owns the column. The page
+                header steps aside — it survives as a visually hidden <h1> so
+                the document keeps exactly one heading for screen readers —
+                and the selection collapses into a re-openable context bar. ── */
           <>
+            <h1 className="qz__sr-only">{pageTitle}</h1>
+
             <div className="qz-context">
               <img
                 className="qz-context__thumb"
@@ -335,6 +398,10 @@ const Quizzes = () => {
                 className="qz-context__toggle"
                 onClick={() => setShowSelectors((v) => !v)}
                 aria-expanded={showSelectors}
+                aria-controls="qz-selection-panel"
+                /* The label is hidden below 560px, which would otherwise leave
+                   this icon-only button with no accessible name. */
+                aria-label={t('quizzes.selectArea', 'Choisir une zone d\'exercice')}
               >
                 <SlidersHorizontal size={15} aria-hidden="true" />
                 <span className="qz-context__toggle-label">{t('quizzes.selectArea', 'Choisir une zone d\'exercice')}</span>
@@ -342,7 +409,7 @@ const Quizzes = () => {
             </div>
 
             {showSelectors && (
-              <div className="qz-card qz-card--tight">
+              <div className="qz-setup qz-setup--tight" id="qz-selection-panel">
                 {selectors}
                 <p className="qz-count">{countLabel}</p>
                 <button
@@ -371,44 +438,63 @@ const Quizzes = () => {
               <button
                 type="button"
                 onClick={generateCurriculumPractice}
-                className="button button--primary"
+                className="button button--primary qz-next__primary"
                 disabled={isLoadingBank}
               >
                 <RotateCcw size={16} aria-hidden="true" /> {ctaLabel}
               </button>
+              <button type="button" onClick={endPractice} className="qz-next__end">
+                {tx('Terminer la pratique', 'Fini pratik la')}
+              </button>
             </div>
           </>
         ) : (
-          /* ── Setup: one purposeful card, sized to its content. No giant
-                empty panel waiting for a question. ── */
+          /* ── Setup: one purposeful surface. The old 16:5 cover banner and the
+                three-card "Comment ça marche" grid are gone (§7: fewer
+                equal-weight cards, fewer decorative icon tiles); their content
+                lives in the fact line and the compact subject strip. ── */
           <>
-            <div className="qz-card">
-              {subjectBase && (
-                <div className="qz-cover">
-                  <img
-                    className="qz-cover__img"
-                    src={subjectThumbs[subjectBase] || subjectThumbs.MATH}
-                    alt=""
-                    width={760}
-                    height={425}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <div className="qz-cover__overlay">
-                    <span className="qz-cover__eyebrow">{t('quizzes.curriculumPractice', 'Quiz du programme')}</span>
-                    <span className="qz-cover__title">{subjectLabel}</span>
-                    {levelLabel && <span className="qz-cover__sub">{levelLabel}</span>}
-                  </div>
-                </div>
-              )}
+            <header className="qz__head">
+              <Link className="qz__back" to="/practice">
+                <ChevronLeft size={15} aria-hidden="true" />
+                {t('nav.practice', 'Pratiquer')}
+              </Link>
+              <h1 className="qz__title">{pageTitle}</h1>
+              <p className="qz__subtitle">
+                {t('quizzes.subtitle', 'Choisissez votre cours, niveau et unité pour vous entraîner avec des questions ciblées. Vous avez jusqu\'à trois essais avec des indices.')}
+              </p>
+              <ul className="qz-facts">
+                {facts.map((fact) => (
+                  <li key={fact} className="qz-facts__item">{fact}</li>
+                ))}
+              </ul>
+            </header>
+
+            {/* react-query is serving the last good copy while the refetch is
+                failing — say so rather than passing stale content off as live. */}
+            {isError && appData && (
+              <p className="qz-stale" role="status">
+                <span>{tx(
+                  'Ces exercices viennent de la dernière copie enregistrée.',
+                  'Egzèsis sa yo soti nan dènye kopi ki anrejistre a.',
+                )}</span>
+                <button type="button" className="qz-stale__retry" onClick={() => refetch()} disabled={isFetching}>
+                  {isFetching ? t('common.retrying', 'Nouvelle tentative…') : t('common.retry', 'Réessayer')}
+                </button>
+              </p>
+            )}
+
+            <div className="qz-setup">
+              {subjectBase && subjectStrip}
 
               {selectors}
 
-              {/* Plain text, not a pill: the subject/level chip that used to
-                  sit here only repeated the two selects directly above it.
-                  The count stays because this is now its only home — the
-                  page header no longer carries it. */}
-              <p className="qz-count">{countLabel}</p>
+              {!hasQuestions && (
+                <p className="qz-note" role="status">
+                  {t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.')}{' '}
+                  {tx('Choisissez une autre unité.', 'Chwazi yon lòt inite.')}
+                </p>
+              )}
 
               <button
                 type="button"
@@ -424,23 +510,14 @@ const Quizzes = () => {
               </p>
             </div>
 
-            <div className="qz-how">
-              <h2 className="qz-how__title">{t('quizzes.howItWorks', 'Comment ça marche')}</h2>
-              <ul className="qz-how__list">
-                <li className="qz-how__item">
-                  <span className="qz-how__icon"><Target size={16} aria-hidden="true" /></span>
-                  {t('quizzes.howItWorksTry', 'Trois essais par question')}
-                </li>
-                <li className="qz-how__item">
-                  <span className="qz-how__icon"><Lightbulb size={16} aria-hidden="true" /></span>
-                  {t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse')}
-                </li>
-                <li className="qz-how__item">
-                  <span className="qz-how__icon"><BookOpen size={16} aria-hidden="true" /></span>
-                  {t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai')}
-                </li>
-              </ul>
-            </div>
+            {/* §6.4: a quiz and an exam are not the same errand. */}
+            <p className="qz-crosslink">
+              {tx('Besoin de conditions d’examen ?', 'Ou bezwen kondisyon egzamen?')}{' '}
+              <Link to="/exams">{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
+              <span className="qz-crosslink__note">
+                {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
+              </span>
+            </p>
           </>
         )}
       </div>

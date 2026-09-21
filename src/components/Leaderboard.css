@@ -280,6 +280,25 @@
 }
 
 /* Sample/example ranking shown when the real board is empty */
+/* A failed fetch, told apart from an empty board. Deliberately quiet: this is
+   an ordinary connection problem, not an error the student caused. */
+.leaderboard__empty--error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 1rem 0.25rem;
+}
+
+.leaderboard__error-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-600);
+  font-size: var(--text-sm);
+}
+
 .leaderboard__empty--sample {
   padding-top: 0;
   text-align: left;

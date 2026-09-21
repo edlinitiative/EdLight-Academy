@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft, ArrowRight, Clock, FileText, Layers, Award, CheckCircle2, Eye,
-  PlayCircle, RotateCcw, History,
+  PlayCircle, RotateCcw, History, Save, LogIn,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
@@ -69,7 +69,7 @@ export default function ExamOverview() {
   const ht = language === 'ht';
   const L = (fr: string, kr: string) => (ht ? kr : fr);
 
-  const { data: catalog, isPending: catalogLoading } = useExamCatalog();
+  const { data: catalog, isPending: catalogLoading, isError: catalogError, refetch: refetchCatalog } = useExamCatalog();
 
   const resolved = useMemo(
     () => (catalog ? resolveExamFromCatalog(catalog, examIdParam) : null),
@@ -153,6 +153,29 @@ export default function ExamOverview() {
     );
   }
 
+  // A failed catalog fetch is NOT "introuvable" — say which one it is, and
+  // offer the matching recovery (§8: plain-language error + safe action).
+  if (catalogError) {
+    return (
+      <div className="section">
+        <div className="container exam-overview__container">
+          <div className="card card--message">
+            <h1 className="section__title">{L('Catalogue indisponible', 'Katalòg la pa disponib')}</h1>
+            <p className="text-muted">
+              {L(
+                'Nous n’avons pas pu charger cet examen. Vérifiez votre connexion, puis réessayez.',
+                'Nou pa t ka chaje egzamen an. Tcheke koneksyon ou, epi eseye ankò.',
+              )}
+            </p>
+            <button className="button button--primary" onClick={() => refetchCatalog()}>
+              {L('Réessayer', 'Eseye ankò')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!exam) {
     return (
       <div className="section">
@@ -169,6 +192,7 @@ export default function ExamOverview() {
     );
   }
 
+  const subjectName: string = exam._subject || exam.subject || '';
   const diff = DIFFICULTY_META[exam.difficulty as number] || null;
   const duration = exam.duration_minutes || 0;
   const points = exam.total_points || 0;
@@ -196,16 +220,25 @@ export default function ExamOverview() {
   return (
     <div className="section exam-overview-page" style={{ '--exam-accent': color } as React.CSSProperties}>
       <div className="container exam-overview__container">
+        {/* The trail mirrors how the student got here (niveau → matière →
+            épreuve), so the middle step is one tap back instead of a restart
+            from the level catalog. */}
         <nav className="exam-overview__crumbs" aria-label={L('Fil d’Ariane', 'Chemen')}>
           <Link to="/exams">{L('Examens', 'Egzamen')}</Link>
           <span aria-hidden>›</span>
           <Link to={`/exams/${slug}`}>{levelLabel}</Link>
+          {subjectName && (
+            <>
+              <span aria-hidden>›</span>
+              <Link to={`/exams/${slug}/matiere/${encodeURIComponent(subjectName)}`}>{subjectName}</Link>
+            </>
+          )}
         </nav>
 
         <header className="exam-overview__head">
           <div className="exam-overview__badges">
             <span className="exam-overview__subject" style={{ background: `${color}1f`, color }}>
-              {exam._subject || exam.subject}
+              {subjectName}
             </span>
             {diff && <span className={`exam-overview__tag exam-overview__tag--${diff.tier}`}>{ht ? diff.ht : diff.fr}</span>}
             {exam.language && <span className="exam-overview__tag">{LANG_LABEL[exam.language] || String(exam.language).toUpperCase()}</span>}
@@ -236,42 +269,79 @@ export default function ExamOverview() {
 
         <div className="exam-overview__layout">
           <div className="exam-overview__main">
-            {/* Stat tiles */}
-            <div className="exam-overview__stats">
-              <div className="exam-overview__stat">
-                <FileText size={16} aria-hidden />
-                <strong>{qCount}</strong>
-                <span>{L('questions', 'kesyon')}</span>
-              </div>
+            {/* Key facts — one quiet strip instead of four equal-weight
+                cards (§7: fewer repeated surfaces, whitespace over borders). */}
+            <ul className="exam-overview__facts">
+              <li>
+                <FileText size={15} aria-hidden />
+                <strong>{qCount}</strong> {L('questions', 'kesyon')}
+              </li>
               {duration > 0 && (
-                <div className="exam-overview__stat">
-                  <Clock size={16} aria-hidden />
-                  <strong>{duration}</strong>
-                  <span>{L('minutes', 'minit')}</span>
-                </div>
+                <li>
+                  <Clock size={15} aria-hidden />
+                  <strong>{duration}</strong> {L('minutes', 'minit')}
+                </li>
               )}
               {points > 0 && (
-                <div className="exam-overview__stat">
-                  <Award size={16} aria-hidden />
-                  <strong>{points}</strong>
-                  <span>{L('points', 'pwen')}</span>
-                </div>
+                <li>
+                  <Award size={15} aria-hidden />
+                  <strong>{points}</strong> {L('points', 'pwen')}
+                </li>
               )}
-              <div className="exam-overview__stat">
-                <Layers size={16} aria-hidden />
-                <strong>{sectionRows.length || (fullLoading ? '…' : '—')}</strong>
-                <span>{L('sections', 'seksyon')}</span>
-              </div>
-            </div>
+              <li>
+                <Layers size={15} aria-hidden />
+                <strong>{sectionRows.length || (fullLoading ? '…' : '—')}</strong> {L('sections', 'seksyon')}
+              </li>
+            </ul>
 
-            {autoGradable > 0 && (
-              <p className="exam-overview__autograde">
-                <CheckCircle2 size={14} aria-hidden />
-                {ht
-                  ? `${autoGradable} kesyon korije otomatikman`
-                  : `${autoGradable} question${autoGradable !== 1 ? 's' : ''} corrigée${autoGradable !== 1  ? 's' : ''} automatiquement`}
-              </p>
-            )}
+            {/* What taking this exam involves — stated BEFORE the start action
+                (§6.4). Every line is read from real data: the timer only exists
+                when duration_minutes > 0, and answers/results are only persisted
+                for a signed-in student (ExamTake's save effect returns early
+                without a uid). Nothing here is inferred. */}
+            <section className="exam-overview__block exam-overview__brief">
+              <h2>{L('Avant de commencer', 'Anvan ou kòmanse')}</h2>
+              <ul className="exam-overview__brief-list">
+                <li>
+                  <Clock size={16} aria-hidden />
+                  <span>
+                    <strong>{duration > 0 ? L('Épreuve chronométrée', 'Egzamen ak kwonomèt') : L('Sans chronomètre', 'San kwonomèt')}</strong>
+                    {duration > 0
+                      ? L(
+                          `Le compte à rebours démarre à ${duration} minutes et l’examen est remis automatiquement à la fin du temps.`,
+                          `Kwonomèt la kòmanse ak ${duration} minit epi egzamen an voye otomatikman lè tan an fini.`,
+                        )
+                      : L('Aucun minuteur : prenez le temps qu’il vous faut.', 'Pa gen kwonomèt : pran tan ou bezwen an.')}
+                  </span>
+                </li>
+                <li>
+                  {userId ? <Save size={16} aria-hidden /> : <LogIn size={16} aria-hidden />}
+                  <span>
+                    <strong>{userId ? L('Réponses enregistrées', 'Repons yo anrejistre') : L('Résultat non enregistré', 'Rezilta a pa anrejistre')}</strong>
+                    {userId
+                      ? L(
+                          'Vos réponses sont sauvegardées pendant que vous travaillez : vous pouvez fermer et reprendre plus tard.',
+                          'Repons ou yo anrejistre pandan w ap travay : ou ka fèmen epi kontinye pita.',
+                        )
+                      : L(
+                          'Connectez-vous pour enregistrer vos réponses, reprendre plus tard et retrouver ce résultat dans votre historique.',
+                          'Konekte pou anrejistre repons ou yo, kontinye pita epi jwenn rezilta a nan istwa ou.',
+                        )}
+                  </span>
+                </li>
+                {autoGradable > 0 && (
+                  <li>
+                    <CheckCircle2 size={16} aria-hidden />
+                    <span>
+                      <strong>{L('Correction immédiate', 'Koreksyon touswit')}</strong>
+                      {ht
+                        ? `${autoGradable} kesyon korije otomatikman apre ou voye egzamen an.`
+                        : `${autoGradable} question${autoGradable !== 1 ? 's' : ''} corrigée${autoGradable !== 1 ? 's' : ''} automatiquement après l’envoi.`}
+                    </span>
+                  </li>
+                )}
+              </ul>
+            </section>
 
             {/* Structure */}
             <section className="exam-overview__block">
@@ -354,20 +424,32 @@ export default function ExamOverview() {
           {/* Action rail */}
           <aside className="exam-overview__rail">
             <div className="exam-overview__cta-card">
+              {/* One primary action, in the brand azure (§7: brand blue for
+                  principal actions — the subject accent stays on the badge and
+                  the section dots, where it identifies the matière). */}
               <button
                 type="button"
                 className="button button--primary exam-overview__cta"
-                style={{ background: color }}
                 onClick={() => goTake(true)}
               >
                 <PrimaryIcon size={18} aria-hidden />
                 {primaryLabel}
               </button>
-              {duration > 0 && (
+              {/* Say what the primary button will actually do: with a saved
+                  draft ExamTake opens on "Reprendre / Recommencer", so we
+                  promise exactly that and nothing more. */}
+              {resumable ? (
+                <p className="exam-overview__cta-hint">
+                  {L(
+                    `${answeredCount} réponse${answeredCount > 1 ? 's' : ''} enregistrée${answeredCount > 1 ? 's' : ''} — vous pourrez reprendre où vous en étiez ou recommencer.`,
+                    `${answeredCount} repons anrejistre — ou ka kontinye kote ou te ye a oswa rekòmanse.`,
+                  )}
+                </p>
+              ) : duration > 0 ? (
                 <p className="exam-overview__cta-hint">
                   {L(`Prévoyez ${duration} minutes dans les conditions de l'examen.`, `Prevwa ${duration} minit nan kondisyon egzamen an.`)}
                 </p>
-              )}
+              ) : null}
               <button type="button" className="button button--ghost exam-overview__cta-secondary" onClick={() => goTake(false)}>
                 <Eye size={16} aria-hidden /> {L('Lire l’épreuve d’abord', 'Li egzamen an anvan')}
               </button>

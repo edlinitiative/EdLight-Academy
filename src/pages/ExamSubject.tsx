@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, CheckCircle2, PlayCircle } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -45,6 +45,28 @@ function useExamCatalog() {
   });
 }
 
+/** examId → answers saved so far, from ExamTake's local draft mirror.
+ *  Read-only: the rows still open the overview, which owns the resume action.
+ *  Submitted / empty drafts are ignored so "en cours" is never a lie. */
+function localDraftProgress(): Record<string, number> {
+  const out: Record<string, number> = {};
+  const PREFIX = 'edlight-exam-draft-';
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(PREFIX)) continue;
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const d = JSON.parse(raw);
+      if (d?.status === 'submitted') continue;
+      const answered = d?.answers ? Object.keys(d.answers).length : 0;
+      if (answered === 0 && !(d?.currentQ > 0)) continue;
+      out[k.slice(PREFIX.length)] = answered;
+    }
+  } catch { /* localStorage unavailable (private mode / blocked) */ }
+  return out;
+}
+
 export default function ExamSubject() {
   const { level, subject: subjectParam } = useParams();
   const navigate = useNavigate();
@@ -53,9 +75,13 @@ export default function ExamSubject() {
   const L = (fr: string, kr: string) => (ht ? kr : fr);
 
   const subject = decodeURIComponent(subjectParam || '');
-  const { data: allExams, isPending } = useExamCatalog();
+  const { data: allExams, isPending, isError, refetch } = useExamCatalog();
   const attempts = useExamAttempts();
   const [statusFilter, setStatusFilter] = useState<'' | 'todo' | 'done'>('');
+  // In-progress drafts, read once from the synchronous localStorage mirror
+  // ExamTake writes. Signed-out students have no draft at all (ExamTake's save
+  // effect needs a uid), so an absent key honestly means "not started here".
+  const drafts = useMemo(() => localDraftProgress(), []);
 
   const exams = useMemo(() => {
     if (!allExams) return [];
@@ -92,6 +118,25 @@ export default function ExamSubject() {
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} width="100%" height={64} radius={14} style={{ marginBottom: '0.7rem' }} />
           ))}
+        </div>
+      </section>
+    );
+  }
+
+  // A failed fetch is not an empty catalog — say so, and offer a retry rather
+  // than the misleading "aucune épreuve" below (§8: truthful states).
+  if (isError) {
+    return (
+      <section className="section exam-subject">
+        <div className="container exam-subject__container">
+          <EmptyState
+            title={L('Catalogue indisponible', 'Katalòg la pa disponib')}
+            message={L(
+              'Nous n’avons pas pu charger les épreuves. Vérifiez votre connexion, puis réessayez.',
+              'Nou pa t ka chaje egzamen yo. Tcheke koneksyon ou, epi eseye ankò.',
+            )}
+            action={{ label: L('Réessayer', 'Eseye ankò'), onClick: () => { void refetch(); } }}
+          />
         </div>
       </section>
     );
@@ -141,21 +186,24 @@ export default function ExamSubject() {
           </div>
         </header>
 
-        {/* Status filter */}
+        {/* Status filter — the same segmented control as the level browser, so
+            the two steps of the path read as one screen family. Counts are
+            real (attempt records), never estimated. */}
         <div className="exam-subject__filters" role="group" aria-label={L('Filtrer par statut', 'Filtre dapre eta')}>
           {([
-            ['', L('Toutes', 'Tout')],
-            ['todo', L('À faire', 'Pou fè')],
-            ['done', L('Terminées', 'Fini')],
-          ] as const).map(([value, label]) => (
+            ['', L('Toutes', 'Tout'), exams.length],
+            ['todo', L('À faire', 'Pou fè'), exams.length - doneCount],
+            ['done', L('Terminées', 'Fini'), doneCount],
+          ] as const).map(([value, label, count]) => (
             <button
               key={value || 'all'}
               type="button"
               className={`exam-subject__chip${statusFilter === value ? ' is-active' : ''}`}
               onClick={() => setStatusFilter(value as any)}
               aria-pressed={statusFilter === value}
+              disabled={count === 0 && statusFilter !== value}
             >
-              {label}
+              {label} <span className="exam-subject__chip-count">{count}</span>
             </button>
           ))}
         </div>
@@ -169,16 +217,23 @@ export default function ExamSubject() {
             const pct = attempt?.percentage ?? null;
             const tone = pct == null ? '' : pct >= 60 ? 'good' : pct >= 40 ? 'mid' : 'low';
             const diff = DIFFICULTY_DOT[e.difficulty as number];
+            const answered = drafts[key];
+            const inProgress = !attempt && answered !== undefined;
             return (
               <li key={key}>
-                <Link className="exam-session" to={`/exams/${level}/${key}`}>
+                <Link
+                  className={`exam-session${inProgress ? ' exam-session--resume' : ''}`}
+                  to={`/exams/${level}/${key}`}
+                >
                   <span className="exam-session__body">
                     <span className="exam-session__title">{name.title}</span>
                     <span className="exam-session__meta">
                       {[
                         name.subtitle,
                         e._questionCount ? `${e._questionCount} ${L('questions', 'kesyon')}` : '',
-                        e.duration_minutes ? `${e.duration_minutes} min` : '',
+                        e.duration_minutes
+                          ? `${e.duration_minutes} min`
+                          : L('non chronométré', 'san kwonomèt'),
                       ].filter(Boolean).join(' · ')}
                     </span>
                   </span>
@@ -187,9 +242,18 @@ export default function ExamSubject() {
                       {ht ? diff.ht : diff.fr}
                     </span>
                   )}
+                  {/* An unfinished draft must not be labelled "À faire" — the
+                      student expects to resume, not to start over (§6.4). */}
                   {attempt ? (
                     <span className={`exam-session__score exam-session__score--${tone}`}>
                       {pct != null ? `${pct}%` : '✓'}
+                    </span>
+                  ) : inProgress ? (
+                    <span className="exam-session__resume">
+                      <PlayCircle size={14} aria-hidden />
+                      {answered > 0
+                        ? L(`En cours · ${answered} rép.`, `Ap fèt · ${answered} repons`)
+                        : L('En cours', 'Ap fèt')}
                     </span>
                   ) : (
                     <span className="exam-session__todo">{L('À faire', 'Pou fè')}</span>
