@@ -962,15 +962,31 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+/* A titled section, NOT a card: ArenaBanner brings its own `.card`, and
+   wrapping it in a second one (with a ghost button orphaned below by
+   `justify-items: start`) is what made this block look broken. §7. */
 .games-hub__championship {
   display: grid;
-  justify-items: start;
-  gap: 0.85rem;
-  padding: 1.2rem;
-  margin-top: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  background: var(--surface);
+  gap: 0.5rem;
+  margin-top: 1.4rem;
+}
+
+.games-hub__championship-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--primary-600);
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.games-hub__championship-link:hover { text-decoration: underline; }
+
+.games-hub__championship-link:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 .games-hub__championship h2,
 .games-hub__section-title {

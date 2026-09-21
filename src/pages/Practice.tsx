@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Brain, ChevronRight, ClipboardCheck, ListChecks, Sparkles } from 'lucide-react';
+import { Brain, ChevronRight, ClipboardCheck, Hourglass, ListChecks } from 'lucide-react';
 import useStore from '../contexts/store';
 import { loadDueReviewIds } from '../services/reviewService';
 import './Practice.css';
@@ -67,7 +67,10 @@ export default function Practice() {
     },
     {
       href: '/study-plan',
-      icon: <Sparkles size={23} aria-hidden="true" />,
+      // Hourglass, not Sparkles. A study plan is about TIME — objectives against
+      // the hours a student actually has — and sparkles read as "AI magic",
+      // which is both wrong here and the icon this product uses for Sandra.
+      icon: <Hourglass size={23} aria-hidden="true" />,
       eyebrow: t('Organiser la suite', 'Òganize sa k ap vini'),
       title: t('Ouvrir mon plan d’étude', 'Louvri plan etid mwen'),
       description: t(

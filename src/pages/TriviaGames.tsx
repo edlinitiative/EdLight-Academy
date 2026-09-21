@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock } from 'lucide-react';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -702,18 +702,32 @@ function GamesHub({ isCreole }) {
         )}
       </div>
 
+      {/*
+        * A titled SECTION, not a card — `ArenaBanner` renders a `.card` of its
+        * own and this wrapped it in a second one, with a small ghost button
+        * orphaned underneath by `justify-items: start`. A card inside a card
+        * with a stray button is what made this block read as a mistake (§7:
+        * reduce nested cards).
+        *
+        * The button is gone as well: the banner ALREADY links to
+        * `/download?from=arena`, so the block offered one destination twice.
+        * The inline link stays because it is the only path when no tournament
+        * is open — the banner hides itself then, and the section would
+        * otherwise describe a championship with no way to reach it.
+        */}
       <section className="games-hub__championship" aria-labelledby="championship-title">
-        <div>
-          <h2 id="championship-title">{isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}</h2>
-          <p>{isCreole
+        <h2 id="championship-title">{isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}</h2>
+        <p>
+          {isCreole
             ? 'Enskripsyon ak patisipasyon fèt nan aplikasyon mobil la. Pwen chanpyona yo separe ak XP jwèt yo.'
-            : 'Inscription et participation dans l’application mobile. Les scores du championnat sont distincts des XP des jeux.'}</p>
-        </div>
+            : 'Inscription et participation dans l’application mobile. Les scores du championnat sont distincts des XP des jeux.'}
+          {' '}
+          <Link to="/download?from=arena" className="games-hub__championship-link">
+            {isCreole ? 'Jwenn aplikasyon an' : 'Accéder à l’application'}
+            <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </p>
         <ArenaBanner />
-        {/* `?from=arena` so the download page says WHY you are there. Without
-            it the championship CTA lands on a generic "scan this QR" card with
-            no mention of the tournament and no way back. */}
-        <Link to="/download?from=arena" className="button button--secondary button--sm">{isCreole ? 'Jwenn aplikasyon an' : 'Accéder à l’application'}</Link>
       </section>
 
       <DailyChallengeBanner
