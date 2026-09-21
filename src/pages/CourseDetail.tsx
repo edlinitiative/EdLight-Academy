@@ -21,6 +21,7 @@ import { chapterTestLessonMap, lessonMastery, masteryNextStep, summarize } from 
 import { useCourseMastery } from '../hooks/useMastery';
 import MasteryBadge from '../components/MasteryBadge';
 import ChapterTestCard from '../components/ChapterTestCard';
+import { useAskSandra } from '../components/SandraWidget';
 import { useTranslation } from 'react-i18next';
 import './CourseDetail.css';
 
@@ -83,6 +84,18 @@ function getResumeSeconds(key) {
   return rec.t;
 }
 
+/** Does this text actually need the Markdown/KaTeX renderer? Maths, or any
+ *  deliberate markup (emphasis, a heading, a bullet or numbered line, a
+ *  table, a link). Plain sentences do not, and sending them through gains
+ *  nothing while risking a rewrite of the author's words. */
+function hasRichText(text: string) {
+  if (!text) return false;
+  if (/\$|\\\(|\\\[/.test(text)) return true; // $x^2$, \( \), \[ \]
+  if (/(\*\*|__|`|\|)/.test(text)) return true; // emphasis, code, table
+  if (/\[[^\]]+\]\([^)]+\)/.test(text)) return true; // link
+  return /^\s{0,3}([-*+]\s|#{1,6}\s|\d{1,2}[.)]\s)/m.test(text); // list / heading line
+}
+
 export default function CourseDetail() {
   const { t, i18n } = useTranslation();
   const isCreole = i18n.language === 'ht';
@@ -107,7 +120,12 @@ export default function CourseDetail() {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false); // Mobile sidebar toggle
   const [showComments, setShowComments] = useState(false); // Mobile comments toggle
-  const { isAuthenticated, enrolledCourses, user, setSandraAsk } = useStore();
+  const { isAuthenticated, enrolledCourses, user } = useStore();
+  // Sandra's own public API (`src/components/SandraWidget`): it composes the
+  // grounding, and it is the thing that knows whether she is allowed to help
+  // on this screen. The lesson used to poke `setSandraAsk` with a hand-built
+  // sentence, which bypassed both.
+  const { available: sandraAvailable, reason: sandraReason, ask: askSandra } = useAskSandra();
   const freeVideoIds = useStore((s) => s.freeVideoIds);
   const recordActivity = useStore((s) => s.recordActivity);
   const { progress } = useCourseProgress(courseId);
@@ -258,10 +276,10 @@ export default function CourseDetail() {
   // Stable thread key per visible video (falls back to module id when needed)
   const threadKey = `comments:${courseId}:${activeLessonData?.id || activeModuleData?.id || 'module'}`;
 
-  /** What an "Ask Sandra" from this lesson names — course, unit, lesson. It is
-   *  what the note under the button promises she is told, so the two must stay
-   *  the same thing. */
-  const lessonAskTitle = [course?.name || course?.title, activeModuleData?.title, activeLessonData?.title]
+  /** What an "Ask Sandra" from this lesson names — unit and lesson as the
+   *  topic, the course by name. It is what the note under the button promises
+   *  she is told, so the two must stay the same thing. */
+  const lessonAskTopic = [activeModuleData?.title, activeLessonData?.title]
     .filter(Boolean)
     .join(' · ') || String(courseId);
 
@@ -422,6 +440,13 @@ export default function CourseDetail() {
   // Keep the address bar pointing at the lesson actually on screen.
   useEffect(() => {
     if (!courseId) return;
+    // Not before the restore above has had its turn. This effect used to run
+    // on the very first render — view still 'overview', modules still
+    // loading — and delete the `?lesson=` it was meant to follow, so every
+    // reload, shared link and Home "Reprendre où vous étiez" landed on the
+    // course overview with the lesson lost. Verified in the browser: the
+    // param disappeared from the URL before the lesson could open.
+    if (restoredForRef.current !== courseId) return;
     const id = (view === 'lesson' && activeLessonData?.id) || null;
     if (id === (searchParams.get('lesson') || null)) return;
     setSearchParams((prev) => {
@@ -537,6 +562,19 @@ export default function CourseDetail() {
   // completion this session has had confirmed).
   const isLessonCompleted = !!activeLessonData?.id && completedIds.has(activeLessonData.id);
 
+  // The lesson's ONE primary action: finish it if it isn't finished, otherwise
+  // go on to the next one. Naming it here lets the quiet previous/next pager
+  // below drop its "Suivant", which was the same tap as the big blue button
+  // directly above it — two controls competing to be the next step.
+  const lessonPrimary: 'complete' | 'next' | null =
+    activeLessonData?.type === 'quiz'
+      ? null
+      : isEnrolled && !isLessonCompleted
+        ? 'complete'
+        : nextTarget
+          ? 'next'
+          : null;
+
   // How far this unit has actually been taken — read off the same document, so
   // it can never disagree with the lesson list.
   const unitCompletedCount = lessonBreakdown.filter((l) => l?.id && completedIds.has(l.id)).length;
@@ -570,6 +608,11 @@ export default function CourseDetail() {
   // back still resumes.
   const [restart, setRestart] = useState({ key: '', token: 0 });
   const startedFrom = restart.key === positionKey ? 0 : resumeSeconds;
+  // Only the JS-API player reports playback time back to us, so it is the only
+  // path where a position can be stored and resumed. A bare embed (which is
+  // what a youtube-nocookie lesson URL gets — deliberately, the iframe API
+  // script is not in the site's CSP) plays fine but tells us nothing.
+  const positionTracked = isVideoLesson && !!youtubeVideoId;
   const restartVideo = () => {
     clearVideoPosition(positionKey);
     lastSavedRef.current = { key: '', t: -100 };
@@ -855,6 +898,21 @@ export default function CourseDetail() {
                 </p>
               )}
 
+              {/* …and where it genuinely cannot be kept, say so. Only the
+                  player that reports playback time can be resumed; the
+                  privacy-preserving embed every current lesson uses cannot be
+                  read from this page, so there is no second where playback
+                  would pick up. §8: don't promise what isn't implemented —
+                  name what IS restored instead (the lesson itself). */}
+              {isVideoLesson && !positionTracked && !videoLocked && !isLessonCompleted && (
+                <p className="lesson-stage__notice lesson-stage__notice--quiet">
+                  {L(
+                    'La vidéo repart du début : sa position n’est pas enregistrée. Votre place dans le cours l’est — revenir sur ce lien vous ramène à cette leçon.',
+                    'Videyo a rekòmanse depi nan konmansman : pozisyon li pa sere. Men plas ou nan kou a sere — lè ou tounen sou lyen sa a, w ap rive nan menm leson an.',
+                  )}
+                </p>
+              )}
+
               {!isAuthenticated && !videoLocked && isVideoLesson && (
                 <div className="lesson-card__free-banner">
                   {freeVideosRemaining > 0
@@ -897,10 +955,11 @@ export default function CourseDetail() {
                         })}`
                       : ''}
                   </span>
-                  <h1
-                    className="lesson-card__title"
-                    onClick={() => setShowSidebar(true)}
-                  >
+                  {/* A heading, not a control: the click handler that used to
+                      open the chapter drawer from here was invisible and
+                      unreachable by keyboard. The labelled toggle beside it is
+                      the way in. */}
+                  <h1 className="lesson-card__title">
                     {activeLessonData?.title || activeModuleData?.title || course.name}
                   </h1>
 
@@ -954,7 +1013,20 @@ export default function CourseDetail() {
                   in authored content isn't shown raw. */}
               {activeDescription && (
                 <div className="lesson-card__description lesson-stage__text">
-                  <InstructionRenderer text={activeDescription} />
+                  {/* `InstructionRenderer` is the app's KaTeX + Markdown
+                      renderer, and it is what authored `$x^2$` in a lesson
+                      needs. But it also carries an EXAM helper that pushes
+                      "a)" / "1)" sub-part markers onto their own line, and a
+                      lesson title like "Fractions (Partie 1)" trips it: the
+                      browser showed "… (Partie" / "» du cours …" on two lines
+                      with the "1)" eaten as a list marker. So prose with no
+                      markup goes through as prose; anything with real markup
+                      or math still goes to the renderer. */}
+                  {hasRichText(activeDescription) ? (
+                    <InstructionRenderer text={activeDescription} />
+                  ) : (
+                    <p className="lesson-stage__prose">{activeDescription}</p>
+                  )}
                 </div>
               )}
 
@@ -966,20 +1038,29 @@ export default function CourseDetail() {
                   <button
                     type="button"
                     className="button button--ghost button--sm lesson-card__nav-flat"
-                    onClick={() => setSandraAsk(
-                      isCreole
-                        ? `Ede m konprann leson sa a: ${lessonAskTitle}`
-                        : `Aide-moi à comprendre cette leçon : ${lessonAskTitle}`
-                    )}
+                    disabled={!sandraAvailable}
+                    title={sandraReason || undefined}
+                    onClick={() => askSandra({
+                      question: isCreole
+                        ? 'Ede m konprann leson sa a'
+                        : 'Aide-moi à comprendre cette leçon',
+                      topic: lessonAskTopic,
+                      course: course?.name || course?.title || undefined,
+                    })}
                   >
                     <MessageCircle size={15} aria-hidden="true" />
                     {L('Demander à Sandra', 'Mande Sandra')}
                   </button>
+                  {/* What she is told, stated where the student decides to ask
+                      — not buried in a policy page. It matches exactly what
+                      `askSandra` sends plus the grade her panel attaches. */}
                   <span className="lesson-stage__sandra-note">
-                    {L(
-                      'Sandra reçoit le nom du cours, de l’unité et de cette leçon, plus votre classe. Vos réponses aux exercices ne sont pas partagées.',
-                      'Sandra resevwa non kou a, non inite a ak non leson sa a, plis klas ou. Repons ou nan egzèsis yo pa pataje.',
-                    )}
+                    {sandraAvailable
+                      ? L(
+                          'Sandra reçoit le nom du cours, de l’unité et de cette leçon, plus votre classe. Vos réponses aux exercices ne sont pas partagées.',
+                          'Sandra resevwa non kou a, non inite a ak non leson sa a, plis klas ou. Repons ou nan egzèsis yo pa pataje.',
+                        )
+                      : sandraReason}
                   </span>
                 </div>
               )}
@@ -990,9 +1071,9 @@ export default function CourseDetail() {
                   belongs after the lesson, not beside the button that ends
                   it. */}
               <div className="lesson-card__nav">
-                {activeLessonData?.type !== 'quiz' && (isEnrolled || nextTarget) && (
+                {activeLessonData?.type !== 'quiz' && (lessonPrimary || isLessonCompleted) && (
                   <div className="lesson-stage__next">
-                    {isEnrolled && !isLessonCompleted ? (
+                    {lessonPrimary === 'complete' ? (
                       <button
                         type="button"
                         className="button button--primary lesson-stage__next-primary"
@@ -1007,7 +1088,7 @@ export default function CourseDetail() {
                               ? L('Terminer et continuer', 'Fini epi kontinye')
                               : t('courses.markComplete', L('Marquer comme terminé', 'Make kòm fini'))}
                       </button>
-                    ) : nextTarget ? (
+                    ) : lessonPrimary === 'next' && nextTarget ? (
                       <button
                         type="button"
                         className="button button--primary lesson-stage__next-primary"
@@ -1062,8 +1143,9 @@ export default function CourseDetail() {
                   </div>
                 )}
 
-                {/* Previous/Next Navigation */}
-                {(prevTarget || nextTarget) && (
+                {/* Lesson-to-lesson paging. "Suivant" is left out whenever the
+                    primary action above it already IS the next lesson. */}
+                {(prevTarget || (nextTarget && lessonPrimary !== 'next')) && (
                   <div className="lesson-card__nav-group lesson-card__nav-group--navigation">
                     <button
                       className="button button--ghost button--sm lesson-card__nav-flat"
@@ -1077,18 +1159,17 @@ export default function CourseDetail() {
                     >
                       ← {t('common.previous', 'Précédent')}
                     </button>
-                    <button
-                      className="button button--ghost button--sm lesson-card__nav-flat"
-                      onClick={() => {
-                        if (nextTarget) {
+                    {nextTarget && lessonPrimary !== 'next' && (
+                      <button
+                        className="button button--ghost button--sm lesson-card__nav-flat"
+                        onClick={() => {
                           goToLesson(nextTarget.module, nextTarget.lesson);
                           setShowSidebar(false);
-                        }
-                      }}
-                      disabled={!nextTarget}
-                    >
-                      {t('common.next', 'Suivant')} →
-                    </button>
+                        }}
+                      >
+                        {t('common.next', 'Suivant')} →
+                      </button>
+                    )}
                   </div>
                 )}
 
