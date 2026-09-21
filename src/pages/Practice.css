@@ -40,156 +40,151 @@
   line-height: 1.65;
 }
 
-/* ── One lead, then rows ──────────────────────────────────────────────────
-   Replaces a 2×2 grid of four near-identical cards. On desktop that grid left
-   a dead band above the footer; on a phone it was four tall cards to scroll
-   past for what is a four-way choice. Plan §4.1, §7. */
+/* ── One markup, two presentations ────────────────────────────────────────
+   Cards on a wide screen, where four of them are taken in at a glance; rows
+   on a phone, where the same four as cards is a long scroll for a four-way
+   choice. Everything is in the DOM at both sizes — the query decides what is
+   shown — so there is one accessible name and one tab order either way. */
 
-.practice-hub__container {
-  /* Narrower than a full canvas on purpose: a short list of choices spread
-     across 1080px reads as a page that failed to fill itself (§6.10). */
-  max-width: 780px;
-}
-
-@media (max-width: 900px) {
-  /* Clear the floating tab bar. The shared `--bottom-nav-height` is 64px and
-     the bar only exists at this breakpoint; without this the last choice sits
-     under it (§8: important actions stay clear of tab bars and safe areas). */
-  .practice-hub__container {
-    padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom) + 1.5rem);
-  }
-}
-
-.practice-hub__stack {
-  display: flex;
-  flex-direction: column;
+.practice-hub__grid {
+  display: grid;
   gap: 0.7rem;
 }
 
-/* The one choice that is right most of the time. */
-.practice-lead {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.35rem 1.4rem;
-  border-radius: var(--radius-xl, 20px);
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
-  color: #fff;
-  text-decoration: none;
-  box-shadow: 0 14px 34px -22px rgba(17, 74, 153, 0.75);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.practice-lead:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 40px -20px rgba(17, 74, 153, 0.8);
-}
-
-.practice-lead__icon {
+.practice-choice {
   display: grid;
-  place-items: center;
-  flex: none;
-  width: 42px;
-  height: 42px;
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
-}
-
-.practice-lead__body { flex: 1; min-width: 0; }
-
-.practice-lead .practice-choice__eyebrow { color: rgba(255, 255, 255, 0.82); }
-
-.practice-lead h2 {
-  margin: 0.35rem 0 0.3rem;
-  color: #fff;
-  font-size: clamp(1.15rem, 2.6vw, 1.35rem);
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-}
-
-.practice-lead p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.95rem;
-  line-height: 1.55;
-}
-
-.practice-lead__note {
-  display: block;
-  margin-top: 0.7rem;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 0.82rem;
-}
-
-.practice-lead__chev { flex: none; margin-top: 0.15rem; opacity: 0.9; }
-
-/* The rest: a title, the one fact you choose on, and a chevron. */
-.practice-row {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 0.95rem 1.1rem;
   border-radius: var(--radius-lg, 16px);
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-900);
   text-decoration: none;
-  transition: border-color 0.16s ease, background 0.16s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.practice-row:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-muted);
-}
-
-/* Flat, not a tinted tile — §7 asks for fewer decorative icon containers, and
-   four of them in a row was the page's most repeated shape. */
-.practice-row__icon {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 26px;
-  height: 26px;
-  color: var(--primary-600);
-}
-
-.practice-row__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.practice-row__title {
+.practice-choice__title {
+  margin: 0;
   color: var(--text-900);
-  font-size: 1rem;
-  font-weight: 650;
-  line-height: 1.3;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
-.practice-row__note {
+.practice-choice__desc {
+  margin: 0;
+  color: var(--text-600);
+  line-height: 1.55;
+}
+
+.practice-choice__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   color: var(--text-500);
   font-size: 0.83rem;
-  line-height: 1.4;
 }
 
-.practice-row svg:last-child { flex: none; color: var(--text-400, var(--text-500)); }
+.practice-choice--primary {
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+  border-color: transparent;
+  color: #fff;
+}
 
-.practice-lead:focus-visible,
-.practice-row:focus-visible {
+.practice-choice--primary .practice-choice__eyebrow { color: rgba(255, 255, 255, 0.82); }
+.practice-choice--primary .practice-choice__title { color: #fff; }
+.practice-choice--primary .practice-choice__desc { color: rgba(255, 255, 255, 0.88); }
+.practice-choice--primary .practice-choice__footer { color: rgba(255, 255, 255, 0.78); }
+
+.practice-choice:focus-visible {
   outline: 2px solid var(--primary-500);
   outline-offset: 3px;
 }
 
-@media (max-width: 520px) {
-  .practice-lead { padding: 1.15rem 1.15rem; }
-  .practice-lead__icon { width: 36px; height: 36px; }
+/* ── Phone: compact rows ─────────────────────────────────────────────────
+   The eyebrow and the description come out. The title says what it is and
+   the note carries the fact you choose on (timed? corrected when? how many
+   waiting?) — the description only restates the title in a longer form. */
+@media (max-width: 859px) {
+  .practice-hub__container {
+    /* Clear the floating tab bar: `--bottom-nav-height` is 64px and the bar
+       only exists at this breakpoint (§8). */
+    padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom) + 1.5rem);
+  }
+
+  .practice-choice {
+    grid-template-areas: 'icon title' 'icon note';
+    grid-template-columns: auto 1fr;
+    column-gap: 0.85rem;
+    align-items: center;
+    padding: 0.95rem 1.05rem;
+  }
+
+  .practice-choice__icon { grid-area: icon; display: grid; place-items: center; color: var(--primary-600); }
+  .practice-choice--primary .practice-choice__icon { color: #fff; }
+  .practice-choice__title { grid-area: title; font-size: 1rem; font-weight: 650; }
+  .practice-choice__footer { grid-area: note; }
+  .practice-choice__footer span { font-size: 0.82rem; }
+  .practice-choice__eyebrow,
+  .practice-choice__desc { display: none; }
+  .practice-choice:hover { background: var(--surface-muted); }
+  .practice-choice--primary:hover { background: linear-gradient(135deg, var(--primary-500), var(--primary-700)); }
+}
+
+/* ── Desktop: four cards ─────────────────────────────────────────────────── */
+@media (min-width: 860px) {
+  .practice-hub__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .practice-choice {
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: 0.5rem;
+    padding: 1.5rem 1.6rem;
+    min-height: 15.5rem;
+    align-content: start;
+  }
+
+  .practice-choice__icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 0.4rem;
+    border-radius: 13px;
+    background: var(--primary-50);
+    color: var(--primary-600);
+  }
+
+  .practice-choice--primary .practice-choice__icon {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+  }
+
+  .practice-choice__title { font-size: 1.2rem; }
+  .practice-choice__desc { font-size: 0.95rem; }
+
+  .practice-choice__footer {
+    align-self: end;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .practice-choice--primary .practice-choice__footer { border-top-color: rgba(255, 255, 255, 0.22); }
+
+  .practice-choice:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px -24px rgba(17, 74, 153, 0.55);
+    border-color: var(--border-strong);
+  }
+
+  .practice-choice--primary:hover {
+    border-color: transparent;
+    box-shadow: 0 18px 38px -20px rgba(17, 74, 153, 0.8);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .practice-lead,
-  .practice-row { transition: none; }
-  .practice-lead:hover { transform: none; }
+  .practice-choice { transition: none; }
+  .practice-choice:hover { transform: none; }
 }
