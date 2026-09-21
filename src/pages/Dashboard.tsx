@@ -486,10 +486,13 @@ export default function Dashboard() {
             <button type="button" className="dash-task" onClick={() => navigate('/exams')}>
               <span className="dash-task__icon"><ListChecks size={19} aria-hidden="true" /></span>
               <span className="dash-task__body">
-                <strong>{examSummary.inProgress > 0
+                {/* Not "Reprendre" when the hero above is already the resume
+                    button for that same attempt — the page would offer one
+                    action twice, a few hundred pixels apart. */}
+                <strong>{examSummary.inProgress > 0 && !resumeExam
                   ? (isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen")
                   : (isCreole ? 'Prepare yon egzamen' : 'Préparer un examen')}</strong>
-                <span>{examSummary.inProgress > 0
+                <span>{examSummary.inProgress > 0 && !resumeExam
                   ? (isCreole ? 'Yon egzamen poko fini' : 'Une tentative reste en cours')
                   : (isCreole ? 'Chwazi nivo ak matyè ou' : 'Choisissez votre niveau et votre matière')}</span>
               </span>
