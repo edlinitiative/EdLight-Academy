@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, CalendarCheck } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, CalendarCheck, Gamepad2, Swords } from 'lucide-react';
 import { subjectCover } from '../utils/subjectCovers';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
@@ -74,6 +74,34 @@ function levelToUrl(levelLabel) {
 /** Bonjour before 18:00, Bonsoir after — students revise late, and being
  *  greeted with "good morning" at 9pm is the kind of small wrongness that makes
  *  software feel unattended. */
+/**
+ * What a panel offers instead of saying it is empty.
+ *
+ * Ted's call: the dashboard must never report emptiness. There is always
+ * something a student can do here — a lesson, a quiz, the daily games, the
+ * championship — so a panel with no history of its own lists real destinations
+ * rather than a sentence explaining that it has nothing to show.
+ *
+ * These are navigational offers, not claims about the student: no counts, no
+ * progress, nothing invented.
+ */
+function DashSuggestions({ items }) {
+  return (
+    <div className="dash-suggest">
+      {items.map((it) => (
+        <button key={it.to} type="button" className="dash-suggest__row" onClick={it.onClick}>
+          <span className="dash-suggest__icon">{it.icon}</span>
+          <span className="dash-suggest__body">
+            <strong>{it.label}</strong>
+            <span>{it.sub}</span>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function timeGreeting(isCreole) {
   const h = new Date().getHours();
   if (isCreole) return h < 18 ? 'Bonjou' : 'Bonswa';
@@ -516,25 +544,18 @@ export default function Dashboard() {
           <div className="dash__main">
 
             {/*
-              * Continue learning — ONLY when there is something to continue.
-              *
-              * With no enrolled courses this panel rendered "Aucun cours pour
-              * le moment" directly under a hero card showing "Chimie NS1", so
-              * the page said both "here is your course" and "you have no
-              * courses" in the same screen. Both statements were true — the
-              * hero falls back to a catalogue suggestion — but together they
-              * read as broken, and they put two identical "Explorer les cours"
-              * buttons a few hundred pixels apart.
-              *
-              * §6.1: "Do not show Continue if there is nothing to continue.
-              * New students should get a sensible subject starting point" —
-              * which is exactly what the hero already is.
+              * Continue learning — or, with nothing to continue, real courses
+              * to start. It used to print "Aucun cours pour le moment"; a
+              * dashboard should never report emptiness when four subjects are
+              * sitting in the catalogue waiting to be opened.
               */}
-            {enrolledCourses.length > 0 && (
+            {(
             <section className="dash-panel">
               <div className="dash-panel__head">
                 <h2 className="dash-panel__title">
-                  <BookOpen size={18} /> {isCreole ? 'Kontinye aprann' : "Continuer l'apprentissage"}
+                  <BookOpen size={18} /> {enrolledCourses.length > 0
+                    ? (isCreole ? 'Kontinye aprann' : "Continuer l'apprentissage")
+                    : (isCreole ? 'Kòmanse yon kou' : 'Commencer un cours')}
                   {enrolledCourses.length > 0 && <span className="dash-panel__count">{enrolledCourses.length}</span>}
                 </h2>
                 <button className="dash-panel__link" onClick={() => navigate('/courses')} type="button">
@@ -584,16 +605,15 @@ export default function Dashboard() {
                   })}
                 </div>
               ) : (
-                <div className="dash-empty">
-                  <p>
-                    {isCreole
-                      ? 'Ou poko gen kou. Gade katalòg la pou enskri nan premye kou ou.'
-                      : 'Aucun cours pour le moment. Explorez le catalogue pour vous inscrire à votre premier cours.'}
-                  </p>
-                  <button className="button button--primary" onClick={() => navigate('/courses')}>
-                    {isCreole ? 'Eksplore kou yo' : 'Explorer les cours'}
-                  </button>
-                </div>
+                <DashSuggestions
+                  items={(courses || []).slice(0, 4).map((c) => ({
+                    to: `/courses/${c.id}`,
+                    onClick: () => navigate(`/courses/${c.id}`),
+                    icon: <BookOpen size={17} aria-hidden="true" />,
+                    label: c.name || c.title || c.id,
+                    sub: isCreole ? 'Kòmanse kou sa a' : 'Commencer ce cours',
+                  }))}
+                />
               )}
             </section>
             )}
@@ -630,12 +650,24 @@ export default function Dashboard() {
                     })}
                   </div>
                 ) : (
-                  <div className="dash-empty">
-                    <p>{isCreole ? 'Fè premye quiz ou pou swiv pèfòmans ou.' : 'Faites votre premier quiz pour suivre votre performance.'}</p>
-                    <button className="button button--primary button--sm" onClick={() => navigate('/quizzes')} type="button">
-                      {isCreole ? 'Kòmanse yon quiz' : 'Commencer un quiz'}
-                    </button>
-                  </div>
+                  <DashSuggestions
+                    items={[
+                      {
+                        to: '/quizzes',
+                        onClick: () => navigate('/quizzes'),
+                        icon: <ListChecks size={17} aria-hidden="true" />,
+                        label: isCreole ? 'Quiz pa matyè' : 'Quiz par matière',
+                        sub: isCreole ? 'San kwonomèt · koreksyon touswit' : 'Non chronométré · correction immédiate',
+                      },
+                      {
+                        to: '/jeux',
+                        onClick: () => navigate('/jeux'),
+                        icon: <Gamepad2 size={17} aria-hidden="true" />,
+                        label: isCreole ? 'Defi jodi a' : 'Défi du jour',
+                        sub: isCreole ? 'Jwèt kout pou ranmase XP' : 'Parties courtes pour gagner des XP',
+                      },
+                    ]}
+                  />
                 )}
               </section>
 
@@ -687,12 +719,24 @@ export default function Dashboard() {
                     })}
                   </div>
                 ) : (
-                  <div className="dash-empty">
-                    <p>{isCreole ? 'Fè yon egzamen blan pou jenere nòt preparasyon ou.' : 'Passez un examen blanc pour générer votre score de préparation.'}</p>
-                    <button className="button button--primary button--sm" onClick={() => navigate('/exams')} type="button">
-                      {isCreole ? 'Kòmanse yon egzamen' : 'Commencer un examen'}
-                    </button>
-                  </div>
+                  <DashSuggestions
+                    items={[
+                      {
+                        to: '/exams',
+                        onClick: () => navigate('/exams'),
+                        icon: <ClipboardList size={17} aria-hidden="true" />,
+                        label: isCreole ? 'Pase yon egzamen blan' : 'Passer un examen blanc',
+                        sub: isCreole ? 'Dire ak barèm parèt anvan' : 'Durée et barème affichés avant',
+                      },
+                      {
+                        to: '/jeux',
+                        onClick: () => navigate('/jeux'),
+                        icon: <Swords size={17} aria-hidden="true" />,
+                        label: isCreole ? 'Chanpyona ant lekòl yo' : 'Championnat interscolaire',
+                        sub: isCreole ? 'Enskri lekòl ou' : 'Inscrivez votre école',
+                      },
+                    ]}
+                  />
                 )}
               </section>
             </div>
