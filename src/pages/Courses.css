@@ -1,80 +1,212 @@
-/* /courses — the grade-led catalog.
-   Anatomy: one compact row shape (.lrn-row) reused at every depth, open
-   sections instead of nested cards, and a single selective featured surface
-   for the student's own class. Tokens only — no new custom properties. */
+/* /courses — the grade-led, faceted catalog.
+   Anatomy: a standing facet rail (subject x level) beside the results, one
+   compact row shape (.lrn-row) reused at every depth, each course opening in
+   place onto its real modules, and a single selective featured surface for
+   the student's own class. Tokens only — no new custom properties, no
+   per-level hues (level is encoded by how much of the ONE azure fills its
+   pill), and no colored left-border stripes anywhere. */
 
-/* ── Toolbar: search + level filter on one compact line ─────────────────── */
+/* == Breadcrumb ========================================================== */
+.lrn-crumbs { margin: 0 0 0.75rem; }
+
+.lrn-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+
+.lrn-crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lrn-crumbs svg { color: var(--text-300); }
+
+.lrn-crumbs button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--text-500);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--border-strong);
+}
+
+.lrn-crumbs button:hover { color: var(--primary-600); }
+
+.lrn-crumbs button:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.lrn-crumbs [aria-current="page"] { color: var(--text-700); font-weight: 650; }
+
+/* == Level pill: one azure, four fill weights ============================
+   The mockups gave every NS year its own hue (sky / indigo / violet / amber).
+   Estil Kle has exactly one accent, so the year is carried by how much of it
+   is mixed into the surface instead. The mixes stay light enough that
+   --primary-700 label text clears WCAG AA on the result in BOTH palettes
+   (measured: 5.5:1 light / 4.7:1 dark at the heaviest step). */
+.lrn-lvl {
+  flex: none;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--primary-700);
+  background: color-mix(in srgb, var(--primary-500) 8%, var(--surface-muted));
+}
+
+.lrn-lvl[data-level="NSII"]  { background: color-mix(in srgb, var(--primary-500) 14%, var(--surface-muted)); }
+.lrn-lvl[data-level="NSIII"] { background: color-mix(in srgb, var(--primary-500) 20%, var(--surface-muted)); }
+.lrn-lvl[data-level="NSIV"]  { background: color-mix(in srgb, var(--primary-500) 26%, var(--surface-muted)); }
+
+/* == Toolbar: a real search field + the axis toggle ====================== */
 .lrn-toolbar {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
-/* index.css gives .level-filter its own bottom margin (and goes full-width
-   under 480px); inside the toolbar the flex gap does the spacing. Scoped at
-   (0,2,0) so it wins on specificity, not on stylesheet order — this file
-   ships in a lazy route chunk. */
-.lrn-toolbar .level-filter {
-  margin: 0;
-  flex: none;
-}
-
-/* Under 480px index.css makes the button full-width with space-between, which
-   parked the label in the middle of the row. Letting the label take the free
-   space keeps "Niveau" next to its icon and the chevron at the far edge. */
-.lrn-toolbar .level-filter__label {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-}
-
-/* Opens the app's single SearchOverlay (navbar icon / ⌘K) rather than adding
-   a second search over the same index — so it is styled as the field it
-   stands in for, and never grows into a panel of its own. */
+/* A field, not a button that opens one. It searches THIS catalog — course
+   names, module titles, lesson titles — and leaves the app-wide overlay
+   (navbar icon / Cmd-K) for everything outside the catalog. */
 .lrn-search {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex: 1;
   min-width: 0;
-  padding: 0.5rem 0.7rem 0.5rem 0.75rem;
-  font: inherit;
-  font-size: var(--text-sm);
-  text-align: left;
-  color: var(--text-500);
+  padding: 0.35rem 0.5rem 0.35rem 0.75rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  cursor: pointer;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.lrn-search:hover { border-color: var(--primary-400); }
+.lrn-search:focus-within {
+  border-color: var(--primary-400);
+  box-shadow: 0 0 0 3px var(--primary-50);
+}
 
-.lrn-search:focus-visible {
+.lrn-search > svg { color: var(--text-400); flex: none; }
+
+.lrn-search__input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-900);
+}
+
+.lrn-search__input::placeholder { color: var(--text-400); }
+.lrn-search__input:focus { outline: none; }
+/* The UA's own clear affordance would sit next to ours. */
+.lrn-search__input::-webkit-search-cancel-button { display: none; }
+
+.lrn-search__clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-500);
+  cursor: pointer;
+}
+
+.lrn-search__clear:hover { color: var(--text-900); }
+
+.lrn-search__clear:focus-visible {
   outline: 2px solid var(--primary-500);
   outline-offset: 2px;
 }
 
-.lrn-search svg { color: var(--text-400); flex: none; }
-
-.lrn-search__text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* The catalogue has two real axes (subject and level) and a student arrives
+   with one or the other in mind, so both readings are one tap apart. */
+.lrn-axis {
+  flex: none;
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 
-.lrn-search__kbd {
-  flex: none;
-  padding: 0.1rem 0.35rem;
+.lrn-axis__btn {
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-600);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lrn-axis__btn:hover { color: var(--text-900); }
+
+.lrn-axis__btn:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 1px;
+}
+
+.lrn-axis__btn--on {
+  background: var(--surface);
+  color: var(--primary-700);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Example queries, taken from the catalogue itself (the biggest module in
+   each subject) so every one of them is guaranteed to return a result. */
+.lrn-tries {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  margin: 0 0 1.25rem;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+
+.lrn-try {
+  padding: 0.2rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--text-400);
+  border-radius: 999px;
+  background: var(--surface);
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--text-600);
+  cursor: pointer;
+}
+
+.lrn-try:hover { border-color: var(--primary-400); color: var(--primary-600); }
+
+.lrn-try:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
 }
 
 /* ── Cached-but-stale catalog ───────────────────────────────────────────── */
@@ -141,7 +273,6 @@
   color: var(--text-900);
 }
 
-.lrn-section__title--flat { margin-top: 0; }
 
 .lrn-badge,
 .lrn-count {
@@ -580,7 +711,6 @@
     gap: 0.5rem;
   }
 
-  .lrn-search__kbd { display: none; }
 
   .lrn-row {
     flex-wrap: wrap;
@@ -620,4 +750,366 @@
   .courses-resume--lead .resume-course:focus-visible {
     transform: none;
   }
+}
+
+/* == Two-column catalog: standing facet rail + results ===================
+   The rail is the strongest idea in the mockups: the two axes stay on screen
+   and stay set, instead of hiding in a popover that forgets itself. Under
+   900px there is no room for a rail, so it folds into one "Filtres"
+   disclosure and the results keep the whole width. */
+.lrn-layout { display: block; }
+
+@media (min-width: 900px) {
+  .lrn-layout {
+    display: grid;
+    grid-template-columns: 224px minmax(0, 1fr);
+    gap: 2.25rem;
+    align-items: start;
+  }
+}
+
+.lrn-facets { margin-bottom: 1.25rem; }
+
+.lrn-facets__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--text-700);
+  cursor: pointer;
+}
+
+.lrn-facets__toggle:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.lrn-facets__toggle[aria-expanded="true"] .lrn-facets__chev { transform: rotate(180deg); }
+.lrn-facets__chev { transition: transform 0.15s ease; }
+
+.lrn-facets__body { margin-top: 0.75rem; }
+
+@media (max-width: 899px) {
+  .lrn-facets__body { display: none; }
+  .lrn-facets__body--open { display: block; }
+}
+
+@media (min-width: 900px) {
+  .lrn-facets__toggle { display: none; }
+  .lrn-facets__body {
+    margin-top: 0;
+    position: sticky;
+    top: calc(var(--navbar-height) + 1rem);
+  }
+}
+
+.lrn-facet { margin-bottom: 1.35rem; }
+
+.lrn-facet__title {
+  margin: 0 0 0.5rem;
+  font-size: var(--text-xs);
+  font-weight: 750;
+  color: var(--text-500);
+}
+
+.lrn-facet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lrn-facet__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  color: var(--text-700);
+  cursor: pointer;
+}
+
+.lrn-facet__opt:hover { background: var(--surface-muted); }
+
+/* A combination with nothing behind it is shown (the zero is information)
+   but not clickable, so a facet can never lead to an empty list. */
+.lrn-facet__opt:disabled {
+  color: var(--text-300);
+  cursor: default;
+}
+
+.lrn-facet__opt:disabled:hover { background: none; }
+.lrn-facet__opt:disabled .lrn-lvl { opacity: 0.55; }
+
+.lrn-facet__opt:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 1px;
+}
+
+/* Selected is a wash plus weight — not a stripe down the side. */
+.lrn-facet__opt--on {
+  background: var(--primary-50);
+  color: var(--primary-700);
+  font-weight: 700;
+}
+
+.lrn-facet__opt--on:hover { background: var(--primary-50); }
+
+.lrn-facet__n {
+  flex: none;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-400);
+}
+
+.lrn-facet__opt--on .lrn-facet__n { color: var(--primary-600); }
+
+.lrn-facets__reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--primary-600);
+  cursor: pointer;
+}
+
+.lrn-facets__reset:hover { background: var(--surface-muted); }
+
+.lrn-facets__reset:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* == Results column ====================================================== */
+.lrn-results__head { margin-bottom: 1.25rem; }
+.lrn-results__head .lrn-section__title { margin-bottom: 0.25rem; }
+
+/* The catalogue's real size, counted from the catalogue. */
+.lrn-results__note {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.lrn-group { margin-bottom: 2rem; }
+
+.lrn-group__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.lrn-group__lead { flex: 1; min-width: 0; }
+
+.lrn-group__title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 750;
+  color: var(--text-900);
+  overflow-wrap: anywhere;
+}
+
+.lrn-group__meta {
+  margin: 0.1rem 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-500);
+}
+
+.lrn-group__practice { flex: none; }
+
+/* == The course row, openable ============================================
+   Two sibling controls, never nested: the head discloses the modules in
+   place, the CTA enters the course. */
+.lrn-row--course {
+  display: block;
+  padding: 0;
+}
+
+.lrn-row__head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 0.95rem;
+}
+
+.lrn-rows--flush .lrn-row__head { padding-left: 0; padding-right: 0; }
+
+.lrn-row__disclose {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.lrn-row__disclose:disabled { cursor: default; }
+
+.lrn-row__disclose:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.lrn-row__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  color: var(--primary-600);
+}
+
+.lrn-row__toggle svg { transition: transform 0.15s ease; }
+.lrn-row--open .lrn-row__toggle svg { transform: rotate(180deg); }
+
+/* The CTA is a real <button> now; it keeps the quiet default and the filled
+   "Reprendre" variant defined further up. */
+.lrn-row__cta {
+  appearance: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lrn-row__cta:not(.lrn-row__cta--resume) { background: none; }
+
+.lrn-row__cta:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.lrn-row__panel { padding: 0 0.95rem 0.5rem; }
+.lrn-rows--flush .lrn-row__panel { padding-left: 0; padding-right: 0; }
+
+/* == The modules inside a course ========================================= */
+.lrn-units {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.lrn-unit {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.15rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text-900);
+  cursor: pointer;
+}
+
+.lrn-units li:last-child .lrn-unit { border-bottom: 0; }
+
+.lrn-unit:hover { background: var(--surface-muted); }
+
+.lrn-unit:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.lrn-unit__n {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-500);
+}
+
+.lrn-unit__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.1rem; }
+
+.lrn-unit__title {
+  font-size: var(--text-sm);
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.lrn-unit__meta { font-size: var(--text-xs); color: var(--text-500); }
+
+.lrn-unit__done {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--success-50);
+  color: var(--success-500);
+}
+
+.lrn-unit__go { flex: none; color: var(--text-300); }
+.lrn-unit:hover .lrn-unit__go { color: var(--primary-600); }
+
+@media (max-width: 600px) {
+  .lrn-toolbar { flex-direction: column; align-items: stretch; }
+
+  /* Three example queries stack to three lines at phone width and push the
+     catalog off the first screen, so they scroll sideways on one line
+     instead of being cut down to two. */
+  .lrn-tries {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lrn-tries::-webkit-scrollbar { display: none; }
+  .lrn-tries > span { flex: none; }
+  .lrn-try { flex: none; }
+
+  .lrn-axis { align-self: stretch; }
+  .lrn-axis__btn { flex: 1; }
+
+  /* The action drops to its own line so it is never squeezed. */
+  .lrn-row__head { flex-wrap: wrap; row-gap: 0.7rem; }
+  .lrn-row__head .lrn-row__cta { flex-basis: 100%; justify-content: center; }
+  .lrn-row__head .lrn-row__cta--resume { width: 100%; }
 }

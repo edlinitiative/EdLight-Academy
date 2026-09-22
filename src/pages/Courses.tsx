@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, ChevronDown, ArrowRight, Target, Layers, Check, Search,
+  ChevronRight, ChevronDown, ArrowRight, Target, Check, Search, X, SlidersHorizontal,
   Sigma, Atom, FlaskConical, LineChart, BookOpen, GraduationCap, RefreshCw, WifiOff,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -50,6 +50,26 @@ const SURFACE_ROUTES: Partial<Record<HomeSurface, string>> = {
   readiness: '/dashboard',
 };
 
+const ID_TO_LEVEL: Record<string, string> = {
+  ns1: 'NSI', ns2: 'NSII', ns3: 'NSIII', ns4: 'NSIV',
+};
+
+/**
+ * The course ID is the trustworthy source of a course's level.
+ *
+ * The live Firestore document for `math-ns4` carries `level_id: 'ns3'` — a
+ * data bug. dataService already sidesteps it (it parses `course.id` to build
+ * `course.level`), and this page grouping by level depends on that being
+ * true: read `level_id` anywhere and Mathématiques renders two identical
+ * "NS III" pills and loses NS IV entirely. So we re-derive from the ID here
+ * too and only fall back to `course.level` for an ID we don't recognise.
+ * Flagged separately as a data fix; the UI must not depend on it landing.
+ */
+function courseLevel(course): string {
+  const fromId = ID_TO_LEVEL[String(course?.id || '').split('-')[1]?.toLowerCase()];
+  return fromId || String(course?.level || '');
+}
+
 /** Cover artwork per subject lives in utils/subjectCovers. */
 
 /** Small square subject thumbnail: real artwork, glyph fallback. */
@@ -78,33 +98,120 @@ function levelLabel(level) {
   return String(level || '').replace(/^NS(.*)$/i, 'NS $1');
 }
 
+/** Accent-insensitive, case-insensitive haystack — "interet" finds "Intérêt". */
+function norm(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 /**
- * CatalogCourseRow — the one compact course row used at every depth (the
- * student's class section, a level-filtered catalog list, and inside a
- * subject): level/subject, one meta line, progress only when there IS
- * progress, and exactly one action.
+ * LevelPill — the level, encoded by how much of the one azure fills it.
  *
- * Same behaviour contract as the card it replaced (click / Enter / Space →
- * course detail, enrolled marker, parent-supplied progress); `lead` decides
- * whether the subject or the level is the row's name, so neither is printed
- * twice on a screen that already says it.
+ * NS I → NS IV get progressively heavier washes of --primary-500 rather than
+ * four different hues: the app has exactly one accent colour, and four hues
+ * would invent a colour language the rest of Estil Klè does not speak. The
+ * mix percentages stay low enough that --primary-700 label text clears AA on
+ * the resulting background in both the light and the night palette.
+ */
+function LevelPill({ level, className = '' }) {
+  return (
+    <span className={`lrn-lvl ${className}`} data-level={level}>
+      {levelLabel(level)}
+    </span>
+  );
+}
+
+/**
+ * UnitList — the catalogue's 49 real units, with their real titles and their
+ * real lesson counts, read straight off `course.modules`.
+ *
+ * This is the one thing /courses never showed: it stopped at subject → level,
+ * so a student could not see that "Économie NS2" contains "La Monnaie et le
+ * Système Bancaire" without opening the course. A unit links to its first
+ * unfinished lesson (`?lesson=<id>`, the deep link CourseDetail restores),
+ * which is the closest thing to "resume this chapter" the data supports.
+ */
+function UnitList({ course, units, progress, onOpenLesson, t }) {
+  const completed: string[] = progress?.completedLessons || [];
+  return (
+    <ul className="lrn-units">
+      {units.map((unit, i) => {
+        const lessons = unit.lessons || [];
+        const doneCount = completed.length
+          ? lessons.filter((l) => completed.includes(l?.id)).length
+          : 0;
+        const next = lessons.find((l) => !completed.includes(l?.id)) || lessons[0];
+        const full = lessons.length > 0 && doneCount === lessons.length;
+        return (
+          <li key={unit.id || `${course.id}-u${i}`}>
+            <button
+              type="button"
+              className="lrn-unit"
+              onClick={() => onOpenLesson(course, next)}
+              aria-label={`${unit.title} — ${t('courses.lessonsCount', { count: lessons.length })}${
+                full ? ` · ${t('courses.completed')}` : ''}`}
+            >
+              {/* Units are a genuine ordered sequence (Firestore stores
+                  `order`), so a plain numeral helps scanning. */}
+              <span className="lrn-unit__n" aria-hidden="true">{i + 1}</span>
+              <span className="lrn-unit__body">
+                <span className="lrn-unit__title">{unit.title}</span>
+                <span className="lrn-unit__meta">
+                  {t('courses.lessonsCount', { count: lessons.length })}
+                  {/* Only ever shown when this student has real, signed-in
+                      progress on this course — never a 0/N on every unit. */}
+                  {doneCount > 0 && ` · ${doneCount}/${lessons.length} ${t('courses.completed').toLowerCase()}`}
+                </span>
+              </span>
+              {full && (
+                <span className="lrn-unit__done" aria-hidden="true">
+                  <Check size={13} />
+                </span>
+              )}
+              <ChevronRight size={15} className="lrn-unit__go" aria-hidden="true" />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * CourseRow — one compact course row used at every depth, now openable.
+ *
+ * Two controls, never nested: the head opens the unit list in place (the
+ * mockups' best idea — you can see what a course contains before committing
+ * to it), and the CTA enters the course. `lead` decides whether the subject
+ * or the level is the row's name, so neither is printed twice on a screen
+ * that already says it.
  *
  * A `comingSoon` course renders inert and labelled instead of looking like a
  * link that goes nowhere.
  */
-function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = false, t, L }) {
+function CourseRow({
+  course, stats = null, lead = 'level', enrolled = false,
+  progress = null, units = null, forceOpen = false, onOpenLesson, t, L,
+}) {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isFrench = i18n.language === 'fr';
   const isCreole = i18n.language === 'ht';
+  const [open, setOpen] = useState(false);
 
-  const units = course.modules || [];
-  const lessonsCount = units.reduce((sum, u) => sum + (u.lessons?.length || 0), 0);
-  // Progress comes from the parent, which prefers cross-device Firestore
-  // progress over the local store.
+  const allUnits = course.modules || [];
+  // When a search is running the row shows only the units that matched, and
+  // opens itself — otherwise the student has to guess which one hit.
+  const shownUnits = units || allUnits;
+  const expanded = forceOpen || open;
+
+  const lessonsCount = allUnits.reduce((sum, u) => sum + (u.lessons?.length || 0), 0);
+  // Progress comes from the parent, which uses Firestore progress only.
   const pct = stats?.pct ?? 0;
   const doneLessons = stats?.completed ?? 0;
-  const totalLessons = stats?.total || lessonsCount || units.length || course.videoCount || 0;
+  const totalLessons = stats?.total || lessonsCount || allUnits.length || course.videoCount || 0;
   // Three distinct states, never one "start" button for all of them: untouched
   // (Commencer), in progress (Reprendre — resumes), finished (Revoir — says so
   // and does not pretend there is something left to resume).
@@ -124,13 +231,12 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
   };
 
   const subjectLabel = t(`subjects.${course.subject}`, { defaultValue: course.subject });
-  const lvl = levelLabel(course.level);
-  const name = lead === 'subject' ? subjectLabel : lvl;
-  const badge = lead === 'subject' ? lvl : null;
+  const lvl = courseLevel(course);
+  const name = lead === 'subject' ? subjectLabel : levelLabel(lvl);
   const accent = { '--accent': course.color || 'var(--primary-500)' } as React.CSSProperties;
 
   const meta = [
-    `${units.length} ${t('courses.modules')}`,
+    allUnits.length > 0 ? t('courses.modulesCount', { count: allUnits.length }) : '',
     t('courses.lessonsCount', { count: lessonsCount || course.videoCount }),
     formatDuration(course.duration),
     enrolled ? t('courses.enrolled') : '',
@@ -142,7 +248,7 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
         <span className="lrn-row__main">
           <span className="lrn-row__name">
             {name}
-            {badge && <span className="lrn-row__badge">{badge}</span>}
+            {lead === 'subject' && <LevelPill level={lvl} />}
           </span>
           <span className="lrn-row__meta">{L('Cours en préparation', 'Kou a ap prepare')}</span>
         </span>
@@ -152,177 +258,217 @@ function CatalogCourseRow({ course, stats = null, lead = 'level', enrolled = fal
   }
 
   const goToCourse = () => navigate(`/courses/${course.id}`);
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goToCourse(); }
-  };
+  const panelId = `units-${course.id}`;
+  const hasUnits = shownUnits.length > 0;
 
   return (
-    <article
-      className="lrn-row"
-      style={accent}
-      role="button"
-      tabIndex={0}
-      onClick={goToCourse}
-      onKeyDown={handleKeyDown}
-      aria-label={`${subjectLabel} · ${lvl} — ${course.name}`}
-    >
-      <span className="lrn-row__main">
-        <span className="lrn-row__name">
-          {name}
-          {badge && <span className="lrn-row__badge">{badge}</span>}
-          {finished && (
-            <span className="lrn-row__done">
-              <Check size={12} aria-hidden="true" />
-              {t('courses.completed')}
+    <article className={`lrn-row lrn-row--course${expanded ? ' lrn-row--open' : ''}`} style={accent}>
+      <div className="lrn-row__head">
+        {/* The head is a disclosure, the CTA is the navigation. Two siblings,
+            so neither control is nested inside the other. */}
+        <button
+          type="button"
+          className="lrn-row__main lrn-row__disclose"
+          onClick={() => hasUnits && setOpen((o) => !o)}
+          aria-expanded={hasUnits ? expanded : undefined}
+          aria-controls={hasUnits ? panelId : undefined}
+          disabled={!hasUnits}
+        >
+          <span className="lrn-row__name">
+            {name}
+            {lead === 'subject' && <LevelPill level={lvl} />}
+            {finished && (
+              <span className="lrn-row__done">
+                <Check size={12} aria-hidden="true" />
+                {t('courses.completed')}
+              </span>
+            )}
+          </span>
+          <span className="lrn-row__meta">{meta}</span>
+          {/* Progress appears once there IS progress. A 0% bar on every row
+              reads as failure, so an untouched course just looks neutral. */}
+          {pct > 0 && (
+            <span className="lrn-row__progress">
+              <span className="progress-bar"><span className="progress-bar__fill" style={{ width: `${pct}%` }} /></span>
+              <span className="lrn-row__pct">
+                {pct}%
+                {totalLessons > 0 && ` · ${doneLessons}/${t('courses.lessonsCount', { count: totalLessons })}`}
+              </span>
             </span>
           )}
-        </span>
-        <span className="lrn-row__meta">{meta}</span>
-        {/* Progress appears once there IS progress. A 0% bar on every row
-            reads as failure, so an untouched course just looks neutral. */}
-        {pct > 0 && (
-          <span className="lrn-row__progress">
-            <span className="progress-bar"><span className="progress-bar__fill" style={{ width: `${pct}%` }} /></span>
-            <span className="lrn-row__pct">
-              {pct}%
-              {totalLessons > 0 && ` · ${doneLessons}/${t('courses.lessonsCount', { count: totalLessons })}`}
+          {hasUnits && (
+            <span className="lrn-row__toggle">
+              <ChevronDown size={14} aria-hidden="true" />
+              {expanded
+                ? L('Masquer les modules', 'Kache modil yo')
+                : L(`Voir les ${shownUnits.length} modules`, `Wè ${shownUnits.length} modil yo`)}
             </span>
-          </span>
-        )}
-      </span>
-      {/* Deliberately a <span>: the whole row is the click target, so a
-          nested <button> would be invalid markup and would announce two
-          controls for one destination. */}
-      <span className={`lrn-row__cta${started ? ' lrn-row__cta--resume' : ''}`}>
-        {finished
-          ? L('Revoir', 'Revize')
-          : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')}
-        <ArrowRight size={15} aria-hidden="true" />
-      </span>
+          )}
+        </button>
+        <button
+          type="button"
+          className={`lrn-row__cta${started ? ' lrn-row__cta--resume' : ''}`}
+          onClick={goToCourse}
+          aria-label={`${finished ? L('Revoir', 'Revize') : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')} — ${subjectLabel} ${levelLabel(lvl)}`}
+        >
+          {finished
+            ? L('Revoir', 'Revize')
+            : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')}
+          <ArrowRight size={15} aria-hidden="true" />
+        </button>
+      </div>
+      {expanded && hasUnits && (
+        <div className="lrn-row__panel" id={panelId}>
+          <UnitList
+            course={course}
+            units={shownUnits}
+            progress={progress}
+            onOpenLesson={onOpenLesson}
+            t={t}
+          />
+        </div>
+      )}
     </article>
   );
 }
 
 /**
- * CatalogSubjectRow — a subject is a destination, not content, so its one
- * action opens the subject instead of claiming to "start" or "continue"
- * anything (the actual resume lives in the Reprendre strip and on the course
- * rows). Unavailable subjects never render as a row: see the quiet group at
- * the bottom of the catalog section.
+ * Facets — subject × level, visible and persistent rather than hidden behind
+ * a popover. The catalogue genuinely has two axes and the strongest version
+ * of this in the mockups is a standing sidebar, so on desktop that is what it
+ * is; under 900px it collapses to one "Filtres" disclosure so it never eats
+ * the first screen on a phone.
+ *
+ * Every count is computed from the loaded catalogue against the *other*
+ * facet, so a number here can never promise courses a click will not produce.
  */
-function CatalogSubjectRow({ group, label, lessons, onOpen, t, L }) {
-  return (
-    <button
-      type="button"
-      className="lrn-row lrn-row--subject"
-      style={{ '--accent': group.accent } as React.CSSProperties}
-      onClick={onOpen}
-      aria-label={label}
-    >
-      <SubjectThumb code={group.code} />
-      <span className="lrn-row__main">
-        <span className="lrn-row__name">{label}</span>
-        <span className="lrn-row__meta">
-          {[
-            t('courses.levelCount', { count: group.items.length }),
-            lessons > 0 ? t('courses.lessonsCount', { count: lessons }) : '',
-            group.enrolledCount > 0 ? `${group.enrolledCount} ${t('courses.enrolledShort')}` : '',
-          ].filter(Boolean).join(' · ')}
-        </span>
-        {group.pct > 0 && (
-          <span className="lrn-row__progress">
-            <span className="progress-bar"><span className="progress-bar__fill" style={{ width: `${group.pct}%` }} /></span>
-            <span className="lrn-row__pct">
-              {group.pct}% · {group.doneLessons}/{t('courses.lessonsCount', { count: group.totalLessons })}
-            </span>
-          </span>
-        )}
-      </span>
-      <span className="lrn-row__cta">
-        {group.items.length === 1
-          ? L('Voir le cours', 'Wè kou a')
-          : L(`Voir les ${group.items.length} cours`, `Wè ${group.items.length} kou yo`)}
-        <ChevronRight size={16} aria-hidden="true" />
-      </span>
-    </button>
-  );
-}
-
-/**
- * LevelFilter — a "Niveau" button that opens a small popover list of levels.
- * Lives in the catalog toolbar now, so it is reachable at the depth where the
- * student is actually choosing (it used to appear only after a subject was
- * picked).
- */
-function LevelFilter({ value, onChange, levels, hasEnrolled, t, L }) {
+function Facets({
+  subject, level, mine, onSubject, onLevel, onMine, subjectCounts, levelCounts,
+  subjects, levels, hasEnrolled, activeCount, onReset, t, L,
+}) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
-  const options = [
-    { value: 'all', label: L('Tous les niveaux', 'Tout nivo yo') },
-    ...(hasEnrolled ? [{ value: 'enrolled', label: t('courses.myCourses') }] : []),
-    ...levels.map((lvl) => ({ value: lvl, label: levelLabel(lvl) })),
-  ];
-  const isFiltered = value !== 'all';
-  const active = options.find((o) => o.value === value);
-  const niveau = L('Niveau', 'Nivo');
-
   return (
-    <div className="level-filter" ref={ref}>
+    <aside className="lrn-facets" aria-label={L('Filtres du catalogue', 'Filtè katalòg la')}>
       <button
         type="button"
-        className={`level-filter__btn ${isFiltered ? 'level-filter__btn--active' : ''}`}
-        aria-haspopup="listbox"
+        className="lrn-facets__toggle"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <Layers size={15} className="level-filter__icon" aria-hidden="true" />
-        <span className="level-filter__label">
-          {isFiltered ? `${niveau} : ${active?.label}` : niveau}
-        </span>
-        <ChevronDown size={16} className="level-filter__chevron" aria-hidden="true" />
+        <SlidersHorizontal size={15} aria-hidden="true" />
+        {L('Filtres', 'Filtè')}
+        {activeCount > 0 && <span className="lrn-count">{activeCount}</span>}
+        <ChevronDown size={16} className="lrn-facets__chev" aria-hidden="true" />
       </button>
-      {open && (
-        <ul className="level-filter__menu" role="listbox">
-          {options.map((o) => (
-            <li key={o.value} role="option" aria-selected={o.value === value}>
+
+      <div className={`lrn-facets__body${open ? ' lrn-facets__body--open' : ''}`}>
+        <div className="lrn-facet">
+          <h2 className="lrn-facet__title">{L('Matière', 'Matyè')}</h2>
+          <ul className="lrn-facet__list">
+            <li>
               <button
                 type="button"
-                className={`level-filter__item ${o.value === value ? 'level-filter__item--active' : ''}`}
-                onClick={() => { onChange(o.value); setOpen(false); }}
+                className={`lrn-facet__opt${subject === 'all' ? ' lrn-facet__opt--on' : ''}`}
+                aria-pressed={subject === 'all'}
+                onClick={() => onSubject('all')}
               >
-                <span>{o.label}</span>
-                {o.value === value && <Check size={15} aria-hidden="true" />}
+                <span>{L('Toutes les matières', 'Tout matyè yo')}</span>
+                <span className="lrn-facet__n">{subjectCounts.all}</span>
               </button>
             </li>
-          ))}
-        </ul>
-      )}
-    </div>
+            {subjects.map((s) => {
+              const n = subjectCounts[s.code] || 0;
+              return (
+                <li key={s.code}>
+                  {/* A facet that would produce an empty list is disabled
+                      rather than offered — the zero still says "nothing
+                      here", but it is no longer a dead end to click. */}
+                  <button
+                    type="button"
+                    className={`lrn-facet__opt${subject === s.code ? ' lrn-facet__opt--on' : ''}`}
+                    aria-pressed={subject === s.code}
+                    disabled={n === 0 && subject !== s.code}
+                    onClick={() => onSubject(s.code)}
+                  >
+                    <span>{s.label}</span>
+                    <span className="lrn-facet__n">{n}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        <div className="lrn-facet">
+          <h2 className="lrn-facet__title">{L('Niveau', 'Nivo')}</h2>
+          <ul className="lrn-facet__list">
+            <li>
+              <button
+                type="button"
+                className={`lrn-facet__opt${level === 'all' ? ' lrn-facet__opt--on' : ''}`}
+                aria-pressed={level === 'all'}
+                onClick={() => onLevel('all')}
+              >
+                <span>{L('Tous les niveaux', 'Tout nivo yo')}</span>
+                <span className="lrn-facet__n">{levelCounts.all}</span>
+              </button>
+            </li>
+            {levels.map((lv) => {
+              const n = levelCounts[lv] || 0;
+              return (
+                <li key={lv}>
+                  <button
+                    type="button"
+                    className={`lrn-facet__opt${level === lv ? ' lrn-facet__opt--on' : ''}`}
+                    aria-pressed={level === lv}
+                    disabled={n === 0 && level !== lv}
+                    onClick={() => onLevel(lv)}
+                  >
+                    <LevelPill level={lv} />
+                    <span className="lrn-facet__n">{n}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {hasEnrolled && (
+          <div className="lrn-facet">
+            <button
+              type="button"
+              className={`lrn-facet__opt${mine ? ' lrn-facet__opt--on' : ''}`}
+              aria-pressed={mine}
+              onClick={() => onMine(!mine)}
+            >
+              <span>{t('courses.myCourses')}</span>
+              {mine && <Check size={15} aria-hidden="true" />}
+            </button>
+          </div>
+        )}
+
+        {activeCount > 0 && (
+          <button type="button" className="lrn-facets__reset" onClick={onReset}>
+            <X size={14} aria-hidden="true" />
+            {t('courses.resetFilters')}
+          </button>
+        )}
+      </div>
+    </aside>
   );
 }
 
 /**
- * Courses — a grade-led catalog.
+ * Courses — a grade-led, faceted catalog.
  *
  * A returning student's own class leads (their level's courses, labelled as
- * theirs); the complete Matière → Niveau → Cours catalog stays open right
- * below, so leading never means filtering things away. Search and the level
- * filter sit in one compact toolbar at the top — the depth where the choice
- * is actually made — and search reuses the app's single SearchOverlay rather
- * than adding a second search over the same index.
+ * theirs); the complete catalog stays open right below, so leading never
+ * means filtering things away. Below that the catalog can be read along
+ * either of the two axes the data actually has — by subject or by level — and
+ * every course opens in place to show its real modules.
+ *
+ * Search and the facets live in the URL, so a filtered catalog survives a
+ * reload, the back button and being shared.
  */
 export default function Courses() {
   const navigate = useNavigate();
@@ -348,8 +494,33 @@ export default function Courses() {
       cancel(handle);
     };
   }, [queryClient]);
-  const [filter, setFilter] = useState('all');
-  const [subject, setSubject] = useState('all');
+
+  // ── Facet + search state lives in the query string ──────────────────────
+  // "Visible and persistent" has to mean it survives a reload and a shared
+  // link, not just a re-render.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const subject = searchParams.get('matiere') || 'all';
+  const level = searchParams.get('niveau') || 'all';
+  const mine = searchParams.get('mes') === '1';
+  const axis = searchParams.get('vue') === 'niveau' ? 'level' : 'subject';
+  const query = searchParams.get('q') || '';
+
+  const setParam = useCallback((key: string, value: string | null) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === null || value === '' || value === 'all') next.delete(key);
+      else next.set(key, value);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  const resetFacets = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      ['matiere', 'niveau', 'mes', 'q'].forEach((k) => next.delete(k));
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   /**
    * Offline is its own state, not an error: react-query pauses rather than
@@ -369,6 +540,7 @@ export default function Courses() {
       window.removeEventListener('offline', down);
     };
   }, []);
+
   const enrolledCourses = useStore((s) => s.enrolledCourses);
   const grade = useStore((s) => s.grade);
   const setGrade = useStore((s) => s.setGrade);
@@ -388,10 +560,9 @@ export default function Courses() {
     return m;
   }, [allProgress]);
 
-  // Best-effort progress: prefer cross-device Firestore progress, fall back to
-  // the local store so the figures still work while signed out / offline.
-  // Returns lesson counts too — the rows show "10/24 leçons" and the resume
-  // strip "N% · X leçons restantes", which a bare percentage can't express.
+  // Progress comes from one place. Returns lesson counts too — the rows show
+  // "10/24 leçons" and the resume strip "N% · X leçons restantes", which a
+  // bare percentage can't express.
   const courseStats = useCallback((course) => {
     const total = countCourseLessons(course);
     const fp = progressByCourseId.get(course.id);
@@ -425,58 +596,127 @@ export default function Courses() {
     [enrolledCourses],
   );
 
-  // Group the catalog by subject — the basis for the Matière → Niveau → Cours flow.
-  const subjectGroups = useMemo(() => {
-    const map = new Map();
-    for (const c of courses) {
-      if (!c?.subject) continue;
-      if (!map.has(c.subject)) map.set(c.subject, []);
-      map.get(c.subject).push(c);
-    }
-    const list = Array.from(map.entries()).map(([code, items]) => {
-      const sorted = [...items].sort(
-        (a, b) => LEVEL_ORDER.indexOf(a.level) - LEVEL_ORDER.indexOf(b.level),
-      );
-      const enrolledItems = sorted.filter(isEnrolled);
-      // Aggregate over the whole subject by LESSONS, not by averaging the
-      // per-course percentages — 100% of a 4-lesson course and 0% of a
-      // 40-lesson one is not "50% of the subject".
-      let doneLessons = 0;
-      let totalLessons = 0;
-      for (const c of sorted) {
-        const st = courseStats(c);
-        doneLessons += st.completed;
-        totalLessons += st.total;
-      }
-      const pct = totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0;
-      const resume = sorted.find((c) => { const p = coursePercent(c); return p > 0 && p < 100; }) || null;
-      return {
-        code,
-        items: sorted,
-        accent: sorted[0]?.color || 'var(--primary-500)',
-        enrolledCount: enrolledItems.length,
-        pct,
-        doneLessons,
-        totalLessons,
-        resume,
-        // Whole subject not yet migrated — listed apart as "bientôt", never
-        // as a row that looks tappable.
-        comingSoon: sorted.length > 0 && sorted.every((c) => c.comingSoon),
-      };
-    });
-    list.sort((a, b) => {
-      const ia = SUBJECT_ORDER.indexOf(a.code); const ib = SUBJECT_ORDER.indexOf(b.code);
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-    });
-    return list;
-  }, [courses, isEnrolled, coursePercent, courseStats]);
-
   const subjectName = useCallback(
     (code) => t(`subjects.${code}`, { defaultValue: code }),
     [t],
   );
 
-  const goToSubjects = () => { setSubject('all'); };
+  /** Open a unit at its first unfinished lesson — CourseDetail restores `?lesson=`. */
+  const openLesson = useCallback((course, lesson) => {
+    navigate(lesson?.id
+      ? `/courses/${course.id}?lesson=${encodeURIComponent(lesson.id)}`
+      : `/courses/${course.id}`);
+  }, [navigate]);
+
+  // ── Search over course names, module titles and lesson titles ───────────
+  // Matching is accent-insensitive so "interet simple" finds "L'Intérêt
+  // Simple". A matching course carries its matching modules with it, so the
+  // row can open straight onto the module that hit.
+  const searched = useMemo(() => {
+    const q = norm(query.trim());
+    return courses.map((c) => {
+      if (!q) return { course: c, units: null as any[] | null, hit: true };
+      const units = (c.modules || []).filter((u) =>
+        norm(u.title).includes(q)
+        || (u.lessons || []).some((l) => norm(l?.title).includes(q)));
+      const headline = norm(`${c.name || ''} ${subjectName(c.subject)} ${levelLabel(courseLevel(c))}`);
+      const hit = headline.includes(q) || units.length > 0;
+      return { course: c, units: units.length > 0 ? units : null, hit };
+    }).filter((r) => r.hit);
+  }, [courses, query, subjectName]);
+
+  /** Everything the search kept, before the two facets narrow it further. */
+  const searchedCourses = useMemo(() => searched.map((r) => r.course), [searched]);
+  const unitsFor = useCallback(
+    (id) => searched.find((r) => r.course.id === id)?.units || null,
+    [searched],
+  );
+
+  const matchesMine = useCallback((c) => !mine || isEnrolled(c), [mine, isEnrolled]);
+
+  // Facet counts: each axis counts against the OTHER axis (plus search), the
+  // standard faceted behaviour — so a number is always the number of courses
+  // that clicking it will actually show.
+  const subjectCounts = useMemo(() => {
+    const out: Record<string, number> = { all: 0 };
+    for (const c of searchedCourses) {
+      if (!matchesMine(c)) continue;
+      if (level !== 'all' && courseLevel(c) !== level) continue;
+      out.all += 1;
+      out[c.subject] = (out[c.subject] || 0) + 1;
+    }
+    return out;
+  }, [searchedCourses, level, matchesMine]);
+
+  const levelCounts = useMemo(() => {
+    const out: Record<string, number> = { all: 0 };
+    for (const c of searchedCourses) {
+      if (!matchesMine(c)) continue;
+      if (subject !== 'all' && c.subject !== subject) continue;
+      out.all += 1;
+      const lv = courseLevel(c);
+      out[lv] = (out[lv] || 0) + 1;
+    }
+    return out;
+  }, [searchedCourses, subject, matchesMine]);
+
+  /** The courses left after search + both facets — what the list renders. */
+  const visible = useMemo(() => searchedCourses.filter((c) =>
+    matchesMine(c)
+    && (subject === 'all' || c.subject === subject)
+    && (level === 'all' || courseLevel(c) === level)), [searchedCourses, subject, level, matchesMine]);
+
+  // Facet options come from the catalogue, never from a hardcoded list.
+  const subjectOptions = useMemo(() => {
+    const codes: string[] = [
+      ...new Set<string>(courses.map((c) => String(c?.subject || '')).filter(Boolean)),
+    ];
+    codes.sort((a, b) => {
+      const ia = SUBJECT_ORDER.indexOf(a); const ib = SUBJECT_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+    return codes.map((code) => ({ code, label: subjectName(code) }));
+  }, [courses, subjectName]);
+
+  const levelOptions = useMemo(() => {
+    const lv: string[] = [...new Set<string>(courses.map(courseLevel).filter(Boolean))];
+    return lv.sort((a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b));
+  }, [courses]);
+
+  // ── The catalogue's real size, counted from the catalogue ───────────────
+  // Every figure below is derived from the courses actually loaded, so the
+  // page can never advertise content it does not have. `coming_soon` courses
+  // are excluded from the lesson and module totals and reported separately.
+  const totals = useMemo(() => {
+    const live = courses.filter((c) => !c.comingSoon);
+    const liveSubjects = new Set(live.map((c) => c.subject));
+    const soonSubjects = new Set(
+      courses.filter((c) => c.comingSoon && !liveSubjects.has(c.subject)).map((c) => c.subject),
+    );
+    return {
+      subjects: liveSubjects.size,
+      soonSubjects: soonSubjects.size,
+      courses: live.length,
+      units: live.reduce((n, c) => n + (c.modules?.length || 0), 0),
+      lessons: live.reduce((n, c) => n + countCourseLessons(c), 0),
+    };
+  }, [courses]);
+
+  // Example queries are read off the catalogue — the biggest module in each
+  // subject — so every suggestion is guaranteed to return a result. Nothing
+  // here is typed by hand.
+  const suggestions = useMemo(() => {
+    const best = new Map<string, { title: string; n: number }>();
+    for (const c of courses) {
+      if (c.comingSoon) continue;
+      for (const u of c.modules || []) {
+        const n = u.lessons?.length || 0;
+        const prev = best.get(c.subject);
+        if (u.title && (!prev || n > prev.n)) best.set(c.subject, { title: u.title, n });
+      }
+    }
+    return SUBJECT_ORDER.map((s) => best.get(s)?.title).filter(Boolean).slice(0, 3) as string[];
+  }, [courses]);
 
   if (isLoading) {
     return (
@@ -536,28 +776,6 @@ export default function Courses() {
     );
   }
 
-  // Selected subject (level view). When none is chosen we show the catalog.
-  const activeGroup = subject !== 'all' ? subjectGroups.find((g) => g.code === subject) : null;
-  const subjectLabelFull = activeGroup ? subjectName(activeGroup.code) : '';
-
-  // Every level present in the catalog — the filter's options at both depths.
-  const allLevels: string[] = [
-    ...new Set<string>(courses.map((c) => String(c?.level || '')).filter(Boolean)),
-  ].sort((a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b));
-  const levelsForSubject = activeGroup
-    ? [...new Set(activeGroup.items.map((c) => c.level))].sort(
-        (a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b),
-      )
-    : allLevels;
-
-  const matchesFilter = (c) => {
-    if (filter === 'enrolled') return isEnrolled(c);
-    if (filter.startsWith('NS')) return c.level === filter;
-    return true;
-  };
-
-  const levelViewCourses = activeGroup ? activeGroup.items.filter(matchesFilter) : [];
-
   // ── The student's own class leads ──────────────────────────────────────
   // Their grade comes from the store (set at first run / in the profile) and
   // maps onto exactly one catalog level. Nothing is inferred: with no grade
@@ -570,7 +788,7 @@ export default function Courses() {
       })()
     : '';
   const myCourses = myLevel
-    ? courses.filter((c) => c.level === myLevel && !c.comingSoon)
+    ? courses.filter((c) => courseLevel(c) === myLevel && !c.comingSoon)
     : [];
   // A grade we can't serve with courses still has a real next step — read it
   // off gradeProfile() rather than inventing one.
@@ -587,12 +805,6 @@ export default function Courses() {
     };
     return { label: labels[lead] as string, to: SURFACE_ROUTES[lead] as string };
   })();
-
-  // ── Filter applied from the toolbar with no subject picked ─────────────
-  // The filter has to do something at the depth where it is offered, so it
-  // flattens the catalog instead of waiting for a subject.
-  const catalogFilterActive = !activeGroup && filter !== 'all';
-  const filteredCatalog = catalogFilterActive ? courses.filter(matchesFilter) : [];
 
   // In-progress courses leading the page. Built from the authoritative
   // progress map as well as the enrolled list, so a student who has watched
@@ -614,49 +826,89 @@ export default function Courses() {
       .slice(0, 1);
   })();
 
-  const availableGroups = subjectGroups.filter((g) => !g.comingSoon);
-  const soonGroups = subjectGroups.filter((g) => g.comingSoon);
   const hasAnyEnrolled = enrolledCourses.length > 0;
+  const activeFacets = (subject !== 'all' ? 1 : 0) + (level !== 'all' ? 1 : 0) + (mine ? 1 : 0);
+  const filtering = activeFacets > 0 || query.trim().length > 0;
 
-  const searchButton = (
-    <button
-      type="button"
-      className="lrn-search"
-      onClick={() => setSearchOpen(true)}
-      aria-label={t('courses.searchLabel')}
-    >
-      <Search size={16} aria-hidden="true" />
-      <span className="lrn-search__text">
-        {L('Rechercher un cours, une leçon…', 'Chèche yon kou, yon leson…')}
-      </span>
-      <kbd className="lrn-search__kbd" aria-hidden="true">⌘K</kbd>
-    </button>
-  );
+  // ── Grouping: the two axes the catalogue genuinely has ─────────────────
+  // Subject and level are both real dimensions of this data, and a student
+  // arrives with one or the other in mind ("I need chemistry" / "I'm in
+  // NS3"), so the list can be read either way instead of forcing one.
+  const groupsFor = (list) => {
+    const map = new Map<string, any[]>();
+    for (const c of list) {
+      const key = axis === 'level' ? courseLevel(c) : c.subject;
+      if (!key) continue;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    const order = axis === 'level' ? LEVEL_ORDER : SUBJECT_ORDER;
+    return [...map.entries()]
+      .map(([key, items]) => {
+        const sorted = [...items].sort((a, b) => (axis === 'level'
+          ? (SUBJECT_ORDER.indexOf(a.subject) - SUBJECT_ORDER.indexOf(b.subject))
+          : (LEVEL_ORDER.indexOf(courseLevel(a)) - LEVEL_ORDER.indexOf(courseLevel(b)))));
+        const liveItems = sorted.filter((c) => !c.comingSoon);
+        return {
+          key,
+          items: sorted,
+          allSoon: sorted.length > 0 && liveItems.length === 0,
+          lessons: liveItems.reduce((n, c) => n + countCourseLessons(c), 0),
+          units: liveItems.reduce((n, c) => n + (c.modules?.length || 0), 0),
+        };
+      })
+      .sort((a, b) => {
+        const ia = order.indexOf(a.key); const ib = order.indexOf(b.key);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+  };
+
+  const groups = groupsFor(visible);
+  // A subject with nothing migrated yet stays visible and inert — listed as
+  // "bientôt", never dressed up as a link — unless the student has explicitly
+  // asked for it, in which case they get its levels, still inert.
+  const liveGroups = groups.filter((g) => !g.allSoon || subject !== 'all' || axis === 'level');
+  const soonGroups = (subject === 'all' && axis === 'subject') ? groups.filter((g) => g.allSoon) : [];
+
+  const groupLabel = (key) => (axis === 'level' ? levelLabel(key) : subjectName(key));
+
+  const crumbs = [
+    { label: L('Accueil', 'Akèy'), to: '/' },
+    { label: t('courses.catalog'), to: filtering ? '/courses' : null },
+    ...(subject !== 'all' ? [{ label: subjectName(subject), to: null }] : []),
+    ...(level !== 'all' ? [{ label: levelLabel(level), to: null }] : []),
+  ];
 
   return (
     <section className="section">
       <div className="container">
-        {/* Header — adapts to the active view (catalog / level) */}
+        {/* Breadcrumb — where this page sits, and one click back out of a
+            filtered view. */}
+        <nav className="lrn-crumbs" aria-label={L('Fil d’Ariane', 'Chemen an')}>
+          <ol>
+            {crumbs.map((c, i) => (
+              <li key={`${c.label}-${i}`}>
+                {c.to && i < crumbs.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => (c.to === '/courses' ? resetFacets() : navigate(c.to as string))}
+                  >
+                    {c.label}
+                  </button>
+                ) : (
+                  <span aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{c.label}</span>
+                )}
+                {i < crumbs.length - 1 && <ChevronRight size={13} aria-hidden="true" />}
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        {/* Header */}
         <div className="page-header page-header--no-eyebrow courses-header">
           <div className="courses-header__lead">
             <span className="courses-header__eyebrow">{t('nav.learn')}</span>
-            {activeGroup ? (
-              <>
-                <button type="button" className="courses-breadcrumb" onClick={goToSubjects}>
-                  <ChevronLeft size={16} /> {t('courses.backToSubjects')}
-                </button>
-                <h1 className="courses-header__title" style={{ color: activeGroup.accent }}>
-                  {subjectLabelFull}
-                </h1>
-                <button
-                  type="button"
-                  className="button button--ghost button--sm courses-header__practice"
-                  onClick={() => navigate(`/quizzes?course=${activeGroup.code}`)}
-                >
-                  <Target size={15} /> {t('courses.practiceCta')}
-                </button>
-              </>
-            ) : myCourses.length > 0 ? (
+            {myCourses.length > 0 && !filtering ? (
               <>
                 <h1 className="courses-header__title">{L('Vos cours', 'Kou ou yo')}</h1>
                 <p className="text-muted courses-header__sub">
@@ -668,25 +920,75 @@ export default function Courses() {
               </>
             ) : (
               <>
-                <h1 className="courses-header__title">{t('courses.chooseSubject')}</h1>
-                <p className="text-muted courses-header__sub">{t('courses.chooseSubjectSubtitle')}</p>
+                <h1 className="courses-header__title">{t('courses.catalog')}</h1>
+                <p className="text-muted courses-header__sub">
+                  {L(
+                    'Filtrez par matière et par niveau, ou cherchez un module ou une leçon par son nom.',
+                    'Filtre pa matyè ak pa nivo, oswa chèche yon modil oswa yon leson ak non li.',
+                  )}
+                </p>
               </>
             )}
           </div>
         </div>
 
-        {/* Toolbar — search + level filter, one compact line, at every depth */}
+        {/* Toolbar — a real search field over the catalogue, plus the axis
+            toggle. Search matches course names, module titles and lesson
+            titles; ⌘K still opens the app-wide overlay for everything else. */}
         <div className="lrn-toolbar">
-          {searchButton}
-          <LevelFilter
-            value={filter}
-            onChange={setFilter}
-            levels={levelsForSubject}
-            hasEnrolled={activeGroup ? activeGroup.enrolledCount > 0 : hasAnyEnrolled}
-            t={t}
-            L={L}
-          />
+          <div className="lrn-search">
+            <Search size={16} aria-hidden="true" />
+            <input
+              type="search"
+              className="lrn-search__input"
+              value={query}
+              onChange={(e) => setParam('q', e.target.value)}
+              placeholder={L('Rechercher un cours, un module, une leçon…', 'Chèche yon kou, yon modil, yon leson…')}
+              aria-label={t('courses.searchLabel')}
+            />
+            {query && (
+              <button
+                type="button"
+                className="lrn-search__clear"
+                onClick={() => setParam('q', null)}
+                aria-label={L('Effacer la recherche', 'Efase rechèch la')}
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <div className="lrn-axis" role="group" aria-label={L('Organiser le catalogue', 'Òganize katalòg la')}>
+            <button
+              type="button"
+              className={`lrn-axis__btn${axis === 'subject' ? ' lrn-axis__btn--on' : ''}`}
+              aria-pressed={axis === 'subject'}
+              onClick={() => setParam('vue', null)}
+            >
+              {L('Par matière', 'Pa matyè')}
+            </button>
+            <button
+              type="button"
+              className={`lrn-axis__btn${axis === 'level' ? ' lrn-axis__btn--on' : ''}`}
+              aria-pressed={axis === 'level'}
+              onClick={() => setParam('vue', 'niveau')}
+            >
+              {L('Par niveau', 'Pa nivo')}
+            </button>
+          </div>
         </div>
+
+        {/* Suggestions are module titles taken from the catalogue itself, so
+            each one is guaranteed to return something. */}
+        {!query && suggestions.length > 0 && (
+          <p className="lrn-tries">
+            <span>{L('Essayez :', 'Eseye :')}</span>
+            {suggestions.map((s) => (
+              <button key={s} type="button" className="lrn-try" onClick={() => setParam('q', s)}>
+                {s}
+              </button>
+            ))}
+          </p>
+        )}
 
         {/* Offline with a catalog on hand. The app-wide NetworkStatus banner
             already announces "hors ligne", so this line does not repeat it: it
@@ -697,8 +999,8 @@ export default function Courses() {
             <WifiOff size={15} aria-hidden="true" />
             <span>
               {L(
-                'Catalogue enregistré : vous pouvez parcourir les cours. La mise à jour de la liste et les vidéos des leçons demandent une connexion.',
-                'Katalòg ki sere a : ou ka gade kou yo. Mizajou lis la ak videyo leson yo mande koneksyon.',
+                'Catalogue enregistré : vous pouvez parcourir les cours et leurs modules. La mise à jour de la liste et les vidéos des leçons demandent une connexion.',
+                'Katalòg ki sere a : ou ka gade kou yo ak modil yo. Mizajou lis la ak videyo leson yo mande koneksyon.',
               )}
             </span>
           </p>
@@ -721,244 +1023,280 @@ export default function Courses() {
           </p>
         )}
 
-        {/* Content */}
-        {activeGroup ? (
-          levelViewCourses.length > 0 ? (
-            <div className="lrn-rows">
-              {levelViewCourses.map((course) => (
-                <CatalogCourseRow
+        {resumeCourses.length > 0 && !filtering && (
+          <div className="courses-resume courses-resume--lead" data-reveal>
+            <h2 className="courses-resume__title">{t('courses.resumeTitle')}</h2>
+            <div className="courses-resume__list">
+              {resumeCourses.map(({ course, stats }) => (
+                /* The whole row stays the click target (it always was), so
+                   the CTA is a styled span rather than a nested <button> —
+                   nesting interactive elements here would be invalid markup
+                   and give screen readers two controls for one destination. */
+                <button
+                  key={course.id}
+                  type="button"
+                  className="resume-course"
+                  style={{ '--course-accent': course.color || 'var(--primary-500)' } as React.CSSProperties}
+                  onClick={() => navigate(`/courses/${course.id}`)}
+                >
+                  {SUBJECT_COVERS[course.subject] && (
+                    <img
+                      className="resume-course__thumb"
+                      src={SUBJECT_COVERS[course.subject]}
+                      alt=""
+                      loading="lazy"
+                    />
+                  )}
+                  <span className="resume-course__info">
+                    <span className="resume-course__name">{course.name || course.title}</span>
+                    <span className="resume-course__meta">
+                      {subjectName(course.subject)} · {levelLabel(courseLevel(course))}
+                    </span>
+                    <span className="progress-bar resume-course__bar">
+                      <span className="progress-bar__fill" style={{ width: `${stats.pct}%` }} />
+                    </span>
+                    <span className="resume-course__remaining">
+                      {stats.pct}%
+                      {stats.remaining > 0
+                        ? ` · ${t('courses.lessonsRemaining', { count: stats.remaining })}`
+                        : ''}
+                    </span>
+                  </span>
+                  <span className="resume-course__cta">
+                    {L('Reprendre', 'Kontinye')} <ArrowRight size={16} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── The student's class, first and named as theirs ── */}
+        {myCourses.length > 0 && !filtering && (
+          <section className="lrn-section lrn-section--mine" aria-labelledby="lrn-mine">
+            <h2 className="lrn-section__title" id="lrn-mine">
+              {L('Pour votre classe', 'Pou klas ou')}
+              <LevelPill level={myLevel} />
+            </h2>
+            <div className="lrn-rows lrn-rows--flush">
+              {myCourses.map((course) => (
+                <CourseRow
                   key={course.id}
                   course={course}
                   stats={courseStats(course)}
-                  lead="level"
+                  progress={progressByCourseId.get(course.id)}
+                  lead="subject"
                   enrolled={isEnrolled(course)}
+                  onOpenLesson={openLesson}
                   t={t}
                   L={L}
                 />
               ))}
             </div>
-          ) : (
-            <EmptyState
-              title={t('courses.noCoursesTitle')}
-              message={t('courses.noCoursesSubtitle')}
-              action={{ label: t('courses.resetFilters'), onClick: () => setFilter('all') }}
-            />
-          )
-        ) : catalogFilterActive ? (
-          /* Toolbar filter with no subject chosen — a flat list across the
-             whole catalog, so the filter is useful where it is offered. */
-          filteredCatalog.length > 0 ? (
-            <>
-              <h2 className="lrn-section__title lrn-section__title--flat">
-                {filter === 'enrolled'
-                  ? t('courses.myCourses')
-                  : L(`Cours de ${levelLabel(filter)}`, `Kou ${levelLabel(filter)}`)}
-                <span className="lrn-count">{filteredCatalog.length}</span>
-              </h2>
-              <div className="lrn-rows">
-                {filteredCatalog.map((course) => (
-                  <CatalogCourseRow
-                    key={course.id}
-                    course={course}
-                    stats={courseStats(course)}
-                    lead="subject"
-                    enrolled={isEnrolled(course)}
-                    t={t}
-                    L={L}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              title={t('courses.noCoursesTitle')}
-              message={t('courses.noCoursesSubtitle')}
-              action={{ label: t('courses.resetFilters'), onClick: () => setFilter('all') }}
-            />
-          )
-        ) : (
-          <>
-            {resumeCourses.length > 0 && (
-              <div className="courses-resume courses-resume--lead" data-reveal>
-                <h2 className="courses-resume__title">{t('courses.resumeTitle')}</h2>
-                <div className="courses-resume__list">
-                  {resumeCourses.map(({ course, stats }) => (
-                    /* The whole row stays the click target (it always was),
-                       so the CTA is a styled span rather than a nested
-                       <button> — nesting interactive elements here would be
-                       invalid markup and give screen readers two controls
-                       for one destination. */
-                    <button
-                      key={course.id}
-                      type="button"
-                      className="resume-course"
-                      style={{ '--course-accent': course.color || 'var(--primary-500)' } as React.CSSProperties}
-                      onClick={() => navigate(`/courses/${course.id}`)}
-                    >
-                      {SUBJECT_COVERS[course.subject] && (
-                        <img
-                          className="resume-course__thumb"
-                          src={SUBJECT_COVERS[course.subject]}
-                          alt=""
-                          loading="lazy"
-                        />
-                      )}
-                      <span className="resume-course__info">
-                        <span className="resume-course__name">{course.name || course.title}</span>
-                        <span className="resume-course__meta">
-                          {subjectName(course.subject)} · {levelLabel(course.level)}
-                        </span>
-                        <span className="progress-bar resume-course__bar">
-                          <span className="progress-bar__fill" style={{ width: `${stats.pct}%` }} />
-                        </span>
-                        <span className="resume-course__remaining">
-                          {stats.pct}%
-                          {stats.remaining > 0
-                            ? ` · ${t('courses.lessonsRemaining', { count: stats.remaining })}`
-                            : ''}
-                        </span>
-                      </span>
-                      <span className="resume-course__cta">
-                        {L('Reprendre', 'Kontinye')} <ArrowRight size={16} />
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── The student's class, first and named as theirs ── */}
-            {myCourses.length > 0 && (
-              <section className="lrn-section lrn-section--mine" aria-labelledby="lrn-mine">
-                <h2 className="lrn-section__title" id="lrn-mine">
-                  {L('Pour votre classe', 'Pou klas ou')}
-                  <span className="lrn-badge">{levelLabel(myLevel)}</span>
-                </h2>
-                <div className="lrn-rows lrn-rows--flush">
-                  {myCourses.map((course) => (
-                    <CatalogCourseRow
-                      key={course.id}
-                      course={course}
-                      stats={courseStats(course)}
-                      lead="subject"
-                      enrolled={isEnrolled(course)}
-                      t={t}
-                      L={L}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* No grade yet → ask once, honestly, and never block the catalog */}
-            {!grade && (
-              <section className="lrn-ask" aria-labelledby="lrn-ask-title">
-                <h2 className="lrn-ask__title" id="lrn-ask-title">
-                  <GraduationCap size={18} aria-hidden="true" />
-                  {L('Vous êtes en quelle classe ?', 'Ki klas ou ye ?')}
-                </h2>
-                <p className="lrn-ask__sub">
-                  {L(
-                    'Nous mettrons vos cours en premier. Tout le catalogue reste visible en dessous.',
-                    'N ap mete kou ou yo an premye. Tout katalòg la ap rete vizib anba a.',
-                  )}
-                </p>
-                <div className="lrn-ask__chips">
-                  {GRADES_WITH_COURSES.map((g) => (
-                    <button
-                      key={g.code}
-                      type="button"
-                      className="lrn-ask__chip"
-                      onClick={() => { setGrade(g.code); setGradeChosen(true); }}
-                    >
-                      {isCreole ? g.labelHt : g.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Grade known, but the catalog has nothing at that level yet */}
-            {grade && myCourses.length === 0 && (
-              <section className="lrn-ask lrn-ask--none" aria-labelledby="lrn-none-title">
-                {/* The grade is a badge, not part of the sentence: inlining it
-                    produced "pour la Après le Bac (Préfac)" for the grades
-                    whose label is not a feminine noun. */}
-                <h2 className="lrn-ask__title" id="lrn-none-title">
-                  <GraduationCap size={18} aria-hidden="true" />
-                  {L('Pas encore de cours pour votre classe', 'Poko gen kou pou klas ou')}
-                  <span className="lrn-badge">{myGradeLabel}</span>
-                </h2>
-                <p className="lrn-ask__sub">
-                  {L(
-                    'Le catalogue couvre pour l’instant le Nouveau Secondaire. Vous pouvez tout consulter ci-dessous.',
-                    'Katalòg la kouvri Nouvo Segondè pou kounye a. Ou ka gade tout bagay anba a.',
-                  )}
-                </p>
-                {gradeFallback && (
-                  <button
-                    type="button"
-                    className="button button--sm lrn-ask__go"
-                    onClick={() => navigate(gradeFallback.to)}
-                  >
-                    {gradeFallback.label} <ArrowRight size={15} aria-hidden="true" />
-                  </button>
-                )}
-              </section>
-            )}
-
-            {/* ── Everything else — always reachable, never filtered away ── */}
-            <section className="lrn-section" aria-labelledby="lrn-all">
-              <h2 className="lrn-section__title" id="lrn-all">
-                {myCourses.length > 0
-                  ? L('Tout le catalogue', 'Tout katalòg la')
-                  : L('Toutes les matières', 'Tout matyè yo')}
-              </h2>
-              {availableGroups.length > 0 ? (
-                <div className="lrn-rows">
-                  {availableGroups.map((g) => (
-                    <CatalogSubjectRow
-                      key={g.code}
-                      group={g}
-                      label={subjectName(g.code)}
-                      lessons={g.items.reduce((sum, c) => sum + countCourseLessons(c), 0)}
-                      onOpen={() => setSubject(g.code)}
-                      t={t}
-                      L={L}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  title={L('Le catalogue est vide pour l’instant', 'Katalòg la vid pou kounye a')}
-                  message={L(
-                    'Aucune matière n’est encore publiée. Vous pouvez vous entraîner avec les quiz en attendant.',
-                    'Pa gen matyè ki pibliye ankò. Ou ka pratike ak quiz yo pandan n ap tann.',
-                  )}
-                  action={{ label: t('courses.practiceCta'), onClick: () => navigate('/quizzes') }}
-                />
-              )}
-
-              {/* Unavailable subjects: listed so they are not a surprise, but
-                  visibly secondary and never dressed up as a link. */}
-              {soonGroups.length > 0 && (
-                <div className="lrn-soon">
-                  <span className="lrn-soon__label">{L('Bientôt disponible', 'Byento disponib')}</span>
-                  <ul className="lrn-soon__list">
-                    {soonGroups.map((g) => (
-                      <li key={g.code} className="lrn-soon__item">
-                        <span className="lrn-soon__name">{subjectName(g.code)}</span>
-                        <span className="lrn-soon__note">
-                          {L('cours en préparation', 'kou a ap prepare')}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </section>
-          </>
+          </section>
         )}
+
+        {/* No grade yet → ask once, honestly, and never block the catalog */}
+        {!grade && !filtering && (
+          <section className="lrn-ask" aria-labelledby="lrn-ask-title">
+            <h2 className="lrn-ask__title" id="lrn-ask-title">
+              <GraduationCap size={18} aria-hidden="true" />
+              {L('Vous êtes en quelle classe ?', 'Ki klas ou ye ?')}
+            </h2>
+            <p className="lrn-ask__sub">
+              {L(
+                'Nous mettrons vos cours en premier. Tout le catalogue reste visible en dessous.',
+                'N ap mete kou ou yo an premye. Tout katalòg la ap rete vizib anba a.',
+              )}
+            </p>
+            <div className="lrn-ask__chips">
+              {GRADES_WITH_COURSES.map((g) => (
+                <button
+                  key={g.code}
+                  type="button"
+                  className="lrn-ask__chip"
+                  onClick={() => { setGrade(g.code); setGradeChosen(true); }}
+                >
+                  {isCreole ? g.labelHt : g.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Grade known, but the catalog has nothing at that level yet */}
+        {grade && myCourses.length === 0 && !filtering && (
+          <section className="lrn-ask lrn-ask--none" aria-labelledby="lrn-none-title">
+            {/* The grade is a badge, not part of the sentence: inlining it
+                produced "pour la Après le Bac (Préfac)" for the grades
+                whose label is not a feminine noun. */}
+            <h2 className="lrn-ask__title" id="lrn-none-title">
+              <GraduationCap size={18} aria-hidden="true" />
+              {L('Pas encore de cours pour votre classe', 'Poko gen kou pou klas ou')}
+              <span className="lrn-badge">{myGradeLabel}</span>
+            </h2>
+            <p className="lrn-ask__sub">
+              {L(
+                'Le catalogue couvre pour l’instant le Nouveau Secondaire. Vous pouvez tout consulter ci-dessous.',
+                'Katalòg la kouvri Nouvo Segondè pou kounye a. Ou ka gade tout bagay anba a.',
+              )}
+            </p>
+            {gradeFallback && (
+              <button
+                type="button"
+                className="button button--sm lrn-ask__go"
+                onClick={() => navigate(gradeFallback.to)}
+              >
+                {gradeFallback.label} <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            )}
+          </section>
+        )}
+
+        {/* ── Everything else — always reachable, never filtered away ── */}
+        <div className="lrn-layout">
+          <Facets
+            subject={subject}
+            level={level}
+            mine={mine}
+            onSubject={(v) => setParam('matiere', v)}
+            onLevel={(v) => setParam('niveau', v)}
+            onMine={(v) => setParam('mes', v ? '1' : null)}
+            subjectCounts={subjectCounts}
+            levelCounts={levelCounts}
+            subjects={subjectOptions}
+            levels={levelOptions}
+            hasEnrolled={hasAnyEnrolled}
+            activeCount={activeFacets}
+            onReset={resetFacets}
+            t={t}
+            L={L}
+          />
+
+          <div className="lrn-results">
+            <div className="lrn-results__head">
+              <h2 className="lrn-section__title" id="lrn-all">
+                {filtering
+                  ? L('Résultats', 'Rezilta')
+                  : myCourses.length > 0
+                    ? L('Tout le catalogue', 'Tout katalòg la')
+                    : L('Toutes les matières', 'Tout matyè yo')}
+                <span className="lrn-count">{visible.length}</span>
+              </h2>
+              {/* The catalogue's real size, counted from the catalogue that is
+                  loaded — never a figure typed into the page. */}
+              {!filtering && totals.courses > 0 && (
+                <p className="lrn-results__note">
+                  {L(
+                    `${totals.subjects} matières · ${totals.courses} cours · ${totals.units} modules · ${totals.lessons} leçons`,
+                    `${totals.subjects} matyè · ${totals.courses} kou · ${totals.units} modil · ${totals.lessons} leson`,
+                  )}
+                  {totals.soonSubjects > 0 && L(
+                    ` — et ${totals.soonSubjects} matière en préparation`,
+                    ` — ak ${totals.soonSubjects} matyè k ap prepare`,
+                  )}
+                </p>
+              )}
+            </div>
+
+            {visible.length > 0 ? (
+              <>
+                {liveGroups.map((g) => (
+                  <section key={g.key} className="lrn-group" aria-labelledby={`grp-${g.key}`}>
+                    <div className="lrn-group__head">
+                      {axis === 'subject' && <SubjectThumb code={g.key} />}
+                      <div className="lrn-group__lead">
+                        <h3 className="lrn-group__title" id={`grp-${g.key}`}>{groupLabel(g.key)}</h3>
+                        <p className="lrn-group__meta">
+                          {[
+                            axis === 'subject'
+                              ? t('courses.levelCount', { count: g.items.length })
+                              : `${g.items.length} ${g.items.length > 1 ? L('cours', 'kou') : L('cours', 'kou')}`,
+                            g.units > 0 ? t('courses.modulesCount', { count: g.units }) : '',
+                            g.lessons > 0 ? t('courses.lessonsCount', { count: g.lessons }) : '',
+                          ].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      {axis === 'subject' && !g.allSoon && (
+                        <button
+                          type="button"
+                          className="button button--ghost button--sm lrn-group__practice"
+                          onClick={() => navigate(`/quizzes?course=${g.key}`)}
+                        >
+                          <Target size={15} aria-hidden="true" /> {t('courses.practiceCta')}
+                        </button>
+                      )}
+                    </div>
+                    <div className="lrn-rows">
+                      {g.items.map((course) => (
+                        <CourseRow
+                          key={course.id}
+                          course={course}
+                          stats={courseStats(course)}
+                          progress={progressByCourseId.get(course.id)}
+                          lead={axis === 'subject' ? 'level' : 'subject'}
+                          enrolled={isEnrolled(course)}
+                          units={unitsFor(course.id)}
+                          forceOpen={Boolean(query.trim() && unitsFor(course.id))}
+                          onOpenLesson={openLesson}
+                          t={t}
+                          L={L}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+
+                {/* Unavailable subjects: listed so they are not a surprise, but
+                    visibly secondary and never dressed up as a link. */}
+                {soonGroups.length > 0 && (
+                  <div className="lrn-soon">
+                    <span className="lrn-soon__label">{L('Bientôt disponible', 'Byento disponib')}</span>
+                    <ul className="lrn-soon__list">
+                      {soonGroups.map((g) => (
+                        <li key={g.key} className="lrn-soon__item">
+                          <span className="lrn-soon__name">{groupLabel(g.key)}</span>
+                          {/* The level count is real (the documents exist and
+                              are flagged `coming_soon`); no lesson count is
+                              shown, because none of it is published yet. */}
+                          <span className="lrn-soon__note">
+                            {t('courses.levelCount', { count: g.items.length })}
+                            {L(' en préparation', ' k ap prepare')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : filtering ? (
+              /* Empty says which filter emptied it and undoes exactly that. */
+              <EmptyState
+                title={query.trim()
+                  ? L(`Aucun résultat pour « ${query.trim()} »`, `Pa gen rezilta pou « ${query.trim()} »`)
+                  : t('courses.noCoursesTitle')}
+                message={L(
+                  'Nous cherchons dans les noms de cours, les titres de modules et les titres de leçons du catalogue.',
+                  'N ap chèche nan non kou yo, tit modil yo ak tit leson yo nan katalòg la.',
+                )}
+                action={{ label: t('courses.resetFilters'), onClick: resetFacets }}
+                secondaryAction={{
+                  label: L('Chercher dans toute l’app', 'Chèche nan tout app la'),
+                  onClick: () => setSearchOpen(true),
+                }}
+              />
+            ) : (
+              <EmptyState
+                title={L('Le catalogue est vide pour l’instant', 'Katalòg la vid pou kounye a')}
+                message={L(
+                  'Aucune matière n’est encore publiée. Vous pouvez vous entraîner avec les quiz en attendant.',
+                  'Pa gen matyè ki pibliye ankò. Ou ka pratike ak quiz yo pandan n ap tann.',
+                )}
+                action={{ label: t('courses.practiceCta'), onClick: () => navigate('/quizzes') }}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );
