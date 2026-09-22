@@ -1,11 +1,23 @@
-import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Brain, ChevronRight, ClipboardCheck, Hourglass, ListChecks, Timer } from 'lucide-react';
+import {
+  Brain,
+  ChevronRight,
+  ClipboardCheck,
+  Flame,
+  Hourglass,
+  ListChecks,
+  Timer,
+  WifiOff,
+} from 'lucide-react';
 import useStore from '../contexts/store';
 import { useAppData } from '../hooks/useData';
+import { useTrivia } from '../hooks/useTrivia';
+import { useStreak } from '../hooks/useStreak';
 import { loadDueReviewIds } from '../services/reviewService';
 import { readMastery } from '../services/masteryService';
+import { normalizeExamCatalog } from '../utils/examCatalog';
 import { courseLessonIds, summarize } from '../../shared/mastery';
 import { gradeProfile } from '../config/trackConfig';
 import './Practice.css';
@@ -13,7 +25,7 @@ import './Practice.css';
 /**
  * /practice — the hub §6.4 asks for: choose by learning need, not by feature.
  *
- * Three things this page is required to get right, and how it does:
+ * Five things this page is required to get right, and how it does:
  *
  * 1. QUIZZES AND EXAMS ARE NOT INTERCHANGEABLE. They are not siblings in one
  *    grid any more. Everything untimed and unrecorded lives under
@@ -34,6 +46,21 @@ import './Practice.css';
  *    a state, one of which is "we do not have enough of your work to say".
  *    That state is a first-class outcome, not a fallback — §3 forbids
  *    inventing a weakness to fill this space.
+ *
+ * 4. EVERY NUMBER ON THIS PAGE IS COUNTED, NEVER QUOTED. The subject and level
+ *    chips are built from the courses the catalogue actually serves; the unit
+ *    and lesson counts are `modules.length` on that course; the exam counts are
+ *    rows of `/exam_catalog_index.json` filtered by level and subject, with the
+ *    genuinely-absent `duration_minutes` reported as "non chronométré" rather
+ *    than guessed. Nothing here is a marketing figure, so nothing here can go
+ *    stale against the content.
+ *
+ * 5. POINTS AND STREAK ARE READ, NOT INVENTED, AND THEIR SCOPE IS STATED.
+ *    XP comes from the gamification profile, which only games and the daily
+ *    challenge write to. The streak comes from users/{uid}/streaks/global,
+ *    which a saved exam attempt, the study plan and a game write to — and
+ *    practice quizzes, which save nothing, do not. The strip says exactly
+ *    that, because a "study streak" that silently ignores studying is a lie.
  */
 
 type Fact = string;
@@ -46,17 +73,49 @@ type PracticeChoice = {
   description: string;
   /** Purpose/time/timed/saved — see the header comment. Rendered in full at every width. */
   facts: Fact[];
+  /** One counted figure about the current subject/level, or null when we cannot count one. */
+  stat?: string | null;
   primary?: boolean;
   /** Shown under the card when the activity is not the priority for this grade. */
   aside?: string;
 };
 
-/** gradeProfile().examLevel → the level path, so a student lands on their own papers. */
-const EXAM_LEVEL_TO_PATH: Record<string, string> = {
-  baccalaureat: '/exams/terminale',
-  universite: '/exams/university',
-  '9eme_af': '/exams/9e',
+/** gradeProfile().examLevel → the level's URL slug, so a student lands on their own papers. */
+const EXAM_LEVEL_TO_SLUG: Record<string, string> = {
+  baccalaureat: 'terminale',
+  universite: 'university',
+  '9eme_af': '9e',
 };
+
+/** A student's class → the catalog level that carries their programme. Mirrors
+ *  the same four-entry literal in Quizzes.tsx and Courses.tsx: a label mapping,
+ *  not state. 7ᵉ/8ᵉ/9ᵉ/Post-Bac have no `NS*` course of their own. */
+const GRADE_TO_LEVEL: Record<string, string> = {
+  NS1: 'NSI', NS2: 'NSII', NS3: 'NSIII', NS4: 'NSIV',
+};
+
+const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
+
+/** Subject codes as the catalogue emits them → the two names we need for them.
+ *  `exam` is the literal `subject` string in exam_catalog_index.json, which is
+ *  what /exams/:level/matiere/:subject matches on. */
+const SUBJECTS: Record<string, { fr: string; ht: string; exam: string }> = {
+  MATH: { fr: 'Mathématiques', ht: 'Matematik', exam: 'Mathématiques' },
+  CHEM: { fr: 'Chimie', ht: 'Chimi', exam: 'Chimie' },
+  PHYS: { fr: 'Physique', ht: 'Fizik', exam: 'Physique' },
+  ECON: { fr: 'Économie', ht: 'Ekonomi', exam: 'Économie' },
+};
+
+/** Chip order when several subjects are open. Anything unlisted follows. */
+const SUBJECT_ORDER = ['MATH', 'CHEM', 'PHYS', 'ECON'];
+
+/** Where the filter is remembered between visits. */
+const FILTER_KEY = 'edlight.practice.filter';
+
+/** French elision: "de Chimie" but "d’Économie". Creole needs no equivalent. */
+function ofFr(name: string) {
+  return /^[aàâeéèêiîoôuûyAÀÂEÉÈÊIÎOÔUÛY]/.test(name) ? `d’${name}` : `de ${name}`;
+}
 
 /**
  * Enough recorded lessons in one course before that course may be named.
@@ -152,19 +211,186 @@ function useEvidence(): Evidence {
   ]);
 }
 
+/** The slim browse index — same query key as /exams, so the two share one fetch. */
+function useExamIndex() {
+  return useQuery({
+    queryKey: ['exam-catalog-index'],
+    queryFn: async () => {
+      const res = await fetch('/exam_catalog_index.json');
+      if (!res.ok) throw new Error('catalog index unavailable');
+      return normalizeExamCatalog(await res.json()) as any[];
+    },
+    staleTime: Infinity,
+  });
+}
+
+/** Last visit's subject/level, if the browser let us keep it. */
+function readStoredFilter(): { subject: string; level: string } {
+  try {
+    const raw = localStorage.getItem(FILTER_KEY) || '';
+    const [subject, level] = raw.split('|');
+    return { subject: (subject || '').toUpperCase(), level: (level || '').toUpperCase() };
+  } catch {
+    return { subject: '', level: '' };
+  }
+}
+
 export default function Practice() {
   const language = useStore((state) => state.language);
   const userId = useStore((state) => state.user?.uid);
   const grade = useStore((state) => state.grade);
   const toggleAuthModal = useStore((state) => state.toggleAuthModal);
   const isCreole = language === 'ht';
-  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const t = useCallback(
+    (fr: string, ht: string) => (isCreole ? ht : fr),
+    [isCreole],
+  );
 
   const evidence = useEvidence();
   const profile = gradeProfile(grade);
   /** `examLevel: null` (7ᵉ/8ᵉ, NS1–NS3) means official papers are not this grade's errand. */
   const examsRelevant = profile.examLevel !== null;
-  const examHref = (profile.examLevel && EXAM_LEVEL_TO_PATH[profile.examLevel]) || '/exams';
+  const examSlug = (profile.examLevel && EXAM_LEVEL_TO_SLUG[profile.examLevel]) || '';
+  const myLevel = (grade && GRADE_TO_LEVEL[grade]) || '';
+
+  // ── The filter: subject × level ───────────────────────────────────────────
+  // Only courses the catalogue actually opens are offered. A `comingSoon`
+  // course is real content that does not exist yet, so it cannot be a practice
+  // target — it is named once, below the chips, instead of being a dead chip.
+  const { data: appData, isError: coursesError, isLoading: coursesLoading } = useAppData();
+  const courses: any[] = appData?.courses || [];
+  const openCourses = useMemo(() => courses.filter((c) => !c.comingSoon), [courses]);
+
+  const subjectOptions = useMemo(() => {
+    const seen = new Set<string>(openCourses.map((c) => c.subject).filter(Boolean));
+    const known = SUBJECT_ORDER.filter((s) => seen.has(s));
+    const rest = Array.from(seen).filter((s) => !SUBJECT_ORDER.includes(s)).sort();
+    return [...known, ...rest];
+  }, [openCourses]);
+
+  /** Subjects in the catalogue with nothing open yet — named, never offered. */
+  const pendingSubjects = useMemo(() => {
+    const open = new Set(subjectOptions);
+    const seen = new Set<string>(
+      courses.filter((c) => c.comingSoon && c.subject && !open.has(c.subject)).map((c) => c.subject),
+    );
+    return Array.from(seen);
+  }, [courses, subjectOptions]);
+
+  const levelsFor = useCallback(
+    (subj: string) => {
+      const set = new Set<string>(openCourses.filter((c) => c.subject === subj).map((c) => c.level));
+      const known = LEVEL_ORDER.filter((l) => set.has(l));
+      const rest = Array.from(set).filter((l) => !LEVEL_ORDER.includes(l)).sort();
+      return [...known, ...rest];
+    },
+    [openCourses],
+  );
+
+  // Read once, at mount, so writing the URL below can never feed back into the
+  // resolution and start a loop. A deep link wins; then the last visit; then
+  // the student's own class.
+  const [requested] = useState(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const stored = readStoredFilter();
+    return {
+      subject: (sp.get('matiere') || stored.subject || '').toUpperCase(),
+      level: (sp.get('niveau') || stored.level || '').toUpperCase(),
+    };
+  });
+
+  const [subject, setSubject] = useState('');
+  const [level, setLevel] = useState('');
+  const [, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (!subjectOptions.length) return;
+
+    let nextSubject = subjectOptions.includes(subject) ? subject : '';
+    if (!nextSubject && subjectOptions.includes(requested.subject)) nextSubject = requested.subject;
+    if (!nextSubject) {
+      // The student's own class leads: the first subject that actually ships a
+      // course at their level, and only then the first subject at all.
+      nextSubject =
+        subjectOptions.find((s) => openCourses.some((c) => c.subject === s && c.level === myLevel)) ||
+        subjectOptions[0];
+    }
+
+    const levels = levelsFor(nextSubject);
+    const keep = nextSubject === subject ? level : '';
+    let nextLevel = levels.includes(keep) ? keep : '';
+    if (!nextLevel && levels.includes(requested.level)) nextLevel = requested.level;
+    if (!nextLevel) nextLevel = levels.includes(myLevel) ? myLevel : levels[0] || '';
+
+    if (nextSubject !== subject) setSubject(nextSubject);
+    if (nextLevel !== level) setLevel(nextLevel);
+  }, [subjectOptions, openCourses, levelsFor, myLevel, requested, subject, level]);
+
+  // The choice rides in the URL (so it survives a reload and can be shared) and
+  // in localStorage (so it survives leaving the page). Both writes are
+  // best-effort; a browser that refuses storage just forgets.
+  useEffect(() => {
+    if (!subject || !level) return;
+    try {
+      localStorage.setItem(FILTER_KEY, `${subject}|${level}`);
+    } catch {
+      /* private mode / blocked storage — the page works without it */
+    }
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('matiere') === subject && sp.get('niveau') === level) return;
+    sp.set('matiere', subject);
+    sp.set('niveau', level);
+    setSearchParams(sp, { replace: true });
+  }, [subject, level, setSearchParams]);
+
+  const levelOptions = useMemo(() => levelsFor(subject), [levelsFor, subject]);
+  const subjectName = subject ? t(SUBJECTS[subject]?.fr || subject, SUBJECTS[subject]?.ht || subject) : '';
+  const levelLabel = level ? level.replace(/^NS(.*)$/i, 'NS $1') : '';
+  const scopeLabel = subjectName && levelLabel ? `${subjectName} · ${levelLabel}` : subjectName;
+
+  /** The selected course, and what it really holds. */
+  const selected = useMemo(
+    () => openCourses.find((c) => c.subject === subject && c.level === level) || null,
+    [openCourses, subject, level],
+  );
+  const unitCount = selected ? (selected.modules || []).length : 0;
+  const lessonCount = selected
+    ? (selected.modules || []).reduce((n: number, m: any) => n + (m.lessons?.length || 0), 0)
+    : 0;
+
+  const courseCode = subject && level ? `${subject}-${level}` : '';
+  const quizHref = courseCode ? `/quizzes?course=${encodeURIComponent(courseCode)}` : '/quizzes';
+  const quizTenHref = courseCode
+    ? `/quizzes?course=${encodeURIComponent(courseCode)}&mode=quiz`
+    : '/quizzes?mode=quiz';
+
+  // ── Exams: counted from the catalogue, never quoted ───────────────────────
+  const examIndex = useExamIndex();
+  const examStat = useMemo(() => {
+    if (!examsRelevant || !profile.examLevel) return null;
+    if (examIndex.isPending) return { kind: 'loading' as const };
+    if (examIndex.isError || !Array.isArray(examIndex.data)) return { kind: 'unavailable' as const };
+    const rows = examIndex.data.filter((e) => e?.level === profile.examLevel);
+    const examName = subject ? SUBJECTS[subject]?.exam : '';
+    const mine = examName ? rows.filter((e) => e?.subject === examName) : [];
+    return {
+      kind: 'ready' as const,
+      atLevel: rows.length,
+      mine: mine.length,
+      // 83 of the 530 catalog entries genuinely carry no duration, and ExamTake
+      // starts no countdown without one — so they are reported as untimed.
+      untimed: mine.filter((e) => !e?.duration_minutes).length,
+    };
+  }, [examsRelevant, profile.examLevel, examIndex.isPending, examIndex.isError, examIndex.data, subject]);
+
+  const examHref = useMemo(() => {
+    if (!examSlug) return '/exams';
+    const examName = subject ? SUBJECTS[subject]?.exam : '';
+    if (examStat?.kind === 'ready' && examStat.mine > 0 && examName) {
+      return `/exams/${examSlug}/matiere/${encodeURIComponent(examName)}`;
+    }
+    return `/exams/${examSlug}`;
+  }, [examSlug, subject, examStat]);
 
   const dueCount = evidence.kind === 'review' ? evidence.count : 0;
   /** Exactly one card is visually strongest (§7). Mistakes win when there are any. */
@@ -177,8 +403,8 @@ export default function Practice() {
       eyebrow: t('À partir de vos erreurs', 'Soti nan erè ou yo'),
       title: t('Revoir ce que vous avez manqué', 'Revize sa ou te rate'),
       description: t(
-        'Une session bâtie uniquement avec les questions que vous avez ratées. Une bonne réponse retire la question de la liste.',
-        'Yon sesyon ki fèt sèlman ak kesyon ou te rate yo. Yon bon repons retire kesyon an nan lis la.',
+        'Une session bâtie uniquement avec les questions d’entraînement que vous avez ratées, toutes matières confondues. Une bonne réponse retire la question de la liste.',
+        'Yon sesyon ki fèt sèlman ak kesyon pratik ou te rate yo, nan tout matyè. Yon bon repons retire kesyon an nan lis la.',
       ),
       facts: [
         dueCount > 0
@@ -189,16 +415,24 @@ export default function Practice() {
         t('Aucune note ; la liste est enregistrée', 'Pa gen nòt ; lis la anrejistre'),
         t('Compte requis', 'Ou bezwen yon kont'),
       ],
+      // The review list is the quiz bank, never an exam paper, and it is not
+      // filtered by the chips above. Both facts are stated rather than implied.
+      stat: t(
+        'Questions d’entraînement uniquement — pas les épreuves d’examen · toutes matières',
+        'Se kesyon pratik sèlman — pa eprèv egzamen · tout matyè',
+      ),
       primary: primaryKey === 'review',
     },
     {
-      href: '/quizzes',
+      href: quizHref,
       icon: <ListChecks size={23} aria-hidden="true" />,
-      eyebrow: t('Pratique courte', 'Pratik kout'),
-      title: t('S’entraîner par matière', 'Pratike pa matyè'),
+      eyebrow: t('Série courte', 'Seri kout'),
+      title: scopeLabel
+        ? t(`S’entraîner en ${scopeLabel}`, `Pratike nan ${scopeLabel}`)
+        : t('S’entraîner par matière', 'Pratike pa matyè'),
       description: t(
-        'Choisissez une matière, un niveau et une unité, puis enchaînez les questions une par une avec une correction immédiate.',
-        'Chwazi yon matyè, yon nivo ak yon inite, epi fè kesyon yo youn apre lòt ak koreksyon touswit.',
+        'Les questions arrivent une par une, avec la correction tout de suite. Vous choisissez l’unité et vous arrêtez quand vous voulez.',
+        'Kesyon yo vini youn apre lòt, ak koreksyon an touswit. Ou chwazi inite a epi ou kanpe lè ou vle.',
       ),
       facts: [
         t('Une question à la fois, autant que vous voulez', 'Yon kesyon alafwa, otan ou vle'),
@@ -206,10 +440,17 @@ export default function Practice() {
         t('Trois essais avec indices', 'Twa esè ak endis'),
         t('Aucune note enregistrée', 'Pa gen nòt ki anrejistre'),
       ],
+      stat:
+        unitCount > 0
+          ? t(
+              `${unitCount} unité${unitCount === 1 ? '' : 's'} · ${lessonCount} leçon${lessonCount === 1 ? '' : 's'} en ${scopeLabel}`,
+              `${unitCount} inite · ${lessonCount} leson nan ${scopeLabel}`,
+            )
+          : null,
       primary: primaryKey === 'drill',
     },
     {
-      href: '/quizzes?mode=quiz',
+      href: quizTenHref,
       icon: <Timer size={23} aria-hidden="true" />,
       eyebrow: t('Se tester', 'Teste tèt ou'),
       title: t('Faire un quiz de 10 questions', 'Fè yon kwiz 10 kesyon'),
@@ -223,8 +464,51 @@ export default function Practice() {
         t('Score affiché à la fin', 'Nòt parèt nan fen an'),
         t('Score non enregistré', 'Nòt la pa anrejistre'),
       ],
+      stat: scopeLabel
+        ? t(`Sur une unité ${ofFr(scopeLabel)}`, `Sou yon inite nan ${scopeLabel}`)
+        : null,
     },
   ];
+
+  const examStatLine = (() => {
+    if (!examStat) return null;
+    if (examStat.kind === 'loading') {
+      return t('Nous comptons les épreuves disponibles…', 'N ap konte eprèv ki disponib yo…');
+    }
+    if (examStat.kind === 'unavailable') {
+      return t(
+        'La liste des épreuves ne se charge pas pour l’instant — le lien fonctionne quand même.',
+        'Lis eprèv yo pa chaje kounye a — men lyen an ap mache kanmenm.',
+      );
+    }
+    if (examStat.mine === 0) {
+      return t(
+        `Aucune épreuve ${ofFr(subjectName)} à ce niveau. Le lien ouvre les ${examStat.atLevel} épreuves du niveau, toutes matières.`,
+        `Pa gen eprèv ${subjectName} nan nivo sa a. Lyen an ouvri tout ${examStat.atLevel} eprèv nivo a, nan tout matyè.`,
+      );
+    }
+    const timed = examStat.mine - examStat.untimed;
+    const n = examStat.mine;
+    const s = n === 1 ? '' : 's';
+    // Three shapes, because "0 sans durée" is noise and "toutes chronométrées"
+    // would be a lie on the 83 papers whose duration_minutes is genuinely null.
+    if (examStat.untimed === 0) {
+      return t(
+        `${n} épreuve${s} ${ofFr(subjectName)}, toutes avec une durée officielle`,
+        `${n} eprèv ${subjectName}, tout gen yon dire ofisyèl`,
+      );
+    }
+    if (timed === 0) {
+      return t(
+        `${n} épreuve${s} ${ofFr(subjectName)} · aucune n’a de durée officielle, donc aucune n’est chronométrée`,
+        `${n} eprèv ${subjectName} · pa gen youn ki gen dire ofisyèl, donk pa gen kwonomèt`,
+      );
+    }
+    return t(
+      `${n} épreuves ${ofFr(subjectName)} · ${timed} chronométrées, ${examStat.untimed} sans durée officielle (non chronométrée${examStat.untimed === 1 ? '' : 's'})`,
+      `${n} eprèv ${subjectName} · ${timed} ak kwonomèt, ${examStat.untimed} san dire ofisyèl (san kwonomèt)`,
+    );
+  })();
 
   const examChoice: PracticeChoice = {
     href: examHref,
@@ -241,6 +525,7 @@ export default function Practice() {
       t('Tentative et note enregistrées', 'Tantativ ak nòt anrejistre'),
       t('Compte requis pour enregistrer', 'Ou bezwen yon kont pou anrejistre'),
     ],
+    stat: examStatLine,
     primary: primaryKey === 'exam',
     aside: examsRelevant
       ? undefined
@@ -306,13 +591,41 @@ export default function Practice() {
           </p>
         </header>
 
+        {userId && <ProgressStrip t={t} />}
+
         <Suggestion evidence={evidence} t={t} onSignIn={toggleAuthModal} signedIn={!!userId} />
+
+        <FilterBar
+          t={t}
+          subject={subject}
+          level={level}
+          subjectOptions={subjectOptions}
+          levelOptions={levelOptions}
+          pendingSubjects={pendingSubjects}
+          myLevel={myLevel}
+          loading={coursesLoading && !appData}
+          failed={coursesError && openCourses.length === 0}
+          onSubject={setSubject}
+          onLevel={setLevel}
+        />
 
         {/* §5: grade emphasis is preserved as ORDER. NS4/9ᵉ/Post-Bac lead with
             the paper they are sitting; 7ᵉ/8ᵉ and NS1–NS3 (examLevel: null) lead
             with training and get the exam block quieted, never removed (§11:
             no feature becomes unreachable). */}
         {examsRelevant ? <>{examGroup}{trainingGroup}</> : <>{trainingGroup}{examGroup}</>}
+
+        <SampleQuestion t={t} isCreole={isCreole} subject={subject} href={quizHref} scope={scopeLabel} />
+
+        <p className="practice-offline">
+          <WifiOff size={17} aria-hidden="true" />
+          <span>
+            {t(
+              'Réseau coupé : les pages et les sujets d’examen déjà ouverts restent lisibles, parce qu’ils sont gardés sur votre appareil. Une série de questions jamais ouverte, elle, a besoin du réseau, et rien n’est enregistré tant qu’il n’est pas revenu.',
+              'Lè rezo a koupe : paj yo ak sijè egzamen ou te deja louvri rete lizib, paske yo sere sou aparèy ou. Men yon seri kesyon ou pa t janm louvri bezwen rezo, epi anyen pa anrejistre toutotan rezo a pa tounen.',
+            )}
+          </span>
+        </p>
 
         {/* Planning is neither training nor an exam, so it is a row, not a
             fifth equal-weight card. §6.1: a plan you made is not a
@@ -335,6 +648,463 @@ export default function Practice() {
   );
 }
 
+/**
+ * Subject × level, above everything it scopes.
+ *
+ * The chips are the catalogue, not a menu someone typed: a subject appears
+ * because a course of that subject is open, and a level appears because that
+ * subject ships it. That is why there is no "toutes matières" chip — it would
+ * promise a shape of practice the quiz screen cannot take.
+ *
+ * Level is encoded by how much of the one azure the chip carries (§ palette:
+ * one accent), not by a per-level hue. The student's own class is marked.
+ */
+function FilterBar({
+  t,
+  subject,
+  level,
+  subjectOptions,
+  levelOptions,
+  pendingSubjects,
+  myLevel,
+  loading,
+  failed,
+  onSubject,
+  onLevel,
+}: {
+  t: (fr: string, ht: string) => string;
+  subject: string;
+  level: string;
+  subjectOptions: string[];
+  levelOptions: string[];
+  pendingSubjects: string[];
+  myLevel: string;
+  loading: boolean;
+  failed: boolean;
+  onSubject: (s: string) => void;
+  onLevel: (l: string) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="practice-filter practice-filter--flat" role="status" aria-busy="true">
+        <p className="practice-filter__note">
+          {t('Nous chargeons les matières ouvertes…', 'N ap chaje matyè ki ouvè yo…')}
+        </p>
+      </div>
+    );
+  }
+
+  if (failed || subjectOptions.length === 0) {
+    return (
+      <div className="practice-filter practice-filter--flat" role="status">
+        <p className="practice-filter__note">
+          {failed
+            ? t(
+                'Le catalogue ne se charge pas, donc nous ne pouvons pas vous proposer de matière ici. Les entrées ci-dessous fonctionnent et vous laisseront choisir sur place.',
+                'Katalòg la pa chaje, konsa nou pa ka pwopoze ou yon matyè isit la. Antre anba yo ap mache epi w ap chwazi sou plas.',
+              )
+            : t(
+                'Aucune matière n’est encore ouverte. Les entrées ci-dessous restent accessibles.',
+                'Pa gen matyè ki ouvè ankò. Antre anba yo rete aksesib.',
+              )}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="practice-filter">
+      <div className="practice-filter__row">
+        <span className="practice-filter__label" id="practice-filter-subject">
+          {t('Matière', 'Matyè')}
+        </span>
+        <div className="practice-filter__chips" role="group" aria-labelledby="practice-filter-subject">
+          {subjectOptions.map((code) => (
+            <button
+              key={code}
+              type="button"
+              className={`practice-chip${code === subject ? ' is-on' : ''}`}
+              aria-pressed={code === subject}
+              onClick={() => onSubject(code)}
+            >
+              {t(SUBJECTS[code]?.fr || code, SUBJECTS[code]?.ht || code)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="practice-filter__row">
+        <span className="practice-filter__label" id="practice-filter-level">
+          {t('Niveau', 'Nivo')}
+        </span>
+        <div className="practice-filter__chips" role="group" aria-labelledby="practice-filter-level">
+          {levelOptions.map((code) => {
+            const rank = LEVEL_ORDER.indexOf(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                className={`practice-chip practice-chip--level${code === level ? ' is-on' : ''}`}
+                data-rank={rank >= 0 ? rank + 1 : 0}
+                aria-pressed={code === level}
+                onClick={() => onLevel(code)}
+              >
+                {code.replace(/^NS(.*)$/i, 'NS $1')}
+                {code === myLevel && (
+                  <span className="practice-chip__mine">{t('votre classe', 'klas ou')}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <p className="practice-filter__note">
+        {t(
+          'Ce choix suit : les entrées ci-dessous, l’exemple en bas de page et votre prochaine visite.',
+          'Chwa sa a swiv ou : antre anba yo, egzanp ki nan pye paj la, ak pwochèn vizit ou.',
+        )}
+        {pendingSubjects.length > 0 && ' '}
+        {pendingSubjects.length > 0 &&
+          t(
+            `${pendingSubjects.map((c) => SUBJECTS[c]?.fr || c).join(', ')} : les cours sont écrits mais aucune leçon n’est encore ouverte.`,
+            `${pendingSubjects.map((c) => SUBJECTS[c]?.ht || c).join(', ')} : kou yo ekri men pa gen leson ki ouvè ankò.`,
+          )}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Points, streak and the daily challenge — read from the two stores that own
+ * them, and never shown to a signed-out visitor, because for them the numbers
+ * would be zeros that mean nothing rather than zeros that mean "not yet".
+ *
+ * The scope line is the point of the strip. XP is written only by the games
+ * and the daily challenge (triviaService). The streak is written by a saved
+ * exam attempt, the study plan and a game (streakService.recordActivity) — and
+ * NOT by the practice quizzes, which save nothing at all. A student who sees
+ * "0" after an hour of quizzes deserves to be told why, not left to conclude
+ * the app lost their work.
+ */
+function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
+  const { profile, isLoading: triviaLoading, level, daily } = useTrivia();
+  const { streak, isLoading: streakLoading } = useStreak();
+
+  if (triviaLoading || streakLoading) {
+    return (
+      <div className="practice-strip" role="status" aria-busy="true">
+        <p className="practice-strip__note">
+          {t('Nous lisons vos points et votre série…', 'N ap li pwen ou yo ak seri ou…')}
+        </p>
+      </div>
+    );
+  }
+
+  const xp = profile?.xp || 0;
+  const days = streak?.currentStreak || 0;
+
+  return (
+    <div className="practice-strip">
+      <dl className="practice-strip__stats">
+        <div className="practice-strip__stat">
+          <dt>{t('Points', 'Pwen')}</dt>
+          <dd>
+            {xp > 0
+              ? t(`${xp} XP · niveau ${level.level}`, `${xp} XP · nivo ${level.level}`)
+              : t('Aucun point encore', 'Poko gen pwen')}
+          </dd>
+        </div>
+        <div className="practice-strip__stat">
+          <dt>
+            <Flame size={14} aria-hidden="true" />
+            {t('Série', 'Seri')}
+          </dt>
+          <dd>
+            {days > 0
+              ? t(`${days} jour${days === 1 ? '' : 's'} de suite`, `${days} jou youn dèyè lòt`)
+              : t('Aucune série en cours', 'Pa gen seri k ap mache')}
+          </dd>
+        </div>
+        <div className="practice-strip__stat">
+          <dt>{t('Défi du jour', 'Defi jodi a')}</dt>
+          <dd>
+            {daily.completedToday
+              ? t(`Fait — ${daily.score}/${daily.total}`, `Fèt — ${daily.score}/${daily.total}`)
+              : t('Pas encore fait', 'Poko fèt')}
+          </dd>
+        </div>
+      </dl>
+      <p className="practice-strip__note">
+        {t(
+          'Les points viennent des jeux et du défi du jour. La série compte les jours où un examen, un jeu ou votre plan d’étude a été enregistré — l’entraînement ci-dessous n’enregistre rien, donc il ne la fait pas monter.',
+          'Pwen yo soti nan jwèt yo ak defi jodi a. Seri a konte jou kote yon egzamen, yon jwèt oswa plan etid ou anrejistre — pratik anba a pa anrejistre anyen, donk li pa fè seri a monte.',
+        )}
+        {' '}
+        <Link to="/jeux">{t('Ouvrir les jeux', 'Louvri jwèt yo')}</Link>
+      </p>
+    </div>
+  );
+}
+
+// ── The playable example ────────────────────────────────────────────────────
+
+type Bilingual = { fr: string; ht: string };
+
+type Sample = {
+  /** The real unit this exercise represents — it exists in the catalogue. */
+  unit: Bilingual;
+  course: string;
+  question: Bilingual;
+  choices: Bilingual[];
+  answer: number;
+  /** Why each choice is what it is. The wrong ones are the mistakes the unit is about. */
+  why: Bilingual[];
+};
+
+/**
+ * One exercise per open subject, written to represent a real unit — NOT lifted
+ * from a past State paper, and never presented as one. Same contract as the
+ * homepage's sample: it explains every wrong option, it links to the unit, and
+ * it produces no score, no level and no readiness signal. One question tells a
+ * student nothing about their Bac and the copy never suggests it does.
+ */
+const SAMPLES: Record<string, Sample> = {
+  MATH: {
+    unit: { fr: 'Mathématiques NS1 · Nombres, Calcul et Proportionnalité', ht: 'Matematik NS1 · Nonb, Kalkil ak Pwopòsyonalite' },
+    course: '/courses/math-ns1',
+    question: {
+      fr: 'Le prix d’un cahier passe de 250 gourdes à 300 gourdes. De quel pourcentage a-t-il augmenté ?',
+      ht: 'Pri yon kaye pase de 250 goud a 300 goud. Ki pousantaj li monte?',
+    },
+    choices: [
+      { fr: '50 %', ht: '50 %' },
+      { fr: '20 %', ht: '20 %' },
+      { fr: '120 %', ht: '120 %' },
+      { fr: '16,7 %', ht: '16,7 %' },
+    ],
+    answer: 1,
+    why: [
+      {
+        fr: '50, c’est l’augmentation en gourdes (300 − 250), pas un pourcentage. Un pourcentage se calcule toujours par rapport au prix de départ.',
+        ht: '50, se monte a an goud (300 − 250), se pa yon pousantaj. Yon pousantaj toujou kalkile parapò ak pri depa a.',
+      },
+      {
+        fr: 'Augmentation = 300 − 250 = 50. Rapportée au prix de départ : 50 ÷ 250 = 0,2, soit 20 %.',
+        ht: 'Monte a = 300 − 250 = 50. Parapò ak pri depa a : 50 ÷ 250 = 0,2, sa vle di 20 %.',
+      },
+      {
+        fr: '300 ÷ 250 = 1,20, donc le nouveau prix vaut 120 % de l’ancien. L’augmentation, c’est ce qui dépasse 100 % : 20 %.',
+        ht: '300 ÷ 250 = 1,20, donk nouvo pri a se 120 % ansyen an. Monte a se sa ki depase 100 % : 20 %.',
+      },
+      {
+        fr: 'C’est 50 ÷ 300, donc un calcul fait sur le nouveau prix. C’est la baisse qu’il faudrait pour revenir à 250, pas la hausse.',
+        ht: 'Sa se 50 ÷ 300, donk yon kalkil ki fèt sou nouvo pri a. Se bès ki ta nesesè pou tounen 250, se pa monte a.',
+      },
+    ],
+  },
+  CHEM: {
+    unit: { fr: 'Chimie NS1 · Grandeurs et Mesures', ht: 'Chimi NS1 · Grandè ak Mezi' },
+    course: '/courses/chem-ns1',
+    question: {
+      fr: 'Un morceau de fer a une masse de 79 g et un volume de 10 cm³. Quelle est sa masse volumique ?',
+      ht: 'Yon moso fè gen yon mas 79 g ak yon volim 10 cm³. Ki mas volimik li?',
+    },
+    choices: [
+      { fr: '790 g/cm³', ht: '790 g/cm³' },
+      { fr: '7,9 g/cm³', ht: '7,9 g/cm³' },
+      { fr: '89 g/cm³', ht: '89 g/cm³' },
+      { fr: '0,13 g/cm³', ht: '0,13 g/cm³' },
+    ],
+    answer: 1,
+    why: [
+      {
+        fr: 'C’est 79 × 10. La masse volumique est une division, pas une multiplication : elle dit combien pèse UN centimètre cube.',
+        ht: 'Sa se 79 × 10. Mas volimik se yon divizyon, se pa yon miltiplikasyon : li di konbyen YON santimèt kib peze.',
+      },
+      {
+        fr: 'ρ = m ÷ V = 79 ÷ 10 = 7,9 g/cm³. C’est bien l’ordre de grandeur du fer.',
+        ht: 'ρ = m ÷ V = 79 ÷ 10 = 7,9 g/cm³. Se byen valè ki nòmal pou fè.',
+      },
+      {
+        fr: 'C’est 79 + 10. On n’additionne pas une masse et un volume : ce sont deux grandeurs différentes, avec deux unités différentes.',
+        ht: 'Sa se 79 + 10. Ou pa adisyone yon mas ak yon volim : se de grandè diferan, ak de inite diferan.',
+      },
+      {
+        fr: 'C’est 10 ÷ 79, la division à l’envers. Ce rapport-là donne un volume par gramme, pas une masse par centimètre cube.',
+        ht: 'Sa se 10 ÷ 79, divizyon an alanvè. Rapò sa a bay yon volim pou chak gram, se pa yon mas pou chak santimèt kib.',
+      },
+    ],
+  },
+  ECON: {
+    unit: { fr: 'Économie NS2 · Consommation et Épargne', ht: 'Ekonomi NS2 · Konsomasyon ak Epay' },
+    course: '/courses/econ-ns2',
+    question: {
+      fr: 'Un ménage dispose d’un revenu de 40 000 gourdes par mois et en consomme 34 000. Quelle est sa propension moyenne à épargner ?',
+      ht: 'Yon fanmi gen yon revni 40 000 goud pa mwa epi li depanse 34 000 ladan l. Ki pwopansyon mwayèn li pou l fè epay?',
+    },
+    choices: [
+      { fr: '0,85', ht: '0,85' },
+      { fr: '6 000 gourdes', ht: '6 000 goud' },
+      { fr: '0,15', ht: '0,15' },
+      { fr: '0,18', ht: '0,18' },
+    ],
+    answer: 2,
+    why: [
+      {
+        fr: 'C’est 34 000 ÷ 40 000, la propension moyenne à CONSOMMER. Les deux propensions s’additionnent toujours à 1 : celle d’épargner est donc 1 − 0,85.',
+        ht: 'Sa se 34 000 ÷ 40 000, pwopansyon mwayèn pou KONSOME. De pwopansyon yo toujou fè 1 ansanm : sa pou fè epay la se 1 − 0,85.',
+      },
+      {
+        fr: 'C’est bien l’épargne (40 000 − 34 000), mais en gourdes. Une propension est un rapport : elle n’a pas d’unité.',
+        ht: 'Se byen epay la (40 000 − 34 000), men an goud. Yon pwopansyon se yon rapò : li pa gen inite.',
+      },
+      {
+        fr: 'Épargne = 40 000 − 34 000 = 6 000. Rapportée au revenu : 6 000 ÷ 40 000 = 0,15.',
+        ht: 'Epay = 40 000 − 34 000 = 6 000. Parapò ak revni an : 6 000 ÷ 40 000 = 0,15.',
+      },
+      {
+        fr: 'C’est 6 000 ÷ 34 000 : l’épargne rapportée à la consommation. La propension se calcule toujours sur le revenu.',
+        ht: 'Sa se 6 000 ÷ 34 000 : epay la parapò ak konsomasyon an. Pwopansyon an toujou kalkile sou revni an.',
+      },
+    ],
+  },
+};
+
+/**
+ * A question you can actually answer, before you have chosen anything.
+ *
+ * It follows the subject chosen above, and its correction explains every option
+ * rather than only marking one right — that is the difference between teaching
+ * and testing, and it is the same contract as the homepage's sample. What it
+ * deliberately does NOT do: score you, estimate a level, or claim to be a Bac
+ * question. The real papers are a separate thing and are linked separately.
+ */
+function SampleQuestion({
+  t,
+  isCreole,
+  subject,
+  href,
+  scope,
+}: {
+  t: (fr: string, ht: string) => string;
+  isCreole: boolean;
+  subject: string;
+  href: string;
+  scope: string;
+}) {
+  const setLanguage = useStore((s) => s.setLanguage);
+  const [picked, setPicked] = useState<number | null>(null);
+
+  // Reset when the student switches subject: a correction for the previous
+  // subject's question next to this subject's question would be nonsense.
+  useEffect(() => { setPicked(null); }, [subject]);
+
+  const sample = SAMPLES[subject];
+  if (!sample) return null;
+
+  const lang = (b: Bilingual) => (isCreole ? b.ht : b.fr);
+  const answered = picked !== null;
+
+  return (
+    <section className="practice-sample" aria-labelledby="practice-sample-title">
+      <div className="practice-sample__head">
+        <h2 className="practice-sample__title" id="practice-sample-title">
+          {t('À quoi ressemble une question', 'Kijan yon kesyon ye')}
+        </h2>
+        <p className="practice-sample__lede">
+          {t(
+            'Un exercice écrit pour cette unité, comme ceux des séries ci-dessus. Changez de langue : la question, les réponses et la correction suivent. Ce n’est pas une question du Bac et rien n’est noté ici.',
+            'Yon egzèsis ki ekri pou inite sa a, tankou sa ki nan seri anwo yo. Chanje lang : kesyon an, repons yo ak koreksyon an swiv. Se pa yon kesyon Bak epi anyen pa note isit la.',
+          )}
+        </p>
+      </div>
+
+      <div className="practice-sample__card">
+        <div className="practice-sample__bar">
+          <span className="practice-sample__source">{lang(sample.unit)}</span>
+          <div className="practice-sample__lang" role="group" aria-label={t('Langue', 'Lang')}>
+            <button
+              type="button"
+              className={`practice-sample__lang-btn${!isCreole ? ' is-on' : ''}`}
+              aria-pressed={!isCreole}
+              onClick={() => setLanguage('fr')}
+            >
+              Français
+            </button>
+            <button
+              type="button"
+              className={`practice-sample__lang-btn${isCreole ? ' is-on' : ''}`}
+              aria-pressed={isCreole}
+              onClick={() => setLanguage('ht')}
+            >
+              Kreyòl
+            </button>
+          </div>
+        </div>
+
+        <p className="practice-sample__question">{lang(sample.question)}</p>
+
+        <ul className="practice-sample__choices">
+          {sample.choices.map((choice, i) => {
+            const isAnswer = i === sample.answer;
+            const isPicked = i === picked;
+            const state = !answered ? '' : isAnswer ? ' is-answer' : isPicked ? ' is-picked' : ' is-dim';
+            return (
+              <li key={i}>
+                <button
+                  type="button"
+                  className={`practice-sample__choice${state}`}
+                  onClick={() => !answered && setPicked(i)}
+                  disabled={answered}
+                >
+                  <span className="practice-sample__mark" aria-hidden="true">
+                    {answered && isAnswer ? '✓' : answered && isPicked ? '✕' : String.fromCharCode(65 + i)}
+                  </span>
+                  <span>{lang(choice)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+
+        {answered ? (
+          <div className="practice-sample__why" role="status">
+            <p className="practice-sample__verdict">
+              {picked === sample.answer ? t('C’est juste.', 'Se sa menm.') : t('Pas tout à fait.', 'Pa fin kòrèk.')}
+            </p>
+            {/* The student's own answer is explained first, because that is the
+                one they need; the worked solution follows. */}
+            <p>{lang(sample.why[picked as number])}</p>
+            {picked !== sample.answer && <p>{lang(sample.why[sample.answer])}</p>}
+
+            <div className="practice-sample__after">
+              <Link className="practice-sample__cta" to={href}>
+                {scope
+                  ? t(`S’entraîner en ${scope}`, `Pratike nan ${scope}`)
+                  : t('S’entraîner', 'Pratike')}
+              </Link>
+              <Link className="practice-sample__link" to={sample.course}>
+                {t('Ouvrir le cours', 'Louvri kou a')}
+              </Link>
+              <button type="button" className="practice-sample__link" onClick={() => setPicked(null)}>
+                {t('Recommencer', 'Rekòmanse')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="practice-sample__hint">
+            {t(
+              'Choisissez une réponse — la correction explique aussi les trois autres.',
+              'Chwazi yon repons — koreksyon an esplike twa lòt yo tou.',
+            )}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ChoiceCard({ choice }: { choice: PracticeChoice }) {
   return (
     <Link
@@ -345,6 +1115,9 @@ function ChoiceCard({ choice }: { choice: PracticeChoice }) {
       <span className="practice-choice__eyebrow">{choice.eyebrow}</span>
       <h3 className="practice-choice__title">{choice.title}</h3>
       <p className="practice-choice__desc">{choice.description}</p>
+      {/* A counted figure about what this entry actually contains. It is
+          omitted, not faked, when nothing can be counted. */}
+      {choice.stat && <span className="practice-choice__stat">{choice.stat}</span>}
       <span className="practice-choice__footer">
         {/* The facts stay in the DOM at every width: they are the reason to
             pick one entry over another, so the phone must not drop them. */}
