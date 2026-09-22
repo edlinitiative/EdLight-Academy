@@ -13,6 +13,7 @@ import {
   Bell,
   X,
   Search,
+  Swords,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
@@ -31,6 +32,9 @@ const NAV_ITEMS = [
   { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
   { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
   { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
+  // Its own destination, not a card inside /jeux: the championship is an
+  // event between schools, not one more game.
+  { to: '/arena', labelKey: 'nav.arena', icon: Swords },
 ];
 
 export function Navbar() {

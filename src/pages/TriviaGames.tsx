@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Swords, Users } from 'lucide-react';
+import { Zap, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Users } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -662,7 +662,7 @@ function GamesHub({ isCreole }) {
       ];
 
   return (
-    <div className="games-hub pf">
+    <div className="games-hub pf container">
       {/* A heading, not a hero.
           It WAS a tag pill, a two-clause display heading and a lede, 271px
           tall on desktop and 326px on a phone, which put the first game card
@@ -676,7 +676,7 @@ function GamesHub({ isCreole }) {
           heading as one small row, not a card under it. */}
       <header className="games-hub__hero jx-hero">
         <h1 className="games-hub__title jx-hero__title">
-          {isCreole ? 'Ki sa ou vle jwe jodi a ?' : 'À quoi veux-tu jouer aujourd’hui ?'}
+          {isCreole ? 'Ki sa ou vle jwe jodi a\u00a0?' : 'À quoi veux-tu jouer aujourd’hui\u00a0?'}
         </h1>
 
         <div className="jx-stats">
@@ -764,40 +764,10 @@ function GamesHub({ isCreole }) {
           <GameRecords isCreole={isCreole} />
         </aside>
       </div>
-      {/* Two cards that say the same kind of thing — here is a mode that
-          exists, and here is where you actually play it — so they sit on
-          one row from 760px up. A presentational wrapper only: both
-          sections keep their own heading, copy and link. */}
+      {/* The championship card used to sit beside this one. Ted: "make
+          arena its own tab - outside of jeux", so the Arène is a nav
+          destination now and /jeux keeps only the one-on-one duel. */}
       <div className="games-hub__handoff">
-        {/*
-          * Compact on purpose. Ted: "these cards should be 50% smaller". Each
-          * is now a small tile, a small heading, one line and one link. The
-          * ArenaBanner that sat inside this one is gone from /jeux: it linked
-          * to /arena, which the line above it already does — the Dashboard
-          * still shows it. The inline link stays because it is the only path
-          * when no tournament is open (the banner hid itself then).
-          */}
-        <section className="games-hub__championship pf-card" aria-labelledby="championship-title">
-          <div className="jx-card-head">
-            <span className="pf-tile pf-tile--sm pf-tile--azure" aria-hidden="true"><Swords size={15} /></span>
-            <HubHeading
-              id="championship-title"
-              size="sm"
-              eyebrow={isCreole ? 'Ant lekòl' : 'Entre écoles'}
-              title={isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}
-            />
-          </div>
-          <p>
-            {isCreole
-              ? 'Enskri lekòl ou isit la ; jou a, yo jwe nan aplikasyon an.'
-              : 'Inscrivez votre école ici ; le jour J, on joue dans l’application.'}
-          </p>
-          <Link to="/arena" className="games-hub__championship-link">
-            {isCreole ? 'Enskri lekòl mwen' : 'Inscrire mon école'}
-            <ChevronRight size={14} aria-hidden="true" />
-          </Link>
-        </section>
-
         {/*
           * "Défi d'un ami" exists and this page never said so.
           *
@@ -810,8 +780,7 @@ function GamesHub({ isCreole }) {
           * feature is if somebody happens to send them a link.
           *
           * Minting a duel needs the app (the share sheet and the round it is
-          * minted from are native), so this is the same shape as the
-          * championship above: the web explains it and hands over.
+          * minted from are native), so the web explains it and hands over.
           */}
         <section className="games-hub__duel pf-card" aria-labelledby="duel-title">
           <div className="jx-card-head">

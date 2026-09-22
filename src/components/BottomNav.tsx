@@ -1,13 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, BookOpen, ClipboardList, Gamepad2, User } from 'lucide-react';
+import { Home, BookOpen, ClipboardList, Gamepad2, Swords, User } from 'lucide-react';
 
 /**
  * Mobile-only bottom tab bar — the primary navigation on phones.
  *
  * Gives EdLight an app-like, native feel: a frosted, safe-area-aware bar with
- * five thumb-friendly destinations (Home / Learn / Exam Prep / Trivia / Profile).
+ * six thumb-friendly destinations (Home / Learn / Practice / Games / Arena / Profile).
  * The "Profil" tab is the account hub — it folds in the secondary destinations
  * (dashboard, study plan, notifications, settings, sign-out) that used to live
  * in the slide-out drawer.
@@ -19,6 +19,7 @@ const TABS = [
   { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
   { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
   { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
+  { to: '/arena', labelKey: 'nav.arena', icon: Swords },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
 

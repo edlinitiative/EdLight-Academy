@@ -28,7 +28,9 @@
 }
 
 .practice-hub__container {
-  max-width: 1080px;
+  /* No max-width of its own: the shared .container (1480px, 2rem gutters) is
+     what /courses and the dashboard use, and this page capped itself at
+     1080px so it visibly jumped narrower between tabs. */
   padding-top: clamp(1rem, 3vw, 2rem);
   padding-bottom: clamp(3rem, 8vw, 6rem);
 }

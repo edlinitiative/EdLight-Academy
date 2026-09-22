@@ -940,9 +940,11 @@
    ═════════════════════════════════════════════════════════════════════════ */
 
 .games-hub {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: clamp(0.5rem, 1.4vw, 1rem) 1rem 3rem;
+  /* Width and side gutters come from the shared .container on the same
+     element — the frame /courses and the dashboard use at every breakpoint.
+     It was 1080px / 1rem, so the tab jumped narrower than its neighbours. */
+  padding-top: clamp(0.5rem, 1.4vw, 1rem);
+  padding-bottom: 3rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1001,7 +1003,8 @@
 
 .games-hub__title {
   margin: 0;
-  max-width: 22ch;
+  max-width: 26ch;
+  text-wrap: balance;
   font-family: var(--font-heading);
   font-size: clamp(1.35rem, 1.1rem + 1vw, 1.8rem);
   font-weight: 800;
@@ -1092,13 +1095,10 @@
   align-items: stretch;
 }
 
-@media (min-width: 760px) {
-  .games-hub__handoff { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+
 
 /* ─── Championship + duel: two cards that explain something the app does ───
    Small pf-cards: a tone tile, a small heading, one line, one link. */
-.games-hub__championship,
 .games-hub__duel {
   display: flex;
   flex-direction: column;
@@ -1109,10 +1109,8 @@
 
 /* Equal-height cards on one row means the last element in each has to sink to
    the bottom edge, or the two cards' feet float at different heights. */
-.games-hub__championship .games-hub__championship-link,
 .games-hub__duel .games-hub__championship-link { margin-top: auto; padding-top: 0.4rem; }
 
-.games-hub__championship p,
 .games-hub__duel p {
   max-width: 70ch;
   margin: 0;
@@ -1998,16 +1996,8 @@
   .trivia-landing { padding-top: .5rem; }
   .trivia-mix { width: 100%; }
   .trivia-results__actions { flex-direction: column; }
-  .games-hub .jx-figures { gap: .5rem; }
-  .games-hub .jx-figure { padding: 0; }
-  .games-hub .jx-figure .pf-eyebrow { font-size: .65rem; }
 }
 
-.games-hub__title { max-width: none; text-wrap: balance; }
-.games-hub .jx-stats { margin-top: .65rem; padding: 0; background: none; box-shadow: none; border-radius: 0; }
-.games-hub .jx-figures { gap: .5rem 1rem; }
-.games-hub .jx-figure { display: flex; flex: 0 1 auto; align-items: baseline; gap: .3rem; padding: 0; border: 0; }
-.games-hub .jx-figure__value { font-size: .95rem; }
 .games-hub .jx-figure .pf-eyebrow { font-size: .65rem; letter-spacing: .04em; }
 .trivia-topic-group { width: 100%; }
 .trivia-themes-title { width: 100%; margin-bottom: .25rem; }
