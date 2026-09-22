@@ -22,6 +22,7 @@ import './TriviaGames.css';
 import { trackTriviaEvent as trackEvent } from '../utils/triviaLearning';
 import { triviaOptions, triviaExplanation } from '../utils/triviaLearning';
 import { logAnswerEvent } from '../services/answerEventsService';
+import { inviteRef, sendInvite, canNativeShare } from '../utils/schoolInvite';
 
 /* Start with a short round; configuration stays optional and in place. */
 function CategoryPicker({ onSelect, isCreole, categories, questions, count, setCount, timed, setTimed, isAuthed }) {
@@ -382,11 +383,64 @@ function TriviaResults({ answers, isAuthed, saving, saveError, onReview, categor
             {isCreole ? 'Kreye yon kont' : 'Créer un compte'}
           </button>
         </div>}
-        <div className="trivia-results__save">
-          <h3>{isCreole ? 'Vle defye yon zanmi ?' : 'Envie de défier un ami ?'}</h3>
-          <p>{isCreole ? 'Nan aplikasyon an, fini yon pati epi pataje menm kesyon yo ak yon zanmi. Ou bezwen aplikasyon an pou kreye defi a.' : 'Dans l’application, termine une partie puis partage les mêmes questions avec un ami. La création du défi nécessite l’application.'}</p>
-          <Link to="/download?from=defi" className="button button--ghost">{isCreole ? 'Jwenn aplikasyon an' : 'Obtenir l’application'}</Link>
-        </div>
+        {/* The peak of the game is the moment to bring someone in. It used to
+            send the student to the app store to make a duel; the score itself
+            can be sent from here, with their school named when they have one. */}
+        <ScoreChallenge
+          score={score}
+          total={total}
+          categoryName={cat ? (isCreole ? cat.nameHt || cat.name : cat.name) : null}
+          xp={reward && !reward.guest ? reward.xpEarned : 0}
+          isAuthed={isAuthed}
+          isCreole={isCreole}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ─── "Tu peux faire mieux ?" — the score, sent to a friend ─── */
+function ScoreChallenge({ score, total, categoryName, xp, isAuthed, isCreole }) {
+  const { profile } = useTrivia();
+  const school: string | null = isAuthed ? profile?.leaderboard?.school || null : null;
+  const [ref, setRef] = useState<{ code: string | null; link: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let live = true;
+    if (isAuthed) inviteRef().then((r) => { if (live) setRef(r); });
+    else setRef({ code: null, link: 'https://academy.edlight.org/jeux/trivia' });
+    return () => { live = false; };
+  }, [isAuthed]);
+
+  const topic = categoryName ? (isCreole ? ` sou ${categoryName}` : ` en ${categoryName}`) : '';
+  const message = !ref ? '' : isCreole
+    ? `🎯 M fè ${score}/${total}${topic} sou EdLight Academy${school ? ` pou ${school}` : ''}. Ou ka fè pi byen ?${ref.code ? ` Kòd mwen : ${ref.code}.` : ''} ${ref.link}`
+    : `🎯 J’ai fait ${score}/${total}${topic} sur EdLight Academy${school ? ` pour ${school}` : ''}. Tu peux faire mieux ?${ref.code ? ` Mon code : ${ref.code}.` : ''} ${ref.link}`;
+
+  const send = async (channel: 'whatsapp' | 'native' | 'copy') => {
+    if (!message) return;
+    const didCopy = await sendInvite(channel, message, 'trivia-results');
+    if (didCopy) { setCopied(true); setTimeout(() => setCopied(false), 2200); }
+  };
+
+  return (
+    <div className="trivia-challenge">
+      {school && xp > 0 && (
+        <p className="trivia-challenge__school">
+          {isCreole ? `+${xp} XP pou ${school}` : `+${xp} XP pour ${school}`}
+        </p>
+      )}
+      <h3 className="trivia-challenge__title">{isCreole ? 'Defye yon zanmi' : 'Défie un ami'}</h3>
+      <p className="trivia-challenge__sub">
+        {isCreole ? `Voye nòt ou (${score}/${total}) : èske l ka fè pi byen ?` : `Envoie ton score (${score}/${total}) : peut-il faire mieux ?`}
+      </p>
+      <div className="trivia-challenge__actions">
+        <button type="button" className="button button--primary" disabled={!ref} onClick={() => send('whatsapp')}>
+          {isCreole ? 'Voye sou WhatsApp' : 'Envoyer sur WhatsApp'}
+        </button>
+        <button type="button" className="button button--ghost" disabled={!ref} onClick={() => send(canNativeShare() ? 'native' : 'copy')}>
+          {copied ? (isCreole ? 'Kopye' : 'Copié') : canNativeShare() ? (isCreole ? 'Pataje' : 'Partager') : (isCreole ? 'Kopye lyen an' : 'Copier le lien')}
+        </button>
       </div>
     </div>
   );

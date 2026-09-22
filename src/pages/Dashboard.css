@@ -1031,3 +1031,12 @@ button.dash-activity__tag { cursor: pointer; }
   border-radius: 0;
 }
 .dash-suggest__icon .dash-course__badge { width: 34px; height: 34px; border-radius: 10px; font-size: 0.82rem; }
+
+/* The one "today" row that survived — mistakes to review — standing alone. */
+.dash-task--solo {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--dash-radius, 18px);
+  box-shadow: var(--shadow-sm);
+}
+.dash-task--solo:last-child { border-bottom: 1px solid var(--border); }

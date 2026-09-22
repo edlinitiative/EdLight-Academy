@@ -435,6 +435,22 @@ export async function setLeaderboardOptIn(uid, { optedIn, displayName, school, c
   }
 }
 
+/**
+ * Set the learner's school (and its département) WITHOUT touching their
+ * leaderboard opt-in. The sign-in school step asks everyone, including people
+ * who never opted into the public board; saving a school must not publish them.
+ * If they are already on the board, their entry picks the school up at once.
+ */
+export async function setMySchool(uid, { school, department }: { school: string | null; department?: string | null }) {
+  if (!uid) return null;
+  const current = await loadTriviaProfile(uid);
+  return setLeaderboardOptIn(uid, {
+    optedIn: !!current.leaderboard?.optedIn,
+    school,
+    ...(department !== undefined ? { department } : {}),
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TRIVIA CONTENT (categories + questions) — Firestore overlay of static banks
 // ═══════════════════════════════════════════════════════════════════════════

@@ -112,3 +112,74 @@
 @media (max-width: 420px) {
 	.grade-modal__grid { grid-template-columns: 1fr; }
 }
+
+/* ── School + invite steps ───────────────────────────────────────────────── */
+
+/* Two dots: where the student is in the first minute. */
+.grade-modal__steps {
+	display: flex;
+	gap: 6px;
+	margin: -6px 0 14px;
+	padding: 0;
+	list-style: none;
+}
+.grade-modal__steps li {
+	width: 22px;
+	height: 4px;
+	border-radius: 999px;
+	background: var(--border, #E3EAF4);
+}
+.grade-modal__steps li[data-on] { background: var(--primary, #1B6FE0); }
+
+.grade-modal__icon--win {
+	color: #B45309;
+	background: #FEF3C7;
+}
+
+.grade-modal__school {
+	width: 100%;
+	text-align: left;
+}
+/* The label repeats the title right above it. */
+.grade-modal__school .arena-field__label { display: none; }
+
+.grade-modal__share {
+	display: grid;
+	gap: 10px;
+	width: 100%;
+}
+
+.grade-modal__primary,
+.grade-modal__secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	width: 100%;
+	min-height: 48px;
+	padding: 0 18px;
+	border-radius: 999px;
+	font: inherit;
+	font-size: 0.95rem;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.grade-modal__primary {
+	margin-top: 16px;
+	border: 0;
+	background: var(--primary, #1B6FE0);
+	color: #fff;
+}
+.grade-modal__share .grade-modal__primary { margin-top: 4px; }
+.grade-modal__primary:hover:not(:disabled) { background: var(--primary-600, #1558B8); }
+.grade-modal__secondary {
+	border: 1px solid var(--border, #E3EAF4);
+	background: var(--surface, #fff);
+	color: var(--text-900, #0F1E38);
+}
+.grade-modal__secondary:hover:not(:disabled) { background: var(--surface-muted, #F1F5FA); }
+.grade-modal__primary:active:not(:disabled),
+.grade-modal__secondary:active:not(:disabled) { transform: scale(0.98); }
+.grade-modal__primary:disabled,
+.grade-modal__secondary:disabled { opacity: 0.5; cursor: default; }

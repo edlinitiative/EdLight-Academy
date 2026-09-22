@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, CalendarCheck, Gamepad2, Swords, Sigma, Atom, FlaskConical, LineChart } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, Gamepad2, Swords, Sigma, Atom, FlaskConical, LineChart } from 'lucide-react';
 import { subjectCover } from '../utils/subjectCovers';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
@@ -11,9 +11,9 @@ import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgr
 import useStore from '../contexts/store';
 import ArenaBanner from '../components/ArenaBanner';
 import ExamCountdown from '../components/ExamCountdown';
-import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import Leaderboard from '../components/Leaderboard';
 import StreakRail from '../components/StreakRail';
+import MySchoolCard from '../components/MySchoolCard';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
@@ -259,8 +259,13 @@ export default function Dashboard() {
    */
   const resumeExam = React.useMemo(() => {
     const attempts = Array.isArray(recentExamAttempts) ? recentExamAttempts : [];
+    // Only an attempt touched in the last two weeks is "in progress" enough
+    // to take the hero. One abandoned in June was leading the page in
+    // September; it is still listed under Examens, just not as the headline.
+    const fresh = Date.now() - 14 * 24 * 60 * 60 * 1000;
     const open = attempts
       .filter((a) => a?.status === 'in_progress' && a?.exam_id && levelToUrl(a?.level))
+      .filter((a) => (a?.updated_at_ms || 0) >= fresh)
       .sort((a, b) => (b?.updated_at_ms || 0) - (a?.updated_at_ms || 0));
     return open[0] || null;
   }, [recentExamAttempts]);
@@ -345,8 +350,6 @@ export default function Dashboard() {
 
   return (
     <section className="section">
-      {/* One-time grade prompt — self-gates on hydrated + signed-in + !gradeChosen */}
-      <WelcomeGradeModal />
       <div className="container dash dash--st">
         {/* Greeting — one quiet line, sentence-size. It used to be a 46px
             display heading that filled a third of the first screen to tell the
@@ -493,54 +496,23 @@ export default function Dashboard() {
           )}
         </div>
 
-        <section className="dash-today" aria-labelledby="dash-today-title">
-          <div className="dash-today__head">
-            <div>
-              <span className="dash-today__eyebrow">{isCreole ? 'Jodi a' : "Aujourd'hui"}</span>
-              <h2 id="dash-today-title">{isCreole ? 'Twa etap klè' : 'Trois étapes claires'}</h2>
-            </div>
-            <span className="dash-today__note">
-              {isCreole ? 'Fè youn oswa kontinye ak tout twa.' : 'Faites-en une, ou avancez sur les trois.'}
+        {/* The student's school, as a team — where it ranks, who is missing,
+            and the invite beside it. It replaces "Trois étapes claires", three
+            rows that repeated the tab bar and the panels below. The one of the
+            three that was about THIS student — mistakes waiting to be
+            reviewed — stays, as a single row, and only when there are some. */}
+        <MySchoolCard where="home" />
+
+        {dueReviewCount > 0 && (
+          <button type="button" className="dash-task dash-task--solo" onClick={() => navigate('/revision')}>
+            <span className="dash-task__icon"><Brain size={19} aria-hidden="true" /></span>
+            <span className="dash-task__body">
+              <strong>{isCreole ? 'Revize erè ou yo' : 'Réviser vos erreurs'}</strong>
+              <span>{isCreole ? `${dueReviewCount} kesyon ap tann ou` : `${dueReviewCount} question${dueReviewCount === 1 ? '' : 's'} à revoir`}</span>
             </span>
-          </div>
-          <div className="dash-today__tasks">
-            <button type="button" className="dash-task" onClick={() => navigate(dueReviewCount > 0 ? '/revision' : '/practice')}>
-              <span className="dash-task__icon"><Brain size={19} aria-hidden="true" /></span>
-              <span className="dash-task__body">
-                <strong>{dueReviewCount > 0
-                  ? (isCreole ? 'Revize erè ou yo' : 'Réviser vos erreurs')
-                  : (isCreole ? 'Chwazi yon pratik' : 'Choisir une pratique')}</strong>
-                <span>{dueReviewCount > 0
-                  ? (isCreole ? `${dueReviewCount} kesyon ap tann ou` : `${dueReviewCount} question${dueReviewCount === 1 ? '' : 's'} à revoir`)
-                  : (isCreole ? 'Quiz, revizyon oswa egzamen' : 'Quiz, révision ou examen')}</span>
-              </span>
-              <ChevronRight size={17} aria-hidden="true" />
-            </button>
-            <button type="button" className="dash-task" onClick={() => navigate('/exams')}>
-              <span className="dash-task__icon"><ListChecks size={19} aria-hidden="true" /></span>
-              <span className="dash-task__body">
-                {/* Not "Reprendre" when the hero above is already the resume
-                    button for that same attempt — the page would offer one
-                    action twice, a few hundred pixels apart. */}
-                <strong>{examSummary.inProgress > 0 && !resumeExam
-                  ? (isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen")
-                  : (isCreole ? 'Prepare yon egzamen' : 'Préparer un examen')}</strong>
-                <span>{examSummary.inProgress > 0 && !resumeExam
-                  ? (isCreole ? 'Yon egzamen poko fini' : 'Une tentative reste en cours')
-                  : (isCreole ? 'Chwazi nivo ak matyè ou' : 'Choisissez votre niveau et votre matière')}</span>
-              </span>
-              <ChevronRight size={17} aria-hidden="true" />
-            </button>
-            <button type="button" className="dash-task" onClick={() => navigate('/study-plan')}>
-              <span className="dash-task__icon"><CalendarCheck size={19} aria-hidden="true" /></span>
-              <span className="dash-task__body">
-                <strong>{isCreole ? 'Òganize semèn ou' : 'Organiser votre semaine'}</strong>
-                <span>{isCreole ? 'Gade oswa ajiste plan etid ou' : "Consultez ou ajustez votre plan d'étude"}</span>
-              </span>
-              <ChevronRight size={17} aria-hidden="true" />
-            </button>
-          </div>
-        </section>
+            <ChevronRight size={17} aria-hidden="true" />
+          </button>
+        )}
 
         {/* The exam a student is actually sitting, and how long is left.
             Self-gating: it renders nothing unless the grade we hold maps to an

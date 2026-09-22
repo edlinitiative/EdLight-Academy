@@ -47,6 +47,9 @@ export interface School {
   mergedInto?: string;
   /** The town, when the commune is not the name a student would recognise. */
   city?: string;
+  /** The school's département, when the student who added it said so. The
+   *  one location field worth scoping by — students mistype communes. */
+  departement?: string;
 }
 
 /**
@@ -173,6 +176,7 @@ export function schoolFromDoc(raw: unknown): School | null {
     commune: str(v.commune),
     address: str(v.address) || undefined,
     city: str(v.city) || undefined,
+    departement: str(v.departement) || undefined,
     shortName: shortNameKey(str(v.shortName)) || undefined,
     aliases: aliases.length ? aliases : undefined,
     status,

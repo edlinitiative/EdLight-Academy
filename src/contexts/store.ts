@@ -26,6 +26,7 @@ export interface AppState {
   track: string | null;
   grade: string | null;
   gradeChosen: boolean;
+  schoolChosen: boolean;
   dismissedSuggestionKey: string | null;
   onboardingCompleted: boolean;
   languageChosen: boolean;
@@ -62,6 +63,7 @@ export interface AppState {
   setTrack: (track: string | null) => void;
   setGrade: (grade: string | null) => void;
   setGradeChosen: (chosen: boolean) => void;
+  setSchoolChosen: (chosen: boolean) => void;
   setDismissedSuggestion: (key: string) => void;
   setOnboardingCompleted: (completed: boolean) => void;
   setLanguageChosen: (chosen: boolean) => void;
@@ -102,6 +104,7 @@ const useStore = create<AppState>()(
       track: null, // Bac track: 'SVT' | 'SMP' | 'SES' | 'LET' | 'ARTS' | null
       grade: null, // Haitian school grade: '7e'|'8e'|'9e'|'NS1'…'NS4'|'POSTBAC' | null
       gradeChosen: false, // first-run grade picker has been answered
+      schoolChosen: false, // first-run school step has been answered (or skipped)
       dismissedSuggestionKey: null,
       onboardingCompleted: false,
       languageChosen: false, // first-run language picker has been answered
@@ -133,6 +136,7 @@ const useStore = create<AppState>()(
       setTrack: (track) => set({ track }),
       setGrade: (grade) => set({ grade }),
       setGradeChosen: (chosen) => set({ gradeChosen: !!chosen }),
+      setSchoolChosen: (chosen) => set({ schoolChosen: !!chosen }),
       setDismissedSuggestion: (key) => set({ dismissedSuggestionKey: key }),
       setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
       setLanguageChosen: (chosen) => set({ languageChosen: !!chosen }),
@@ -203,6 +207,9 @@ const useStore = create<AppState>()(
         isAuthenticated: false,
         track: null,
         onboardingCompleted: false,
+        // The next account on this device gets its own school step; one that
+        // already has a school skips it silently (the modal reads the profile).
+        schoolChosen: false,
         currentCourse: null,
         enrolledCourses: [],
         progress: {},
@@ -224,6 +231,7 @@ const useStore = create<AppState>()(
         track: state.track,
         grade: state.grade,
         gradeChosen: state.gradeChosen,
+        schoolChosen: state.schoolChosen,
         dismissedSuggestionKey: state.dismissedSuggestionKey,
         onboardingCompleted: state.onboardingCompleted,
         languageChosen: state.languageChosen,

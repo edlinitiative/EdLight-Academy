@@ -15,6 +15,7 @@ import useStore from '../contexts/store';
 import { SandraWidget } from './SandraWidget';
 import SearchOverlay from './SearchOverlay';
 import DownloadAppBanner from './DownloadAppBanner';
+import WelcomeGradeModal from './WelcomeGradeModal';
 
 // Notification panel is only shown on demand — keep it (and its Firebase use)
 // out of the initial shell bundle.
@@ -130,6 +131,10 @@ export function Layout() {
       </main>
       {!isTrivia && <Footer />}
       {!isFocused && <BottomNav />}
+      {/* The first-minute steps (grade, school, invite). App-wide, not only on
+          the dashboard: a student who signs in from /arena or a course page
+          is asked there. Never over an exam or a focused lesson. */}
+      {!isFocused && <WelcomeGradeModal />}
       {showAuthModal && <AuthModal onClose={() => toggleAuthModal()} />}
       {showNotifications && (
         <Suspense fallback={null}>

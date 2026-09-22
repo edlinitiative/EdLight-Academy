@@ -573,10 +573,7 @@ export default function Practice() {
       <div className="practice-group__head">
         <h2 className="practice-group__title" id="practice-train">{t('S’entraîner', 'Pratike')}</h2>
         <p className="practice-group__purpose">
-          {t(
-            'Pour apprendre : aucune note n’est enregistrée, rien n’est chronométré, et la correction arrive tout de suite.',
-            'Pou aprann : pa gen nòt ki anrejistre, pa gen kwonomèt, epi koreksyon an rive touswit.',
-          )}
+          {t('Sans note, sans chrono, corrigé tout de suite.', 'San nòt, san kwonomèt, korije touswit.')}
         </p>
       </div>
       <div className="practice-hub__grid">
@@ -597,10 +594,7 @@ export default function Practice() {
           {t('Se mettre en conditions d’examen', 'Mete ou nan kondisyon egzamen')}
         </h2>
         <p className="practice-group__purpose">
-          {t(
-            'Ce n’est pas un quiz : un examen mesure où vous en êtes sur une épreuve entière, il est chronométré quand l’épreuve l’est, et votre tentative reste dans votre historique.',
-            'Se pa yon kwiz : yon egzamen mezire kote ou ye sou yon eprèv antye, li gen kwonomèt lè eprèv la genyen youn, epi tantativ ou rete nan istorik ou.',
-          )}
+          {t('Une épreuve entière, notée et gardée dans votre historique.', 'Yon eprèv antye, ak nòt, ki rete nan istorik ou.')}
         </p>
       </div>
       <div className="practice-hub__grid practice-hub__grid--single">
@@ -811,18 +805,15 @@ function FilterBar({
         </div>
       </div>
 
+      {pendingSubjects.length > 0 && (
       <p className="practice-filter__note">
-        {t(
-          'Ce choix suit : les entrées ci-dessous, l’exemple en bas de page et votre prochaine visite.',
-          'Chwa sa a swiv ou : antre anba yo, egzanp ki nan pye paj la, ak pwochèn vizit ou.',
-        )}
-        {pendingSubjects.length > 0 && ' '}
         {pendingSubjects.length > 0 &&
           t(
             `${pendingSubjects.map((c) => SUBJECTS[c]?.fr || c).join(', ')} : les cours sont écrits mais aucune leçon n’est encore ouverte.`,
             `${pendingSubjects.map((c) => SUBJECTS[c]?.ht || c).join(', ')} : kou yo ekri men pa gen leson ki ouvè ankò.`,
           )}
       </p>
+      )}
     </div>
   );
 }
@@ -1186,7 +1177,9 @@ function ChoiceCard({ choice }: { choice: PracticeChoice }) {
       </span>
       <span className="practice-choice__eyebrow">{choice.eyebrow}</span>
       <h3 className="practice-choice__title">{choice.title}</h3>
-      <p className="practice-choice__desc">{choice.description}</p>
+      {/* Ted: the page "takes too much space". The description and the full
+          list of facts said, per card, what the title and the counted figure
+          already say; one fact — the one that tells entries apart — stays. */}
       {/* A counted figure about what this entry actually contains. It is
           omitted, not faked, when nothing can be counted. */}
       {choice.stat && <span className="practice-choice__stat">{choice.stat}</span>}
@@ -1194,7 +1187,7 @@ function ChoiceCard({ choice }: { choice: PracticeChoice }) {
         {/* The facts stay in the DOM at every width: they are the reason to
             pick one entry over another, so the phone must not drop them. */}
         <ul className="practice-choice__facts">
-          {choice.facts.map((fact) => (
+          {choice.facts.slice(0, 1).map((fact) => (
             <li key={fact}>{fact}</li>
           ))}
         </ul>
@@ -1317,8 +1310,8 @@ function Suggestion({
       <p className="practice-suggest__body">
         {signedIn
           ? t(
-              'Nous n’avons pas encore assez de traces de votre travail pour vous suggérer une matière. Choisissez-en une : à partir de là, nous nous appuierons sur ce que vous ferez.',
-              'Nou poko gen ase mak travay ou pou nou sijere ou yon matyè. Chwazi youn : apati la, n ap apiye sou sa w ap fè.',
+              'Choisissez une matière : nos suggestions suivront votre travail.',
+              'Chwazi yon matyè : sijesyon nou yo ap swiv travay ou.',
             )
           : t(
               'Choisissez une matière pour commencer.',

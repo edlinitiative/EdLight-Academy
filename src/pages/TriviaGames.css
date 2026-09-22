@@ -2002,3 +2002,26 @@
 .trivia-topic-group { width: 100%; }
 .trivia-themes-title { width: 100%; margin-bottom: .25rem; }
 .trivia-settings summary { list-style-position: inside; }
+
+/* The end of a game: send the score, name the school it counted for. */
+.trivia-challenge {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: var(--primary-50, #EAF2FE);
+  text-align: center;
+}
+.trivia-challenge__school {
+  display: inline-block;
+  margin: 0 0 0.6rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface, #fff);
+  color: var(--primary-600, #1558B8);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.trivia-challenge__title { margin: 0; font-size: 1.05rem; color: var(--text-900); }
+.trivia-challenge__sub { margin: 0.3rem 0 0.8rem; color: var(--text-600); font-size: 0.9rem; }
+.trivia-challenge__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+.trivia-challenge__actions .button { min-height: 44px; }

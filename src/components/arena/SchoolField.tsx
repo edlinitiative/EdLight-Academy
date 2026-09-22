@@ -14,6 +14,10 @@ import {
   addSchool,
   type AddSchoolResult,
 } from '../../services/schoolWebService';
+import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf } from '../../data/haitiGeo';
+// The field's styles live with the /arena page; the sign-in school step renders
+// it app-wide, so it brings them along (every rule there is .arena-* scoped).
+import '../../pages/Arena.css';
 
 /**
  * Pick your school, or add the one that isn't there.
@@ -35,9 +39,14 @@ import {
  * The list paints from the bundled seed immediately and folds in the added
  * schools when Firestore answers, so it is never empty and never blocks.
  */
-export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
+export default function SchoolField({ picked, onPick, isCreole, signedIn, variant = 'arena', autoFocus = false }: {
   picked: { key: string; label: string } | null;
-  onPick: (s: { key: string; label: string } | null) => void;
+  onPick: (s: { key: string; label: string; departement?: string | null } | null) => void;
+  /** 'onboarding' is the sign-in school step: adding asks for exactly the
+   *  name, the département and the commune — the tournament's short name and
+   *  street address belong to /arena, not to someone's first minute here. */
+  variant?: 'arena' | 'onboarding';
+  autoFocus?: boolean;
   isCreole: boolean;
   /** Re-runs the load when it flips: the schools a student ADDED are readable
    *  only to a signed-in user, so a visitor who signs in on this page would
@@ -59,7 +68,10 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [shortName, setShortName] = useState('');
+  const [departement, setDepartement] = useState('');
+  const [communeOther, setCommuneOther] = useState(false);
   const [busy, setBusy] = useState(false);
+  const onboarding = variant === 'onboarding';
   const [problem, setProblem] = useState<AddSchoolResult | null>(null);
 
   useEffect(() => {
@@ -122,16 +134,24 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
   // reject it after the student thinks they are done.
   const canAdd = newName.trim().length >= 4
     && commune.trim().length > 0
+    && (!onboarding || departement.length > 0)
     && !shortNameBroken
     && !busy;
 
   const submitNew = async () => {
     setBusy(true);
     setProblem(null);
-    const res = await addSchool({ name: newName.trim(), commune, address, city, shortName });
+    const res = await addSchool({
+      name: newName.trim(),
+      commune,
+      address,
+      city,
+      shortName,
+      departement: departement || undefined,
+    });
     setBusy(false);
     if (res.ok && res.school) {
-      onPick({ key: res.school.key, label: res.school.name });
+      onPick({ key: res.school.key, label: res.school.name, departement: departement || null });
       setAdding(false);
       return;
     }
@@ -169,6 +189,7 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
             onChange={(e) => { setQuery(e.target.value); setProblem(null); }}
             placeholder={t('Tapez le nom de votre école…', 'Tape non lekòl ou…')}
             autoComplete="off"
+            autoFocus={autoFocus}
           />
         </span>
       )}
@@ -177,7 +198,7 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
         <ul className="arena-field__results">
           {matches.map((s) => (
             <li key={s.key}>
-              <button type="button" onClick={() => onPick({ key: s.key, label: s.name })}>
+              <button type="button" onClick={() => onPick({ key: s.key, label: s.name, departement: s.departement ?? null })}>
                 <strong>{s.name}</strong>
                 {/* Short name and commune, because the list holds schools whose
                     names differ only by where they are. */}
@@ -241,6 +262,46 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
             </small>
           </label>
 
+          {onboarding ? (
+            <>
+              <label className="arena-add__field">
+                <span>{t('Département', 'Depatman')}</span>
+                <select
+                  value={departement}
+                  onChange={(e) => { setDepartement(e.target.value); setCommune(''); setCommuneOther(false); }}
+                >
+                  <option value="">{t('Choisir…', 'Chwazi…')}</option>
+                  {HAITI_DEPARTMENTS.map((d) => <option key={d.name} value={d.name}>{d.name}</option>)}
+                </select>
+              </label>
+              <label className="arena-add__field">
+                <span>{t('Commune de l’école', 'Komin lekòl la')}</span>
+                {communeOther || !departement || citiesOf(departement).length === 0 ? (
+                  <input
+                    type="text"
+                    value={commune}
+                    onChange={(e) => setCommune(e.target.value)}
+                    placeholder={t('Ex. Delmas', 'Egz. Dèlma')}
+                    autoComplete="off"
+                    disabled={!departement}
+                  />
+                ) : (
+                  <select
+                    value={commune}
+                    onChange={(e) => {
+                      if (e.target.value === OTHER_CITY) { setCommuneOther(true); setCommune(''); }
+                      else setCommune(e.target.value);
+                    }}
+                  >
+                    <option value="">{t('Choisir…', 'Chwazi…')}</option>
+                    {citiesOf(departement).map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value={OTHER_CITY}>{t('Autre commune…', 'Lòt komin…')}</option>
+                  </select>
+                )}
+              </label>
+            </>
+          ) : (
+            <>
           <label className="arena-add__field">
             <span>{t('Commune de l’école', 'Komin lekòl la')}</span>
             <input
@@ -296,6 +357,9 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
             />
           </label>
 
+            </>
+          )}
+
           {problem && <p className="arena-page__error" role="alert">{addProblem(problem)}</p>}
 
           <p className="arena-field__hint">
@@ -303,14 +367,18 @@ export default function SchoolField({ picked, onPick, isCreole, signedIn }: {
                 page. Name the one thing that is missing. */}
             {newName.trim().length < 4
               ? t('Écrivez le nom complet de l’école.', 'Ekri non konplè lekòl la.')
+              : onboarding && !departement
+                ? t('Choisissez le département de l’école.', 'Chwazi depatman lekòl la.')
               : !commune.trim()
                 ? t('Indiquez la commune de l’école.', 'Di nan ki komin lekòl la ye.')
                 : shortNameBroken
                   ? t('Corrigez le nom court, ou laissez-le vide.', 'Korije non kout la, oswa kite l vid.')
-                  : t(
-                    'Votre école sera vérifiée par notre équipe. Vous pouvez vous inscrire tout de suite.',
-                    'Ekip nou an ap verifye lekòl ou a. Ou ka enskri kounye a menm.',
-                  )}
+                  : onboarding
+                    ? t('Notre équipe vérifiera l’école ; vous pouvez continuer tout de suite.', 'Ekip nou an ap verifye lekòl la ; ou ka kontinye kounye a.')
+                    : t(
+                      'Votre école sera vérifiée par notre équipe. Vous pouvez vous inscrire tout de suite.',
+                      'Ekip nou an ap verifye lekòl ou a. Ou ka enskri kounye a menm.',
+                    )}
           </p>
 
           <div className="arena-add__actions">

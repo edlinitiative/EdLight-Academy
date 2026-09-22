@@ -13,7 +13,7 @@
  * no way forward — "arène does not let me register my school". The seed is
  * four years of ESLP applicants; it was never the whole country.
  */
-import { addDoc, collection, getDocs, limit, query, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, getDocs, limit, query, serverTimestamp, where } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import {
   schoolKey,
@@ -94,6 +94,8 @@ export async function addSchool(input: {
   commune: string;
   address?: string;
   city?: string;
+  /** The school's département — asked for by the sign-in school step. */
+  departement?: string;
   /** Optional: a student who does not know their school's short name leaves it
    *  blank, and an admin asks later. Demanding one here is how invented short
    *  names get created. */
@@ -126,6 +128,7 @@ export async function addSchool(input: {
     commune: input.commune.trim(),
     address: input.address?.trim() || undefined,
     city: input.city?.trim() || undefined,
+    departement: input.departement?.trim() || undefined,
     shortName,
     // Student-submitted, so NOT canonical yet: an admin approves it, merges it
     // into an existing school, or rejects it. Writing 'approved' here would put
@@ -137,6 +140,7 @@ export async function addSchool(input: {
       ...school,
       address: school.address ?? null,
       city: school.city ?? null,
+      departement: school.departement ?? null,
       shortName: school.shortName ?? null,
       createdBy: auth.currentUser.uid,
       createdAt: serverTimestamp(),
@@ -147,4 +151,28 @@ export async function addSchool(input: {
   }
   cache = mergeSchools(cache ?? SEED, [school]);
   return { ok: true, school };
+}
+
+/**
+ * How many OTHER students already play for this school — read from the public
+ * all-time board, the same entries the school ranking is built from, so the
+ * number a student is told matches the board they will then look at.
+ *
+ * Returns null when the read fails: "you are the first" is a claim, and a
+ * failed read must never be dressed up as zero.
+ */
+export async function countSchoolmates(schoolLabel: string, myUid?: string | null): Promise<number | null> {
+  const label = schoolLabel.trim();
+  if (!label) return null;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'leaderboards', 'all-time', 'entries'),
+      where('school', '==', label),
+      limit(200),
+    ));
+    return snap.docs.filter((d) => d.id !== myUid).length;
+  } catch (err) {
+    console.error('[Schools] countSchoolmates error:', err);
+    return null;
+  }
 }

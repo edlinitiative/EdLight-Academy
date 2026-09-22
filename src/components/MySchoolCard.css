@@ -1,0 +1,216 @@
+/* ── My school card + school ranking ────────────────────────────────────────
+   One azure, soft card, pill buttons — the Limyè / Estil Klè language. The
+   rank is the only large number: it is what makes an invite worth sending. */
+
+.myschool {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--primary-500) 22%, var(--border));
+  border-radius: var(--r-card, 18px);
+  background: linear-gradient(180deg, var(--primary-50, #EAF2FE), var(--surface, #fff) 85%);
+  box-shadow: var(--shadow-sm);
+}
+
+.myschool--empty {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  background: var(--surface, #fff);
+  border-color: var(--border);
+}
+.myschool--empty .myschool__cta { grid-column: 1 / -1; justify-self: start; }
+@media (min-width: 640px) {
+  .myschool--empty { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .myschool--empty .myschool__cta { grid-column: auto; }
+}
+
+.myschool__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.myschool__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  color: var(--primary-600, #1558B8);
+  box-shadow: var(--shadow-sm);
+}
+
+.myschool__body { min-width: 0; }
+
+.myschool__eyebrow {
+  display: block;
+  color: var(--text-500);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.myschool__title {
+  margin: 0.1rem 0 0;
+  overflow: hidden;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.myschool__sub {
+  margin: 0.15rem 0 0;
+  color: var(--text-600);
+  font-size: 0.88rem;
+}
+
+.myschool__rank {
+  color: var(--primary-600, #1558B8);
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.myschool__line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-700);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.myschool__line svg { flex: none; color: var(--primary-600, #1558B8); }
+
+.myschool__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.myschool__cta,
+.myschool__ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 42px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+}
+.myschool__cta {
+  flex: 1;
+  border: 0;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+}
+.myschool--empty .myschool__cta { flex: none; }
+.myschool__cta:hover:not(:disabled) { background: var(--primary-600, #1558B8); }
+.myschool__ghost {
+  border: 1px solid var(--border);
+  background: var(--surface, #fff);
+  color: var(--text-800, var(--text-900));
+}
+.myschool__cta:active:not(:disabled),
+.myschool__ghost:active:not(:disabled) { transform: scale(0.98); }
+.myschool__cta:disabled,
+.myschool__ghost:disabled { opacity: 0.55; cursor: default; }
+
+/* ── Ranking ── */
+.school-rank {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card, 18px);
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm);
+}
+
+.school-rank__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+.school-rank__head h2 {
+  margin: 0;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.school-rank__all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--primary-600, #1558B8);
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.school-rank__empty { margin: 0; color: var(--text-500); font-size: 0.9rem; }
+
+.school-rank__list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.school-rank__list li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 12px;
+}
+.school-rank__list li.is-mine {
+  background: var(--primary-50, #EAF2FE);
+  font-weight: 700;
+}
+.school-rank__gap { margin-top: 0.35rem; }
+
+.school-rank__pos {
+  color: var(--text-500);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.school-rank__list li:nth-child(1) .school-rank__pos { color: #B45309; }
+
+.school-rank__name {
+  display: grid;
+  min-width: 0;
+  color: var(--text-900);
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+.school-rank__name small {
+  color: var(--text-500);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.school-rank__xp {
+  color: var(--text-700);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

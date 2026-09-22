@@ -133,6 +133,12 @@ module.exports = {
     historyApiFallback: true,
     hot: true,
     port: 3000,
+    // Opt-in: DEV_API_PROXY=https://academy.edlight.org forwards /api to a
+    // deployed backend, so pages that read the serverless routes (school
+    // board, leaderboard collectives) show real data under `npm start`.
+    ...(process.env.DEV_API_PROXY
+      ? { proxy: [{ context: ['/api'], target: process.env.DEV_API_PROXY, changeOrigin: true, secure: true }] }
+      : {}),
     static: {
       directory: path.join(__dirname, 'public')
     }

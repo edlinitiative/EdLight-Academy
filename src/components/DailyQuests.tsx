@@ -341,13 +341,6 @@ export default function DailyQuests() {
         </span>
       </div>
 
-      <p className="quests__lede">
-        {t(
-          'Trois missions au plus, choisies pour vous et remises à zéro à minuit. Chaque barre compte ce que vos exercices ont réellement enregistré aujourd’hui — rien n’est coché à la main.',
-          'Pou pi plis twa misyon, chwazi pou ou, epi yo remèt a zewo a minwi. Chak ba konte sa egzèsis ou yo anrejistre toutbon jodi a — anyen pa tcheke alamen.',
-        )}
-      </p>
-
       <ul className="quests__list">
         {quests.map((quest) => (
           <QuestRow
@@ -366,15 +359,7 @@ export default function DailyQuests() {
               `${banked} XP ajoutés à votre compte aujourd’hui${left > 0 ? ` · ${left} XP encore en jeu` : ''}.`,
               `${banked} XP ajoute nan kont ou jodi a${left > 0 ? ` · ${left} XP toujou an jwèt` : ''}.`,
             )
-          : t(
-              `${left} XP en jeu aujourd’hui. Les points arrivent tout seuls dès qu’une quête est remplie.`,
-              `${left} XP an jwèt jodi a. Pwen yo rive pou kont yo depi yon kèt fini.`,
-            )}
-        {' '}
-        {t(
-          'Terminer une quête compte aussi comme activité du jour pour votre série.',
-          'Fini yon kèt konte tou kòm aktivite jou a pou seri ou.',
-        )}
+          : t(`${left} XP en jeu aujourd’hui.`, `${left} XP an jwèt jodi a.`)}
       </p>
 
       {justEarned > 0 && (
@@ -504,7 +489,6 @@ function QuestRow({
       <div className="quests__body">
         <span className="pf-eyebrow quests__eyebrow">{copy.eyebrow}</span>
         <h3 className="quests__name">{copy.title}</h3>
-        <p className="quests__desc">{copy.desc}</p>
         <div className="quests__progress">
           <span
             className={`pf-meter quests__meter${quest.complete ? ' quests__meter--done' : ''}`}

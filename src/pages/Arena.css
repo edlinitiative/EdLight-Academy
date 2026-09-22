@@ -12,7 +12,8 @@
 }
 
 .arena-page__container {
-  max-width: 620px;
+  /* The shared .container frame, like every other tab. Only the form keeps a
+     reading width. */
   padding-top: clamp(1rem, 3vw, 2rem);
   padding-bottom: clamp(3rem, 8vw, 6rem);
 }
@@ -452,7 +453,8 @@
   font-weight: 650;
 }
 
-.arena-add__field input {
+.arena-add__field input,
+.arena-add__field select {
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -462,7 +464,8 @@
   font-size: 1rem; /* 16px — anything smaller makes iOS zoom the page on focus */
 }
 
-.arena-add__field input:focus {
+.arena-add__field input:focus,
+.arena-add__field select:focus {
   border-color: var(--primary-500);
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-500) 18%, transparent);
@@ -519,4 +522,27 @@
 
 @media (prefers-reduced-motion: reduce) {
   .arena-page__spinner { animation-duration: 3s; }
+}
+
+/* Between editions: the student's school, the board, one line about the next
+   live final. */
+.arena-page__between {
+  display: grid;
+  gap: 1rem;
+}
+.arena-page__next {
+  margin: 0;
+  color: var(--text-500);
+  font-size: 0.88rem;
+}
+.arena-page__next a { color: var(--pf-accent-ink, var(--primary-600)); font-weight: 650; }
+
+.arena-page__form { max-width: 620px; }
+.arena-page__header p { max-width: 62ch; }
+@media (min-width: 900px) {
+  .arena-page__between {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+  .arena-page__between .arena-page__next { grid-column: 1 / -1; }
 }

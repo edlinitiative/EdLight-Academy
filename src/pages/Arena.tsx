@@ -5,6 +5,8 @@ import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 import { registerForTournament, registerErrorMessage } from '../services/arenaWebService';
 import SchoolField from '../components/arena/SchoolField';
+import MySchoolCard from '../components/MySchoolCard';
+import SchoolRanking from '../components/SchoolRanking';
 import { GRADES } from '../../shared/trackConfig';
 import './Arena.css';
 
@@ -97,14 +99,17 @@ export default function Arena() {
                     : 'Lekòl ou kont lòt yo. Enskripsyon yo ouvè.',
               )
               : t(
-                'Chaque mois, les écoles s’affrontent en direct. La prochaine édition sera annoncée ici.',
-                'Chak mwa, lekòl yo afwonte an dirèk. Y ap anonse pwochen edisyon an isit la.',
+                'Ton école contre les autres, tous les jours. Chaque partie, quiz et examen compte ; une fois par mois, la finale se joue en direct.',
+                'Lekòl ou kont lòt yo, chak jou. Chak pati, quiz ak egzamen konte ; yon fwa pa mwa, final la jwe an dirèk.',
               )}
           </p>
         </header>
 
         {/* Said BEFORE the button, not after it. A student who registers here
-            and never installs the app is a no-show who counts for nothing. */}
+            and never installs the app is a no-show who counts for nothing.
+            Only while an edition is open — between editions there is no
+            button for it to come before. */}
+        {open && !done && (
         <div className="arena-page__note">
           <Smartphone size={17} aria-hidden="true" />
           <p>
@@ -114,6 +119,7 @@ export default function Arena() {
             )}
           </p>
         </div>
+        )}
 
         {done ? (
           <div className="arena-page__done" role="status">
@@ -137,16 +143,26 @@ export default function Arena() {
             <p>{t('Chargement du championnat…', 'N ap chaje chanpyona a…')}</p>
           </div>
         ) : !open ? (
-          <div className="arena-page__closed">
-            <p>
-              {t(
-                'Aucune édition ouverte aux inscriptions pour le moment. En attendant, les jeux quotidiens rapportent des XP.',
-                'Pa gen edisyon ki ouvè pou enskripsyon kounye a. Pandan n ap tann, jwèt chak jou yo bay XP.',
-              )}
+          /* Between editions the tab is the race itself, not an apology: the
+             school board moves every day, and the student's own school — with
+             the invite beside it — is the reason to come back. It used to be
+             one line saying nothing was open. */
+          <div className="arena-page__between">
+            {signedIn ? (
+              <MySchoolCard where="arena" />
+            ) : (
+              <div className="arena-page__signin">
+                <p>{t('Connecte-toi pour représenter ton école.', 'Konekte pou w reprezante lekòl ou.')}</p>
+                <button type="button" className="button button--primary" onClick={toggleAuthModal}>
+                  {t('Se connecter', 'Konekte')}
+                </button>
+              </div>
+            )}
+            <SchoolRanking max={10} />
+            <p className="arena-page__next">
+              {t('Prochaine finale en direct : annoncée ici et dans l’application.', 'Pwochen final an dirèk : n ap anonse l isit la ak nan aplikasyon an.')}
+              {' '}<Link to="/jeux">{t('Jouer maintenant', 'Jwe kounye a')}</Link>
             </p>
-            <Link to="/jeux" className="button button--secondary">
-              {t('Voir les jeux', 'Gade jwèt yo')}
-            </Link>
           </div>
         ) : (
           <div className="arena-page__form">
