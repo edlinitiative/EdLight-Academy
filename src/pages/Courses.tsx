@@ -443,21 +443,18 @@ function Facets({
         <ChevronDown size={16} className="lrn-facets__chev" aria-hidden="true" />
       </button>
 
-      <div className={`lrn-facets__body pf-card${open ? ' lrn-facets__body--open' : ''}`}>
-        {/* The mockups' rail header: what this panel is, and the one control
-            that undoes it, side by side. */}
-        <div className="pf-head lrn-facets__head">
-          <div className="pf-head__text">
-            <span className="pf-eyebrow">{L('Catalogue', 'Katalòg')}</span>
-            <h2 className="pf-head__title">{L('Filtres', 'Filtè')}</h2>
-          </div>
-          {activeCount > 0 && (
-            <button type="button" className="pf-link lrn-facets__reset" onClick={onReset}>
-              <X size={13} aria-hidden="true" />
-              {t('courses.resetFilters')}
-            </button>
-          )}
-        </div>
+      {/* A bare rail, not a card. Ted: "the filter section is too heavy —
+          simplify it and make it more premium". The boxed panel and its
+          "Catalogue / Filtres" header are gone; the two facet titles already
+          say what the rail is, and the reset link only appears when there is
+          something to reset. */}
+      <div className={`lrn-facets__body${open ? ' lrn-facets__body--open' : ''}`}>
+        {activeCount > 0 && (
+          <button type="button" className="pf-link lrn-facets__reset" onClick={onReset}>
+            <X size={13} aria-hidden="true" />
+            {t('courses.resetFilters')}
+          </button>
+        )}
 
         <div className="lrn-facet">
           <h2 className="lrn-facet__title pf-eyebrow">{L('Matière', 'Matyè')}</h2>
@@ -1090,8 +1087,10 @@ export default function Courses() {
 
         {/* Toolbar — a real search field over the catalogue, plus the axis
             toggle. Search matches course names, module titles and lesson
-            titles; ⌘K still opens the app-wide overlay for everything else. */}
-        <div className="lrn-panel pf-card">
+            titles; ⌘K still opens the app-wide overlay for everything else.
+            No card around it any more: one field, one toggle, and the
+            suggestions as quiet links under them. */}
+        <div className="lrn-panel">
         <div className="lrn-toolbar">
           <div className="lrn-search">
             <Search size={17} aria-hidden="true" />
@@ -1140,7 +1139,7 @@ export default function Courses() {
             sentence. */}
         {!query && suggestions.length > 0 && (
           <p className="lrn-tries">
-            <span className="pf-eyebrow">{L('Sujets fréquents', 'Sijè souvan')}</span>
+            <span className="lrn-tries__label">{L('Essayez', 'Eseye')}</span>
             {suggestions.map((s) => (
               <button key={s} type="button" className="lrn-try" onClick={() => setParam('q', s)}>
                 {s}
@@ -1346,7 +1345,6 @@ export default function Courses() {
           <div className="lrn-results">
             <div className="lrn-results__head pf-head">
               <div className="pf-head__text">
-                <span className="pf-eyebrow">{L('Catalogue', 'Katalòg')}</span>
                 <h2 className="pf-head__title" id="lrn-all">
                   {filtering
                     ? L('Résultats', 'Rezilta')
