@@ -55,6 +55,12 @@ export function normalizeName(raw?: string): string {
     // Coeur" — two spellings of one school, ranked separately.
     .replace(/œ/gi, 'oe')
     .replace(/æ/gi, 'ae')
+    // Hyphens, dashes and apostrophes read as spaces: "Institution Saint-Louis
+    // de Gonzague" and "INSTITUTION SAINT LOUIS DE GONZAGUE" were ranked as two
+    // schools with the points split between them. schoolKey() already turns
+    // all punctuation into spaces after this, so stored school keys are
+    // unchanged — only the board's grouping gets the fold.
+    .replace(/[-‐‑‒–—'’]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();

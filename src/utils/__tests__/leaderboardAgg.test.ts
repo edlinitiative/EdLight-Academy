@@ -11,9 +11,9 @@ const ENTRIES = [
 
 describe('normalizeName', () => {
   it('folds accents, case, and whitespace', () => {
-    expect(normalizeName('  Port-au-Prince ')).toBe('port-au-prince');
+    expect(normalizeName('  Port-au-Prince ')).toBe('port au prince');
     expect(normalizeName('Lycée  Toussaint')).toBe('lycee toussaint');
-    expect(normalizeName('Cap-Haïtien')).toBe('cap-haitien');
+    expect(normalizeName('Cap-Haïtien')).toBe('cap haitien');
   });
   it('handles undefined/blank', () => {
     expect(normalizeName(undefined)).toBe('');
@@ -155,9 +155,17 @@ describe('normalizeName — ligatures', () => {
   it('groups Cœur with Coeur', () => {
     // NFD does not decompose a ligature, so these two spellings of one school
     // were ranked as two schools.
-    // normalizeName keeps hyphens on purpose — "Port-au-Prince" needs them —
-    // so compare the ligature alone; schoolKey is what drops punctuation.
+    // Keys are only ever compared, both sides normalised, never shown — so
+    // hyphens now fold too (see the punctuation test below).
     expect(normalizeName('Sacré-Cœur')).toBe(normalizeName('Sacre-Coeur'));
     expect(normalizeName('Sœurs Salésiennes')).toBe('soeurs salesiennes');
+  });
+});
+
+describe('normalizeName — punctuation fold', () => {
+  it('groups a hyphenated and an unhyphenated spelling of one school', () => {
+    expect(normalizeName('Institution Saint-Louis de Gonzague'))
+      .toBe(normalizeName('INSTITUTION SAINT LOUIS DE GONZAGUE'));
+    expect(normalizeName("Collège l’Étoile")).toBe(normalizeName("College l'Etoile"));
   });
 });
