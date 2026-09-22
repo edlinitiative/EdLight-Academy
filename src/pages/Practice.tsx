@@ -903,14 +903,6 @@ function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
           </dd>
         </div>
       </dl>
-      <p className="practice-strip__note">
-        {t(
-          'Les points viennent des jeux, du défi du jour et des quêtes juste en dessous. La série compte les jours où un examen, un jeu, votre plan d’étude ou une quête terminée a été enregistré. L’entraînement plus bas n’enregistre aucune note par lui-même : il ne fait monter la série que lorsqu’il remplit une quête.',
-          'Pwen yo soti nan jwèt yo, defi jodi a ak kèt ki jis anba yo. Seri a konte jou kote yon egzamen, yon jwèt, plan etid ou oswa yon kèt ki fini anrejistre. Pratik ki pi ba a pa anrejistre okenn nòt pou kont li : li fè seri a monte sèlman lè li ranpli yon kèt.',
-        )}
-        {' '}
-        <Link to="/jeux">{t('Ouvrir les jeux', 'Louvri jwèt yo')}</Link>
-      </p>
     </div>
   );
 }

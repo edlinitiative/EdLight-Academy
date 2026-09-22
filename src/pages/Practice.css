@@ -91,9 +91,9 @@
 .practice-suggest {
   display: grid;
   justify-items: start;
-  gap: 0.55rem;
+  gap: 0.4rem;
   align-content: start;
-  padding: 1.05rem 1.15rem 1.2rem;
+  padding: 0.8rem 1rem 0.9rem;
   border: 1px solid var(--border);
   border-radius: var(--r-card);
   background: var(--surface);
@@ -129,8 +129,8 @@
   max-width: 62ch;
   margin: 0;
   color: var(--text-700);
-  font-size: 0.95rem;
-  line-height: 1.62;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .practice-suggest__action {
@@ -172,7 +172,7 @@
    has a number and a date and nothing that would justify dressing either
    up — and no tier, because there are no tiers. */
 
-.practice-strip { margin-bottom: 1.5rem; }
+.practice-strip { margin-bottom: 1.1rem; }
 
 /* While the two stores are still answering there is nothing to put in a
    tile, so the strip is one quiet panel rather than three empty boxes. */
@@ -186,15 +186,15 @@
 .practice-strip__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
-  gap: 0.7rem;
-  margin: 0 0 0.8rem;
+  gap: 0.6rem;
+  margin: 0;
 }
 
 .practice-strip__stat {
   min-width: 0;
-  padding: 0.85rem 0.95rem 0.95rem;
+  padding: 0.6rem 0.85rem 0.65rem;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   transition: box-shadow 0.3s ease, transform 0.3s ease;
@@ -219,24 +219,24 @@
 }
 
 .practice-strip__stat dd {
-  margin: 0.6rem 0 0;
+  margin: 0.3rem 0 0;
   color: var(--text-900);
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.015em;
 }
 
+/* The loading line is the only note left. The strip used to carry a
+   four-line paragraph on where each figure comes from; Ted: "still takes
+   too much space", so it went — the tiles' own labels say what they count. */
 .practice-strip__note {
-  max-width: 82ch;
   margin: 0;
   color: var(--text-500);
   font-size: 0.82rem;
   line-height: 1.6;
 }
-
-.practice-strip__note a { color: var(--pf-accent-ink); font-weight: 650; }
 
 /* ── Subject × level ─────────────────────────────────────────────────────
    The filter sits above everything it scopes, and it is built from the
