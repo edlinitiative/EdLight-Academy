@@ -3,6 +3,7 @@ import './Home.css';
 import { useT } from './home/content';
 import ResumeBanner from '../components/ResumeBanner';
 import HeroSection from './home/HeroSection';
+import SampleQuestionSection from './home/SampleQuestionSection';
 import LearningJourneySection from './home/LearningJourneySection';
 import CoursesSection from './home/CoursesSection';
 import CtaSection from './home/CtaSection';
@@ -24,6 +25,9 @@ export default function Home() {
       <div className="container resume-banner-wrap">
         <ResumeBanner />
       </div>
+      {/* Before the pitch, not after it: the fastest way to answer "is this
+          for me, and is it really in Kreyòl" is to hand over the thing. */}
+      <SampleQuestionSection t={t} />
       <LearningJourneySection t={t} />
       <CoursesSection t={t} />
       <CtaSection t={t} />

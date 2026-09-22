@@ -14,14 +14,12 @@ export default function HeroSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <div className="lp-hero__layout">
           <div className="lp-hero__copy">
-            <span className="lp-eyebrow">
-              <span className="lp-eyebrow__dot" />
-              {t('Apprendre · pratiquer · progresser', 'Aprann · pratike · pwogrese')}
-            </span>
-
+            {/* One voice, no accented fragment. Colouring the second
+                sentence a different colour was decoration standing in for
+                emphasis; the sentence already carries it. */}
             <h1 className="lp-hero__title">
-              {t('Avancez dans vos cours. ', 'Avanse nan kou ou yo. ')}
-              <span className="lp-text-accent">{t('Pratiquez là où ça compte.', 'Pratike kote sa enpòtan.')}</span>
+              {t('Avancez dans vos cours. Pratiquez là où ça compte.',
+                 'Avanse nan kou ou yo. Pratike kote sa enpòtan.')}
             </h1>
 
             <p className="lp-hero__lede">

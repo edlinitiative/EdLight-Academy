@@ -96,6 +96,10 @@ export function Layout() {
   // Reveal-on-scroll: any element with data-reveal fades + slides in once visible.
   React.useEffect(() => {
     if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+    // Only now is it safe for CSS to hide anything: the observer exists and is
+    // about to be wired up, so everything hidden will get revealed. Without
+    // this the page is blank whenever this effect does not run.
+    document.documentElement.classList.add('reveal-ready');
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         if (e.isIntersecting) {
@@ -109,7 +113,7 @@ export function Layout() {
     attach();
     const mo = new MutationObserver(attach);
     mo.observe(document.body, { subtree: true, childList: true });
-    return () => { io.disconnect(); mo.disconnect(); };
+    return () => { io.disconnect(); mo.disconnect(); document.documentElement.classList.remove('reveal-ready'); };
   }, []);
 
   return (

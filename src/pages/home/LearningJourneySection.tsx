@@ -72,8 +72,7 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
               {t('Un parcours, pas un catalogue', 'Yon chemen, pa yon katalòg')}
             </span>
             <h2 className="lp-section__title">
-              {t('Toujours savoir ', 'Toujou konnen ')}
-              <span className="lp-text-accent">{t('quoi faire ensuite.', 'sa pou fè apre.')}</span>
+              {t('Toujours savoir quoi faire ensuite.', 'Toujou konnen sa pou fè apre.')}
             </h2>
           </div>
           <p className="lp-section__lede">

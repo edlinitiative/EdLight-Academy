@@ -70,10 +70,6 @@ export default function CoursesSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <header className="lp-section__head lp-section__head--row" data-reveal>
           <div>
-            <span className="lp-eyebrow">
-              <span className="lp-eyebrow__dot" />
-              {t('Le programme', 'Pwogram lan')}
-            </span>
             <h2 className="lp-section__title lp-section__title--sm">
               {t('Quatre matières, du NS I au NS IV', 'Kat matyè, soti NS I rive NS IV')}
             </h2>
