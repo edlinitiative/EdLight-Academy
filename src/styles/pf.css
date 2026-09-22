@@ -96,6 +96,18 @@
   color: var(--text-900);
 }
 
+/* Caps micro-label. The mockups set these in a separate label face; Geist Mono
+   is the one we already self-host, and it does the same job. */
+.pf-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  /* text-400 falls under AA on the dark surface — this is small caps text. */
+  color: var(--text-600);
+}
+
 .pf-empty { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
 .pf-note {
   margin: 0.7rem 0 0;

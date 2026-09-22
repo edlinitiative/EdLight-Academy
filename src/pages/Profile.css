@@ -648,18 +648,6 @@
    used by this page (the hero, its stats and ladder, the totals, the rank
    rows and the achievement cards). */
 
-/* Caps micro-label. The mockups set these in a separate label face; Geist Mono
-   is the one we already self-host, and it does the same job. */
-.pf-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  /* text-400 falls under AA on the dark surface — this is small caps text. */
-  color: var(--text-600);
-}
-
 /* ── Hero ────────────────────────────────────────────────────────────────── */
 
 .pf-hero {
