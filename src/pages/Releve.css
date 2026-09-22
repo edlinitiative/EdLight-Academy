@@ -1,0 +1,581 @@
+/* /releve — the printable progress record, dressed in the pf-* language.
+
+   Anatomy: a screen-only toolbar (what this is, how to print it), then ONE
+   sheet — masthead, the bilingual "not an official document" line, the pupil's
+   identity, the figures, a course-by-course mastery table with a legend for the
+   ladder, the corrected exams, and a footer naming where the numbers come from.
+
+   Where it comes from: the owner's mockups asked for "Exporter le Relevé de
+   Progression". What they also had and this page does NOT take: a weighted
+   average out of 20, a projected "mention", a Bac readiness verdict, a
+   "VÉRIFIÉ MENFP" seal, a rank in the cohort, a signature block with a serial
+   number, and a study-hours chart. None of those exist behind this app — and a
+   document a parent or a head teacher will read as authoritative is the last
+   place to invent one. See the header of Releve.tsx for the per-figure sources.
+
+   Rules: tokens and pf-* tones only — no new hues, and no colored left-border
+   stripes anywhere. Emphasis is fill, weight and spacing.
+
+   THE PRINT LAYER IS THE POINT, and it is scoped. A webpack CSS chunk stays in
+   the document once loaded, so an unscoped `@media print` block here would
+   follow the visitor onto every other page they printed for the rest of the
+   session. Every print rule below therefore sits under `[data-releve]`, an
+   attribute Releve.tsx puts on <html> while it is mounted and removes on
+   unmount.
+
+   The shared primitives — .pf-card, .pf-eyebrow, .pf-tile, .pf-pill, .pf-meter,
+   .pf-link, .pf-empty, .pf-note — live in src/styles/pf.css and are read-only
+   here. Everything below is this page's own, scoped under .rlv. */
+
+.rlv .container { max-width: 940px; }
+
+/* == Screen-only toolbar ================================================== */
+
+.rlv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.rlv-toolbar__text { flex: 1 1 320px; min-width: 0; }
+.rlv-toolbar__title {
+  margin: 0.2rem 0 0.45rem;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-900);
+}
+.rlv-toolbar__lead {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 58ch;
+}
+.rlv-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+.rlv-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* == The sheet ============================================================ */
+
+.rlv-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.6rem 1.4rem 1.4rem;
+  color: var(--text-800);
+}
+
+.rlv-mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 2px solid var(--border);
+}
+.rlv-mast__title {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text-900);
+}
+.rlv-mast__date {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* The line the whole document is built around. A wash and a full-width rule —
+   not a left stripe, and not a badge, which is exactly the shape a reader
+   mistakes for a seal. */
+.rlv-disclaimer {
+  display: grid;
+  gap: 0.4rem;
+  margin: 1rem 0 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-800);
+}
+.rlv-disclaimer span[lang='ht'] { color: var(--text-600); }
+.rlv-disclaimer--plain { margin-top: 1.1rem; }
+
+/* == Blocks =============================================================== */
+
+.rlv-block { margin-top: 1.5rem; }
+.rlv-block__title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-900);
+}
+.rlv-block__note {
+  margin: -0.3rem 0 0.85rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  max-width: 72ch;
+}
+.rlv-loading { margin-top: 1.5rem; }
+
+/* == Identity ============================================================= */
+
+.rlv-identity {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.5rem 1.4rem;
+  margin: 0;
+}
+.rlv-identity__row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px dotted var(--border);
+}
+.rlv-identity dt {
+  flex: none;
+  min-width: 5.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-600);
+}
+.rlv-identity dd {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-900);
+  overflow-wrap: anywhere;
+}
+
+/* == Figures ============================================================== */
+
+.rlv-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+.rlv-figure {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.rlv-figure__value {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-900);
+}
+.rlv-figure__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-800);
+}
+.rlv-figure__hint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.rlv-figure .pf-tile { margin-bottom: 0.25rem; }
+
+/* == Courses and units ==================================================== */
+
+.rlv-course {
+  margin-top: 0.9rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.rlv-course__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.rlv-course__name {
+  flex: 1 1 auto;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-900);
+  min-width: 0;
+}
+.rlv-course__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.rlv-course__rest {
+  margin: 0.55rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.rlv-units {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.rlv-unit {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+}
+.rlv-unit:first-child { border-top: 0; }
+.rlv-unit__title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-900);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rlv-unit__pill { justify-self: end; }
+.rlv-unit__counts,
+.rlv-unit__points {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.rlv-unit__counts { grid-column: 1; }
+.rlv-unit__points { grid-column: 2; justify-self: end; }
+.rlv-unit__meter { grid-column: 1 / -1; }
+
+@media (min-width: 760px) {
+  .rlv-unit {
+    grid-template-columns: minmax(0, 1fr) 7.5rem 8.5rem minmax(70px, 110px) 4.2rem;
+  }
+  .rlv-unit__pill { justify-self: start; }
+  .rlv-unit__counts { grid-column: auto; }
+  .rlv-unit__meter { grid-column: auto; }
+  .rlv-unit__points { grid-column: auto; justify-self: end; }
+}
+
+/* The ladder legend: what each level actually cost to earn. */
+.rlv-ladder {
+  margin-top: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.rlv-ladder ul {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.rlv-ladder li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-800);
+}
+.rlv-ladder .pf-pill { flex: none; }
+
+/* == Exams ================================================================ */
+
+.rlv-exams {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.rlv-exam {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.2rem 0.8rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--border);
+}
+.rlv-exam:first-child { border-top: 0; }
+.rlv-exam__title {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-900);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rlv-exam__meta {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.rlv-exam__date {
+  grid-column: 1;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.rlv-exam__score {
+  grid-row: 1;
+  grid-column: 2;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-900);
+  white-space: nowrap;
+}
+
+/* == Sheet footer ========================================================= */
+
+.rlv-foot {
+  margin-top: 1.6rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.rlv-foot p { margin: 0 0 0.35rem; max-width: 76ch; }
+.rlv-foot__repeat { font-weight: 600; color: var(--text-600); }
+
+.rlv-after {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.rlv-after svg { flex: none; }
+
+/* == Guest ================================================================ */
+
+.rlv-guest { max-width: 640px; }
+.rlv-guest__title {
+  margin: 0.7rem 0 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-900);
+}
+.rlv-guest__lead {
+  margin: 0 0 0.7rem;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.rlv-guest__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1rem 0 0.4rem;
+}
+.rlv-inline-link { margin-top: 0; }
+
+/* == Reduced motion ======================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .rlv .pf-meter__fill { transition: none; }
+  .rlv .button { transition: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT — scoped to [data-releve] (see the note at the top of this file)
+   ──────────────────────────────────────────────────────────────────────────
+   On paper: no dark theme, no app chrome, black on white, no blue underlined
+   links pointing at URLs nobody can click, and no course's rows split across
+   two pages. Page margins are left to the browser deliberately: an `@page`
+   rule cannot be scoped to a route, so setting one here would change the
+   margins of every page printed later in the session.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media print {
+  /* 1 — Nothing but the sheet. `.app-shell > *` is the navbar, the footer, the
+     bottom nav, the install banner, the assistant launcher and the overlays;
+     <main> is the only child that holds the page. */
+  [data-releve] .app-shell > :not(main) { display: none !important; }
+  [data-releve] [data-noprint] { display: none !important; }
+  [data-releve] .rlv-after { display: none !important; }
+
+  /* 2 — Light, whatever the interface is set to. The dark theme redefines
+     these tokens on <html>; re-declaring them on the page root puts the whole
+     subtree — including the pf-* primitives — back on white. */
+  [data-releve],
+  [data-releve] body,
+  [data-releve] .app-shell,
+  [data-releve] .rlv {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  [data-releve] .rlv {
+    --surface: #fff;
+    --surface-muted: #fff;
+    --border: #9aa3ae;
+    --text-900: #000;
+    --text-800: #16181c;
+    --text-600: #33383f;
+    --text-muted: #3d434a;
+    --text-400: #4a5058;
+    --t-azure-fill: #fff;   --t-azure-ink: #000;
+    --t-amber-fill: #fff;   --t-amber-ink: #000;
+    --t-emerald-fill: #fff; --t-emerald-ink: #000;
+    --t-rose-fill: #fff;    --t-rose-ink: #000;
+    --t-violet-fill: #fff;  --t-violet-ink: #000;
+    --t-slate-fill: #fff;   --t-slate-ink: #000;
+    --shadow-sm: none;
+  }
+
+  /* 3 — Page furniture off. The sheet IS the page. */
+  [data-releve] .section,
+  [data-releve] .app-shell__main,
+  [data-releve] .rlv .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  [data-releve] .rlv-sheet {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  /* 4 — Print typography. Point sizes, not rem: the reader's browser font size
+     has nothing to do with a sheet of A4. */
+  [data-releve] .rlv-mast { padding-bottom: 6pt; border-bottom: 1.5pt solid #000; }
+  [data-releve] .rlv-mast__title { font-size: 17pt; }
+  [data-releve] .rlv-mast__date { font-size: 9pt; }
+  [data-releve] .rlv-block { margin-top: 14pt; }
+  [data-releve] .rlv-block__title { font-size: 12pt; margin-bottom: 5pt; }
+  [data-releve] .rlv-block__note { font-size: 8.5pt; margin: 0 0 7pt; }
+  [data-releve] .rlv-identity dt { font-size: 7pt; }
+  [data-releve] .rlv-identity dd { font-size: 10pt; }
+  [data-releve] .rlv-figure__value { font-size: 15pt; }
+  [data-releve] .rlv-figure__label { font-size: 9pt; }
+  [data-releve] .rlv-figure__hint { font-size: 8pt; }
+  [data-releve] .rlv-course__name { font-size: 11pt; }
+  [data-releve] .rlv-course__meta { font-size: 8.5pt; }
+  [data-releve] .rlv-unit__title { font-size: 9.5pt; }
+  [data-releve] .rlv-unit__counts,
+  [data-releve] .rlv-unit__points { font-size: 8.5pt; }
+  [data-releve] .rlv-exam__title { font-size: 9.5pt; }
+  [data-releve] .rlv-exam__score { font-size: 11pt; }
+  [data-releve] .rlv-disclaimer { font-size: 8.5pt; padding: 7pt 8pt; }
+  [data-releve] .rlv-ladder li { font-size: 8.5pt; }
+  [data-releve] .rlv-foot { font-size: 8pt; }
+
+  /* The icon tiles are decoration that costs ink and says nothing on paper. */
+  [data-releve] .rlv .pf-tile { display: none !important; }
+
+  /* A4 is narrower than the 760px the tabular unit row asks for, so in print
+     the rows would fall back to the stacked phone layout — three lines and a
+     full-width bar per chapter, which is what turned a one-page course into
+     half a page. Forced back into columns, sized for the printed measure. */
+  [data-releve] .rlv-unit {
+    grid-template-columns: minmax(0, 1fr) 4.6rem 6.2rem minmax(48px, 78px) 3.4rem;
+    gap: 0 0.5rem;
+    padding: 3.5pt 0;
+  }
+  [data-releve] .rlv-unit__pill { justify-self: start; }
+  [data-releve] .rlv-unit__counts,
+  [data-releve] .rlv-unit__meter,
+  [data-releve] .rlv-unit__points { grid-column: auto; }
+  [data-releve] .rlv-unit__points { justify-self: end; }
+
+  /* The reading-measure caps are for a 1280px screen; on A4 they leave a
+     heading spanning the page above three short lines of note. */
+  [data-releve] .rlv-block__note,
+  [data-releve] .rlv-foot p { max-width: none; }
+
+  /* A pill is a fill on screen; on paper it is a word with an outline, so the
+     level still reads on a black-and-white printer. */
+  [data-releve] .rlv .pf-pill {
+    border: 0.75pt solid #000;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 8pt;
+    padding: 0.5pt 5pt;
+  }
+
+  /* The meter, forced to actually print — and paired with its own number in
+     the markup, so it still reads if a printer drops backgrounds anyway. */
+  [data-releve] .rlv .pf-meter {
+    height: 5pt;
+    border: 0.5pt solid #000;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-releve] .rlv .pf-meter__fill {
+    background: #000 !important;
+    transition: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 5 — Links: the text, in black, with no href printed after it. */
+  [data-releve] .rlv a,
+  [data-releve] .rlv a:visited {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+  [data-releve] .rlv a[href]::after { content: '' !important; }
+
+  /* 6 — Page breaks. A course's rows are one group and never split; a heading
+     never ends a page on its own. */
+  [data-releve] .rlv-course,
+  [data-releve] .rlv-unit,
+  [data-releve] .rlv-exam,
+  [data-releve] .rlv-figure,
+  [data-releve] .rlv-ladder,
+  [data-releve] .rlv-identity__row,
+  [data-releve] .rlv-disclaimer,
+  [data-releve] .rlv-foot {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  [data-releve] .rlv-block__title,
+  [data-releve] .rlv-course__head,
+  [data-releve] .rlv-mast {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+}

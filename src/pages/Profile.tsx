@@ -1131,6 +1131,14 @@ export default function Profile() {
                 <span className="pf-total__label">{t('Meilleure série', 'Pi bon seri')}</span>
               </div>
             </div>
+            {/* The same four figures, plus mastery per chapter and the exams,
+                as one page a student can print or save as PDF for a parent,
+                a teacher or a school. It is a record of activity here — not a
+                bulletin, and it says so on itself. */}
+            <Link to="/releve" className="pf-link">
+              <FileText size={16} aria-hidden="true" />
+              {t('Relevé de progression à imprimer', 'Relve pwogrè pou enprime')}
+            </Link>
           </div>
 
           {/* ── Leaderboard: your actual neighbours ──

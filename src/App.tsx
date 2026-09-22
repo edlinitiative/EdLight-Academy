@@ -60,6 +60,7 @@ const AnswerVerification = lazyWithRetry(() => import('./pages/AnswerVerificatio
 const StudyPlan = lazyWithRetry(() => import('./pages/StudyPlan'));
 const TriviaGames = lazyWithRetry(() => import('./pages/TriviaGames'));
 const Profile = lazyWithRetry(() => import('./pages/Profile'));
+const Releve = lazyWithRetry(() => import('./pages/Releve'));
 const Classement = lazyWithRetry(() => import('./pages/Classement'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 const FigureEmbed = lazyWithRetry(() => import('./pages/FigureEmbed'));
@@ -128,6 +129,10 @@ export default function App() {
                 <Route path="trivia" element={<Navigate to="/jeux" replace />} />
                 <Route path="trivia/:gameId" element={<Navigate to="/jeux" replace />} />
                 <Route path="profile" element={<Profile />} />
+                {/* Printable progress record. Inside Layout: its signed-out
+                    state invites the visitor to sign in, and Layout is what
+                    renders <AuthModal>. The print stylesheet hides the chrome. */}
+                <Route path="releve" element={<Releve />} />
                 {/* Bare /arena is the link buildArenaInviteMessage()
                     (mobile/src/services/arenaService.ts) puts in every "il
                     manque N joueurs" share text, so it is the most-followed
