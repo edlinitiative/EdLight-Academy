@@ -862,14 +862,12 @@ export default function Courses() {
           {/* Loading keeps the page's real identity — the student can already
               read where they are instead of watching an anonymous grey page.
               Only the list that is genuinely unknown is a skeleton. */}
-          <header className="lrn-hero lrn-hero--bare">
-            <div className="lrn-hero__lead">
-              <span className="pf-eyebrow lrn-hero__eyebrow">
-                <span className="lrn-hero__dot" aria-hidden="true" />
-                {t('nav.learn')}
-              </span>
-              <h1 className="lrn-hero__title">{t('courses.catalog')}</h1>
-              <p className="lrn-hero__sub" role="status">
+          {/* Same compact header as the loaded page, so the title does not
+              resize under the reader when the catalogue arrives. */}
+          <header className="lrn-head">
+            <div className="lrn-head__line">
+              <h1 className="lrn-head__title">{t('courses.catalog')}</h1>
+              <p className="lrn-head__note" role="status">
                 {L('Chargement du catalogue…', 'N ap chaje katalòg la…')}
               </p>
             </div>
@@ -900,13 +898,9 @@ export default function Courses() {
               not load. ErrorState supplies the plain-language message (and the
               offline variant of it) plus the retry; the second action keeps a
               way forward instead of a dead end. */}
-          <header className="lrn-hero lrn-hero--bare">
-            <div className="lrn-hero__lead">
-              <span className="pf-eyebrow lrn-hero__eyebrow">
-                <span className="lrn-hero__dot" aria-hidden="true" />
-                {t('nav.learn')}
-              </span>
-              <h1 className="lrn-hero__title">{t('courses.catalog')}</h1>
+          <header className="lrn-head">
+            <div className="lrn-head__line">
+              <h1 className="lrn-head__title">{t('courses.catalog')}</h1>
             </div>
           </header>
           <ErrorState
@@ -1051,58 +1045,47 @@ export default function Courses() {
             title, and the catalogue's own size beside it. Every figure in
             `catalogFigures` is counted from the loaded catalogue, so the
             panel self-corrects the day a hidden subject is unhidden. */}
-        <header className="lrn-hero pf-card">
-          <div className="lrn-hero__lead">
-            <span className="pf-eyebrow lrn-hero__eyebrow">
-              <span className="lrn-hero__dot" aria-hidden="true" />
-              {t('nav.learn')}
-            </span>
+        {/* A page header, not a hero.
+            It WAS a hero: a 384px card (346px on a phone) with an eyebrow, a
+            display title, a lede and a 2×2 panel of figures. That pushed the
+            search field to 560px and the filter rail to 928px — below the fold
+            on both sizes, so a student could not narrow the catalogue without
+            scrolling past a card that only described the page.
+
+            Ted, on seeing it: "the hero is too big - i want people to start
+            taking action as soon as they are on the page".
+
+            So: one line of title, the same real figures inline beside it, and
+            the lede dropped — it said "filtrez par matière et par niveau, ou
+            cherchez…", which is what the controls directly underneath already
+            show. The <h1> stays; it is the page's only one. */}
+        <header className="lrn-head">
+          <div className="lrn-head__line">
             {myCourses.length > 0 && !filtering ? (
-              <>
-                <h1 className="lrn-hero__title">
-                  {L('Vos cours', 'Kou ou yo')}
-                  {myLevel && (
-                    <span className="lrn-hero__accent">{levelLabel(myLevel)}</span>
-                  )}
-                </h1>
-                <p className="lrn-hero__sub">
-                  {L(
-                    `Nous commençons par ${levelLabel(myLevel)}, votre classe. Tout le catalogue reste juste en dessous.`,
-                    `Nou kòmanse ak ${levelLabel(myLevel)}, klas ou a. Tout katalòg la rete anba a.`,
-                  )}
-                </p>
-              </>
+              <h1 className="lrn-head__title">
+                {L('Vos cours', 'Kou ou yo')}
+                {myLevel && <span className="lrn-head__accent">{levelLabel(myLevel)}</span>}
+              </h1>
             ) : (
-              <>
-                <h1 className="lrn-hero__title">
-                  {t('courses.catalog')}
-                  {/* The range is read off the levels the catalogue actually
-                      has — not a "NS I → NS IV" typed into the page. */}
-                  {levelSpan && <span className="lrn-hero__accent">{levelSpan}</span>}
-                </h1>
-                <p className="lrn-hero__sub">
-                  {L(
-                    'Filtrez par matière et par niveau, ou cherchez un module ou une leçon par son nom.',
-                    'Filtre pa matyè ak pa nivo, oswa chèche yon modil oswa yon leson ak non li.',
-                  )}
-                </p>
-              </>
+              <h1 className="lrn-head__title">
+                {t('courses.catalog')}
+                {/* The range is read off the levels the catalogue actually
+                    has — not a "NS I → NS IV" typed into the page. */}
+                {levelSpan && <span className="lrn-head__accent">{levelSpan}</span>}
+              </h1>
+            )}
+
+            {catalogFigures.length > 0 && (
+              <dl className="lrn-tally">
+                {catalogFigures.map((f) => (
+                  <div key={f.key} className="lrn-tally__item">
+                    <dd className="lrn-tally__value">{f.value}</dd>
+                    <dt className="lrn-tally__label">{f.label}</dt>
+                  </div>
+                ))}
+              </dl>
             )}
           </div>
-
-          {catalogFigures.length > 0 && (
-            <dl className="lrn-figures">
-              {catalogFigures.map((f) => (
-                <div key={f.key} className="lrn-figure">
-                  <span className={`pf-tile pf-tile--sm pf-tile--${f.tone}`} aria-hidden="true">
-                    <f.icon size={15} strokeWidth={1.9} />
-                  </span>
-                  <dt className="pf-eyebrow lrn-figure__label">{f.label}</dt>
-                  <dd className="lrn-figure__value">{f.value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
         </header>
 
         {/* Toolbar — a real search field over the catalogue, plus the axis

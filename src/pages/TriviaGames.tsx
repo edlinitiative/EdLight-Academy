@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Gamepad2, Swords, Users } from 'lucide-react';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Swords, Users } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -730,25 +730,23 @@ function GamesHub({ isCreole }) {
 
   return (
     <div className="games-hub pf">
+      {/* A heading, not a hero.
+          It WAS a tag pill, a two-clause display heading and a lede, 271px
+          tall on desktop and 326px on a phone, which put the first game card
+          at 861px / 1115px — a page about playing where nothing playable was
+          on screen.
+
+          Ted: "the hero is too big - i want people to start taking action as
+          soon as they are on the page". The pill and the lede are gone; the
+          count the pill carried now sits in the figure strip below, which was
+          already reporting real numbers. */}
       <header className="games-hub__hero jx-hero">
-        <span className="jx-hero__tag pf-eyebrow">
-          <Gamepad2 size={13} aria-hidden="true" />
-          {isCreole ? 'Jwèt EdLight' : 'Jeux EdLight'}
-          <span className="jx-hero__tag-count">
-            {GAMES.length} {isCreole ? 'jwèt' : 'jeux'}
-          </span>
-        </span>
         <h1 className="games-hub__title jx-hero__title">
           {isCreole ? 'Aprann pandan w ap jwe.' : 'Apprenez en jouant.'}{' '}
           <span className="jx-hero__title-accent">
             {isCreole ? 'Chak pati konte.' : 'Chaque partie compte.'}
           </span>
         </h1>
-        <p className="games-hub__subtitle jx-hero__lede">
-          {isCreole
-            ? 'Chak pati fè ou ranmase XP epi monte nan klasman an.'
-            : 'Chaque partie vous fait gagner des XP et grimper au classement.'}
-        </p>
 
         <div className="jx-stats">
           <div className="jx-figures">

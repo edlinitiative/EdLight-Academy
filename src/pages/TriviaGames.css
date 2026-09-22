@@ -925,7 +925,6 @@
   color: var(--text-500);
 }
 
-
 /* ═══ Games hub ═════════════════════════════════════════════════════════════
    Restyled from the "Jeux Éducatifs & Arène de Quiz" mockups on top of the
    shared pf-* language (src/styles/pf.css — .pf-card, .pf-eyebrow, .pf-tile,
@@ -996,31 +995,11 @@
   padding-top: 0.35rem;
 }
 
-.jx-hero__tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.28rem 0.32rem 0.28rem 0.7rem;
-  border-radius: 999px;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.jx-hero__tag svg { color: var(--pf-accent-ink); }
-
-.jx-hero__tag-count {
-  padding: 0.16rem 0.52rem;
-  border-radius: 999px;
-  background: var(--t-azure-fill);
-  color: var(--t-azure-ink);
-  letter-spacing: 0.08em;
-}
-
 .games-hub__title {
-  margin: 0.85rem 0 0;
+  margin: 0;
   max-width: 22ch;
   font-family: var(--font-heading);
-  font-size: clamp(1.7rem, 4.4vw, 2.6rem);
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.8rem);
   font-weight: 800;
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -1031,14 +1010,6 @@
    azure scale lightens, so this takes the LIGHTER end (pf-accent-ink) to stay
    legible on the canvas. */
 .jx-hero__title-accent { color: var(--pf-accent-ink); }
-
-.games-hub__subtitle {
-  margin: 0.7rem 0 0;
-  max-width: 56ch;
-  color: var(--text-600);
-  font-size: 1rem;
-  line-height: 1.6;
-}
 
 /* ─── Figure strip ─────────────────────────────────────────────────────────
    One card holding the figures and, for a signed-in player, the bar to their

@@ -613,22 +613,20 @@ export default function Practice() {
   return (
     <section className="section practice-hub pf">
       <div className="container practice-hub__container">
-        {/* The mockups open on a wash panel: heading on the left, one card on
-            the right. The card is the suggestion, because it is the only thing
-            on this page addressed to this student in particular. */}
+        {/* A heading and the suggestion, not a hero.
+            It WAS a wash panel 378px tall on desktop and 504px on a phone: a
+            pill eyebrow, a 2.65rem display heading and a paragraph explaining
+            that each entry states what it measures — which every entry below
+            then states for itself. The filter bar landed at 542px / 606px.
+
+            Ted: "the hero is too big - i want people to start taking action as
+            soon as they are on the page". So the eyebrow and the paragraph are
+            gone and the heading is one line. The suggestion card stays and is
+            now the first thing under it, because it is the only element here
+            addressed to this student in particular — it is the action. */}
         <div className="practice-hero">
           <header className="practice-hub__header">
-            <span className="practice-hub__eyebrow">
-              <span className="practice-hub__dot" aria-hidden="true" />
-              {t('Pratique', 'Pratik')}
-            </span>
             <h1>{t('De quoi avez-vous besoin aujourd’hui ?', 'Kisa ou bezwen travay jodi a?')}</h1>
-            <p>
-              {t(
-                'Chaque entrée dit ce qu’elle mesure, si elle est chronométrée et ce qui est enregistré, pour que vous choisissiez en connaissance de cause.',
-                'Chak antre di sa l ap mezire, si gen kwonomèt epi kisa ki anrejistre, pou ou ka chwazi ak konesans.',
-              )}
-            </p>
           </header>
 
           <Suggestion evidence={evidence} t={t} onSignIn={toggleAuthModal} signedIn={!!userId} />

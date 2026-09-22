@@ -72,136 +72,6 @@
 
 .lrn-crumbs [aria-current="page"] { color: var(--text-700); font-weight: 650; }
 
-/* == Hero ================================================================
-   The mockups' opening: a dotted caps eyebrow, a two-tone display title and
-   the catalogue measuring itself beside it. */
-.lrn .lrn-hero {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.4rem;
-  margin-bottom: 1.1rem;
-  padding: 1.5rem 1.6rem 1.6rem;
-}
-
-@media (min-width: 860px) {
-  .lrn-hero {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 2.25rem;
-  }
-}
-
-/* One soft wash behind the title — the mockups' tinted canvas, scoped to the
-   card instead of repainting the page. Decorative only: nothing reads on it
-   that does not also clear AA against the plain surface underneath. */
-.lrn-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 420px;
-  height: 260px;
-  background: radial-gradient(
-    120% 100% at 0% 0%,
-    color-mix(in srgb, var(--primary-500) 9%, transparent),
-    transparent 70%
-  );
-  pointer-events: none;
-}
-
-.lrn-hero > * { position: relative; }
-
-/* Loading and error keep the page's identity without the card chrome — there
-   is nothing yet to put in it. */
-.lrn .lrn-hero--bare {
-  background: none;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-  margin-bottom: 1.5rem;
-}
-
-.lrn-hero--bare::before { display: none; }
-
-.lrn-hero__eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.lrn-hero__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--primary-500);
-}
-
-.lrn-hero__title {
-  margin: 0.5rem 0 0;
-  font-family: var(--font-heading);
-  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.4rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
-  color: var(--text-900);
-  overflow-wrap: anywhere;
-}
-
-/* The second line in the one azure — its accent end, which the dark theme
-   flips to the lighter tint so the ink stays legible on the night surface. */
-.lrn-hero__accent {
-  display: block;
-  color: var(--pf-accent-ink);
-}
-
-.lrn-hero__sub {
-  margin: 0.7rem 0 0;
-  max-width: 56ch;
-  font-size: var(--text-base);
-  line-height: 1.6;
-  color: var(--text-600);
-}
-
-/* ── The catalogue's own figures ─────────────────────────────────────────
-   Four counts, all derived at runtime from the courses this page renders. */
-.lrn-figures {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin: 0;
-}
-
-@media (min-width: 860px) {
-  .lrn-figures { grid-template-columns: repeat(2, minmax(124px, 1fr)); }
-}
-
-.lrn-figure {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: 'tile value' 'tile label';
-  align-items: center;
-  gap: 0 0.6rem;
-  padding: 0.65rem 0.8rem;
-  border-radius: 16px;
-  background: var(--surface-muted);
-}
-
-.lrn-figure .pf-tile { grid-area: tile; }
-
-.lrn-figure__value {
-  grid-area: value;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  font-family: var(--font-heading);
-  font-size: 1.3rem;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--text-900);
-}
-
-.lrn-figure__label { grid-area: label; }
 
 /* == Search panel ========================================================
    The mockups keep search, the reading axis and the suggested subjects in one
@@ -1239,8 +1109,6 @@
 }
 
 @media (max-width: 600px) {
-  .lrn .lrn-hero { padding: 1.2rem 1.1rem 1.3rem; }
-  .lrn-hero__sub { font-size: var(--text-sm); }
 
   .lrn-toolbar {
     flex-direction: column;
@@ -1311,3 +1179,66 @@
 
   .lrn-units { animation: none; }
 }
+
+/* ── Page header (replaces the old hero) ───────────────────────────────────
+   The catalogue's own job is on screen immediately: title and the real
+   figures on one line, then the search and the filters. The hero this
+   replaced was a 384px card whose only content was a description of the
+   page, and it put the filter rail below the fold at both sizes. */
+
+.lrn-head { margin-bottom: 1rem; }
+
+.lrn-head__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.lrn-head__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--text-900);
+}
+/* The level range, in the one azure, on the same line rather than under it. */
+.lrn-head__accent { color: var(--accent-ink); margin-left: 0.4rem; font-weight: 700; }
+
+/* The same four catalogue figures the panel carried, read as a line. */
+.lrn-tally {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+  margin: 0;
+}
+.lrn-tally__item { display: flex; align-items: baseline; gap: 0.3rem; }
+.lrn-tally__value {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-900);
+  font-variant-numeric: tabular-nums;
+}
+.lrn-tally__label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-600);
+}
+
+@media (max-width: 560px) {
+  .lrn-head { margin-bottom: 0.75rem; }
+  .lrn-tally { gap: 0.15rem 0.75rem; }
+  .lrn-tally__value { font-size: 0.88rem; }
+}
+
+/* The loading line sits beside the title rather than under it, so the header
+   is the same height before and after the catalogue arrives. */
+.lrn-head__note { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
