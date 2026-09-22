@@ -48,88 +48,6 @@
   gap: 1rem;
 }
 
-/* ── Identity header ── */
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.profile-header__avatar {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: var(--primary-500);
-  color: #fff;
-  font-weight: 800;
-  font-size: 1.4rem;
-  flex: 0 0 auto;
-}
-
-.profile-header__id { min-width: 0; }
-
-.profile-header__name {
-  margin: 0;
-  font-size: var(--text-lg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.profile-header__email {
-  margin: 0.1rem 0 0.5rem;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.profile-header__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.profile-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-}
-
-.profile-chip--level { background: var(--primary-50); color: var(--primary-600); }
-
-/* ── Level progress (inside hero) ── */
-.profile-level__top {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.profile-level__bar {
-  height: 9px;
-  border-radius: 999px;
-  background: var(--surface-alt);
-  overflow: hidden;
-}
-
-.profile-level__fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--primary-500);
-  transition: width 0.6s ease;
-  /* width set via --level-pct custom property */
-  width: var(--level-pct, 0%);
-}
-
 /* ── Generic profile card ── */
 .profile-card {
   background: var(--surface);
@@ -725,214 +643,353 @@
 
 .profile-guest__free a { color: var(--primary-600); font-weight: 700; }
 
-/* ── Identity: place line and the streak ─────────────────────────────────── */
+/* ── Profile-specific pieces of the pf-* language ──────────────────────────
+   The shared primitives live in src/styles/pf.css; everything below is only
+   used by this page (the hero, its stats and ladder, the totals, the rank
+   rows and the achievement cards). */
 
-.profile-header__place {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0.2rem 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.profile-chip--button {
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font: inherit;
-}
-.profile-chip--button:hover { border-color: var(--primary-500); color: var(--primary-600); }
-
-/* The streak, stated once. Its value is the number of days AND the next
-   threshold — a count on its own gives nothing to aim at. */
-.profile-streak {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
-}
-.profile-streak__icon { align-self: center; color: var(--primary-500); }
-.profile-streak__days { font-size: 1.25rem; font-weight: 700; color: var(--text-900); }
-.profile-streak__unit { color: var(--text-600); }
-.profile-streak__next { margin-left: auto; }
-
-/* ── The four totals ─────────────────────────────────────────────────────── */
-
-.profile-totals {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-.profile-total {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.7rem 0.75rem;
-  background: var(--surface-muted);
-  border-radius: var(--radius-md);
-}
-.profile-total__value { font-size: 1.35rem; font-weight: 700; color: var(--text-900); line-height: 1.1; }
-.profile-total__label { font-size: 0.78rem; color: var(--text-muted); }
-
-/* A count beside a card title, pushed to the end of the row. */
-.profile-card__count {
-  margin-left: auto;
-  font-size: var(--text-sm);
+/* Caps micro-label. The mockups set these in a separate label face; Geist Mono
+   is the one we already self-host, and it does the same job. */
+.pf-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
   font-weight: 600;
-  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  /* text-400 falls under AA on the dark surface — this is small caps text. */
+  color: var(--text-600);
 }
 
-/* ── Courses ─────────────────────────────────────────────────────────────── */
+/* ── Hero ────────────────────────────────────────────────────────────────── */
 
-.profile-courses {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0.75rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-.profile-course__link {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas: "name chev" "meta chev";
-  align-items: center;
-  gap: 0 0.5rem;
-  padding: 0.6rem 0.75rem;
+.pf-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem 1.6rem;
 }
-.profile-course__link:hover { border-color: var(--primary-500); background: var(--primary-50); }
-.profile-course__name { grid-area: name; font-weight: 600; color: var(--text-900); }
-.profile-course__meta { grid-area: meta; font-size: 0.8rem; }
-.profile-course__chev { grid-area: chev; color: var(--text-400); }
+/* A single soft wash behind the identity block — the mockups' tinted canvas,
+   scoped to the one card instead of repainting the page. */
+.pf-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 190px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-500) 7%, var(--surface)), var(--surface));
+  pointer-events: none;
+}
+.pf-hero > * { position: relative; }
 
-/* ── Leaderboard neighbours ──────────────────────────────────────────────── */
+.pf-hero__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.pf-hero__who { display: flex; align-items: center; gap: 1rem; min-width: 0; }
 
-.profile-ranks {
+.pf-avatar {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  flex: none;
+  border-radius: 50%;
   display: grid;
-  gap: 0.25rem;
-  margin: 0.75rem 0 0;
-  padding: 0;
-  list-style: none;
+  place-items: center;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px var(--primary-100);
 }
-.profile-rank {
-  display: grid;
-  grid-template-columns: 2.4rem 1fr auto;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-}
-.profile-rank__pos { color: var(--text-muted); font-weight: 600; }
-.profile-rank__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.profile-rank__xp { color: var(--text-600); }
-/* Your own row is filled rather than outlined — no accent stripe. */
-.profile-rank.is-me {
-  background: var(--primary-50);
+.pf-avatar__initials {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--primary-600);
+  color: #fff;
+  letter-spacing: -0.02em;
 }
-.profile-rank.is-me .profile-rank__pos,
-.profile-rank.is-me .profile-rank__xp { color: var(--primary-600); }
-
-.profile-ranks__gap {
-  margin: 0.6rem 0 0;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-.profile-ranks__open {
+/* The level rides the avatar, as in the mockups. */
+.pf-avatar__level {
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.75rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: var(--text-sm);
+  gap: 0.15rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--warning-500);
+  color: #3B2300;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
   font-weight: 600;
-  color: var(--primary-600);
-  cursor: pointer;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 0 0 3px var(--surface);
 }
-.profile-ranks__open:hover { text-decoration: underline; }
 
-/* ── Achievement shelf ───────────────────────────────────────────────────── */
-
-.profile-badges {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 0.6rem;
-  margin-top: 0.75rem;
-}
-.profile-badge {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.6rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-}
-/* Locked tiles stay legible — they carry the criterion, which is the only
-   part of a locked badge that can change what a student does next. */
-.profile-badge:not(.is-unlocked) { background: var(--surface-muted); }
-/* Dimmed, not desaturated: grayscale turns a 💎 or a 🏆 into a grey smudge —
-   unreadable at 1.4rem, and worse on the dark tile. Earned vs not is already
-   carried by the tile fill, the check and the meter. */
-.profile-badge:not(.is-unlocked) .profile-badge__emoji { opacity: 0.65; }
-.profile-badge.is-unlocked { border-color: var(--primary-100); }
-
-.profile-badge__emoji { font-size: 1.4rem; line-height: 1.2; }
-.profile-badge__body { display: grid; gap: 0.15rem; min-width: 0; }
-.profile-badge__label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-weight: 600;
-  font-size: var(--text-sm);
+.pf-hero__id { min-width: 0; }
+.pf-hero__name {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
   color: var(--text-900);
 }
-.profile-badge__check { color: var(--success-500); flex: none; }
-.profile-badge__how { font-size: 0.78rem; color: var(--text-muted); }
+.pf-hero__place {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.3rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-600);
+}
+.pf-hero__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
 
-.profile-badge__meter {
-  display: block;
-  position: relative;
-  height: 4px;
-  margin-top: 0.35rem;
+/* Three figures, each with the context that makes it mean something. */
+.pf-hero__stats { display: flex; gap: 0.6rem; }
+.pf-stat {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  min-width: 108px;
+  padding: 0.8rem 0.7rem;
+  background: var(--surface-muted);
+  border-radius: 16px;
+  text-align: center;
+}
+.pf-stat__value {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-900);
+}
+.pf-stat__label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-600);
+}
+.pf-stat__sub { font-size: 0.7rem; color: var(--text-muted); }
+
+/* The ladder to the next level, in its own inset panel. */
+.pf-ladder {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  background: var(--surface-muted);
+  border-radius: 16px;
+}
+.pf-ladder__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+.pf-ladder__title { font-size: var(--text-sm); font-weight: 600; color: var(--text-800); }
+.pf-ladder__figures {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: var(--text-900);
+  white-space: nowrap;
+}
+.pf-ladder__figures small { font-weight: 400; color: var(--text-muted); }
+
+.pf-hero__honours {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.pf-hero__honour-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.pf-honour {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.65rem;
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--border);
+  background: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-800);
 }
-.profile-badge__meter-fill {
-  display: block;
-  height: 100%;
-  width: var(--pct, 0%);
-  border-radius: inherit;
-  background: var(--primary-500);
+
+/* ── Totals ──────────────────────────────────────────────────────────────── */
+
+.pf-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+.pf-total {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.75rem 0.8rem;
+  background: var(--surface-muted);
+  border-radius: 14px;
 }
-.profile-badge__meter-label {
-  position: absolute;
-  top: 0.4rem;
-  right: 0;
+.pf-total__value {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-900);
+}
+.pf-total__label { font-size: 0.74rem; color: var(--text-muted); }
+
+/* ── Leaderboard rows ────────────────────────────────────────────────────── */
+
+.pf-ranks { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.pf-rank {
+  display: grid;
+  grid-template-columns: 2rem auto 1fr auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 14px;
+  font-size: var(--text-sm);
+  transition: background 0.3s ease;
+}
+.pf-rank__pos { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-400); }
+.pf-rank__avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--t-azure-fill);
+  color: var(--t-azure-ink);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.pf-rank__body { display: grid; min-width: 0; }
+.pf-rank__name {
+  font-weight: 600;
+  color: var(--text-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-rank__school {
   font-size: 0.7rem;
   color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-rank__xp { font-weight: 600; color: var(--text-600); }
+
+/* Your own row is filled, as in the mockups — no accent stripe. */
+.pf-rank.is-me {
+  background: var(--pf-fill);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary-500) 30%, transparent);
+}
+.pf-rank.is-me .pf-rank__pos,
+.pf-rank.is-me .pf-rank__name,
+.pf-rank.is-me .pf-rank__school,
+.pf-rank.is-me .pf-rank__xp { color: #fff; }
+.pf-rank.is-me .pf-rank__avatar { background: rgba(255, 255, 255, 0.24); color: #fff; }
+
+/* ── Achievement cards ───────────────────────────────────────────────────── */
+
+.pf-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.7rem;
+}
+.pf-badge {
+  display: flex;
+  flex-direction: column;
+  padding: 0.9rem 1rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+.pf-badge:hover { box-shadow: var(--pf-lift); transform: translateY(-2px); }
+.pf-badge:not(.is-unlocked) { background: color-mix(in srgb, var(--surface-muted) 55%, var(--surface)); }
+.pf-badge.is-unlocked { border-color: var(--primary-100); }
+
+.pf-badge__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+/* Dimmed, not desaturated: grayscale turns a 💎 or a 🏆 into a grey smudge —
+   unreadable at this size, and worse on the dark tile. Earned vs not is
+   already carried by the tile fill, the pill and the border. */
+.pf-badge__emoji { font-size: 1.3rem; line-height: 1; }
+.pf-badge:not(.is-unlocked) .pf-badge__emoji { opacity: 0.7; }
+
+.pf-badge__label {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-900);
+}
+.pf-badge__how {
+  margin: 0.2rem 0 0;
+  font-size: 0.79rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.pf-badge__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+.pf-badge__foot-value { font-size: 0.75rem; font-weight: 600; color: var(--text-600); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .pf-hero__stats { width: 100%; }
+  .pf-stat { flex: 1; min-width: 0; }
 }
 
-@media (max-width: 520px) {
-  .profile-badges { grid-template-columns: 1fr; }
-  .profile-streak__next { margin-left: 0; width: 100%; }
+@media (max-width: 560px) {
+  .pf-hero { padding: 1.25rem 1.1rem; }
+  .pf-hero__who { gap: 0.8rem; }
+  .pf-avatar { width: 62px; height: 62px; }
+  .pf-avatar__initials { font-size: 1.3rem; }
+  .pf-hero__name { font-size: 1.45rem; }
+  .pf-hero__stats { flex-direction: column; }
+  .pf-stat {
+    grid-template-columns: auto auto 1fr;
+    justify-items: start;
+    align-items: center;
+    text-align: left;
+    gap: 0 0.6rem;
+    min-width: 0;
+  }
+  .pf-stat .pf-tile { grid-row: span 2; margin-bottom: 0; }
+  .pf-stat__value { grid-column: 2; }
+  .pf-stat__label { grid-column: 3; }
+  .pf-stat__sub { grid-column: 2 / -1; }
+  .pf-badges { grid-template-columns: 1fr; }
+  .pf-ladder__top { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .profile-course__link { transition: none; }
-}
+.pf-stat .pf-tile { margin-bottom: 0.25rem; }
+
+.pf-total .pf-tile { margin-bottom: 0.3rem; }

@@ -1,0 +1,266 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   pf-* — the shared page visual language
+   ──────────────────────────────────────
+   Taken from the design mockups: white cards on a tinted canvas, a pastel icon
+   tile opening every row and card, status pills rather than bare ticks, caps
+   micro-labels in the mono face, and hover lifts at 300ms. Plus Jakarta Sans
+   sets the headings; Source Sans 3 still carries every word of body copy, so a
+   page keeps one reading voice.
+
+   HOW TO USE: put `pf` on the page's outermost element (it declares the tone
+   variables), then compose from the primitives below. Import this file once
+   per page that needs it — webpack dedupes.
+
+   Colour runs on one axis — `tone`: azure · amber · emerald · rose · violet ·
+   slate. Every tone maps to a token the app already had, so nothing here
+   introduces a new hue, and every pairing below is measured at WCAG AA in both
+   themes. If you add a tone, measure it; the dark theme lightens the azure
+   scale, which flips which end of it is legible.
+
+   Primitives: .pf-card · .pf-head + .pf-eyebrow · .pf-tile · .pf-pill ·
+               .pf-meter · .pf-rows/.pf-row · .pf-link · .pf-btn
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Profile visual language (pf-*)
+   ──────────────────────────────
+   From the profile mockups: white cards on a tinted canvas, a pastel icon tile
+   opening every row and card, status pills rather than bare ticks, caps
+   micro-labels in the mono face, one ringed avatar carrying the level, and
+   hover lifts at 300ms. Plus Jakarta Sans sets the headings; Source Sans 3
+   still carries every word of body copy, so the page keeps one reading voice.
+
+   Colour runs on one axis — `tone` — and every tone maps to a token the app
+   already had. Nothing here introduces a new hue.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.pf {
+  /* Tones: fill / ink. Kept local so the rest of the app is untouched. */
+  --t-azure-fill:   color-mix(in srgb, var(--primary-500) 12%, var(--surface));
+  --t-azure-ink:    #114A9C;
+  --t-amber-fill:   color-mix(in srgb, var(--warning-500) 15%, var(--surface));
+  --t-amber-ink:    #7A4703;
+  --t-emerald-fill: color-mix(in srgb, var(--success-500) 14%, var(--surface));
+  --t-emerald-ink:  #0A522E;
+  --t-rose-fill:    color-mix(in srgb, var(--danger-500) 12%, var(--surface));
+  --t-rose-ink:     #8C1C1C;
+  --t-violet-fill:  color-mix(in srgb, #7C3AED 12%, var(--surface));
+  --t-violet-ink:   #4A1A93;
+  --t-slate-fill:   var(--surface-muted);
+  --t-slate-ink:    var(--text-600);
+
+  --pf-lift: 0 6px 20px rgba(15, 30, 56, 0.08);
+  --pf-accent-ink: var(--primary-600);
+  --pf-fill: var(--primary-500);
+}
+
+[data-theme="dark"] .pf {
+  --t-azure-fill:   color-mix(in srgb, var(--primary-500) 24%, transparent);
+  --t-azure-ink:    #9DC2FA;
+  --t-amber-fill:   color-mix(in srgb, var(--warning-500) 24%, transparent);
+  --t-amber-ink:    #F3C171;
+  --t-emerald-fill: color-mix(in srgb, var(--success-500) 24%, transparent);
+  --t-emerald-ink:  #6FD59F;
+  --t-rose-fill:    color-mix(in srgb, var(--danger-500) 24%, transparent);
+  --t-rose-ink:     #F0A3A3;
+  --t-violet-fill:  color-mix(in srgb, #A78BFA 22%, transparent);
+  --t-violet-ink:   #C4B0FB;
+  --t-slate-fill:   color-mix(in srgb, var(--text-400) 22%, transparent);
+  /* text-400 is already dimmed for the dark theme; on a dimmed fill it fell
+     under AA, so the neutral tone gets its own ink here. */
+  --t-slate-ink:    #AFC0D4;
+  --pf-lift: 0 6px 20px rgba(0, 0, 0, 0.35);
+  /* The dark theme lightens the azure scale, which flips which end of it is
+     legible: link text needs the lighter tint, and the filled row needs the
+     deeper one to keep white text above AA. */
+  --pf-accent-ink: var(--primary-700);
+  --pf-fill: var(--primary-600);
+}
+.pf-card:hover { box-shadow: var(--pf-lift); }
+
+.pf-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.pf-head__text { display: grid; gap: 0.15rem; min-width: 0; }
+.pf-head__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--text-900);
+}
+
+.pf-empty { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+.pf-note {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.pf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.9rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--pf-accent-ink);
+  cursor: pointer;
+}
+.pf-link:hover { text-decoration: underline; }
+
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.9rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.pf-btn--primary { background: var(--primary-500); color: #fff; }
+.pf-btn--primary:hover { background: var(--primary-600); }
+.pf-btn:active { transform: translateY(1px); }
+.pf-tile--sm { width: 28px; height: 28px; border-radius: 9px; }
+.pf-tile--md { width: 44px; height: 44px; }
+.pf-tile--lg { width: 52px; height: 52px; border-radius: 16px; }
+
+.pf-tile--azure   { background: var(--t-azure-fill);   color: var(--t-azure-ink); }
+.pf-tile--amber   { background: var(--t-amber-fill);   color: var(--t-amber-ink); }
+.pf-tile--emerald { background: var(--t-emerald-fill); color: var(--t-emerald-ink); }
+.pf-tile--rose    { background: var(--t-rose-fill);    color: var(--t-rose-ink); }
+.pf-tile--violet  { background: var(--t-violet-fill);  color: var(--t-violet-ink); }
+.pf-tile--slate   { background: var(--t-slate-fill);   color: var(--t-slate-ink); }
+.pf-pill--azure   { background: var(--t-azure-fill);   color: var(--t-azure-ink); }
+.pf-pill--amber   { background: var(--t-amber-fill);   color: var(--t-amber-ink); }
+.pf-pill--emerald { background: var(--t-emerald-fill); color: var(--t-emerald-ink); }
+.pf-pill--rose    { background: var(--t-rose-fill);    color: var(--t-rose-ink); }
+.pf-pill--violet  { background: var(--t-violet-fill);  color: var(--t-violet-ink); }
+.pf-pill--slate   { background: var(--t-slate-fill);   color: var(--t-slate-ink); }
+
+.pf-pill--button {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.pf-pill--button:hover { background: var(--t-azure-fill); color: var(--t-azure-ink); }
+.pf-meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  /* Grows from zero on mount — a bar that arrives full reads as a rule. */
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pf-meter--azure .pf-meter__fill {
+  background: linear-gradient(90deg, var(--primary-500), var(--success-500));
+}
+.pf-meter--amber .pf-meter__fill { background: var(--warning-500); }
+
+.pf-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+.pf-row:hover {
+  border-color: var(--primary-100);
+  box-shadow: var(--pf-lift);
+  transform: translateY(-2px);
+}
+.pf-row__body { display: grid; gap: 0.1rem; min-width: 0; }
+.pf-row__title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.98rem;
+  letter-spacing: -0.01em;
+  color: var(--text-900);
+}
+.pf-row__meta { font-size: 0.8rem; color: var(--text-muted); }
+.pf-row__chev { color: var(--text-400); transition: transform 0.3s ease; }
+.pf-row:hover .pf-row__chev { transform: translateX(3px); }
+.pf-badge__foot .pf-eyebrow { flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-card,
+  .pf-row,
+  .pf-badge,
+  .pf-rank,
+  .pf-row__chev,
+  .pf-meter__fill { transition: none; }
+  .pf-row:hover,
+  .pf-badge:hover { transform: none; }
+}
+
+/* ── Shared card ─────────────────────────────────────────────────────────── */
+
+.pf-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: 1.15rem 1.25rem 1.3rem;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+/* ── Icon tile ───────────────────────────────────────────────────────────── */
+
+.pf-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 13px;
+}
+
+/* ── Pill ────────────────────────────────────────────────────────────────── */
+
+.pf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* ── Meter ───────────────────────────────────────────────────────────────── */
+
+.pf-meter {
+  display: block;
+  flex: 1;
+  height: 7px;
+  min-width: 60px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+/* ── Rows (courses) ──────────────────────────────────────────────────────── */
+
+.pf-rows { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }

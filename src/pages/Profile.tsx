@@ -33,6 +33,7 @@ import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haiti
 import { schoolKey } from '../../shared/schools';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
+import '../styles/pf.css';
 import './Profile.css';
 
 function initialsOf(user) {
@@ -395,31 +396,88 @@ function IdentityFields({ isCreole, uid, board }: {
   );
 }
 
-/**
- * StreakLine — the streak, stated once, with the next milestone as the target.
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Visual language
+ * ───────────────
+ * Taken from the profile mockups: white cards on a tinted canvas, a 44px
+ * pastel icon tile opening every row and card, status pills instead of bare
+ * ticks, caps micro-labels in the mono face, one gradient feature panel, and
+ * hover lifts at 300ms. Plus Jakarta Sans carries the headings; Source Sans 3
+ * still carries every word of body copy.
  *
- * A raw "18 jours" is a fact; "18 jours, prochain palier à 30" is a reason to
- * come back tomorrow. The thresholds come from STREAK_MILESTONES, which is the
- * same list that actually awards them, so the target shown can never drift
- * from the target enforced.
- */
-export function StreakLine({ streak, isCreole }: { streak: any; isCreole: boolean }) {
-  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const days = streak?.currentStreak || 0;
-  const next = STREAK_MILESTONES.find((m) => m.days > days);
+ * `tone` is the one axis of colour. Six named tones map to the semantic tokens
+ * the app already has, so nothing here introduces a new hue.
+ * ══════════════════════════════════════════════════════════════════════════ */
 
+type Tone = 'azure' | 'amber' | 'emerald' | 'rose' | 'violet' | 'slate';
+
+/** The pastel square that opens a row, a card or a stat. */
+function IconTile({ tone = 'azure', size = 'md', children }: {
+  tone?: Tone; size?: 'sm' | 'md' | 'lg'; children: React.ReactNode;
+}) {
   return (
-    <div className="profile-streak">
-      <Flame size={16} className="profile-streak__icon" aria-hidden="true" />
-      <span className="profile-streak__days num">{days}</span>
-      <span className="profile-streak__unit">
-        {days === 1 ? t('jour de suite', 'jou swit') : t('jours de suite', 'jou swit')}
-      </span>
-      {next && (
-        <span className="profile-streak__next text-muted">
-          {t(`prochain palier : ${next.days} jours`, `pwochen palye : ${next.days} jou`)}
-        </span>
-      )}
+    <span className={`pf-tile pf-tile--${tone} pf-tile--${size}`} aria-hidden="true">
+      {children}
+    </span>
+  );
+}
+
+/** A status pill: "✓ Acquis", "3 / 5 en cours", "À débloquer". */
+function Pill({ tone = 'slate', children }: { tone?: Tone; children: React.ReactNode }) {
+  return <span className={`pf-pill pf-pill--${tone}`}>{children}</span>;
+}
+
+/**
+ * Meter — a bar that fills once, on mount.
+ *
+ * The mockups animate their bars; a bar that is already full when it appears
+ * reads as a static rule. It grows from zero over 700ms, and holds still for
+ * anyone who asked their system not to animate.
+ */
+function Meter({ pct, tone = 'azure' }: { pct: number; tone?: Tone }) {
+  const [grown, setGrown] = React.useState(false);
+  React.useEffect(() => {
+    const id = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const width = grown ? Math.max(0, Math.min(100, pct)) : 0;
+  return (
+    <span className={`pf-meter pf-meter--${tone}`}>
+      <span className="pf-meter__fill" style={{ width: `${width}%` }} />
+    </span>
+  );
+}
+
+/**
+ * HeroStat — one of the three figures beside the identity block.
+ *
+ * Big number, caps label, one line of context. The context line is the point:
+ * "18" is a fact, "18 · prochain palier 30 jours" is a reason to come back.
+ */
+function HeroStat({ tone, icon, value, label, sub }: {
+  tone: Tone; icon: React.ReactNode; value: React.ReactNode; label: string; sub: string;
+}) {
+  return (
+    <div className="pf-stat">
+      <IconTile tone={tone} size="sm">{icon}</IconTile>
+      <span className="pf-stat__value num">{value}</span>
+      <span className="pf-stat__label">{label}</span>
+      <span className="pf-stat__sub">{sub}</span>
+    </div>
+  );
+}
+
+/** Section heading: eyebrow in the mono face, title in the display face. */
+function CardHead({ eyebrow, title, aside }: {
+  eyebrow?: string; title: React.ReactNode; aside?: React.ReactNode;
+}) {
+  return (
+    <div className="pf-head">
+      <div className="pf-head__text">
+        {eyebrow && <span className="pf-eyebrow">{eyebrow}</span>}
+        <h2 className="pf-head__title">{title}</h2>
+      </div>
+      {aside}
     </div>
   );
 }
@@ -448,44 +506,53 @@ interface Achievement {
   /** 0–1. Only set where the number behind it is one we actually hold. */
   progress?: number;
   progressLabel?: string;
+  /** Caps micro-label for the card footer. */
+  kind: string;
+  tone: Tone;
 }
 
 /** Course badges, with the real thresholds from progressTracking.ts. */
 const COURSE_BADGES = [
   {
-    id: 'first_lesson', emoji: '🎓',
+    id: 'first_lesson', emoji: '🎓', tone: 'azure' as Tone,
     fr: 'Première leçon', ht: 'Premye leson',
+    kindFr: 'Cours', kindHt: 'Kou',
     howFr: 'Terminer une première leçon dans un cours.',
     howHt: 'Fini yon premye leson nan yon kou.',
   },
   {
-    id: 'quiz_enthusiast', emoji: '📝',
+    id: 'quiz_enthusiast', emoji: '📝', tone: 'violet' as Tone,
     fr: 'Habitué des quiz', ht: 'Abitye ak quiz',
+    kindFr: 'Quiz', kindHt: 'Quiz',
     howFr: '10 quiz passés dans un même cours.',
     howHt: '10 quiz nan yon menm kou.',
   },
   {
-    id: 'quiz_master', emoji: '🧠',
+    id: 'quiz_master', emoji: '🧠', tone: 'violet' as Tone,
     fr: 'Maître des quiz', ht: 'Mèt quiz',
+    kindFr: 'Quiz', kindHt: 'Quiz',
     howFr: '50 quiz passés dans un même cours.',
     howHt: '50 quiz nan yon menm kou.',
   },
   {
-    id: 'perfectionist', emoji: '💯',
+    id: 'perfectionist', emoji: '💯', tone: 'emerald' as Tone,
     fr: 'Sans faute', ht: 'San fot',
+    kindFr: 'Précision', kindHt: 'Presizyon',
     howFr: '5 quiz réussis sans la moindre erreur.',
     howHt: '5 quiz reyisi san okenn erè.',
   },
   {
-    id: 'point_collector', emoji: '💎',
+    id: 'point_collector', emoji: '💎', tone: 'azure' as Tone,
     fr: 'Collectionneur', ht: 'Ranmasè pwen',
+    kindFr: 'Points', kindHt: 'Pwen',
     howFr: '1 000 points dans un même cours.',
     howHt: '1 000 pwen nan yon menm kou.',
     target: 1000,
   },
   {
-    id: 'point_master', emoji: '👑',
+    id: 'point_master', emoji: '👑', tone: 'amber' as Tone,
     fr: 'Maître des points', ht: 'Mèt pwen',
+    kindFr: 'Points', kindHt: 'Pwen',
     howFr: '5 000 points dans un même cours.',
     howHt: '5 000 pwen nan yon menm kou.',
     target: 5000,
@@ -516,6 +583,8 @@ export function buildAchievements({ isCreole, streak, unlockedMilestones, course
       unlocked,
       progress,
       progressLabel: progress == null ? undefined : `${days} / ${m.days}`,
+      kind: t('Régularité', 'Regilarite'),
+      tone: 'amber' as Tone,
     };
   });
 
@@ -531,9 +600,9 @@ export function buildAchievements({ isCreole, streak, unlockedMilestones, course
       how: isCreole ? b.howHt : b.howFr,
       unlocked,
       progress,
-      progressLabel: progress == null
-        ? undefined
-        : `${bestCoursePoints} / ${b.target}`,
+      progressLabel: progress == null ? undefined : `${bestCoursePoints} / ${b.target}`,
+      kind: isCreole ? b.kindHt : b.kindFr,
+      tone: b.tone,
     };
   });
 
@@ -559,29 +628,38 @@ export function AchievementShelf({ achievements, isCreole }: {
   const won = achievements.filter((a) => a.unlocked).length;
 
   return (
-    <div className="profile-card">
-      <h2 className="profile-card__title">
-        <Award size={18} /> {t('Réussites', 'Reyalizasyon')}
-        <span className="profile-card__count num">{won} / {achievements.length}</span>
-      </h2>
-      <div className="profile-badges">
+    <div className="pf-card">
+      <CardHead
+        eyebrow={t('Réussites', 'Reyalizasyon')}
+        title={t('Ce que vous avez débloqué', 'Sa ou debloke')}
+        aside={<Pill tone="slate">{won} / {achievements.length}</Pill>}
+      />
+      <div className="pf-badges">
         {achievements.map((a) => (
-          <div key={a.id} className={`profile-badge ${a.unlocked ? 'is-unlocked' : ''}`}>
-            <span className="profile-badge__emoji" aria-hidden="true">{a.emoji}</span>
-            <span className="profile-badge__body">
-              <span className="profile-badge__label">
-                {a.label}
-                {a.unlocked && <Check size={13} className="profile-badge__check" aria-label={t('obtenu', 'jwenn')} />}
-              </span>
-              <span className="profile-badge__how">{a.how}</span>
-              {!a.unlocked && a.progress != null && (
-                <span className="profile-badge__meter">
-                  <span className="profile-badge__meter-fill" style={{ '--pct': `${Math.round(a.progress * 100)}%` } as React.CSSProperties} />
-                  <small className="profile-badge__meter-label">{a.progressLabel}</small>
-                </span>
+          <article key={a.id} className={`pf-badge ${a.unlocked ? 'is-unlocked' : ''}`}>
+            <header className="pf-badge__top">
+              <IconTile tone={a.unlocked ? a.tone : 'slate'}>
+                <span className="pf-badge__emoji">{a.emoji}</span>
+              </IconTile>
+              {a.unlocked ? (
+                <Pill tone="emerald"><Check size={12} /> {t('Acquis', 'Jwenn')}</Pill>
+              ) : a.progress != null ? (
+                <Pill tone="amber">{a.progressLabel}</Pill>
+              ) : (
+                <Pill tone="slate">{t('À débloquer', 'Pou debloke')}</Pill>
               )}
-            </span>
-          </div>
+            </header>
+
+            <h3 className="pf-badge__label">{a.label}</h3>
+            <p className="pf-badge__how">{a.how}</p>
+
+            <footer className="pf-badge__foot">
+              <span className="pf-eyebrow">{a.kind}</span>
+              {!a.unlocked && a.progress != null
+                ? <Meter pct={a.progress * 100} tone="amber" />
+                : <span className="pf-badge__foot-value">{a.unlocked ? t('Obtenu', 'Jwenn') : '—'}</span>}
+            </footer>
+          </article>
         ))}
       </div>
     </div>
@@ -597,6 +675,10 @@ export function AchievementShelf({ achievements, isCreole }: {
  * learner's, so it could disagree with the streak in the header); only the
  * per-course list said anything the rest of the page did not.
  */
+const SUBJECT_TONE: Record<string, Tone> = {
+  MATH: 'azure', PHYS: 'violet', CHEM: 'emerald', ECON: 'amber', BIO: 'rose',
+};
+
 export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }: {
   allProgress: any[];
   loading: boolean;
@@ -612,20 +694,20 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
     ECON: t('Économie', 'Ekonomi'),
     BIO: t('Biologie', 'Byoloji'),
   };
-  const courseLabel = (courseId: string) => {
+  const parse = (courseId: string) => {
     const [subj, ...rest] = String(courseId || '').split('-');
-    const name = SUBJECTS[(subj || '').toUpperCase()] || subj || courseId;
+    const code = (subj || '').toUpperCase();
     const level = rest.join('-').replace(/^NS([IVX]+)$/i, 'NS $1').toUpperCase();
-    return level ? `${name} · ${level}` : name;
+    return { code, name: SUBJECTS[code] || subj || courseId, level };
   };
 
   if (loading) {
     return (
-      <div className="profile-card" aria-busy="true">
-        <h2 className="profile-card__title"><BookOpen size={18} /> {t('Vos cours', 'Kou ou yo')}</h2>
-        <div className="profile-courses">
+      <div className="pf-card" aria-busy="true">
+        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Vos cours', 'Kou ou yo')} />
+        <div className="pf-rows">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} variant="rect" height={58} radius={12} />
+            <Skeleton key={i} variant="rect" height={64} radius={14} />
           ))}
         </div>
       </div>
@@ -634,16 +716,17 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
 
   if (!allProgress || allProgress.length === 0) {
     return (
-      <div className="profile-card">
-        <h2 className="profile-card__title"><BookOpen size={18} /> {t('Vos cours', 'Kou ou yo')}</h2>
-        <p className="text-muted">
+      <div className="pf-card">
+        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Vos cours', 'Kou ou yo')} />
+        <p className="pf-empty">
           {t(
             'Vous n’avez pas encore ouvert de cours. La première leçon terminée apparaîtra ici.',
             'Ou poko louvri okenn kou. Premye leson ou fini an ap parèt isit la.',
           )}
         </p>
-        <button type="button" className="button button--primary" style={{ marginTop: '0.75rem' }} onClick={onExplore}>
+        <button type="button" className="pf-btn pf-btn--primary" onClick={onExplore}>
           {t('Explorer les cours', 'Eksplore kou yo')}
+          <ChevronRight size={16} />
         </button>
       </div>
     );
@@ -656,23 +739,27 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
   );
 
   return (
-    <div className="profile-card">
-      <h2 className="profile-card__title"><BookOpen size={18} /> {t('Vos cours', 'Kou ou yo')}</h2>
-      <ul className="profile-courses">
+    <div className="pf-card">
+      <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Vos cours', 'Kou ou yo')} />
+      <ul className="pf-rows">
         {sorted.map((p) => {
           const done = p.completedLessons?.length || 0;
+          const { code, name, level } = parse(p.courseId);
           return (
-            <li key={p.courseId} className="profile-course">
-              <Link className="profile-course__link" to={`/courses/${p.courseId}`}>
-                <span className="profile-course__name">{courseLabel(p.courseId)}</span>
-                <span className="profile-course__meta text-muted">
-                  {/* No "x / y": the total lesson count for a course isn't
-                      loaded here, and a fraction would imply a denominator we
-                      do not have. */}
-                  {done} {done === 1 ? t('leçon terminée', 'leson fini') : t('leçons terminées', 'leson fini')}
-                  {p.totalPoints ? ` · ${p.totalPoints} ${t('points', 'pwen')}` : ''}
+            <li key={p.courseId}>
+              <Link className="pf-row" to={`/courses/${p.courseId}`}>
+                <IconTile tone={SUBJECT_TONE[code] || 'azure'}><BookOpen size={20} /></IconTile>
+                <span className="pf-row__body">
+                  <span className="pf-row__title">{name}{level ? ` · ${level}` : ''}</span>
+                  <span className="pf-row__meta">
+                    {/* No "x / y": the total lesson count for a course isn't
+                        loaded here, and a fraction would imply a denominator we
+                        do not have. */}
+                    {done} {done === 1 ? t('leçon terminée', 'leson fini') : t('leçons terminées', 'leson fini')}
+                    {p.totalPoints ? ` · ${p.totalPoints} ${t('points', 'pwen')}` : ''}
+                  </span>
                 </span>
-                <ChevronRight size={16} className="profile-course__chev" />
+                <ChevronRight size={18} className="pf-row__chev" />
               </Link>
             </li>
           );
@@ -702,6 +789,9 @@ export function rankWindow(entries: any[], uid: string | null) {
   return { slice, gap };
 }
 
+const boardInitials = (name: string) =>
+  String(name || '?').trim().split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+
 /**
  * RankNeighbours — your place on the weekly board, with the people either side.
  *
@@ -722,27 +812,37 @@ export function RankNeighbours({ entries, myRank, uid, isCreole, onOpen }: {
   const { slice, gap } = rankWindow(entries, uid);
 
   return (
-    <div className="profile-card">
-      <h2 className="profile-card__title">
-        <Trophy size={18} /> {t('Classement de la semaine', 'Klasman semèn nan')}
-        {myRank ? <span className="profile-card__count num">#{myRank}</span> : null}
-      </h2>
+    <div className="pf-card">
+      <CardHead
+        eyebrow={t('Cette semaine', 'Semèn sa a')}
+        title={t('Classement', 'Klasman')}
+        aside={myRank ? <Pill tone="azure">#{myRank}</Pill> : null}
+      />
 
       {slice.length > 0 ? (
         <>
-          <ul className="profile-ranks">
-            {slice.map((e) => (
-              <li key={e.id} className={`profile-rank ${e.id === uid ? 'is-me' : ''}`}>
-                <span className="profile-rank__pos num">#{e.rank}</span>
-                <span className="profile-rank__name">
-                  {e.id === uid ? t('Vous', 'Ou menm') : e.displayName}
-                </span>
-                <span className="profile-rank__xp num">{e.xp} XP</span>
-              </li>
-            ))}
+          <ul className="pf-ranks">
+            {slice.map((e) => {
+              const me = e.id === uid;
+              return (
+                <li key={e.id} className={`pf-rank ${me ? 'is-me' : ''}`}>
+                  <span className="pf-rank__pos num">#{e.rank}</span>
+                  <span className="pf-rank__avatar" aria-hidden="true">
+                    {me ? boardInitials(e.displayName) : boardInitials(e.displayName)}
+                  </span>
+                  <span className="pf-rank__body">
+                    <span className="pf-rank__name">
+                      {me ? t('Vous', 'Ou menm') : e.displayName}
+                    </span>
+                    {e.school && <span className="pf-rank__school">{e.school}</span>}
+                  </span>
+                  <span className="pf-rank__xp num">{e.xp} XP</span>
+                </li>
+              );
+            })}
           </ul>
           {gap > 0 && (
-            <p className="profile-ranks__gap">
+            <p className="pf-note">
               {t(
                 `${gap} XP vous séparent de la place au-dessus.`,
                 `${gap} XP separe ou ak plas ki anwo a.`,
@@ -751,7 +851,7 @@ export function RankNeighbours({ entries, myRank, uid, isCreole, onOpen }: {
           )}
         </>
       ) : (
-        <p className="text-muted">
+        <p className="pf-empty">
           {myRank
             ? t(
                 'Votre place de la semaine est enregistrée. Ouvrez le classement pour voir qui vous entoure.',
@@ -764,7 +864,7 @@ export function RankNeighbours({ entries, myRank, uid, isCreole, onOpen }: {
         </p>
       )}
 
-      <button type="button" className="profile-ranks__open" onClick={onOpen}>
+      <button type="button" className="pf-link" onClick={onOpen}>
         {t('Voir le classement complet', 'Wè tout klasman an')}
         <ChevronRight size={16} />
       </button>
@@ -848,7 +948,6 @@ export default function Profile() {
       </section>
     );
   }
-
   // ── Authenticated view ──────────────────────────────────────────────────
   const accuracy = profile.totalQuestions > 0
     ? Math.round((profile.totalCorrect / profile.totalQuestions) * 100)
@@ -869,6 +968,12 @@ export default function Profile() {
   const achievements = buildAchievements({
     isCreole, streak, unlockedMilestones, courseBadges, bestCoursePoints,
   });
+  // The hero's honours row shows only what has actually been earned, newest
+  // thresholds first. Nothing is listed there that isn't on the shelf below.
+  const earned = achievements.filter((a) => a.unlocked).slice(0, 4);
+
+  const days = streak?.currentStreak || 0;
+  const nextMilestone = STREAK_MILESTONES.find((m) => m.days > days);
 
   const school = profile?.leaderboard?.school || '';
   const place = profile?.leaderboard?.city || profile?.leaderboard?.department || '';
@@ -882,48 +987,105 @@ export default function Profile() {
   };
 
   return (
-    <section className="section">
+    <section className="section pf">
       <div className="container profile">
 
         {/* ── Identity ──────────────────────────────────────────────────────
-             Who you are and where you are in the level ladder. The streak is
-             stated here and nowhere else on the page: it used to appear three
-             times, and one of the three read the first course's streak rather
-             than the learner's, so two of the numbers could disagree. */}
+             The mockups' hero: a ringed avatar carrying the level, the name
+             and school, three figures with their context, and the ladder to
+             the next level in an inset panel.
+
+             The streak is stated here and nowhere else on the page. It used to
+             appear three times, and one of the three read the first course's
+             streak rather than the learner's, so two of the numbers could
+             disagree with each other. */}
         <div className="profile-area profile-area--hero">
-          <header className="profile-header">
-            <div className="profile-header__avatar">{initialsOf(user)}</div>
-            <div className="profile-header__id">
-              <h1 className="profile-header__name">{user.name || getFirstName(user) || t('Élève', 'Elèv')}</h1>
-              {(school || place) && (
-                <p className="profile-header__place">
-                  <MapPin size={13} aria-hidden="true" />
-                  {[school, place].filter(Boolean).join(' · ')}
-                </p>
-              )}
-              <div className="profile-header__chips">
-                {gradeLabel && <span className="profile-chip">{gradeLabel}</span>}
-                {trackInfo && (
-                  <button type="button" className="profile-chip profile-chip--button" onClick={() => setShowTrackSelector(true)}>
-                    {trackInfo.shortLabel || trackInfo.label}
-                  </button>
-                )}
-                <span className="profile-chip profile-chip--level"><Zap size={13} /> {t('Niveau', 'Nivo')} {level.level}</span>
+          <div className="pf-hero">
+            <div className="pf-hero__top">
+              <div className="pf-hero__who">
+                <div className="pf-avatar">
+                  <span className="pf-avatar__initials">{initialsOf(user)}</span>
+                  <span className="pf-avatar__level">
+                    <Zap size={11} aria-hidden="true" />
+                    {t('NIV.', 'NIV.')} {level.level}
+                  </span>
+                </div>
+                <div className="pf-hero__id">
+                  <h1 className="pf-hero__name">{user.name || getFirstName(user) || t('Élève', 'Elèv')}</h1>
+                  {(school || place) && (
+                    <p className="pf-hero__place">
+                      <GraduationCap size={15} aria-hidden="true" />
+                      {[school, place].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  <div className="pf-hero__chips">
+                    {gradeLabel && <Pill tone="azure">{gradeLabel}</Pill>}
+                    {trackInfo && (
+                      <button type="button" className="pf-pill pf-pill--slate pf-pill--button" onClick={() => setShowTrackSelector(true)}>
+                        {trackInfo.shortLabel || trackInfo.label}
+                        <ChevronRight size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pf-hero__stats">
+                <HeroStat
+                  tone="amber"
+                  icon={<Flame size={16} />}
+                  value={days}
+                  label={days === 1 ? t('Jour de suite', 'Jou swit') : t('Jours de suite', 'Jou swit')}
+                  sub={nextMilestone
+                    ? t(`Prochain palier : ${nextMilestone.days}`, `Pwochen palye : ${nextMilestone.days}`)
+                    : t('Tous les paliers atteints', 'Tout palye yo fèt')}
+                />
+                <HeroStat
+                  tone="azure"
+                  icon={<Sparkles size={16} />}
+                  value={level.xp}
+                  label={t('Points d’XP', 'Pwen XP')}
+                  sub={t(`Niveau ${level.level}`, `Nivo ${level.level}`)}
+                />
+                <HeroStat
+                  tone="emerald"
+                  icon={<Trophy size={16} />}
+                  value={myRank ? `#${myRank}` : '—'}
+                  label={t('Classement', 'Klasman')}
+                  sub={myRank
+                    ? t('Cette semaine', 'Semèn sa a')
+                    : t('Pseudonyme requis', 'Ou bezwen yon ti non')}
+                />
               </div>
             </div>
-          </header>
 
-          <div className="profile-level">
-            <div className="profile-level__top">
-              <span className="num">{level.xp} XP</span>
-              <span className="text-muted">{level.xpToNext} XP → {t('niveau', 'nivo')} {level.level + 1}</span>
+            {/* The ladder to the next level, in the mockups' inset panel. */}
+            <div className="pf-ladder">
+              <div className="pf-ladder__top">
+                <span className="pf-ladder__title">
+                  {t(`Progression vers le niveau ${level.level + 1}`, `Pwogrè pou nivo ${level.level + 1}`)}
+                </span>
+                <span className="pf-ladder__figures num">
+                  {level.xp} XP
+                  <small>{t(`reste ${level.xpToNext} XP`, `rete ${level.xpToNext} XP`)}</small>
+                </span>
+              </div>
+              <Meter pct={level.progressPct} tone="azure" />
             </div>
-            <div className="profile-level__bar">
-              <span className="profile-level__fill" style={{ '--level-pct': `${level.progressPct}%` } as React.CSSProperties} />
-            </div>
+
+            {earned.length > 0 && (
+              <div className="pf-hero__honours">
+                <span className="pf-eyebrow">{t('Distinctions', 'Distenksyon')}</span>
+                <div className="pf-hero__honour-list">
+                  {earned.map((a) => (
+                    <span key={a.id} className="pf-honour">
+                      <span aria-hidden="true">{a.emoji}</span> {a.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-
-          <StreakLine streak={streak} isCreole={isCreole} />
         </div>
 
         {/* ── Where you stand — the diagnostic, first ──
@@ -935,32 +1097,38 @@ export default function Profile() {
           <ReadinessCard />
         </div>
 
-        {/* ── What you have actually done ──
-             Four totals, each appearing exactly once on the page and each from
-             a different source, so no two of them can contradict each other. */}
         {/* ── Sidebar column: the two short cards, stacked ──
              Kept in one grid area on purpose. Given their own rows they each
              sat next to a much taller card and left the dead space under it
              that 629aa32 had to go and fix. */}
         <div className="profile-area profile-area--aside">
-          <div className="profile-card">
-            <h2 className="profile-card__title"><Target size={18} /> {t('Ce que vous avez fait', 'Sa ou fè deja')}</h2>
-            <div className="profile-totals">
-              <div className="profile-total">
-                <span className="profile-total__value num">{lessonsDone}</span>
-                <span className="profile-total__label">{t('Leçons terminées', 'Leson fini')}</span>
+          <div className="pf-card">
+            <CardHead
+              eyebrow={t('Bilan', 'Bilan')}
+              title={t('Ce que vous avez fait', 'Sa ou fè deja')}
+            />
+            {/* Four totals, each appearing exactly once on the page and each
+                from a different source, so no two can contradict each other. */}
+            <div className="pf-totals">
+              <div className="pf-total">
+                <IconTile tone="azure" size="sm"><BookOpen size={15} /></IconTile>
+                <span className="pf-total__value num">{lessonsDone}</span>
+                <span className="pf-total__label">{t('Leçons terminées', 'Leson fini')}</span>
               </div>
-              <div className="profile-total">
-                <span className="profile-total__value num">{profile.totalGames || 0}</span>
-                <span className="profile-total__label">{t('Parties de trivia', 'Pati trivia')}</span>
+              <div className="pf-total">
+                <IconTile tone="violet" size="sm"><Brain size={15} /></IconTile>
+                <span className="pf-total__value num">{profile.totalGames || 0}</span>
+                <span className="pf-total__label">{t('Parties de trivia', 'Pati trivia')}</span>
               </div>
-              <div className="profile-total">
-                <span className="profile-total__value num">{accuracy}%</span>
-                <span className="profile-total__label">{t('Précision aux quiz', 'Presizyon nan quiz')}</span>
+              <div className="pf-total">
+                <IconTile tone="emerald" size="sm"><Target size={15} /></IconTile>
+                <span className="pf-total__value num">{accuracy}%</span>
+                <span className="pf-total__label">{t('Précision aux quiz', 'Presizyon nan quiz')}</span>
               </div>
-              <div className="profile-total">
-                <span className="profile-total__value num">{streak?.longestStreak || 0}</span>
-                <span className="profile-total__label">{t('Meilleure série (jours)', 'Pi bon seri (jou)')}</span>
+              <div className="pf-total">
+                <IconTile tone="amber" size="sm"><Flame size={15} /></IconTile>
+                <span className="pf-total__value num">{streak?.longestStreak || 0}</span>
+                <span className="pf-total__label">{t('Meilleure série', 'Pi bon seri')}</span>
               </div>
             </div>
           </div>
