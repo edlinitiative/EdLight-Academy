@@ -331,8 +331,8 @@ const ExamLanding = () => {
               ? 'Yon egzamen isit la se yon sijè ofisyèl MENFP konplè — se pa yon ti kiz. Premye yo kòmanse nan 9yèm ane.'
               : 'Ici, un examen est un sujet officiel du MENFP complet — pas un quiz rapide. Les premières épreuves nationales arrivent en 9ᵉ AF.')
           : (ht
-              ? 'Chak egzamen se yon sijè ofisyèl konplè, se pa yon ti kiz. Kontinye yonn ou te kòmanse oswa chwazi matyè ou. Dire ak enstriksyon yo parèt anvan ou kòmanse.'
-              : 'Chaque examen est un sujet officiel complet, pas un quiz rapide. Reprenez-en un en cours ou choisissez votre matière. La durée et les consignes sont affichées avant de commencer.')}</p>
+              ? 'Sijè ofisyèl MENFP yo, nan vrè kondisyon.'
+              : 'Les sujets officiels du MENFP, en conditions réelles.')}</p>
       </header>
       <div className="exam-landing__toolbar">
         {knowsLevel ? (
@@ -375,7 +375,12 @@ const ExamLanding = () => {
           Each line is read from real behaviour: the countdown only exists when
           the paper carries a duration, and ExamTake's save effect returns
           early without a uid, so a signed-out attempt really is not kept. */}
-      <ul className="exam-landing__facts">
+      {/* Signed in, the three facts repeated what every paper's own card
+          says (duration, official source) and what the student already knows
+          (their work is saved). Signed out, the one that matters — nothing is
+          kept — stays, with the way to fix it. */}
+      {!userId && (
+        <ul className="exam-landing__facts">
         <li>
           <FileText size={15} aria-hidden="true" />
           <span>
@@ -419,6 +424,7 @@ const ExamLanding = () => {
           </span>
         </li>
       </ul>
+      )}
 
       {/* ── Reprendre ─────────────────────────────────────────────────────── */}
       {drafts.length > 0 && (

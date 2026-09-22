@@ -59,6 +59,17 @@ export default function WelcomeGradeModal() {
 
   const ready = hydrated && authConfirmed && isAuthenticated && !!uid;
 
+  // Development only: ?welcome=school or ?welcome=invite opens that step for
+  // an account that would never see it (one that already has a school), so
+  // the screens can be checked in a browser. Stripped from production builds.
+  const [preview, setPreview] = useState<string | null>(() => {
+    if (process.env.NODE_ENV === 'production' || typeof window === 'undefined') return null;
+    return new URLSearchParams(window.location.search).get('welcome');
+  });
+  useEffect(() => {
+    if (preview === 'invite' && !invite) setInvite({ school: 'Collège Dominique Savio', mates: 0 });
+  }, [preview, invite]);
+
   // Only once the grade is settled and the school step is due: does this
   // account already have a school? If so the step is simply marked done.
   useEffect(() => {
@@ -81,7 +92,7 @@ export default function WelcomeGradeModal() {
       ? 'invite'
       : !gradeChosen
         ? 'grade'
-        : !schoolChosen && hasSchool === false
+        : (!schoolChosen && hasSchool === false) || preview === 'school'
           ? 'school'
           : null;
 
@@ -104,8 +115,8 @@ export default function WelcomeGradeModal() {
 
   const skip = () => {
     if (step === 'grade') setGradeChosen(true);
-    else if (step === 'school') { setSchoolChosen(true); trackEvent('school_step_skipped'); }
-    else if (step === 'invite') setInvite(null);
+    else if (step === 'school') { setSchoolChosen(true); setPreview(null); trackEvent('school_step_skipped'); }
+    else if (step === 'invite') { setInvite(null); setPreview(null); }
   };
 
   useEffect(() => {
@@ -132,6 +143,7 @@ export default function WelcomeGradeModal() {
     queryClient.invalidateQueries({ queryKey: ['leaderboard-collectives'] });
     setSaving(false);
     setSchoolChosen(true);
+    setPreview(null);
     setInvite({ school: picked.label, mates });
     trackEvent('school_step_saved', { mates: mates ?? -1 });
   };
