@@ -412,6 +412,67 @@ export async function loadTriviaCategories(): Promise<any[]> {
 }
 
 /**
+ * Coerce ONE stored question into the shape the game grades against, or null.
+ *
+ * This is the trust boundary. The game grades with `idx === q.answer` — strict
+ * equality against a number — and `loadTriviaQuestions` used to spread raw
+ * Firestore data straight through. So a doc whose `answer` is the STRING "2"
+ * makes `2 === "2"` false for every option: the student picks the right one,
+ * is told they are wrong, and no option is ever marked correct. That is not a
+ * hypothetical shape for this database — the quiz collection already stores
+ * `options` as a JSON string and `correct_answer` as a letter, and the trivia
+ * writers have always coerced on the way IN while nothing coerced on the way
+ * OUT.
+ *
+ * Accepts the shapes that can be resolved without guessing:
+ *   • a real index (2)
+ *   • a numeric string ("2")
+ *   • a letter ("A".."D", any case) — the A/B/C/D the UI itself labels options with
+ *   • the answer's own text, matched against the options
+ *
+ * Returns null for anything still ambiguous, and the caller DROPS it. That is
+ * the whole point: the old write-side fallback was `: 0`, which silently makes
+ * the first option "correct" and is precisely how a bank fills with questions
+ * that mark a right answer wrong. Serving fewer questions is recoverable;
+ * teaching a student the wrong answer is not.
+ */
+export function normalizeTriviaQuestion(raw: any): any | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  // `options` may arrive as a JSON string — the shape the quiz collection uses.
+  let options: unknown = raw.options;
+  if (typeof options === 'string') {
+    try { options = JSON.parse(options); } catch { return null; }
+  }
+  if (!Array.isArray(options)) return null;
+  const opts = options.map((o) => (typeof o === 'string' ? o : String(o ?? ''))).map((o) => o.trim());
+  if (opts.length < 2 || opts.some((o) => !o)) return null;
+
+  const a = raw.answer;
+  let index: number | null = null;
+
+  if (typeof a === 'number' && Number.isInteger(a)) {
+    index = a;
+  } else if (typeof a === 'string') {
+    const t = a.trim();
+    if (/^\d+$/.test(t)) {
+      index = Number(t);
+    } else if (/^[a-z]$/i.test(t)) {
+      index = t.toUpperCase().charCodeAt(0) - 65;
+    } else {
+      // The answer written out in full: match it against the options.
+      const norm = (x: string) => x.replace(/\s+/g, ' ').trim().toLowerCase();
+      const hit = opts.findIndex((o) => norm(o) === norm(t));
+      if (hit >= 0) index = hit;
+    }
+  }
+
+  if (index === null || index < 0 || index >= opts.length) return null;
+
+  return { ...raw, options: opts, answer: index };
+}
+
+/**
  * Load all question docs, assembled into a map { catId: Question[] },
  * each category's list sorted by `order`.
  * Returns {} on empty or error (never throws). Cached for TTL_MS.
@@ -424,13 +485,22 @@ export async function loadTriviaQuestions(): Promise<Record<string, any[]>> {
       const snap = await getDocs(collection(db, QUESTIONS_COLLECTION));
       if (snap.empty) return {};
       const map: Record<string, any[]> = {};
+      let dropped = 0;
       snap.forEach((d) => {
         const data: any = d.data();
         const catId = data.categoryId;
         if (!catId) return;
+        // Normalized here rather than at the point of use, because there are
+        // three points of use (the round, the daily challenge, the admin list)
+        // and only one of them would have been fixed.
+        const q = normalizeTriviaQuestion({ id: d.id, ...data });
+        if (!q) { dropped += 1; return; }
         if (!map[catId]) map[catId] = [];
-        map[catId].push({ id: d.id, ...data });
+        map[catId].push(q);
       });
+      if (dropped > 0) {
+        console.warn(`[triviaService] dropped ${dropped} unusable question doc(s) — answer could not be resolved to an option`);
+      }
       for (const catId of Object.keys(map)) {
         map[catId].sort((a, b) => {
           const oa = typeof a.order === 'number' ? a.order : 9999;
@@ -482,7 +552,7 @@ async function clearCollection(collName: string): Promise<void> {
 export async function seedTriviaFromStatic(
   categories: any[],
   questionsMap: Record<string, any[]>,
-): Promise<{ categories: number; questions: number }> {
+): Promise<{ categories: number; questions: number; skipped: number }> {
   // 1. Wipe existing questions so a re-seed can't duplicate.
   await clearCollection(QUESTIONS_COLLECTION);
 
@@ -517,6 +587,9 @@ export async function seedTriviaFromStatic(
 
   // 3. Write questions for EDITABLE categories only.
   let qCount = 0;
+  // Questions whose answer could not be resolved to an option — reported back
+  // to the admin rather than written as a silent 0.
+  let skipped = 0;
   {
     // Flatten all editable questions into { catId, order, question } tuples.
     const pending: Array<{ catId: string; order: number; q: any }> = [];
@@ -529,13 +602,21 @@ export async function seedTriviaFromStatic(
       const batch = writeBatch(db);
       const chunk = pending.splice(0, 400);
       for (const { catId, order, q } of chunk) {
+        // Same rule as saveTriviaQuestion: never migrate a question whose
+        // answer cannot be resolved to one of its options. A skipped question
+        // is a gap someone can see; a `0` is a wrong answer nobody can.
+        const checked = normalizeTriviaQuestion(q);
+        if (!checked) {
+          skipped += 1;
+          continue;
+        }
         const ref = doc(collection(db, QUESTIONS_COLLECTION)); // auto-id
         batch.set(ref, {
           categoryId: catId,
           q: q.q ?? '',
           qHt: q.qHt ?? '',
-          options: Array.isArray(q.options) ? q.options : [],
-          answer: typeof q.answer === 'number' ? q.answer : 0,
+          options: checked.options,
+          answer: checked.answer,
           order,
           created_at: serverTimestamp(),
         });
@@ -546,7 +627,7 @@ export async function seedTriviaFromStatic(
   }
 
   clearTriviaCache();
-  return { categories: catCount, questions: qCount };
+  return { categories: catCount, questions: qCount, skipped };
 }
 
 /**
@@ -560,12 +641,28 @@ export async function saveTriviaQuestion(
   question: any,
   questionId?: string,
 ): Promise<string> {
+  /*
+    Refuse an unresolvable answer instead of writing 0.
+
+    `answer: ... : 0` was the old fallback here and in the migration below, and
+    it is how a bank quietly fills with questions whose first option is marked
+    correct. A save that throws is visible to the admin who made it; a save
+    that writes 0 is discovered by a student being told they are wrong.
+  */
+  const checked = normalizeTriviaQuestion(question);
+  if (!checked) {
+    throw new Error(
+      'Question refusée : la bonne réponse ne correspond à aucune option. '
+      + 'Vérifiez les options et la réponse sélectionnée.',
+    );
+  }
+
   const payload: any = {
     categoryId: catId,
     q: question.q ?? '',
     qHt: question.qHt ?? '',
-    options: Array.isArray(question.options) ? question.options : [],
-    answer: typeof question.answer === 'number' ? question.answer : 0,
+    options: checked.options,
+    answer: checked.answer,
     updated_at: serverTimestamp(),
   };
   if (typeof question.order === 'number') payload.order = question.order;
