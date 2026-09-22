@@ -1,0 +1,120 @@
+/* ==========================================================================
+   ExamCountdown — the "J-84" card
+   -------------------------------
+   Composes the shared pf-* language (src/styles/pf.css): a .pf-card shell, a
+   44px pastel .pf-tile, a .pf-pill for the indicative-date flag, .pf-eyebrow
+   for the caps micro-label and .pf-link for the affordance. Only layout and
+   the one oversized numeral live here.
+
+   Rules kept:
+   · No coloured left-border accent stripe. The card's emphasis is the tile,
+     the numeral's weight and the pill — never a bar down one edge.
+   · Azure text takes --pf-accent-ink (pf.css already flips it per theme);
+     nothing here puts white on raw --primary-500, which the dark theme
+     lightens to 3.2:1.
+   · Every transition is dropped under prefers-reduced-motion. Nothing here
+     ticks or animates on a timer either: the day count is computed once on
+     mount, so the card is already still.
+   ========================================================================== */
+
+.xcd {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  text-decoration: none;
+  color: inherit;
+}
+.xcd:hover { text-decoration: none; }
+
+.xcd__tile { margin-top: 0.15rem; }
+
+.xcd__body {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.xcd__eyebrow { display: block; }
+
+/* The count and the exam's name share a baseline; they wrap together on a
+   narrow screen rather than the number stranding on its own line. */
+.xcd__line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.55rem;
+  min-width: 0;
+}
+
+.xcd__count {
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 5vw, 2.3rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--pf-accent-ink);
+  font-variant-numeric: tabular-nums;
+}
+/* "Aujourd'hui" / "Demain" are words, not a numeral — at the numeral's size
+   they overwhelm the card and wrap badly at 390px. */
+.xcd__count--word {
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  letter-spacing: -0.01em;
+}
+
+.xcd__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-900);
+  min-width: 0;
+}
+
+.xcd__when {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.xcd__date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-600);
+}
+/* Small, quiet, and immediately after the date — it must not be skippable,
+   and it must not shout over the exam's name. */
+.xcd__flag {
+  font-size: 0.68rem;
+  padding: 0.16rem 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.xcd__caveat {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.xcd__cta {
+  margin-top: 0;
+  align-self: center;
+  flex: none;
+  white-space: nowrap;
+}
+.xcd:hover .xcd__cta { text-decoration: underline; }
+
+/* Below the card's comfortable width the affordance would squeeze the body to
+   nothing, so it drops under it and the card keeps two columns of content. */
+@media (max-width: 640px) {
+  .xcd { gap: 0.75rem; flex-wrap: wrap; }
+  .xcd__cta {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    flex-basis: 100%;
+    padding-left: calc(44px + 0.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xcd { transition: none; }
+}

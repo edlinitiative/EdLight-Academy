@@ -87,6 +87,15 @@
 /* The resume banner keeps the same gutter as every section below it. */
 .lp .resume-banner-wrap { max-width: 1180px; }
 
+/* The exam countdown (signed in, and only for grades that sit an exam) shares
+   that gutter. The spacing hangs off the card rather than the wrapper, because
+   ExamCountdown renders nothing for a learner with no exam level and an empty
+   wrapper must then cost nothing. */
+.lp .lp-exam-countdown > .xcd { margin-top: 1.75rem; }
+@media (max-width: 768px) {
+  .lp .lp-exam-countdown > .xcd { margin-top: 1.25rem; }
+}
+
 
 /* ══ Utilities ═══════════════════════════════════════════════════════════ */
 
