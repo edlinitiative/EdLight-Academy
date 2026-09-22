@@ -30,18 +30,13 @@ import { Skeleton } from '../components/Skeleton';
 import SchoolField from '../components/arena/SchoolField';
 import { GRADES, TRACK_BY_CODE } from '../config/trackConfig';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
+import PixelAvatar from '../components/PixelAvatar';
 import { schoolKey } from '../../shared/schools';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import '../styles/pf.css';
 import './Profile.css';
 
-function initialsOf(user) {
-  const name = user?.name || user?.displayName || '';
-  const parts = String(name).trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return 'EL';
-  return parts.map((p) => p[0]).join('').slice(0, 2).toUpperCase();
-}
 
 /**
  * InviteCard — "Inviter des amis". Reveals the caller's referral code on demand
@@ -1004,7 +999,9 @@ export default function Profile() {
             <div className="pf-hero__top">
               <div className="pf-hero__who">
                 <div className="pf-avatar">
-                  <span className="pf-avatar__initials">{initialsOf(user)}</span>
+                  {/* The account's own portrait — the one in the navbar —
+                      instead of two initials. */}
+                  <PixelAvatar seed={user?.uid || user?.email || user?.name} size={72} className="pf-avatar__art" />
                   <span className="pf-avatar__level">
                     <Zap size={11} aria-hidden="true" />
                     {t('NIV.', 'NIV.')} {level.level}

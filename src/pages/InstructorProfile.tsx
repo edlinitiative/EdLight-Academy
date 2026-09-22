@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import PixelAvatar from '../components/PixelAvatar';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, GraduationCap, School, BookOpen, ChevronRight } from 'lucide-react';
 import useStore from '../contexts/store';
@@ -30,9 +31,6 @@ const LEVEL_LABELS: Record<string, string> = {
   '9af': '9e AF', ns1: 'NS I', ns2: 'NS II', ns3: 'NS III', ns4: 'NS IV',
 };
 
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
-}
 
 export default function InstructorProfile() {
   const { instructorId } = useParams();
@@ -111,7 +109,7 @@ export default function InstructorProfile() {
               <img className="instructor-photo" src={instructor.photoUrl} alt="" />
             ) : (
               <span className="instructor-photo instructor-photo--initials" aria-hidden>
-                {initials(instructor.name)}
+                <PixelAvatar seed={instructor.id || instructor.name} size={96} />
               </span>
             )}
             <div>

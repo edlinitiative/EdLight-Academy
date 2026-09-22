@@ -214,3 +214,9 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* On a wide screen a full-width WhatsApp bar read as a banner, not a button. */
+@media (min-width: 720px) {
+  .myschool__actions { justify-content: flex-start; }
+  .myschool__cta { flex: 0 0 auto; min-width: 220px; }
+}

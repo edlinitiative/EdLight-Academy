@@ -18,6 +18,7 @@ import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';
 import { isValidAlias } from '../services/leaderboardService';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
+import PixelAvatar from './PixelAvatar';
 import { aggregateBy, normalizeName } from '../../shared/leaderboardAgg';
 import './Leaderboard.css';
 
@@ -349,6 +350,9 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
             return (
               <li key={e.id} className={`leaderboard__row ${isMe ? 'is-me' : ''}`}>
                 <RankBadge rank={e.rank} />
+                {/* A face, not a blank row: the same pixel portrait the
+                    navbar gives each account, seeded by uid. */}
+                <PixelAvatar seed={e.id} size={28} className="leaderboard__avatar" />
                 <span className="leaderboard__name">
                   {e.displayName || 'Élève'}
                   {isMe && <span className="leaderboard__you">{t('vous', 'ou')}</span>}
@@ -409,6 +413,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
       {!compact && scope === 'national' && optedIn && myEntry && !entries.some((e) => e.id === user?.uid) && (
         <div className="leaderboard__self">
           <RankBadge rank={myRank} />
+          <PixelAvatar seed={user?.uid} size={28} className="leaderboard__avatar" />
           <span className="leaderboard__name">
             {myEntry.displayName} <span className="leaderboard__you">{t('vous', 'ou')}</span>
           </span>

@@ -134,8 +134,12 @@ export default function WelcomeGradeModal() {
     setGradeChosen(true);
   };
 
-  const saveSchool = async () => {
-    if (!picked || !uid) return;
+  // One tap: picking a school from the list, or adding the missing one, IS
+  // the answer. A separate "Continuer" after "Ajouter" asked twice.
+  const saveSchool = async (chosen: Picked | null) => {
+    setPicked(chosen);
+    if (!chosen || !uid) return;
+    const picked = chosen;
     setSaving(true);
     await setMySchool(uid, { school: picked.label, ...(picked.departement ? { department: picked.departement } : {}) });
     const mates = await countSchoolmates(picked.label, uid);
@@ -215,21 +219,16 @@ export default function WelcomeGradeModal() {
             <div className="grade-modal__school">
               <SchoolField
                 picked={picked}
-                onPick={setPicked}
+                onPick={saveSchool}
                 isCreole={isCreole}
                 signedIn
                 variant="onboarding"
                 autoFocus
               />
             </div>
-            <button
-              type="button"
-              className="grade-modal__primary"
-              disabled={!picked || saving}
-              onClick={saveSchool}
-            >
-              {saving ? t('Enregistrement…', 'N ap anrejistre…') : t('Continuer', 'Kontinye')}
-            </button>
+            {saving && (
+              <p className="grade-modal__saving" role="status">{t('Enregistrement…', 'N ap anrejistre…')}</p>
+            )}
           </>
         )}
 

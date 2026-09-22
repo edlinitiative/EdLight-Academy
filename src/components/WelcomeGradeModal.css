@@ -183,3 +183,43 @@
 .grade-modal__secondary:active:not(:disabled) { transform: scale(0.98); }
 .grade-modal__primary:disabled,
 .grade-modal__secondary:disabled { opacity: 0.5; cursor: default; }
+
+/* "Tu es le premier" is a moment: the trophy pops and a little confetti
+   bursts from it once. Pure CSS, and off for reduced motion. */
+.grade-modal__icon--win {
+	position: relative;
+	animation: grade-win-pop 0.5s cubic-bezier(0.34, 1.6, 0.5, 1);
+}
+.grade-modal__icon--win::before,
+.grade-modal__icon--win::after {
+	content: "";
+	position: absolute;
+	inset: -10px;
+	border-radius: 50%;
+	pointer-events: none;
+	background:
+		radial-gradient(circle, #F59E0B 0 3px, transparent 4px) 8% 20% / 12px 12px no-repeat,
+		radial-gradient(circle, #1B6FE0 0 3px, transparent 4px) 88% 12% / 12px 12px no-repeat,
+		radial-gradient(circle, #10B981 0 3px, transparent 4px) 92% 78% / 12px 12px no-repeat,
+		radial-gradient(circle, #EF4444 0 3px, transparent 4px) 6% 84% / 12px 12px no-repeat,
+		radial-gradient(circle, #8B5CF6 0 2px, transparent 3px) 50% 0% / 10px 10px no-repeat;
+	animation: grade-win-burst 0.9s ease-out forwards;
+}
+.grade-modal__icon--win::after { transform: rotate(45deg); animation-delay: 0.08s; }
+@keyframes grade-win-pop {
+	from { transform: scale(0.4); opacity: 0; }
+	to { transform: scale(1); opacity: 1; }
+}
+@keyframes grade-win-burst {
+	from { transform: scale(0.5); opacity: 1; }
+	to { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.grade-modal__icon--win,
+	.grade-modal__icon--win::before,
+	.grade-modal__icon--win::after { animation: none; }
+	.grade-modal__icon--win::before,
+	.grade-modal__icon--win::after { display: none; }
+}
+
+.grade-modal__saving { margin: 12px 0 0; color: var(--text-500); font-size: 0.9rem; }

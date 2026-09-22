@@ -8,15 +8,13 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import PixelAvatar from './PixelAvatar';
 import { Link } from 'react-router-dom';
 import { ChevronRight, GraduationCap } from 'lucide-react';
 import useStore from '../contexts/store';
 import { getInstructorsForCourse, type Instructor } from '../services/instructorService';
 import './CourseInstructors.css';
 
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
-}
 
 export default function CourseInstructors({ courseId }: { courseId: string }) {
   const language = useStore((s) => s.language);
@@ -46,7 +44,7 @@ export default function CourseInstructors({ courseId }: { courseId: string }) {
             {i.photoUrl ? (
               <img className="course-instructor__photo" src={i.photoUrl} alt="" loading="lazy" />
             ) : (
-              <span className="course-instructor__initials" aria-hidden>{initials(i.name)}</span>
+              <PixelAvatar seed={i.id || i.name} size={44} className="course-instructor__initials" />
             )}
             <span className="course-instructor__body">
               <span className="course-instructor__name">{i.name}</span>

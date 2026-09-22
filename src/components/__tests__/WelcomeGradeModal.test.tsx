@@ -60,7 +60,6 @@ it('asks for the school after the grade, then says the student is the first from
 
   expect(await screen.findByText('Tu vas à quelle école ?')).toBeInTheDocument();
   fireEvent.click(screen.getByText('pick-school'));
-  fireEvent.click(screen.getByText('Continuer'));
 
   expect(await screen.findByText('Tu es le premier élève de Collège X ici !')).toBeInTheDocument();
   expect(mockSetMySchool).toHaveBeenCalledWith('me', { school: 'Collège X', department: 'Ouest' });
@@ -73,7 +72,6 @@ it('counts the classmates already there', async () => {
   signIn();
   renderModal();
   fireEvent.click(await screen.findByText('pick-school'));
-  fireEvent.click(screen.getByText('Continuer'));
   expect(await screen.findByText('3 élèves de Collège X sont déjà là')).toBeInTheDocument();
 });
 
@@ -83,7 +81,6 @@ it('never claims "first" when the count could not be read', async () => {
   signIn();
   renderModal();
   fireEvent.click(await screen.findByText('pick-school'));
-  fireEvent.click(screen.getByText('Continuer'));
   expect(await screen.findByText('Ton école est enregistrée')).toBeInTheDocument();
   expect(screen.queryByText(/premier/)).not.toBeInTheDocument();
 });

@@ -401,3 +401,10 @@
 [data-theme="dark"] .lb-rank--gold { background: rgba(251, 191, 36, 0.16); color: #FBD38D; }
 [data-theme="dark"] .lb-rank--silver { background: rgba(226, 232, 240, 0.14); color: #CBD5E1; }
 [data-theme="dark"] .lb-rank--bronze { background: rgba(234, 130, 62, 0.16); color: #F4B08C; }
+
+/* Each learner's pixel portrait — the same one the navbar shows them. */
+.leaderboard__avatar {
+  flex: none;
+  border-radius: 8px;
+  overflow: hidden;
+}
