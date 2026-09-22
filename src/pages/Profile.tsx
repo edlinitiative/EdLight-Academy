@@ -12,20 +12,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Flame, Trophy, Zap, Target, LayoutDashboard, CalendarCheck, Bell, Brain,
-  Info, LogOut, Moon, Sun, Languages, Award, GraduationCap, Sparkles, ChevronRight, Check,
+  Info, LogOut, Moon, Sun, Languages, Award, GraduationCap, Sparkles, ChevronRight, Check, BookOpen,
   Gift, Share2, Copy, MessageCircle, Loader2, Settings, ShieldCheck, MapPin, Trash2,
   FileText, RefreshCw, AlertTriangle,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
+import { useAllProgress } from '../hooks/useProgress';
 import { logoutUser } from '../services/authService';
 import { getReferralCode, inviteMessage, type ReferralCode } from '../services/referralService';
 import { STREAK_MILESTONES } from '../services/streakService';
 import { setLeaderboardOptIn as saveBoardIdentity } from '../services/triviaService';
 import { isValidAlias } from '../services/leaderboardService';
 import ReadinessCard from '../components/ReadinessCard';
-import ProgressDashboard from '../components/ProgressDashboard';
+import { Skeleton } from '../components/Skeleton';
 import SchoolField from '../components/arena/SchoolField';
 import { GRADES, TRACK_BY_CODE } from '../config/trackConfig';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
@@ -394,6 +395,383 @@ function IdentityFields({ isCreole, uid, board }: {
   );
 }
 
+/**
+ * StreakLine — the streak, stated once, with the next milestone as the target.
+ *
+ * A raw "18 jours" is a fact; "18 jours, prochain palier à 30" is a reason to
+ * come back tomorrow. The thresholds come from STREAK_MILESTONES, which is the
+ * same list that actually awards them, so the target shown can never drift
+ * from the target enforced.
+ */
+export function StreakLine({ streak, isCreole }: { streak: any; isCreole: boolean }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const days = streak?.currentStreak || 0;
+  const next = STREAK_MILESTONES.find((m) => m.days > days);
+
+  return (
+    <div className="profile-streak">
+      <Flame size={16} className="profile-streak__icon" aria-hidden="true" />
+      <span className="profile-streak__days num">{days}</span>
+      <span className="profile-streak__unit">
+        {days === 1 ? t('jour de suite', 'jou swit') : t('jours de suite', 'jou swit')}
+      </span>
+      {next && (
+        <span className="profile-streak__next text-muted">
+          {t(`prochain palier : ${next.days} jours`, `pwochen palye : ${next.days} jou`)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ── Achievements ───────────────────────────────────────────────────────────
+ * One shelf, built from both sources at once.
+ *
+ * The page used to show streak milestones in one card and course badges in
+ * another, which meant the 7-, 30- and 100-day streaks were listed twice under
+ * two different names: `streak_7` (awarded by streakService) and `week_streak`
+ * (awarded by progressTracking) are the same achievement earned by the same
+ * behaviour. Streaks are taken from STREAK_MILESTONES only — it is the list
+ * that knows the day thresholds — and the course badges contribute the four
+ * that are genuinely about coursework plus the two point tiers.
+ *
+ * Every tile says what earns it. A locked tile without its criterion is just a
+ * grey square, and the criterion is the only part of a locked badge that can
+ * change what a student does next.
+ */
+interface Achievement {
+  id: string;
+  emoji: string;
+  label: string;
+  how: string;
+  unlocked: boolean;
+  /** 0–1. Only set where the number behind it is one we actually hold. */
+  progress?: number;
+  progressLabel?: string;
+}
+
+/** Course badges, with the real thresholds from progressTracking.ts. */
+const COURSE_BADGES = [
+  {
+    id: 'first_lesson', emoji: '🎓',
+    fr: 'Première leçon', ht: 'Premye leson',
+    howFr: 'Terminer une première leçon dans un cours.',
+    howHt: 'Fini yon premye leson nan yon kou.',
+  },
+  {
+    id: 'quiz_enthusiast', emoji: '📝',
+    fr: 'Habitué des quiz', ht: 'Abitye ak quiz',
+    howFr: '10 quiz passés dans un même cours.',
+    howHt: '10 quiz nan yon menm kou.',
+  },
+  {
+    id: 'quiz_master', emoji: '🧠',
+    fr: 'Maître des quiz', ht: 'Mèt quiz',
+    howFr: '50 quiz passés dans un même cours.',
+    howHt: '50 quiz nan yon menm kou.',
+  },
+  {
+    id: 'perfectionist', emoji: '💯',
+    fr: 'Sans faute', ht: 'San fot',
+    howFr: '5 quiz réussis sans la moindre erreur.',
+    howHt: '5 quiz reyisi san okenn erè.',
+  },
+  {
+    id: 'point_collector', emoji: '💎',
+    fr: 'Collectionneur', ht: 'Ranmasè pwen',
+    howFr: '1 000 points dans un même cours.',
+    howHt: '1 000 pwen nan yon menm kou.',
+    target: 1000,
+  },
+  {
+    id: 'point_master', emoji: '👑',
+    fr: 'Maître des points', ht: 'Mèt pwen',
+    howFr: '5 000 points dans un même cours.',
+    howHt: '5 000 pwen nan yon menm kou.',
+    target: 5000,
+  },
+];
+
+export function buildAchievements({ isCreole, streak, unlockedMilestones, courseBadges, bestCoursePoints }: {
+  isCreole: boolean;
+  streak: any;
+  unlockedMilestones: Set<string>;
+  courseBadges: Set<string>;
+  bestCoursePoints: number;
+}): Achievement[] {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const days = streak?.currentStreak || 0;
+  const best = streak?.longestStreak || 0;
+
+  const streakTiles: Achievement[] = STREAK_MILESTONES.map((m) => {
+    const unlocked = unlockedMilestones.has(m.id) || best >= m.days;
+    // Progress is measured against the CURRENT streak, not the best one: the
+    // question a locked streak badge answers is "how far is today's run".
+    const progress = unlocked ? undefined : Math.min(1, days / m.days);
+    return {
+      id: m.id,
+      emoji: m.emoji,
+      label: isCreole ? m.labelHt : m.label,
+      how: t(`${m.days} jours de révision d’affilée.`, `${m.days} jou revizyon youn dèyè lòt.`),
+      unlocked,
+      progress,
+      progressLabel: progress == null ? undefined : `${days} / ${m.days}`,
+    };
+  });
+
+  const courseTiles: Achievement[] = COURSE_BADGES.map((b) => {
+    const unlocked = courseBadges.has(b.id);
+    const progress = unlocked || !b.target
+      ? undefined
+      : Math.min(1, bestCoursePoints / b.target);
+    return {
+      id: b.id,
+      emoji: b.emoji,
+      label: isCreole ? b.ht : b.fr,
+      how: isCreole ? b.howHt : b.howFr,
+      unlocked,
+      progress,
+      progressLabel: progress == null
+        ? undefined
+        : `${bestCoursePoints} / ${b.target}`,
+    };
+  });
+
+  // Earned first, then the closest to being earned — so the shelf opens on
+  // what you have and continues with what is actually within reach.
+  const rank = (a: Achievement) => (a.unlocked ? -1 : 1 - (a.progress || 0));
+  return [...courseTiles, ...streakTiles].sort((a, b) => rank(a) - rank(b));
+}
+
+/**
+ * AchievementShelf — every badge the product can award, in one place.
+ *
+ * Locked tiles are shown, not hidden, because the criterion is the part that
+ * can change what a student does next; a shelf of only what you already have
+ * is a trophy case, not a prompt. The meter appears only where a real number
+ * backs it (see buildAchievements).
+ */
+export function AchievementShelf({ achievements, isCreole }: {
+  achievements: Achievement[];
+  isCreole: boolean;
+}) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const won = achievements.filter((a) => a.unlocked).length;
+
+  return (
+    <div className="profile-card">
+      <h2 className="profile-card__title">
+        <Award size={18} /> {t('Réussites', 'Reyalizasyon')}
+        <span className="profile-card__count num">{won} / {achievements.length}</span>
+      </h2>
+      <div className="profile-badges">
+        {achievements.map((a) => (
+          <div key={a.id} className={`profile-badge ${a.unlocked ? 'is-unlocked' : ''}`}>
+            <span className="profile-badge__emoji" aria-hidden="true">{a.emoji}</span>
+            <span className="profile-badge__body">
+              <span className="profile-badge__label">
+                {a.label}
+                {a.unlocked && <Check size={13} className="profile-badge__check" aria-label={t('obtenu', 'jwenn')} />}
+              </span>
+              <span className="profile-badge__how">{a.how}</span>
+              {!a.unlocked && a.progress != null && (
+                <span className="profile-badge__meter">
+                  <span className="profile-badge__meter-fill" style={{ '--pct': `${Math.round(a.progress * 100)}%` } as React.CSSProperties} />
+                  <small className="profile-badge__meter-label">{a.progressLabel}</small>
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * CourseProgressCard — the courses you have actually opened.
+ *
+ * Absorbed from the former <ProgressDashboard />, which this page was the only
+ * caller of. Its four summary tiles duplicated numbers shown elsewhere (and
+ * its "Série de jours" read the first course's streak rather than the
+ * learner's, so it could disagree with the streak in the header); only the
+ * per-course list said anything the rest of the page did not.
+ */
+export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }: {
+  allProgress: any[];
+  loading: boolean;
+  isCreole: boolean;
+  onExplore: () => void;
+}) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+
+  const SUBJECTS: Record<string, string> = {
+    CHEM: t('Chimie', 'Chimi'),
+    PHYS: t('Physique', 'Fizik'),
+    MATH: t('Mathématiques', 'Matematik'),
+    ECON: t('Économie', 'Ekonomi'),
+    BIO: t('Biologie', 'Byoloji'),
+  };
+  const courseLabel = (courseId: string) => {
+    const [subj, ...rest] = String(courseId || '').split('-');
+    const name = SUBJECTS[(subj || '').toUpperCase()] || subj || courseId;
+    const level = rest.join('-').replace(/^NS([IVX]+)$/i, 'NS $1').toUpperCase();
+    return level ? `${name} · ${level}` : name;
+  };
+
+  if (loading) {
+    return (
+      <div className="profile-card" aria-busy="true">
+        <h2 className="profile-card__title"><BookOpen size={18} /> {t('Vos cours', 'Kou ou yo')}</h2>
+        <div className="profile-courses">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} variant="rect" height={58} radius={12} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!allProgress || allProgress.length === 0) {
+    return (
+      <div className="profile-card">
+        <h2 className="profile-card__title"><BookOpen size={18} /> {t('Vos cours', 'Kou ou yo')}</h2>
+        <p className="text-muted">
+          {t(
+            'Vous n’avez pas encore ouvert de cours. La première leçon terminée apparaîtra ici.',
+            'Ou poko louvri okenn kou. Premye leson ou fini an ap parèt isit la.',
+          )}
+        </p>
+        <button type="button" className="button button--primary" style={{ marginTop: '0.75rem' }} onClick={onExplore}>
+          {t('Explorer les cours', 'Eksplore kou yo')}
+        </button>
+      </div>
+    );
+  }
+
+  // Busiest course first: the list is a record of work done, so the course
+  // with the most of it belongs at the top.
+  const sorted = [...allProgress].sort(
+    (a, b) => (b.completedLessons?.length || 0) - (a.completedLessons?.length || 0),
+  );
+
+  return (
+    <div className="profile-card">
+      <h2 className="profile-card__title"><BookOpen size={18} /> {t('Vos cours', 'Kou ou yo')}</h2>
+      <ul className="profile-courses">
+        {sorted.map((p) => {
+          const done = p.completedLessons?.length || 0;
+          return (
+            <li key={p.courseId} className="profile-course">
+              <Link className="profile-course__link" to={`/courses/${p.courseId}`}>
+                <span className="profile-course__name">{courseLabel(p.courseId)}</span>
+                <span className="profile-course__meta text-muted">
+                  {/* No "x / y": the total lesson count for a course isn't
+                      loaded here, and a fraction would imply a denominator we
+                      do not have. */}
+                  {done} {done === 1 ? t('leçon terminée', 'leson fini') : t('leçons terminées', 'leson fini')}
+                  {p.totalPoints ? ` · ${p.totalPoints} ${t('points', 'pwen')}` : ''}
+                </span>
+                <ChevronRight size={16} className="profile-course__chev" />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * rankWindow — the learner and the one entry either side of them.
+ *
+ * Pure so it can be tested without a board: the interesting cases are the ends
+ * of the list (rank 1 has nobody above; the last entry has nobody below) and
+ * the learner being absent entirely, which is the normal state for anyone who
+ * has not chosen a pseudonym.
+ */
+export function rankWindow(entries: any[], uid: string | null) {
+  const list = entries || [];
+  const idx = uid ? list.findIndex((e) => e.id === uid) : -1;
+  if (idx < 0) return { slice: [], gap: 0 };
+  const slice = list.slice(Math.max(0, idx - 1), idx + 2);
+  const ahead = idx > 0 ? list[idx - 1] : null;
+  // Never negative: a board that momentarily reports the entry above with
+  // fewer XP must not print "-40 XP vous séparent".
+  const gap = ahead ? Math.max(0, (ahead.xp || 0) - (list[idx].xp || 0)) : 0;
+  return { slice, gap };
+}
+
+/**
+ * RankNeighbours — your place on the weekly board, with the people either side.
+ *
+ * "#42" on its own is a number to feel something about. The learner one place
+ * above, with the XP gap spelled out, is something to do this week. Falls back
+ * to the plain link whenever the board cannot place the learner — which is the
+ * normal state for anyone who hasn't chosen a pseudonym, since entries without
+ * one are never shown publicly.
+ */
+export function RankNeighbours({ entries, myRank, uid, isCreole, onOpen }: {
+  entries: any[];
+  myRank: number | null;
+  uid: string | null;
+  isCreole: boolean;
+  onOpen: () => void;
+}) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const { slice, gap } = rankWindow(entries, uid);
+
+  return (
+    <div className="profile-card">
+      <h2 className="profile-card__title">
+        <Trophy size={18} /> {t('Classement de la semaine', 'Klasman semèn nan')}
+        {myRank ? <span className="profile-card__count num">#{myRank}</span> : null}
+      </h2>
+
+      {slice.length > 0 ? (
+        <>
+          <ul className="profile-ranks">
+            {slice.map((e) => (
+              <li key={e.id} className={`profile-rank ${e.id === uid ? 'is-me' : ''}`}>
+                <span className="profile-rank__pos num">#{e.rank}</span>
+                <span className="profile-rank__name">
+                  {e.id === uid ? t('Vous', 'Ou menm') : e.displayName}
+                </span>
+                <span className="profile-rank__xp num">{e.xp} XP</span>
+              </li>
+            ))}
+          </ul>
+          {gap > 0 && (
+            <p className="profile-ranks__gap">
+              {t(
+                `${gap} XP vous séparent de la place au-dessus.`,
+                `${gap} XP separe ou ak plas ki anwo a.`,
+              )}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-muted">
+          {myRank
+            ? t(
+                'Votre place de la semaine est enregistrée. Ouvrez le classement pour voir qui vous entoure.',
+                'Plas ou pou semèn nan anrejistre. Louvri klasman an pou wè ki moun ki bò kote w.',
+              )
+            : t(
+                'Choisissez un pseudonyme dans les réglages ci-dessous pour apparaître au classement.',
+                'Chwazi yon ti non nan reglaj anba a pou w parèt nan klasman an.',
+              )}
+        </p>
+      )}
+
+      <button type="button" className="profile-ranks__open" onClick={onOpen}>
+        {t('Voir le classement complet', 'Wè tout klasman an')}
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const {
@@ -406,7 +784,10 @@ export default function Profile() {
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
-  const { myRank } = useLeaderboard(50);
+  const { entries: boardEntries, myRank } = useLeaderboard(50);
+  // Hooks run before the guest early-return, as they must; useAllProgress
+  // no-ops without a signed-in user.
+  const { progress: allProgress, loading: progressLoading } = useAllProgress();
   const [showTrackSelector, setShowTrackSelector] = React.useState(false);
 
   const trackInfo = React.useMemo(() => {
@@ -472,7 +853,27 @@ export default function Profile() {
   const accuracy = profile.totalQuestions > 0
     ? Math.round((profile.totalCorrect / profile.totalQuestions) * 100)
     : 0;
-  const unlockedMilestones = new Set(streak?.milestones || []);
+  const unlockedMilestones = new Set<string>(streak?.milestones || []);
+
+  // Lessons finished across every course the learner has touched. Each course
+  // keeps its own progress document, so this is a sum, not a single field.
+  const lessonsDone = (allProgress || []).reduce(
+    (n, p) => n + (p.completedLessons?.length || 0), 0,
+  );
+  const courseBadges = new Set<string>((allProgress || []).flatMap((p) => p.badges || []));
+  // Point badges are awarded per course, so the relevant figure for "how close
+  // am I" is the best single course, not the total across all of them.
+  const bestCoursePoints = (allProgress || []).reduce(
+    (best, p) => Math.max(best, p.totalPoints || 0), 0,
+  );
+  const achievements = buildAchievements({
+    isCreole, streak, unlockedMilestones, courseBadges, bestCoursePoints,
+  });
+
+  const school = profile?.leaderboard?.school || '';
+  const place = profile?.leaderboard?.city || profile?.leaderboard?.department || '';
+  const gradeEntry = GRADES.find((g) => g.code === grade);
+  const gradeLabel = gradeEntry ? (isCreole ? gradeEntry.labelHt : gradeEntry.label) : '';
 
   const handleLogout = async () => {
     try { await logoutUser(); } catch {}
@@ -484,29 +885,117 @@ export default function Profile() {
     <section className="section">
       <div className="container profile">
 
-        {/* ── Hero: identity + level progress ── */}
+        {/* ── Identity ──────────────────────────────────────────────────────
+             Who you are and where you are in the level ladder. The streak is
+             stated here and nowhere else on the page: it used to appear three
+             times, and one of the three read the first course's streak rather
+             than the learner's, so two of the numbers could disagree. */}
         <div className="profile-area profile-area--hero">
           <header className="profile-header">
             <div className="profile-header__avatar">{initialsOf(user)}</div>
             <div className="profile-header__id">
               <h1 className="profile-header__name">{user.name || getFirstName(user) || t('Élève', 'Elèv')}</h1>
-              {user.email && <p className="profile-header__email">{user.email}</p>}
+              {(school || place) && (
+                <p className="profile-header__place">
+                  <MapPin size={13} aria-hidden="true" />
+                  {[school, place].filter(Boolean).join(' · ')}
+                </p>
+              )}
               <div className="profile-header__chips">
+                {gradeLabel && <span className="profile-chip">{gradeLabel}</span>}
+                {trackInfo && (
+                  <button type="button" className="profile-chip profile-chip--button" onClick={() => setShowTrackSelector(true)}>
+                    {trackInfo.shortLabel || trackInfo.label}
+                  </button>
+                )}
                 <span className="profile-chip profile-chip--level"><Zap size={13} /> {t('Niveau', 'Nivo')} {level.level}</span>
-                <span className="profile-chip profile-chip--xp"><Sparkles size={13} /> {level.xp} XP</span>
-                <span className="profile-chip profile-chip--streak"><Flame size={13} /> {streak?.currentStreak || 0} {t('j', 'j')}</span>
               </div>
             </div>
           </header>
+
           <div className="profile-level">
             <div className="profile-level__top">
-              <span>{t('Niveau', 'Nivo')} {level.level}</span>
+              <span className="num">{level.xp} XP</span>
               <span className="text-muted">{level.xpToNext} XP → {t('niveau', 'nivo')} {level.level + 1}</span>
             </div>
             <div className="profile-level__bar">
               <span className="profile-level__fill" style={{ '--level-pct': `${level.progressPct}%` } as React.CSSProperties} />
             </div>
           </div>
+
+          <StreakLine streak={streak} isCreole={isCreole} />
+        </div>
+
+        {/* ── Where you stand — the diagnostic, first ──
+             The page's job is to answer "how am I doing and what should I fix",
+             so the per-subject readiness breakdown comes before anything the
+             learner can only read and admire. Settings now sit at the bottom;
+             they used to be the second thing on the page. */}
+        <div className="profile-area profile-area--readiness">
+          <ReadinessCard />
+        </div>
+
+        {/* ── What you have actually done ──
+             Four totals, each appearing exactly once on the page and each from
+             a different source, so no two of them can contradict each other. */}
+        {/* ── Sidebar column: the two short cards, stacked ──
+             Kept in one grid area on purpose. Given their own rows they each
+             sat next to a much taller card and left the dead space under it
+             that 629aa32 had to go and fix. */}
+        <div className="profile-area profile-area--aside">
+          <div className="profile-card">
+            <h2 className="profile-card__title"><Target size={18} /> {t('Ce que vous avez fait', 'Sa ou fè deja')}</h2>
+            <div className="profile-totals">
+              <div className="profile-total">
+                <span className="profile-total__value num">{lessonsDone}</span>
+                <span className="profile-total__label">{t('Leçons terminées', 'Leson fini')}</span>
+              </div>
+              <div className="profile-total">
+                <span className="profile-total__value num">{profile.totalGames || 0}</span>
+                <span className="profile-total__label">{t('Parties de trivia', 'Pati trivia')}</span>
+              </div>
+              <div className="profile-total">
+                <span className="profile-total__value num">{accuracy}%</span>
+                <span className="profile-total__label">{t('Précision aux quiz', 'Presizyon nan quiz')}</span>
+              </div>
+              <div className="profile-total">
+                <span className="profile-total__value num">{streak?.longestStreak || 0}</span>
+                <span className="profile-total__label">{t('Meilleure série (jours)', 'Pi bon seri (jou)')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Leaderboard: your actual neighbours ──
+               A bare "#42" says nothing a student can act on. The two learners
+               either side of you do: they are reachable this week. Falls back
+               to the plain link when the board can't place you. */}
+          <RankNeighbours
+            entries={boardEntries}
+            myRank={myRank}
+            uid={user?.uid || null}
+            isCreole={isCreole}
+            onOpen={() => navigate('/classement')}
+          />
+        </div>
+
+        {/* ── Courses in progress ── */}
+        <div className="profile-area profile-area--courses">
+          <CourseProgressCard
+            allProgress={allProgress}
+            loading={progressLoading}
+            isCreole={isCreole}
+            onExplore={() => navigate('/courses')}
+          />
+        </div>
+
+        {/* ── Achievements — one shelf, every tile saying what earns it ── */}
+        <div className="profile-area profile-area--achievements">
+          <AchievementShelf achievements={achievements} isCreole={isCreole} />
+        </div>
+
+        {/* ── Invite friends (two-sided referral) ── */}
+        <div className="profile-area profile-area--invite">
+          <InviteCard lang={isCreole ? 'ht' : 'fr'} />
         </div>
 
         {/* ── Réglages — five readable groups, each saying why it asks ──
@@ -637,89 +1126,6 @@ export default function Profile() {
                 </button>
               </section>
             </div>
-          </div>
-        </div>
-
-        {/* ── Readiness (main column) ── */}
-        <div className="profile-area profile-area--readiness">
-          <ReadinessCard />
-        </div>
-
-        {/* ── Achievements sidebar ── */}
-        <div className="profile-area profile-area--aside">
-          <div className="profile-card profile-card--full-height">
-            <h2 className="profile-card__title"><Award size={18} /> {t('Réussites', 'Reyalizasyon')}</h2>
-            <div className="profile-achievements">
-              <div className="profile-stat">
-                <span className="profile-stat__value">{profile.totalGames || 0}</span>
-                <span className="profile-stat__label">{t('Parties trivia', 'Pati trivia')}</span>
-              </div>
-              <div className="profile-stat">
-                <span className="profile-stat__value">{accuracy}%</span>
-                <span className="profile-stat__label">{t('Précision', 'Presizyon')}</span>
-              </div>
-              <div className="profile-stat">
-                <span className="profile-stat__value">{streak?.longestStreak || 0}</span>
-                <span className="profile-stat__label">{t('Meilleure série', 'Pi bon seri')}</span>
-              </div>
-              <div className="profile-stat">
-                <span className="profile-stat__value">{profile.bestScorePct || 0}%</span>
-                <span className="profile-stat__label">{t('Meilleur score', 'Pi bon nòt')}</span>
-              </div>
-            </div>
-            <div className="profile-milestones">
-              {STREAK_MILESTONES.map((m) => {
-                const unlocked = unlockedMilestones.has(m.id);
-                return (
-                  <div key={m.id} className={`profile-milestone ${unlocked ? 'is-unlocked' : ''}`} title={isCreole ? m.labelHt : m.label}>
-                    <span className="profile-milestone__emoji">{m.emoji}</span>
-                    <span className="profile-milestone__label">{isCreole ? m.labelHt : m.label}</span>
-                    {unlocked && <Check size={12} className="profile-milestone__check" />}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Progression (full width) ── */}
-        <div className="profile-area profile-area--progress">
-          <ProgressDashboard />
-        </div>
-
-        {/* ── Classement — entry to the dedicated full page (no longer embedded) ── */}
-        <div className="profile-area profile-area--leaderboard">
-          <button
-            className="profile-leaderboard-link"
-            onClick={() => navigate('/classement')}
-            type="button"
-          >
-            <span className="profile-leaderboard-link__icon"><Trophy size={20} /></span>
-            <span className="profile-leaderboard-link__body">
-              <span className="profile-leaderboard-link__title">{t('Classement', 'Klasman')}</span>
-              <span className="profile-leaderboard-link__sub">{t('Voyez où vous vous situez', 'Wè kote ou ye')}</span>
-            </span>
-            {myRank ? <span className="profile-leaderboard-link__rank num">#{myRank}</span> : null}
-            <ChevronRight size={18} className="profile-leaderboard-link__chev" />
-          </button>
-        </div>
-
-        {/* ── Invite friends (two-sided referral) ── */}
-        <div className="profile-area profile-area--invite">
-          <InviteCard lang={isCreole ? 'ht' : 'fr'} />
-        </div>
-
-        {/* ── Certificates (future) ── */}
-        <div className="profile-area profile-area--certs">
-          <div className="profile-card profile-card--soon">
-            <h2 className="profile-card__title"><GraduationCap size={18} /> {t('Certificats', 'Sètifika')}</h2>
-            <p className="text-muted">
-              {t(
-                'Bientôt : obtenez des certificats vérifiables en complétant des parcours et des examens blancs.',
-                'Talè : jwenn sètifika verifyab lè w konplete pakou ak egzamen blan.',
-              )}
-            </p>
-            <span className="profile-soon-badge">{t('Bientôt', 'Talè')}</span>
           </div>
         </div>
 

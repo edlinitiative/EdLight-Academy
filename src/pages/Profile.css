@@ -1,31 +1,40 @@
 /* Profile — account hub
    ───────────────────── */
 
-/* Keep account controls directly after identity on desktop and mobile. */
+/* Reading order is the page's argument: who you are, how you are doing, what
+   you have done, what you have earned — and only then the controls. Settings
+   used to sit second, above every answer the page exists to give. */
 .profile {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   grid-template-areas:
-    "hero        hero"
-    "settings    settings"
-    "readiness   aside"
-    "progress    aside"
-    "leaderboard aside"
-    "invite      certs";
+    "hero         hero"
+    "readiness    aside"
+    "courses      aside"
+    "achievements achievements"
+    "invite       invite"
+    "settings     settings";
   gap: 1rem;
   max-width: 1060px;
   align-items: start;
 }
 
 /* ── Grid area assignments ── */
-.profile-area--hero        { grid-area: hero; }
-.profile-area--readiness   { grid-area: readiness; }
-.profile-area--aside       { grid-area: aside; }
-.profile-area--progress    { grid-area: progress; }
-.profile-area--leaderboard { grid-area: leaderboard; }
-.profile-area--settings    { grid-area: settings; }
-.profile-area--invite      { grid-area: invite; }
-.profile-area--certs       { grid-area: certs; }
+.profile-area--hero         { grid-area: hero; }
+.profile-area--readiness    { grid-area: readiness; }
+.profile-area--aside        { grid-area: aside; }
+.profile-area--courses      { grid-area: courses; }
+.profile-area--achievements { grid-area: achievements; }
+.profile-area--settings     { grid-area: settings; }
+.profile-area--invite       { grid-area: invite; }
+
+/* The sidebar holds two short cards stacked, so neither of them sits alone
+   beside a tall one and leaves a hole under itself. */
+.profile-area--aside {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
 
 /* ── Hero card: identity + level ── */
 .profile-area--hero {
@@ -93,8 +102,6 @@
 }
 
 .profile-chip--level { background: var(--primary-50); color: var(--primary-600); }
-.profile-chip--xp    { background: var(--primary-50); color: var(--primary-600); }
-.profile-chip--streak { background: var(--danger-50); color: var(--danger-500); }
 
 /* ── Level progress (inside hero) ── */
 .profile-level__top {
@@ -133,11 +140,6 @@
   position: relative;
 }
 
-.profile-card--full-height {
-  height: 100%;
-  box-sizing: border-box;
-}
-
 .profile-card__title {
   display: flex;
   align-items: center;
@@ -156,85 +158,6 @@
 
 .profile-card__header .profile-card__title {
   margin-bottom: 0;
-}
-
-/* ── Achievements grid ── */
-.profile-achievements {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.6rem;
-  margin-bottom: 1rem;
-}
-
-.profile-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  background: var(--surface-alt);
-  border-radius: 12px;
-  padding: 0.7rem 0.4rem;
-  text-align: center;
-}
-
-.profile-stat__value {
-  font-size: var(--text-lg);
-  font-weight: 800;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.profile-stat__label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  line-height: 1.2;
-}
-
-/* ── Milestones ── */
-.profile-milestones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.profile-milestone {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 999px;
-  background: var(--surface-alt);
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--text-muted, var(--text-400));
-  filter: grayscale(1);
-  opacity: 0.6;
-}
-
-.profile-milestone.is-unlocked {
-  filter: none;
-  opacity: 1;
-  color: var(--text);
-  background: var(--success-50);
-}
-
-.profile-milestone__check { color: var(--success-500); }
-
-/* ── Certificates (soon) ── */
-.profile-card--soon { border: 1px dashed var(--border-strong); box-shadow: none; }
-
-.profile-soon-badge {
-  position: absolute;
-  top: 1.1rem;
-  right: 1.2rem;
-  font-size: 0.66rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--primary-600);
-  background: var(--primary-50);
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
 }
 
 /* ── Quick links: icon tile grid ── */
@@ -368,100 +291,14 @@
     grid-template-columns: 1fr;
     grid-template-areas:
       "hero"
-      "settings"
       "readiness"
       "aside"
-      "progress"
-      "leaderboard"
+      "courses"
+      "achievements"
       "invite"
-      "certs";
+      "settings";
   }
 
-  .profile-card--full-height { height: auto; }
-  .profile-achievements { grid-template-columns: repeat(4, 1fr); }
-}
-
-@media (max-width: 520px) {
-  .profile-achievements { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ── Dark ── The brand chips/badge use a very dark navy tint (rgba(8,87,166,…))
-   with deep-azure text that all but disappears on the night canvas. Swap to the
-   dark-mode primary tint + a light-blue label so they meet contrast. Surfaces,
-   borders, and body/muted text already adapt through the token aliases. */
-[data-theme="dark"] .profile-chip--level,
-[data-theme="dark"] .profile-chip--xp,
-[data-theme="dark"] .profile-soon-badge {
-  background: var(--primary-50);
-  color: var(--primary-400);
-}
-[data-theme="dark"] .profile-chip--streak {
-  background: color-mix(in srgb, var(--danger-500) 18%, transparent);
-  color: #fca5a5;
-}
-[data-theme="dark"] .profile-milestone.is-unlocked {
-  background: rgba(52, 196, 112, 0.16);
-}
-
-/* ── Classement entry (links to the dedicated /classement page) ── */
-.profile-leaderboard-link {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  width: 100%;
-  padding: 0.9rem 1rem;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  border: 1px solid var(--primary-50);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
-}
-.profile-leaderboard-link:hover {
-  background: var(--primary-50);
-  border-color: var(--primary-100);
-  transform: translateY(-1px);
-}
-.profile-leaderboard-link__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: var(--primary-50);
-  color: var(--primary-600);
-  flex-shrink: 0;
-}
-.profile-leaderboard-link__body {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-.profile-leaderboard-link__title {
-  font-size: var(--text-base);
-  font-weight: 800;
-  color: var(--text);
-}
-.profile-leaderboard-link__sub {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-.profile-leaderboard-link__rank {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--primary-600);
-  background: var(--primary-50);
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  flex-shrink: 0;
-}
-.profile-leaderboard-link__chev {
-  color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -887,3 +724,215 @@
 }
 
 .profile-guest__free a { color: var(--primary-600); font-weight: 700; }
+
+/* ── Identity: place line and the streak ─────────────────────────────────── */
+
+.profile-header__place {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.2rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.profile-chip--button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit;
+}
+.profile-chip--button:hover { border-color: var(--primary-500); color: var(--primary-600); }
+
+/* The streak, stated once. Its value is the number of days AND the next
+   threshold — a count on its own gives nothing to aim at. */
+.profile-streak {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+.profile-streak__icon { align-self: center; color: var(--primary-500); }
+.profile-streak__days { font-size: 1.25rem; font-weight: 700; color: var(--text-900); }
+.profile-streak__unit { color: var(--text-600); }
+.profile-streak__next { margin-left: auto; }
+
+/* ── The four totals ─────────────────────────────────────────────────────── */
+
+.profile-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.profile-total {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.75rem;
+  background: var(--surface-muted);
+  border-radius: var(--radius-md);
+}
+.profile-total__value { font-size: 1.35rem; font-weight: 700; color: var(--text-900); line-height: 1.1; }
+.profile-total__label { font-size: 0.78rem; color: var(--text-muted); }
+
+/* A count beside a card title, pushed to the end of the row. */
+.profile-card__count {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── Courses ─────────────────────────────────────────────────────────────── */
+
+.profile-courses {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.profile-course__link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "name chev" "meta chev";
+  align-items: center;
+  gap: 0 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.profile-course__link:hover { border-color: var(--primary-500); background: var(--primary-50); }
+.profile-course__name { grid-area: name; font-weight: 600; color: var(--text-900); }
+.profile-course__meta { grid-area: meta; font-size: 0.8rem; }
+.profile-course__chev { grid-area: chev; color: var(--text-400); }
+
+/* ── Leaderboard neighbours ──────────────────────────────────────────────── */
+
+.profile-ranks {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.profile-rank {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.profile-rank__pos { color: var(--text-muted); font-weight: 600; }
+.profile-rank__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profile-rank__xp { color: var(--text-600); }
+/* Your own row is filled rather than outlined — no accent stripe. */
+.profile-rank.is-me {
+  background: var(--primary-50);
+  font-weight: 700;
+  color: var(--primary-600);
+}
+.profile-rank.is-me .profile-rank__pos,
+.profile-rank.is-me .profile-rank__xp { color: var(--primary-600); }
+
+.profile-ranks__gap {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.profile-ranks__open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--primary-600);
+  cursor: pointer;
+}
+.profile-ranks__open:hover { text-decoration: underline; }
+
+/* ── Achievement shelf ───────────────────────────────────────────────────── */
+
+.profile-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+.profile-badge {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+/* Locked tiles stay legible — they carry the criterion, which is the only
+   part of a locked badge that can change what a student does next. */
+.profile-badge:not(.is-unlocked) { background: var(--surface-muted); }
+/* Dimmed, not desaturated: grayscale turns a 💎 or a 🏆 into a grey smudge —
+   unreadable at 1.4rem, and worse on the dark tile. Earned vs not is already
+   carried by the tile fill, the check and the meter. */
+.profile-badge:not(.is-unlocked) .profile-badge__emoji { opacity: 0.65; }
+.profile-badge.is-unlocked { border-color: var(--primary-100); }
+
+.profile-badge__emoji { font-size: 1.4rem; line-height: 1.2; }
+.profile-badge__body { display: grid; gap: 0.15rem; min-width: 0; }
+.profile-badge__label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--text-900);
+}
+.profile-badge__check { color: var(--success-500); flex: none; }
+.profile-badge__how { font-size: 0.78rem; color: var(--text-muted); }
+
+.profile-badge__meter {
+  display: block;
+  position: relative;
+  height: 4px;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: var(--border);
+}
+.profile-badge__meter-fill {
+  display: block;
+  height: 100%;
+  width: var(--pct, 0%);
+  border-radius: inherit;
+  background: var(--primary-500);
+}
+.profile-badge__meter-label {
+  position: absolute;
+  top: 0.4rem;
+  right: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 520px) {
+  .profile-badges { grid-template-columns: 1fr; }
+  .profile-streak__next { margin-left: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-course__link { transition: none; }
+}
