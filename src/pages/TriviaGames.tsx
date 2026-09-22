@@ -730,6 +730,35 @@ function GamesHub({ isCreole }) {
         <ArenaBanner />
       </section>
 
+      {/*
+        * "Défi d'un ami" exists and this page never said so.
+        *
+        * mobile/src/services/challengeService.ts is a complete feature: you
+        * mint a duel from a round you just finished, your friend plays the
+        * SAME questions once, and the winner's XP is awarded server-side. The
+        * web even has the landing page for it — /defi/:code, so an invited
+        * friend can arrive. But nothing anywhere on the web CREATES one or
+        * mentions it is possible, so the only way a student discovers the
+        * feature is if somebody happens to send them a link.
+        *
+        * Minting a duel needs the app (the share sheet and the round it is
+        * minted from are native), so this is the same shape as the
+        * championship above: the web explains it and hands over.
+        */}
+      <section className="games-hub__duel" aria-labelledby="duel-title">
+        <h2 id="duel-title">{isCreole ? 'Defi yon zanmi' : 'Défi d’un ami'}</h2>
+        <p>
+          {isCreole
+            ? 'Fini yon pati, epi voye menm kesyon yo bay yon zanmi. Li gen yon sèl tantativ — pi gwo nòt la genyen. Ou kreye defi a nan aplikasyon an.'
+            : 'Finissez une partie, puis envoyez les mêmes questions à un ami. Il n’a qu’un seul essai — le meilleur score gagne. Le défi se crée dans l’application.'}
+          {' '}
+          <Link to="/download?from=defi" className="games-hub__championship-link">
+            {isCreole ? 'Jwenn aplikasyon an' : 'Obtenir l’application'}
+            <ChevronRight size={14} aria-hidden="true" />
+          </Link>
+        </p>
+      </section>
+
       <DailyChallengeBanner
         daily={daily}
         isCreole={isCreole}

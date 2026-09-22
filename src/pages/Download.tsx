@@ -42,9 +42,24 @@ const ORIGINS: Record<string, {
       'Le championnat se joue dans l’application',
       'Chanpyona a jwe nan aplikasyon an',
     ],
+    // Corrected: this used to say registration was in the app too. It is not
+    // any more — /arena takes it on the web, which was the whole point of
+    // moving the cheap step off the install. Only PLAYING is mobile-only.
     body: [
-      'L’inscription, les questions en direct et les résultats du championnat interscolaire sont dans l’application mobile. Installe-la, connecte-toi avec le même compte, et ton école t’attend.',
-      'Enskripsyon, kesyon yo an dirèk ak rezilta chanpyona ant lekòl yo nan aplikasyon mobil la. Enstale l, konekte ak menm kont lan, epi lekòl ou ap tann ou.',
+      'Votre école s’inscrit sur le site, mais les questions du jour J se jouent dans l’application. Installez-la et connectez-vous avec le même compte : votre école ne compte que les élèves présents.',
+      'Lekòl ou enskri sou sit la, men kesyon jou a jwe nan aplikasyon an. Enstale l epi konekte ak menm kont lan : lekòl ou konte sèlman elèv ki prezan.',
+    ],
+    backTo: '/arena',
+    backLabel: ['Retour au championnat', 'Tounen nan chanpyona a'],
+  },
+  defi: {
+    title: [
+      'Les défis se lancent depuis l’application',
+      'Defi yo pati depi nan aplikasyon an',
+    ],
+    body: [
+      'Un défi part d’une partie que vous venez de finir : votre ami reçoit exactement les mêmes questions et n’a qu’un seul essai. Cette partie se joue dans l’application — mais le lien que vous envoyez s’ouvre partout.',
+      'Yon defi soti nan yon pati ou fèk fini : zanmi ou resevwa egzakteman menm kesyon yo epi li gen yon sèl tantativ. Pati sa a jwe nan aplikasyon an — men lyen ou voye a ouvè tout kote.',
     ],
     backTo: '/jeux',
     backLabel: ['Retour aux jeux', 'Tounen nan jwèt yo'],
