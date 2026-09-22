@@ -15,13 +15,18 @@
  *    days is a lie about their year. No grade, or a grade with no exam level,
  *    renders nothing at all.
  *
- * 2. It never presents the date as the official calendar. examSchedule.ts says
- *    of its own dates: "placeholders … should be confirmed/updated by an admin
- *    each year against the official MENFP calendar." A student who plans their
- *    revision around a date we invented, believing it published, is the harm
- *    this card could actually do. So the date carries an "indicative" pill
- *    against it and a line telling the learner where the real answer lives
- *    (their school), and nothing here claims an endorsement.
+ * 2. It never presents an unpublished date as the official calendar. A student
+ *    who plans their revision around a date we estimated, believing it
+ *    published, is the harm this card could actually do. So an UNCONFIRMED
+ *    session carries an "indicative" pill against its date and a line telling
+ *    the learner where the real answer lives (their school).
+ *
+ *    A session marked `confirmed` in examSchedule.ts comes from the MENFP's
+ *    published calendar, and then the caveat is not merely unnecessary but
+ *    misleading — hedging a real date teaches a student to distrust the one
+ *    number here that is solid. The caveat is therefore tied to the flag, so
+ *    it disappears by itself the day someone enters the published dates.
+ *    Nothing here claims an endorsement either way.
  */
 
 import React from 'react';
@@ -89,7 +94,12 @@ export function resolveExamCountdown(
      rejected rather than rendered. */
   if (session.level !== level) return null;
 
-  const days = session.daysRemaining;
+  /* A session runs over several days, and getNextExamSession keeps it current
+     until its last one. So on day 2 of a four-day Bac `daysRemaining` is
+     already negative — the exam has started, not passed. "C'est aujourd'hui"
+     is true on every day of the window, and the count is clamped so the card
+     can never print a negative number of days. */
+  const days = Math.max(0, session.daysRemaining);
   return {
     session,
     level: session.level,
@@ -147,10 +157,14 @@ export default function ExamCountdown({ className }: { className?: string }) {
     <Link
       to={`/exams/${level}`}
       className={['pf-card', 'xcd', className].filter(Boolean).join(' ')}
-      aria-label={t(
-        `${spoken}. Date indicative, à confirmer auprès de votre école. Préparer cet examen.`,
-        `${spoken}. Dat endikatif, tcheke avèk lekòl ou pou konfime. Prepare egzamen sa a.`,
-      )}
+      aria-label={
+        session.confirmed
+          ? t(`${spoken}. Préparer cet examen.`, `${spoken}. Prepare egzamen sa a.`)
+          : t(
+              `${spoken}. Date indicative, à confirmer auprès de votre école. Préparer cet examen.`,
+              `${spoken}. Dat endikatif, tcheke avèk lekòl ou pou konfime. Prepare egzamen sa a.`,
+            )
+      }
     >
       <span className="pf-tile pf-tile--md pf-tile--azure xcd__tile" aria-hidden="true">
         <CalendarClock size={22} />
@@ -172,17 +186,21 @@ export default function ExamCountdown({ className }: { className?: string }) {
             the claim, so the caveat has to be the next thing read. */}
         <span className="xcd__when">
           {date && <span className="xcd__date">{date}</span>}
-          <span className="pf-pill pf-pill--amber xcd__flag">
-            {t('Date indicative', 'Dat endikatif')}
-          </span>
-        </span>
-
-        <span className="xcd__caveat">
-          {t(
-            'À confirmer auprès de votre école : le calendrier peut changer.',
-            'Tcheke avèk lekòl ou pou konfime : kalandriye a ka chanje.',
+          {!session.confirmed && (
+            <span className="pf-pill pf-pill--amber xcd__flag">
+              {t('Date indicative', 'Dat endikatif')}
+            </span>
           )}
         </span>
+
+        {!session.confirmed && (
+          <span className="xcd__caveat">
+            {t(
+              'À confirmer auprès de votre école : le calendrier peut changer.',
+              'Tcheke avèk lekòl ou pou konfime : kalandriye a ka chanje.',
+            )}
+          </span>
+        )}
       </span>
 
       <span className="pf-link xcd__cta" aria-hidden="true">

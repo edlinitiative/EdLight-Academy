@@ -87,14 +87,23 @@ export const TRACK_LEVEL: Record<string, 'baccalaureat' | 'universite'> = {
  * Seasonal default plan mode. Once the Bac is past and the next Bac session is
  * more than ~5 months out, préfac (concours) is the sensible default; the Bac
  * plan auto-returns as the next cycle approaches. Kept in sync with the web's
- * src/config/examSchedule.ts. Bac dates: bac1 ~ July 5-6, bac2 ~ July 19-20.
+ * src/config/examSchedule.ts.
+ *
+ * The dates here used to read "bac1 ~ July 5-6, bac2 ~ July 19-20" — the old
+ * two-part Bac. Students on the Nouveau Secondaire sit ONE end-of-NS4 exam:
+ * in 2026 it ran 13–16 July (MENFP calendar, published mid-May 2026). This
+ * approximates that as a mid-July window; examSchedule.ts holds the exact
+ * dates, and this file stays deliberately dependency-free because the mobile
+ * app reads it too.
  */
 export function currentPlanSeason(from: Date = new Date()): 'bac' | 'prefac' {
   const y = from.getFullYear();
-  // Days until the next July 5 (first Bac session) on/after `from`.
-  const julyFirstBac = (yr: number) => new Date(yr, 6, 5);
-  let nextBac = julyFirstBac(y);
-  if (from > new Date(y, 6, 20)) nextBac = julyFirstBac(y + 1); // past this year's bac2 → next year
+  /** The Bac opens around the second Monday of July. */
+  const bacStart = (yr: number) => new Date(yr, 6, 13);
+  /** ...and runs about four days. Past that, the season has turned. */
+  const bacEnd = (yr: number) => new Date(yr, 6, 16);
+  let nextBac = bacStart(y);
+  if (from > bacEnd(y)) nextBac = bacStart(y + 1);
   const days = Math.round((nextBac.getTime() - from.getTime()) / 86_400_000);
   return days <= 150 ? 'bac' : 'prefac';
 }

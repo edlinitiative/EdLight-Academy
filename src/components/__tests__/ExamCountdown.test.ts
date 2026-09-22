@@ -7,12 +7,16 @@
  * runs out), and a test that uses `new Date()` silently stops testing those
  * the moment the calendar moves past them.
  *
- * EXAM_SESSIONS as committed:
- *   9e-2026   9e        2026-06-29      9e-2027   9e        2027-06-28
- *   bac1-2026 terminale 2026-07-06      bac1-2027 terminale 2027-07-05
- *   bac2-2026 terminale 2026-07-20      bac2-2027 terminale 2027-07-19
- * There is no `university` session at all — POSTBAC is a real "nothing to
- * show" case, not a hypothetical one.
+ * EXAM_SESSIONS as committed — note each session spans several DAYS, and stays
+ * current until the last of them:
+ *   9e-2026   9e        2026-06-29 → 07-02   (confirmed)
+ *   ns4-2026  terminale 2026-07-13 → 07-16   (confirmed)
+ *   9e-2027   9e        2027-06-28 → 07-01   (estimated)
+ *   ns4-2027  terminale 2027-07-12 → 07-15   (estimated)
+ * The Bac is ONE session: students on the Nouveau Secondaire sit a single
+ * end-of-NS4 exam, not the two-part Bac the first version of this file
+ * modelled. There is no `university` session at all — POSTBAC is a real
+ * "nothing to show" case, not a hypothetical one.
  */
 
 import { resolveExamCountdown, formatSessionDate } from '../ExamCountdown';
@@ -21,10 +25,10 @@ import { resolveExamCountdown, formatSessionDate } from '../ExamCountdown';
 const on = (y: number, m: number, d: number) => new Date(y, m - 1, d);
 
 describe('resolveExamCountdown — who sees a countdown', () => {
-  it('gives an NS4 learner the Bac, not the 9ᵉ exam sitting a week earlier', () => {
+  it('gives an NS4 learner the Bac, not the 9ᵉ exam sitting a fortnight earlier', () => {
     const info = resolveExamCountdown('NS4', on(2026, 6, 1));
     expect(info).not.toBeNull();
-    expect(info.session.id).toBe('bac1-2026');
+    expect(info.session.id).toBe('ns4-2026');
     expect(info.level).toBe('terminale');
   });
 
@@ -89,32 +93,52 @@ describe('resolveExamCountdown — the day arithmetic', () => {
     expect(info.phase).toBe('today');
   });
 
-  it('rolls to the next session once one is past, not to a negative count', () => {
-    // 30 June 2026: the 9ᵉ exam was yesterday.
+  it('stays on a session that has started but not finished', () => {
+    // The 2026 9ᵉ exam runs 29 June – 2 July. On 30 June a student is sitting
+    // it; filtering on the start date alone used to skip them to next year's.
     const info = resolveExamCountdown('9e', on(2026, 6, 30));
+    expect(info.session.id).toBe('9e-2026');
+    expect(info.days).toBe(0);
+    expect(info.phase).toBe('today');
+  });
+
+  it('rolls to the next session once one is fully past, not to a negative count', () => {
+    // 3 July 2026: the last day of the 9ᵉ window was yesterday.
+    const info = resolveExamCountdown('9e', on(2026, 7, 3));
     expect(info.session.id).toBe('9e-2027');
     expect(info.days).toBeGreaterThan(0);
   });
 
   it('crosses the year boundary rather than counting backwards', () => {
-    // 21 July 2026: both 2026 Bac sessions are behind us.
-    const info = resolveExamCountdown('NS4', on(2026, 7, 21));
-    expect(info.session.id).toBe('bac1-2027');
-    expect(info.session.dateISO).toBe('2027-07-05');
-    expect(info.days).toBe(349);
+    // 17 July 2026: the 2026 Bac window closed yesterday.
+    const info = resolveExamCountdown('NS4', on(2026, 7, 17));
+    expect(info.session.id).toBe('ns4-2027');
+    expect(info.session.dateISO).toBe('2027-07-12');
     expect(info.phase).toBe('upcoming');
+    expect(info.days).toBe(360);
   });
 
-  it('advances through the two Bac sessions in order', () => {
-    expect(resolveExamCountdown('NS4', on(2026, 7, 6)).phase).toBe('today');
-    expect(resolveExamCountdown('NS4', on(2026, 7, 7)).session.id).toBe('bac2-2026');
-    expect(resolveExamCountdown('NS4', on(2026, 7, 20)).phase).toBe('today');
+  it('reads "today" across every day of the Bac window, then moves on', () => {
+    for (const day of [13, 14, 15, 16]) {
+      const info = resolveExamCountdown('NS4', on(2026, 7, day));
+      expect(info.session.id).toBe('ns4-2026');
+      expect(info.phase).toBe('today');
+    }
+    expect(resolveExamCountdown('NS4', on(2026, 7, 12)).phase).toBe('tomorrow');
+    expect(resolveExamCountdown('NS4', on(2026, 7, 17)).session.id).toBe('ns4-2027');
+  });
+
+  it('only hedges a date the MENFP has not published', () => {
+    // The flag is what the card keys its "date indicative" caveat on, so the
+    // caveat disappears by itself when real dates are entered.
+    expect(resolveExamCountdown('NS4', on(2026, 6, 1)).session.confirmed).toBe(true);
+    expect(resolveExamCountdown('NS4', on(2026, 7, 17)).session.confirmed).toBe(false);
   });
 
   it('never reports a negative number of days, whatever the date', () => {
     const dates = [
-      on(2025, 1, 1), on(2026, 6, 29), on(2026, 6, 30),
-      on(2026, 7, 20), on(2026, 7, 21), on(2027, 7, 19),
+      on(2025, 1, 1), on(2026, 6, 29), on(2026, 6, 30), on(2026, 7, 2),
+      on(2026, 7, 13), on(2026, 7, 16), on(2026, 7, 17), on(2027, 7, 15),
     ];
     for (const from of dates) {
       for (const grade of ['9e', 'NS4']) {
@@ -125,10 +149,10 @@ describe('resolveExamCountdown — the day arithmetic', () => {
   });
 
   it('renders nothing once the list runs out instead of crashing', () => {
-    // The committed list ends at 20 July 2027. The day after the last session
-    // there is simply nothing true left to say.
-    expect(resolveExamCountdown('NS4', on(2027, 7, 20))).toBeNull();
-    expect(resolveExamCountdown('9e', on(2027, 6, 29))).toBeNull();
+    // The committed list ends with the 2027 Bac window closing on 15 July.
+    // The day after, there is simply nothing true left to say.
+    expect(resolveExamCountdown('NS4', on(2027, 7, 16))).toBeNull();
+    expect(resolveExamCountdown('9e', on(2027, 7, 2))).toBeNull();
     expect(resolveExamCountdown('NS4', on(2030, 1, 1))).toBeNull();
   });
 
@@ -138,7 +162,7 @@ describe('resolveExamCountdown — the day arithmetic', () => {
     expect(resolveExamCountdown('NS4', on(2028, 2, 29))).toBeNull();
     // And within range, a span containing 29 Feb 2028 is not applicable; the
     // 2027 spans are the ones the list covers.
-    expect(resolveExamCountdown('NS4', on(2027, 1, 1)).days).toBe(185);
+    expect(resolveExamCountdown('NS4', on(2027, 1, 1)).days).toBe(192);
   });
 });
 

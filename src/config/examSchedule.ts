@@ -1,12 +1,32 @@
 /**
  * Exam Schedule
  * ─────────────
- * Configurable upcoming national-exam sessions used for the "Upcoming Exam"
- * countdown on the home dashboard ("42 days until Bac I").
+ * National-exam sessions, used for the countdown a student sees on their
+ * dashboard.
  *
- * ⚠️  Dates are placeholders and should be confirmed/updated by an admin each
- * year against the official MENFP calendar. Keeping them here (rather than
- * hard-coded in a component) makes that a one-line edit.
+ * WHAT WAS WRONG HERE, AND WHY IT MATTERED
+ * The original entries modelled the Bac as two parts a fortnight apart
+ * ("1ʳᵉ partie" / "2ᵉ partie"). That is the OLD structure. Students on the
+ * Nouveau Secondaire — the programme this whole app teaches — sit a single
+ * end-of-NS4 exam, the "bac unique". The dates were wrong too: the 2026 Bac
+ * ran 13–16 July, not 6 July. So the countdown was telling an NS4 student
+ * about two exams they will never sit, on dates a week out.
+ *
+ * SOURCES for the 2026 calendar, published by the MENFP in mid-May 2026 and
+ * reported consistently by Ted'Actu (2026-05-16), Le Quotidien 509, KARIBINFO
+ * and hpninfo: 9ᵉ A.F. 29 June – 2 July; Bac (Secondaire 4) 13–16 July, a
+ * single session, 118 090 candidates, in the four series this app knows
+ * (SVT, LLA, SMP, SES). The traditional Bac (Philo) still runs in parallel
+ * for the outgoing system — it is NOT what our students sit, so it is not
+ * listed here.
+ *
+ * ⚠️  `confirmed: false` means the date is OUR ESTIMATE, not the MENFP's
+ * calendar. The ministry publishes each year's dates around mid-May, so an
+ * estimate is what we can honestly offer for the rest of the year. Anything
+ * rendering these dates must say so — see ExamCountdown, which only drops its
+ * "date indicative" caveat once a session is marked confirmed. When the real
+ * calendar is published: set the dates and flip the flag. That is the whole
+ * maintenance job, and it is why these live in one file.
  */
 
 export interface ExamSession {
@@ -15,17 +35,24 @@ export interface ExamSession {
   level: 'terminale' | '9e' | 'university';
   label: string;
   labelHt: string;
-  /** ISO date (YYYY-MM-DD), local. */
+  /** First day of the session. ISO date (YYYY-MM-DD), local. */
   dateISO: string;
+  /** Last day, when the session runs over several days. Defaults to dateISO. */
+  endISO?: string;
+  /** True only when these dates come from the published MENFP calendar. */
+  confirmed?: boolean;
 }
 
 export const EXAM_SESSIONS: ExamSession[] = [
-  { id: '9e-2026',   level: '9e',        label: 'Examen 9ᵉ A.F.',       labelHt: 'Egzamen 9yèm A.F.',  dateISO: '2026-06-29' },
-  { id: 'bac1-2026', level: 'terminale', label: 'Bac — 1ʳᵉ partie',     labelHt: 'Bak — 1ye pati',     dateISO: '2026-07-06' },
-  { id: 'bac2-2026', level: 'terminale', label: 'Bac — 2ᵉ partie',      labelHt: 'Bak — 2yèm pati',    dateISO: '2026-07-20' },
-  { id: '9e-2027',   level: '9e',        label: 'Examen 9ᵉ A.F.',       labelHt: 'Egzamen 9yèm A.F.',  dateISO: '2027-06-28' },
-  { id: 'bac1-2027', level: 'terminale', label: 'Bac — 1ʳᵉ partie',     labelHt: 'Bak — 1ye pati',     dateISO: '2027-07-05' },
-  { id: 'bac2-2027', level: 'terminale', label: 'Bac — 2ᵉ partie',      labelHt: 'Bak — 2yèm pati',    dateISO: '2027-07-19' },
+  // ── 2026: published, and now past. Kept so the record is right. ──────────
+  { id: '9e-2026',  level: '9e',        label: 'Examen 9ᵉ A.F.', labelHt: 'Egzamen 9yèm A.F.', dateISO: '2026-06-29', endISO: '2026-07-02', confirmed: true },
+  { id: 'ns4-2026', level: 'terminale', label: 'Bac — fin du Nouveau Secondaire', labelHt: 'Bak — fen Nouvo Segondè', dateISO: '2026-07-13', endISO: '2026-07-16', confirmed: true },
+
+  // ── 2027: NOT ANNOUNCED. Estimated by carrying the 2026 weekdays forward
+  //    (the 9ᵉ opens the last Monday of June, the Bac the second Monday of
+  //    July). Replace with the real dates when the MENFP publishes them. ────
+  { id: '9e-2027',  level: '9e',        label: 'Examen 9ᵉ A.F.', labelHt: 'Egzamen 9yèm A.F.', dateISO: '2027-06-28', endISO: '2027-07-01', confirmed: false },
+  { id: 'ns4-2027', level: 'terminale', label: 'Bac — fin du Nouveau Secondaire', labelHt: 'Bak — fen Nouvo Segondè', dateISO: '2027-07-12', endISO: '2027-07-15', confirmed: false },
 ];
 
 /** Midnight (local) for an ISO date string. */
@@ -56,8 +83,16 @@ export function getNextExamSession(
   from: Date = new Date(),
 ): (ExamSession & { daysRemaining: number }) | null {
   const upcoming = EXAM_SESSIONS
-    .map((s) => ({ ...s, daysRemaining: daysUntil(s.dateISO, from) }))
-    .filter((s) => s.daysRemaining >= 0)
+    .map((s) => ({
+      ...s,
+      daysRemaining: daysUntil(s.dateISO, from),
+      // A session stays current until its LAST day. Filtering on the start
+      // date meant that on day 2 of a four-day exam the countdown skipped to
+      // next year's — telling a student sitting the Bac that morning that
+      // their Bac was in 360 days.
+      daysUntilOver: daysUntil(s.endISO || s.dateISO, from),
+    }))
+    .filter((s) => s.daysUntilOver >= 0)
     .sort((a, b) => a.daysRemaining - b.daysRemaining);
 
   if (upcoming.length === 0) return null;
@@ -92,8 +127,12 @@ export type PlanSeason = 'bac' | 'prefac';
  */
 export function currentPlanSeason(from: Date = new Date()): PlanSeason {
   const nextBac = EXAM_SESSIONS
-    .map((s) => ({ ...s, daysRemaining: daysUntil(s.dateISO, from) }))
-    .filter((s) => s.level === 'terminale' && s.daysRemaining >= 0)
+    .map((s) => ({
+      ...s,
+      daysRemaining: daysUntil(s.dateISO, from),
+      daysUntilOver: daysUntil(s.endISO || s.dateISO, from),
+    }))
+    .filter((s) => s.level === 'terminale' && s.daysUntilOver >= 0)
     .sort((a, b) => a.daysRemaining - b.daysRemaining)[0];
   if (nextBac && nextBac.daysRemaining <= BAC_SEASON_DAYS) return 'bac';
   return 'prefac';
