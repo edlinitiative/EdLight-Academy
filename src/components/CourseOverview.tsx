@@ -7,13 +7,14 @@
  * "Commencer / Reprendre" action that enters the right lesson.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Clock, Layers, PlayCircle, Target, ChevronRight, ArrowLeft, Check } from 'lucide-react';
 import CourseInstructors from './CourseInstructors';
 import MasteryBadge from './MasteryBadge';
 import { summarize } from '../../shared/mastery';
+import { subjectCover } from '../utils/subjectCovers';
 
 function getLessons(module) {
   return Array.isArray(module?.lessons) ? module.lessons : [];
@@ -87,17 +88,40 @@ export default function CourseOverview({
   // Practice deep-link: subject + level lands the Quiz page on the right unit.
   const practiceHref = `/quizzes?course=${course.subject}${course.level ? `-${course.level}` : ''}`;
 
+  // The subject's cover art, the one the catalogue and the home hero use.
+  const cover = subjectCover(course.subject);
+  // A course description can run to seven lines; two are enough to decide,
+  // and the student who wants the rest asks for it.
+  const [descOpen, setDescOpen] = useState(false);
+  const longDesc = (description || '').length > 180;
+
   return (
     <div className="course-overview" style={{ '--course-accent': accent } as React.CSSProperties}>
       <button type="button" className="course-overview__back" onClick={() => navigate('/courses')}>
         <ArrowLeft size={16} /> {t('courses.returnToCatalog', 'Retour au catalogue')}
       </button>
 
-      <header className="course-overview__hero">
+      <header className={`course-overview__hero${cover ? ' course-overview__hero--art' : ''}`}>
+        {cover && (
+          <img
+            className="course-overview__cover"
+            src={cover}
+            alt=""
+            aria-hidden="true"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
         {/* No badge pills: the title already carries subject + level
             ("Mathématiques NS1") — repeating them as chips was noise. */}
         <h1 className="course-overview__title">{course.name || course.title}</h1>
-        {description && <p className="course-overview__desc">{description}</p>}
+        {description && (
+          <p className={`course-overview__desc${longDesc && !descOpen ? ' is-clamped' : ''}`}>{description}</p>
+        )}
+        {longDesc && (
+          <button type="button" className="course-overview__more" onClick={() => setDescOpen((o) => !o)}>
+            {descOpen ? t('common.showLess', 'Voir moins') : t('common.readMore', 'Lire la suite')}
+          </button>
+        )}
 
         <div className="course-overview__meta">
           <span className="course-overview__meta-item"><Layers size={16} /> {t('courses.modulesCount', { count: totalModules, defaultValue: `${totalModules} modules` })}</span>
