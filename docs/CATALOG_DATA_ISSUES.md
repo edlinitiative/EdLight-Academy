@@ -66,9 +66,44 @@ checked at the same time.
 ## 3. Physique is authored but entirely unlaunched
 
 **What:** All four Physique courses carry `coming_soon: true`. 151 lessons are
-authored and none are live. Real live totals are therefore **331 lessons across
-3 subjects**, not 4.
+authored and none are live.
 
 **Why it is here:** not a bug — recorded because several mockups and drafts have
 quoted Physique lesson counts as though the subject were live, and because the
 launch is the natural moment to fix #2 above.
+
+---
+
+## 4. Chimie NS2/NS3/NS4 are hidden, and nothing says so
+
+**What:** `chem-ns2`, `chem-ns3` and `chem-ns4` carry `hidden: true`. They hold
+17, 52 and 31 authored lessons respectively — 100 lessons that exist in
+Firestore and in `catalog.json` and are served to nobody.
+
+`src/services/dataService.ts:142` drops them:
+
+```js
+const transformed = firestoreCourses.filter(course => !course.hidden).map(course => {
+```
+
+**Why it matters:** this is the single easiest way to state the catalogue
+wrongly, and it has already happened more than once. Counting `catalog.json`
+directly gives 12 courses / 160 units / 331 lessons. **The app serves 9 courses /
+49 units / 231 lessons.** Chimie is NS1 only — 33 lessons, not 133.
+
+| Subject | Live lessons | Levels live |
+|---|---|---|
+| Chimie | 33 | NS1 only |
+| Économie | 101 | 18 · 42 · 23 · 18 |
+| Mathématiques | 97 | 19 · 21 · 24 · 33 |
+| Physique | 0 | none (all `coming_soon`) |
+
+**Rule for any UI touching these numbers:** never hardcode them. Derive every
+count at runtime from the same filtered array the page already renders, so the
+page corrects itself the day Chimie NS2–NS4 are unhidden. `/courses` and the
+homepage catalogue section both do this; copy that, don't copy a number.
+
+**Status:** _Working as designed, presumably_ — but whether those 100 Chimie
+lessons are unfinished or merely forgotten is worth a decision. If they are
+finished, unhiding them is a one-field change that grows the live catalogue by
+43%.

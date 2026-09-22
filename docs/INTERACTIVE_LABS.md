@@ -70,10 +70,13 @@ oversight to route around.
 
 ## If we do it, the cheapest way to find out whether it matters
 
-Pick two or three PhET sims for **Chimie**, not Physique. Chimie is already
-live with 133 lessons, so the idea gets tested against real students instead of
-shipping blind alongside a launch. Extend `frame-src`, gate the load behind a
-tap that shows the download size, and measure whether anyone opens it twice.
+Pick two or three PhET sims for **Chimie NS1**, not Physique. Chimie NS1 is
+live — 33 lessons, the only Chimie level the app serves (NS2/NS3/NS4 are
+`hidden: true`; see `docs/CATALOG_DATA_ISSUES.md` #4) — so the idea gets tested
+against real students instead of shipping blind alongside a launch. Its
+"Grandeurs et Mesures" and "L'Atome" chapters already map onto Build an Atom
+and Molarity. Extend `frame-src`, gate the load behind a tap that shows the
+download size, and measure whether anyone opens it twice.
 
 That is roughly a day. It answers the question that actually matters — do
 students use this — before anyone commits to the Physique launch.
@@ -100,3 +103,52 @@ one feature set:
 Also discard, as with every mockup in that series, the invented numbers and the
 invented features: named tutors, downloadable PDF/MP3 packs, certificates of
 aptitude, and "+65% retention vs the textbook".
+
+---
+
+## Where a lab would attach
+
+The question "where does this fit in the curriculum" has a concrete answer,
+because the curriculum already has a shape: course → unit → lesson, with a
+chapter test at the end of each unit and a mastery level per unit
+(`shared/mastery.ts`: none → seen → familiar → proficient → mastered).
+
+A lab attaches **to a unit, not to a lesson and not to the course**. A unit is
+one chapter — one idea with its own test — which is exactly the grain at which
+"now go play with it" makes sense. Below that you get five sims per chapter and
+none of them earn their download; above that the sim is too generic to teach
+anything.
+
+Two rules that follow, and should not be negotiated away later:
+
+**A lab never moves mastery.** Mastery is earned by answering questions. A
+simulation has no right answer to grade, so a lab that raised a mastery level
+would be inflating the one number the whole ladder depends on. It can be marked
+*visited*; it cannot make a student "proficient".
+
+**A lab is optional and says so.** The moment it sits in the required path, a
+student on a slow connection is blocked by an 8 MB download from finishing a
+chapter. It belongs beside the chapter test as an offer, not before it as a
+gate.
+
+## Do we need a guided curriculum per class?
+
+Partly — and most of it already exists, which is the useful thing to notice
+before building anything.
+
+Already there: `gradeProfile()` in `shared/trackConfig.ts` maps a student's
+grade to their track, their exam level and their landing tab. The mastery ladder
+already knows which unit a student has and has not passed. The home companion
+already answers "what now?". So the machinery for a guided path is built.
+
+Not there: the **ordering**. Nothing in the data says unit 4 should come after
+unit 3, or that a student who fails the NS2 proportionality test should go back
+to NS1 fractions first. Units are a list, not a sequence with prerequisites.
+That is the actual gap, and it is a content-authoring job — someone who knows
+the MENFP programme writing down the order and the prerequisites — not a
+React job.
+
+The honest sequencing: a per-class guided path is worth more than labs, costs
+mostly curriculum work rather than engineering, and would give a lab somewhere
+meaningful to sit when it arrives. Labs before ordering would be an optional
+extra hanging off a path that does not yet exist.
