@@ -85,7 +85,15 @@ export function useTriviaContent() {
           const generated = fsQs.filter((x) => x?.source === 'generated');
           const authored = fsQs.filter((x) => x?.source !== 'generated');
 
-          const base = authored.length > 0 ? authored : staticQs;
+          // Preserve authored answers; only reuse shipped learning copy when
+          // both the question and its correct answer still match.
+          const shipped = new Map(staticQs.map((q) => [q.q, q]));
+          const base = authored.length > 0 ? authored.map((q) => {
+            const original = shipped.get(q.q);
+            if (!original || original.options[original.answer] !== q.options[q.answer]) return q;
+            return { ...q, explanation: q.explanation || original.explanation,
+              explanationHt: q.explanationHt || original.explanationHt };
+          }) : staticQs;
           const seen = new Set(
             base.map((x) => String(x?.q ?? '').replace(/\s+/g, ' ').trim().toLowerCase())
           );

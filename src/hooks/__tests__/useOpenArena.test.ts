@@ -44,3 +44,11 @@ describe('pickOpenArena', () => {
     expect(result?.id).toBe('sooner');
   });
 });
+
+it('never promotes test editions instead of a real open tournament', () => {
+  expect(pickOpenArena([
+    { ...row('sandbox', 'doors'), title: 'Arène de test' },
+    { ...row('internal', 'doors'), isTest: true },
+    row('real', 'registration'),
+  ])?.id).toBe('real');
+});

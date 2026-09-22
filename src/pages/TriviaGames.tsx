@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Swords, Users } from 'lucide-react';
+import { Zap, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Swords, Users } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -19,99 +19,71 @@ import CalculGame from '../components/games/CalculGame';
 import SuitesGame from '../components/games/SuitesGame';
 import '../styles/pf.css';
 import './TriviaGames.css';
+import { trackTriviaEvent as trackEvent } from '../utils/triviaLearning';
+import { triviaOptions, triviaExplanation } from '../utils/triviaLearning';
 import { logAnswerEvent } from '../services/answerEventsService';
 
-/* ─── Category Selection Screen ─── */
-function CategoryPicker({ onSelect, isCreole, categories = TRIVIA_CATEGORIES as any[], questions = TRIVIA_QUESTIONS as Record<string, any[]> }) {
+/* Start with a short round; configuration stays optional and in place. */
+function CategoryPicker({ onSelect, isCreole, categories, questions, count, setCount, timed, setTimed, isAuthed }) {
+  const groups = [
+    { name: isCreole ? 'Ayiti' : 'Haïti', match: (id) => id.includes('haiti') },
+    { name: isCreole ? 'Syans ak matematik' : 'Sciences et maths', match: (id) => ['maths_eclair', 'chimie_symboles', 'bio_corps', 'sciences'].includes(id) },
+    { name: isCreole ? 'Mond lan ak lang' : 'Monde et langues', match: (id) => !id.includes('haiti') && !['maths_eclair', 'chimie_symboles', 'bio_corps', 'sciences'].includes(id) },
+  ];
   return (
     <div className="trivia-landing">
-      <div className="trivia-landing__header">
-        <h1 className="trivia-landing__title">{isCreole ? 'Jwèt Trivia' : 'Jeu Trivia'}</h1>
-        <p className="trivia-landing__subtitle">
-          {isCreole
-            ? 'Chwazi yon kategori pou kòmanse jwe'
-            : 'Choisissez une catégorie pour commencer à jouer'}
-        </p>
-      </div>
-      <div className="trivia-landing__grid">
-        {categories.map((cat) => {
-          const count = (questions[cat.id] || []).length;
-          const name = isCreole ? cat.nameHt || cat.name : cat.name;
-          return (
-            <button
-              key={cat.id}
-              className="trivia-cat"
-              style={{ ['--cat' as any]: cat.color || '#1B6FE0' }}
-              onClick={() => onSelect(cat.id)}
-              aria-label={`${name} — ${count} ${isCreole ? 'kesyon' : 'questions'}`}
-            >
-              <span className="trivia-cat__icon" aria-hidden="true">{cat.icon}</span>
-              <span className="trivia-cat__name">{name}</span>
-              <span className="trivia-cat__count">
-                {count} {isCreole ? 'kesyon' : 'questions'}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Difficulty / Round Size Picker ─── */
-function RoundPicker({ category, onStart, onBack, isCreole, categories = TRIVIA_CATEGORIES as any[], questions = TRIVIA_QUESTIONS as Record<string, any[]> }) {
-  const cat = categories.find((c) => c.id === category);
-  const total = (questions[category] || []).length;
-
-  const rounds = [
-    { count: 10, label: isCreole ? 'Rapid, 10 kesyon' : 'Rapide, 10 questions', icon: <Zap size={18} /> },
-    { count: 25, label: isCreole ? 'Mwayen, 25 kesyon' : 'Moyen, 25 questions', icon: <PenLine size={18} /> },
-    { count: 50, label: isCreole ? 'Difisil, 50 kesyon' : 'Difficile, 50 questions', icon: <Flame size={18} /> },
-    { count: total, label: isCreole ? `Tout, ${total} kesyon` : `Tout, ${total} questions`, icon: <Trophy size={18} /> },
-  ].filter((r) => r.count > 0 && r.count <= total);
-
-  return (
-    <div className="trivia-round-picker">
-      <button className="trivia-back-btn" onClick={onBack}>
-        ← {isCreole ? 'Retounen' : 'Retour'}
-      </button>
-      <div className="trivia-round-picker__header">
-        <span
-          className="trivia-round-picker__badge"
-          style={{ ['--cat' as any]: cat?.color || '#1B6FE0' }}
-          aria-hidden="true"
-        >
-          {cat?.icon}
-        </span>
-        <h2>{isCreole ? cat?.nameHt : cat?.name}</h2>
-        <p>{isCreole ? 'Chwazi konbyen kesyon ou vle reponn' : 'Choisissez le nombre de questions'}</p>
-      </div>
-      {rounds.length === 0 && (
-        <p className="trivia-round-picker__empty" role="status">
-          {isCreole
-            ? 'Pa gen kesyon pou kategori sa a pou kounye a.'
-            : 'Aucune question disponible pour cette catégorie pour le moment.'}
-        </p>
-      )}
-      <div className="trivia-round-picker__options">
-        {rounds.map((r) => (
-          <button
-            key={r.count}
-            className="trivia-round-btn"
-            style={{ '--cat-color': cat?.color }}
-            onClick={() => onStart(r.count)}
-          >
-            <span className="trivia-round-btn__icon">{r.icon}</span>
-            <span>{r.label}</span>
-          </button>
-        ))}
-      </div>
+      <header className="trivia-landing__header">
+        <h1 className="trivia-landing__title">Trivia</h1>
+        <p className="trivia-landing__subtitle">{isCreole ? 'Yon ti pati pou aprann yon bagay nouvo.' : 'Une petite partie pour apprendre quelque chose de nouveau.'}</p>
+        <p>{count} {isCreole ? 'kesyon' : 'questions'} · {timed ? (isCreole ? '15 segonn / kesyon' : '15 secondes / question') : (isCreole ? 'San kwonomèt' : 'Sans chrono')}{!isAuthed && (isCreole ? ' · San kont' : ' · Sans compte')}</p>
+        <button className="button button--primary trivia-mix" onClick={() => onSelect('mixed')} disabled={!Object.values(questions).some((bank: any[]) => bank.length)}>
+          <Sparkles size={18} aria-hidden="true" /> {isCreole ? 'Jwe yon melanj tèm' : 'Jouer un mélange de thèmes'}
+        </button>
+        <details className="trivia-settings">
+          <summary>{isCreole ? 'Modifye pati a' : 'Modifier la partie'}</summary>
+          <div className="trivia-settings__fields">
+            <label>{isCreole ? 'Kantite kesyon' : 'Nombre de questions'}
+              <select value={count} onChange={(e) => setCount(Number(e.target.value))}>
+                {[10, 25, 50].map((n) => <option key={n} value={n}>{n} {isCreole ? 'kesyon' : 'questions'}</option>)}
+              </select>
+            </label>
+            <label>{isCreole ? 'Mòd jwèt' : 'Mode de jeu'}
+              <select value={timed ? 'timed' : 'learn'} onChange={(e) => setTimed(e.target.value === 'timed')}>
+                <option value="learn">{isCreole ? 'San kwonomèt' : 'Sans chrono'}</option>
+                <option value="timed">{isCreole ? 'Ak kwonomèt — 15 segonn' : 'Chronométré — 15 secondes'}</option>
+              </select>
+            </label>
+          </div>
+          <p>{isCreole ? 'Si yon tèm gen mwens kesyon, w ap jwe tout kesyon ki disponib yo.' : 'Si un thème contient moins de questions, la partie utilise toutes celles disponibles.'}</p>
+        </details>
+      </header>
+      <h2 className="trivia-themes-title">{isCreole ? 'Oswa chwazi tèm ou' : 'Ou choisis ton thème'}</h2>
+      {groups.map((group) => {
+        const items = categories.filter((cat) => group.match(cat.id));
+        if (!items.length) return null;
+        return <section className="trivia-topic-group" key={group.name}>
+          <h3>{group.name}</h3>
+          <div className="trivia-landing__grid">
+            {items.map((cat) => {
+              const available = (questions[cat.id] || []).length;
+              const name = isCreole ? cat.nameHt || cat.name : cat.name;
+              return <button key={cat.id} className="trivia-cat" style={{ '--cat': cat.color || '#1B6FE0' } as React.CSSProperties}
+                onClick={() => onSelect(cat.id)} disabled={!available}
+                aria-label={`${name} — ${Math.min(count, available)} ${isCreole ? 'kesyon' : 'questions'}`}>
+                <span className="trivia-cat__icon" aria-hidden="true">{cat.icon}</span>
+                <span className="trivia-cat__name">{name}</span>
+                <span className="trivia-cat__count">{available ? `${Math.min(count, available)} ${isCreole ? 'kesyon · Jwe →' : 'questions · Jouer →'}` : (isCreole ? 'Byento' : 'Bientôt')}</span>
+              </button>;
+            })}
+          </div>
+        </section>;
+      })}
     </div>
   );
 }
 
 /* ─── Active Game Screen ─── */
-function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: providedQuestions = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[], questionsMap = TRIVIA_QUESTIONS as Record<string, any[]> }) {
+export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, isCreole, questions: providedQuestions = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[], questionsMap = TRIVIA_QUESTIONS as Record<string, any[]> }) {
   const cat = categories.find((c) => c.id === category);
   /*
     Draw the round from a bag that remembers what it has already served, so
@@ -137,7 +109,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
     () =>
       providedQuestions && providedQuestions.length
         ? providedQuestions
-        : drawAndRemember(category, questionsMap[category] || [], count),
+        : drawAndRemember(category, category === 'mixed' ? Object.values(questionsMap).flat() : questionsMap[category] || [], count),
     [category, count, providedQuestions, questionsMap],
   );
   const [questions, setQuestions] = useState(drawRoundNow);
@@ -161,50 +133,53 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
   const [answered, setAnswered] = useState(false);
   const [timeLeft, setTimeLeft] = useState(15);
   const timerRef = useRef(null);
+  const answersRef = useRef([]);
+  const lockedRef = useRef(false);
+  const finishedRef = useRef(false);
+  const startedAt = useRef(Date.now());
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const q = questions[current];
-  const progress = ((current) / questions.length) * 100;
+  const options = q ? triviaOptions(q, isCreole) : [];
 
-  // Timer logic
+  useEffect(() => { headingRef.current?.focus(); }, [current, questions.length]);
+
+  const handleSelect = useCallback((idx) => {
+    if (lockedRef.current || !q) return;
+    lockedRef.current = true;
+    clearInterval(timerRef.current);
+    setSelected(idx);
+    setAnswered(true);
+    const correct = idx === q.answer;
+    answersRef.current.push({ question: q, selected: idx, correct });
+    if (correct) setScore((s) => s + 1);
+    if (q.q) logAnswerEvent(q.q, correct);
+    if (current === 0) trackEvent('trivia_first_answer', { category, timed, elapsedMs: Date.now() - startedAt.current, timedOut: idx === -1 });
+  }, [q, current, category, timed]);
+
   useEffect(() => {
+    if (!timed || !q || answered) return;
     setTimeLeft(15);
-    timerRef.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(timerRef.current);
-          // Auto-answer wrong on timeout
-          setAnswered(true);
-          setSelected(-1); // no selection
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
+    timerRef.current = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
     return () => clearInterval(timerRef.current);
-  }, [current]);
+  }, [current, timed, q, answered]);
 
-  const handleSelect = useCallback(
-    (idx) => {
-      if (answered) return;
-      clearInterval(timerRef.current);
-      setSelected(idx);
-      setAnswered(true);
-      const correct = idx === q.answer;
-      if (correct) setScore((s) => s + 1);
-      // Crowd-difficulty logging (canonical FR stem q.q — Adaptive Engine 3b).
-      if (q?.q) logAnswerEvent(q.q, correct);
-    },
-    [answered, q]
-  );
+  useEffect(() => {
+    if (timed && timeLeft === 0 && !answered) handleSelect(-1);
+  }, [timed, timeLeft, answered, handleSelect]);
 
   const handleNext = useCallback(() => {
+    if (!lockedRef.current || finishedRef.current) return;
     if (current + 1 >= questions.length) {
-      onFinish(score, questions.length);
+      finishedRef.current = true;
+      onFinish(score, questions.length, answersRef.current);
       return;
     }
+    lockedRef.current = false;
     setCurrent((c) => c + 1);
     setSelected(null);
     setAnswered(false);
+    setTimeLeft(15);
   }, [current, questions.length, onFinish, score]);
 
   const optionClass = (idx) => {
@@ -259,9 +234,9 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
         </div>
       </div>
 
-      <div className="trivia-quiz__timer-ring" data-urgent={timeLeft <= 5 ? 'true' : undefined}>
+      {timed ? <div aria-label={isCreole ? `${timeLeft} segonn rete` : `${timeLeft} secondes restantes`} className="trivia-quiz__timer-ring" data-urgent={timeLeft <= 5 ? 'true' : undefined}>
         <span>{timeLeft}</span>
-      </div>
+      </div> : <p className="trivia-mode-label">{isCreole ? 'San kwonomèt · Pran tan ou' : 'Sans chrono · Prends ton temps'}</p>}
 
       <div className="trivia-quiz__question-card">
         {q.flag && (
@@ -279,13 +254,13 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
             )}
           </div>
         )}
-        <h2 className="trivia-quiz__question">
-          {isCreole ? q.qHt : q.q}
+        <h2 ref={headingRef} tabIndex={-1} className="trivia-quiz__question">
+          {isCreole ? q.qHt || q.q : q.q}
         </h2>
       </div>
 
       <div className="trivia-quiz__options">
-        {q.options.map((opt, idx) => (
+        {options.map((opt, idx) => (
           <button
             key={idx}
             className={optionClass(idx)}
@@ -309,6 +284,11 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
         ))}
       </div>
 
+      {answered && <div className="trivia-feedback" role="status">
+        <strong>{selected === q.answer ? (isCreole ? 'Egzak !' : 'Exact !') : selected === -1 ? (isCreole ? 'Tan an fini. Men repons lan.' : 'Temps écoulé. Voici la réponse.') : (isCreole ? 'Kontinye, w ap aprann !' : 'Continue, tu apprends !')}</strong>
+        <p>{isCreole ? 'Bon repons :' : 'Bonne réponse :'} <strong>{options[q.answer]}</strong></p>
+        {triviaExplanation(q, isCreole) && <p>{triviaExplanation(q, isCreole)}</p>}
+      </div>}
       {answered && (
         <button className="trivia-next-btn" onClick={handleNext}>
           {current + 1 >= questions.length
@@ -321,7 +301,7 @@ function TriviaQuiz({ category, count, onFinish, onBack, isCreole, questions: pr
 }
 
 /* ─── Results Screen ─── */
-function TriviaResults({ category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[] }) {
+function TriviaResults({ answers, isAuthed, saving, saveError, onReview, category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[] }) {
   const cat = categories.find((c) => c.id === category);
   const accent = accentColor || cat?.color || '#1B6FE0';
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
@@ -381,18 +361,31 @@ function TriviaResults({ category, score, total, onReplay, onHome, isCreole, rew
             )}
             {reward.guest && (
               <span className="trivia-reward__guest">
-                {isCreole ? 'Konekte pou anrejistre XP ou' : 'Connectez-vous pour sauvegarder vos XP'}
+                {isCreole ? 'Aperçu XP — pati sa a pa anrejistre' : 'Aperçu XP — cette partie n’est pas sauvegardée'}
               </span>
             )}
           </div>
         )}
+        <p role="status">{saving ? (isCreole ? 'N ap anrejistre pwogrè ou…' : 'Enregistrement de ta progression…') : saveError ? (isCreole ? 'Nou pa t ka anrejistre XP yo. Rezilta ou rete isit la.' : 'Les XP n’ont pas pu être enregistrés. Ton résultat reste disponible ici.') : ''}</p>
         <div className="trivia-results__actions">
-          <button className="button button--primary" onClick={onReplay}>
-            <RefreshCw size={16} /> {isCreole ? 'Jwe ankò' : 'Rejouer'}
+          {answers.some((a) => !a.correct) && <button className="button button--primary" onClick={onReview}>{isCreole ? 'Revize erè mwen yo' : 'Revoir mes erreurs'}</button>}
+          <button className="button button--secondary" onClick={onReplay}>
+            <RefreshCw size={16} /> {isCreole ? 'Jwe ak nouvo kesyon' : 'Rejouer avec de nouvelles questions'}
           </button>
           <button className="button button--ghost" onClick={onHome}>
             ← {isCreole ? 'Kategori yo' : 'Catégories'}
           </button>
+        </div>
+        {!isAuthed && <div className="trivia-results__save">
+          <p>{isCreole ? 'Kontinye gratis. Kreye yon kont pou anrejistre pwogrè pwochen pati ou yo.' : 'Continue gratuitement. Crée un compte pour sauvegarder la progression de tes prochaines parties.'}</p>
+          <button className="button button--ghost" onClick={() => { useStore.getState().setActiveTab('signup'); useStore.getState().toggleAuthModal(); }}>
+            {isCreole ? 'Kreye yon kont' : 'Créer un compte'}
+          </button>
+        </div>}
+        <div className="trivia-results__save">
+          <h3>{isCreole ? 'Vle defye yon zanmi ?' : 'Envie de défier un ami ?'}</h3>
+          <p>{isCreole ? 'Nan aplikasyon an, fini yon pati epi pataje menm kesyon yo ak yon zanmi. Ou bezwen aplikasyon an pou kreye defi a.' : 'Dans l’application, termine une partie puis partage les mêmes questions avec un ami. La création du défi nécessite l’application.'}</p>
+          <Link to="/download?from=defi" className="button button--ghost">{isCreole ? 'Jwenn aplikasyon an' : 'Obtenir l’application'}</Link>
         </div>
       </div>
     </div>
@@ -437,7 +430,7 @@ function DailyChallengeBanner({ daily, isCreole, onStart }) {
             ? (isCreole
                 ? `Fini — ${daily.score}/${daily.total}. Retounen demen !`
                 : `Terminé — ${daily.score}/${daily.total}. Revenez demain !`)
-            : (isCreole ? '10 kesyon · +50 XP bonis' : '10 questions · +50 XP bonus')}
+            : (isCreole ? '10 kesyon · 15 segonn / kesyon · +50 XP bonis' : '10 questions · 15 s / question · +50 XP bonus')}
         </span>
       </span>
       {!done && <span className="trivia-daily__cta">{isCreole ? 'Jwe →' : 'Jouer →'}</span>}
@@ -445,174 +438,138 @@ function DailyChallengeBanner({ daily, isCreole, onStart }) {
   );
 }
 
-/* ─── Classic Trivia (the original flow, now one game among six) ─── */
+/* The daily challenge retains its fixed round and timer; practice is configurable. */
 function TriviaClassic({ isCreole, onExitHub }) {
   const location = useLocation();
   const { recordResult, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
-  // Merged trivia content (static floor + optional Firestore overlay).
   const { categories, questions } = useTriviaContent();
-
-  // States: 'pick' | 'round' | 'play' | 'results'
   const [screen, setScreen] = useState('pick');
   const [category, setCategory] = useState(null);
   const [roundCount, setRoundCount] = useState(10);
+  const [timed, setTimed] = useState(false);
   const [dailyQuestions, setDailyQuestions] = useState([]);
   const [finalScore, setFinalScore] = useState({ score: 0, total: 0 });
+  const [answers, setAnswers] = useState([]);
   const [reward, setReward] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [playNonce, setPlayNonce] = useState(0);
   const [dailyNotice, setDailyNotice] = useState('');
   const autoStartedRef = useRef(false);
+  const roundVersion = useRef(0);
+  const entryAt = useRef(Date.now());
+  const resultHeading = useRef<HTMLHeadingElement>(null);
+  useFocusMode(screen === 'play' || screen === 'review');
 
-  // While a round is in play, go heads-down: drop the bottom tab bar + footer
-  // so the question owns the screen. The in-quiz ✕ button is the way out.
-  useFocusMode(screen === 'play');
+  useEffect(() => { trackEvent('trivia_view'); }, []);
+  useEffect(() => {
+    if (screen !== 'play') {
+      window.scrollTo(0, 0);
+      resultHeading.current?.focus();
+    }
+  }, [screen]);
+  useEffect(() => () => { roundVersion.current += 1; }, []);
 
   const startDaily = useCallback(() => {
     const qs = getDailyChallengeQuestions(questions, todayStr(), 10);
     if (!qs.length) {
-      setDailyNotice(isCreole
-        ? 'Defi jodi a poko disponib. Tanpri retounen pita.'
-        : "Le défi du jour n'est pas encore disponible. Revenez plus tard.");
-      setTimeout(() => setDailyNotice(''), 4000);
+      setDailyNotice(isCreole ? 'Defi jodi a poko disponib. Eseye yon tèm.' : 'Le défi du jour n’est pas encore disponible. Essaie un thème.');
       return;
     }
+    roundVersion.current += 1;
     setDailyNotice('');
     setDailyQuestions(qs);
     setCategory('daily');
-    setRoundCount(qs.length);
     setReward(null);
+    setSaving(false);
+    setSaveError(false);
     setPlayNonce((n) => n + 1);
     setScreen('play');
+    trackEvent('trivia_start', { category: 'daily', count: qs.length, timed: true, elapsedMs: Date.now() - entryAt.current });
   }, [questions, isCreole]);
 
-  // Deep-link from the home "Défi du jour" widget:
-  // navigate('/trivia', { state: { startDaily: true } }).
   useEffect(() => {
     if (autoStartedRef.current) return;
-    if ((location.state)?.startDaily && !daily.completedToday) {
+    if (location.state?.startDaily && !daily.completedToday) {
       autoStartedRef.current = true;
       startDaily();
     }
   }, [location.state, daily.completedToday, startDaily]);
 
-  const handleCategorySelect = (catId) => {
+  const startRound = (catId) => {
+    roundVersion.current += 1;
     setCategory(catId);
-    setScreen('round');
-  };
-
-  const handleStart = (count) => {
-    setRoundCount(count);
     setReward(null);
+    setSaving(false);
+    setSaveError(false);
     setPlayNonce((n) => n + 1);
     setScreen('play');
+    trackEvent('trivia_start', { category: catId, count: roundCount, timed, elapsedMs: Date.now() - entryAt.current });
   };
 
-  const handleFinish = useCallback(
-    async (score, total) => {
-      setFinalScore({ score, total });
-      const isDaily = category === 'daily';
-      try {
-        const r = await recordResult({ category: isDaily ? 'daily' : category, score, total, isDaily });
-        setReward(r);
-      } catch {
-        setReward(null);
-      }
-      setScreen('results');
-    },
-    [category, recordResult],
-  );
+  const handleFinish = useCallback(async (score, total, roundAnswers) => {
+    const version = roundVersion.current;
+    setFinalScore({ score, total });
+    setAnswers(roundAnswers);
+    setScreen('results');
+    setSaving(true);
+    trackEvent('trivia_complete', { category, score, total, timed: category === 'daily' || timed });
+    try {
+      const r = await recordResult({ category, score, total, isDaily: category === 'daily' });
+      if (version === roundVersion.current) setReward(r);
+    } catch {
+      if (version === roundVersion.current) setSaveError(true);
+    } finally {
+      if (version === roundVersion.current) setSaving(false);
+    }
+  }, [category, recordResult, timed]);
 
   const handleReplay = () => {
-    if (category === 'daily') {
-      // Daily is once-a-day — send them back to choose a category.
-      setScreen('pick');
-      setCategory(null);
-      return;
-    }
-    setScreen('round');
+    trackEvent('trivia_replay', { category });
+    // A completed daily round becomes fresh mixed practice, never another daily reward.
+    startRound(category === 'daily' ? 'mixed' : category);
   };
-
   const handleHome = () => {
+    roundVersion.current += 1;
     setScreen('pick');
     setCategory(null);
   };
 
-  const handleBack = () => {
-    if (screen === 'round') {
-      setScreen('pick');
-      setCategory(null);
-    } else if (screen === 'play') {
-      if (category === 'daily') {
-        setScreen('pick');
-        setCategory(null);
-      } else {
-        setScreen('round');
-      }
-    }
-  };
-
-  return (
-    <div className="trivia-page">
-      {screen === 'pick' && (
-        <>
-          <button className="trivia-back-btn" onClick={onExitHub}>
-            ← {isCreole ? 'Jwèt yo' : 'Les jeux'}
-          </button>
-          {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
-          <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
-          {dailyNotice && (
-            <p className="trivia-daily__notice" role="status" style={{ textAlign: 'center', color: 'var(--text-muted)', margin: '0.5rem 0' }}>
-              {dailyNotice}
-            </p>
-          )}
-          <CategoryPicker
-            onSelect={handleCategorySelect}
-            isCreole={isCreole}
-            categories={categories}
-            questions={questions}
-          />
-        </>
-      )}
-      {screen === 'round' && (
-        <RoundPicker
-          category={category}
-          onStart={handleStart}
-          onBack={handleBack}
-          isCreole={isCreole}
-          categories={categories}
-          questions={questions}
-        />
-      )}
-      {screen === 'play' && (
-        <TriviaQuiz
-          key={`${category}-${playNonce}`}
-          category={category}
-          count={roundCount}
-          questions={category === 'daily' ? dailyQuestions : null}
-          accentColor={category === 'daily' ? '#f59e0b' : null}
-          onFinish={handleFinish}
-          onBack={handleBack}
-          isCreole={isCreole}
-          categories={categories}
-          questionsMap={questions}
-        />
-      )}
-      {screen === 'results' && (
-        <TriviaResults
-          category={category}
-          score={finalScore.score}
-          total={finalScore.total}
-          reward={reward}
-          accentColor={category === 'daily' ? '#f59e0b' : null}
-          onReplay={handleReplay}
-          onHome={handleHome}
-          isCreole={isCreole}
-          categories={categories}
-        />
-      )}
-    </div>
-  );
+  return <div className="trivia-page">
+    {screen === 'pick' && <>
+      <button className="trivia-back-btn" onClick={onExitHub}>← {isCreole ? 'Jwèt yo' : 'Les jeux'}</button>
+      <CategoryPicker onSelect={startRound} isCreole={isCreole} categories={categories} questions={questions}
+        count={roundCount} setCount={setRoundCount} timed={timed} setTimed={setTimed} isAuthed={isAuthed} />
+      <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
+      {dailyNotice && <p role="status">{dailyNotice}</p>}
+      {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
+    </>}
+    {screen === 'play' && <TriviaQuiz key={`${category}-${playNonce}`} category={category}
+      count={roundCount} timed={category === 'daily' || timed} questions={category === 'daily' ? dailyQuestions : null}
+      accentColor={category === 'daily' ? '#f59e0b' : null} onFinish={handleFinish}
+      onBack={() => { trackEvent('trivia_exit', { category }); handleHome(); }}
+      isCreole={isCreole} categories={categories} questionsMap={questions} />}
+    {screen === 'results' && <>
+      <h1 className="trivia-result-heading" tabIndex={-1} ref={resultHeading}>{isCreole ? 'Pati fini !' : 'Partie terminée !'}</h1>
+      <TriviaResults category={category} score={finalScore.score} total={finalScore.total} answers={answers}
+        reward={reward} saving={saving} saveError={saveError} isAuthed={isAuthed}
+        accentColor={category === 'daily' ? '#f59e0b' : null} onReplay={handleReplay} onHome={handleHome}
+        onReview={() => { trackEvent('trivia_review', { category }); setScreen('review'); }}
+        isCreole={isCreole} categories={categories} />
+    </>}
+    {screen === 'review' && <section className="trivia-review">
+      <button className="trivia-back-btn" onClick={() => setScreen('results')}>← {isCreole ? 'Rezilta' : 'Résultats'}</button>
+      <h1 ref={resultHeading} tabIndex={-1}>{isCreole ? 'Aprann nan erè ou yo' : 'Apprends de tes erreurs'}</h1>
+      {answers.filter((a) => !a.correct).map(({ question: q, selected }, index) => <article className="trivia-feedback" key={index}>
+        <h2>{isCreole ? q.qHt || q.q : q.q}</h2>
+        <p>{isCreole ? 'Repons ou :' : 'Ta réponse :'} {selected === -1 ? (isCreole ? 'Tan an fini' : 'Temps écoulé') : triviaOptions(q, isCreole)[selected]}</p>
+        <p>{isCreole ? 'Bon repons :' : 'Bonne réponse :'} <strong>{triviaOptions(q, isCreole)[q.answer]}</strong></p>
+        {triviaExplanation(q, isCreole) && <p>{triviaExplanation(q, isCreole)}</p>}
+      </article>)}
+      <button className="button button--primary" onClick={handleReplay}>{isCreole ? 'Jwe ak nouvo kesyon' : 'Rejouer avec de nouvelles questions'}</button>
+    </section>}
+  </div>;
 }
 
 /* ─── Section heading: caps micro-label over the title ─────────────────────
@@ -694,34 +651,11 @@ function GamesHub({ isCreole }) {
 
   const highScores = profile?.games?.highScores || {};
   const gamesPlayed = profile?.games?.gamesPlayed || 0;
-
-  /* The level meter grows from zero on the first frame after mount. A bar
-     that arrives already full reads as a rule, not as progress. */
-  const [meterOn, setMeterOn] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setMeterOn(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
+  useEffect(() => { trackEvent('games_view'); }, []);
 
   const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(n || 0);
 
-  /*
-    The mockups open on a strip of big figures. Theirs were invented — "1 420
-    élèves en direct", "15 000+ parties / semaine", a national podium. We have
-    no live-player count and no weekly total, so those are gone and what is
-    left is only what this page can prove at the instant it renders: a signed
-    in player's own XP, level, streak and games played, all from their
-    gamification profile; and for a visitor, the size of the shipped
-    catalogue, counted from the data above.
-  */
-  const figures = isAuthed
-    ? [
-        { tone: 'azure', value: nf(level.xp), label: 'XP' },
-        { tone: 'azure', value: String(level.level), label: isCreole ? 'Nivo' : 'Niveau' },
-        { tone: 'amber', value: String(streak?.currentStreak || 0), label: isCreole ? 'Jou seri' : 'Jours de série' },
-        { tone: 'emerald', value: nf(gamesPlayed), label: isCreole ? 'Pati' : 'Parties' },
-      ]
-    : [
+  const figures = [
         { tone: 'azure', value: String(GAMES.length), label: isCreole ? 'Jwèt' : 'Jeux' },
         { tone: 'violet', value: String(TRIVIA_CATEGORIES.length), label: isCreole ? 'Kategori' : 'Catégories' },
         { tone: 'emerald', value: nf(BANK_TOTAL), label: isCreole ? 'Kesyon' : 'Questions' },
@@ -742,10 +676,7 @@ function GamesHub({ isCreole }) {
           heading as one small row, not a card under it. */}
       <header className="games-hub__hero jx-hero">
         <h1 className="games-hub__title jx-hero__title">
-          {isCreole ? 'Aprann pandan w ap jwe.' : 'Apprenez en jouant.'}{' '}
-          <span className="jx-hero__title-accent">
-            {isCreole ? 'Chak pati konte.' : 'Chaque partie compte.'}
-          </span>
+          {isCreole ? 'Ki sa ou vle jwe jodi a ?' : 'À quoi veux-tu jouer aujourd’hui ?'}
         </h1>
 
         <div className="jx-stats">
@@ -758,28 +689,81 @@ function GamesHub({ isCreole }) {
             ))}
           </div>
 
-          {/* Progress to the next level — the one number the old header showed
-              as a bare bar with no destination. xpToNext is derived from the
-              same triangular curve the service uses to award the level. */}
-          {isAuthed && level.xpForNext > 0 && (
-            <div className="jx-levelbar">
-              <span className="pf-meter pf-meter--azure">
-                <span
-                  className="pf-meter__fill"
-                  style={{ width: `${meterOn ? Math.min(100, level.progressPct) : 0}%` }}
-                />
-              </span>
-              <span className="jx-levelbar__label">
-                {isCreole
-                  ? `${nf(level.xpToNext)} XP pou nivo ${level.level + 1}`
-                  : `${nf(level.xpToNext)} XP pour le niveau ${level.level + 1}`}
-              </span>
-            </div>
-          )}
+
         </div>
 
       </header>
 
+      <DailyChallengeBanner
+        daily={daily}
+        isCreole={isCreole}
+        onStart={() => navigate('/jeux/trivia', { state: { startDaily: true } })}
+      />
+
+      <div className="games-hub__layout">
+        <div className="games-hub__main">
+          <HubHeading
+            eyebrow={isCreole ? 'Sal arkad la' : 'La salle d’arcade'}
+            title={isCreole ? 'Chwazi yon jwèt' : 'Choisir un jeu'}
+          />
+          <div className="games-hub__grid">
+            {GAMES.map((g, i) => {
+              const Icon = GAME_ICONS[g.id];
+              const hs = highScores[g.id];
+              return (
+                <button
+                  key={g.id}
+                  className="game-card"
+                  style={{ ['--game-color' as any]: g.color }}
+                  onClick={() => { trackEvent('game_select', { game: g.id }); navigate(`/jeux/${g.id}`); }}
+                >
+                  {/* Decorative corner wash, the mockups' one flourish per
+                      card. Purely presentational, clipped by the card. */}
+                  <span className="game-card__wash" aria-hidden="true" />
+                  {/* The game's identity now lives in this one tinted tile
+                      rather than a full-bleed colour surface. */}
+                  <span className="game-card__icon" aria-hidden="true"><Icon size={22} /></span>
+                  <span className="pf-eyebrow game-card__index" translate="no">
+                    {(isCreole ? 'JWÈT ' : 'JEU ') + String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
+                  <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
+                  <span className="game-card__meta">
+                    <span className="game-card__time">
+                      <Clock size={12} aria-hidden="true" /> ~{g.minutes} min
+                    </span>
+                    {hs != null && (
+                      <span className="game-card__hs">
+                        <Trophy size={12} aria-hidden="true" />{' '}
+                        {isCreole ? 'Rekò' : 'Record'} {hs}
+                      </span>
+                    )}
+                  </span>
+                  {/* The card IS the button; this is its visible affordance,
+                      hidden from the accessibility tree so the control keeps
+                      one name. */}
+                  <span className="game-card__cta" aria-hidden="true">
+                    {isCreole ? 'Jwe' : 'Jouer'}
+                    <ChevronRight size={15} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <aside className="games-hub__side">
+          {isAuthed && <section aria-label={isCreole ? 'Pwogrè mwen' : 'Ma progression'}>
+            <TriviaHeader level={level} streak={streak} isCreole={isCreole} />
+            <p>{nf(gamesPlayed)} {isCreole ? 'pati arkad' : 'parties d’arcade'} · {nf(level.xpToNext)} XP {isCreole ? 'pou pwochen nivo a' : 'pour le prochain niveau'}</p>
+          </section>}
+          <HubHeading
+            eyebrow={isCreole ? 'Klasman' : 'Classement'}
+            title={isCreole ? 'Klasman XP jwèt yo' : 'Classement XP des jeux'}
+          />
+          <Leaderboard variant="full" max={25} periodToggle />
+          <GameRecords isCreole={isCreole} />
+        </aside>
+      </div>
       {/* Two cards that say the same kind of thing — here is a mode that
           exists, and here is where you actually play it — so they sit on
           one row from 760px up. A presentational wrapper only: both
@@ -851,72 +835,7 @@ function GamesHub({ isCreole }) {
         </section>
       </div>
 
-      <DailyChallengeBanner
-        daily={daily}
-        isCreole={isCreole}
-        onStart={() => navigate('/jeux/trivia', { state: { startDaily: true } })}
-      />
 
-      <div className="games-hub__layout">
-        <div className="games-hub__main">
-          <HubHeading
-            eyebrow={isCreole ? 'Sal arkad la' : 'La salle d’arcade'}
-            title={isCreole ? 'Chwazi yon jwèt' : 'Choisir un jeu'}
-          />
-          <div className="games-hub__grid">
-            {GAMES.map((g, i) => {
-              const Icon = GAME_ICONS[g.id];
-              const hs = highScores[g.id];
-              return (
-                <button
-                  key={g.id}
-                  className="game-card"
-                  style={{ ['--game-color' as any]: g.color }}
-                  onClick={() => navigate(`/jeux/${g.id}`)}
-                >
-                  {/* Decorative corner wash, the mockups' one flourish per
-                      card. Purely presentational, clipped by the card. */}
-                  <span className="game-card__wash" aria-hidden="true" />
-                  {/* The game's identity now lives in this one tinted tile
-                      rather than a full-bleed colour surface. */}
-                  <span className="game-card__icon" aria-hidden="true"><Icon size={22} /></span>
-                  <span className="pf-eyebrow game-card__index" translate="no">
-                    {(isCreole ? 'JWÈT ' : 'JEU ') + String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
-                  <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
-                  <span className="game-card__meta">
-                    <span className="game-card__time">
-                      <Clock size={12} aria-hidden="true" /> ~{g.minutes} min
-                    </span>
-                    {hs != null && (
-                      <span className="game-card__hs">
-                        <Trophy size={12} aria-hidden="true" />{' '}
-                        {isCreole ? 'Rekò' : 'Record'} {hs}
-                      </span>
-                    )}
-                  </span>
-                  {/* The card IS the button; this is its visible affordance,
-                      hidden from the accessibility tree so the control keeps
-                      one name. */}
-                  <span className="game-card__cta" aria-hidden="true">
-                    {isCreole ? 'Jwe' : 'Jouer'}
-                    <ChevronRight size={15} />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <aside className="games-hub__side">
-          <HubHeading
-            eyebrow={isCreole ? 'Klasman' : 'Classement'}
-            title={isCreole ? 'Klasman XP jwèt yo' : 'Classement XP des jeux'}
-          />
-          <Leaderboard variant="full" max={25} periodToggle />
-          <GameRecords isCreole={isCreole} />
-        </aside>
-      </div>
     </div>
   );
 }

@@ -42,14 +42,15 @@ export interface OpenArena {
   startsAt: number;
   schools: number;
   players: number;
+  isTest?: boolean;
 }
 
 /** Exported for tests — which tournament a visitor should be told about. */
 export function pickOpenArena(
-  rows: { id: string; title: string; titleHt: string; state: string; startsAt: number; schools: number; players: number }[],
+  rows: { id: string; title: string; titleHt: string; state: string; startsAt: number; schools: number; players: number; isTest?: boolean }[],
 ): OpenArena | null {
   for (const state of PRIORITY) {
-    const inState = rows.filter((r) => r.state === state);
+    const inState = rows.filter((r) => r.state === state && !r.isTest && !/\b(test|demo|démo)\b/i.test(r.title));
     if (inState.length === 0) continue;
     const chosen = inState.sort((a, b) => a.startsAt - b.startsAt)[0];
     return { ...chosen, state: state as OpenArena['state'] };
@@ -80,6 +81,7 @@ export function useOpenArena(): OpenArena | null | undefined {
             id: d.id,
             title: typeof v.title === 'string' ? v.title : d.id,
             titleHt: typeof v.titleHt === 'string' ? v.titleHt : (typeof v.title === 'string' ? v.title : d.id),
+            isTest: v.isTest === true || v.testMode === true,
             state: String(v.state ?? ''),
             startsAt: millis(v.startsAt),
             schools: typeof v.counts?.schools === 'number' ? v.counts.schools : 0,
