@@ -176,11 +176,13 @@
   display: block;
   height: 100%;
   border-radius: inherit;
+  /* The default tone is azure. It used to live only under .pf-meter--azure,
+     so a bar written without a tone modifier rendered a fill with no
+     background at all — invisible, and invisible in a way that looks like an
+     empty bar rather than a bug. Two pages hit it. */
+  background: linear-gradient(90deg, var(--primary-500), var(--success-500));
   /* Grows from zero on mount — a bar that arrives full reads as a rule. */
   transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.pf-meter--azure .pf-meter__fill {
-  background: linear-gradient(90deg, var(--primary-500), var(--success-500));
 }
 .pf-meter--amber .pf-meter__fill { background: var(--warning-500); }
 

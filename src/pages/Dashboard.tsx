@@ -10,6 +10,7 @@ import { useCourses } from '../hooks/useData';
 import { useAllProgress, calculateCompletionPercentage } from '../hooks/useProgress';
 import useStore from '../contexts/store';
 import ArenaBanner from '../components/ArenaBanner';
+import ExamCountdown from '../components/ExamCountdown';
 import WelcomeGradeModal from '../components/WelcomeGradeModal';
 import Leaderboard from '../components/Leaderboard';
 import StreakRail from '../components/StreakRail';
@@ -536,6 +537,12 @@ export default function Dashboard() {
             </button>
           </div>
         </section>
+
+        {/* The exam a student is actually sitting, and how long is left.
+            Self-gating: it renders nothing unless the grade we hold maps to an
+            exam level with a future session, so 7ᵉ–NS3 and post-Bac see
+            nothing rather than somebody else's countdown. */}
+        <div className="dash__event"><ExamCountdown /></div>
 
         <div className="dash__event"><ArenaBanner /></div>
 
