@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../contexts/store';
-import { TFn } from './content';
+import { ArrowIcon, TFn } from './content';
 
 export default function CtaSection({ t }: { t: TFn }) {
   const navigate = useNavigate();
@@ -13,6 +13,9 @@ export default function CtaSection({ t }: { t: TFn }) {
         <div className="lp-cta__card" data-reveal>
           <div className="lp-cta__glow" aria-hidden="true" />
           <div className="lp-cta__content">
+            <span className="lp-cta__eyebrow">
+              {t('Accès gratuit', 'Aksè gratis')}
+            </span>
             <h2 className="lp-cta__title">
               {t('Votre prochaine étape', 'Pwochen etap ou')}
               <br />
@@ -29,20 +32,24 @@ export default function CtaSection({ t }: { t: TFn }) {
                     'Kreye espas ou pou jwenn kou ou, erè pou revize ak pwogrè ou sou chak aparèy.'
                   )}
             </p>
-            {/* The page's single closing action. It used to sit beside a
-                second, equally large button (§13: competing calls to action),
-                and it invited a signed-in student to "create a free account"
-                they already had. */}
-            <div className="lp-hero__actions">
-              <button
-                className="lp-btn lp-btn--primary lp-btn--lg"
-                onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}
-              >
+          </div>
+
+          {/* The page's single closing action. It used to sit beside a
+              second, equally large button (§13: competing calls to action),
+              and it invited a signed-in student to "create a free account"
+              they already had. */}
+          <div className="lp-cta__actions">
+            <button
+              className="lp-btn lp-btn--primary lp-btn--lg"
+              onClick={() => (isAuthenticated ? navigate('/dashboard') : toggleAuthModal())}
+            >
+              <span>
                 {isAuthenticated
                   ? t('Reprendre mon apprentissage', 'Kontinye aprann')
                   : t('Créer un compte gratuit', 'Kreye yon kont gratis')}
-              </button>
-            </div>
+              </span>
+              <ArrowIcon />
+            </button>
           </div>
         </div>
       </div>

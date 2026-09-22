@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Brain, CheckCircle2 } from 'lucide-react';
+import { BadgeCheck, BookOpen, Brain, CheckCircle2 } from 'lucide-react';
 import { TFn, useCatalogSummary } from './content';
 
 export default function LearningJourneySection({ t }: { t: TFn }) {
@@ -7,8 +7,10 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
 
   const steps = [
     {
-      icon: <BookOpen size={21} aria-hidden="true" />,
+      icon: <BookOpen size={22} aria-hidden="true" />,
+      tone: 'azure',
       number: '01',
+      step: t('Étape 1', 'Etap 1'),
       title: t('Apprenez avec un cap clair', 'Aprann ak yon objektif klè'),
       body: t(
         'Choisissez votre niveau et reprenez directement la leçon où vous vous êtes arrêté.',
@@ -16,8 +18,10 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
       ),
     },
     {
-      icon: <Brain size={21} aria-hidden="true" />,
+      icon: <Brain size={22} aria-hidden="true" />,
+      tone: 'violet',
       number: '02',
+      step: t('Étape 2', 'Etap 2'),
       title: t('Pratiquez selon votre besoin', 'Pratike selon bezwen ou'),
       body: t(
         'Quiz courts, révision des erreurs ou examen blanc : chaque format a un objectif distinct.',
@@ -25,8 +29,10 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
       ),
     },
     {
-      icon: <CheckCircle2 size={21} aria-hidden="true" />,
+      icon: <CheckCircle2 size={22} aria-hidden="true" />,
+      tone: 'emerald',
       number: '03',
+      step: t('Étape 3', 'Etap 3'),
       title: t('Transformez le résultat en action', 'Transfòme rezilta a an aksyon'),
       body: t(
         'Voyez ce qui est acquis, ce qui mérite une révision et la meilleure suite possible.',
@@ -87,20 +93,33 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
           <ol className="lp-journey__steps">
             {steps.map((step) => (
               <li key={step.number} className="lp-journey-step" data-reveal>
-                <span className="lp-journey-step__number">{step.number}</span>
-                <span className="lp-journey-step__icon">{step.icon}</span>
-                <span>
-                  <strong>{step.title}</strong>
-                  <span>{step.body}</span>
+                <span className="lp-journey-step__rail">
+                  <span className="lp-journey-step__number">{step.number}</span>
+                  <span
+                    className={`pf-tile pf-tile--${step.tone} pf-tile--md`}
+                    aria-hidden="true"
+                  >
+                    {step.icon}
+                  </span>
+                </span>
+                <span className="lp-journey-step__body">
+                  <span className="lp-journey-step__head">
+                    <strong className="lp-journey-step__title">{step.title}</strong>
+                    <span className={`pf-pill pf-pill--${step.tone}`}>{step.step}</span>
+                  </span>
+                  <span className="lp-journey-step__text">{step.body}</span>
                 </span>
               </li>
             ))}
           </ol>
 
           <aside className="lp-facts" data-reveal>
-            <h3 className="lp-facts__title">
-              {t('Dans le catalogue aujourd’hui', 'Nan katalòg la jodi a')}
-            </h3>
+            <div className="lp-facts__head">
+              <h3 className="lp-facts__title">
+                {t('Dans le catalogue aujourd’hui', 'Nan katalòg la jodi a')}
+              </h3>
+              <span className="lp-facts__live" aria-hidden="true" />
+            </div>
             {facts.length > 0 ? (
               <dl className="lp-facts__list">
                 {facts.map((fact) => (
@@ -121,6 +140,9 @@ export default function LearningJourneySection({ t }: { t: TFn }) {
               </p>
             )}
             <p className="lp-facts__foot">
+              <span className="pf-tile pf-tile--amber pf-tile--sm" aria-hidden="true">
+                <BadgeCheck size={16} />
+              </span>
               {t(
                 'Et les annales du Bac haïtien, corrigées question par question.',
                 'Ak ansyen egzamen Bak ayisyen an, korije kesyon pa kesyon.',

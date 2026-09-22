@@ -1,29 +1,46 @@
 import React from 'react';
+import { Calculator, FlaskConical, Lock, TrendingUp, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowIcon, CatalogSubject, TFn, useCatalogSummary } from './content';
+import { ArrowIcon, CatalogSubject, SubjectCode, TFn, useCatalogSummary } from './content';
+
+/* The mockups open every row with a pastel icon tile. One tone per subject,
+   all six drawn from pf's tone axis — no new hue enters the app. */
+const SUBJECT_TILE: Record<SubjectCode, { tone: string; icon: React.ReactNode }> = {
+  ECON: { tone: 'emerald', icon: <TrendingUp size={24} /> },
+  MATH: { tone: 'azure', icon: <Calculator size={24} /> },
+  CHEM: { tone: 'violet', icon: <FlaskConical size={24} /> },
+  PHYS: { tone: 'amber', icon: <Zap size={24} /> },
+};
 
 /** One subject: its real levels, its real lesson count, its real units. */
 function SubjectRow({ subject, t }: { subject: CatalogSubject; t: TFn }) {
   const openLevels = subject.levels.filter((l) => !l.comingSoon).length;
+  const tile = SUBJECT_TILE[subject.code];
 
   return (
     <li className="lp-subject" data-reveal>
-      <div className="lp-subject__head">
-        <h3 className="lp-subject__name">{subject.name}</h3>
-        <p className="lp-subject__meta">
-          {subject.comingSoon
-            ? t('En préparation', 'N ap prepare l')
-            : t(
-                // French marks the plural; Kreyòl does not.
-                `${subject.lessons} leçon${subject.lessons > 1 ? 's' : ''} · ${openLevels} niveau${openLevels > 1 ? 'x' : ''}`,
-                `${subject.lessons} leson · ${openLevels} nivo`,
-              )}
-        </p>
-      </div>
+      <span className={`pf-tile pf-tile--${tile.tone} lp-tile lp-tile--48`} aria-hidden="true">
+        {tile.icon}
+      </span>
 
-      {subject.units.length > 0 && (
-        <p className="lp-subject__units">{subject.units.join(' · ')}</p>
-      )}
+      <div className="lp-subject__body">
+        <div className="lp-subject__head">
+          <h3 className="lp-subject__name">{subject.name}</h3>
+          <p className={`lp-subject__meta${subject.comingSoon ? ' lp-subject__meta--soon' : ''}`}>
+            {subject.comingSoon
+              ? t('En préparation', 'N ap prepare l')
+              : t(
+                  // French marks the plural; Kreyòl does not.
+                  `${subject.lessons} leçon${subject.lessons > 1 ? 's' : ''} · ${openLevels} niveau${openLevels > 1 ? 'x' : ''}`,
+                  `${subject.lessons} leson · ${openLevels} nivo`,
+                )}
+          </p>
+        </div>
+
+        {subject.units.length > 0 && (
+          <p className="lp-subject__units">{subject.units.join(' · ')}</p>
+        )}
+      </div>
 
       <ul className="lp-subject__levels">
         {subject.levels.map((level) =>
@@ -31,7 +48,9 @@ function SubjectRow({ subject, t }: { subject: CatalogSubject; t: TFn }) {
             <li key={level.id}>
               <span className="lp-level lp-level--soon">
                 {level.label}
-                <small>{t('bientôt', 'talè')}</small>
+                <small>
+                  <Lock size={9} aria-hidden="true" /> {t('bientôt', 'talè')}
+                </small>
               </span>
             </li>
           ) : (
@@ -70,6 +89,10 @@ export default function CoursesSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <header className="lp-section__head lp-section__head--row" data-reveal>
           <div>
+            <span className="lp-eyebrow">
+              <span className="lp-eyebrow__dot" aria-hidden="true" />
+              {t('Le programme', 'Pwogram lan')}
+            </span>
             <h2 className="lp-section__title lp-section__title--sm">
               {t('Quatre matières, du NS I au NS IV', 'Kat matyè, soti NS I rive NS IV')}
             </h2>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Sigma } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ArrowIcon, TFn } from './content';
 import useStore from '../../contexts/store';
@@ -85,7 +86,11 @@ export default function SampleQuestionSection({ t }: { t: TFn }) {
     <section className="lp-section lp-sample" aria-labelledby="lp-sample-title">
       <div className="lp-container lp-sample__container">
         <div className="lp-sample__intro" data-reveal>
-          <h2 className="lp-section__title lp-section__title--sm" id="lp-sample-title">
+          <span className="lp-eyebrow">
+            <span className="lp-eyebrow__dot" aria-hidden="true" />
+            {t('Un vrai exercice, tout de suite', 'Yon vrè egzèsis, kounye a')}
+          </span>
+          <h2 className="lp-section__title" id="lp-sample-title">
             {t('Voyez par vous-même.', 'Gade ak pwòp je w.')}
           </h2>
           <p className="lp-section__lede">
@@ -98,7 +103,9 @@ export default function SampleQuestionSection({ t }: { t: TFn }) {
 
         <div className="lp-sample__card" data-reveal>
           <div className="lp-sample__bar">
+            {/* A badge, not a stripe: where the exercise comes from, stated. */}
             <span className="lp-sample__source">
+              <Sigma size={14} aria-hidden="true" />
               {t('Économie NS1 · L’Intérêt Simple', 'Ekonomi NS1 · Enterè Senp')}
             </span>
 
@@ -159,7 +166,7 @@ export default function SampleQuestionSection({ t }: { t: TFn }) {
 
           {answered && (
             <div className="lp-sample__why" role="status">
-              <p className="lp-sample__verdict">
+              <p className={`lp-sample__verdict${picked === ANSWER ? '' : ' lp-sample__verdict--wrong'}`}>
                 {picked === ANSWER
                   ? t('C’est juste.', 'Se sa menm.')
                   : t('Pas tout à fait.', 'Pa fin kòrèk.')}

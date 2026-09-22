@@ -14,6 +14,14 @@ export default function HeroSection({ t }: { t: TFn }) {
       <div className="lp-container">
         <div className="lp-hero__layout">
           <div className="lp-hero__copy">
+            {/* The mockups' kicker chip. A marker dot, never the little azure
+                bar they put beside headings — that is the left-border accent
+                the app removed everywhere else. */}
+            <span className="lp-kicker">
+              <span className="lp-kicker__dot" aria-hidden="true" />
+              {t('Apprendre · Pratiquer · Progresser', 'Aprann · Pratike · Avanse')}
+            </span>
+
             {/* One voice, no accented fragment. Colouring the second
                 sentence a different colour was decoration standing in for
                 emphasis; the sentence already carries it. */}
@@ -52,9 +60,12 @@ export default function HeroSection({ t }: { t: TFn }) {
             {/* Trust line: verifiable facts only — invented counts and
                 decorative star ratings read as the opposite of premium. */}
             <div className="lp-hero__trust">
+              <span className="lp-hero__trust-chip">
+                <span className="lp-hero__trust-dot" aria-hidden="true" />
+                {t('Gratuit pour les élèves', 'Gratis pou elèv yo')}
+              </span>
               <span>
-                <strong>{t('Gratuit pour les élèves', 'Gratis pou elèv yo')}</strong>
-                {t(' · Français et créole haïtien · Web, iOS et Android', ' · Fransè ak kreyòl ayisyen · Wèb, iOS ak Android')}
+                {t('Français et créole haïtien · Web, iOS et Android', 'Fransè ak kreyòl ayisyen · Wèb, iOS ak Android')}
               </span>
             </div>
           </div>

@@ -1,4 +1,8 @@
 import React from 'react';
+/* The shared page visual language (tone variables, card, tile, pill, meter).
+   `pf` goes on the outermost element below because that is where it declares
+   them. Home.css composes on top of it. */
+import '../styles/pf.css';
 import './Home.css';
 import { useT } from './home/content';
 import ResumeBanner from '../components/ResumeBanner';
@@ -20,7 +24,7 @@ export default function Home() {
   const t = useT();
 
   return (
-    <div className="lp">
+    <div className="lp pf">
       <HeroSection t={t} />
       <div className="container resume-banner-wrap">
         <ResumeBanner />

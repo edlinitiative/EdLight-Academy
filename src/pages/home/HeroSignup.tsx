@@ -1,4 +1,5 @@
 import React from 'react';
+import { GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import { loginWithGoogle, warmAuth } from '../../services/authService';
@@ -73,15 +74,22 @@ export default function HeroSignup({ t }: { t: TFn }) {
 
   return (
     <div className="lp-signup">
-      <h2 className="lp-signup__title">
-        {t('Commencez gratuitement', 'Kòmanse gratis')}
-      </h2>
-      <p className="lp-signup__lede">
-        {t(
-          'Votre progression, vos révisions et votre série vous suivent partout.',
-          'Pwogrè ou, revizyon ou ak seri ou swiv ou tout kote.'
-        )}
-      </p>
+      <div className="lp-signup__head">
+        <div>
+          <h2 className="lp-signup__title">
+            {t('Commencez gratuitement', 'Kòmanse gratis')}
+          </h2>
+          <p className="lp-signup__lede">
+            {t(
+              'Votre progression, vos révisions et votre série vous suivent partout.',
+              'Pwogrè ou, revizyon ou ak seri ou swiv ou tout kote.'
+            )}
+          </p>
+        </div>
+        <span className="pf-tile pf-tile--azure pf-tile--md" aria-hidden="true">
+          <GraduationCap size={22} />
+        </span>
+      </div>
 
       <button
         type="button"
