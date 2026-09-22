@@ -926,56 +926,240 @@
 }
 
 
-/* ═══ Games hub ═══════════════════════════════════════════════════════════ */
+/* ═══ Games hub ═════════════════════════════════════════════════════════════
+   Restyled from the "Jeux Éducatifs & Arène de Quiz" mockups on top of the
+   shared pf-* language (src/styles/pf.css — .pf-card, .pf-eyebrow, .pf-tile,
+   .pf-pill, .pf-meter): a mono caps eyebrow over every
+   heading, a pastel tile opening every card, one gradient feature panel for
+   the single most important action, and a decorative corner wash on the game
+   cards. What the mockups invented — live player counts, weekly game totals,
+   named opponents, Elo, prize pots, a national podium — is NOT here; every
+   number this page prints is computed in TriviaGames.tsx from state we hold.
+
+   The mockups also set a short azure bar to the left of each section title.
+   Dropped on purpose: left-edge accent stripes are retired app-wide.
+   ═════════════════════════════════════════════════════════════════════════ */
 
 .games-hub {
   max-width: 1080px;
   margin: 0 auto;
-  padding: clamp(0.35rem, 1vw, 0.6rem) 1rem 2.5rem;
+  padding: clamp(0.5rem, 1.4vw, 1rem) 1rem 3rem;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 1.5rem;
+
+  /* The one gradient on the page. Both stops are deep enough that white text
+     clears AA at the LIGHTEST point — including under the decorative circle,
+     which lifts the fill by another 8%. The dark theme lightens the azure
+     scale, so the panel picks its own deeper pair rather than a token. */
+  --jx-grad-a: #0A2A60;
+  --jx-grad-b: #1558B8;
+  --jx-grad-wash: rgba(255, 255, 255, 0.08);
+  /* The panel's CTA is a WHITE pill in both themes, so its ink must not be
+     themed: --primary-600 lightens to #2F6FD4 in dark and lands at 4.36:1 on
+     the hovered tint. This is the light-theme azure, fixed. */
+  --jx-ink-on-white: #1558B8;
+  --jx-tint-on-white: #EAF2FE;
 }
 
-.games-hub__hero {
+[data-theme="dark"] .games-hub {
+  --jx-grad-a: #10275A;
+  --jx-grad-b: #2461B6;
+  --jx-grad-wash: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Section heading ─── */
+.jx-heading { display: grid; gap: 0.15rem; min-width: 0; }
+
+.jx-heading__title {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 0.4rem;
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--text-900);
 }
 
+.jx-heading--sm .jx-heading__title { font-size: 1rem; }
+.jx-heading--sm .jx-heading__title svg { color: var(--warning-500); }
+
+/* ─── Hero ─────────────────────────────────────────────────────────────────
+   The mockups' opening band: a pill eyebrow, a two-tone display heading, a
+   lede, then a strip of figures. Theirs were invented; ours are the player's
+   own profile, or the size of the shipped catalogue. */
+.games-hub__hero {
+  display: block;
+  padding-top: 0.35rem;
+}
+
+.jx-hero__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.32rem 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.jx-hero__tag svg { color: var(--pf-accent-ink); }
+
+.jx-hero__tag-count {
+  padding: 0.16rem 0.52rem;
+  border-radius: 999px;
+  background: var(--t-azure-fill);
+  color: var(--t-azure-ink);
+  letter-spacing: 0.08em;
+}
 
 .games-hub__title {
-  margin: 0;
-  font-size: clamp(1.35rem, 3.5vw, 1.8rem);
+  margin: 0.85rem 0 0;
+  max-width: 22ch;
+  font-family: var(--font-heading);
+  font-size: clamp(1.7rem, 4.4vw, 2.6rem);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--text-900);
 }
 
-.games-hub__eyebrow {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--primary-600);
-  font-size: var(--text-xs);
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* Second clause in azure — the mockups' one typographic flourish. In dark the
+   azure scale lightens, so this takes the LIGHTER end (pf-accent-ink) to stay
+   legible on the canvas. */
+.jx-hero__title-accent { color: var(--pf-accent-ink); }
+
+.games-hub__subtitle {
+  margin: 0.7rem 0 0;
+  max-width: 56ch;
+  color: var(--text-600);
+  font-size: 1rem;
+  line-height: 1.6;
 }
-/* A titled section, NOT a card: ArenaBanner brings its own `.card`, and
-   wrapping it in a second one (with a ghost button orphaned below by
-   `justify-items: start`) is what made this block look broken. §7. */
-.games-hub__championship {
+
+/* ─── Figure strip ─────────────────────────────────────────────────────────
+   One card holding the figures and, for a signed-in player, the bar to their
+   next level — the bar was floating loose on the canvas underneath it. */
+.jx-stats {
+  max-width: 620px;
+  margin-top: 1.15rem;
+  padding: 0.85rem 0.3rem;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.jx-figures {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.jx-figure {
   display: grid;
-  gap: 0.5rem;
-  margin-top: 1.4rem;
+  gap: 0.08rem;
+  flex: 1 1 120px;
+  min-width: 0;
+  padding: 0.1rem 1.05rem;
+}
+
+/* A hairline RULE between columns, the way a table separates cells — not an
+   accent stripe on a card. Suppressed once the strip wraps. */
+@media (min-width: 561px) {
+  .jx-figure + .jx-figure { border-left: 1px solid var(--border); }
+}
+
+.jx-figure__value {
+  font-family: var(--font-heading);
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+.jx-figure__value--azure   { color: var(--t-azure-ink); }
+.jx-figure__value--amber   { color: var(--t-amber-ink); }
+.jx-figure__value--emerald { color: var(--t-emerald-ink); }
+.jx-figure__value--violet  { color: var(--t-violet-ink); }
+
+.jx-levelbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.85rem 1.05rem 0.25rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.jx-levelbar .pf-meter { height: 8px; }
+
+.jx-levelbar__label {
+  flex: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-600);
+}
+
+/* ─── Card head: tile + heading ─── */
+.jx-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+/* Two cards on one row from 760px: at full width their three lines of copy
+   left two thirds of each card empty. */
+.games-hub__handoff {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 760px) {
+  .games-hub__handoff { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ─── Championship + duel: two cards that explain something the app does ───
+   Both were bare titled sections. They are pf-cards now, each opened by a
+   tone tile. ArenaBanner brings its own `.card`; rather than edit a shared
+   component it is flattened to a muted strip BY SCOPE, so the card-inside-a
+   -card that made this block read as a mistake stays fixed. */
+.games-hub__championship,
+.games-hub__duel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
+}
+
+/* Equal-height cards on one row means the last element in each has to sink to
+   the bottom edge, or the two cards' feet float at different heights. */
+.games-hub__duel .games-hub__championship-link { margin-top: auto; padding-top: 0.85rem; }
+.games-hub__championship .games-hub__championship-link { margin-bottom: 0.95rem; }
+
+.games-hub__championship p,
+.games-hub__duel p {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--text-600);
+  font-size: var(--text-sm);
+  line-height: 1.6;
 }
 
 .games-hub__championship-link {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  color: var(--primary-600);
+  margin-top: 0.85rem;
+  /* Was --primary-600, which in the dark theme is the DEEPER end of a scale
+     that lightens — 3.7:1 on the canvas. pf-accent-ink flips to the lighter
+     end there and keeps this above AA in both themes. */
+  color: var(--pf-accent-ink);
+  font-size: var(--text-sm);
   font-weight: 650;
   text-decoration: none;
   white-space: nowrap;
@@ -988,65 +1172,113 @@
   outline-offset: 2px;
   border-radius: 4px;
 }
-.games-hub__championship h2,
-.games-hub__section-title {
-  margin: 0 0 0.65rem;
-  color: var(--text-900);
-  font-size: 1.05rem;
-  line-height: 1.3;
+
+.games-hub__championship > .card {
+  width: 100%;
+  margin: auto 0 0;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface-muted);
+  box-shadow: none;
 }
-.games-hub__championship p {
-  max-width: 70ch;
+
+/* ─── Feature panel: the Défi du jour ──────────────────────────────────────
+   The mockups keep exactly one gradient panel for the single most important
+   call to action, with a decorative circle bleeding out of the corner. On a
+   games hub that action is today's challenge, so the flat azure bar becomes
+   the panel. Its "done" state stays a quiet white card — a finished task
+   should not shout. */
+.games-hub .trivia-daily {
+  position: relative;
+  overflow: hidden;
   margin: 0;
-  color: var(--text-600);
+  max-width: none;
+  border: 0;
+  border-radius: var(--r-panel);
+  padding: 1.3rem 1.4rem;
+  background: linear-gradient(115deg, var(--jx-grad-a) 0%, var(--jx-grad-b) 100%);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.games-hub .trivia-daily::after {
+  content: "";
+  position: absolute;
+  right: -90px;
+  top: -130px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--jx-grad-wash), transparent);
+  pointer-events: none;
+}
+
+.games-hub .trivia-daily > * { position: relative; }
+
+.games-hub .trivia-daily:hover:not(:disabled) {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: transparent;
+}
+
+.games-hub .trivia-daily__title,
+.games-hub .trivia-daily__sub { color: #fff; }
+
+.games-hub .trivia-daily__title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.games-hub .trivia-daily__sub { opacity: 0.94; }
+
+.games-hub .trivia-daily__icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: 14px;
+}
+
+.games-hub .trivia-daily__cta {
+  background: #fff;
+  color: var(--jx-ink-on-white);
+  border-radius: 999px;
+  font-weight: 700;
   font-size: var(--text-sm);
-  line-height: 1.6;
-}
-.games-hub__championship > .card { width: 100%; }
-
-.games-hub__subtitle {
-  margin: 0.15rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.88rem;
+  padding: 0.6rem 1.2rem;
+  box-shadow: none;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.games-hub__stats {
-  display: flex;
-  gap: 0.6rem;
+.games-hub .trivia-daily:hover:not(:disabled) .trivia-daily__cta {
+  background: var(--jx-tint-on-white);
 }
 
-.games-hub__stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
-  min-width: 74px;
-  padding: 0.65rem 0.8rem;
-  border-radius: var(--radius-md);
+.games-hub .trivia-daily--done {
   background: var(--surface);
+  color: inherit;
   border: none;
   box-shadow: var(--shadow-sm);
 }
+.games-hub .trivia-daily--done::after { display: none; }
+.games-hub .trivia-daily--done .trivia-daily__title,
+.games-hub .trivia-daily--done .trivia-daily__sub { color: inherit; }
+.games-hub .trivia-daily--done .trivia-daily__sub { opacity: 1; color: var(--text-600); }
+.games-hub .trivia-daily--done .trivia-daily__icon { background: var(--t-emerald-fill); color: var(--t-emerald-ink); }
 
-.games-hub__stat svg { color: var(--primary-500); }
-.games-hub__stat strong { font-size: var(--text-base); color: var(--text-900); }
-.games-hub__stat span {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-500);
-  text-align: center;
-}
-
+/* ─── Layout ─── */
 .games-hub__layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.25rem;
+  gap: 1.75rem;
   align-items: start;
 }
 
 @media (min-width: 900px) {
   .games-hub__layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 330px;
   }
   .games-hub__side {
     position: sticky;
@@ -1054,72 +1286,107 @@
   }
 }
 
+.games-hub__main .jx-heading,
+.games-hub__side .jx-heading { margin-bottom: 0.85rem; }
+
 /* Content-based columns (like .exam-subjects-grid / the course catalog)
    instead of hardcoded 2-then-3: the white cards carry a real description,
    and a forced 2-up at 360px left it ~125px wide. This yields 1 column on
-   a small phone, 3 in the desktop main column, with no breakpoint. */
+   a small phone, 2 in the desktop main column, with no breakpoint. */
 .games-hub__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  gap: 1rem;
 }
 
-/* ─── Game card — Estil Klè: white surface, ONE tinted accent ───────────────
-   Replaces the retired "Limyè Arcade" full-bleed gradient tile. Each game
-   keeps its identity through the icon tile alone (its colour on a tint of
-   itself), so six games read as one calm system instead of a rainbow.
-   Anatomy matches .exam-subject-card / the course catalog cards. */
+/* ─── Game card ────────────────────────────────────────────────────────────
+   The mockups' "mode" card: pastel tile, caps index, title in the display
+   face, description, a meta row, and a CTA pinned to the bottom edge so the
+   six cards align. The tinted quarter-circle in the top-right is the one
+   flourish per card. The game keeps its own hue in the tile and the wash;
+   the CTA is azure in every card, so six games still read as one system. */
 .game-card {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  align-items: start;
-  gap: 0.3rem;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
   text-align: left;
-  border: none;
+  border: 1px solid var(--border);
   border-radius: var(--r-card);
-  padding: 1rem;
+  padding: 1.05rem 1.1rem 1.05rem;
   background: var(--surface);
   color: var(--text-900);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 160ms ease, transform 160ms ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
 }
 
-.game-card__icon { grid-row: 1 / 4; }
-.game-card__name,
-.game-card__desc,
-.game-card__meta { grid-column: 2; margin-left: 0.5rem; }
+.game-card > * { position: relative; }
+
+.game-card__wash {
+  position: absolute;
+  right: -72px;
+  top: -96px;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  /* A soft bloom, not a disc: a hard-edged circle at any usable opacity read
+     as a coloured blob covering a third of the card. */
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--game-color) 13%, transparent),
+    color-mix(in srgb, var(--game-color) 0%, transparent)
+  );
+  pointer-events: none;
+}
+
+[data-theme="dark"] .game-card__wash {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--game-color) 20%, transparent),
+    color-mix(in srgb, var(--game-color) 0%, transparent)
+  );
+}
+
 .game-card:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 3px; }
 
 .game-card:hover,
 .game-card:focus-visible {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--pf-lift);
+  transform: translateY(-3px);
+  border-color: var(--primary-100);
 }
 
 .game-card__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  margin-bottom: 0.35rem;
-  border-radius: 12px;
-  /* The one place the game's colour appears. */
-  background: color-mix(in srgb, var(--game-color) 12%, transparent);
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  /* The one place the game's colour appears at full strength. */
+  background: color-mix(in srgb, var(--game-color) 12%, var(--surface));
   color: var(--game-color);
 }
 
+.game-card__index { margin-top: 0.6rem; }
+
 .game-card__name {
+  margin-top: 0.2rem;
+  font-family: var(--font-heading);
   font-weight: 700;
-  font-size: var(--text-base);
-  line-height: 1.2;
+  font-size: 1.05rem;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
   color: var(--text-900);
 }
 
 .game-card__desc {
-  font-size: var(--text-xs);
-  line-height: 1.45;
+  margin-top: 0.35rem;
+  font-size: var(--text-sm);
+  line-height: 1.5;
   color: var(--text-500);
   display: -webkit-box;
   /* Three, not two. At two every one of the six cards cut its own sentence
@@ -1137,29 +1404,46 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.3rem;
+  gap: 0.4rem;
+  /* Pushes itself and the CTA to the bottom, so a short card and a long one
+     still line their buttons up. */
+  margin-top: auto;
+  padding-top: 0.7rem;
   font-size: var(--text-xs);
 }
 
-.game-card__time {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-weight: 600;
-  color: var(--text-400);
-}
-
-/* Personal best — a quiet chip in the meta row (was a tilted white sticker). */
+.game-card__time,
 .game-card__hs {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.14rem 0.5rem;
+  padding: 0.16rem 0.55rem;
   border-radius: 999px;
   background: var(--surface-muted);
   color: var(--text-600);
+  font-weight: 600;
+}
+
+.game-card__hs { font-weight: 700; }
+
+.game-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: var(--t-azure-fill);
+  color: var(--t-azure-ink);
   font-weight: 700;
+  font-size: var(--text-sm);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.game-card:hover .game-card__cta,
+.game-card:focus-visible .game-card__cta {
+  background: var(--pf-fill);
+  color: #fff;
 }
 
 /* Darker game hues (teal/green) lose contrast as an icon colour on the dark
@@ -1169,86 +1453,13 @@
   color: color-mix(in srgb, var(--game-color) 62%, #ffffff);
 }
 
-/* The hub's hover lifts were never covered by the reduced-motion blocks
-   further up this file (the old arcade tile had a 3px lift too). */
-@media (prefers-reduced-motion: reduce) {
-  .game-card { transition: box-shadow 160ms ease; }
-  .game-card:hover,
-  .game-card:focus-visible { transform: none; }
-}
-
-/* ─── Hub daily banner — the ONE deliberately accented element ──────────────
-   It stays azure because it is the primary daily action, but the arcade
-   trimmings are gone: no coloured glow, and the gold "pressable game key"
-   CTA (a 0 3px 0 hard bottom edge, the treatment retired app-wide) becomes
-   an inverted button — white on azure, --r-btn radius, shadow-only feedback. */
-.games-hub .trivia-daily {
-  margin: 0;
-  max-width: none;
-  border: none;
-  border-radius: var(--r-card);
-  background: var(--primary-500);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
-}
-
-.games-hub .trivia-daily:hover:not(:disabled) {
-  box-shadow: var(--shadow-md);
-  border-color: transparent;
-}
-
-.games-hub .trivia-daily__title,
-.games-hub .trivia-daily__sub { color: #fff; }
-.games-hub .trivia-daily__sub { opacity: 0.92; }
-.games-hub .trivia-daily__icon { background: rgba(255, 255, 255, 0.18); color: #fff; }
-
-.games-hub .trivia-daily__cta {
-  background: #fff;
-  color: var(--primary-600);
-  border-radius: var(--r-btn);
-  font-weight: 600;
-  font-size: var(--text-sm);
-  padding: 0.55rem 1.1rem;
-  box-shadow: none;
-  transition: background 0.15s ease;
-}
-
-.games-hub .trivia-daily:hover:not(:disabled) .trivia-daily__cta {
-  background: color-mix(in srgb, var(--primary-500) 8%, #ffffff);
-}
-
-.games-hub .trivia-daily--done {
-  background: var(--surface);
-  color: inherit;
-  border: none;
-  box-shadow: var(--shadow-sm);
-}
-.games-hub .trivia-daily--done .trivia-daily__title,
-.games-hub .trivia-daily--done .trivia-daily__sub { color: inherit; }
-.games-hub .trivia-daily--done .trivia-daily__sub { opacity: 1; color: var(--text-500); }
-.games-hub .trivia-daily--done .trivia-daily__icon { background: var(--success-50); color: var(--success-500); }
-
-/* ─── Records strip (hub sidebar) — card system, solid hairlines ─── */
+/* ─── Records strip (hub sidebar) ─── */
 .game-records {
   margin-top: 1rem;
-  background: var(--surface);
-  border: none;
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-  padding: 1rem 1.1rem;
+  padding: 1.15rem 1.25rem 1.2rem;
 }
 
-.game-records__title {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0 0 0.5rem;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--text-900);
-}
-
-.game-records__title svg { color: var(--warning-500); }
+.game-records .jx-heading { margin-bottom: 0.6rem; }
 
 .game-records__list { list-style: none; margin: 0; padding: 0; }
 
@@ -1257,7 +1468,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.45rem 0;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
   font-size: var(--text-xs);
 }
@@ -1267,21 +1478,24 @@
 .game-records__game {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
+  min-width: 0;
   font-weight: 600;
+  color: var(--text-900);
 }
 
-.game-records__holder { color: var(--text-500); }
+.game-records__tile {
+  background: color-mix(in srgb, var(--game-color) 14%, var(--surface));
+  color: var(--game-color);
+}
+
+[data-theme="dark"] .game-records__tile {
+  background: color-mix(in srgb, var(--game-color) 24%, transparent);
+  color: color-mix(in srgb, var(--game-color) 62%, #ffffff);
+}
+
+.game-records__holder { color: var(--text-600); white-space: nowrap; }
 .game-records__holder strong { color: var(--text-900); font-weight: 700; }
-
-.game-records__open {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--warning-500);
-  background: var(--warning-50);
-  border-radius: 999px;
-  padding: 0.12rem 0.55rem;
-}
 
 /* ─── Hub-scoped leaderboard tightening ────────────────────────────────────
    Leaderboard is a shared component (also /classement + Profil), so it is
@@ -1305,6 +1519,31 @@
 .games-hub__side .leaderboard__scope {
   font-size: var(--text-xs);
   padding: 0.3rem 0.6rem;
+}
+
+/* ─── Small screens ─── */
+@media (max-width: 560px) {
+  .games-hub { gap: 1.25rem; }
+  .jx-figures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.7rem 0;
+  }
+  .games-hub .trivia-daily { padding: 1.1rem 1.15rem; }
+  .games-hub .trivia-daily__title { font-size: 1.08rem; }
+}
+
+/* The hub's hover lifts were never covered by the reduced-motion blocks
+   further up this file (the old arcade tile had a 3px lift too). */
+@media (prefers-reduced-motion: reduce) {
+  .game-card,
+  .games-hub .trivia-daily,
+  .games-hub .trivia-daily__cta,
+  .game-card__cta,
+  .games-hub .pf-meter__fill { transition: none; }
+  .game-card:hover,
+  .game-card:focus-visible,
+  .games-hub .trivia-daily:hover:not(:disabled) { transform: none; }
 }
 
 /* ─── Arcade shell (per-game page) ─── */
@@ -1768,27 +2007,3 @@
 [data-theme="dark"] .mk-tile { color: var(--text-200, #e4e7ec); }
 [data-theme="dark"] .mk-key { color: var(--text-200, #e4e7ec); }
 
-/* "Défi d'un ami" — same treatment as the championship block above it: a
-   titled section rather than a card, because both are the web explaining
-   something that happens in the app. */
-.games-hub__duel {
-  display: grid;
-  gap: 0.4rem;
-  margin-bottom: 1.25rem;
-}
-
-.games-hub__duel h2 {
-  margin: 0;
-  color: var(--text-900);
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.games-hub__duel p {
-  margin: 0;
-  max-width: 68ch;
-  color: var(--text-600);
-  font-size: 0.92rem;
-  line-height: 1.6;
-}

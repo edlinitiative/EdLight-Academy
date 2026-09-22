@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight } from 'lucide-react';
+import { Zap, PenLine, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Gamepad2, Swords, Users } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -18,6 +18,7 @@ import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
 import CalculGame from '../components/games/CalculGame';
 import SuitesGame from '../components/games/SuitesGame';
+import '../styles/pf.css';
 import './TriviaGames.css';
 import { logAnswerEvent } from '../services/answerEventsService';
 
@@ -615,6 +616,23 @@ function TriviaClassic({ isCreole, onExitHub }) {
   );
 }
 
+/* ─── Section heading: caps micro-label over the title ─────────────────────
+   From the mockups: every band opens with a mono caps eyebrow and a heading
+   in the display face. The mockups also put a short azure bar to the left of
+   each title — dropped deliberately: left-edge accent stripes are out
+   app-wide, so emphasis here comes from the eyebrow and the type weight. */
+function HubHeading({ eyebrow, title, id = undefined, icon = null, size = 'md' }: any) {
+  return (
+    <div className={`jx-heading${size === 'sm' ? ' jx-heading--sm' : ''}`}>
+      <span className="pf-eyebrow">{eyebrow}</span>
+      <h2 className="jx-heading__title" id={id}>
+        {icon}
+        {title}
+      </h2>
+    </div>
+  );
+}
+
 /* ─── Records strip: best-ever score per game + holder ─── */
 function GameRecords({ isCreole }) {
   const [records, setRecords] = useState({});
@@ -630,25 +648,31 @@ function GameRecords({ isCreole }) {
   if (!arcade.some((g) => records[g.id])) return null; // nothing set yet
 
   return (
-    <div className="game-records">
-      <h3 className="game-records__title">
-        <Crown size={15} /> {isCreole ? 'Rekò yo' : 'Records'}
-      </h3>
+    <div className="game-records pf-card">
+      <HubHeading
+        size="sm"
+        eyebrow={isCreole ? 'Pi bon nòt yo' : 'Meilleurs scores'}
+        title={isCreole ? 'Rekò yo' : 'Records'}
+        icon={<Crown size={15} aria-hidden="true" />}
+      />
       <ul className="game-records__list">
         {arcade.map((g) => {
           const rec = records[g.id];
           const Icon = GAME_ICONS[g.id];
           return (
-            <li key={g.id} className="game-records__row">
-              <span className="game-records__game" style={{ color: g.color }}>
-                <Icon size={14} /> {isCreole ? g.nameHt : g.name}
+            <li key={g.id} className="game-records__row" style={{ ['--game-color' as any]: g.color }}>
+              <span className="game-records__game">
+                <span className="pf-tile pf-tile--sm game-records__tile" aria-hidden="true">
+                  <Icon size={14} />
+                </span>
+                {isCreole ? g.nameHt : g.name}
               </span>
               {rec ? (
                 <span className="game-records__holder">
                   {rec.displayName} · <strong>{rec.score}</strong>
                 </span>
               ) : (
-                <span className="game-records__open">{isCreole ? 'Poko gen rekò !' : 'À prendre !'}</span>
+                <span className="pf-pill pf-pill--amber">{isCreole ? 'Poko gen rekò !' : 'À prendre !'}</span>
               )}
             </li>
           );
@@ -657,6 +681,11 @@ function GameRecords({ isCreole }) {
     </div>
   );
 }
+
+/* Size of the shipped question bank. Computed from the data, once, so the
+   figure on the hero can never drift from what a player actually gets. */
+const BANK_TOTAL = Object.values(TRIVIA_QUESTIONS as Record<string, any[]>)
+  .reduce((n, list) => n + (list?.length || 0), 0);
 
 /* ─── Games hub (landing) ─── */
 function GamesHub({ isCreole }) {
@@ -667,97 +696,170 @@ function GamesHub({ isCreole }) {
   const highScores = profile?.games?.highScores || {};
   const gamesPlayed = profile?.games?.gamesPlayed || 0;
 
-  return (
-    <div className="games-hub">
-      <div className="games-hub__hero">
-        <div className="games-hub__hero-text">
-          <span className="games-hub__eyebrow">{isCreole ? 'Defye' : 'Défier'}</span>
-          <h1 className="games-hub__title">
-            {isCreole ? 'Aprann pandan w ap jwe' : 'Apprenez en jouant'}
-          </h1>
-          <p className="games-hub__subtitle">
-            {isCreole
-              ? 'Chak pati fè ou ranmase XP epi monte nan klasman an.'
-              : 'Chaque partie vous fait gagner des XP et grimper au classement.'}
-          </p>
-        </div>
-        {isAuthed && (
-          <div className="games-hub__stats">
-            <div className="games-hub__stat">
-              <Zap size={16} />
-              <strong>{level.xp}</strong>
-              <span>XP · {isCreole ? 'Nivo' : 'Niv.'} {level.level}</span>
-            </div>
-            <div className="games-hub__stat">
-              <Flame size={16} />
-              <strong>{streak?.currentStreak || 0}</strong>
-              <span>{isCreole ? 'Seri' : 'Série'}</span>
-            </div>
-            <div className="games-hub__stat">
-              <Trophy size={16} />
-              <strong>{gamesPlayed}</strong>
-              <span>{isCreole ? 'Pati' : 'Parties'}</span>
-            </div>
-          </div>
-        )}
-      </div>
+  /* The level meter grows from zero on the first frame after mount. A bar
+     that arrives already full reads as a rule, not as progress. */
+  const [meterOn, setMeterOn] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMeterOn(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
-      {/*
-        * A titled SECTION, not a card — `ArenaBanner` renders a `.card` of its
-        * own and this wrapped it in a second one, with a small ghost button
-        * orphaned underneath by `justify-items: start`. A card inside a card
-        * with a stray button is what made this block read as a mistake (§7:
-        * reduce nested cards).
-        *
-        * The button is gone as well: the banner ALREADY links to `/arena`,
-        * so the block offered one destination twice. The inline link stays
-        * because it is the only path when no tournament is open — the banner
-        * hides itself then, and the section would otherwise describe a
-        * championship with no way to reach it.
-        */}
-      <section className="games-hub__championship" aria-labelledby="championship-title">
-        <h2 id="championship-title">{isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}</h2>
-        <p>
+  const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(n || 0);
+
+  /*
+    The mockups open on a strip of big figures. Theirs were invented — "1 420
+    élèves en direct", "15 000+ parties / semaine", a national podium. We have
+    no live-player count and no weekly total, so those are gone and what is
+    left is only what this page can prove at the instant it renders: a signed
+    in player's own XP, level, streak and games played, all from their
+    gamification profile; and for a visitor, the size of the shipped
+    catalogue, counted from the data above.
+  */
+  const figures = isAuthed
+    ? [
+        { tone: 'azure', value: nf(level.xp), label: 'XP' },
+        { tone: 'azure', value: String(level.level), label: isCreole ? 'Nivo' : 'Niveau' },
+        { tone: 'amber', value: String(streak?.currentStreak || 0), label: isCreole ? 'Jou seri' : 'Jours de série' },
+        { tone: 'emerald', value: nf(gamesPlayed), label: isCreole ? 'Pati' : 'Parties' },
+      ]
+    : [
+        { tone: 'azure', value: String(GAMES.length), label: isCreole ? 'Jwèt' : 'Jeux' },
+        { tone: 'violet', value: String(TRIVIA_CATEGORIES.length), label: isCreole ? 'Kategori' : 'Catégories' },
+        { tone: 'emerald', value: nf(BANK_TOTAL), label: isCreole ? 'Kesyon' : 'Questions' },
+      ];
+
+  return (
+    <div className="games-hub pf">
+      <header className="games-hub__hero jx-hero">
+        <span className="jx-hero__tag pf-eyebrow">
+          <Gamepad2 size={13} aria-hidden="true" />
+          {isCreole ? 'Jwèt EdLight' : 'Jeux EdLight'}
+          <span className="jx-hero__tag-count">
+            {GAMES.length} {isCreole ? 'jwèt' : 'jeux'}
+          </span>
+        </span>
+        <h1 className="games-hub__title jx-hero__title">
+          {isCreole ? 'Aprann pandan w ap jwe.' : 'Apprenez en jouant.'}{' '}
+          <span className="jx-hero__title-accent">
+            {isCreole ? 'Chak pati konte.' : 'Chaque partie compte.'}
+          </span>
+        </h1>
+        <p className="games-hub__subtitle jx-hero__lede">
           {isCreole
-            ? 'Enskri lekòl ou isit la. Jou a, kesyon yo jwe nan aplikasyon an. Pwen chanpyona yo separe ak XP jwèt yo.'
-            : 'Inscrivez votre école ici. Le jour J, les questions se jouent dans l’application. Les scores du championnat sont distincts des XP des jeux.'}
-          {' '}
+            ? 'Chak pati fè ou ranmase XP epi monte nan klasman an.'
+            : 'Chaque partie vous fait gagner des XP et grimper au classement.'}
+        </p>
+
+        <div className="jx-stats">
+          <div className="jx-figures">
+            {figures.map((f) => (
+              <div className="jx-figure" key={f.label}>
+                <span className={`jx-figure__value jx-figure__value--${f.tone}`} translate="no">{f.value}</span>
+                <span className="pf-eyebrow">{f.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Progress to the next level — the one number the old header showed
+              as a bare bar with no destination. xpToNext is derived from the
+              same triangular curve the service uses to award the level. */}
+          {isAuthed && level.xpForNext > 0 && (
+            <div className="jx-levelbar">
+              <span className="pf-meter pf-meter--azure">
+                <span
+                  className="pf-meter__fill"
+                  style={{ width: `${meterOn ? Math.min(100, level.progressPct) : 0}%` }}
+                />
+              </span>
+              <span className="jx-levelbar__label">
+                {isCreole
+                  ? `${nf(level.xpToNext)} XP pou nivo ${level.level + 1}`
+                  : `${nf(level.xpToNext)} XP pour le niveau ${level.level + 1}`}
+              </span>
+            </div>
+          )}
+        </div>
+
+      </header>
+
+      {/* Two cards that say the same kind of thing — here is a mode that
+          exists, and here is where you actually play it — so they sit on
+          one row from 760px up. A presentational wrapper only: both
+          sections keep their own heading, copy and link. */}
+      <div className="games-hub__handoff">
+        {/*
+          * A titled SECTION, not a card — `ArenaBanner` renders a `.card` of its
+          * own and this wrapped it in a second one, with a small ghost button
+          * orphaned underneath by `justify-items: start`. A card inside a card
+          * with a stray button is what made this block read as a mistake (§7:
+          * reduce nested cards).
+          *
+          * It is now a pf-card, and the banner inside it is flattened to a
+          * tinted strip by scope (see TriviaGames.css) rather than edited —
+          * ArenaBanner is shared with the Dashboard.
+          *
+          * The button is gone as well: the banner ALREADY links to `/arena`,
+          * so the block offered one destination twice. The inline link stays
+          * because it is the only path when no tournament is open — the banner
+          * hides itself then, and the section would otherwise describe a
+          * championship with no way to reach it.
+          */}
+        <section className="games-hub__championship pf-card" aria-labelledby="championship-title">
+          <div className="jx-card-head">
+            <span className="pf-tile pf-tile--md pf-tile--azure" aria-hidden="true"><Swords size={20} /></span>
+            <HubHeading
+              id="championship-title"
+              eyebrow={isCreole ? 'Ant lekòl' : 'Entre écoles'}
+              title={isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}
+            />
+          </div>
+          <p>
+            {isCreole
+              ? 'Enskri lekòl ou isit la. Jou a, kesyon yo jwe nan aplikasyon an. Pwen chanpyona yo separe ak XP jwèt yo.'
+              : 'Inscrivez votre école ici. Le jour J, les questions se jouent dans l’application. Les scores du championnat sont distincts des XP des jeux.'}
+          </p>
           <Link to="/arena" className="games-hub__championship-link">
             {isCreole ? 'Enskri lekòl mwen' : 'Inscrire mon école'}
             <ChevronRight size={14} aria-hidden="true" />
           </Link>
-        </p>
-        <ArenaBanner />
-      </section>
+          <ArenaBanner />
+        </section>
 
-      {/*
-        * "Défi d'un ami" exists and this page never said so.
-        *
-        * mobile/src/services/challengeService.ts is a complete feature: you
-        * mint a duel from a round you just finished, your friend plays the
-        * SAME questions once, and the winner's XP is awarded server-side. The
-        * web even has the landing page for it — /defi/:code, so an invited
-        * friend can arrive. But nothing anywhere on the web CREATES one or
-        * mentions it is possible, so the only way a student discovers the
-        * feature is if somebody happens to send them a link.
-        *
-        * Minting a duel needs the app (the share sheet and the round it is
-        * minted from are native), so this is the same shape as the
-        * championship above: the web explains it and hands over.
-        */}
-      <section className="games-hub__duel" aria-labelledby="duel-title">
-        <h2 id="duel-title">{isCreole ? 'Defi yon zanmi' : 'Défi d’un ami'}</h2>
-        <p>
-          {isCreole
-            ? 'Fini yon pati, epi voye menm kesyon yo bay yon zanmi. Li gen yon sèl tantativ — pi gwo nòt la genyen. Ou kreye defi a nan aplikasyon an.'
-            : 'Finissez une partie, puis envoyez les mêmes questions à un ami. Il n’a qu’un seul essai — le meilleur score gagne. Le défi se crée dans l’application.'}
-          {' '}
+        {/*
+          * "Défi d'un ami" exists and this page never said so.
+          *
+          * mobile/src/services/challengeService.ts is a complete feature: you
+          * mint a duel from a round you just finished, your friend plays the
+          * SAME questions once, and the winner's XP is awarded server-side. The
+          * web even has the landing page for it — /defi/:code, so an invited
+          * friend can arrive. But nothing anywhere on the web CREATES one or
+          * mentions it is possible, so the only way a student discovers the
+          * feature is if somebody happens to send them a link.
+          *
+          * Minting a duel needs the app (the share sheet and the round it is
+          * minted from are native), so this is the same shape as the
+          * championship above: the web explains it and hands over.
+          */}
+        <section className="games-hub__duel pf-card" aria-labelledby="duel-title">
+          <div className="jx-card-head">
+            <span className="pf-tile pf-tile--md pf-tile--violet" aria-hidden="true"><Users size={20} /></span>
+            <HubHeading
+              id="duel-title"
+              eyebrow={isCreole ? '1 kont 1' : '1 contre 1'}
+              title={isCreole ? 'Defi yon zanmi' : 'Défi d’un ami'}
+            />
+          </div>
+          <p>
+            {isCreole
+              ? 'Fini yon pati, epi voye menm kesyon yo bay yon zanmi. Li gen yon sèl tantativ — pi gwo nòt la genyen. Ou kreye defi a nan aplikasyon an.'
+              : 'Finissez une partie, puis envoyez les mêmes questions à un ami. Il n’a qu’un seul essai — le meilleur score gagne. Le défi se crée dans l’application.'}
+          </p>
           <Link to="/download?from=defi" className="games-hub__championship-link">
             {isCreole ? 'Jwenn aplikasyon an' : 'Obtenir l’application'}
             <ChevronRight size={14} aria-hidden="true" />
           </Link>
-        </p>
-      </section>
+        </section>
+      </div>
 
       <DailyChallengeBanner
         daily={daily}
@@ -767,9 +869,12 @@ function GamesHub({ isCreole }) {
 
       <div className="games-hub__layout">
         <div className="games-hub__main">
-          <h2 className="games-hub__section-title">{isCreole ? 'Chwazi yon jwèt' : 'Choisir un jeu'}</h2>
+          <HubHeading
+            eyebrow={isCreole ? 'Sal arkad la' : 'La salle d’arcade'}
+            title={isCreole ? 'Chwazi yon jwèt' : 'Choisir un jeu'}
+          />
           <div className="games-hub__grid">
-            {GAMES.map((g) => {
+            {GAMES.map((g, i) => {
               const Icon = GAME_ICONS[g.id];
               const hs = highScores[g.id];
               return (
@@ -779,9 +884,15 @@ function GamesHub({ isCreole }) {
                   style={{ ['--game-color' as any]: g.color }}
                   onClick={() => navigate(`/jeux/${g.id}`)}
                 >
+                  {/* Decorative corner wash, the mockups' one flourish per
+                      card. Purely presentational, clipped by the card. */}
+                  <span className="game-card__wash" aria-hidden="true" />
                   {/* The game's identity now lives in this one tinted tile
                       rather than a full-bleed colour surface. */}
                   <span className="game-card__icon" aria-hidden="true"><Icon size={22} /></span>
+                  <span className="pf-eyebrow game-card__index" translate="no">
+                    {(isCreole ? 'JWÈT ' : 'JEU ') + String(i + 1).padStart(2, '0')}
+                  </span>
                   <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
                   <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
                   <span className="game-card__meta">
@@ -795,13 +906,23 @@ function GamesHub({ isCreole }) {
                       </span>
                     )}
                   </span>
+                  {/* The card IS the button; this is its visible affordance,
+                      hidden from the accessibility tree so the control keeps
+                      one name. */}
+                  <span className="game-card__cta" aria-hidden="true">
+                    {isCreole ? 'Jwe' : 'Jouer'}
+                    <ChevronRight size={15} />
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
         <aside className="games-hub__side">
-          <h2 className="games-hub__section-title">{isCreole ? 'Klasman XP jwèt yo' : 'Classement XP des jeux'}</h2>
+          <HubHeading
+            eyebrow={isCreole ? 'Klasman' : 'Classement'}
+            title={isCreole ? 'Klasman XP jwèt yo' : 'Classement XP des jeux'}
+          />
           <Leaderboard variant="full" max={25} periodToggle />
           <GameRecords isCreole={isCreole} />
         </aside>
