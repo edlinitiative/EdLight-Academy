@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Snowflake } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import { useStreak } from '../hooks/useStreak';
 import useStore from '../contexts/store';
 import './StreakRail.css';
@@ -66,40 +66,39 @@ export default function StreakRail() {
         : `Une leçon aujourd'hui pour garder tes ${count} jours.`)
       : (isCreole ? 'Kòmanse seri ou jodi a.' : 'Commence ta série aujourd\'hui.');
 
+  // A chip, not a card: the count and the week at a glance. The sentence
+  // that says what is at stake today is the tooltip and the label, so it is
+  // still read out, just not printed as a paragraph.
   return (
     <aside
       className={`streak-rail${studiedToday ? ' streak-rail--done' : ''}`}
-      aria-label={isCreole ? 'Seri ou' : 'Ta série'}
+      aria-label={`${isCreole ? 'Seri ou' : 'Ta série'} : ${count} ${isCreole ? 'jou' : (count === 1 ? 'jour' : 'jours')}. ${note}`}
+      title={note}
     >
-      <div className="streak-rail__count">
-        <Flame size={22} strokeWidth={2.2} aria-hidden="true" />
+      <span className="streak-rail__count" aria-hidden="true">
+        <Flame size={14} strokeWidth={2.4} />
         <span className="streak-rail__num">{count}</span>
         <span className="streak-rail__unit">
-          {isCreole ? (count === 1 ? 'jou' : 'jou') : (count === 1 ? 'jour' : 'jours')}
+          {isCreole ? 'jou' : (count === 1 ? 'jour' : 'jours')}
         </span>
-      </div>
+      </span>
 
-      <ol className="streak-rail__week">
+      <ol className="streak-rail__week" aria-hidden="true">
         {days.map((d, i) => {
           const isActive = active.has(d.key);
           const isFrozen = frozen.has(d.key);
           const state = isActive ? 'on' : isFrozen ? 'frozen' : d.isFuture ? 'future' : 'off';
           return (
-            <li key={d.key} className="streak-rail__day">
-              <span className="streak-rail__letter" aria-hidden="true">{letters[i]}</span>
-              <span
-                className="streak-rail__dot"
-                data-state={state}
-                data-today={d.isToday ? 'true' : undefined}
-              >
-                {isFrozen && <Snowflake size={11} strokeWidth={2.4} aria-hidden="true" />}
-              </span>
-            </li>
+            <li
+              key={d.key}
+              className="streak-rail__dot"
+              data-state={state}
+              data-today={d.isToday ? 'true' : undefined}
+              title={letters[i]}
+            />
           );
         })}
       </ol>
-
-      <p className="streak-rail__note">{note}</p>
     </aside>
   );
 }

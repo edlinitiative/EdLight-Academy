@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, CalendarCheck, Gamepad2, Swords } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, CalendarCheck, Gamepad2, Swords, Sigma, Atom, FlaskConical, LineChart } from 'lucide-react';
 import { subjectCover } from '../utils/subjectCovers';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';
@@ -29,8 +29,12 @@ function subjectCode(subject) {
   if (SUBJECT_CODES.includes(String(subject).toUpperCase() as any)) return String(subject).toUpperCase();
   return 'PHYS';
 }
-function subjectInitial(subject) {
-  return (String(subject || '?').trim()[0] || '?').toUpperCase();
+// The subject's own glyph, the same set the catalogue rows use — a first
+// letter said nothing, and "E" for Économie read as a grade.
+const SUBJECT_GLYPHS = { MATH: Sigma, PHYS: Atom, CHEM: FlaskConical, ECON: LineChart };
+function SubjectGlyph({ subject }) {
+  const Icon = SUBJECT_GLYPHS[subjectCode(subject)];
+  return <Icon size={20} strokeWidth={2} aria-hidden="true" />;
 }
 
 // Turn a raw quiz id like "CHEM-NSI-U1-L2" into a readable title
@@ -94,7 +98,7 @@ function DashSuggestions({ items }) {
           <span className="dash-suggest__icon">{it.icon}</span>
           <span className="dash-suggest__body">
             <strong>{it.label}</strong>
-            <span>{it.sub}</span>
+            {it.sub && <span>{it.sub}</span>}
           </span>
           <ChevronRight size={16} aria-hidden="true" />
         </button>
@@ -351,15 +355,17 @@ export default function Dashboard() {
           <p className="dash__greet">
             {greeting}, {firstName || (isCreole ? 'zanmi' : 'à vous')}.
           </p>
+          {/* Top right, chip-sized. It was a 260px column beside the focus
+              card; Ted: "could just be at the very top, 90% smaller". */}
+          <StreakRail />
         </header>
 
         {/* ── The one bold thing on the page ──────────────────────────────
             A student opening this has exactly one question: what do I study
             now? The focus card answers it and nothing else — course, where they
             stopped, how much is left, one button. Everything below it is
-            deliberately quieter so this is what the eye lands on.
-            The streak sits beside it because it is the only thing here that
-            decays; together they say "do this, and don't break that". */}
+            deliberately quieter so this is what the eye lands on. The streak
+            now rides in the greeting line above as a small chip. */}
         <div className="dash-lead">
           {resumeExam ? (
             <section className="dash-focus" aria-label={isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen"}>
@@ -485,8 +491,6 @@ export default function Dashboard() {
               </div>
             </section>
           )}
-
-          <StreakRail />
         </div>
 
         <section className="dash-today" aria-labelledby="dash-today-title">
@@ -588,7 +592,7 @@ export default function Dashboard() {
                         aria-label={course.name || course.title || course.id}
                       >
                         <span className="dash-course__badge" data-subject={subjectCode(course.subject)}>
-                          {subjectInitial(course.subject)}
+                          <SubjectGlyph subject={course.subject} />
                         </span>
                         <span className="dash-course__body">
                           <span className="dash-course__top">
@@ -626,11 +630,13 @@ export default function Dashboard() {
                       */
                     icon: (
                       <span className="dash-course__badge" data-subject={subjectCode(c.subject)}>
-                        {subjectInitial(c.subject)}
+                        <SubjectGlyph subject={c.subject} />
                       </span>
                     ),
                     label: c.name || c.title || c.id,
-                    sub: isCreole ? 'Kòmanse kou sa a' : 'Commencer ce cours',
+                    /* No sub-line: "Commencer ce cours" four times under a
+                       heading that already says "Commencer un cours" was the
+                       same sentence five times. */
                   }))}
                 />
               )}

@@ -823,8 +823,12 @@ button.dash-activity__tag { cursor: pointer; }
    answers it (focus) and states what's at stake (streak). Every surface below
    is intentionally flatter so this row wins the page. */
 
-.dash--st .dash__greet {
+.dash--st .dash__header {
+  align-items: center;
   margin: 0 0 18px;
+}
+.dash--st .dash__greet {
+  margin: 0;
   font-size: 15px;
   font-weight: 500;
   color: var(--st-muted);
@@ -832,7 +836,7 @@ button.dash-activity__tag { cursor: pointer; }
 
 .dash-lead {
   display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin: 0 0 18px;
   align-items: stretch;
