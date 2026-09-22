@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ChevronRight, ChevronDown, ArrowRight, Target, Check, Search, X, SlidersHorizontal,
   Sigma, Atom, FlaskConical, LineChart, BookOpen, GraduationCap, RefreshCw, WifiOff,
+  Layers, PlayCircle, Library,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCourses } from '../hooks/useData';
@@ -14,6 +15,7 @@ import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 import { GRADES, gradeProfile, type HomeSurface } from '../config/trackConfig';
 import { SUBJECT_COVERS } from '../utils/subjectCovers';
+import '../styles/pf.css';
 import './Courses.css';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
@@ -54,6 +56,12 @@ const ID_TO_LEVEL: Record<string, string> = {
   ns1: 'NSI', ns2: 'NSII', ns3: 'NSIII', ns4: 'NSIV',
 };
 
+/** The numeral a level card wears in its tile — the mockups open every row
+ *  with one, and the catalogue's levels are already Roman. */
+const LEVEL_NUMERAL: Record<string, string> = {
+  NSI: 'I', NSII: 'II', NSIII: 'III', NSIV: 'IV',
+};
+
 /**
  * The course ID is the trustworthy source of a course's level.
  *
@@ -72,18 +80,47 @@ function courseLevel(course): string {
 
 /** Cover artwork per subject lives in utils/subjectCovers. */
 
-/** Small square subject thumbnail: real artwork, glyph fallback. */
-function SubjectThumb({ code }) {
-  const [broken, setBroken] = useState(false);
-  const src = SUBJECT_COVERS[code];
+/**
+ * One pf tone per subject. The mockups gave each discipline its own pastel
+ * icon tile, and pf.css already ships six measured tone pairs — so the
+ * subject picks a tone rather than a new hue, and the page introduces no
+ * colour the design system has not already measured at AA in both themes.
+ */
+const SUBJECT_TONE: Record<string, string> = {
+  MATH: 'azure', PHYS: 'violet', CHEM: 'emerald', ECON: 'amber',
+};
+const toneFor = (code) => SUBJECT_TONE[code] || 'slate';
+
+/** The mockups' pastel icon tile, per subject. */
+function SubjectTile({ code, size = 'md' }) {
   const Icon = SUBJECT_ICONS[code] || BookOpen;
+  const px = size === 'lg' ? 24 : size === 'sm' ? 15 : 20;
   return (
-    <span className="lrn-thumb" aria-hidden="true">
-      {src && !broken ? (
-        <img src={src} alt="" loading="lazy" onError={() => setBroken(true)} />
-      ) : (
-        <Icon size={20} strokeWidth={1.8} />
-      )}
+    <span className={`pf-tile pf-tile--${size} pf-tile--${toneFor(code)}`} aria-hidden="true">
+      <Icon size={px} strokeWidth={1.9} />
+    </span>
+  );
+}
+
+/**
+ * A pf meter that grows from zero on mount rather than arriving full — a bar
+ * that is already full reads as a rule, not as progress. The animation is the
+ * 700ms width transition pf.css declares (and drops under
+ * prefers-reduced-motion); this only supplies the "from".
+ */
+function Meter({ pct, tone = 'azure', label = undefined as string | undefined }) {
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  return (
+    <span
+      className={`pf-meter pf-meter--${tone}`}
+      role="img"
+      aria-label={label}
+    >
+      <span className="pf-meter__fill" style={{ width: `${grown ? pct : 0}%` }} />
     </span>
   );
 }
@@ -154,23 +191,29 @@ function UnitList({ course, units, progress, onOpenLesson, t }) {
                 full ? ` · ${t('courses.completed')}` : ''}`}
             >
               {/* Units are a genuine ordered sequence (Firestore stores
-                  `order`), so a plain numeral helps scanning. */}
-              <span className="lrn-unit__n" aria-hidden="true">{i + 1}</span>
+                  `order`), so a plain numeral helps scanning. The mockups put
+                  that numeral in a tile — done units swap it for the tick, so
+                  the state is carried by the same slot. */}
+              <span
+                className={`pf-tile pf-tile--sm ${full ? 'pf-tile--emerald' : 'pf-tile--azure'} lrn-unit__n`}
+                aria-hidden="true"
+              >
+                {full ? <Check size={14} strokeWidth={2.6} /> : i + 1}
+              </span>
               <span className="lrn-unit__body">
                 <span className="lrn-unit__title">{unit.title}</span>
-                <span className="lrn-unit__meta">
-                  {t('courses.lessonsCount', { count: lessons.length })}
-                  {/* Only ever shown when this student has real, signed-in
-                      progress on this course — never a 0/N on every unit. */}
-                  {doneCount > 0 && ` · ${doneCount}/${lessons.length} ${t('courses.completed').toLowerCase()}`}
-                </span>
+                {doneCount > 0 && (
+                  /* Only ever shown when this student has real, signed-in
+                     progress on this course — never a 0/N on every unit. */
+                  <span className="lrn-unit__meta">
+                    {`${doneCount}/${lessons.length} ${t('courses.completed').toLowerCase()}`}
+                  </span>
+                )}
               </span>
-              {full && (
-                <span className="lrn-unit__done" aria-hidden="true">
-                  <Check size={13} />
-                </span>
-              )}
-              <ChevronRight size={15} className="lrn-unit__go" aria-hidden="true" />
+              <span className={`pf-pill pf-pill--${full ? 'emerald' : 'slate'} lrn-unit__pill`}>
+                {t('courses.lessonsCount', { count: lessons.length })}
+              </span>
+              <ChevronRight size={15} className="pf-row__chev lrn-unit__go" aria-hidden="true" />
             </button>
           </li>
         );
@@ -235,9 +278,10 @@ function CourseRow({
   const name = lead === 'subject' ? subjectLabel : levelLabel(lvl);
   const accent = { '--accent': course.color || 'var(--primary-500)' } as React.CSSProperties;
 
+  // The lesson total is promoted out of this line into the card's own figure
+  // (the mockups' right-hand count), so the line is not a second copy of it.
   const meta = [
     allUnits.length > 0 ? t('courses.modulesCount', { count: allUnits.length }) : '',
-    t('courses.lessonsCount', { count: lessonsCount || course.videoCount }),
     formatDuration(course.duration),
     enrolled ? t('courses.enrolled') : '',
   ].filter(Boolean).join(' · ');
@@ -245,6 +289,7 @@ function CourseRow({
   if (course.comingSoon) {
     return (
       <div className="lrn-row lrn-row--soon" style={accent} aria-disabled="true">
+        <SubjectTile code={course.subject} />
         <span className="lrn-row__main">
           <span className="lrn-row__name">
             {name}
@@ -252,7 +297,9 @@ function CourseRow({
           </span>
           <span className="lrn-row__meta">{L('Cours en préparation', 'Kou a ap prepare')}</span>
         </span>
-        <span className="lrn-row__soon">{L('Bientôt disponible', 'Byento disponib')}</span>
+        <span className="pf-pill pf-pill--slate lrn-row__soon">
+          {L('Bientôt disponible', 'Byento disponib')}
+        </span>
       </div>
     );
   }
@@ -262,7 +309,10 @@ function CourseRow({
   const hasUnits = shownUnits.length > 0;
 
   return (
-    <article className={`lrn-row lrn-row--course${expanded ? ' lrn-row--open' : ''}`} style={accent}>
+    <article
+      className={`lrn-row lrn-row--course${expanded ? ' lrn-row--open' : ''}`}
+      style={accent}
+    >
       <div className="lrn-row__head">
         {/* The head is a disclosure, the CTA is the navigation. Two siblings,
             so neither control is nested inside the other. */}
@@ -274,22 +324,38 @@ function CourseRow({
           aria-controls={hasUnits ? panelId : undefined}
           disabled={!hasUnits}
         >
-          <span className="lrn-row__name">
-            {name}
-            {lead === 'subject' && <LevelPill level={lvl} />}
-            {finished && (
-              <span className="lrn-row__done">
-                <Check size={12} aria-hidden="true" />
-                {t('courses.completed')}
+          <span className="lrn-row__lead">
+            {lead === 'subject' ? (
+              <SubjectTile code={course.subject} />
+            ) : (
+              /* Grouped by subject, the card IS a level — so the tile carries
+                 its numeral, the way the mockups open every row with one. */
+              <span className="pf-tile pf-tile--md pf-tile--azure lrn-row__roman" aria-hidden="true">
+                {LEVEL_NUMERAL[lvl] || levelLabel(lvl)}
               </span>
             )}
+            <span className="lrn-row__text">
+              <span className="lrn-row__name">
+                {name}
+                {lead === 'subject' && <LevelPill level={lvl} />}
+                {finished && (
+                  <span className="pf-pill pf-pill--emerald lrn-row__done">
+                    <Check size={12} aria-hidden="true" />
+                    {t('courses.completed')}
+                  </span>
+                )}
+              </span>
+              {meta && <span className="lrn-row__meta">{meta}</span>}
+            </span>
           </span>
-          <span className="lrn-row__meta">{meta}</span>
           {/* Progress appears once there IS progress. A 0% bar on every row
               reads as failure, so an untouched course just looks neutral. */}
           {pct > 0 && (
             <span className="lrn-row__progress">
-              <span className="progress-bar"><span className="progress-bar__fill" style={{ width: `${pct}%` }} /></span>
+              <Meter
+                pct={pct}
+                label={`${pct}% — ${subjectLabel} ${levelLabel(lvl)}`}
+              />
               <span className="lrn-row__pct">
                 {pct}%
                 {totalLessons > 0 && ` · ${doneLessons}/${t('courses.lessonsCount', { count: totalLessons })}`}
@@ -305,17 +371,33 @@ function CourseRow({
             </span>
           )}
         </button>
-        <button
-          type="button"
-          className={`lrn-row__cta${started ? ' lrn-row__cta--resume' : ''}`}
-          onClick={goToCourse}
-          aria-label={`${finished ? L('Revoir', 'Revize') : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')} — ${subjectLabel} ${levelLabel(lvl)}`}
-        >
-          {finished
-            ? L('Revoir', 'Revize')
-            : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')}
-          <ArrowRight size={15} aria-hidden="true" />
-        </button>
+        <div className="lrn-row__aside">
+          {/* The mockups' right-hand figure. Both numbers are counted off
+              `course.modules` — the same array the panel below lists. */}
+          {totalLessons > 0 && (
+            <span
+              className="lrn-row__figure"
+              role="img"
+              aria-label={t('courses.lessonsCount', { count: totalLessons })}
+            >
+              <span className="lrn-row__figure-n" aria-hidden="true">{totalLessons}</span>
+              <span className="pf-eyebrow lrn-row__figure-label" aria-hidden="true">
+                {L(totalLessons > 1 ? 'leçons' : 'leçon', 'leson')}
+              </span>
+            </span>
+          )}
+          <button
+            type="button"
+            className={`lrn-row__cta${started ? ' lrn-row__cta--resume' : ''}`}
+            onClick={goToCourse}
+            aria-label={`${finished ? L('Revoir', 'Revize') : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')} — ${subjectLabel} ${levelLabel(lvl)}`}
+          >
+            {finished
+              ? L('Revoir', 'Revize')
+              : started ? L('Reprendre', 'Kontinye') : t('courses.startCourse')}
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {expanded && hasUnits && (
         <div className="lrn-row__panel" id={panelId}>
@@ -361,9 +443,24 @@ function Facets({
         <ChevronDown size={16} className="lrn-facets__chev" aria-hidden="true" />
       </button>
 
-      <div className={`lrn-facets__body${open ? ' lrn-facets__body--open' : ''}`}>
+      <div className={`lrn-facets__body pf-card${open ? ' lrn-facets__body--open' : ''}`}>
+        {/* The mockups' rail header: what this panel is, and the one control
+            that undoes it, side by side. */}
+        <div className="pf-head lrn-facets__head">
+          <div className="pf-head__text">
+            <span className="pf-eyebrow">{L('Catalogue', 'Katalòg')}</span>
+            <h2 className="pf-head__title">{L('Filtres', 'Filtè')}</h2>
+          </div>
+          {activeCount > 0 && (
+            <button type="button" className="pf-link lrn-facets__reset" onClick={onReset}>
+              <X size={13} aria-hidden="true" />
+              {t('courses.resetFilters')}
+            </button>
+          )}
+        </div>
+
         <div className="lrn-facet">
-          <h2 className="lrn-facet__title">{L('Matière', 'Matyè')}</h2>
+          <h2 className="lrn-facet__title pf-eyebrow">{L('Matière', 'Matyè')}</h2>
           <ul className="lrn-facet__list">
             <li>
               <button
@@ -372,7 +469,10 @@ function Facets({
                 aria-pressed={subject === 'all'}
                 onClick={() => onSubject('all')}
               >
-                <span>{L('Toutes les matières', 'Tout matyè yo')}</span>
+                <span className="pf-tile pf-tile--sm pf-tile--slate" aria-hidden="true">
+                  <Library size={15} strokeWidth={1.9} />
+                </span>
+                <span className="lrn-facet__name">{L('Toutes les matières', 'Tout matyè yo')}</span>
                 <span className="lrn-facet__n">{subjectCounts.all}</span>
               </button>
             </li>
@@ -390,7 +490,8 @@ function Facets({
                     disabled={n === 0 && subject !== s.code}
                     onClick={() => onSubject(s.code)}
                   >
-                    <span>{s.label}</span>
+                    <SubjectTile code={s.code} size="sm" />
+                    <span className="lrn-facet__name">{s.label}</span>
                     <span className="lrn-facet__n">{n}</span>
                   </button>
                 </li>
@@ -400,7 +501,7 @@ function Facets({
         </div>
 
         <div className="lrn-facet">
-          <h2 className="lrn-facet__title">{L('Niveau', 'Nivo')}</h2>
+          <h2 className="lrn-facet__title pf-eyebrow">{L('Niveau', 'Nivo')}</h2>
           <ul className="lrn-facet__list">
             <li>
               <button
@@ -409,7 +510,7 @@ function Facets({
                 aria-pressed={level === 'all'}
                 onClick={() => onLevel('all')}
               >
-                <span>{L('Tous les niveaux', 'Tout nivo yo')}</span>
+                <span className="lrn-facet__name">{L('Tous les niveaux', 'Tout nivo yo')}</span>
                 <span className="lrn-facet__n">{levelCounts.all}</span>
               </button>
             </li>
@@ -441,17 +542,10 @@ function Facets({
               aria-pressed={mine}
               onClick={() => onMine(!mine)}
             >
-              <span>{t('courses.myCourses')}</span>
+              <span className="lrn-facet__name">{t('courses.myCourses')}</span>
               {mine && <Check size={15} aria-hidden="true" />}
             </button>
           </div>
-        )}
-
-        {activeCount > 0 && (
-          <button type="button" className="lrn-facets__reset" onClick={onReset}>
-            <X size={14} aria-hidden="true" />
-            {t('courses.resetFilters')}
-          </button>
         )}
       </div>
     </aside>
@@ -693,14 +787,40 @@ export default function Courses() {
     const soonSubjects = new Set(
       courses.filter((c) => c.comingSoon && !liveSubjects.has(c.subject)).map((c) => c.subject),
     );
+    const liveLevels: string[] = [...new Set<string>(live.map(courseLevel).filter(Boolean))]
+      .sort((a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b));
     return {
       subjects: liveSubjects.size,
       soonSubjects: soonSubjects.size,
       courses: live.length,
+      levels: liveLevels,
       units: live.reduce((n, c) => n + (c.modules?.length || 0), 0),
       lessons: live.reduce((n, c) => n + countCourseLessons(c), 0),
     };
   }, [courses]);
+
+  /**
+   * The hero's figures — the catalogue measuring itself. `totals` counts only
+   * the courses this page renders (dataService already drops the `hidden`
+   * ones, and `coming_soon` courses are excluded above), so the day Chimie
+   * NS II–IV are unhidden these numbers move on their own.
+   */
+  const catalogFigures = useMemo(() => ([
+    { key: 'subjects', icon: Library, tone: 'azure', value: totals.subjects, label: L('Matières', 'Matyè') },
+    { key: 'levels', icon: Layers, tone: 'violet', value: totals.levels.length, label: L('Niveaux', 'Nivo') },
+    { key: 'units', icon: BookOpen, tone: 'emerald', value: totals.units, label: L('Modules', 'Modil') },
+    { key: 'lessons', icon: PlayCircle, tone: 'amber', value: totals.lessons, label: L('Leçons', 'Leson') },
+  ].filter((f) => f.value > 0)), [totals, L]);
+
+  /** "du NS I au NS IV" — the span the catalogue actually covers. */
+  const levelSpan = useMemo(() => {
+    const lv = totals.levels;
+    if (lv.length === 0) return '';
+    if (lv.length === 1) return levelLabel(lv[0]);
+    const first = levelLabel(lv[0]);
+    const last = levelLabel(lv[lv.length - 1]);
+    return L(`du ${first} au ${last}`, `depi ${first} rive ${last}`);
+  }, [totals, L]);
 
   // Example queries are read off the catalogue — the biggest module in each
   // subject — so every suggestion is guaranteed to return a result. Nothing
@@ -720,20 +840,23 @@ export default function Courses() {
 
   if (isLoading) {
     return (
-      <section className="section">
+      <section className="section pf lrn">
         <div className="container">
           {/* Loading keeps the page's real identity — the student can already
               read where they are instead of watching an anonymous grey page.
               Only the list that is genuinely unknown is a skeleton. */}
-          <div className="page-header page-header--no-eyebrow courses-header">
-            <div className="courses-header__lead">
-              <span className="courses-header__eyebrow">{t('nav.learn')}</span>
-              <h1 className="courses-header__title">{t('courses.catalog')}</h1>
-              <p className="text-muted courses-header__sub" role="status">
+          <header className="lrn-hero lrn-hero--bare">
+            <div className="lrn-hero__lead">
+              <span className="pf-eyebrow lrn-hero__eyebrow">
+                <span className="lrn-hero__dot" aria-hidden="true" />
+                {t('nav.learn')}
+              </span>
+              <h1 className="lrn-hero__title">{t('courses.catalog')}</h1>
+              <p className="lrn-hero__sub" role="status">
                 {L('Chargement du catalogue…', 'N ap chaje katalòg la…')}
               </p>
             </div>
-          </div>
+          </header>
           {/* Row-shaped skeletons so the loading state has the shape of the
               list it becomes, not of the cards this page no longer uses. */}
           <div className="lrn-rows">
@@ -754,18 +877,21 @@ export default function Courses() {
 
   if (isError && courses.length === 0) {
     return (
-      <section className="section">
+      <section className="section pf lrn">
         <div className="container">
           {/* The failure keeps the page's context, so a student knows what did
               not load. ErrorState supplies the plain-language message (and the
               offline variant of it) plus the retry; the second action keeps a
               way forward instead of a dead end. */}
-          <div className="page-header page-header--no-eyebrow courses-header">
-            <div className="courses-header__lead">
-              <span className="courses-header__eyebrow">{t('nav.learn')}</span>
-              <h1 className="courses-header__title">{t('courses.catalog')}</h1>
+          <header className="lrn-hero lrn-hero--bare">
+            <div className="lrn-hero__lead">
+              <span className="pf-eyebrow lrn-hero__eyebrow">
+                <span className="lrn-hero__dot" aria-hidden="true" />
+                {t('nav.learn')}
+              </span>
+              <h1 className="lrn-hero__title">{t('courses.catalog')}</h1>
             </div>
-          </div>
+          </header>
           <ErrorState
             onRetry={() => refetch()}
             retrying={isFetching}
@@ -880,7 +1006,7 @@ export default function Courses() {
   ];
 
   return (
-    <section className="section">
+    <section className="section pf lrn">
       <div className="container">
         {/* Breadcrumb — where this page sits, and one click back out of a
             filtered view. */}
@@ -904,14 +1030,25 @@ export default function Courses() {
           </ol>
         </nav>
 
-        {/* Header */}
-        <div className="page-header page-header--no-eyebrow courses-header">
-          <div className="courses-header__lead">
-            <span className="courses-header__eyebrow">{t('nav.learn')}</span>
+        {/* Header — the mockups' hero: a dotted caps eyebrow, a two-tone
+            title, and the catalogue's own size beside it. Every figure in
+            `catalogFigures` is counted from the loaded catalogue, so the
+            panel self-corrects the day a hidden subject is unhidden. */}
+        <header className="lrn-hero pf-card">
+          <div className="lrn-hero__lead">
+            <span className="pf-eyebrow lrn-hero__eyebrow">
+              <span className="lrn-hero__dot" aria-hidden="true" />
+              {t('nav.learn')}
+            </span>
             {myCourses.length > 0 && !filtering ? (
               <>
-                <h1 className="courses-header__title">{L('Vos cours', 'Kou ou yo')}</h1>
-                <p className="text-muted courses-header__sub">
+                <h1 className="lrn-hero__title">
+                  {L('Vos cours', 'Kou ou yo')}
+                  {myLevel && (
+                    <span className="lrn-hero__accent">{levelLabel(myLevel)}</span>
+                  )}
+                </h1>
+                <p className="lrn-hero__sub">
                   {L(
                     `Nous commençons par ${levelLabel(myLevel)}, votre classe. Tout le catalogue reste juste en dessous.`,
                     `Nou kòmanse ak ${levelLabel(myLevel)}, klas ou a. Tout katalòg la rete anba a.`,
@@ -920,8 +1057,13 @@ export default function Courses() {
               </>
             ) : (
               <>
-                <h1 className="courses-header__title">{t('courses.catalog')}</h1>
-                <p className="text-muted courses-header__sub">
+                <h1 className="lrn-hero__title">
+                  {t('courses.catalog')}
+                  {/* The range is read off the levels the catalogue actually
+                      has — not a "NS I → NS IV" typed into the page. */}
+                  {levelSpan && <span className="lrn-hero__accent">{levelSpan}</span>}
+                </h1>
+                <p className="lrn-hero__sub">
                   {L(
                     'Filtrez par matière et par niveau, ou cherchez un module ou une leçon par son nom.',
                     'Filtre pa matyè ak pa nivo, oswa chèche yon modil oswa yon leson ak non li.',
@@ -930,14 +1072,29 @@ export default function Courses() {
               </>
             )}
           </div>
-        </div>
+
+          {catalogFigures.length > 0 && (
+            <dl className="lrn-figures">
+              {catalogFigures.map((f) => (
+                <div key={f.key} className="lrn-figure">
+                  <span className={`pf-tile pf-tile--sm pf-tile--${f.tone}`} aria-hidden="true">
+                    <f.icon size={15} strokeWidth={1.9} />
+                  </span>
+                  <dt className="pf-eyebrow lrn-figure__label">{f.label}</dt>
+                  <dd className="lrn-figure__value">{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </header>
 
         {/* Toolbar — a real search field over the catalogue, plus the axis
             toggle. Search matches course names, module titles and lesson
             titles; ⌘K still opens the app-wide overlay for everything else. */}
+        <div className="lrn-panel pf-card">
         <div className="lrn-toolbar">
           <div className="lrn-search">
-            <Search size={16} aria-hidden="true" />
+            <Search size={17} aria-hidden="true" />
             <input
               type="search"
               className="lrn-search__input"
@@ -978,10 +1135,12 @@ export default function Courses() {
         </div>
 
         {/* Suggestions are module titles taken from the catalogue itself, so
-            each one is guaranteed to return something. */}
+            each one is guaranteed to return something. The mockups' "sujets
+            fréquents" row — same content, the caps micro-label instead of a
+            sentence. */}
         {!query && suggestions.length > 0 && (
           <p className="lrn-tries">
-            <span>{L('Essayez :', 'Eseye :')}</span>
+            <span className="pf-eyebrow">{L('Sujets fréquents', 'Sijè souvan')}</span>
             {suggestions.map((s) => (
               <button key={s} type="button" className="lrn-try" onClick={() => setParam('q', s)}>
                 {s}
@@ -989,6 +1148,7 @@ export default function Courses() {
             ))}
           </p>
         )}
+        </div>{/* .lrn-panel */}
 
         {/* Offline with a catalog on hand. The app-wide NetworkStatus banner
             already announces "hors ligne", so this line does not repeat it: it
@@ -1052,9 +1212,10 @@ export default function Courses() {
                     <span className="resume-course__meta">
                       {subjectName(course.subject)} · {levelLabel(courseLevel(course))}
                     </span>
-                    <span className="progress-bar resume-course__bar">
-                      <span className="progress-bar__fill" style={{ width: `${stats.pct}%` }} />
-                    </span>
+                    <Meter
+                      pct={stats.pct}
+                      label={`${stats.pct}%`}
+                    />
                     <span className="resume-course__remaining">
                       {stats.pct}%
                       {stats.remaining > 0
@@ -1073,11 +1234,16 @@ export default function Courses() {
 
         {/* ── The student's class, first and named as theirs ── */}
         {myCourses.length > 0 && !filtering && (
-          <section className="lrn-section lrn-section--mine" aria-labelledby="lrn-mine">
-            <h2 className="lrn-section__title" id="lrn-mine">
-              {L('Pour votre classe', 'Pou klas ou')}
+          <section className="lrn-section lrn-section--mine pf-card" aria-labelledby="lrn-mine">
+            <div className="pf-head">
+              <div className="pf-head__text">
+                <span className="pf-eyebrow">{myGradeLabel || levelLabel(myLevel)}</span>
+                <h2 className="pf-head__title" id="lrn-mine">
+                  {L('Pour votre classe', 'Pou klas ou')}
+                </h2>
+              </div>
               <LevelPill level={myLevel} />
-            </h2>
+            </div>
             <div className="lrn-rows lrn-rows--flush">
               {myCourses.map((course) => (
                 <CourseRow
@@ -1098,9 +1264,11 @@ export default function Courses() {
 
         {/* No grade yet → ask once, honestly, and never block the catalog */}
         {!grade && !filtering && (
-          <section className="lrn-ask" aria-labelledby="lrn-ask-title">
+          <section className="lrn-ask pf-card" aria-labelledby="lrn-ask-title">
             <h2 className="lrn-ask__title" id="lrn-ask-title">
-              <GraduationCap size={18} aria-hidden="true" />
+              <span className="pf-tile pf-tile--md pf-tile--azure" aria-hidden="true">
+                <GraduationCap size={20} strokeWidth={1.9} />
+              </span>
               {L('Vous êtes en quelle classe ?', 'Ki klas ou ye ?')}
             </h2>
             <p className="lrn-ask__sub">
@@ -1126,14 +1294,16 @@ export default function Courses() {
 
         {/* Grade known, but the catalog has nothing at that level yet */}
         {grade && myCourses.length === 0 && !filtering && (
-          <section className="lrn-ask lrn-ask--none" aria-labelledby="lrn-none-title">
+          <section className="lrn-ask lrn-ask--none pf-card" aria-labelledby="lrn-none-title">
             {/* The grade is a badge, not part of the sentence: inlining it
                 produced "pour la Après le Bac (Préfac)" for the grades
                 whose label is not a feminine noun. */}
             <h2 className="lrn-ask__title" id="lrn-none-title">
-              <GraduationCap size={18} aria-hidden="true" />
+              <span className="pf-tile pf-tile--md pf-tile--slate" aria-hidden="true">
+                <GraduationCap size={20} strokeWidth={1.9} />
+              </span>
               {L('Pas encore de cours pour votre classe', 'Poko gen kou pou klas ou')}
-              <span className="lrn-badge">{myGradeLabel}</span>
+              <span className="pf-pill pf-pill--azure lrn-badge">{myGradeLabel}</span>
             </h2>
             <p className="lrn-ask__sub">
               {L(
@@ -1174,40 +1344,54 @@ export default function Courses() {
           />
 
           <div className="lrn-results">
-            <div className="lrn-results__head">
-              <h2 className="lrn-section__title" id="lrn-all">
-                {filtering
-                  ? L('Résultats', 'Rezilta')
-                  : myCourses.length > 0
-                    ? L('Tout le catalogue', 'Tout katalòg la')
-                    : L('Toutes les matières', 'Tout matyè yo')}
-                <span className="lrn-count">{visible.length}</span>
-              </h2>
-              {/* The catalogue's real size, counted from the catalogue that is
-                  loaded — never a figure typed into the page. */}
-              {!filtering && totals.courses > 0 && (
-                <p className="lrn-results__note">
-                  {L(
-                    `${totals.subjects} matières · ${totals.courses} cours · ${totals.units} modules · ${totals.lessons} leçons`,
-                    `${totals.subjects} matyè · ${totals.courses} kou · ${totals.units} modil · ${totals.lessons} leson`,
-                  )}
-                  {totals.soonSubjects > 0 && L(
-                    ` — et ${totals.soonSubjects} matière en préparation`,
-                    ` — ak ${totals.soonSubjects} matyè k ap prepare`,
-                  )}
-                </p>
-              )}
+            <div className="lrn-results__head pf-head">
+              <div className="pf-head__text">
+                <span className="pf-eyebrow">{L('Catalogue', 'Katalòg')}</span>
+                <h2 className="pf-head__title" id="lrn-all">
+                  {filtering
+                    ? L('Résultats', 'Rezilta')
+                    : myCourses.length > 0
+                      ? L('Tout le catalogue', 'Tout katalòg la')
+                      : L('Toutes les matières', 'Tout matyè yo')}
+                </h2>
+                {/* Counted from the catalogue that is loaded — never a figure
+                    typed into the page. The hero above carries the rest. */}
+                {!filtering && totals.courses > 0 && (
+                  <p className="lrn-results__note">
+                    {L(
+                      `${totals.courses} cours publiés`,
+                      `${totals.courses} kou pibliye`,
+                    )}
+                    {totals.soonSubjects > 0 && L(
+                      ` — et ${totals.soonSubjects} matière en préparation`,
+                      ` — ak ${totals.soonSubjects} matyè k ap prepare`,
+                    )}
+                  </p>
+                )}
+              </div>
+              <span className="pf-pill pf-pill--slate lrn-count">{visible.length}</span>
             </div>
 
             {visible.length > 0 ? (
               <>
                 {liveGroups.map((g) => (
-                  <section key={g.key} className="lrn-group" aria-labelledby={`grp-${g.key}`}>
+                  <section
+                    key={g.key}
+                    className="lrn-group"
+                    aria-labelledby={`grp-${g.key}`}
+                    data-reveal
+                  >
                     <div className="lrn-group__head">
-                      {axis === 'subject' && <SubjectThumb code={g.key} />}
+                      {axis === 'subject'
+                        ? <SubjectTile code={g.key} size="lg" />
+                        : (
+                          <span className="pf-tile pf-tile--lg pf-tile--azure" aria-hidden="true">
+                            <Layers size={24} strokeWidth={1.9} />
+                          </span>
+                        )}
                       <div className="lrn-group__lead">
                         <h3 className="lrn-group__title" id={`grp-${g.key}`}>{groupLabel(g.key)}</h3>
-                        <p className="lrn-group__meta">
+                        <p className="lrn-group__meta pf-eyebrow">
                           {[
                             axis === 'subject'
                               ? t('courses.levelCount', { count: g.items.length })
@@ -1251,10 +1435,11 @@ export default function Courses() {
                     visibly secondary and never dressed up as a link. */}
                 {soonGroups.length > 0 && (
                   <div className="lrn-soon">
-                    <span className="lrn-soon__label">{L('Bientôt disponible', 'Byento disponib')}</span>
+                    <span className="pf-eyebrow lrn-soon__label">{L('Bientôt disponible', 'Byento disponib')}</span>
                     <ul className="lrn-soon__list">
                       {soonGroups.map((g) => (
                         <li key={g.key} className="lrn-soon__item">
+                          <SubjectTile code={g.key} size="sm" />
                           <span className="lrn-soon__name">{groupLabel(g.key)}</span>
                           {/* The level count is real (the documents exist and
                               are flagged `coming_soon`); no lesson count is
