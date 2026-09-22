@@ -991,7 +991,11 @@
    lede, then a strip of figures. Theirs were invented; ours are the player's
    own profile, or the size of the shipped catalogue. */
 .games-hub__hero {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
   padding-top: 0.35rem;
 }
 
@@ -1014,13 +1018,12 @@
 /* ─── Figure strip ─────────────────────────────────────────────────────────
    One card holding the figures and, for a signed-in player, the bar to their
    next level — the bar was floating loose on the canvas underneath it. */
+/* Top right of the heading, one small row: the figures are a glance, not the
+   page. Ted: "add top right or remove". */
 .jx-stats {
-  max-width: 620px;
-  margin-top: 1.15rem;
-  padding: 0.85rem 0.3rem;
-  border-radius: var(--r-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .jx-figures {
@@ -1029,12 +1032,14 @@
 }
 
 .jx-figure {
-  display: grid;
-  gap: 0.08rem;
-  flex: 1 1 120px;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
   min-width: 0;
-  padding: 0.1rem 1.05rem;
+  padding: 0 0.7rem;
 }
+
+.jx-figure:first-child { padding-left: 0; }
 
 /* A hairline RULE between columns, the way a table separates cells — not an
    accent stripe on a card. Suppressed once the strip wraps. */
@@ -1044,10 +1049,10 @@
 
 .jx-figure__value {
   font-family: var(--font-heading);
-  font-size: 1.55rem;
+  font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.12;
+  line-height: 1.2;
 }
 
 .jx-figure__value--azure   { color: var(--t-azure-ink); }
@@ -1058,17 +1063,14 @@
 .jx-levelbar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin: 0.85rem 1.05rem 0.25rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid var(--border);
+  gap: 0.6rem;
 }
 
-.jx-levelbar .pf-meter { height: 8px; }
+.jx-levelbar .pf-meter { height: 5px; }
 
 .jx-levelbar__label {
   flex: none;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-600);
 }
@@ -1077,8 +1079,8 @@
 .jx-card-head {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.7rem;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
 }
 
 /* Two cards on one row from 760px: at full width their three lines of copy
@@ -1086,7 +1088,7 @@
 .games-hub__handoff {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.1rem;
+  gap: 0.75rem;
   align-items: stretch;
 }
 
@@ -1095,22 +1097,20 @@
 }
 
 /* ─── Championship + duel: two cards that explain something the app does ───
-   Both were bare titled sections. They are pf-cards now, each opened by a
-   tone tile. ArenaBanner brings its own `.card`; rather than edit a shared
-   component it is flattened to a muted strip BY SCOPE, so the card-inside-a
-   -card that made this block read as a mistake stays fixed. */
+   Small pf-cards: a tone tile, a small heading, one line, one link. */
 .games-hub__championship,
 .games-hub__duel {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   margin: 0;
+  padding: 0.7rem 0.95rem 0.8rem;
 }
 
 /* Equal-height cards on one row means the last element in each has to sink to
    the bottom edge, or the two cards' feet float at different heights. */
-.games-hub__duel .games-hub__championship-link { margin-top: auto; padding-top: 0.85rem; }
-.games-hub__championship .games-hub__championship-link { margin-bottom: 0.95rem; }
+.games-hub__championship .games-hub__championship-link,
+.games-hub__duel .games-hub__championship-link { margin-top: auto; padding-top: 0.4rem; }
 
 .games-hub__championship p,
 .games-hub__duel p {
@@ -1118,7 +1118,7 @@
   margin: 0;
   color: var(--text-600);
   font-size: var(--text-sm);
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .games-hub__championship-link {
@@ -1142,16 +1142,6 @@
   outline: 2px solid var(--primary-500);
   outline-offset: 2px;
   border-radius: 4px;
-}
-
-.games-hub__championship > .card {
-  width: 100%;
-  margin: auto 0 0;
-  padding: 0.8rem 1rem;
-  border: 0;
-  border-radius: 14px;
-  background: var(--surface-muted);
-  box-shadow: none;
 }
 
 /* ─── Feature panel: the Défi du jour ──────────────────────────────────────
@@ -1495,11 +1485,6 @@
 /* ─── Small screens ─── */
 @media (max-width: 560px) {
   .games-hub { gap: 1.25rem; }
-  .jx-figures {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.7rem 0;
-  }
   .games-hub .trivia-daily { padding: 1.1rem 1.15rem; }
   .games-hub .trivia-daily__title { font-size: 1.08rem; }
 }

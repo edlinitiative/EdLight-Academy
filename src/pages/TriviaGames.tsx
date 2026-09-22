@@ -12,7 +12,6 @@ import { drawAndRemember } from '../utils/questionRotation';
 import { todayStr } from '../services/streakService';
 import { GAMES, GAME_ICONS, getGameById } from '../data/games';
 import Leaderboard from '../components/Leaderboard';
-import ArenaBanner from '../components/ArenaBanner';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -739,7 +738,8 @@ function GamesHub({ isCreole }) {
           Ted: "the hero is too big - i want people to start taking action as
           soon as they are on the page". The pill and the lede are gone; the
           count the pill carried now sits in the figure strip below, which was
-          already reporting real numbers. */}
+          already reporting real numbers. The strip now sits top right of the
+          heading as one small row, not a card under it. */}
       <header className="games-hub__hero jx-hero">
         <h1 className="games-hub__title jx-hero__title">
           {isCreole ? 'Aprann pandan w ap jwe.' : 'Apprenez en jouant.'}{' '}
@@ -786,41 +786,32 @@ function GamesHub({ isCreole }) {
           sections keep their own heading, copy and link. */}
       <div className="games-hub__handoff">
         {/*
-          * A titled SECTION, not a card — `ArenaBanner` renders a `.card` of its
-          * own and this wrapped it in a second one, with a small ghost button
-          * orphaned underneath by `justify-items: start`. A card inside a card
-          * with a stray button is what made this block read as a mistake (§7:
-          * reduce nested cards).
-          *
-          * It is now a pf-card, and the banner inside it is flattened to a
-          * tinted strip by scope (see TriviaGames.css) rather than edited —
-          * ArenaBanner is shared with the Dashboard.
-          *
-          * The button is gone as well: the banner ALREADY links to `/arena`,
-          * so the block offered one destination twice. The inline link stays
-          * because it is the only path when no tournament is open — the banner
-          * hides itself then, and the section would otherwise describe a
-          * championship with no way to reach it.
+          * Compact on purpose. Ted: "these cards should be 50% smaller". Each
+          * is now a small tile, a small heading, one line and one link. The
+          * ArenaBanner that sat inside this one is gone from /jeux: it linked
+          * to /arena, which the line above it already does — the Dashboard
+          * still shows it. The inline link stays because it is the only path
+          * when no tournament is open (the banner hid itself then).
           */}
         <section className="games-hub__championship pf-card" aria-labelledby="championship-title">
           <div className="jx-card-head">
-            <span className="pf-tile pf-tile--md pf-tile--azure" aria-hidden="true"><Swords size={20} /></span>
+            <span className="pf-tile pf-tile--sm pf-tile--azure" aria-hidden="true"><Swords size={15} /></span>
             <HubHeading
               id="championship-title"
+              size="sm"
               eyebrow={isCreole ? 'Ant lekòl' : 'Entre écoles'}
               title={isCreole ? 'Chanpyona lekòl yo' : 'Championnat interscolaire'}
             />
           </div>
           <p>
             {isCreole
-              ? 'Enskri lekòl ou isit la. Jou a, kesyon yo jwe nan aplikasyon an. Pwen chanpyona yo separe ak XP jwèt yo.'
-              : 'Inscrivez votre école ici. Le jour J, les questions se jouent dans l’application. Les scores du championnat sont distincts des XP des jeux.'}
+              ? 'Enskri lekòl ou isit la ; jou a, yo jwe nan aplikasyon an.'
+              : 'Inscrivez votre école ici ; le jour J, on joue dans l’application.'}
           </p>
           <Link to="/arena" className="games-hub__championship-link">
             {isCreole ? 'Enskri lekòl mwen' : 'Inscrire mon école'}
             <ChevronRight size={14} aria-hidden="true" />
           </Link>
-          <ArenaBanner />
         </section>
 
         {/*
@@ -840,17 +831,18 @@ function GamesHub({ isCreole }) {
           */}
         <section className="games-hub__duel pf-card" aria-labelledby="duel-title">
           <div className="jx-card-head">
-            <span className="pf-tile pf-tile--md pf-tile--violet" aria-hidden="true"><Users size={20} /></span>
+            <span className="pf-tile pf-tile--sm pf-tile--violet" aria-hidden="true"><Users size={15} /></span>
             <HubHeading
               id="duel-title"
+              size="sm"
               eyebrow={isCreole ? '1 kont 1' : '1 contre 1'}
               title={isCreole ? 'Defi yon zanmi' : 'Défi d’un ami'}
             />
           </div>
           <p>
             {isCreole
-              ? 'Fini yon pati, epi voye menm kesyon yo bay yon zanmi. Li gen yon sèl tantativ — pi gwo nòt la genyen. Ou kreye defi a nan aplikasyon an.'
-              : 'Finissez une partie, puis envoyez les mêmes questions à un ami. Il n’a qu’un seul essai — le meilleur score gagne. Le défi se crée dans l’application.'}
+              ? 'Voye menm kesyon yo bay yon zanmi : yon sèl tantativ, pi gwo nòt la genyen.'
+              : 'Envoyez vos questions à un ami : un seul essai, le meilleur score gagne.'}
           </p>
           <Link to="/download?from=defi" className="games-hub__championship-link">
             {isCreole ? 'Jwenn aplikasyon an' : 'Obtenir l’application'}
