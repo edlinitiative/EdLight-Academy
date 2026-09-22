@@ -294,7 +294,6 @@
   margin-top: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--next-accent, var(--primary-500));
   box-shadow: none;
   align-items: flex-start;
 }
@@ -369,7 +368,6 @@
 }
 
 [data-theme="dark"] .exam-results .exam-results__next {
-  border-left-color: var(--next-accent, var(--primary-500));
 }
 
 [data-theme="dark"] .exam-results__caveat {

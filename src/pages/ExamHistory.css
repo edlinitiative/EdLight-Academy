@@ -130,7 +130,6 @@
   gap: 0.35rem 1.25rem;
   padding: clamp(1.1rem, 3vw, 1.5rem);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--exam-accent, var(--primary-500));
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);

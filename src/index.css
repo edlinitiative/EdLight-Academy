@@ -4742,7 +4742,6 @@ textarea:focus-visible,
 	gap: 0.85rem;
 	padding: 0.8rem 1rem;
 	border: 1px solid var(--border);
-	border-left: 4px solid var(--course-accent, var(--primary-500));
 	border-radius: var(--radius-md, 14px);
 	background: var(--surface);
 	cursor: pointer;
@@ -8044,19 +8043,28 @@ textarea:focus-visible,
 }
 
 /* ── Section block ─────────────────────────────────────────────── */
+/* The active section is marked with a wash and a rounded surface rather than
+   a coloured left rule — see the no-left-border-accents rule. This is the one
+   stripe in the app that was carrying a signal nothing else repeated, so it is
+   replaced rather than dropped. */
 .exam-take__nav-section {
 	display: grid;
 	gap: 0.35rem;
-	padding-left: 0.55rem;
-	border-left: 2px solid transparent;
-	transition: border-color 0.25s ease;
+	padding: 0.35rem 0.55rem;
+	border-radius: var(--radius-sm);
+	transition: background 0.25s ease;
 	min-width: 0;
 	width: 100%;
 	overflow: hidden;
 }
 
 .exam-take__nav-section--active {
-	border-left-color: var(--nav-accent, var(--primary-500));
+	background: color-mix(in srgb, var(--primary-500) 8%, transparent);
+}
+
+.exam-take__nav-section--active .exam-take__nav-section-title {
+	color: var(--primary-600);
+	font-weight: 700;
 }
 
 .exam-take__nav-section-title {
@@ -8317,7 +8325,6 @@ textarea:focus-visible,
 	line-height: 1.55;
 	color: var(--text-500);
 	background: rgba(8, 87, 166, 0.07);
-	border-left: 3px solid rgba(8, 87, 166, 0.5);
 	border-radius: var(--radius-sm);
 }
 
@@ -8376,7 +8383,6 @@ textarea:focus-visible,
 	border-radius: var(--radius-md);
 	background: rgba(8, 87, 166, 0.06);
 	border: 1.5px solid rgba(8, 87, 166, 0.28);
-	border-left-width: 4px;
 	padding: 0.85rem 1.15rem;
 }
 
@@ -9325,7 +9331,6 @@ textarea:focus-visible,
 	margin-bottom: 1rem;
 	background: none;
 	border: none;
-	border-left: 3px solid var(--primary-200, rgba(27, 111, 224, 0.2));
 	border-radius: 0;
 }
 
@@ -9479,7 +9484,6 @@ textarea:focus-visible,
 	margin-bottom: 0.75rem;
 	background: none;
 	border: none;
-	border-left: 3px solid rgba(8, 87, 166, 0.35);
 	border-radius: 0;
 }
 
@@ -10626,7 +10630,6 @@ textarea:focus-visible,
 }
 
 .exam-results__item--partial {
-	border-left: 3px solid #5d5b54;
 }
 
 .exam-results__item-solution,
@@ -12652,28 +12655,10 @@ textarea:focus-visible,
 
 .exam-results__item {
 	margin-bottom: 0.85rem;
-	border-left: 3px solid var(--border);
-	transition: border-left-color 0.2s ease;
 }
 
 .exam-results__item:hover {
 	transform: none;
-}
-
-.exam-results__item--correct {
-	border-left-color: var(--success-500);
-}
-
-.exam-results__item--incorrect {
-	border-left-color: var(--danger-500);
-}
-
-.exam-results__item--manual {
-	border-left-color: var(--warning-500);
-}
-
-.exam-results__item--unanswered {
-	border-left-color: var(--text-300);
 }
 
 .exam-results__item-header {
@@ -13016,7 +13001,6 @@ textarea:focus-visible,
 .figure-renderer--prose {
 	border-color: var(--border);
 	background: var(--surface-muted, #f8fafc);
-	border-left: 3px solid var(--primary-400, #60a5fa);
 }
 .figure-render--prose {
 	padding: 1rem 1.15rem;
@@ -13043,7 +13027,6 @@ textarea:focus-visible,
 /* Music notation figure */
 .figure-render--music {
 	padding: 0.75rem;
-	border-left: 3px solid var(--primary-600);
 	background: linear-gradient(135deg, rgba(74, 147, 221, 0.04), rgba(74, 147, 221, 0.01));
 }
 
@@ -13548,7 +13531,6 @@ textarea:focus-visible,
 	font-size: 0.85rem;
 	padding: 0.75rem;
 	background: #eff6ff;
-	border-left: 3px solid #3b82f6;
 	border-radius: 4px;
 	margin-bottom: 1rem;
 }
@@ -14107,8 +14089,7 @@ textarea:focus-visible,
 	}
 
 	.exam-take__nav-section {
-		border-left: 2px solid transparent;
-		padding-left: 0.55rem;
+		padding: 0.35rem 0.55rem;
 	}
 
 	.exam-take__nav-section-grid {
@@ -16905,12 +16886,10 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .quiz-card__explanation--correct {
 	background: color-mix(in srgb, var(--lp-accent-3, var(--success-500)) 10%, var(--surface)) !important;
 	border-color: color-mix(in srgb, var(--lp-accent-3, var(--success-500)) 35%, var(--border)) !important;
-	border-left: 4px solid var(--lp-accent-3, var(--success-500)) !important;
 }
 .quiz-card__explanation--wrong {
 	background: color-mix(in srgb, var(--danger-500) 9%, var(--surface)) !important;
 	border-color: color-mix(in srgb, var(--danger-500) 35%, var(--border)) !important;
-	border-left: 4px solid var(--danger-500) !important;
 }
 .quiz-card__explanation--correct strong:first-child { color: var(--success-500); }
 .quiz-card__explanation--wrong strong:first-child { color: var(--danger-500); }

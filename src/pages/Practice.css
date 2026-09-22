@@ -53,13 +53,12 @@
   margin-bottom: 1.5rem;
   padding: 1rem 1.15rem;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border-strong);
   border-radius: var(--radius-md, 14px);
   background: var(--surface-muted);
 }
 
 .practice-suggest--lead {
-  border-left-color: var(--primary-500);
+  border-color: color-mix(in srgb, var(--primary-500) 30%, var(--border));
   background: var(--primary-50);
 }
 
