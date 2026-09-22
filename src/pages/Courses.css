@@ -1016,6 +1016,18 @@
 
 .lrn-facet__opt--on .lrn-facet__n { color: var(--primary-700); }
 
+/* A subject or level whose courses are all still unreleased carries a word,
+   not a number — the rail used to quote "Physique 4" two inches from a note
+   saying nine courses are published. */
+.lrn-facet__n--soon {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--text-500);
+  font-variant-numeric: normal;
+}
+
 /* == Results column ====================================================== */
 .lrn-results__head { margin-bottom: 1.35rem; align-items: center; }
 .lrn-results__head .pf-head__title { font-size: 1.28rem; }

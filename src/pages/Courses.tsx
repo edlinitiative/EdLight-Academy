@@ -473,26 +473,30 @@ function Facets({
                   <Library size={15} strokeWidth={1.9} />
                 </span>
                 <span className="lrn-facet__name">{L('Toutes les matières', 'Tout matyè yo')}</span>
-                <span className="lrn-facet__n">{subjectCounts.all}</span>
+                <span className="lrn-facet__n">{subjectCounts.live.all}</span>
               </button>
             </li>
             {subjects.map((s) => {
-              const n = subjectCounts[s.code] || 0;
+              const n = subjectCounts.live[s.code] || 0;
+              const soon = subjectCounts.pending[s.code] || 0;
               return (
                 <li key={s.code}>
-                  {/* A facet that would produce an empty list is disabled
-                      rather than offered — the zero still says "nothing
-                      here", but it is no longer a dead end to click. */}
+                  {/* A facet with nothing behind it at all is disabled rather
+                      than offered. One whose courses are merely unreleased
+                      stays clickable — the list has something to say about
+                      them — but it is labelled, not numbered. */}
                   <button
                     type="button"
                     className={`lrn-facet__opt${subject === s.code ? ' lrn-facet__opt--on' : ''}`}
                     aria-pressed={subject === s.code}
-                    disabled={n === 0 && subject !== s.code}
+                    disabled={n === 0 && soon === 0 && subject !== s.code}
                     onClick={() => onSubject(s.code)}
                   >
                     <SubjectTile code={s.code} size="sm" />
                     <span className="lrn-facet__name">{s.label}</span>
-                    <span className="lrn-facet__n">{n}</span>
+                    {n > 0
+                      ? <span className="lrn-facet__n">{n}</span>
+                      : <span className="lrn-facet__n lrn-facet__n--soon">{L('bientôt', 'talè')}</span>}
                   </button>
                 </li>
               );
@@ -511,22 +515,25 @@ function Facets({
                 onClick={() => onLevel('all')}
               >
                 <span className="lrn-facet__name">{L('Tous les niveaux', 'Tout nivo yo')}</span>
-                <span className="lrn-facet__n">{levelCounts.all}</span>
+                <span className="lrn-facet__n">{levelCounts.live.all}</span>
               </button>
             </li>
             {levels.map((lv) => {
-              const n = levelCounts[lv] || 0;
+              const n = levelCounts.live[lv] || 0;
+              const soon = levelCounts.pending[lv] || 0;
               return (
                 <li key={lv}>
                   <button
                     type="button"
                     className={`lrn-facet__opt${level === lv ? ' lrn-facet__opt--on' : ''}`}
                     aria-pressed={level === lv}
-                    disabled={n === 0 && level !== lv}
+                    disabled={n === 0 && soon === 0 && level !== lv}
                     onClick={() => onLevel(lv)}
                   >
                     <LevelPill level={lv} />
-                    <span className="lrn-facet__n">{n}</span>
+                    {n > 0
+                      ? <span className="lrn-facet__n">{n}</span>
+                      : <span className="lrn-facet__n lrn-facet__n--soon">{L('bientôt', 'talè')}</span>}
                   </button>
                 </li>
               );
@@ -731,27 +738,37 @@ export default function Courses() {
   // Facet counts: each axis counts against the OTHER axis (plus search), the
   // standard faceted behaviour — so a number is always the number of courses
   // that clicking it will actually show.
+  //
+  // Published and pending are counted apart. Counting them together put "13"
+  // in the rail beside a results note reading "9 cours publiés", and offered
+  // "Physique 4" as though four courses were there to take — they are all
+  // `coming_soon`. A facet whose only courses are pending now says so instead
+  // of quoting a number the page contradicts two inches away.
   const subjectCounts = useMemo(() => {
     const out: Record<string, number> = { all: 0 };
+    const pending: Record<string, number> = { all: 0 };
     for (const c of searchedCourses) {
       if (!matchesMine(c)) continue;
       if (level !== 'all' && courseLevel(c) !== level) continue;
-      out.all += 1;
-      out[c.subject] = (out[c.subject] || 0) + 1;
+      const bucket = c.comingSoon ? pending : out;
+      bucket.all += 1;
+      bucket[c.subject] = (bucket[c.subject] || 0) + 1;
     }
-    return out;
+    return { live: out, pending };
   }, [searchedCourses, level, matchesMine]);
 
   const levelCounts = useMemo(() => {
     const out: Record<string, number> = { all: 0 };
+    const pending: Record<string, number> = { all: 0 };
     for (const c of searchedCourses) {
       if (!matchesMine(c)) continue;
       if (subject !== 'all' && c.subject !== subject) continue;
-      out.all += 1;
       const lv = courseLevel(c);
-      out[lv] = (out[lv] || 0) + 1;
+      const bucket = c.comingSoon ? pending : out;
+      bucket.all += 1;
+      bucket[lv] = (bucket[lv] || 0) + 1;
     }
-    return out;
+    return { live: out, pending };
   }, [searchedCourses, subject, matchesMine]);
 
   /** The courses left after search + both facets — what the list renders. */
