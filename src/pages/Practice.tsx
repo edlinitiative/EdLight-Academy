@@ -3,13 +3,20 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Brain,
+  Calculator,
   ChevronRight,
   ClipboardCheck,
+  Compass,
   Flame,
+  FlaskConical,
   Hourglass,
+  LineChart,
   ListChecks,
+  Sparkles,
+  Target,
   Timer,
   WifiOff,
+  Zap,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useAppData } from '../hooks/useData';
@@ -20,6 +27,7 @@ import { readMastery } from '../services/masteryService';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { courseLessonIds, summarize } from '../../shared/mastery';
 import { gradeProfile } from '../config/trackConfig';
+import '../styles/pf.css';
 import './Practice.css';
 
 /**
@@ -65,9 +73,14 @@ import './Practice.css';
 
 type Fact = string;
 
+/** The six pf tones. Practice uses four, one per entry point, so the icon tile
+ *  identifies the activity at a glance without introducing a hue of its own. */
+type Tone = 'azure' | 'amber' | 'emerald' | 'rose' | 'violet' | 'slate';
+
 type PracticeChoice = {
   href: string;
   icon: React.ReactNode;
+  tone: Tone;
   eyebrow: string;
   title: string;
   description: string;
@@ -108,6 +121,16 @@ const SUBJECTS: Record<string, { fr: string; ht: string; exam: string }> = {
 
 /** Chip order when several subjects are open. Anything unlisted follows. */
 const SUBJECT_ORDER = ['MATH', 'CHEM', 'PHYS', 'ECON'];
+
+/** A glyph per subject, as the mockups' selector tiles carry one. Decoration
+ *  only — the chip's own text is the accessible name, and a subject with no
+ *  glyph simply renders without one. */
+const SUBJECT_ICON: Record<string, React.ReactNode> = {
+  MATH: <Calculator size={15} aria-hidden="true" />,
+  CHEM: <FlaskConical size={15} aria-hidden="true" />,
+  PHYS: <Zap size={15} aria-hidden="true" />,
+  ECON: <LineChart size={15} aria-hidden="true" />,
+};
 
 /** Where the filter is remembered between visits. */
 const FILTER_KEY = 'edlight.practice.filter';
@@ -400,6 +423,7 @@ export default function Practice() {
     {
       href: '/revision',
       icon: <Brain size={23} aria-hidden="true" />,
+      tone: 'amber',
       eyebrow: t('À partir de vos erreurs', 'Soti nan erè ou yo'),
       title: t('Revoir ce que vous avez manqué', 'Revize sa ou te rate'),
       description: t(
@@ -426,6 +450,7 @@ export default function Practice() {
     {
       href: quizHref,
       icon: <ListChecks size={23} aria-hidden="true" />,
+      tone: 'azure',
       eyebrow: t('Série courte', 'Seri kout'),
       title: scopeLabel
         ? t(`S’entraîner en ${scopeLabel}`, `Pratike nan ${scopeLabel}`)
@@ -452,6 +477,7 @@ export default function Practice() {
     {
       href: quizTenHref,
       icon: <Timer size={23} aria-hidden="true" />,
+      tone: 'violet',
       eyebrow: t('Se tester', 'Teste tèt ou'),
       title: t('Faire un quiz de 10 questions', 'Fè yon kwiz 10 kesyon'),
       description: t(
@@ -513,6 +539,7 @@ export default function Practice() {
   const examChoice: PracticeChoice = {
     href: examHref,
     icon: <ClipboardCheck size={23} aria-hidden="true" />,
+    tone: 'emerald',
     eyebrow: t('Épreuve officielle', 'Egzamen ofisyèl'),
     title: t('Passer un examen blanc', 'Pase yon egzamen blan'),
     description: t(
@@ -578,22 +605,30 @@ export default function Practice() {
   );
 
   return (
-    <section className="section practice-hub">
+    <section className="section practice-hub pf">
       <div className="container practice-hub__container">
-        <header className="practice-hub__header">
-          <span className="practice-hub__eyebrow">{t('Pratique', 'Pratik')}</span>
-          <h1>{t('De quoi avez-vous besoin aujourd’hui ?', 'Kisa ou bezwen travay jodi a?')}</h1>
-          <p>
-            {t(
-              'Chaque entrée dit ce qu’elle mesure, si elle est chronométrée et ce qui est enregistré, pour que vous choisissiez en connaissance de cause.',
-              'Chak antre di sa l ap mezire, si gen kwonomèt epi kisa ki anrejistre, pou ou ka chwazi ak konesans.',
-            )}
-          </p>
-        </header>
+        {/* The mockups open on a wash panel: heading on the left, one card on
+            the right. The card is the suggestion, because it is the only thing
+            on this page addressed to this student in particular. */}
+        <div className="practice-hero">
+          <header className="practice-hub__header">
+            <span className="practice-hub__eyebrow">
+              <span className="practice-hub__dot" aria-hidden="true" />
+              {t('Pratique', 'Pratik')}
+            </span>
+            <h1>{t('De quoi avez-vous besoin aujourd’hui ?', 'Kisa ou bezwen travay jodi a?')}</h1>
+            <p>
+              {t(
+                'Chaque entrée dit ce qu’elle mesure, si elle est chronométrée et ce qui est enregistré, pour que vous choisissiez en connaissance de cause.',
+                'Chak antre di sa l ap mezire, si gen kwonomèt epi kisa ki anrejistre, pou ou ka chwazi ak konesans.',
+              )}
+            </p>
+          </header>
+
+          <Suggestion evidence={evidence} t={t} onSignIn={toggleAuthModal} signedIn={!!userId} />
+        </div>
 
         {userId && <ProgressStrip t={t} />}
-
-        <Suggestion evidence={evidence} t={t} onSignIn={toggleAuthModal} signedIn={!!userId} />
 
         <FilterBar
           t={t}
@@ -618,7 +653,9 @@ export default function Practice() {
         <SampleQuestion t={t} isCreole={isCreole} subject={subject} href={quizHref} scope={scopeLabel} />
 
         <p className="practice-offline">
-          <WifiOff size={17} aria-hidden="true" />
+          <span className="pf-tile pf-tile--slate pf-tile--sm" aria-hidden="true">
+            <WifiOff size={15} />
+          </span>
           <span>
             {t(
               'Réseau coupé : les pages et les sujets d’examen déjà ouverts restent lisibles, parce qu’ils sont gardés sur votre appareil. Une série de questions jamais ouverte, elle, a besoin du réseau, et rien n’est enregistré tant qu’il n’est pas revenu.',
@@ -631,7 +668,9 @@ export default function Practice() {
             fifth equal-weight card. §6.1: a plan you made is not a
             recommendation, and the copy says who made it. */}
         <Link to="/study-plan" className="practice-plan">
-          <span className="practice-plan__icon"><Hourglass size={20} aria-hidden="true" /></span>
+          <span className="pf-tile pf-tile--azure pf-tile--md practice-plan__icon" aria-hidden="true">
+            <Hourglass size={20} />
+          </span>
           <span className="practice-plan__text">
             <span className="practice-plan__title">{t('Ouvrir mon plan d’étude', 'Louvri plan etid mwen')}</span>
             <span className="practice-plan__note">
@@ -641,7 +680,7 @@ export default function Practice() {
               )}
             </span>
           </span>
-          <ChevronRight size={18} aria-hidden="true" />
+          <ChevronRight size={18} aria-hidden="true" className="practice-plan__chev" />
         </Link>
       </div>
     </section>
@@ -723,10 +762,13 @@ function FilterBar({
             <button
               key={code}
               type="button"
-              className={`practice-chip${code === subject ? ' is-on' : ''}`}
+              className={`practice-chip practice-chip--subject${code === subject ? ' is-on' : ''}`}
               aria-pressed={code === subject}
               onClick={() => onSubject(code)}
             >
+              {SUBJECT_ICON[code] && (
+                <span className="practice-chip__glyph">{SUBJECT_ICON[code]}</span>
+              )}
               {t(SUBJECTS[code]?.fr || code, SUBJECTS[code]?.ht || code)}
             </button>
           ))}
@@ -793,7 +835,7 @@ function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
 
   if (triviaLoading || streakLoading) {
     return (
-      <div className="practice-strip" role="status" aria-busy="true">
+      <div className="practice-strip practice-strip--loading" role="status" aria-busy="true">
         <p className="practice-strip__note">
           {t('Nous lisons vos points et votre série…', 'N ap li pwen ou yo ak seri ou…')}
         </p>
@@ -806,9 +848,17 @@ function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
 
   return (
     <div className="practice-strip">
+      {/* The mockups' stat tile: caps micro-label, a pastel glyph opposite it,
+          the figure below in the heading face. The figure is whatever the store
+          returned — including the sentence that says there is none yet. */}
       <dl className="practice-strip__stats">
         <div className="practice-strip__stat">
-          <dt>{t('Points', 'Pwen')}</dt>
+          <dt>
+            <span>{t('Points', 'Pwen')}</span>
+            <span className="pf-tile pf-tile--azure pf-tile--sm" aria-hidden="true">
+              <Sparkles size={14} />
+            </span>
+          </dt>
           <dd>
             {xp > 0
               ? t(`${xp} XP · niveau ${level.level}`, `${xp} XP · nivo ${level.level}`)
@@ -817,8 +867,10 @@ function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
         </div>
         <div className="practice-strip__stat">
           <dt>
-            <Flame size={14} aria-hidden="true" />
-            {t('Série', 'Seri')}
+            <span>{t('Série', 'Seri')}</span>
+            <span className="pf-tile pf-tile--amber pf-tile--sm" aria-hidden="true">
+              <Flame size={14} />
+            </span>
           </dt>
           <dd>
             {days > 0
@@ -827,7 +879,12 @@ function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
           </dd>
         </div>
         <div className="practice-strip__stat">
-          <dt>{t('Défi du jour', 'Defi jodi a')}</dt>
+          <dt>
+            <span>{t('Défi du jour', 'Defi jodi a')}</span>
+            <span className="pf-tile pf-tile--emerald pf-tile--sm" aria-hidden="true">
+              <Target size={14} />
+            </span>
+          </dt>
           <dd>
             {daily.completedToday
               ? t(`Fait — ${daily.score}/${daily.total}`, `Fèt — ${daily.score}/${daily.total}`)
@@ -1022,7 +1079,7 @@ function SampleQuestion({
 
       <div className="practice-sample__card">
         <div className="practice-sample__bar">
-          <span className="practice-sample__source">{lang(sample.unit)}</span>
+          <span className="pf-pill pf-pill--azure practice-sample__source">{lang(sample.unit)}</span>
           <div className="practice-sample__lang" role="group" aria-label={t('Langue', 'Lang')}>
             <button
               type="button"
@@ -1043,7 +1100,9 @@ function SampleQuestion({
           </div>
         </div>
 
-        <p className="practice-sample__question">{lang(sample.question)}</p>
+        <div className="practice-sample__stage">
+          <p className="practice-sample__question">{lang(sample.question)}</p>
+        </div>
 
         <ul className="practice-sample__choices">
           {sample.choices.map((choice, i) => {
@@ -1061,7 +1120,8 @@ function SampleQuestion({
                   <span className="practice-sample__mark" aria-hidden="true">
                     {answered && isAnswer ? '✓' : answered && isPicked ? '✕' : String.fromCharCode(65 + i)}
                   </span>
-                  <span>{lang(choice)}</span>
+                  <span className="practice-sample__label">{lang(choice)}</span>
+                  <span className="practice-sample__dot" aria-hidden="true" />
                 </button>
               </li>
             );
@@ -1071,7 +1131,11 @@ function SampleQuestion({
         {answered ? (
           <div className="practice-sample__why" role="status">
             <p className="practice-sample__verdict">
-              {picked === sample.answer ? t('C’est juste.', 'Se sa menm.') : t('Pas tout à fait.', 'Pa fin kòrèk.')}
+              <span
+                className={`pf-pill pf-pill--${picked === sample.answer ? 'emerald' : 'amber'}`}
+              >
+                {picked === sample.answer ? t('C’est juste.', 'Se sa menm.') : t('Pas tout à fait.', 'Pa fin kòrèk.')}
+              </span>
             </p>
             {/* The student's own answer is explained first, because that is the
                 one they need; the worked solution follows. */}
@@ -1111,7 +1175,12 @@ function ChoiceCard({ choice }: { choice: PracticeChoice }) {
       to={choice.href}
       className={`practice-choice${choice.primary ? ' practice-choice--primary' : ''}`}
     >
-      <span className="practice-choice__icon">{choice.icon}</span>
+      <span
+        className={`pf-tile pf-tile--${choice.tone} pf-tile--md practice-choice__icon`}
+        aria-hidden="true"
+      >
+        {choice.icon}
+      </span>
       <span className="practice-choice__eyebrow">{choice.eyebrow}</span>
       <h3 className="practice-choice__title">{choice.title}</h3>
       <p className="practice-choice__desc">{choice.description}</p>
@@ -1126,7 +1195,7 @@ function ChoiceCard({ choice }: { choice: PracticeChoice }) {
             <li key={fact}>{fact}</li>
           ))}
         </ul>
-        <ChevronRight size={18} aria-hidden="true" />
+        <ChevronRight size={18} aria-hidden="true" className="practice-choice__chev" />
       </span>
     </Link>
   );
@@ -1149,12 +1218,19 @@ function Suggestion({
   onSignIn: () => void;
   signedIn: boolean;
 }) {
-  const eyebrow = t('Par où commencer', 'Kote pou kòmanse');
+  const eyebrow = (
+    <span className="practice-suggest__head">
+      <span className="pf-tile pf-tile--azure pf-tile--sm" aria-hidden="true">
+        <Compass size={14} />
+      </span>
+      <span className="practice-suggest__eyebrow">{t('Par où commencer', 'Kote pou kòmanse')}</span>
+    </span>
+  );
 
   if (evidence.kind === 'loading') {
     return (
       <div className="practice-suggest" aria-busy="true" role="status">
-        <span className="practice-suggest__eyebrow">{eyebrow}</span>
+        {eyebrow}
         <p className="practice-suggest__body">
           {t('Nous lisons votre travail enregistré…', 'N ap li travay ou ki anrejistre…')}
         </p>
@@ -1165,7 +1241,7 @@ function Suggestion({
   if (evidence.kind === 'signed-out') {
     return (
       <div className="practice-suggest">
-        <span className="practice-suggest__eyebrow">{eyebrow}</span>
+        {eyebrow}
         <p className="practice-suggest__body">
           {t(
             'Sans compte, vos erreurs et vos leçons travaillées ne sont pas enregistrées — nous ne pouvons donc rien vous suggérer. Vous pouvez quand même vous entraîner ci-dessous.',
@@ -1184,7 +1260,7 @@ function Suggestion({
   if (evidence.kind === 'unavailable') {
     return (
       <div className="practice-suggest" role="status">
-        <span className="practice-suggest__eyebrow">{eyebrow}</span>
+        {eyebrow}
         <p className="practice-suggest__body">
           {t(
             'Nous n’arrivons pas à lire votre travail enregistré pour le moment. Les entrées ci-dessous fonctionnent toutes ; seule la suggestion manque.',
@@ -1199,7 +1275,7 @@ function Suggestion({
     const n = evidence.count;
     return (
       <div className="practice-suggest practice-suggest--lead">
-        <span className="practice-suggest__eyebrow">{eyebrow}</span>
+        {eyebrow}
         <p className="practice-suggest__body">
           {t(
             `${n} question${n === 1 ? '' : 's'} que vous avez ratée${n === 1 ? '' : 's'} vous attend${n === 1 ? '' : 'ent'}. Ce sont vos propres réponses, enregistrées pendant vos exercices.`,
@@ -1217,7 +1293,7 @@ function Suggestion({
     const { name, href, started, total, mastered } = evidence;
     return (
       <div className="practice-suggest practice-suggest--lead">
-        <span className="practice-suggest__eyebrow">{eyebrow}</span>
+        {eyebrow}
         <p className="practice-suggest__body">
           {t(
             `En ${name}, ${started} leçon${started === 1 ? '' : 's'} sur ${total} portent une trace de travail et ${mastered} ${mastered === 1 ? 'est maîtrisée' : 'sont maîtrisées'}. C’est ce que vos exercices enregistrent — pas un diagnostic de vos difficultés.`,
