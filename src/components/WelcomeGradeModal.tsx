@@ -59,11 +59,12 @@ export default function WelcomeGradeModal() {
 
   const ready = hydrated && authConfirmed && isAuthenticated && !!uid;
 
-  // Development only: ?welcome=school or ?welcome=invite opens that step for
-  // an account that would never see it (one that already has a school), so
-  // the screens can be checked in a browser. Stripped from production builds.
+  // QA: ?welcome=school or ?welcome=invite opens that step for an account
+  // that would never see it (one that already has a school), so the screens
+  // can be checked on the live site. It only opens the step; nothing is saved
+  // unless the viewer saves their own school.
   const [preview, setPreview] = useState<string | null>(() => {
-    if (process.env.NODE_ENV === 'production' || typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search).get('welcome');
   });
   useEffect(() => {
