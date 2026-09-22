@@ -76,6 +76,11 @@ export function defaultTriviaProfile() {
     bestScorePct: 0,
     byCategory: {},
     dailyChallenge: { date: null, completed: false, score: 0, total: 0, xpEarned: 0 },
+    // Which of today's daily quests have already been PAID. `claimed` is an
+    // ARRAY on purpose: Firestore's {merge:true} replaces arrays wholesale but
+    // deep-merges maps key-by-key, so a map would carry yesterday's quest ids
+    // into today's document forever.
+    dailyQuests: { date: null, claimed: [], xpEarned: 0 },
     lastPlayedDate: null,
     games: { gamesPlayed: 0, highScores: {} },
     leaderboard: { optedIn: false, displayName: '', school: null, city: null, department: null },
@@ -99,6 +104,7 @@ export async function loadTriviaProfile(uid) {
       ...data,
       byCategory: { ...base.byCategory, ...(data.byCategory || {}) },
       dailyChallenge: { ...base.dailyChallenge, ...(data.dailyChallenge || {}) },
+      dailyQuests: { ...base.dailyQuests, ...(data.dailyQuests || {}) },
       games: { ...base.games, ...(data.games || {}) },
       leaderboard: { ...base.leaderboard, ...(data.leaderboard || {}) },
     };
@@ -119,6 +125,100 @@ export function getDailyChallengeState(profile, today = todayStr()) {
     total: completedToday ? dc.total : null,
     xpEarned: completedToday ? dc.xpEarned : 0,
   };
+}
+
+// ─── Daily quests ───────────────────────────────────────────────────────────
+//
+// The quests themselves — which ones a student gets, and how far along each
+// one is — are DERIVED in services/dailyQuests.ts from records the app already
+// writes. Nothing about a quest's progress is stored.
+//
+// What lives here is the one thing that cannot be derived: whether a finished
+// quest has already been PAID. XP is durable state, so "did we already add
+// those 20 XP?" is a fact about our own ledger, not about the student's day.
+// It belongs on the document that owns the XP it protects — this one — and it
+// is written by the service that owns XP, not around it.
+
+/** Quest ids already paid for `today`. `{}` yesterday's entry, so the day rolls over. */
+export function getDailyQuestClaims(profile, today = todayStr()): string[] {
+  const dq = profile?.dailyQuests;
+  if (!dq || dq.date !== today) return [];
+  return Array.isArray(dq.claimed) ? dq.claimed.filter((id) => typeof id === 'string') : [];
+}
+
+/**
+ * Pay one finished daily quest, once.
+ *
+ * Idempotent by re-reading the profile: the claim list is checked against the
+ * stored copy, not against whatever the caller believed, so a double click, a
+ * second tab or a replayed effect adds nothing. Returns `{ awarded: 0 }` when
+ * the quest was already paid or the amount is not a positive number.
+ *
+ * Like every other XP award in this file (`recordTriviaResult`,
+ * `recordGameResult`) it also pings the global streak and, for opted-in
+ * players, the weekly board — a quest is finished because the student did real
+ * work today, and it would be strange for that work to move the XP total and
+ * not the day count. Worth noting because the practice quizzes that resolve a
+ * review question write nothing else at all: DirectBankQuiz records the missed
+ * question and stops, so before this, an hour of /revision left the streak
+ * untouched.
+ */
+export async function claimQuestXp(uid, { questId, xp, today = todayStr() }) {
+  const amount = Math.max(0, Math.floor(Number(xp) || 0));
+  const none = { awarded: 0, xp: 0, leveledUp: false, prevLevel: 1, newLevel: 1, profile: null };
+  if (!uid || !questId || amount <= 0) return none;
+
+  try {
+    const current = await loadTriviaProfile(uid);
+    const alreadyClaimed = getDailyQuestClaims(current, today);
+    if (alreadyClaimed.includes(questId)) {
+      return { ...none, xp: current.xp || 0, profile: current };
+    }
+
+    const prevLevel = levelInfo(current.xp).level;
+    const claimed = [...alreadyClaimed, questId];
+    const dailyQuests = {
+      date: today,
+      claimed,
+      // Banked today. Purely informational — the quest list re-derives its own
+      // total from `claimed`, so nothing depends on this staying in step.
+      xpEarned: (alreadyClaimed.length === 0 ? 0 : current.dailyQuests?.xpEarned || 0) + amount,
+    };
+    const nextXp = (current.xp || 0) + amount;
+
+    await setDoc(
+      profileRef(uid),
+      { xp: nextXp, dailyQuests, updatedAt: serverTimestamp() },
+      { merge: true },
+    );
+
+    const newLevelInfo = levelInfo(nextXp);
+    try { await recordStreakActivity(uid); } catch {}
+
+    if (current.leaderboard?.optedIn) {
+      try {
+        await addWeeklyXp(uid, amount, {
+          displayName: current.leaderboard.displayName || null,
+          level: newLevelInfo.level,
+          school: current.leaderboard.school || null,
+          city: current.leaderboard.city || null,
+          department: current.leaderboard.department || null,
+        });
+      } catch { /* the board is best-effort; the XP is already banked */ }
+    }
+
+    return {
+      awarded: amount,
+      xp: nextXp,
+      leveledUp: newLevelInfo.level > prevLevel,
+      prevLevel,
+      newLevel: newLevelInfo.level,
+      profile: { ...current, xp: nextXp, dailyQuests },
+    };
+  } catch (err) {
+    console.error('[Trivia] claimQuestXp error:', err);
+    return none;
+  }
 }
 
 // ─── Recording a round ──────────────────────────────────────────────────────

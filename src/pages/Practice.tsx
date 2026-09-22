@@ -22,6 +22,7 @@ import useStore from '../contexts/store';
 import { useAppData } from '../hooks/useData';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
+import DailyQuests from '../components/DailyQuests';
 import { loadDueReviewIds } from '../services/reviewService';
 import { readMastery } from '../services/masteryService';
 import { normalizeExamCatalog } from '../utils/examCatalog';
@@ -64,11 +65,16 @@ import './Practice.css';
  *    stale against the content.
  *
  * 5. POINTS AND STREAK ARE READ, NOT INVENTED, AND THEIR SCOPE IS STATED.
- *    XP comes from the gamification profile, which only games and the daily
- *    challenge write to. The streak comes from users/{uid}/streaks/global,
- *    which a saved exam attempt, the study plan and a game write to — and
- *    practice quizzes, which save nothing, do not. The strip says exactly
- *    that, because a "study streak" that silently ignores studying is a lie.
+ *    XP comes from the gamification profile, which the games, the daily
+ *    challenge and a finished daily quest write to. The streak comes from
+ *    users/{uid}/streaks/global, which a saved exam attempt, the study plan, a
+ *    game and a claimed quest write to — and practice quizzes, which save
+ *    nothing, still do not. The strip says exactly that, because a "study
+ *    streak" that silently ignores studying is a lie.
+ *
+ * 6. THE DAILY QUESTS BELOW THE STRIP COUNT, THEY DO NOT CLAIM. Each one's
+ *    progress is derived from a timestamped record something else already
+ *    wrote — see services/dailyQuests.ts, which is the whole argument.
  */
 
 type Fact = string;
@@ -630,6 +636,12 @@ export default function Practice() {
 
         {userId && <ProgressStrip t={t} />}
 
+        {/* Two or three missions for today, each one's progress derived from a
+            record the app already writes, each expiring at the same local
+            midnight the streak uses. Renders nothing for a signed-out visitor
+            — see components/DailyQuests.tsx. */}
+        <DailyQuests />
+
         <FilterBar
           t={t}
           subject={subject}
@@ -822,12 +834,13 @@ function FilterBar({
  * them, and never shown to a signed-out visitor, because for them the numbers
  * would be zeros that mean nothing rather than zeros that mean "not yet".
  *
- * The scope line is the point of the strip. XP is written only by the games
- * and the daily challenge (triviaService). The streak is written by a saved
- * exam attempt, the study plan and a game (streakService.recordActivity) — and
- * NOT by the practice quizzes, which save nothing at all. A student who sees
- * "0" after an hour of quizzes deserves to be told why, not left to conclude
- * the app lost their work.
+ * The scope line is the point of the strip. XP is written by the games, the
+ * daily challenge and now a finished daily quest (triviaService). The streak is
+ * written by a saved exam attempt, the study plan, a game and a claimed quest
+ * (streakService.recordActivity) — and still NOT by the practice quizzes
+ * themselves, which save nothing at all: DirectBankQuiz records the missed
+ * question and stops there. A student who sees "0" after an hour of quizzes
+ * deserves to be told why, not left to conclude the app lost their work.
  */
 function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
   const { profile, isLoading: triviaLoading, level, daily } = useTrivia();
@@ -894,8 +907,8 @@ function ProgressStrip({ t }: { t: (fr: string, ht: string) => string }) {
       </dl>
       <p className="practice-strip__note">
         {t(
-          'Les points viennent des jeux et du défi du jour. La série compte les jours où un examen, un jeu ou votre plan d’étude a été enregistré — l’entraînement ci-dessous n’enregistre rien, donc il ne la fait pas monter.',
-          'Pwen yo soti nan jwèt yo ak defi jodi a. Seri a konte jou kote yon egzamen, yon jwèt oswa plan etid ou anrejistre — pratik anba a pa anrejistre anyen, donk li pa fè seri a monte.',
+          'Les points viennent des jeux, du défi du jour et des quêtes juste en dessous. La série compte les jours où un examen, un jeu, votre plan d’étude ou une quête terminée a été enregistré. L’entraînement plus bas n’enregistre aucune note par lui-même : il ne fait monter la série que lorsqu’il remplit une quête.',
+          'Pwen yo soti nan jwèt yo, defi jodi a ak kèt ki jis anba yo. Seri a konte jou kote yon egzamen, yon jwèt, plan etid ou oswa yon kèt ki fini anrejistre. Pratik ki pi ba a pa anrejistre okenn nòt pou kont li : li fè seri a monte sèlman lè li ranpli yon kèt.',
         )}
         {' '}
         <Link to="/jeux">{t('Ouvrir les jeux', 'Louvri jwèt yo')}</Link>
