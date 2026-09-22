@@ -7,6 +7,7 @@ import {
   PLAY_STORE_URL,
 } from '../utils/platform';
 import useStore from '../contexts/store';
+import RouteMeta from '../components/RouteMeta';
 
 /**
  * /download — device-detecting smart link (the QR-code target).
@@ -95,10 +96,17 @@ export default function Download() {
     color: 'var(--text-900)',
   };
 
+  /* This route sits OUTSIDE <Layout> on purpose — a scanned QR should resolve
+     instantly, with no navbar or footer to paint. Layout is also what mounts
+     <RouteMeta />, so this page was the one route left with a bare "EdLight
+     Academy" title and the homepage's description, despite being the link
+     people actually share to pass the app on. RouteMeta is standalone and
+     only needs a Router above it, so the page mounts its own. */
   if (platform) {
     // Redirecting — brief message in case the store is slow to open.
     return (
       <div style={wrap}>
+        <RouteMeta />
         <p style={{ fontSize: 16, color: 'var(--text-500)' }}>
           {t('Ouverture de la boutique…', 'Ap louvri boutik la…')}
         </p>
@@ -109,6 +117,7 @@ export default function Download() {
   // Desktop
   return (
     <div style={wrap}>
+      <RouteMeta />
       <div
         style={{
           background: 'var(--surface)',

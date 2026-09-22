@@ -29,6 +29,21 @@ const DESCRIPTIONS: Record<string, Partial<Record<Lang, string>>> = {
     ht: 'Kou fizik, chimi, matematik ak ekonomi pou elèv ayisyen. Videyo kout, quiz entèraktif ak egzamen blan — gratis, an franse ak kreyòl.',
     en: 'Physics, chemistry, math and economics courses for Haitian students. Short videos, interactive quizzes and mock exams — free, in French and Haitian Creole.',
   },
+  arena: {
+    fr: 'Le championnat inter-écoles EdLight : inscrivez votre école, puis affrontez les autres établissements d’Haïti dans l’application.',
+    ht: 'Chanpyona ant lekòl EdLight la : enskri lekòl ou, epi afwonte lòt lekòl an Ayiti nan aplikasyon an.',
+    en: 'The EdLight inter-school championship: register your school on the web, then compete in the app.',
+  },
+  leaderboard: {
+    fr: 'Le classement EdLight Academy : les élèves, les écoles, les villes et les départements les plus actifs cette semaine et depuis toujours.',
+    ht: 'Klasman EdLight Academy : elèv, lekòl, vil ak depatman ki pi aktif semèn sa a ak depi tout tan.',
+    en: 'The EdLight Academy leaderboard: the most active students, schools, cities and departments.',
+  },
+  download: {
+    fr: 'Installez l’application EdLight Academy sur Android ou iPhone : les cours, les quiz et les examens blancs, même hors connexion.',
+    ht: 'Enstale aplikasyon EdLight Academy sou Android oswa iPhone : kou, quiz ak egzamen blan, menm san entènèt.',
+    en: 'Install the EdLight Academy app on Android or iPhone: courses, quizzes and mock exams, even offline.',
+  },
   courses: {
     fr: 'Explorez les cours EdLight Academy : physique, chimie, mathématiques et économie (NS I–IV), avec vidéos courtes et exercices pratiques.',
     ht: 'Gade kou EdLight Academy yo : fizik, chimi, matematik ak ekonomi (NS I–IV), ak videyo kout ak egzèsis pratik.',
@@ -99,6 +114,14 @@ function metaKeyForPath(pathname: string): string | null {
     [/^\/exams(\/|$)/, 'exams'],
     [/^\/study-plan(\/|$)/, 'studyPlan'],
     [/^\/(jeux|trivia)(\/|$)/, 'trivia'],
+    // Five routes used to fall through this table to the bare site title and
+    // the homepage's description — including /arena and /classement, the two
+    // pages people are most likely to share a link to.
+    [/^\/arena(\/|$)/, 'arena'],
+    [/^\/classement(\/|$)/, 'leaderboard'],
+    [/^\/download(\/|$)/, 'download'],
+    [/^\/profile(\/|$)/, 'profile'],
+    [/^\/releve(\/|$)/, 'record'],
     [/^\/about(\/|$)/, 'about'],
     [/^\/contact(\/|$)/, 'contact'],
     [/^\/enseigner(\/|$)/, 'teach'],

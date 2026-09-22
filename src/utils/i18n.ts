@@ -108,6 +108,11 @@ const resources = {
         teach: 'Become an instructor',
         studyPlan: 'Study plan',
         trivia: 'Trivia games',
+        arena: 'Inter-school championship',
+        leaderboard: 'Leaderboard',
+        download: 'Get the app',
+        profile: 'My profile',
+        record: 'Progress record',
         notFound: 'Page not found'
       },
       auth: {
@@ -452,6 +457,11 @@ const resources = {
         teach: 'Devenir enseignant',
         studyPlan: 'Plan d’étude',
         trivia: 'Jeux-questionnaires',
+        arena: 'Championnat inter-écoles',
+        leaderboard: 'Classement',
+        download: 'Obtenir l’application',
+        profile: 'Mon profil',
+        record: 'Relevé de progression',
         notFound: 'Page introuvable'
       },
       auth: {
@@ -796,6 +806,11 @@ const resources = {
         teach: 'Vin yon pwofesè',
         studyPlan: 'Plan etid',
         trivia: 'Jwèt kesyon',
+        arena: 'Chanpyona ant lekòl',
+        leaderboard: 'Klasman',
+        download: 'Jwenn aplikasyon an',
+        profile: 'Pwofil mwen',
+        record: 'Relve pwogrè',
         notFound: 'Nou pa jwenn paj la'
       },
       auth: {
