@@ -187,6 +187,7 @@
 }
 
 .tn-card {
+  min-width: 0;
   padding: clamp(1rem, 2.5vw, 1.35rem);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
@@ -204,6 +205,12 @@
   display: grid;
   gap: 1rem;
   grid-template-columns: minmax(0, 1fr);
+}
+
+.tn-split > * {
+  /* The bracket scrolls sideways inside its card; without this the grid
+     column grows to its full width and slides under the standings. */
+  min-width: 0;
 }
 
 @media (min-width: 900px) {
@@ -496,6 +503,7 @@
 
 .tn-timeline li {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.55rem 0.75rem;

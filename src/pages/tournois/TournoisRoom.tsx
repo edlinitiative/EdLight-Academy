@@ -637,7 +637,7 @@ export function RoomView({ tour, roster, live, progress, standings, matches, me,
             {liveNow && <span className="tn-chip tn-chip--live">{tour.format === 'live' ? t('EN DIRECT', 'AN DIRÈK') : t('EN COURS', 'AP JWE')}</span>}
             {tour.state === 'finished' && <span className="tn-chip">{t('Terminé', 'Fini')}</span>}
             {tour.state === 'cancelled' && <span className="tn-chip">{t('Annulé', 'Anile')}</span>}
-            <span className="tn-chip">{formatLabel(tour.format, isCreole)}</span>
+            {!(liveNow && tour.format === 'live') && <span className="tn-chip">{formatLabel(tour.format, isCreole)}</span>}
             {tour.teamRule === 'school' && <span className="tn-chip">{t('École vs école', 'Lekòl vs lekòl')}</span>}
             {tour.teamRule === 'grade' && <span className="tn-chip">{t('Classe vs classe', 'Klas vs klas')}</span>}
             <span className="tn-chip">{tour.visibility === 'public' ? t('Public', 'Piblik') : tour.visibility === 'unlisted' ? t('Non listé', 'Pa nan lis') : t('Privé', 'Prive')}</span>
