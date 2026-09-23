@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Flame, Trophy, Zap, Target, LayoutDashboard, CalendarCheck, Bell, Brain,
@@ -31,6 +31,7 @@ import SchoolField from '../components/arena/SchoolField';
 import { GRADES, TRACK_BY_CODE } from '../config/trackConfig';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
 import PixelAvatar from '../components/PixelAvatar';
+import MySchoolCard from '../components/MySchoolCard';
 import { schoolKey } from '../../shared/schools';
 import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
@@ -38,117 +39,6 @@ import '../styles/pf.css';
 import './Profile.css';
 
 
-/**
- * InviteCard — "Inviter des amis". Reveals the caller's referral code on demand
- * (GET /api/referrals/code), then offers WhatsApp, native share, and copy. Fully
- * theme-aware via CSS custom properties.
- */
-function InviteCard({ lang }: { lang: 'fr' | 'ht' }) {
-  const t = (fr: string, ht: string) => (lang === 'ht' ? ht : fr);
-  const [data, setData] = React.useState<ReferralCode | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [failed, setFailed] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    setFailed(false);
-    const res = await getReferralCode();
-    setData(res);
-    setFailed(!res);
-    setLoading(false);
-  };
-
-  const message = data ? inviteMessage(data.code, data.link, lang) : '';
-
-  const shareWhatsApp = () => {
-    if (!data) return;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
-  };
-
-  const shareNative = async () => {
-    if (!data) return;
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try { await navigator.share({ text: message }); } catch { /* cancelled */ }
-    } else {
-      shareWhatsApp();
-    }
-  };
-
-  const copy = async () => {
-    if (!data) return;
-    try {
-      await navigator.clipboard.writeText(`${data.code} — ${data.link}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      shareNative();
-    }
-  };
-
-  return (
-    <div className="profile-card">
-      <h2 className="profile-card__title"><Gift size={18} /> {t('Inviter des amis', 'Envite zanmi')}</h2>
-      <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '-0.25rem' }}>
-        {t(
-          'Vous et votre ami gagnez un bonus quand il s’inscrit avec votre code : +1 gel de série et des XP chacun.',
-          'Ou menm ak zanmi ou chak ap genyen yon bonus lè li enskri ak kòd ou : +1 jèl seri ak XP pou chak.',
-        )}
-      </p>
-
-      {!data ? (
-        <button
-          type="button"
-          className="button button--primary"
-          style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-          onClick={load}
-          disabled={loading}
-        >
-          {loading ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Gift size={16} />}
-          {failed ? t('Réessayer', 'Eseye ankò') : t('Obtenir mon code', 'Jwenn kòd mwen')}
-        </button>
-      ) : (
-        <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.75rem' }}>
-          <button
-            type="button"
-            onClick={copy}
-            title={t('Copier', 'Kopye')}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem',
-              background: 'var(--surface-muted)', border: '1px solid var(--primary-100)',
-              borderRadius: 'var(--r-card)', padding: '0.9rem 1rem', cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: '1.6rem', fontWeight: 800, letterSpacing: '0.18em', color: 'var(--primary-500)' }}>
-              {data.code}
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-              {copied ? <><Check size={14} /> {t('Copié', 'Kopye')}</> : <><Copy size={14} /> {t('Copier', 'Kopye')}</>}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className="button"
-            onClick={shareWhatsApp}
-            style={{ background: '#25D366', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-          >
-            <MessageCircle size={18} /> {t('Partager sur WhatsApp', 'Pataje sou WhatsApp')}
-          </button>
-
-          <button
-            type="button"
-            className="button button--secondary"
-            onClick={shareNative}
-            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-          >
-            <Share2 size={18} /> {t('Partager', 'Pataje')}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** Lazy TrackSelector, same wrapper the navbar dropdown uses. */
 function TrackSelectorModal({ currentTrack, onClose }: { currentTrack: string | null; onClose: () => void }) {
@@ -621,6 +511,15 @@ export function AchievementShelf({ achievements, isCreole }: {
 }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const won = achievements.filter((a) => a.unlocked).length;
+  // Thirteen tiles were ~950px of mostly "À débloquer". What is earned, and
+  // the three closest to earning, are what a student acts on; the rest are
+  // one tap away.
+  const [showAll, setShowAll] = React.useState(false);
+  const next = achievements
+    .filter((a) => !a.unlocked)
+    .sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))
+    .slice(0, 3);
+  const shown = showAll ? achievements : [...achievements.filter((a) => a.unlocked), ...next];
 
   return (
     <div className="pf-card">
@@ -630,7 +529,7 @@ export function AchievementShelf({ achievements, isCreole }: {
         aside={<Pill tone="slate">{won} / {achievements.length}</Pill>}
       />
       <div className="pf-badges">
-        {achievements.map((a) => (
+        {shown.map((a) => (
           <article key={a.id} className={`pf-badge ${a.unlocked ? 'is-unlocked' : ''}`}>
             <header className="pf-badge__top">
               <IconTile tone={a.unlocked ? a.tone : 'slate'}>
@@ -657,6 +556,13 @@ export function AchievementShelf({ achievements, isCreole }: {
           </article>
         ))}
       </div>
+      {shown.length < achievements.length || showAll ? (
+        <button type="button" className="pf-link pf-badges__more" onClick={() => setShowAll((v) => !v)}>
+          {showAll
+            ? t('Voir moins', 'Wè mwens')
+            : t(`Voir les ${achievements.length} réussites`, `Wè ${achievements.length} reyalizasyon yo`)}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -853,8 +759,8 @@ export function RankNeighbours({ entries, myRank, uid, isCreole, onOpen }: {
                 'Plas ou pou semèn nan anrejistre. Louvri klasman an pou wè ki moun ki bò kote w.',
               )
             : t(
-                'Choisissez un pseudonyme dans les réglages ci-dessous pour apparaître au classement.',
-                'Chwazi yon ti non nan reglaj anba a pou w parèt nan klasman an.',
+                'Choisissez un pseudonyme dans les réglages (bas de page) pour apparaître au classement.',
+                'Chwazi yon ti non nan reglaj yo (anba paj la) pou w parèt nan klasman an.',
               )}
         </p>
       )}
@@ -876,6 +782,16 @@ export default function Profile() {
   } = useStore();
   const isCreole = language === 'ht';
   const t = (fr, ht) => (isCreole ? ht : fr);
+
+  // Settings are folded unless the link asked for them (#reglages).
+  const location = useLocation();
+  const [settingsOpen, setSettingsOpen] = React.useState(() => location.hash === '#reglages');
+  React.useEffect(() => {
+    if (location.hash !== '#reglages') return;
+    setSettingsOpen(true);
+    const id = window.setTimeout(() => document.getElementById('reglages')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    return () => window.clearTimeout(id);
+  }, [location.hash]);
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
@@ -1166,18 +1082,29 @@ export default function Profile() {
           <AchievementShelf achievements={achievements} isCreole={isCreole} />
         </div>
 
-        {/* ── Invite friends (two-sided referral) ── */}
+        {/* ── Your school, and the invite — one card. The separate "Inviter des
+             amis" card offered the same referral code a second way. ── */}
         <div className="profile-area profile-area--invite">
-          <InviteCard lang={isCreole ? 'ht' : 'fr'} />
+          <MySchoolCard where="profile" />
         </div>
 
         {/* ── Réglages — five readable groups, each saying why it asks ──
              Learning preferences · identity/school · notifications ·
              appearance/language · account/privacy. Everything a student used
              to be asked for twice is edited here once. */}
-        <div className="profile-area profile-area--settings">
-          <div className="profile-card">
-            <h2 className="profile-card__title"><Settings size={18} /> {t('Réglages', 'Reglaj')}</h2>
+        <div className="profile-area profile-area--settings" id="reglages">
+          {/* Folded: settings are visited once, not every time the profile is
+              opened. /profile#reglages (the "Choisir un pseudo" links) opens
+              it and scrolls here. */}
+          <details
+            className="profile-card profile-settings"
+            open={settingsOpen}
+            onToggle={(e) => setSettingsOpen((e.currentTarget as HTMLDetailsElement).open)}
+          >
+            <summary className="profile-settings__summary">
+              <h2 className="profile-card__title"><Settings size={18} /> {t('Réglages', 'Reglaj')}</h2>
+              <span className="profile-settings__hint">{t('Pseudo, école, notifications, langue, compte', 'Ti non, lekòl, notifikasyon, lang, kont')}</span>
+            </summary>
             <p className="profile-set__intro">
               {t(
                 'Renseignez ceci une fois : les cours, la pratique et les compétitions réutilisent les mêmes informations.',
@@ -1299,7 +1226,7 @@ export default function Profile() {
                 </button>
               </section>
             </div>
-          </div>
+          </details>
         </div>
 
       </div>

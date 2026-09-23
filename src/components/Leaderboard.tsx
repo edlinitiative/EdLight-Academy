@@ -541,7 +541,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
       {compact && isAuthed && (
         <div className="leaderboard__compact-foot">
           {needsAlias ? (
-            <button className="leaderboard__more" onClick={() => navigate('/profile')}>
+            <button className="leaderboard__more" onClick={() => navigate('/profile#reglages')}>
               {t('Choisir un pseudo →', 'Chwazi yon ti non →')}
             </button>
           ) : optedIn ? (
@@ -551,7 +551,7 @@ export default function Leaderboard({ variant = 'full', max = 25, periodToggle =
                 : t('Jouez pour grimper !', 'Jwe pou ou monte !')}
             </span>
           ) : (
-            <button className="leaderboard__more" onClick={() => navigate('/profile')}>
+            <button className="leaderboard__more" onClick={() => navigate('/profile#reglages')}>
               {t('Rejoindre →', 'Antre →')}
             </button>
           )}

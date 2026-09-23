@@ -989,3 +989,27 @@
   border-radius: 50%;
   overflow: hidden;
 }
+
+/* Réglages, folded. The summary is the card title plus one line naming what
+   is inside, so a student knows whether to open it. */
+.profile-settings > .profile-settings__summary {
+  display: grid;
+  gap: 0.2rem;
+  list-style: none;
+  cursor: pointer;
+}
+.profile-settings > .profile-settings__summary::-webkit-details-marker { display: none; }
+.profile-settings__summary .profile-card__title { margin: 0; }
+.profile-settings__summary .profile-card__title::after {
+  content: "›";
+  margin-left: auto;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--text-500);
+  transition: transform 0.2s ease;
+}
+.profile-settings[open] .profile-card__title::after { transform: rotate(90deg); }
+.profile-settings__hint { color: var(--text-500); font-size: 0.88rem; }
+.profile-settings[open] > .profile-settings__summary { margin-bottom: 1rem; }
+
+.pf-badges__more { margin-top: 0.9rem; }
