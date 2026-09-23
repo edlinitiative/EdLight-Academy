@@ -13,7 +13,6 @@ import { captureRefFromUrl } from './services/referralService';
 // Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
 const Courses = lazyWithRetry(() => import('./pages/Courses'));
 const CourseDetail = lazyWithRetry(() => import('./pages/CourseDetail'));
-const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
 const Practice = lazyWithRetry(() => import('./pages/Practice'));
 const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'));
 const Revision = lazyWithRetry(() => import('./pages/Revision'));
@@ -99,7 +98,9 @@ export default function App() {
                 <Route index element={<HomeRoute />} />
                 <Route path="courses" element={<Courses />} />
                 <Route path="courses/:courseId" element={<CourseDetail />} />
-                <Route path="dashboard" element={<Dashboard />} />
+                {/* The student's workspace (Ted's "Espace de travail" mockup); the
+                    signed-in "/" keeps the Dashboard. */}
+                <Route path="dashboard" element={<Courses mode="workspace" />} />
                 <Route path="quizzes" element={<Quizzes />} />
                 <Route path="practice" element={<Practice />} />
                 <Route path="revision" element={<Revision />} />

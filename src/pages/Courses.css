@@ -1410,3 +1410,14 @@
   .lws-bar__actions .lws-btn { flex: 1; }
   .lws-exam .lws-btn { width: 100%; }
 }
+
+/* /dashboard: the workspace alone. Its command bar carries the visible title,
+   so the page h1 is for screen readers. */
+.lrn-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

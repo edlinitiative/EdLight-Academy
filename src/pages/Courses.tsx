@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ChevronRight, ChevronDown, ArrowRight, Target, Check, Search, X, SlidersHorizontal,
   Sigma, Atom, FlaskConical, LineChart, BookOpen, GraduationCap, RefreshCw, WifiOff,
@@ -569,7 +569,7 @@ function Facets({
  * Search and the facets live in the URL, so a filtered catalog survives a
  * reload, the back button and being shared.
  */
-export default function Courses() {
+export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'workspace' } = {}) {
   const navigate = useNavigate();
   const { data: courses = [], isLoading, isError, isFetching, refetch } = useCourses();
   const queryClient = useQueryClient();
@@ -1014,6 +1014,35 @@ export default function Courses() {
     ...(subject !== 'all' ? [{ label: subjectName(subject), to: null }] : []),
     ...(level !== 'all' ? [{ label: levelLabel(level), to: null }] : []),
   ];
+
+  // /dashboard — Ted: "use this [the 'Espace de travail' mockup] to change the
+  // dashboard … the actual dashboard /dashboard", while the signed-in home
+  // ("/") keeps its own layout. The workspace needs the catalogue helpers this
+  // page already computes, so /dashboard renders this page in workspace mode:
+  // the student's workspace alone, no catalogue under it.
+  if (mode === 'workspace') {
+    if (!signedIn) return <Navigate to="/" replace />;
+    return (
+      <section className="section pf lrn lrn--workspace">
+        <div className="container">
+          <h1 className="lrn-sr-title">{L('Espace de travail', 'Espas travay')}</h1>
+          {courses.length > 0 && (
+            <LearnWorkspace
+              courses={courses}
+              courseStats={courseStats}
+              courseLevel={courseLevel}
+              subjectName={subjectName}
+              levelLabel={levelLabel}
+              myLevel={myLevel}
+              progressByCourseId={progressByCourseId}
+              SubjectTile={SubjectTile as any}
+              L={L}
+            />
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="section pf lrn">
