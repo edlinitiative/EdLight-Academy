@@ -63,6 +63,10 @@ const Classement = lazyWithRetry(() => import('./pages/Classement'));
 const NotFound = lazyWithRetry(() => import('./pages/NotFound'));
 const FigureEmbed = lazyWithRetry(() => import('./pages/FigureEmbed'));
 const Download = lazyWithRetry(() => import('./pages/Download'));
+const TournoisHub = lazyWithRetry(() => import('./pages/tournois/TournoisHub'));
+const TournoisCreate = lazyWithRetry(() => import('./pages/tournois/TournoisCreate'));
+const TournoisJoin = lazyWithRetry(() => import('./pages/tournois/TournoisJoin'));
+const TournoisRoom = lazyWithRetry(() => import('./pages/tournois/TournoisRoom'));
 
 // Create a client
 const queryClient = new QueryClient({
@@ -157,6 +161,11 @@ export default function App() {
                     asking a visitor to sign in and then install the app needs
                     all three. */}
                 <Route path="arena" element={<Arena />} />
+                {/* User-created tournaments. Static segments before :id. */}
+                <Route path="tournois" element={<TournoisHub />} />
+                <Route path="tournois/nouveau" element={<TournoisCreate />} />
+                <Route path="tournois/rejoindre" element={<TournoisJoin />} />
+                <Route path="tournois/:id" element={<TournoisRoom />} />
                 <Route path="classement" element={<Classement />} />
                 <Route path="leaderboard" element={<Navigate to="/classement" replace />} />
                 <Route path="*" element={<NotFound />} />
