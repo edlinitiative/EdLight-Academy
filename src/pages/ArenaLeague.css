@@ -1,0 +1,341 @@
+/* ══ /arena on Ted's sixth mockup (2026-09-23) ═════════════════════════════
+   Identity bar, stats ribbon, two tabs, the Cinq Majeur board, best-five
+   standings, a navy national panel, a side column. Brand navy headings, soft
+   white cards, pill tags. Layered on Arena.css (form, fields, states). */
+.arena-page { --arena-navy: #0B296B; }
+[data-theme="dark"] .arena-page { --arena-navy: var(--text-900); }
+
+.arena-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-500);
+  font-size: 0.85rem;
+}
+.arena-crumbs a { color: var(--text-500); text-decoration: none; }
+.arena-crumbs a:hover { color: var(--primary-600); }
+.arena-crumbs [aria-current] { color: var(--primary-600); font-weight: 700; }
+
+.arena-card,
+.arena-id,
+.arena-stat,
+.arena-tabs {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 12px 30px -22px rgba(11, 41, 107, 0.3);
+}
+
+/* Identity bar */
+.arena-id {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+  margin-bottom: 0.9rem;
+}
+.arena-id__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--primary-50, #EAF2FE);
+  color: var(--primary-600, #1558B8);
+}
+.arena-id__body { min-width: 0; display: grid; gap: 0.35rem; }
+.arena-id__title {
+  margin: 0;
+  color: var(--arena-navy);
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.arena-id__sub { margin: 0; color: var(--text-600); font-size: 0.95rem; line-height: 1.5; }
+.arena-id__pills { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.arena-id__actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+@media (min-width: 900px) {
+  .arena-id { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .arena-id__actions { grid-column: auto; justify-content: flex-end; }
+}
+.arena-id__actions .button { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+.arena-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-600);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+.arena-pill--azure { background: var(--primary-50, #EAF2FE); color: var(--primary-600, #1558B8); }
+.arena-pill--eyebrow {
+  background: none;
+  padding-left: 0;
+  color: var(--primary-600, #1558B8);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Stats ribbon */
+.arena-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0 0 0.9rem;
+}
+@media (min-width: 900px) { .arena-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.arena-stat { display: flex; align-items: center; gap: 0.7rem; padding: 0.75rem 0.85rem; min-width: 0; }
+.arena-stat dt {
+  color: var(--text-500);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.arena-stat dd {
+  margin: 0.15rem 0 0;
+  color: var(--arena-navy);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.arena-stat dd small { color: var(--text-500); font-size: 0.8rem; font-weight: 500; letter-spacing: 0; }
+.arena-stat__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+.arena-stat__icon--amber { background: var(--t-amber-fill, #FEF3C7); color: var(--t-amber-ink, #92400E); }
+.arena-stat__icon--azure { background: var(--t-azure-fill, #EAF2FE); color: var(--t-azure-ink, #1558B8); }
+.arena-stat__icon--violet { background: var(--t-violet-fill, #EDE9FE); color: var(--t-violet-ink, #5B21B6); }
+.arena-stat__icon--orange { background: #FFEDD5; color: #C2410C; }
+[data-theme="dark"] .arena-stat__icon--orange { background: rgba(249, 115, 22, 0.18); color: #FDBA74; }
+
+/* Tabs */
+.arena-tabs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  margin-bottom: 1rem;
+}
+@media (min-width: 720px) { .arena-tabs { grid-template-columns: 1fr 1fr; } }
+.arena-tab {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--text-900);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.arena-tab__title { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 1.05rem; font-weight: 800; }
+.arena-tab__sub { color: var(--text-600); font-size: 0.86rem; }
+.arena-tab.is-on { background: var(--primary-500, #1B6FE0); color: #fff; }
+.arena-tab.is-on .arena-tab__sub { color: rgba(255, 255, 255, 0.88); }
+.arena-tab:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+
+/* Main grid */
+.arena-grid { display: grid; gap: 1rem; align-items: start; }
+@media (min-width: 1000px) { .arena-grid { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 1.25rem; } }
+.arena-main, .arena-side { display: grid; gap: 1rem; min-width: 0; }
+.arena-main .arena-page__form { max-width: none; }
+
+/* Cinq Majeur callout */
+.arena-five {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--primary-500) 12%, var(--surface)), var(--surface) 60%, color-mix(in srgb, #FFB95F 22%, var(--surface)));
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05);
+}
+.arena-five__badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+  font-weight: 800;
+}
+.arena-five h2 { margin: 0; color: var(--arena-navy); font-size: 1.1rem; font-weight: 800; }
+.arena-five p { margin: 0.25rem 0 0; color: var(--text-700, var(--text-600)); font-size: 0.93rem; line-height: 1.5; }
+
+/* Cards */
+.arena-card { padding: 1rem 1.1rem; }
+.arena-card__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+.arena-card__head h2 { margin: 0; color: var(--arena-navy); font-size: 1.08rem; font-weight: 800; }
+.arena-card__foot { display: block; margin: 0.75rem 0 0; color: var(--text-600); font-size: 0.88rem; line-height: 1.5; }
+.arena-card__foot a { color: var(--primary-600); font-weight: 700; }
+.arena-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.75rem;
+  color: var(--primary-600);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* School board + team standings */
+.arena-board, .arena-teams { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.arena-board__row, .arena-teams__row {
+  display: grid;
+  grid-template-columns: 1.8rem auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.arena-teams__row { grid-template-columns: 1.8rem minmax(0, 1fr) auto; }
+.arena-board__row.is-five { background: color-mix(in srgb, #FFB95F 18%, var(--surface)); }
+.arena-board__row.is-me, .arena-teams__row.is-me {
+  background: var(--primary-50, #EAF2FE);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary-500) 40%, transparent);
+}
+.arena-teams__row.is-short { opacity: 0.82; }
+.arena-board__pos { color: var(--text-500); font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.arena-board__avatar { border-radius: 8px; overflow: hidden; }
+.arena-board__name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--text-900);
+  font-weight: 700;
+  font-size: 0.93rem;
+}
+.arena-board__name em {
+  padding: 0.05rem 0.4rem;
+  border-radius: 6px;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 700;
+}
+.arena-teams__name { display: grid; min-width: 0; color: var(--text-900); font-weight: 700; font-size: 0.93rem; }
+.arena-teams__name small { color: var(--text-500); font-size: 0.76rem; font-weight: 500; }
+.arena-board__xp {
+  color: var(--arena-navy);
+  font-weight: 800;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.arena-board__line {
+  padding: 0.25rem 0;
+  color: var(--text-500);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* National panel — the page's one gradient */
+.arena-national {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.1rem, 3vw, 1.6rem);
+  border-radius: 18px;
+  background: linear-gradient(125deg, #0B296B 0%, #0F3A8A 55%, #1558B8 100%);
+  color: #fff;
+  box-shadow: 0 24px 50px -30px rgba(11, 41, 107, 0.7);
+}
+.arena-national__tag {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: #FEA619;
+  color: #2A1700;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.arena-national h2 {
+  margin: 0.6rem 0 0.4rem;
+  color: #fff;
+  font-size: clamp(1.3rem, 3vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.arena-national p { margin: 0; max-width: 56ch; color: #DCE6FF; font-size: 0.95rem; line-height: 1.55; }
+.arena-national__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+.arena-national__cta, .arena-national__ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+.arena-national__cta { background: #fff; color: #0B296B; }
+.arena-national__ghost { background: rgba(255, 255, 255, 0.12); color: #fff; border: 1px solid rgba(255, 255, 255, 0.28); }
+
+/* Bilan */
+.arena-bilan__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+.arena-bilan__grid div {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.55rem;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  text-align: center;
+}
+.arena-bilan__grid span {
+  color: var(--text-500);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.arena-bilan__grid strong { color: var(--arena-navy); font-size: 1.15rem; font-weight: 800; }
+.arena-bilan__records { display: grid; gap: 0.3rem; margin: 0.75rem 0 0; padding: 0; list-style: none; }
+.arena-bilan__records li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--text-700, var(--text-600));
+  font-size: 0.88rem;
+}
+.arena-bilan__records strong { color: var(--arena-navy); }
+
+.arena-side .school-rank {
+  border: 0;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 12px 30px -22px rgba(11, 41, 107, 0.3);
+}
+
+@media (max-width: 560px) {
+  .arena-stat dd { font-size: 1.1rem; }
+  .arena-id__actions .button { flex: 1; justify-content: center; }
+}
