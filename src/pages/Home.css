@@ -1508,5 +1508,10 @@ a.lp-level:focus-visible {
   background: none !important;
   -webkit-background-clip: initial !important;
   background-clip: initial !important;
-  -webkit-text-fill-color: currentColor !important;
+  color: var(--primary-500, #1B6FE0) !important;
+  -webkit-text-fill-color: var(--primary-500, #1B6FE0) !important;
+}
+[data-theme="dark"] .lp .lp-hero__title .lp-hero__title-accent {
+  color: var(--pf-accent-ink) !important;
+  -webkit-text-fill-color: var(--pf-accent-ink) !important;
 }
