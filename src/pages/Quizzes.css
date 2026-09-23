@@ -588,3 +588,129 @@
   line-height: 1.55;
   color: var(--text-500);
 }
+
+/* ══ The hub — Ted's "Entraînement & Quiz" mockup (2026-09-23) ═══════════
+   Brand-navy titles, soft white cards, pill chips, a dense chapter table
+   that becomes cards on a phone, a side console. */
+.qz { --qz-navy: #0B296B; }
+[data-theme="dark"] .qz { --qz-navy: var(--text-900); }
+
+.qz-hub__head,
+.qz-card {
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 12px 30px -22px rgba(11, 41, 107, 0.3);
+}
+.qz-hub__head { display: grid; gap: 0.85rem; padding: 1.1rem 1.25rem; margin-bottom: 1rem; }
+
+.qz-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-500); }
+.qz-crumbs a { color: var(--primary-600, #1558B8); font-weight: 650; text-decoration: none; }
+.qz-crumbs strong { color: var(--qz-navy); }
+
+.qz-hub__titlerow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.qz-hub__titlerow .qz__title { margin: 0; max-width: none; color: var(--qz-navy); font-size: clamp(1.4rem, 3vw, 1.9rem); }
+
+.qz-lang { display: inline-flex; align-items: center; gap: 0.25rem; padding: 3px 3px 3px 0.6rem; border-radius: 999px; background: var(--surface-muted); color: var(--text-500); }
+.qz-lang button { padding: 0.3rem 0.75rem; border: 0; border-radius: 999px; background: none; color: var(--text-600); font: inherit; font-size: 0.8rem; font-weight: 650; cursor: pointer; }
+.qz-lang button.is-on { background: var(--surface); color: var(--primary-600, #1558B8); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+
+.qz-pick { display: grid; gap: 0.4rem; }
+@media (min-width: 720px) { .qz-pick { grid-template-columns: 6.5rem minmax(0, 1fr); align-items: center; } }
+.qz-pick__label { color: var(--text-500); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.qz-pick__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+.qz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.8rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text-700);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+.qz-chip:hover { background: color-mix(in srgb, var(--primary-500) 10%, var(--surface-muted)); }
+.qz-chip.is-on { background: var(--primary-500, #1B6FE0); color: #fff; box-shadow: 0 4px 12px -6px rgba(27, 111, 224, 0.6); }
+.qz-chip--soft.is-on { background: var(--qz-navy); }
+.qz-chip__mine { padding: 0.05rem 0.4rem; border-radius: 999px; background: rgba(255, 255, 255, 0.22); font-size: 0.68rem; }
+.qz-chip:not(.is-on) .qz-chip__mine { background: var(--primary-50, #EAF2FE); color: var(--primary-600, #1558B8); }
+
+.qz-hub { display: grid; gap: 1rem; align-items: start; }
+@media (min-width: 1000px) { .qz-hub { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+.qz-hub__main, .qz-hub__side { display: grid; gap: 1rem; min-width: 0; }
+
+.qz-card { padding: 1.1rem 1.2rem; }
+.qz-card__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.75rem; }
+.qz-card__eyebrow { display: block; color: var(--text-500); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.qz-card__title { display: flex; align-items: center; gap: 0.45rem; margin: 0.2rem 0 0; color: var(--qz-navy); font-size: 1.05rem; font-weight: 800; }
+.qz-card__sub { margin: 0.35rem 0 0; color: var(--text-600); font-size: 0.9rem; line-height: 1.5; }
+
+.qz-badge { display: inline-flex; padding: 0.2rem 0.6rem; border-radius: 6px; background: var(--primary-500, #1B6FE0); color: #fff; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.qz-badge--muted { background: var(--surface-muted); color: var(--text-600); letter-spacing: 0; text-transform: none; font-size: 0.8rem; }
+
+/* Selected series */
+.qz-series { padding: 0; overflow: hidden; }
+.qz-series__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; padding: 0.8rem 1.2rem; background: color-mix(in srgb, var(--primary-500) 9%, var(--surface)); }
+.qz-series__title { flex: 1; min-width: 12rem; margin: 0; color: var(--qz-navy); font-size: 1.05rem; font-weight: 800; }
+.qz-series__count { color: var(--text-600); font-size: 0.85rem; font-weight: 650; }
+.qz-series__body { padding: 0.25rem 1.2rem 1.1rem; }
+.qz-series .qz-modes { border-top: 0; padding-top: 0.75rem; }
+@media (min-width: 720px) { .qz-series .qz-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.qz-series .qz-mode { padding: 0.9rem; border-radius: 12px; background: var(--surface-muted); }
+.qz-series .qz-mode__title { display: flex; align-items: center; gap: 0.4rem; color: var(--qz-navy); }
+.qz-facts--row { margin-top: 0.8rem; }
+
+/* Chapter table */
+.qz-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.qz-table thead th { padding: 0.55rem 0.6rem; background: var(--surface-muted); color: var(--text-500); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-align: left; text-transform: uppercase; }
+.qz-table thead th:first-child { border-radius: 8px 0 0 8px; }
+.qz-table thead th:last-child { border-radius: 0 8px 8px 0; }
+.qz-table tbody th, .qz-table tbody td { padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.qz-table tbody tr:last-child th, .qz-table tbody tr:last-child td { border-bottom: 0; }
+.qz-table tbody tr.is-current { background: color-mix(in srgb, var(--primary-500) 5%, transparent); }
+.qz-table tbody th { font-weight: 650; color: var(--text-900); }
+.qz-table__no { display: inline-block; min-width: 2rem; color: var(--text-500); font-size: 0.78rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.qz-table__act { text-align: right !important; white-space: nowrap; }
+.qz-state { color: var(--text-500); font-size: 0.82rem; }
+.qz-state--due { padding: 0.15rem 0.55rem; border-radius: 999px; background: #FEE2E2; color: #B91C1C; font-weight: 700; }
+.qz-state--none { color: var(--text-400, var(--text-500)); }
+[data-theme="dark"] .qz-state--due { background: rgba(239, 68, 68, 0.18); color: #FCA5A5; }
+.qz-act { margin-left: 0.35rem; padding: 0.35rem 0.75rem; border: 0; border-radius: 8px; background: var(--surface-muted); color: var(--text-800, var(--text-900)); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.qz-act--primary { background: var(--primary-500, #1B6FE0); color: #fff; }
+.qz-act:disabled { opacity: 0.45; cursor: default; }
+
+@media (max-width: 640px) {
+  .qz-table thead { display: none; }
+  .qz-table, .qz-table tbody, .qz-table tr, .qz-table th, .qz-table td { display: block; width: 100%; }
+  .qz-table tbody tr { padding: 0.7rem 0; border-bottom: 1px solid var(--border); }
+  .qz-table tbody th, .qz-table tbody td { padding: 0.15rem 0; border: 0; }
+  .qz-table tbody td[data-label] { display: flex; justify-content: space-between; color: var(--text-600); font-size: 0.85rem; }
+  .qz-table tbody td[data-label]::before { content: attr(data-label); color: var(--text-500); }
+  .qz-table__act { padding-top: 0.5rem !important; text-align: left !important; }
+  .qz-act { margin: 0 0.35rem 0 0; }
+}
+
+/* Side console */
+.qz-diag__big { margin: 0.6rem 0 0; color: var(--text-700); }
+.qz-diag__big strong { color: #B91C1C; font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+.qz-diag__weak { margin: 0.2rem 0 0; color: var(--text-600); font-size: 0.9rem; }
+.qz-diag__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+.qz-config__label { margin: 0.8rem 0 0.35rem; color: var(--text-600); font-size: 0.82rem; font-weight: 650; }
+.qz-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px; padding: 3px; border-radius: 10px; background: var(--surface-muted); }
+.qz-seg button { padding: 0.45rem 0.5rem; border: 0; border-radius: 8px; background: none; color: var(--text-600); font: inherit; font-size: 0.84rem; font-weight: 650; cursor: pointer; }
+.qz-seg button.is-on { background: var(--surface); color: var(--primary-600, #1558B8); box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); }
+.qz-config .qz-cta { display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; }
+.qz-config__note { margin: 0.5rem 0 0; color: var(--text-500); font-size: 0.8rem; }
+.qz-examlink__cta { display: inline-flex; align-items: center; gap: 0.25rem; margin-top: 0.6rem; color: var(--primary-600, #1558B8); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+/* Grid children default to their content's width; without this the series
+   and chapter cards ran to ~840px inside a 358px phone column. */
+.qz-hub__main > *, .qz-hub__side > * { min-width: 0; max-width: 100%; }
+.qz-card, .qz-table { box-sizing: border-box; }
+/* mobile-fixes.css gives every <table> min-width: 800px on phones (meant for
+   admin tables); this one collapses to cards instead. */
+.qz .qz-table { min-width: 0; }
