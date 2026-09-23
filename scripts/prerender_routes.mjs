@@ -389,7 +389,14 @@ try {
   // global-replace it in the built output.
   const srcVersion = readFileSync(join(root, 'pwa', 'sw.js'), 'utf8')
     .match(/const CACHE_VERSION = '([^']+)';/)?.[1];
-  const buildTag = createHash('md5').update(readFileSync(distIndex, 'utf8')).digest('hex').slice(0, 8);
+  // index.html alone was not enough: its entry bundle hash rarely changes
+  // (routes are lazy chunks), so consecutive deploys got the SAME tag and old
+  // caches were never dropped. Hash the shell plus every emitted bundle name.
+  const { readdirSync } = await import('node:fs');
+  const bundleNames = ['js', 'css'].flatMap((d) => {
+    try { return readdirSync(join(root, 'dist', d)).map((f) => `${d}/${f}`); } catch { return []; }
+  }).sort().join('\n');
+  const buildTag = createHash('md5').update(readFileSync(distIndex, 'utf8')).update(bundleNames).digest('hex').slice(0, 8);
   if (!srcVersion || !sw.includes(srcVersion)) {
     console.warn('sw.js: source CACHE_VERSION literal not found in build — worker NOT stamped');
   } else {

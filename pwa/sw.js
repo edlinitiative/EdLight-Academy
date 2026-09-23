@@ -18,7 +18,7 @@
 // byte-different worker. That's what makes installed clients detect the
 // update, skip-wait, drop old caches and self-reload; a hand-bumped constant
 // only did that when someone remembered to bump it.
-const CACHE_VERSION = 'v31';
+const CACHE_VERSION = 'v32';
 const SHELL_CACHE = `edlight-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `edlight-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `edlight-data-${CACHE_VERSION}`;
@@ -147,7 +147,13 @@ async function cacheFirst(request, cacheName) {
   // site data (seen 2026-09-23). Drop such a hit and go back to the network.
   if (hit && !isHtml(hit)) return hit;
   if (hit) await cache.delete(request);
-  const res = await fetch(request);
+  let res = await fetch(request);
+  // /js, /css and /assets ship `immutable, max-age=1y` — on EVERY response,
+  // including a 404 or the HTML fallback served mid-deploy — so the browser's
+  // own HTTP cache can hold the bad copy too. Retry once past it.
+  if (!res || !res.ok || isHtml(res)) {
+    res = await fetch(request, { cache: 'reload' }).catch(() => res);
+  }
   if (res && res.ok && !isHtml(res)) cache.put(request, res.clone());
   return res;
 }
