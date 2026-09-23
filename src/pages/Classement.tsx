@@ -39,6 +39,11 @@ export default function Classement() {
           <ChevronLeft size={16} /> {t('Retour', 'Tounen')}
         </button>
 
+        {/* Two columns from 1000px: the explanation on the left, the board on
+            the right — the shared page frame, without stretching ranking rows
+            across 1400px. */}
+        <div className="classement__layout">
+        <div className="classement__side">
         <header className="classement__header">
           <span className="classement__eyebrow">{t('Classement', 'Klasman')}</span>
           <h1 className="classement__title">{t('Où vous situez-vous ?', 'Kote ou ye?')}</h1>
@@ -103,14 +108,18 @@ export default function Classement() {
           </div>
         </section>
 
-        <Leaderboard variant="full" periodToggle max={50} />
-
         <p className="classement__foot">
           <Link to="/jeux" className="classement__foot-link">
             {t('Jouer une partie pour gagner des XP', 'Jwe yon pati pou ranmase XP')}
             <ChevronRight size={15} aria-hidden="true" />
           </Link>
         </p>
+        </div>
+
+        <div className="classement__main">
+          <Leaderboard variant="full" periodToggle max={50} />
+        </div>
+        </div>
       </div>
     </section>
   );

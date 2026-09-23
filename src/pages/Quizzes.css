@@ -10,9 +10,11 @@
    action per state; everything else is a row or a line of text. */
 
 .qz__container {
-  max-width: 780px;
+  /* The picker uses the shared frame like every tab; only a quiz in progress
+     keeps a reading column (below). */
   padding-bottom: clamp(2.5rem, 6vw, 4rem);
 }
+.qz--taking .qz__container { max-width: 780px; }
 
 /* The Sandra launcher is `position: fixed` bottom-right at z-index 990 and is
    NOT hidden by focus mode, so reserve room under the question controls: §6.5

@@ -12,9 +12,8 @@
 }
 
 .classement__container {
-  /* Narrower than the marketing pages: a ranking is a single column of rows,
-     and full-bleed width would stretch every row into unreadable gaps. */
-  max-width: 820px;
+  /* The shared frame, like every tab. The ranking rows stay readable because
+     from 1000px the page is two columns (see .classement__layout). */
   padding-top: clamp(1rem, 3vw, 2rem);
   padding-bottom: clamp(3rem, 8vw, 6rem);
 }
@@ -219,4 +218,15 @@
   .classement__kinds {
     grid-template-columns: 1fr;
   }
+}
+
+.classement__layout { display: block; }
+@media (min-width: 1000px) {
+  .classement__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+  .classement__side { position: sticky; top: calc(var(--navbar-height, 64px) + 1rem); }
 }
