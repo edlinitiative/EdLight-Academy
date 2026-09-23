@@ -12,7 +12,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Eye, Play, RotateCcw, Users, X } from 'lucide-react';
+import { ArrowLeft, Eye, Play, RotateCcw, Users, X } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { GRADES } from '../../../shared/trackConfig';

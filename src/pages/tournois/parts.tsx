@@ -3,7 +3,7 @@
  * ticker, the room header, the podium, the boards and the bracket.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Copy, Share2 } from 'lucide-react';
+import { Check, Copy, Share2 } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { formatPin } from '../../../shared/tournois/config';
 import type { Match } from '../../../shared/tournois/bracket';

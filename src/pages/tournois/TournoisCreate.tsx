@@ -9,7 +9,7 @@
  */
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, CalendarDays, Layers, Radio, Swords, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, Layers, Radio, Swords, Sparkles } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { TRIVIA_CATEGORIES } from '../../data/triviaData';

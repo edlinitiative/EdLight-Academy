@@ -9,7 +9,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Radio, Trophy, Users, KeyRound, Eye } from 'lucide-react';
+import { Plus, Radio, Trophy, Users, KeyRound, Eye } from '../../components/icons';
 import useStore from '../../contexts/store';
 import {
   formatLabel,

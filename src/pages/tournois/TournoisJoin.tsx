@@ -7,7 +7,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, KeyRound } from 'lucide-react';
+import { ArrowLeft, KeyRound } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { GRADES } from '../../../shared/trackConfig';
