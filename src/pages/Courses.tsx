@@ -17,6 +17,7 @@ import { GRADES, gradeProfile, type HomeSurface } from '../config/trackConfig';
 import { SUBJECT_COVERS } from '../utils/subjectCovers';
 import '../styles/pf.css';
 import './Courses.css';
+import LearnWorkspace from './courses/LearnWorkspace';
 
 const SUBJECT_ORDER = ['MATH', 'PHYS', 'CHEM', 'ECON'];
 const LEVEL_ORDER = ['NSI', 'NSII', 'NSIII', 'NSIV'];
@@ -640,6 +641,7 @@ export default function Courses() {
   }, []);
 
   const enrolledCourses = useStore((s) => s.enrolledCourses);
+  const signedIn = useStore((s) => !!s.user?.uid);
   const grade = useStore((s) => s.grade);
   const setGrade = useStore((s) => s.setGrade);
   const setGradeChosen = useStore((s) => s.setGradeChosen);
@@ -1090,6 +1092,27 @@ export default function Courses() {
             titles; ⌘K still opens the app-wide overlay for everything else.
             No card around it any more: one field, one toggle, and the
             suggestions as quiet links under them. */}
+        {/* Signed in and not searching: the student's workspace leads (Ted's
+            "Espace de travail" mockup, wired to their own progress, exams and
+            missed questions). The catalogue follows it, unchanged, and a
+            search or a facet puts the results back on top. */}
+        {signedIn && !filtering && courses.length > 0 && (
+          <LearnWorkspace
+            courses={courses}
+            courseStats={courseStats}
+            courseLevel={courseLevel}
+            subjectName={subjectName}
+            levelLabel={levelLabel}
+            myLevel={myLevel}
+            progressByCourseId={progressByCourseId}
+            SubjectTile={SubjectTile as any}
+            L={L}
+          />
+        )}
+        {signedIn && !filtering && courses.length > 0 && (
+          <h2 className="lrn-browse-title">{L('Parcourir le catalogue', 'Gade katalòg la')}</h2>
+        )}
+
         <div className="lrn-panel">
         <div className="lrn-toolbar">
           <div className="lrn-search">
@@ -1182,7 +1205,8 @@ export default function Courses() {
           </p>
         )}
 
-        {resumeCourses.length > 0 && !filtering && (
+        {/* The workspace's resume card replaces this strip when signed in. */}
+        {resumeCourses.length > 0 && !filtering && !signedIn && (
           <div className="courses-resume courses-resume--lead" data-reveal>
             <h2 className="courses-resume__title">{t('courses.resumeTitle')}</h2>
             <div className="courses-resume__list">
