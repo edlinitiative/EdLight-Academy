@@ -876,7 +876,7 @@
 /* Dimmed, not desaturated: grayscale turns a 💎 or a 🏆 into a grey smudge —
    unreadable at this size, and worse on the dark tile. Earned vs not is
    already carried by the tile fill, the pill and the border. */
-.pf-badge__emoji { font-size: 1.3rem; line-height: 1; }
+.pf-badge__emoji { display: inline-flex; line-height: 1; }
 .pf-badge:not(.is-unlocked) .pf-badge__emoji { opacity: 0.7; }
 
 .pf-badge__label {

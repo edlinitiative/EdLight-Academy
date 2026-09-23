@@ -118,6 +118,7 @@ function metaKeyForPath(pathname: string): string | null {
     // the homepage's description — including /arena and /classement, the two
     // pages people are most likely to share a link to.
     [/^\/arena(\/|$)/, 'arena'],
+    [/^\/tournois(\/|$)/, 'tournois'],
     [/^\/classement(\/|$)/, 'leaderboard'],
     [/^\/download(\/|$)/, 'download'],
     [/^\/profile(\/|$)/, 'profile'],

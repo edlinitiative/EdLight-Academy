@@ -7,6 +7,7 @@
  * calendar preview is computed with the same `buildSchedule` the server runs,
  * so what the wizard shows is what the server will store.
  */
+import CategoryIcon from '../../components/CategoryIcon';
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CalendarDays, Layers, Radio, Swords, Sparkles } from '../../components/icons';
@@ -184,7 +185,7 @@ export default function TournoisCreate() {
                     return (
                       <button key={c.id} type="button" className="tn-toggle" aria-pressed={on}
                         onClick={() => setCategories((cs) => (on ? cs.filter((x) => x !== c.id) : [...cs, c.id]))}>
-                        <span aria-hidden="true">{c.icon}</span> {isCreole ? c.nameHt : c.name}
+                        <CategoryIcon id={c.id} size={16} /> {isCreole ? c.nameHt : c.name}
                       </button>
                     );
                   })}

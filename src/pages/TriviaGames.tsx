@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import CategoryIcon from '../components/CategoryIcon';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Zap, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Users, Target, Gamepad2, Swords, History, School as SchoolIcon } from '../components/icons';
 import useStore from '../contexts/store';
@@ -101,7 +102,7 @@ function CategoryPicker({ onSelect, isCreole, categories, questions, count, setC
               return <button key={cat.id} className="trivia-cat" style={{ '--cat': cat.color || '#1B6FE0' } as React.CSSProperties}
                 onClick={() => onSelect(cat.id)} disabled={!available}
                 aria-label={`${name} — ${Math.min(count, available)} ${isCreole ? 'kesyon' : 'questions'}`}>
-                <span className="trivia-cat__icon" aria-hidden="true">{cat.icon}</span>
+                <span className="trivia-cat__icon" aria-hidden="true"><CategoryIcon id={cat.id} size={22} /></span>
                 <span className="trivia-cat__name">{name}</span>
                 <span className="trivia-cat__count">{available ? `${Math.min(count, available)} ${isCreole ? 'kesyon · Jwe →' : 'questions · Jouer →'}` : (isCreole ? 'Byento' : 'Bientôt')}</span>
               </button>;
@@ -979,7 +980,7 @@ function GamesHub({ isCreole }) {
                       style={{ ['--cat' as any]: c.color }}
                       onClick={() => { trackEvent('trivia_topic_from_hub', { category: c.id }); navigate('/jeux/trivia', { state: { startCategory: c.id } }); }}
                     >
-                      <span className="gx-topic__emoji" aria-hidden="true">{c.icon || '🎯'}</span>
+                      <span className="gx-topic__emoji" aria-hidden="true"><CategoryIcon id={c.id} size={18} /></span>
                       <span className="gx-topic__name">{isCreole ? c.nameHt || c.name : c.name}</span>
                     </button>
                   ))}

@@ -163,7 +163,7 @@ it('saves the goal to the account on tap', async () => {
   expect(screen.getByRole('button', { name: 'Améliorer mes notes' })).toHaveAttribute('aria-pressed', 'true');
   await act(async () => { fireEvent.click(bac); });
   expect(mockUpdateUser).toHaveBeenCalledWith('u1', { studyGoal: 'bac' });
-  expect(await screen.findByText('Enregistré sur votre compte')).toBeInTheDocument();
+  expect(await screen.findByText('Enregistré sur ton compte')).toBeInTheDocument();
 });
 
 it('shows schoolmates from the board, not other schools or the student', async () => {

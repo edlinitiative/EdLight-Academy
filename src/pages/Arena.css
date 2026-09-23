@@ -546,3 +546,8 @@
   }
   .arena-page__between .arena-page__next { grid-column: 1 / -1; }
 }
+
+/* Same top rhythm as /exams, /practice and /tournois: the generic .section
+   padding stacked on the container's and left a gap above the header. */
+.arena-page.section { padding-top: 0; }
+.arena-page__container { padding-top: 1.25rem; }

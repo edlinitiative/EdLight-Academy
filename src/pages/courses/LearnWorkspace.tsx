@@ -149,9 +149,22 @@ export default function LearnWorkspace({
   }, [uid]);
   const weakTotal = (weak || []).reduce((n, w) => n + w.count, 0);
 
+  // Review entries store a course code like "MATH-NSI"; students see
+  // "Mathématiques NS I · Unité 1 — <the unit's title>", never the code.
+  const splitCode = (code: string) => {
+    const [sub = '', lvl = ''] = String(code || '').split('-');
+    return { sub, lvl: lvl.toUpperCase() };
+  };
+  const weakName = (code: string) => {
+    const { sub, lvl } = splitCode(code);
+    return `${subjectName(sub)}${lvl ? ` ${levelLabel(lvl)}` : ''}`;
+  };
   const unitTitle = (code: string, unitNo?: number) => {
     if (!unitNo) return '';
-    const c = subjects.find((s) => s.code === code)?.course;
+    const { sub, lvl } = splitCode(code);
+    const c = courses.find((x) => String(x.subject || '').toUpperCase() === sub.toUpperCase()
+      && String(courseLevel(x) || '').replace(/\s+/g, '').toUpperCase() === lvl)
+      || subjects.find((x) => x.code === sub)?.course;
     const m = (c?.modules || []).find((u) => Number(u?.unit_no) === Number(unitNo));
     return m?.title || '';
   };
@@ -301,7 +314,7 @@ export default function LearnWorkspace({
                 {weak.map((w) => (
                   <li key={`${w.code}-${w.unitNo}`}>
                     <div>
-                      <strong>{w.code ? subjectName(w.code) : L('Divers', 'Divès')}{w.unitNo ? ` · ${L('Unité', 'Inite')} ${w.unitNo}` : ''}</strong>
+                      <strong>{w.code ? weakName(w.code) : L('Divers', 'Divès')}{w.unitNo ? ` · ${L('Unité', 'Inite')} ${w.unitNo}` : ''}</strong>
                       {unitTitle(w.code, w.unitNo) && <span>{unitTitle(w.code, w.unitNo)}</span>}
                     </div>
                     <span className="lws-weak__count">{w.count} {w.count === 1 ? L('question', 'kesyon') : L('questions', 'kesyon')}</span>

@@ -825,7 +825,7 @@ const ExamLanding = () => {
                 <p className="exam-landing__section-note">
                   {ht
                     ? 'Matyè ki gen plis pwa nan filyè a. Lè ou fin fè kèk egzamen, n ap montre sa pou w ranfòse.'
-                    : 'Les matières au plus fort coefficient. Après quelques examens, nous indiquerons celles à renforcer.'}
+                    : 'Les matières au plus fort coefficient. Après quelques examens, on te montrera celles à renforcer.'}
                 </p>
               )}
               {/* Compact rows, not a second grid of covers: the covers here

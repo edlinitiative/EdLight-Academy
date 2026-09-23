@@ -144,7 +144,12 @@
 	--font-sans: "Source Sans 3", "SF Pro Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 	--font-display: var(--font-sans);
 	--font-serif: var(--font-sans); /* legacy alias — serif retired in Limyè */
-	--font-mono: "Geist Mono", "SF Mono", "Monaco", "Courier New", monospace;
+	/* Labels, counters and eyebrows used to be Geist Mono — the typewriter
+	   look that reads as a generic AI template (Ted: "less AI"). They now use
+	   the body face; --font-code keeps a real monospace for code/kbd only. */
+	--font-mono: var(--font-sans);
+	--font-code: "Geist Mono", "SF Mono", "Monaco", "Courier New", monospace;
+	--st-mono: var(--font-sans);
 	/* Headings. Source Sans 3 still carries every word of body copy; this is
 	   the display face only, so the page keeps one reading voice. */
 	--font-heading: "Plus Jakarta Sans", var(--font-sans);
@@ -4140,7 +4145,7 @@ textarea.input-field {
 }
 
 .not-found__code {
-	font-family: var(--font-mono);
+	font-family: var(--font-code);
 	font-size: clamp(2.75rem, 12vw, 4.5rem);
 	font-weight: 700;
 	letter-spacing: 0.04em;
@@ -17308,7 +17313,7 @@ textarea:focus {
 	font-weight: 600;
 }
 
-/* Eyebrows / labels / meta — Geist Mono, uppercase, tracked. */
+/* Eyebrows / labels / meta — uppercase, tracked. */
 .font-label {
 	font-family: var(--font-mono);
 	text-transform: uppercase;
@@ -17722,4 +17727,8 @@ button.card:hover,
 .qz-select--wide select { max-width: 20rem; }
 .qz-select select:hover { border-color: var(--primary-300, #93C5FD); }
 .qz-select select:focus-visible { outline: 2px solid var(--primary-500, #1B6FE0); outline-offset: 2px; }
-@media (max-width: 560px) { .qz-bar-filters, .qz-select, .qz-select select { width: 100%; max-width: none; } }
+@media (max-width: 560px) {
+  .qz-bar-filters { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+  .qz-bar-filters .qz-select--wide { grid-column: 1 / -1; }
+  .qz-bar-filters .qz-select, .qz-bar-filters .qz-select select { width: 100%; max-width: none; }
+}

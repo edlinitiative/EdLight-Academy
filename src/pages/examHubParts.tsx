@@ -59,7 +59,7 @@ export function PaperAction({ exam, status, ht, navigate, big = false }: {
     );
   }
   return (
-    <Link className={`${cls} exam-hub__btn--primary`} to={`/exams/${slug}/${key}`}>
+    <Link className={`${cls} ${big ? 'exam-hub__btn--primary' : 'exam-hub__btn--line'}`} to={`/exams/${slug}/${key}`}>
       <PlayCircle size={big ? 18 : 15} aria-hidden="true" /> {big ? (ht ? 'Kòmanse eprèv la' : 'Démarrer l’épreuve') : (ht ? 'Kòmanse' : 'Démarrer')}
     </Link>
   );

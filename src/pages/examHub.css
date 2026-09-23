@@ -359,3 +359,16 @@
 @media (max-width: 560px) { .exam-hub__seg { width: 100%; overflow-x: auto; } }
 .exam-hub__head--flat .exam-hub__search { border-radius: 999px; padding: 0.4rem 0.9rem; max-width: 320px; }
 .exam-landing.exam-hub { padding-top: 1.25rem; }
+
+/* Table rows: one quiet outline button per row, not ten solid blue blocks. */
+.exam-hub__btn--line { background: var(--surface); color: var(--primary-600, #1558B8); box-shadow: inset 0 0 0 1.5px var(--primary-200, #BFDBFE); }
+.exam-hub__btn--line:hover { background: var(--primary-500, #1B6FE0); color: #fff; box-shadow: none; }
+.exam-hub__head--flat .exam-hub__search { min-height: 0; height: 38px; padding-top: 0; padding-bottom: 0; }
+.exam-hub__head--flat .exam-hub__search input { padding: 0; height: 100%; }
+@media (max-width: 640px) {
+  /* Phones: search on its own line, then level + selects wrap compactly
+     side by side instead of stacking into a tall filter block. */
+  .exam-hub__toolbar .qz-select, .exam-hub__toolbar .qz-select select { width: auto; max-width: 100%; }
+  .exam-hub__head--flat .exam-hub__search { order: -1; flex: 1 0 100%; min-width: 0; max-width: none; }
+  .exam-hub__seg { width: auto; }
+}

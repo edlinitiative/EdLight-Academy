@@ -9,7 +9,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Radio, Trophy, Users, KeyRound, Eye } from '../../components/icons';
+import { Plus, Radio, Users, KeyRound, Eye } from '../../components/icons';
 import useStore from '../../contexts/store';
 import {
   formatLabel,
@@ -88,24 +88,19 @@ export default function TournoisHub() {
   return (
     <section className="tn">
       <div className="tn__wrap">
-        <header className="tn-hero">
-          <div className="tn-hero__top">
-            <span className="tn-chip"><Trophy size={13} aria-hidden="true" /> {t('Tournois', 'Tounwa')}</span>
+        {/* A title line and one action, like every other hub (no gradient
+            hero — Ted). */}
+        <header className="tn-head">
+          <div>
+            <h1>{t('Tournois', 'Tounwa')}</h1>
+            <p>{t(
+              'Choisis le format et les thèmes : on génère les questions et le calendrier. Tes amis rejoignent avec un PIN.',
+              'Chwazi fòma a ak tèm yo : nou jenere kesyon yo ak orè a. Zanmi w yo antre ak yon PIN.',
+            )}</p>
           </div>
-          <h1>{t('Crée ton tournoi. On s’occupe du reste.', 'Kreye tounwa pa w. Nou okipe rès la.')}</h1>
-          <p>
-            {t(
-              'Choisis le format — en direct, sur une journée ou deux semaines, par manches ou à élimination — et les catégories. Les questions et le calendrier sont générés pour toi ; tes amis rejoignent avec un PIN.',
-              'Chwazi fòma a — an dirèk, sou yon jounen oswa de semèn, pa manch oswa eliminasyon — ak kategori yo. Nou jenere kesyon yo ak orè a pou ou ; zanmi w yo antre ak yon PIN.',
-            )}
-          </p>
-          <div className="tn-hero__row">
-            <div className="tn-hero__actions">
-              <button type="button" className="tn-btn-glass" onClick={create}>
-                <Plus size={16} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
-              </button>
-            </div>
-          </div>
+          <button type="button" className="tn-head__cta" onClick={create}>
+            <Plus size={16} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
+          </button>
         </header>
 
         <div className="tn-split tn-section">

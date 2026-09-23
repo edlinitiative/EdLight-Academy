@@ -1294,11 +1294,11 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
               <span className="pf-tile pf-tile--md pf-tile--azure" aria-hidden="true">
                 <GraduationCap size={20} strokeWidth={1.9} />
               </span>
-              {L('Vous êtes en quelle classe ?', 'Ki klas ou ye ?')}
+              {L('Tu es en quelle classe ?', 'Ki klas ou ye ?')}
             </h2>
             <p className="lrn-ask__sub">
               {L(
-                'Nous mettrons vos cours en premier. Tout le catalogue reste visible en dessous.',
+                'On met tes cours en premier. Tout le catalogue reste visible en dessous.',
                 'N ap mete kou ou yo an premye. Tout katalòg la ap rete vizib anba a.',
               )}
             </p>

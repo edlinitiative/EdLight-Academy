@@ -17,9 +17,13 @@
 }
 
 .tn__wrap {
-  width: min(100% - 32px, 1040px);
+  /* Same frame as the other hubs (.container: 1480px, 2rem gutters). */
+  width: 100%;
+  max-width: 1480px;
   margin: 0 auto;
+  padding: 0 2rem;
 }
+@media (max-width: 640px) { .tn__wrap { padding: 0 1rem; } }
 
 .tn__narrow {
   width: min(100% - 32px, 720px);
@@ -463,6 +467,9 @@
 }
 
 .tn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   min-height: 40px;
   padding: 0.4rem 0.85rem;
   border: 1.5px solid var(--border);
@@ -1020,3 +1027,12 @@
   .tn-opt__bar,
   .tn-tile { transition: none; }
 }
+
+/* ── Hub header: flat title line ─────────────────────────────────── */
+.tn-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem 1.5rem; margin-bottom: 1.25rem; }
+.tn-head h1 { margin: 0; font-size: clamp(1.35rem, 2.2vw, 1.6rem); color: var(--tn-navy); letter-spacing: -0.02em; }
+.tn-head p { margin: 0.25rem 0 0; color: var(--text-600); font-size: 0.95rem; max-width: 62ch; }
+.tn-head__cta { display: inline-flex; align-items: center; gap: 0.4rem; border: 0; border-radius: 999px; padding: 0.6rem 1.1rem; background: var(--primary-500); color: #fff; font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+.tn-head__cta:hover { background: var(--primary-600, #1558B8); }
+.tn-head__cta:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+[data-theme="dark"] .tn-head h1 { color: var(--text-900); }

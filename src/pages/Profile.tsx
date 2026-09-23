@@ -12,6 +12,7 @@ import {
   Flame, Trophy, Zap, Bell, Info, Moon, Sun, Languages, GraduationCap, ChevronRight, Check, BookOpen,
   Loader2, ShieldCheck, MapPin, RefreshCw, AlertTriangle,
 } from '../components/icons';
+import * as AppIcons from '../components/icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
@@ -183,7 +184,7 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
         />
         <small className="profile-field__why">
           {t(
-            'Le seul nom que les autres élèves voient. Votre nom complet n’est jamais affiché.',
+            'Le seul nom que les autres élèves voient. Ton nom complet n’est jamais affiché.',
             'Se sèl non lòt elèv yo wè. Non konplè ou pa janm parèt.',
           )}
         </small>
@@ -199,7 +200,7 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
       <SchoolField picked={picked} onPick={(s) => { setPicked(s); setStatus('idle'); }} isCreole={isCreole} signedIn={!!uid} />
       <p className="profile-field__why">
         {t(
-          'Votre école sert au championnat interscolaire et au classement par école — nous ne la redemanderons pas ailleurs.',
+          'Ton école sert au championnat interscolaire et au classement par école — on ne te la redemandera pas ailleurs.',
           'Lekòl ou sèvi pou chanpyona ant lekòl yo ak klasman pa lekòl — nou p ap mande w li yon lòt kote.',
         )}
       </p>
@@ -208,11 +209,11 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
 
       <fieldset className="profile-residence">
         <legend className="profile-field__label">
-          <MapPin size={14} aria-hidden="true" /> {t('Où vous habitez', 'Kote ou rete')}
+          <MapPin size={14} aria-hidden="true" /> {t('Où tu habites', 'Kote ou rete')}
         </legend>
         <p className="profile-field__why">
           {t(
-            'Pour le classement par ville et par département. Ce n’est pas l’adresse de votre école : beaucoup d’élèves étudient dans une autre commune.',
+            'Pour le classement par ville et par département. Ce n’est pas l’adresse de ton école : beaucoup d’élèves étudient dans une autre commune.',
             'Pou klasman pa vil ak pa depatman. Se pa adrès lekòl ou : anpil elèv etidye nan yon lòt komin.',
           )}
         </p>
@@ -253,7 +254,7 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
                   value={customCity}
                   maxLength={60}
                   onChange={(e) => { setCustomCity(e.target.value); setStatus('idle'); }}
-                  placeholder={t('Nom de votre ville', 'Non vil ou')}
+                  placeholder={t('Nom de ta ville', 'Non vil ou')}
                 />
               )}
             </label>
@@ -265,11 +266,11 @@ function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchoo
         <ShieldCheck size={13} aria-hidden="true" />{' '}
         {board?.optedIn
           ? t(
-            'Vous participez au classement : votre pseudo, votre école et votre ville y sont visibles.',
+            'Tu participes au classement : ton pseudo, ton école et ta ville y sont visibles.',
             'Ou nan klasman an : ti non ou, lekòl ou ak vil ou parèt ladan l.',
           )
           : t(
-            'Vous ne participez pas encore au classement — rien de ceci n’est public tant que vous ne l’avez pas rejoint.',
+            'Tu ne participes pas encore au classement — rien de ceci n’est public tant que tu ne l’as pas rejoint.',
             'Ou poko nan klasman an — anyen nan sa a pa piblik toutotan ou pa antre ladan l.',
           )}
       </p>
@@ -501,6 +502,17 @@ export function buildAchievements({ isCreole, streak, unlockedMilestones, course
  * is a trophy case, not a prompt. The meter appears only where a real number
  * backs it (see buildAchievements).
  */
+/** Badge art: the app's icon set, not emoji (which render differently per phone). */
+const BADGE_ICON: Record<string, AppIcons.AppIcon> = {
+  '🔥': AppIcons.Flame, '⚡': AppIcons.Zap, '💪': AppIcons.Dumbbell, '👑': AppIcons.Crown,
+  '🏆': AppIcons.Trophy, '💎': AppIcons.Gem, '🎓': AppIcons.GraduationCap, '📝': AppIcons.PenLine,
+  '🧠': AppIcons.Brain, '💯': AppIcons.Target,
+};
+function BadgeArt({ emoji }: { emoji: string }) {
+  const I = BADGE_ICON[emoji] || AppIcons.Medal;
+  return <I size={22} aria-hidden="true" />;
+}
+
 export function AchievementShelf({ achievements, isCreole }: {
   achievements: Achievement[];
   isCreole: boolean;
@@ -521,7 +533,7 @@ export function AchievementShelf({ achievements, isCreole }: {
     <div className="pf-card">
       <CardHead
         eyebrow={t('Réussites', 'Reyalizasyon')}
-        title={t('Ce que vous avez débloqué', 'Sa ou debloke')}
+        title={t('Ce que tu as débloqué', 'Sa ou debloke')}
         aside={<Pill tone="slate">{won} / {achievements.length}</Pill>}
       />
       <div className="pf-badges">
@@ -529,7 +541,7 @@ export function AchievementShelf({ achievements, isCreole }: {
           <article key={a.id} className={`pf-badge ${a.unlocked ? 'is-unlocked' : ''}`}>
             <header className="pf-badge__top">
               <IconTile tone={a.unlocked ? a.tone : 'slate'}>
-                <span className="pf-badge__emoji">{a.emoji}</span>
+                <span className="pf-badge__emoji"><BadgeArt emoji={a.emoji} /></span>
               </IconTile>
               {a.unlocked ? (
                 <Pill tone="emerald"><Check size={12} /> {t('Acquis', 'Jwenn')}</Pill>
@@ -601,7 +613,7 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
   if (loading) {
     return (
       <div className="pf-card" aria-busy="true">
-        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Vos cours', 'Kou ou yo')} />
+        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
         <div className="pf-rows">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} variant="rect" height={64} radius={14} />
@@ -614,10 +626,10 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
   if (!allProgress || allProgress.length === 0) {
     return (
       <div className="pf-card">
-        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Vos cours', 'Kou ou yo')} />
+        <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
         <p className="pf-empty">
           {t(
-            'Vous n’avez pas encore ouvert de cours. La première leçon terminée apparaîtra ici.',
+            'Tu n’as pas encore ouvert de cours. Ta première leçon terminée apparaîtra ici.',
             'Ou poko louvri okenn kou. Premye leson ou fini an ap parèt isit la.',
           )}
         </p>
@@ -637,7 +649,7 @@ export function CourseProgressCard({ allProgress, loading, isCreole, onExplore }
 
   return (
     <div className="pf-card">
-      <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Vos cours', 'Kou ou yo')} />
+      <CardHead eyebrow={t('Progression', 'Pwogrè')} title={t('Tes cours', 'Kou ou yo')} />
       <ul className="pf-rows">
         {sorted.map((p) => {
           const done = p.completedLessons?.length || 0;
@@ -760,10 +772,10 @@ export default function Profile() {
         <div className="container profile-guest">
           <div className="profile-guest__card">
             <div className="profile-guest__icon"><GraduationCap size={32} /></div>
-            <h1>{t('Votre profil EdLight', 'Pwofil EdLight ou')}</h1>
+            <h1>{t('Ton profil EdLight', 'Pwofil EdLight ou')}</h1>
             <p className="text-muted">
               {t(
-                'Un compte garde ce que vous avez déjà fait : votre progression, votre score de préparation, votre série et votre place au classement vous suivent d’un appareil à l’autre.',
+                'Un compte garde ce que tu as déjà fait : ta progression, ton score de préparation, ta série et ta place au classement te suivent d’un appareil à l’autre.',
                 'Yon kont kenbe sa ou deja fè : pwogrè ou, nòt preparasyon ou, seri ou ak plas ou nan klasman an swiv ou sou nenpòt aparèy.',
               )}
             </p>
@@ -959,7 +971,7 @@ export default function Profile() {
                       ))}
                     </div>
                     <small className="profile-field__why">
-                      {t('Appliquée tout de suite : elle choisit vos cours, quiz et examens.', 'Aplike touswit : se li ki chwazi kou, quiz ak egzamen ou.')}
+                      {t('Appliquée tout de suite : elle choisit tes cours, quiz et examens.', 'Aplike touswit : se li ki chwazi kou, quiz ak egzamen ou.')}
                     </small>
                   </div>
                 )}
@@ -977,14 +989,14 @@ export default function Profile() {
 
             {/* 2 — Objectifs */}
             <section className="pr-sec">
-              <SectionHead n={2} title={t('Objectifs', 'Objektif')} sub={t('Ce que vous visez, et où vous en êtes vraiment.', 'Sa ou vize, ak kote ou ye vre.')} />
+              <SectionHead n={2} title={t('Objectifs', 'Objektif')} sub={t('Ce que tu vises, et où tu en es vraiment.', 'Sa ou vize, ak kote ou ye vre.')} />
               <GoalRhythm uid={uid} t={t} />
               <SkillSpots uid={uid} isCreole={isCreole} t={t} />
             </section>
 
             {/* 3 — Réseau */}
             <section className="pr-sec">
-              <SectionHead n={3} title={t('Réseau', 'Rezo')} sub={t('Votre école, et qui la représente avec vous.', 'Lekòl ou, ak kiyès ki reprezante l avè w.')} />
+              <SectionHead n={3} title={t('Réseau', 'Rezo')} sub={t('Ton école, et qui la représente avec toi.', 'Lekòl ou, ak kiyès ki reprezante l avè w.')} />
               <MySchoolCard where="profile" />
               <Schoolmates entries={boardEntries} uid={uid} school={board.school || ''} t={t} />
             </section>
@@ -1016,8 +1028,8 @@ export default function Profile() {
                   : !board.optedIn && !hasAlias
                     ? t('Choisissez d’abord un pseudo (section 1).', 'Chwazi yon ti non anvan (seksyon 1).')
                     : board.optedIn
-                      ? t('Votre pseudo, votre école et votre ville apparaissent au classement.', 'Ti non ou, lekòl ou ak vil ou parèt nan klasman an.')
-                      : t('Désactivé : vos nouveaux points ne sont pas publiés.', 'Dezaktive : nouvo pwen ou yo pa pibliye.')}
+                      ? t('Ton pseudo, ton école et ta ville apparaissent au classement.', 'Ti non ou, lekòl ou ak vil ou parèt nan klasman an.')
+                      : t('Désactivé : tes nouveaux points ne sont pas publiés.', 'Dezaktive : nouvo pwen ou yo pa pibliye.')}
               />
               <button type="button" className="pr-row" onClick={() => setShowNotifications(true)}>
                 <Bell size={16} aria-hidden="true" /> {t('Mes alertes', 'Alèt mwen')}

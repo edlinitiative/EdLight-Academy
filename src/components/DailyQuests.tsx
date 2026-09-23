@@ -289,7 +289,7 @@ export default function DailyQuests() {
         </h2>
         <p className="quests__note">
           {t(
-            'Nous n’arrivons pas à lire votre travail d’aujourd’hui, donc nous ne pouvons pas vous proposer de quêtes. Tout le reste de la page fonctionne.',
+            'Impossible de lire ton travail d’aujourd’hui, donc pas de quêtes pour l’instant. Tout le reste de la page fonctionne.',
             'Nou pa rive li travay ou fè jodi a, konsa nou pa ka pwopoze ou kèt. Tout rès paj la ap mache.',
           )}
         </p>
@@ -304,7 +304,7 @@ export default function DailyQuests() {
           {t('Quêtes du jour', 'Kèt jodi a')}
         </h2>
         <p className="quests__note">
-          {t('Nous lisons ce que vous avez déjà fait aujourd’hui…', 'N ap li sa ou deja fè jodi a…')}
+          {t('On regarde ce que tu as déjà fait aujourd’hui…', 'N ap li sa ou deja fè jodi a…')}
         </p>
       </section>
     );
@@ -356,7 +356,7 @@ export default function DailyQuests() {
       <p className="quests__note">
         {banked > 0
           ? t(
-              `${banked} XP ajoutés à votre compte aujourd’hui${left > 0 ? ` · ${left} XP encore en jeu` : ''}.`,
+              `${banked} XP ajoutés à ton compte aujourd’hui${left > 0 ? ` · ${left} XP encore en jeu` : ''}.`,
               `${banked} XP ajoute nan kont ou jodi a${left > 0 ? ` · ${left} XP toujou an jwèt` : ''}.`,
             )
           : t(`${left} XP en jeu aujourd’hui.`, `${left} XP an jwèt jodi a.`)}
@@ -393,13 +393,13 @@ function questCopy(
   switch (quest.id) {
     case 'review':
       return {
-        eyebrow: t('Vos propres erreurs', 'Pwòp erè ou yo'),
+        eyebrow: t('Tes propres erreurs', 'Pwòp erè ou yo'),
         title: t(
-          `Corrigez ${n} question${n === 1 ? '' : 's'} que vous aviez ratée${n === 1 ? '' : 's'}`,
+          `Corrige ${n} question${n === 1 ? '' : 's'} que tu avais ratée${n === 1 ? '' : 's'}`,
           `Korije ${n} kesyon ou te rate`,
         ),
         desc: t(
-          'Compté sur votre liste de révision : une question que vous aviez ratée et que vous répondez juste aujourd’hui, où que ce soit.',
+          'Compté sur ta liste de révision : une question que tu avais ratée et que tu réussis aujourd’hui, où que ce soit.',
           'Konte sou lis revizyon ou : yon kesyon ou te rate epi ou reponn kòrèk jodi a, kèlkeswa kote a.',
         ),
         cta: t('Ouvrir Revizyon', 'Louvri Revizyon'),
@@ -409,16 +409,16 @@ function questCopy(
       return {
         eyebrow: t('Progression', 'Pwogrè'),
         title: t(
-          `Faites monter ${n} leçon${n === 1 ? '' : 's'} d’un cran`,
+          `Fais monter ${n} leçon${n === 1 ? '' : 's'} d’un cran`,
           `Fè ${n} leson monte yon degre`,
         ),
         desc: course
           ? t(
-              `Compté sur votre suivi de maîtrise : une leçon monte quand vos exercices battent votre meilleur score. ${course.name} est le cours où vous êtes le plus avancé sans l’avoir fini.`,
+              `Compté sur ton suivi de maîtrise : une leçon monte quand tes exercices battent ton meilleur score. ${course.name} est le cours où tu es le plus avancé sans l’avoir fini.`,
               `Konte sou swivi metriz ou : yon leson monte lè egzèsis ou yo bat pi bon nòt ou. ${course.name} se kou kote ou pi avanse san ou poko fini l.`,
             )
           : t(
-              'Compté sur votre suivi de maîtrise : une leçon monte quand vos exercices battent votre meilleur score — 70 % pour « familier », 100 % pour le cran au-dessus.',
+              'Compté sur ton suivi de maîtrise : une leçon monte quand tes exercices battent ton meilleur score — 70 % pour « familier », 100 % pour le cran au-dessus.',
               'Konte sou swivi metriz ou : yon leson monte lè egzèsis ou yo bat pi bon nòt ou — 70 % pou « familye », 100 % pou degre ki anwo a.',
             ),
         cta: course ? t(`Ouvrir ${course.name}`, `Louvri ${course.name}`) : t('Ouvrir mes cours', 'Louvri kou m yo'),
@@ -427,9 +427,9 @@ function questCopy(
     case 'unit-quiz':
       return {
         eyebrow: t('Série d’unité', 'Seri inite'),
-        title: t('Terminez une série de questions dans une leçon', 'Fini yon seri kesyon nan yon leson'),
+        title: t('Termine une série de questions dans une leçon', 'Fini yon seri kesyon nan yon leson'),
         desc: t(
-          'Compté sur vos tentatives enregistrées : ce sont les séries lancées depuis une leçon, les seules dont la note est gardée.',
+          'Compté sur tes tentatives enregistrées : ce sont les séries lancées depuis une leçon, les seules dont la note est gardée.',
           'Konte sou tantativ ou yo ki anrejistre : se seri ou lanse depi nan yon leson, sèl yo ki kenbe nòt la.',
         ),
         cta: course ? t(`Ouvrir ${course.name}`, `Louvri ${course.name}`) : t('Ouvrir mes cours', 'Louvri kou m yo'),
@@ -438,9 +438,9 @@ function questCopy(
     case 'daily-challenge':
       return {
         eyebrow: t('Défi du jour', 'Defi jodi a'),
-        title: t('Terminez le défi du jour', 'Fini defi jodi a'),
+        title: t('Termine le défi du jour', 'Fini defi jodi a'),
         desc: t(
-          'Compté sur votre profil de jeu : dix questions, une seule fois par jour. Le défi paie déjà son propre bonus, donc la quête n’ajoute qu’un petit supplément.',
+          'Compté sur ton profil de jeu : dix questions, une seule fois par jour. Le défi paie déjà son propre bonus, donc la quête n’ajoute qu’un petit supplément.',
           'Konte sou pwofil jwèt ou : dis kesyon, yon sèl fwa pa jou. Defi a deja peye pwòp bonis li, kidonk kèt la ajoute yon ti siplemantè sèlman.',
         ),
         cta: t('Jouer le défi', 'Jwe defi a'),
@@ -450,9 +450,9 @@ function questCopy(
     case 'exam-paper':
       return {
         eyebrow: t('Épreuve officielle', 'Eprèv ofisyèl'),
-        title: t('Travaillez une épreuve de votre niveau', 'Travay yon eprèv nan nivo ou'),
+        title: t('Travaille une épreuve de ton niveau', 'Travay yon eprèv nan nivo ou'),
         desc: t(
-          'Compté sur votre copie enregistrée : dès que vos réponses sont sauvegardées, la quête est remplie. Vous n’êtes pas obligé de finir l’épreuve aujourd’hui.',
+          'Compté sur ta copie enregistrée : dès que tes réponses sont sauvegardées, la quête est remplie. Pas besoin de finir l’épreuve aujourd’hui.',
           'Konte sou kopi ou ki anrejistre : depi repons ou yo sove, kèt la fini. Ou pa oblije fini eprèv la jodi a.',
         ),
         cta: t('Ouvrir les épreuves', 'Louvri eprèv yo'),

@@ -133,7 +133,7 @@ export function GoalRhythm({ uid, t }: { uid: string; t: T }) {
 
 function SaveNote({ status, t }: { status: 'idle' | 'saving' | 'saved' | 'failed'; t: T }) {
   if (status === 'saved') {
-    return <small className="pr-ok" role="status"><Check size={13} aria-hidden="true" /> {t('Enregistré sur votre compte', 'Anrejistre sou kont ou')}</small>;
+    return <small className="pr-ok" role="status"><Check size={13} aria-hidden="true" /> {t('Enregistré sur ton compte', 'Anrejistre sou kont ou')}</small>;
   }
   if (status === 'failed') {
     return <small className="pr-failed" role="alert"><AlertTriangle size={13} aria-hidden="true" /> {t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}</small>;

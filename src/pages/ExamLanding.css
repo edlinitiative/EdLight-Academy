@@ -693,9 +693,11 @@
 }
 
 .exam-landing__row-swatch {
-  width: 8px;
-  align-self: stretch;
-  min-height: 40px;
+  /* a dot, not a left stripe (Ted) */
+  width: 10px;
+  height: 10px;
+  align-self: center;
+  flex: none;
   border-radius: 999px;
   flex: none;
 }
