@@ -28,6 +28,31 @@ import { trackTriviaEvent as trackEvent } from '../utils/triviaLearning';
 import { triviaOptions, triviaExplanation } from '../utils/triviaLearning';
 import { logAnswerEvent } from '../services/answerEventsService';
 import { inviteRef, sendInvite, canNativeShare } from '../utils/schoolInvite';
+import SprintSolo from './trivia/SprintSolo';
+import LiveRoomEntry from './trivia/LiveRoomEntry';
+import './trivia/triviaModes.css';
+
+/* ─── The three ways to play trivia (Ted: "3 variations — combine the
+   features"): the quick round, the solo sprint, and live rooms. ─── */
+type TriviaMode = 'quick' | 'sprint' | 'live';
+function TriviaModeSwitch({ mode, onChange, isCreole }: { mode: TriviaMode; onChange: (m: TriviaMode) => void; isCreole: boolean }) {
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
+  const modes: { id: TriviaMode; label: string; sub: string; Icon: any }[] = [
+    { id: 'quick', label: t('Partie rapide', 'Pati rapid'), sub: t('10 questions, un thème', '10 kesyon, yon tèm'), Icon: Zap },
+    { id: 'sprint', label: t('Sprint solo', 'Sprint solo'), sub: t('Contre la montre', 'Kont kwonomèt'), Icon: Clock },
+    { id: 'live', label: t('Salon en direct', 'Salon an dirèk'), sub: t('Avec ta classe, par code', 'Ak klas ou, ak kòd'), Icon: Users },
+  ];
+  return (
+    <div className="trivia-modes" role="tablist" aria-label={t('Mode de jeu', 'Mòd jwèt')}>
+      {modes.map(({ id, label, sub, Icon }) => (
+        <button key={id} type="button" role="tab" aria-selected={mode === id} className={`trivia-mode${mode === id ? ' is-on' : ''}`} onClick={() => onChange(id)}>
+          <span className="trivia-mode__icon"><Icon size={18} aria-hidden="true" /></span>
+          <span className="trivia-mode__text"><strong>{label}</strong><small>{sub}</small></span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /* Start with a short round; configuration stays optional and in place. */
 function CategoryPicker({ onSelect, isCreole, categories, questions, count, setCount, timed, setTimed, isAuthed }) {
@@ -515,6 +540,11 @@ function DailyChallengeBanner({ daily, isCreole, onStart }) {
 /* The daily challenge retains its fixed round and timer; practice is configurable. */
 function TriviaClassic({ isCreole, onExitHub }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const modeParam = new URLSearchParams(location.search).get('mode');
+  const mode: TriviaMode = modeParam === 'sprint' || modeParam === 'live' ? modeParam : 'quick';
+  const setMode = (m: TriviaMode) => navigate({ search: m === 'quick' ? '' : `?mode=${m}` }, { replace: true });
+  const [sprintPlaying, setSprintPlaying] = useState(false);
   const { recordResult, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
   const { categories, questions } = useTriviaContent();
@@ -615,9 +645,22 @@ function TriviaClassic({ isCreole, onExitHub }) {
     setCategory(null);
   };
 
+  if (mode !== 'quick') {
+    return <div className="trivia-page trivia-page--modes">
+      {!sprintPlaying && <>
+        <button className="trivia-back-btn" onClick={onExitHub}>← {isCreole ? 'Jwèt yo' : 'Les jeux'}</button>
+        <TriviaModeSwitch mode={mode} onChange={setMode} isCreole={isCreole} />
+      </>}
+      {mode === 'sprint'
+        ? <SprintSolo isCreole={isCreole} categories={categories} questionsMap={questions} onPlaying={setSprintPlaying} />
+        : <LiveRoomEntry isCreole={isCreole} />}
+    </div>;
+  }
+
   return <div className="trivia-page">
     {screen === 'pick' && <>
       <button className="trivia-back-btn" onClick={onExitHub}>← {isCreole ? 'Jwèt yo' : 'Les jeux'}</button>
+      <TriviaModeSwitch mode={mode} onChange={setMode} isCreole={isCreole} />
       <CategoryPicker onSelect={startRound} isCreole={isCreole} categories={categories} questions={questions}
         count={roundCount} setCount={setRoundCount} timed={timed} setTimed={setTimed} isAuthed={isAuthed} />
       <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
