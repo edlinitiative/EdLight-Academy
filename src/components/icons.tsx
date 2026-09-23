@@ -87,6 +87,7 @@ import {
   ListIcon,
   ListChecksIcon,
   LockIcon,
+  EnvelopeSimpleIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
   MedalIcon,
@@ -308,3 +309,4 @@ export const Wifi = make(WifiHighIcon, 'duotone', 'Wifi');
 export const WifiOff = make(WifiSlashIcon, 'duotone', 'WifiOff');
 export const X = make(XIcon, 'bold', 'X');
 export const Zap = make(LightningIcon, 'duotone', 'Zap');
+export const Mail = make(EnvelopeSimpleIcon, 'duotone', 'Mail');

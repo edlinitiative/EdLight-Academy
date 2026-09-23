@@ -8,7 +8,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ArrowRight, Check, FileText, KeyRound, Loader2, LogOut, Mail, RotateCcw, ShieldCheck, Trash2,
-} from 'lucide-react';
+} from '../../components/icons';
 import PixelAvatar from '../../components/PixelAvatar';
 import { loadReviewMap } from '../../services/reviewService';
 import { readMastery } from '../../services/masteryService';
