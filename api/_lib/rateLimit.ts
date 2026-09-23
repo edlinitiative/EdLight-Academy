@@ -81,6 +81,16 @@ const LIMITS: Record<string, Limit> = {
   // questions must still be able to, which is why this one is not tight.
   'arena-state':   { max: 60, windowSec: 3600 },
   'arena-control': { max: 300, windowSec: 3600 },
+
+  // ── Tournois (user-created tournaments, api/tournois/*) ─────────────────
+  // No prize money, so these fail OPEN like the duels. `tournois-play` covers
+  // one request per question (30 live, 20 × rounds) plus retries; `tournois-tick`
+  // is keyed by caller address because spectators tick without signing in, and
+  // a whole classroom behind one school router shares it.
+  'tournois-create': { max: 10, windowSec: 86400 },
+  'tournois-join':   { max: 60, windowSec: 3600 },
+  'tournois-play':   { max: 600, windowSec: 3600 },
+  'tournois-tick':   { max: 3000, windowSec: 3600 },
 };
 
 // Endpoints that spend money per call (paid LLM / email). If the limiter can't

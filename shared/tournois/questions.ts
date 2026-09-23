@@ -99,7 +99,9 @@ export function drawQuestions(
       if (out.length >= n) break;
       while (d.qs.length) {
         const q = d.qs.shift()!;
-        const key = q.q.trim().toLowerCase();
+        // A flag question's text is the same for every flag ("Quel pays a ce
+        // drapeau ?"); the flag is what makes it a different question.
+        const key = `${q.q.trim().toLowerCase()}|${q.flagIso || q.flag || ''}`;
         if (seen.has(key)) continue;
         seen.add(key);
         out.push(shuffleOptions(q, d.c, rand));

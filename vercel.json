@@ -48,6 +48,10 @@
     {
       "path": "/api/arena/claim?action=sweep",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/tournois/tick",
+      "schedule": "* * * * *"
     }
   ],
   "rewrites": [

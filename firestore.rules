@@ -97,6 +97,12 @@ service cloud.firestore {
       match /gamification/{docId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // "Mes tournois": written only by /api/tournois/* (Admin SDK).
+      match /myTournaments/{tid} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // Public site-wide stats document (for homepage/about metrics)
@@ -551,6 +557,56 @@ service cloud.firestore {
     // Aggregator cursor — server-side only.
     match /aggregatorState/{docId} {
       allow read, write: if false;
+    }
+
+    // ── User-created tournaments (Tournois) ─────────────────────────────────
+    // Every write goes through /api/tournois/* (Admin SDK), so no client may
+    // write anything here. Reads follow the creator's visibility choice:
+    //   public / unlisted — anyone, signed in or not, can watch;
+    //   private           — only the creator and players on the roster.
+    // `list` is public-only, so an unlisted or private room never shows up in
+    // a query — it is reachable only by its link or its PIN.
+    // questions/players/answers/attempts carry the answer key and the raw
+    // scores: unreadable by every client, including the creator.
+    function canSeeTournament(tid) {
+      let t = get(/databases/$(database)/documents/userTournaments/$(tid)).data;
+      return t.visibility != 'private'
+        || (request.auth != null
+            && (t.creatorUid == request.auth.uid
+                || exists(/databases/$(database)/documents/userTournaments/$(tid)/roster/$(request.auth.uid))));
+    }
+    match /userTournaments/{tid} {
+      allow get: if resource.data.visibility != 'private'
+        || (request.auth != null
+            && (resource.data.creatorUid == request.auth.uid
+                || exists(/databases/$(database)/documents/userTournaments/$(tid)/roster/$(request.auth.uid))));
+      allow list: if resource.data.visibility == 'public';
+      allow write: if false;
+
+      match /roster/{uid} {
+        allow read: if canSeeTournament(tid);
+        allow write: if false;
+      }
+      match /live/{docId} {
+        allow read: if canSeeTournament(tid);
+        allow write: if false;
+      }
+      match /standings/{docId} {
+        allow read: if canSeeTournament(tid);
+        allow write: if false;
+      }
+      match /matches/{matchId} {
+        allow read: if canSeeTournament(tid);
+        allow write: if false;
+      }
+      match /{server=**} {
+        allow read, write: if false;
+      }
+    }
+    // PIN → tid. `get` only: a PIN is a key you already hold, never a list to browse.
+    match /tournamentPins/{pin} {
+      allow get: if true;
+      allow list, write: if false;
     }
 
     // Default: deny all other access

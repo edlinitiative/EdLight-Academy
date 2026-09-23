@@ -544,8 +544,9 @@ function buildFlagQs(data: TriviaCountry[]): TriviaQuestion[] {
 function randomizeBank(questions: TriviaQuestion[]): TriviaQuestion[] {
   return questions.map((item) => {
     const order = shuffleArr(item.options.map((_, index) => index));
+    const ht = item.optionsHt;
     return { ...item, options: order.map((i) => item.options[i]),
-      optionsHt: item.optionsHt?.length === item.options.length ? order.map((i) => item.optionsHt[i]) : undefined,
+      optionsHt: ht && ht.length === item.options.length ? order.map((i) => ht[i]) : undefined,
       answer: order.indexOf(item.answer) };
   });
 }
