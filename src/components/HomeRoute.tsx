@@ -5,12 +5,13 @@ import { lazyWithRetry } from '../utils/lazyWithRetry';
 // Both targets stay lazy so the index route only ships the bundle the current
 // visitor actually needs (marketing page for guests, dashboard for learners).
 const Home = lazyWithRetry(() => import('../pages/Home'));
-const Dashboard = lazyWithRetry(() => import('../pages/Dashboard'));
+// Ted: the signed-in "/" shows the same content as /dashboard — the workspace.
+const Workspace = lazyWithRetry(() => import('../pages/Courses'));
 
 /**
  * The index route ("/") adapts to who is viewing it:
  *  - Signed-out visitors get the marketing landing page (Home).
- *  - Signed-in learners get their personalized Dashboard.
+ *  - Signed-in learners get their workspace (the same page as /dashboard).
  *
  * When localStorage says the user is authenticated but Firebase hasn't
  * confirmed the session yet (authConfirmed = false), we hold on a spinner
@@ -31,5 +32,5 @@ export default function HomeRoute() {
     );
   }
 
-  return isAuthenticated ? <Dashboard /> : <Home />;
+  return isAuthenticated ? <Workspace mode="workspace" /> : <Home />;
 }

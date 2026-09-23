@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import useStore from '../contexts/store';
 
 export function Footer() {
   const { t } = useTranslation();
+  const language = useStore((s) => s.language);
+  const setLanguage = useStore((s) => s.setLanguage);
   return (
     <footer className="footer">
       <div className="container footer__inner">
@@ -24,6 +27,12 @@ export function Footer() {
             <Link to="/privacy" className="footer__link">{t('footer.privacy')}</Link>
             <Link to="/terms" className="footer__link">{t('footer.terms')}</Link>
           </nav>
+          {/* The one place, with the profile page, where the language changes
+              (Ted: not a toggle on every screen). */}
+          <div className="footer__lang" role="group" aria-label="Langue / Lang">
+            <button type="button" className={language !== 'ht' ? 'is-on' : ''} aria-pressed={language !== 'ht'} onClick={() => setLanguage('fr')}>Français</button>
+            <button type="button" className={language === 'ht' ? 'is-on' : ''} aria-pressed={language === 'ht'} onClick={() => setLanguage('ht')}>Kreyòl</button>
+          </div>
           <span className="footer__copy">© {new Date().getFullYear()} EdLight Academy. {t('footer.rights')}</span>
         </div>
       </div>

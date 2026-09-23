@@ -2,10 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  PlayCircle, Brain, Zap, ChevronRight, ClipboardList, AlertTriangle, GraduationCap,
+  PlayCircle, ChevronRight, ClipboardList, AlertTriangle,
 } from 'lucide-react';
 import useStore from '../../contexts/store';
-import { GRADES } from '../../config/trackConfig';
 import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';
 import { dueQuestionIds } from '../../utils/review';
@@ -13,7 +12,6 @@ import { normalizeExamCatalog } from '../../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../../utils/examUtils';
 import { sessionRowName } from '../../utils/examNaming';
 import { useExamAttempts } from '../../hooks/useExamAttempts';
-import { useTrivia } from '../../hooks/useTrivia';
 import ExamCountdown from '../../components/ExamCountdown';
 import DailyQuests from '../../components/DailyQuests';
 import MySchoolCard from '../../components/MySchoolCard';
@@ -68,14 +66,10 @@ export default function LearnWorkspace({
 }) {
   const navigate = useNavigate();
   const user = useStore((s) => s.user);
-  const grade = useStore((s) => s.grade);
   const lastActivity = useStore((s) => s.lastActivity);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const uid = user?.uid || null;
-  const { profile } = useTrivia();
-  const school: string | null = profile?.leaderboard?.school || null;
-  const gradeRow = GRADES.find((g) => g.code === grade);
 
   // ── Resume ────────────────────────────────────────────────────────────────
   const live = useMemo(() => courses.filter((c) => !c.comingSoon), [courses]);
@@ -166,31 +160,6 @@ export default function LearnWorkspace({
 
   return (
     <div className="lws">
-      {/* ── Command bar ─────────────────────────────────────────────────── */}
-      <section className="lws-bar" aria-label={L('Ton espace de travail', 'Espas travay ou')}>
-        <div className="lws-bar__who">
-          <span className="lws-bar__icon" aria-hidden="true"><GraduationCap size={22} /></span>
-          <div className="lws-bar__text">
-            <p className="lws-bar__title">
-              {L('Espace de travail', 'Espas travay')}
-              {gradeRow && <span className="lws-pill">{isCreole ? gradeRow.labelHt : gradeRow.label}</span>}
-            </p>
-            {school && <p className="lws-bar__sub">{school}</p>}
-          </div>
-        </div>
-        <div className="lws-bar__actions">
-          <Link to="/quizzes" className="lws-btn lws-btn--violet">
-            <Zap size={16} aria-hidden="true" /> {L('Quiz rapide', 'Quiz rapid')}
-          </Link>
-          <Link to="/revision" className="lws-btn lws-btn--ghost">
-            <Brain size={16} aria-hidden="true" />
-            {weakTotal > 0
-              ? L(`Revoir mes erreurs (${weakTotal})`, `Revize erè m yo (${weakTotal})`)
-              : L('Revoir mes erreurs', 'Revize erè m yo')}
-          </Link>
-        </div>
-      </section>
-
       <div className="lws-grid">
         <div className="lws-main">
           {/* ── Resume ───────────────────────────────────────────────────── */}
@@ -225,13 +194,7 @@ export default function LearnWorkspace({
                 <PlayCircle size={18} aria-hidden="true" /> {L('Reprendre la leçon', 'Kontinye leson an')}
               </button>
             </section>
-          ) : (
-            <section className="lws-card lws-resume">
-              <span className="lws-eyebrow">{L('Pour commencer', 'Pou kòmanse')}</span>
-              <h2 className="lws-resume__title">{L('Choisis ta première leçon', 'Chwazi premye leson ou')}</h2>
-              <p className="lws-resume__sub">{L('Tes matières sont juste en dessous.', 'Matyè ou yo jis anba a.')}</p>
-            </section>
-          )}
+          ) : null}
 
           {/* ── Subjects ─────────────────────────────────────────────────── */}
           <section className="lws-section" aria-labelledby="lws-subjects">

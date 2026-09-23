@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Timer, Pause, Play, Check, X, RotateCcw, Target, NotebookPen, Languages, SkipForward, ShieldCheck } from 'lucide-react';
+import { Timer, Pause, Play, Check, X, RotateCcw, Target, NotebookPen, SkipForward, ShieldCheck } from 'lucide-react';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useFocusMode } from '../../hooks/useFocusMode';
 import { drawAndRemember } from '../../utils/questionRotation';
@@ -55,7 +55,7 @@ export default function SprintSolo({ isCreole, categories, questionsMap, onPlayi
   const [skipped, setSkipped] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(minutes * 60);
   const [paused, setPaused] = useState(false);
-  const [showHt, setShowHt] = useState(isCreole);
+  const showHt = isCreole;
   const [sessionId, setSessionId] = useState('');
   const [scratchOpen, setScratchOpen] = useState(false);
   const [scratch, setScratch] = useState('');
@@ -67,7 +67,6 @@ export default function SprintSolo({ isCreole, categories, questionsMap, onPlayi
 
   useFocusMode(screen === 'play');
   useEffect(() => { onPlaying?.(screen === 'play'); }, [screen, onPlaying]);
-  useEffect(() => { setShowHt(isCreole); }, [isCreole]);
 
   const catName = useCallback((id: string) => {
     if (id === 'mixed') return t('Mélange de thèmes', 'Melanj tèm');
@@ -346,9 +345,6 @@ export default function SprintSolo({ isCreole, categories, questionsMap, onPlayi
             <span className="sprint-pill">{t('Sprint solo', 'Sprint solo')}</span>
           </div>
           <div className="sprint-hud__controls">
-            <button type="button" className="sprint-btn sprint-btn--ghost sprint-btn--sm" onClick={() => setShowHt((v) => !v)} aria-pressed={showHt}>
-              <Languages size={15} aria-hidden="true" /> {showHt ? 'Français' : 'Kreyòl'}
-            </button>
             <button type="button" className="sprint-btn sprint-btn--ghost sprint-btn--sm" onClick={() => setPaused((p) => !p)} aria-pressed={paused}>
               {paused ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
               {paused ? t('Reprendre', 'Kontinye') : t('Pause', 'Poz')}

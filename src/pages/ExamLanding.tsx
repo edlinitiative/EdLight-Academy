@@ -399,93 +399,56 @@ const ExamLanding = () => {
   return (
     <div className="exam-landing exam-hub container">
       {/* ── Header card: breadcrumb, title, filters (Ted's third mockup) ── */}
-      <header className="exam-hub__head">
-        <nav className="exam-hub__crumbs" aria-label={ht ? 'Chemen' : 'Fil d’Ariane'}>
-          <Link to="/practice">{ht ? 'Pratik' : 'Pratique'}</Link>
-          <span aria-hidden="true">/</span>
-          <span>{ht ? 'Egzamen ofisyèl' : 'Examens officiels'}</span>
-          <span aria-hidden="true">/</span>
-          <strong>{hubLevelLabel}</strong>
-        </nav>
+      {/* One title line + one filter row (Ted: no "big filter hero"). */}
+      <header className="exam-hub__head exam-hub__head--flat">
         <div className="exam-hub__head-row">
-          <div>
-            <h1 className="exam-hub__title">{offLevel
-              ? (ht ? 'Egzamen nasyonal yo' : 'Les examens nationaux')
-              : (ht ? 'Sant egzamen ofisyèl yo' : 'Le hub des examens officiels')}</h1>
-            <p className="exam-hub__lede">{offLevel
-              ? (ht
-                  ? 'Yon egzamen isit la se yon sijè ofisyèl MENFP konplè — se pa yon ti kiz. Premye yo kòmanse nan 9yèm ane.'
-                  : 'Ici, un examen est un sujet officiel du MENFP complet — pas un quiz rapide. Les premières épreuves nationales arrivent en 9ᵉ AF.')
-              : (ht
-                  ? `${enriched.length ? `${enriched.length} ` : ''}sijè ofisyèl MENFP, nan vrè kondisyon.`
-                  : `${enriched.length ? `${enriched.length} sujets` : 'Les sujets'} officiels du MENFP, en conditions réelles.`)}</p>
-          </div>
-          <div className="exam-hub__head-actions">
-            {knowsLevel && (
-              <span className="exam-hub__level-context">
-                <span>{t('examLanding.myLevelEyebrow')}</span>
-                <strong>{myLevelLabel}</strong>
-              </span>
-            )}
-            <Link to="/exams/resultats" className="exam-hub__btn exam-hub__btn--soft">
-              <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
-            </Link>
-          </div>
+          <h1 className="exam-hub__title">{offLevel
+            ? (ht ? 'Egzamen nasyonal yo' : 'Les examens nationaux')
+            : (ht ? 'Egzamen ofisyèl' : 'Examens officiels')}
+            {!offLevel && enriched.length > 0 && <span className="exam-hub__count">{enriched.length}</span>}
+          </h1>
+          <Link to="/exams/resultats" className="exam-hub__btn exam-hub__btn--soft">
+            <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
+          </Link>
         </div>
-
-        <div className="exam-hub__filters">
-          <div className="exam-hub__filter-row">
-            <span className="exam-hub__filter-label">{ht ? 'EGZAMEN' : 'EXAMEN'}</span>
-            <div className="exam-hub__chips" role="group" aria-label={ht ? 'Nivo' : 'Niveau'}>
-              {HUB_LEVELS.map((l) => (
-                <button key={l.raw} type="button" aria-pressed={hubLevel === l.raw}
-                  className={`exam-hub__chip${hubLevel === l.raw ? ' is-on' : ''}`} onClick={() => setHubLevel(l.raw)}>
-                  {ht ? l.ht : l.fr}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="exam-hub__filter-row">
-            <span className="exam-hub__filter-label">{ht ? 'MATYÈ' : 'MATIÈRE'}</span>
-            <div className="exam-hub__chips" role="group" aria-label={ht ? 'Matyè' : 'Matière'}>
-              <button type="button" aria-pressed={hubSubject === 'all'}
-                className={`exam-hub__chip${hubSubject === 'all' ? ' is-on' : ''}`} onClick={() => setHubSubject('all')}>
-                {ht ? 'Tout' : 'Toutes'}
+        <div className="exam-hub__toolbar" role="group" aria-label={ht ? 'Filt' : 'Filtres'}>
+          <div className="exam-hub__seg" role="group" aria-label={ht ? 'Nivo' : 'Niveau'}>
+            {HUB_LEVELS.map((l) => (
+              <button key={l.raw} type="button" aria-pressed={hubLevel === l.raw}
+                className={hubLevel === l.raw ? 'is-on' : ''} onClick={() => setHubLevel(l.raw)}>
+                {ht ? l.ht : l.fr}
               </button>
-              {hubSubjects.map((sub) => (
-                <button key={sub} type="button" aria-pressed={hubSubject === sub}
-                  className={`exam-hub__chip${hubSubject === sub ? ' is-on' : ''}`} onClick={() => setHubSubject(sub)}>
-                  {sub}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
-          <div className="exam-hub__filter-row exam-hub__filter-row--split">
-            <div className="exam-hub__selects">
-              <label>
-                <span className="exam-hub__filter-label">{ht ? 'ANE' : 'ANNÉE'}</span>
-                <select value={hubYear} onChange={(e) => setHubYear(e.target.value)}>
-                  <option value="all">{ht ? 'Tout ane' : 'Toutes'}</option>
-                  {hubYears.map((y) => <option key={y} value={y}>{y}</option>)}
-                </select>
-              </label>
-              {hubSessions.length > 1 && (
-                <label>
-                  <span className="exam-hub__filter-label">{ht ? 'SESYON' : 'SESSION'}</span>
-                  <select value={hubSession} onChange={(e) => setHubSession(e.target.value)}>
-                    <option value="all">{ht ? 'Tout' : 'Toutes'}</option>
-                    {hubSessions.map((x) => <option key={x} value={x}>{x}</option>)}
-                  </select>
-                </label>
-              )}
-            </div>
-            <label className="exam-hub__search">
-              <Search size={16} aria-hidden="true" />
-              <input type="search" value={hubQuery} onChange={(e) => setHubQuery(e.target.value)}
-                placeholder={ht ? 'Chèche yon sijè, yon tèm…' : 'Rechercher un sujet, un thème…'}
-                aria-label={ht ? 'Chèche' : 'Rechercher'} />
+          <label className="qz-select">
+            <span className="qz__sr-only">{ht ? 'Matyè' : 'Matière'}</span>
+            <select value={hubSubject} onChange={(e) => setHubSubject(e.target.value)}>
+              <option value="all">{ht ? 'Tout matyè' : 'Toutes les matières'}</option>
+              {hubSubjects.map((sub) => <option key={sub} value={sub}>{sub}</option>)}
+            </select>
+          </label>
+          <label className="qz-select">
+            <span className="qz__sr-only">{ht ? 'Ane' : 'Année'}</span>
+            <select value={hubYear} onChange={(e) => setHubYear(e.target.value)}>
+              <option value="all">{ht ? 'Tout ane' : 'Toutes les années'}</option>
+              {hubYears.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </label>
+          {hubSessions.length > 1 && (
+            <label className="qz-select">
+              <span className="qz__sr-only">{ht ? 'Sesyon' : 'Session'}</span>
+              <select value={hubSession} onChange={(e) => setHubSession(e.target.value)}>
+                <option value="all">{ht ? 'Tout sesyon' : 'Toutes les sessions'}</option>
+                {hubSessions.map((x) => <option key={x} value={x}>{x}</option>)}
+              </select>
             </label>
-          </div>
+          )}
+          <label className="exam-hub__search">
+            <Search size={16} aria-hidden="true" />
+            <input type="search" value={hubQuery} onChange={(e) => setHubQuery(e.target.value)}
+              placeholder={ht ? 'Chèche yon sijè…' : 'Rechercher un sujet…'}
+              aria-label={ht ? 'Chèche' : 'Rechercher'} />
+          </label>
         </div>
       </header>
 

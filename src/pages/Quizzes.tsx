@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Target, Brain, Timer, Languages } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Target, Brain, Timer } from 'lucide-react';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
@@ -113,7 +113,6 @@ const Quizzes = () => {
     return (isCreole ? g.labelHt : g.label).split(' · ')[0].split(' (')[0].trim();
   }, [grade, isCreole]);
 
-  const setLanguage = useStore((state) => state.setLanguage);
 
   // The configurator's length. buildQuizDeck caps at what the unit holds, so
   // 20 on a 12-question unit is a 12-question quiz — the count shown says so.
@@ -863,57 +862,37 @@ const Quizzes = () => {
                 from the bank or the Revizyon map — no rate, no timer, no XP
                 is invented. ── */
           <>
-            <header className="qz-hub__head">
-              <nav className="qz-crumbs" aria-label={tx('Fil d’Ariane', 'Chemen')}>
-                <Link to="/practice">{t('nav.practice', 'Pratiquer')}</Link>
-                <span aria-hidden="true">/</span>
-                <span>{subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}</span>
-                <span aria-hidden="true">/</span>
-                <strong>{pageTitle}</strong>
-              </nav>
-
-              <div className="qz-hub__titlerow">
-                <h1 className="qz__title">{tx('Entraînement et quiz', 'Antrènman ak kwiz')}</h1>
-                <div className="qz-lang" role="group" aria-label={tx('Langue', 'Lang')}>
-                  <Languages size={15} aria-hidden="true" />
-                  <button type="button" className={!isCreole ? 'is-on' : ''} aria-pressed={!isCreole} onClick={() => setLanguage('fr')}>Français</button>
-                  <button type="button" className={isCreole ? 'is-on' : ''} aria-pressed={isCreole} onClick={() => setLanguage('ht')}>Kreyòl</button>
-                </div>
-              </div>
-
-              <div className="qz-pick">
-                <span className="qz-pick__label">{t('quizzes.course', 'Matière')}</span>
-                <div className="qz-pick__chips">
-                  {subjectOptions.map((o) => (
-                    <button key={o.value} type="button" className={`qz-chip${subjectBase === o.value ? ' is-on' : ''}`} aria-pressed={subjectBase === o.value} onClick={() => setSubjectBase(o.value)}>
-                      {subjectBase === o.value && <Check size={14} aria-hidden="true" />}{o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="qz-pick">
-                <span className="qz-pick__label">{t('quizzes.gradeLevel', 'Niveau')}</span>
-                <div className="qz-pick__chips">
-                  {levelOptions.map((o) => (
-                    <button key={o.value} type="button" className={`qz-chip${level === o.value ? ' is-on' : ''}`} aria-pressed={level === o.value} onClick={() => setLevel(o.value)}>
-                      {o.label}
-                      {myLevel === o.value && <span className="qz-chip__mine">{tx('ta classe', 'klas ou')}</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {unitOptions.length > 0 && (
-                <div className="qz-pick">
-                  <span className="qz-pick__label">{t('quizzes.unit', 'Unité')}</span>
-                  <div className="qz-pick__chips">
-                    {unitOptions.map((o) => (
-                      <button key={o.value} type="button" className={`qz-chip qz-chip--soft${unit === o.value ? ' is-on' : ''}`} aria-pressed={unit === o.value} onClick={() => setUnit(o.value)}>
-                        {o.label}
-                      </button>
+            {/* Ted: "i complained about hero and you bring me a big filter
+                hero". The header is now one title line and one row of
+                compact selects — no crumbs, no stacked chip rows, no card. */}
+            <header className="qz-hub__head qz-hub__head--flat">
+              <h1 className="qz__title">{tx('Entraînement et quiz', 'Antrènman ak kwiz')}</h1>
+              <div className="qz-bar-filters" role="group" aria-label={tx('Filtres', 'Filt')}>
+                <label className="qz-select">
+                  <span className="qz__sr-only">{t('quizzes.course', 'Matière')}</span>
+                  <select value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
+                    {subjectOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </label>
+                <label className="qz-select">
+                  <span className="qz__sr-only">{t('quizzes.gradeLevel', 'Niveau')}</span>
+                  <select value={level} onChange={(e) => setLevel(e.target.value)}>
+                    {levelOptions.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}{myLevel === o.value ? ` · ${tx('ta classe', 'klas ou')}` : ''}
+                      </option>
                     ))}
-                  </div>
-                </div>
-              )}
+                  </select>
+                </label>
+                {unitOptions.length > 0 && (
+                  <label className="qz-select qz-select--wide">
+                    <span className="qz__sr-only">{t('quizzes.unit', 'Unité')}</span>
+                    <select value={unit} onChange={(e) => setUnit(e.target.value)}>
+                      {unitOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </label>
+                )}
+              </div>
             </header>
 
             {isError && appData && (

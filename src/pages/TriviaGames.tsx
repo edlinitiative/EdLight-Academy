@@ -784,7 +784,6 @@ function GamesHub({ isCreole }) {
   const location = useLocation();
   const { profile, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
-  const setLanguage = useStore((s) => s.setLanguage);
   const setSchoolChosen = useStore((s) => s.setSchoolChosen);
   const toggleAuthModal = useStore((s) => s.toggleAuthModal);
   const { categories } = useTriviaContent();
@@ -888,10 +887,6 @@ function GamesHub({ isCreole }) {
             </div>
           </div>
           <div className="gx-hud__controls">
-            <div className="gx-lang" role="group" aria-label={t('Langue', 'Lang')}>
-              <button type="button" className={!isCreole ? 'is-on' : ''} aria-pressed={!isCreole} onClick={() => setLanguage('fr')}>Français</button>
-              <button type="button" className={isCreole ? 'is-on' : ''} aria-pressed={isCreole} onClick={() => setLanguage('ht')}>Kreyòl</button>
-            </div>
             <Link to="/download?from=defi" className="gx-duel">
               <Users size={16} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
             </Link>

@@ -258,7 +258,7 @@
 .exam-hub__td-paper > span:last-child { display: grid; min-width: 0; }
 .exam-hub__td-paper strong { color: var(--text-900); font-size: 0.92rem; }
 .exam-hub__td-paper small { overflow: hidden; color: var(--primary-600, #1558B8); font-size: 0.78rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.exam-hub__swatch { flex: none; width: 6px; height: 34px; border-radius: 999px; }
+.exam-hub__swatch { flex: none; width: 10px; height: 10px; border-radius: 50%; } /* a dot, not a left stripe (Ted) */
 .exam-hub__td-topics { overflow: hidden; color: var(--text-600); font-size: 0.82rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .exam-hub__td-dur { color: var(--text-600); font-size: 0.82rem; white-space: nowrap; }
 .exam-hub__more {
@@ -345,3 +345,17 @@
   background: var(--surface);
   box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 16px 36px -30px rgba(11, 41, 107, 0.35);
 }
+
+/* ── Flat header (replaces the filter card) ── */
+.exam-hub__head.exam-hub__head--flat { padding: 0; background: none; border: 0; box-shadow: none; gap: 0.85rem; margin-bottom: 1.25rem; }
+.exam-hub__head--flat .exam-hub__head-row { align-items: center; }
+.exam-hub__head--flat .exam-hub__title { margin: 0; font-size: clamp(1.35rem, 2.2vw, 1.6rem); display: inline-flex; align-items: center; gap: 0.6rem; }
+.exam-hub__count { font-size: 0.8rem; font-weight: 700; color: var(--text-600); background: var(--surface-2, #F1F5F9); padding: 0.15rem 0.6rem; border-radius: 999px; }
+.exam-hub__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.exam-hub__seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface-2, #F1F5F9); }
+.exam-hub__seg button { border: 0; background: none; font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--text-600); padding: 0.38rem 0.85rem; border-radius: 999px; cursor: pointer; }
+.exam-hub__seg button.is-on { background: var(--surface, #fff); color: var(--text-900); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12); }
+.exam-hub__head--flat .exam-hub__search { flex: 1 1 14rem; min-width: 12rem; }
+@media (max-width: 560px) { .exam-hub__seg { width: 100%; overflow-x: auto; } }
+.exam-hub__head--flat .exam-hub__search { border-radius: 999px; padding: 0.4rem 0.9rem; max-width: 320px; }
+.exam-landing.exam-hub { padding-top: 1.25rem; }

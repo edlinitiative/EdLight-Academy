@@ -81,7 +81,6 @@ const WHY: Array<{ fr: string; ht: string }> = [
 export function SampleQuestionCard({ t }: { t: TFn }) {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
-  const setLanguage = useStore((s) => s.setLanguage);
 
   const [picked, setPicked] = useState<number | null>(null);
   const answered = picked !== null;
@@ -95,29 +94,6 @@ export function SampleQuestionCard({ t }: { t: TFn }) {
           <Sigma size={14} aria-hidden="true" />
           {t('Économie NS1 · L’Intérêt Simple', 'Ekonomi NS1 · Enterè Senp')}
         </span>
-
-        {/* The toggle is the demonstration, so it drives the real app-wide
-            language rather than a local copy of it — switching here
-            switches the whole site, which is the honest version of the
-            claim. */}
-        <div className="lp-sample__lang" role="group" aria-label={t('Langue', 'Lang')}>
-          <button
-            type="button"
-            className={`lp-sample__lang-btn${!isCreole ? ' is-on' : ''}`}
-            aria-pressed={!isCreole}
-            onClick={() => setLanguage('fr')}
-          >
-            Français
-          </button>
-          <button
-            type="button"
-            className={`lp-sample__lang-btn${isCreole ? ' is-on' : ''}`}
-            aria-pressed={isCreole}
-            onClick={() => setLanguage('ht')}
-          >
-            Kreyòl
-          </button>
-        </div>
       </div>
 
       <p className="lp-sample__question">{lang(QUESTION)}</p>
