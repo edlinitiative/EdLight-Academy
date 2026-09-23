@@ -25,6 +25,12 @@ export default function DirectBankQuiz({
   const [submitted, setSubmitted] = useState(false);
   const [correct, setCorrect] = useState(null);
   const [attempts, setAttempts] = useState(0);
+  // The answer that was just marked wrong. Two bugs lived here: the red
+  // "wrong" styling followed WHATEVER option was selected next (so the right
+  // answer looked wrong before it was checked), and the button — relabelled
+  // "Réessayer" — re-graded the still-selected wrong answer, spending an
+  // attempt on a choice already known to be wrong.
+  const [lastWrong, setLastWrong] = useState<number | string | null>(null);
   const maxAttempts = MAX_ATTEMPTS;
 
   const derivedHints = useMemo(() => {
@@ -43,6 +49,7 @@ export default function DirectBankQuiz({
     setSubmitted(false);
     setCorrect(null);
     setAttempts(0);
+    setLastWrong(null);
   }, [item]);
 
   const handleCheck = () => {
@@ -91,6 +98,7 @@ export default function DirectBankQuiz({
     } else {
       // allow another try without submitting
       setCorrect(false);
+      setLastWrong((item.kind === 'mcq' || item.kind === 'tf') ? selected : String(textAns).trim());
       if (onScore) onScore({ correct: 0, message: `attempt_${next}`, attemptsLeft: maxAttempts - next });
     }
   };
@@ -145,7 +153,7 @@ export default function DirectBankQuiz({
             if (submitted) {
               if (isCorrectOpt) stateClass = 'radio-option--correct';
               else if (isSelectedOpt) stateClass = 'radio-option--wrong';
-            } else if (attempts > 0 && isSelectedOpt && correct === false) {
+            } else if (attempts > 0 && idx === lastWrong) {
               stateClass = 'radio-option--wrong';
             }
             return (
@@ -225,11 +233,11 @@ export default function DirectBankQuiz({
             type="button"
             className="button button--primary button--sm"
             onClick={handleCheck}
-            disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf') ? selected === null : textAns.trim().length === 0)}
+            disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf')
+              ? selected === null || selected === lastWrong
+              : textAns.trim().length === 0 || textAns.trim() === lastWrong)}
           >
-            {submitted
-              ? t('quizzes.answered', 'Répondu')
-              : (attempts > 0 ? t('quizzes.tryAgain', 'Réessayer') : t('quizzes.check', 'Vérifier'))}
+            {submitted ? t('quizzes.answered', 'Répondu') : t('quizzes.check', 'Vérifier')}
           </button>
         )}
         {onNext && (

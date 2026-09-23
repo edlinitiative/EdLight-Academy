@@ -247,7 +247,7 @@ export default function StudyPlan() {
       <div className="sp">
         <div className="sp-empty">
           <span className="sp-empty__icon"><Lock size={40} /></span>
-          <h2>{isCreole ? 'Konekte pou wè plan ou' : 'Connectez-vous pour voir votre plan'}</h2>
+          <h1 className="sp-state__title">{isCreole ? 'Konekte pou wè plan ou' : 'Connectez-vous pour voir votre plan'}</h1>
           <p>
             {isCreole
               ? 'Yon plan etid se yon lis travay ki anrejistre nan kont ou, pou li rete menm sou telefòn ou ak sou òdinatè a. Se poutèt sa ou bezwen yon kont.'
@@ -286,7 +286,7 @@ export default function StudyPlan() {
       <div className="sp">
         <div className="sp-empty">
           <span className="sp-empty__icon"><GraduationCap size={40} /></span>
-          <h2>{isCreole ? 'Kreye plan etid ou' : 'Créez votre plan d\'étude'}</h2>
+          <h1 className="sp-state__title">{isCreole ? 'Kreye plan etid ou' : 'Créez votre plan d\'étude'}</h1>
           <p>
             {prefacSeason
               ? (isCreole
@@ -354,7 +354,7 @@ export default function StudyPlan() {
       <div className="sp">
         <div className="sp-empty">
           <span className="sp-empty__icon"><ClipboardList size={40} /></span>
-          <h2>{isCreole ? 'Pa gen plan etid ankò' : 'Pas encore de plan d\'étude'}</h2>
+          <h1 className="sp-state__title">{isCreole ? 'Pa gen plan etid ankò' : 'Pas encore de plan d\'étude'}</h1>
           <p style={{ maxWidth: '52ch' }}>
             {isCreole
               ? 'Yon plan se yon lis travay — egzamen, egzèsis ak videyo — ki soti nan filyè ou ak rezilta egzamen ou yo. Ou menm ki mande l, epi ou ka chanje l oswa efase l nenpòt lè.'

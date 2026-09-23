@@ -355,9 +355,11 @@ export default function Dashboard() {
             display heading that filled a third of the first screen to tell the
             student their own name. The focus card below is the headline now. */}
         <header className="dash__header">
-          <p className="dash__greet">
+          {/* The page's one heading, at sentence size — screen readers need an
+              h1 to land on, and this line is what the page is. */}
+          <h1 className="dash__greet">
             {greeting}, {firstName || (isCreole ? 'zanmi' : 'à vous')}.
-          </p>
+          </h1>
           {/* Top right, chip-sized. It was a 260px column beside the focus
               card; Ted: "could just be at the very top, 90% smaller". */}
           <StreakRail />
