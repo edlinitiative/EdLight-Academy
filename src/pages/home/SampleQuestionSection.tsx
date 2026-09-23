@@ -73,7 +73,12 @@ const WHY: Array<{ fr: string; ht: string }> = [
   },
 ];
 
-export default function SampleQuestionSection({ t }: { t: TFn }) {
+/**
+ * The exercise card on its own — the homepage hero leads with it (Ted's
+ * mockup: a live question on the right of the headline), so it is the first
+ * thing a visitor can DO rather than read about.
+ */
+export function SampleQuestionCard({ t }: { t: TFn }) {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const setLanguage = useStore((s) => s.setLanguage);
@@ -83,118 +88,98 @@ export default function SampleQuestionSection({ t }: { t: TFn }) {
   const lang = (c: { fr: string; ht: string }) => (isCreole ? c.ht : c.fr);
 
   return (
-    <section className="lp-section lp-sample" aria-labelledby="lp-sample-title">
-      <div className="lp-container lp-sample__container">
-        <div className="lp-sample__intro" data-reveal>
-          <span className="lp-eyebrow">
-            <span className="lp-eyebrow__dot" aria-hidden="true" />
-            {t('Un vrai exercice, tout de suite', 'Yon vrè egzèsis, kounye a')}
-          </span>
-          <h2 className="lp-section__title" id="lp-sample-title">
-            {t('Voyez par vous-même.', 'Gade ak pwòp je w.')}
-          </h2>
-          <p className="lp-section__lede">
-            {t(
-              'Un exercice d’Économie NS1, comme ceux de l’application. Changez de langue : tout suit, y compris la correction.',
-              'Yon egzèsis Ekonomi NS1, tankou sa ki nan aplikasyon an. Chanje lang : tout bagay swiv, menm koreksyon an.',
-            )}
-          </p>
-        </div>
+    <div className="lp-sample__card">
+      <div className="lp-sample__bar">
+        {/* A badge, not a stripe: where the exercise comes from, stated. */}
+        <span className="lp-sample__source">
+          <Sigma size={14} aria-hidden="true" />
+          {t('Économie NS1 · L’Intérêt Simple', 'Ekonomi NS1 · Enterè Senp')}
+        </span>
 
-        <div className="lp-sample__card" data-reveal>
-          <div className="lp-sample__bar">
-            {/* A badge, not a stripe: where the exercise comes from, stated. */}
-            <span className="lp-sample__source">
-              <Sigma size={14} aria-hidden="true" />
-              {t('Économie NS1 · L’Intérêt Simple', 'Ekonomi NS1 · Enterè Senp')}
-            </span>
-
-            {/* The toggle is the demonstration, so it drives the real app-wide
-                language rather than a local copy of it — switching here
-                switches the whole site, which is the honest version of the
-                claim. */}
-            <div className="lp-sample__lang" role="group" aria-label={t('Langue', 'Lang')}>
-              <button
-                type="button"
-                className={`lp-sample__lang-btn${!isCreole ? ' is-on' : ''}`}
-                aria-pressed={!isCreole}
-                onClick={() => setLanguage('fr')}
-              >
-                Français
-              </button>
-              <button
-                type="button"
-                className={`lp-sample__lang-btn${isCreole ? ' is-on' : ''}`}
-                aria-pressed={isCreole}
-                onClick={() => setLanguage('ht')}
-              >
-                Kreyòl
-              </button>
-            </div>
-          </div>
-
-          <p className="lp-sample__question">{lang(QUESTION)}</p>
-
-          <ul className="lp-sample__choices">
-            {CHOICES.map((choice, i) => {
-              const isAnswer = i === ANSWER;
-              const isPicked = i === picked;
-              const state = !answered
-                ? ''
-                : isAnswer
-                  ? ' is-answer'
-                  : isPicked
-                    ? ' is-picked'
-                    : ' is-dim';
-              return (
-                <li key={i}>
-                  <button
-                    type="button"
-                    className={`lp-sample__choice${state}`}
-                    onClick={() => !answered && setPicked(i)}
-                    disabled={answered}
-                  >
-                    <span className="lp-sample__choice-mark" aria-hidden="true">
-                      {answered && isAnswer ? '✓' : answered && isPicked ? '✕' : String.fromCharCode(65 + i)}
-                    </span>
-                    <span>{lang(choice)}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          {answered && (
-            <div className="lp-sample__why" role="status">
-              <p className={`lp-sample__verdict${picked === ANSWER ? '' : ' lp-sample__verdict--wrong'}`}>
-                {picked === ANSWER
-                  ? t('C’est juste.', 'Se sa menm.')
-                  : t('Pas tout à fait.', 'Pa fin kòrèk.')}
-              </p>
-              {/* The student's own wrong answer is explained first, because
-                  that is the one they need; the worked solution follows. */}
-              <p>{lang(WHY[picked as number])}</p>
-              {picked !== ANSWER && <p>{lang(WHY[ANSWER])}</p>}
-
-              <div className="lp-sample__after">
-                <Link className="lp-btn lp-btn--primary" to="/courses/econ-ns1">
-                  <span>{t('Ouvrir cette leçon', 'Louvri leson sa a')}</span>
-                  <ArrowIcon />
-                </Link>
-                <button type="button" className="lp-link" onClick={() => setPicked(null)}>
-                  {t('Recommencer', 'Rekòmanse')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!answered && (
-            <p className="lp-sample__hint">
-              {t('Choisissez une réponse — la correction s’affiche tout de suite.', 'Chwazi yon repons — koreksyon an parèt touswit.')}
-            </p>
-          )}
+        {/* The toggle is the demonstration, so it drives the real app-wide
+            language rather than a local copy of it — switching here
+            switches the whole site, which is the honest version of the
+            claim. */}
+        <div className="lp-sample__lang" role="group" aria-label={t('Langue', 'Lang')}>
+          <button
+            type="button"
+            className={`lp-sample__lang-btn${!isCreole ? ' is-on' : ''}`}
+            aria-pressed={!isCreole}
+            onClick={() => setLanguage('fr')}
+          >
+            Français
+          </button>
+          <button
+            type="button"
+            className={`lp-sample__lang-btn${isCreole ? ' is-on' : ''}`}
+            aria-pressed={isCreole}
+            onClick={() => setLanguage('ht')}
+          >
+            Kreyòl
+          </button>
         </div>
       </div>
-    </section>
+
+      <p className="lp-sample__question">{lang(QUESTION)}</p>
+
+      <ul className="lp-sample__choices">
+        {CHOICES.map((choice, i) => {
+          const isAnswer = i === ANSWER;
+          const isPicked = i === picked;
+          const state = !answered
+            ? ''
+            : isAnswer
+              ? ' is-answer'
+              : isPicked
+                ? ' is-picked'
+                : ' is-dim';
+          return (
+            <li key={i}>
+              <button
+                type="button"
+                className={`lp-sample__choice${state}`}
+                onClick={() => !answered && setPicked(i)}
+                disabled={answered}
+              >
+                <span className="lp-sample__choice-mark" aria-hidden="true">
+                  {answered && isAnswer ? '✓' : answered && isPicked ? '✕' : String.fromCharCode(65 + i)}
+                </span>
+                <span>{lang(choice)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {answered && (
+        <div className="lp-sample__why" role="status">
+          <p className={`lp-sample__verdict${picked === ANSWER ? '' : ' lp-sample__verdict--wrong'}`}>
+            {picked === ANSWER
+              ? t('C’est juste.', 'Se sa menm.')
+              : t('Pas tout à fait.', 'Pa fin kòrèk.')}
+          </p>
+          {/* The student's own wrong answer is explained first, because
+              that is the one they need; the worked solution follows. */}
+          <p>{lang(WHY[picked as number])}</p>
+          {picked !== ANSWER && <p>{lang(WHY[ANSWER])}</p>}
+
+          <div className="lp-sample__after">
+            <Link className="lp-btn lp-btn--primary" to="/courses/econ-ns1">
+              <span>{t('Ouvrir cette leçon', 'Louvri leson sa a')}</span>
+              <ArrowIcon />
+            </Link>
+            <button type="button" className="lp-link" onClick={() => setPicked(null)}>
+              {t('Recommencer', 'Rekòmanse')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!answered && (
+        <p className="lp-sample__hint">
+          {t('Choisissez une réponse — la correction s’affiche tout de suite.', 'Chwazi yon repons — koreksyon an parèt touswit.')}
+        </p>
+      )}
+    </div>
   );
 }

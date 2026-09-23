@@ -28,7 +28,7 @@ function GoogleMark() {
  * to bring them back. Progress, streaks, revision and reminders all hang off
  * having an account, so asking for it is the hero's real job.
  */
-export default function HeroSignup({ t }: { t: TFn }) {
+export default function HeroSignup({ t, inline = false }: { t: TFn; inline?: boolean }) {
   const navigate = useNavigate();
   const setUser = useStore((s) => s.setUser);
   const setShowAuthModal = useStore((s) => s.setShowAuthModal);
@@ -71,6 +71,40 @@ export default function HeroSignup({ t }: { t: TFn }) {
     setActiveTab('signup');
     setShowAuthModal(true);
   };
+
+  // The homepage hero (Ted's mockup): two buttons side by side — one-tap
+  // Google sign-up, and revising without an account.
+  if (inline) {
+    return (
+      <div className="lp-hero__cta">
+        <button
+          type="button"
+          className="lp-btn lp-btn--primary lp-btn--lg lp-hero__google"
+          onClick={handleGoogle}
+          onMouseEnter={warmAuth}
+          onFocus={warmAuth}
+          onTouchStart={warmAuth}
+          disabled={busy}
+        >
+          <GoogleMark />
+          <span>{busy ? t('Connexion…', 'Koneksyon…') : t('Commencer avec Google', 'Kòmanse ak Google')}</span>
+        </button>
+        <button type="button" className="lp-btn lp-btn--ghost lp-btn--lg" onClick={() => navigate('/courses')}>
+          {t('Réviser sans compte', 'Revize san kont')}
+        </button>
+        <p className="lp-hero__cta-fine">
+          <button type="button" className="lp-signup__link" onClick={openEmailSignup}>
+            {t('S’inscrire avec un e-mail', 'Enskri ak yon imèl')}
+          </button>
+          {' · '}
+          <button type="button" className="lp-signup__link" onClick={() => { setActiveTab('signin'); setShowAuthModal(true); }}>
+            {t('Se connecter', 'Konekte')}
+          </button>
+        </p>
+        {error && <p className="lp-signup__error" role="alert">{error}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="lp-signup">

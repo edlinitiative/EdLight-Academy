@@ -1,5 +1,6 @@
 import React from 'react';
 import { School as SchoolIcon, Trophy, Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import SchoolRanking from '../../components/SchoolRanking';
 import { TFn } from './content';
@@ -28,9 +29,9 @@ export default function SchoolRaceSection({ t }: { t: TFn }) {
     <section className="lp-section lp-race">
       <div className="lp-container lp-race__layout">
         <div className="lp-race__copy" data-reveal>
-          <span className="lp-eyebrow">
-            <span className="lp-eyebrow__dot" />
-            {t('Le championnat des écoles', 'Chanpyona lekòl yo')}
+          <span className="lp-tag lp-tag--amber">
+            <Trophy size={14} aria-hidden="true" />
+            {t('La ligue des écoles', 'Lig lekòl yo')}
           </span>
           <h2 className="lp-section__title">
             {t('Quelle école sera première ce mois-ci ?', 'Ki lekòl ki pral premye mwa sa a ?')}
@@ -43,16 +44,31 @@ export default function SchoolRaceSection({ t }: { t: TFn }) {
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            className="button button--primary lp-race__cta"
-            onClick={() => { setActiveTab('signup'); setShowAuthModal(true); }}
-          >
-            {t('Représenter mon école', 'Reprezante lekòl mwen')}
-          </button>
+          <div className="lp-race__actions">
+            <button
+              type="button"
+              className="lp-btn lp-btn--primary lp-btn--lg"
+              onClick={() => { setActiveTab('signup'); setShowAuthModal(true); }}
+            >
+              <SchoolIcon size={18} aria-hidden="true" />
+              {t('Représenter mon école', 'Reprezante lekòl mwen')}
+            </button>
+            <Link to="/arena" className="lp-btn lp-btn--ghost lp-btn--lg">
+              {t('Voir l’Arène', 'Gade Arèn nan')}
+            </Link>
+          </div>
         </div>
         <div className="lp-race__board" data-reveal>
           <SchoolRanking max={6} />
+          {/* The mockup's callout: a missing school is the reason to sign up —
+              the sign-in step lets a student add it. */}
+          <p className="lp-race__callout">
+            <SchoolIcon size={18} aria-hidden="true" />
+            <span>{t('Ton école n’apparaît pas encore ?', 'Lekòl ou poko parèt ?')}</span>
+            <button type="button" onClick={() => { setActiveTab('signup'); setShowAuthModal(true); }}>
+              {t('La faire grimper →', 'Fè l monte →')}
+            </button>
+          </p>
         </div>
       </div>
     </section>

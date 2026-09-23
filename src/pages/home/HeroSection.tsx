@@ -1,108 +1,74 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowIcon, TFn } from './content';
+import React from 'react';
+import { TFn, useCatalogSummary } from './content';
 import HeroSignup from './HeroSignup';
-import useStore from '../../contexts/store';
+import { SampleQuestionCard } from './SampleQuestionSection';
+import { useSiteHeadlineStats } from '../../hooks/useSiteStats';
 
+const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(n);
+
+/**
+ * The landing hero, laid out as Ted's mockup: a bold three-line headline, a
+ * two-button call to action, a proof bar — and on the right a real exercise
+ * the visitor can answer, in French or Kreyòl, before being asked for
+ * anything.
+ *
+ * Every figure in the proof bar is live (siteStats + the catalogue snapshot).
+ * The mockup's "+42 800 exercices / 120+ lycées / 0 Mo" were placeholders and
+ * are not reproduced; a figure that has not loaded is simply not shown.
+ */
 export default function HeroSection({ t }: { t: TFn }) {
-  const navigate = useNavigate();
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
-  const [heroSrc, setHeroSrc] = useState('/assets/landing-hero.webp');
+  const { activeStudentsThisTerm, exams } = useSiteHeadlineStats();
+  const { summary } = useCatalogSummary(t);
+
+  const proof = [
+    activeStudentsThisTerm ? { value: `${nf(activeStudentsThisTerm)}+`, label: t('élèves inscrits', 'elèv enskri'), tone: 'azure' } : null,
+    exams ? { value: nf(exams), label: t('sujets d’examen officiels', 'sijè egzamen ofisyèl'), tone: 'amber' } : null,
+    summary?.lessons ? { value: nf(summary.lessons), label: t('leçons vidéo', 'leson videyo'), tone: 'emerald' } : null,
+  ].filter(Boolean) as { value: string; label: string; tone: string }[];
 
   return (
-    <section className="lp-hero">
+    <section className="lp-hero lp-hero--bold">
+      <div className="lp-hero__glow-a" aria-hidden="true" />
+      <div className="lp-hero__glow-b" aria-hidden="true" />
       <div className="lp-container">
         <div className="lp-hero__layout">
           <div className="lp-hero__copy">
-            {/* The mockups' kicker chip. A marker dot, never the little azure
-                bar they put beside headings — that is the left-border accent
-                the app removed everywhere else. */}
-            <span className="lp-kicker">
-              <span className="lp-kicker__dot" aria-hidden="true" />
-              {t('Apprendre · Pratiquer · Progresser', 'Aprann · Pratike · Avanse')}
+            <span className="lp-tag">
+              <span className="lp-tag__dot" aria-hidden="true" />
+              {t('Programme officiel MENFP · NS I à NS IV', 'Pwogram ofisyèl MENFP · NS I rive NS IV')}
             </span>
 
-            {/* One voice, no accented fragment. Colouring the second
-                sentence a different colour was decoration standing in for
-                emphasis; the sentence already carries it. */}
             <h1 className="lp-hero__title">
-              {t('Avancez dans vos cours. Pratiquez là où ça compte.',
-                 'Avanse nan kou ou yo. Pratike kote sa enpòtan.')}
+              {t('Réussis ton Bac.', 'Reyisi Bak ou.')}<br />
+              {t('Domine tes matières.', 'Metrize matyè ou yo.')}<br />
+              <span className="lp-hero__title-accent">{t('Gratuit et bilingue.', 'Gratis ak an de lang.')}</span>
             </h1>
 
             <p className="lp-hero__lede">
               {t(
-                'Des cours bilingues, des exercices ciblés et des examens blancs alignés sur le programme haïtien — réunis dans un parcours qui vous montre toujours la prochaine étape.',
-                'Kou nan de lang, egzèsis vize ak egzamen blan ki swiv pwogram ayisyen an — nan yon chemen ki toujou montre w pwochen etap la.'
+                'Des leçons vidéo, des quiz corrigés et les vrais sujets d’examen, sur le programme haïtien — en français et en kreyòl.',
+                'Leson videyo, quiz ki korije ak vrè sijè egzamen yo, sou pwogram ayisyen an — an franse ak an kreyòl.',
               )}
             </p>
 
-            {/* Signed out, the sign-up card beside this is the primary action,
-                so this steps down to secondary — two competing primaries just
-                split the click — and it is the only other thing to click
-                (§6.10: one clear entry point). Signed in there is nothing to
-                sign up for, so both learning destinations are offered. */}
-            <div className="lp-hero__actions">
-              <button
-                className={isAuthenticated ? 'lp-btn lp-btn--primary' : 'lp-btn lp-btn--ghost'}
-                onClick={() => navigate('/courses')}
-              >
-                <span>{t('Voir les cours', 'Gade kou yo')}</span>
-                {isAuthenticated && <ArrowIcon />}
-              </button>
-              {isAuthenticated && (
-                <button className="lp-btn lp-btn--ghost" onClick={() => navigate('/practice')}>
-                  {t('Choisir une pratique', 'Chwazi yon pratik')}
-                </button>
-              )}
-            </div>
+            <HeroSignup t={t} inline />
 
-            {/* Trust line: verifiable facts only — invented counts and
-                decorative star ratings read as the opposite of premium. */}
-            <div className="lp-hero__trust">
-              <span className="lp-hero__trust-chip">
-                <span className="lp-hero__trust-dot" aria-hidden="true" />
-                {t('Gratuit pour les élèves', 'Gratis pou elèv yo')}
-              </span>
-              <span>
-                {t('Français et créole haïtien · Web, iOS et Android', 'Fransè ak kreyòl ayisyen · Wèb, iOS ak Android')}
-              </span>
-            </div>
+            {proof.length > 0 && (
+              <dl className="lp-proof">
+                {proof.map((p) => (
+                  <div key={p.label} className="lp-proof__item">
+                    <dd className={`lp-proof__value lp-proof__value--${p.tone}`}>{p.value}</dd>
+                    <dt className="lp-proof__label">{p.label}</dt>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
 
-          {/* Signed out, the hero's job is to open an account — everything the
-              product does to bring a student back (progress, streak, revision,
-              reminders) needs one. Signed in, there is nothing to ask for, so
-              the artwork stays. */}
-          {!isAuthenticated ? (
-            <div className="lp-hero__visual lp-hero__visual--signup">
-              <HeroSignup t={t} />
-            </div>
-          ) : (
-          <div className="lp-hero__visual">
-            <div className="lp-hero__glow" aria-hidden="true" />
-            <div className="lp-hero__frame hatch-frame">
-              <img
-                src={heroSrc}
-                alt={t('Élève haïtien apprenant en ligne', 'Elèv ayisyen k ap aprann sou entènèt')}
-                width={1200}
-                height={1091}
-                loading="eager"
-                decoding="async"
-                fetchPriority="high"
-                onError={(e) => {
-                  if (heroSrc !== '/assets/student-hero.svg') {
-                    setHeroSrc('/assets/student-hero.svg');
-                    (e.target as HTMLImageElement).alt = t('Illustration EdLight', 'Ilistrasyon EdLight');
-                  }
-                }}
-              />
-            </div>
-
+          <div className="lp-hero__visual lp-hero__visual--quiz">
+            <SampleQuestionCard t={t} />
           </div>
-          )}
         </div>
-
       </div>
     </section>
   );

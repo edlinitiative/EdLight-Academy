@@ -8,7 +8,8 @@ import { useT } from './home/content';
 import ResumeBanner from '../components/ResumeBanner';
 import ExamCountdown from '../components/ExamCountdown';
 import HeroSection from './home/HeroSection';
-import SampleQuestionSection from './home/SampleQuestionSection';
+import PillarsSection from './home/PillarsSection';
+import ExamsSection from './home/ExamsSection';
 import SchoolRaceSection from './home/SchoolRaceSection';
 import CoursesSection from './home/CoursesSection';
 import CtaSection from './home/CtaSection';
@@ -49,11 +50,13 @@ export default function Home() {
       <div className="container resume-banner-wrap">
         <ResumeBanner />
       </div>
-      {/* Before the pitch, not after it: the fastest way to answer "is this
-          for me, and is it really in Kreyòl" is to hand over the thing. */}
-      <SampleQuestionSection t={t} />
-      <SchoolRaceSection t={t} />
+      {/* Ted's mockup, in its order: pillars, the programme, the school
+          league, the real papers, the closing banner. The exercise that used
+          to be its own section now leads the hero. */}
+      <PillarsSection t={t} />
       <CoursesSection t={t} />
+      <SchoolRaceSection t={t} />
+      <ExamsSection t={t} />
       <CtaSection t={t} />
     </div>
   );
