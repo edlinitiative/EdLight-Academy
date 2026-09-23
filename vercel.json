@@ -104,7 +104,7 @@
       "destination": "/exams/index.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!js/|css/|assets/|fonts/).*)",
       "destination": "/index.html"
     }
   ],

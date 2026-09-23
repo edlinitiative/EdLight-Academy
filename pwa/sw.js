@@ -140,10 +140,20 @@ self.addEventListener('notificationclick', (event) => {
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(request);
-  if (hit) return hit;
+  // A hashed bundle must never be HTML. During a deploy a request for a new
+  // /js/main.<hash>.js can reach an edge that does not have it yet; the SPA
+  // fallback used to answer with index.html + 200, this cached it, and the
+  // visitor was stuck on "Chargement de l'application…" until they cleared
+  // site data (seen 2026-09-23). Drop such a hit and go back to the network.
+  if (hit && !isHtml(hit)) return hit;
+  if (hit) await cache.delete(request);
   const res = await fetch(request);
-  if (res && res.ok) cache.put(request, res.clone());
+  if (res && res.ok && !isHtml(res)) cache.put(request, res.clone());
   return res;
+}
+
+function isHtml(res) {
+  return /text\/html/i.test(res.headers.get('content-type') || '');
 }
 
 /** Stale-while-revalidate: serve cache immediately, refresh in background.
