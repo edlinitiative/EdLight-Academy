@@ -1,0 +1,347 @@
+/* ══ Exams hub (Ted's third mockup, 2026-09-23) ═════════════════════════════
+   Header card with breadcrumb + filters, then two columns: the featured paper,
+   drafts and the papers table on the left; the calculator, preparation,
+   review, suggestions and results on the right. Brand navy titles, soft
+   white cards, pill tags. The page sits on the shared .container frame. */
+.exam-hub { --hub-navy: #0B296B; align-items: stretch; padding-left: 2rem; padding-right: 2rem; }
+@media (max-width: 640px) { .exam-hub { padding-left: 1rem; padding-right: 1rem; } }
+[data-theme="dark"] .exam-hub { --hub-navy: var(--text-900); }
+.exam-hub .exam-landing__facts,
+.exam-hub .exam-landing__offlevel,
+.exam-hub .exam-landing__section,
+.exam-hub .exam-landing__review { max-width: none; }
+.exam-hub .exam-landing__section { margin: 0; }
+
+.exam-hub__head {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 16px 36px -28px rgba(11, 41, 107, 0.35);
+}
+.exam-hub__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-500);
+}
+.exam-hub__crumbs a { color: var(--primary-600, #1558B8); text-decoration: none; }
+.exam-hub__crumbs strong { color: var(--hub-navy); }
+.exam-hub__head-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.exam-hub__title {
+  margin: 0;
+  color: var(--hub-navy);
+  font-family: var(--font-heading);
+  font-size: clamp(1.45rem, 1.1rem + 1.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+.exam-hub__lede { margin: 0.3rem 0 0; color: var(--text-600); font-size: 0.95rem; }
+.exam-hub__head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.exam-hub__level-context {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--primary-50, #EAF2FE);
+  color: var(--text-600);
+  font-size: 0.8rem;
+}
+.exam-hub__level-context strong { color: var(--primary-600, #1558B8); }
+
+.exam-hub__filters {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary-500) 5%, var(--background));
+}
+.exam-hub__filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.exam-hub__filter-row--split { justify-content: space-between; }
+.exam-hub__filter-label {
+  min-width: 5.5rem;
+  color: var(--text-500);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.exam-hub__chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.exam-hub__chip {
+  padding: 0.35rem 0.8rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-600);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.exam-hub__chip:hover { color: var(--text-900); }
+.exam-hub__chip.is-on { background: var(--primary-500, #1B6FE0); color: #fff; }
+.exam-hub__chip:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+.exam-hub__selects { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.exam-hub__selects label { display: inline-flex; align-items: center; gap: 0.5rem; }
+.exam-hub__selects .exam-hub__filter-label { min-width: 0; }
+.exam-hub__selects select {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-900);
+  font: inherit;
+  font-size: 0.88rem;
+}
+.exam-hub__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1 1 240px;
+  max-width: 340px;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-500);
+}
+.exam-hub__search:focus-within { border-color: var(--primary-400); box-shadow: 0 0 0 3px var(--primary-50); }
+.exam-hub__search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 0.9rem; color: var(--text-900); }
+.exam-hub__search input:focus { outline: none; }
+
+.exam-hub__grid { display: grid; gap: 1rem; align-items: start; width: 100%; }
+@media (min-width: 1024px) { .exam-hub__grid { grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); gap: 1.25rem; } }
+.exam-hub__main, .exam-hub__aside { display: grid; gap: 1rem; min-width: 0; align-content: start; }
+
+.exam-hub__card {
+  padding: clamp(1rem, 2.5vw, 1.35rem);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 16px 36px -30px rgba(11, 41, 107, 0.35);
+}
+.exam-hub__card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+.exam-hub__card-title { margin: 0; color: var(--hub-navy); font-size: 1.1rem; font-weight: 800; }
+.exam-hub__note { margin: 0.2rem 0 0; color: var(--text-500); font-size: 0.85rem; line-height: 1.5; }
+.exam-hub__empty { margin: 0; padding: 1rem; color: var(--text-500); text-align: center; }
+.exam-hub__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--primary-50, #EAF2FE);
+  color: var(--primary-600, #1558B8);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.exam-hub__tag--soft { background: var(--surface-muted); color: var(--text-600); }
+.exam-hub__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+.exam-hub__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+.exam-hub__btn--primary { background: var(--primary-500, #1B6FE0); color: #fff; }
+.exam-hub__btn--primary:hover { background: var(--primary-600, #1558B8); }
+.exam-hub__btn--soft { background: var(--surface-muted); color: var(--text-900); }
+.exam-hub__btn--soft:hover { background: var(--primary-50, #EAF2FE); }
+.exam-hub__btn--big { padding: 0.65rem 1.25rem; font-size: 0.95rem; }
+.exam-hub__btn:active { transform: scale(0.98); }
+
+.exam-hub__pill { display: inline-flex; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
+.exam-hub__pill--slate { background: var(--surface-muted); color: var(--text-600); }
+.exam-hub__pill--amber { background: #FEF3C7; color: #92400E; }
+.exam-hub__pill--green { background: #D1FAE5; color: #065F46; }
+.exam-hub__pill--red { background: #FEE2E2; color: #991B1B; }
+[data-theme="dark"] .exam-hub__pill--amber { background: rgba(245, 158, 11, 0.18); color: #FCD34D; }
+[data-theme="dark"] .exam-hub__pill--green { background: rgba(16, 185, 129, 0.18); color: #6EE7B7; }
+[data-theme="dark"] .exam-hub__pill--red { background: rgba(239, 68, 68, 0.18); color: #FCA5A5; }
+
+/* Featured paper */
+.exam-hub__featured { display: grid; gap: 1rem; }
+.exam-hub__featured-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary-500) 6%, var(--background));
+}
+.exam-hub__featured-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+}
+.exam-hub__featured-kicker { margin: 0; color: var(--text-900); font-size: 0.95rem; font-weight: 800; }
+.exam-hub__featured-sub { margin: 0.1rem 0 0; color: var(--text-500); font-size: 0.82rem; }
+.exam-hub__featured-body { display: grid; gap: 1rem; }
+@media (min-width: 720px) { .exam-hub__featured-body { grid-template-columns: minmax(0, 1fr) auto; align-items: start; } }
+.exam-hub__featured-main { display: grid; gap: 0.5rem; min-width: 0; }
+.exam-hub__featured-title { margin: 0; color: var(--hub-navy); font-size: clamp(1.15rem, 1rem + 0.6vw, 1.4rem); font-weight: 800; letter-spacing: -0.015em; }
+.exam-hub__topics { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0; padding: 0; list-style: none; }
+.exam-hub__topics li { padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--surface-muted); color: var(--text-600); font-size: 0.78rem; }
+.exam-hub__facts {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: var(--surface-muted);
+}
+.exam-hub__facts div { display: grid; gap: 0.1rem; }
+.exam-hub__facts dt { color: var(--text-500); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.exam-hub__facts dd { margin: 0; color: var(--primary-600, #1558B8); font-size: 1.05rem; font-weight: 800; white-space: nowrap; }
+.exam-hub__featured-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.exam-hub__featured-status { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--text-500); font-size: 0.85rem; }
+
+/* Papers table (cards under 760px) */
+.exam-hub__table { display: grid; gap: 0.25rem; }
+.exam-hub__tr {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) 5.5rem 6.5rem 8.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+}
+.exam-hub__tr:not(.exam-hub__tr--head):nth-child(odd) { background: color-mix(in srgb, var(--primary-500) 3%, var(--surface)); }
+.exam-hub__tr:not(.exam-hub__tr--head):hover { background: var(--primary-50, #EAF2FE); }
+.exam-hub__tr--head {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  background: var(--surface-muted);
+  color: var(--text-500);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.exam-hub__th-right, .exam-hub__td-action { text-align: right; justify-self: end; }
+.exam-hub__td-paper { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+.exam-hub__td-paper > span:last-child { display: grid; min-width: 0; }
+.exam-hub__td-paper strong { color: var(--text-900); font-size: 0.92rem; }
+.exam-hub__td-paper small { overflow: hidden; color: var(--primary-600, #1558B8); font-size: 0.78rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.exam-hub__swatch { flex: none; width: 6px; height: 34px; border-radius: 999px; }
+.exam-hub__td-topics { overflow: hidden; color: var(--text-600); font-size: 0.82rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.exam-hub__td-dur { color: var(--text-600); font-size: 0.82rem; white-space: nowrap; }
+.exam-hub__more {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: none;
+  color: var(--primary-600, #1558B8);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .exam-hub__tr--head { display: none; }
+  .exam-hub__tr {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "paper action" "topics topics" "dur status";
+    gap: 0.4rem 0.75rem;
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    background: var(--surface) !important;
+  }
+  .exam-hub__td-paper { grid-area: paper; }
+  .exam-hub__td-action { grid-area: action; }
+  .exam-hub__td-topics { grid-area: topics; }
+  .exam-hub__td-dur { grid-area: dur; }
+  .exam-hub__td-status { grid-area: status; justify-self: end; }
+}
+
+/* Average calculator */
+.exam-calc { display: grid; gap: 0.35rem; margin-top: 0.75rem; }
+.exam-calc__row { display: grid; grid-template-columns: minmax(0, 1fr) 3.6rem 3.6rem 1.8rem; align-items: center; gap: 0.4rem; }
+.exam-calc__row--head { color: var(--text-500); font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.exam-calc__row input {
+  min-width: 0;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-900);
+  font: inherit;
+  font-size: 0.88rem;
+}
+.exam-calc__row input:nth-child(2), .exam-calc__row input:nth-child(3) { text-align: center; font-weight: 700; }
+.exam-calc__row input:focus { outline: none; border-color: var(--primary-400); background: var(--surface); }
+.exam-calc__remove { border: 0; background: none; color: var(--text-500); font-size: 1.1rem; cursor: pointer; }
+.exam-calc__add {
+  justify-self: start;
+  margin-top: 0.2rem;
+  padding: 0.3rem 0;
+  border: 0;
+  background: none;
+  color: var(--primary-600, #1558B8);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.exam-calc__result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary-500) 6%, var(--background));
+  color: var(--text-600);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.exam-calc__result strong { color: var(--hub-navy); font-size: 1.35rem; letter-spacing: -0.02em; text-transform: none; }
+.exam-calc__bar { display: block; height: 6px; margin-top: 0.5rem; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.exam-calc__bar > span { display: block; height: 100%; border-radius: inherit; background: var(--primary-500, #1B6FE0); }
+
+/* Signed-out facts sit in the right column as a card, like its neighbours. */
+.exam-hub__aside .exam-landing__facts {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 16px 36px -30px rgba(11, 41, 107, 0.35);
+}
