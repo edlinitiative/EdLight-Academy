@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Inbox, RefreshCw, WifiOff } from 'lucide-react';
+import { AlertTriangle, Inbox, RefreshCw, WifiOff } from './icons';
 
 /**
  * Shared "UX state" primitives so every async/list view ships the same

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpenCheck, Languages, Trophy, Wifi } from 'lucide-react';
+import { BookOpenCheck, Languages, Trophy, Wifi } from '../../components/icons';
 import { TFn } from './content';
 
 /**

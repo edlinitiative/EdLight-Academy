@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Swords, GraduationCap, Check, Smartphone, School as SchoolIcon, Trophy, Globe, Sparkles, Flame,
   ChevronRight, Users, Plus, Gamepad2,
-} from 'lucide-react';
+} from '../components/icons';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 import { registerForTournament, registerErrorMessage } from '../services/arenaWebService';

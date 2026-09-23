@@ -8,7 +8,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, ChevronRight } from 'lucide-react';
+import { Brain, ChevronRight } from './icons';
 import useStore from '../contexts/store';
 import { loadReviewMap } from '../services/reviewService';
 import { dueQuestionIds } from '../utils/review';

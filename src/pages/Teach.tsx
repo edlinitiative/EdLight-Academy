@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, MessageCircle, Video, CheckCircle2 } from 'lucide-react';
+import { GraduationCap, MessageCircle, Video, CheckCircle2 } from '../components/icons';
 import useStore from '../contexts/store';
 import { HAITI_DEPARTMENTS } from '../data/haitiGeo';
 import './Teach.css';

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { History, PlayCircle, ChevronRight, ChevronDown, FileText, Clock, Save, LogIn, Search } from 'lucide-react';
+import { History, PlayCircle, ChevronRight, ChevronDown, FileText, Clock, Save, LogIn, Search } from '../components/icons';
 import useStore from '../contexts/store';
 import { TRACKS, GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
 import CardCover from '../components/CardCover';

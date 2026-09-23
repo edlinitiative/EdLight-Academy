@@ -8,7 +8,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Target, Lightbulb, TrendingUp, ClipboardList, ChevronDown } from 'lucide-react';
+import { Target, Lightbulb, TrendingUp, ClipboardList, ChevronDown } from './icons';
 import useStore from '../contexts/store';
 import { gradeProfile } from '../config/trackConfig';
 import { useReadiness } from '../hooks/useReadiness';

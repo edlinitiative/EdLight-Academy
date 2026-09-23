@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timer, Delete, CornerDownLeft, Flame } from 'lucide-react';
+import { Timer, Delete, CornerDownLeft, Flame } from '../icons';
 import { nextCalcProblem } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3 } from '../../components/icons';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import useStore from '../../contexts/store';
 import { db } from '../../services/firebase';

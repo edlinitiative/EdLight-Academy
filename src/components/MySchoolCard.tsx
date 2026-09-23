@@ -15,7 +15,7 @@
  * list underneath it. While that board is loading nothing is claimed.
  */
 import React, { useEffect, useState } from 'react';
-import { School as SchoolIcon, Share2, Copy, Check, Plus, TrendingUp } from 'lucide-react';
+import { School as SchoolIcon, Share2, Copy, Check, Plus, TrendingUp } from './icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useCollectives } from '../hooks/useLeaderboard';

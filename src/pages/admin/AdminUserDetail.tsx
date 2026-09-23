@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, UserCog } from 'lucide-react';
+import { ArrowLeft, UserCog } from '../../components/icons';
 import { getUser, setUserRole, type AdminUser } from '../../services/adminService';
 import { updateUser } from '../../services/firebase';
 import useStore from '../../contexts/store';

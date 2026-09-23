@@ -20,7 +20,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { GraduationCap, School as SchoolIcon, Share2, Copy, Check, Trophy } from 'lucide-react';
+import { GraduationCap, School as SchoolIcon, Share2, Copy, Check, Trophy } from './icons';
 import useStore from '../contexts/store';
 import { GRADES } from '../config/trackConfig';
 import SchoolField from './arena/SchoolField';

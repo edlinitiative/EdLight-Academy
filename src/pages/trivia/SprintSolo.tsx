@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Timer, Pause, Play, Check, X, RotateCcw, Target, NotebookPen, SkipForward, ShieldCheck } from 'lucide-react';
+import { Timer, Pause, Play, Check, X, RotateCcw, Target, NotebookPen, SkipForward, ShieldCheck } from '../../components/icons';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useFocusMode } from '../../hooks/useFocusMode';
 import { drawAndRemember } from '../../utils/questionRotation';

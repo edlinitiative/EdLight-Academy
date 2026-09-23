@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { Printer } from '../components/icons';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import useStore from '../contexts/store';

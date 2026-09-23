@@ -9,8 +9,8 @@ import {
   FileText,
   Link,
   HelpCircle,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+} from './icons';
+import type { LucideIcon } from './icons';
 
 /**
  * Curated registry of the Lucide icons referenced by the dynamic

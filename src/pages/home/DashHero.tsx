@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame, Sparkles, Trophy } from 'lucide-react';
+import { Flame, Sparkles, Trophy } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useStreak } from '../../hooks/useStreak';

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap } from '../../components/icons';
 import { Link } from 'react-router-dom';
 import {
   collection, getDocs, query, orderBy, limit as fbLimit, startAfter,

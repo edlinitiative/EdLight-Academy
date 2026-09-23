@@ -19,7 +19,7 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Swords, ChevronRight } from 'lucide-react';
+import { Swords, ChevronRight } from './icons';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
 

@@ -5,7 +5,7 @@
  * pair to the shared XP engine in triviaService.recordGameResult.
  */
 
-import { Lightbulb, Scale, Layers, Keyboard, Calculator, TrendingUp } from 'lucide-react';
+import { Lightbulb, Scale, Layers, Keyboard, Calculator, TrendingUp } from '../components/icons';
 
 export const GAME_ICONS = {
   trivia: Lightbulb,

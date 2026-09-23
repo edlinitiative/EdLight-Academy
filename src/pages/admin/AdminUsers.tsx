@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users } from 'lucide-react';
+import { Users } from '../../components/icons';
 import { listUsers, type AdminUser } from '../../services/adminService';
 import useStore from '../../contexts/store';
 

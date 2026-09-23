@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ListChecks, ChevronLeft, Lock, Check, Pencil } from 'lucide-react';
+import { ListChecks, ChevronLeft, Lock, Check, Pencil } from '../../components/icons';
 import useStore from '../../contexts/store';
 import {
   ArenaAdminError,

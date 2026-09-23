@@ -44,7 +44,7 @@ import {
   ListChecks,
   Sparkles,
   TrendingUp,
-} from 'lucide-react';
+} from './icons';
 import useStore from '../contexts/store';
 import { useAppData } from '../hooks/useData';
 import { loadReviewMap } from '../services/reviewService';

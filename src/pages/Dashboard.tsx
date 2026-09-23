@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, Gamepad2, Swords, Sigma, Atom, FlaskConical, LineChart } from 'lucide-react';
+import { Target, ClipboardList, BookOpen, ChevronRight, PlayCircle, Brain, ListChecks, Gamepad2, Swords, Sigma, Atom, FlaskConical, LineChart } from '../components/icons';
 import { subjectCover } from '../utils/subjectCovers';
 import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, displayStoredExamTitle } from '../utils/examUtils';

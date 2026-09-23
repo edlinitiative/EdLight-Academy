@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Swords, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Swords, Zap } from '../components/icons';
 import useStore from '../contexts/store';
 import Leaderboard from '../components/Leaderboard';
 import './Classement.css';

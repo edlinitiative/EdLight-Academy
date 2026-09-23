@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Shuffle, Lightbulb, Frown, Check } from 'lucide-react';
+import { Shuffle, Lightbulb, Frown, Check } from './icons';
 import { useAppData } from '../hooks/useData';
 import { useKatex, renderWithKatex, shuffleArray } from '../utils/shared';
 

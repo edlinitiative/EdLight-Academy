@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import PixelAvatar from '../components/PixelAvatar';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, GraduationCap, School, BookOpen, ChevronRight } from 'lucide-react';
+import { ArrowLeft, GraduationCap, School, BookOpen, ChevronRight } from '../components/icons';
 import useStore from '../contexts/store';
 import { getInstructor, type Instructor } from '../services/instructorService';
 import { getCachedCourses } from '../services/dataService';

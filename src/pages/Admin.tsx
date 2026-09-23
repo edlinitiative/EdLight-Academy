@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Film, HelpCircle, Users } from 'lucide-react';
+import { Film, HelpCircle, Users } from '../components/icons';
 import { loadCSV } from '../utils/csvParser';
 import './Admin.css';
 import { toCSV, remapRow } from '../utils/csvStringify';

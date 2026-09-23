@@ -5,7 +5,7 @@
    PDFs, no "grille" downloads, no inspectors' guides: none of those exist. */
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, FileText, PlayCircle } from 'lucide-react';
+import { Clock, FileText, PlayCircle } from '../components/icons';
 import { levelToSlug } from '../utils/examLevels';
 
 export const HUB_LEVELS = [

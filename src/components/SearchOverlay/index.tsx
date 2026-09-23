@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, X, BookOpen, PlayCircle, ClipboardList, Gamepad2, Compass, Sparkles, MessageCircle,
-} from 'lucide-react';
+} from '../icons';
 import useStore from '../../contexts/store';
 import {
   getSearchIndex, searchItems, type SearchItem, type SearchResult, type SearchItemType,

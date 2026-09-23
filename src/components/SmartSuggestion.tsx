@@ -5,7 +5,7 @@
  */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ScrollText, ChevronRight, X } from 'lucide-react';
+import { GraduationCap, Landmark, ClipboardList, Gamepad2, BookOpen, ScrollText, ChevronRight, X } from './icons';
 import useStore from '../contexts/store';
 import { pickHomeSuggestion, type HomeSuggestionKind } from '../config/trackConfig';
 import './SmartSuggestion.css';

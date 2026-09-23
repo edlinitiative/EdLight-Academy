@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sigma } from 'lucide-react';
+import { Sigma } from '../../components/icons';
 import { Link } from 'react-router-dom';
 import { ArrowIcon, TFn } from './content';
 import useStore from '../../contexts/store';

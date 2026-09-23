@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Flame, PlayCircle, X } from 'lucide-react';
+import { Check, Flame, PlayCircle, X } from './icons';
 import useStore from '../contexts/store';
 import { useStreak } from '../hooks/useStreak';
 import './LessonComplete.css';

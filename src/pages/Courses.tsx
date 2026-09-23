@@ -4,7 +4,7 @@ import {
   ChevronRight, ChevronDown, ArrowRight, Target, Check, Search, X, SlidersHorizontal,
   Sigma, Atom, FlaskConical, LineChart, BookOpen, GraduationCap, RefreshCw, WifiOff,
   Layers, PlayCircle, Library,
-} from 'lucide-react';
+} from '../components/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCourses } from '../hooks/useData';
 import { loadAppData } from '../services/dataService';

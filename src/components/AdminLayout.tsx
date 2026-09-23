@@ -3,7 +3,7 @@ import { Outlet, NavLink, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Video, Target, ClipboardList, CheckSquare, Gamepad2,
   Users, ShieldAlert, MessageCircle, Database, BarChart3, ArrowLeft, GraduationCap, Menu, X, Swords,
-} from 'lucide-react';
+} from './icons';
 import useStore from '../contexts/store';
 import { getFirstName } from '../utils/shared';
 import './AdminLayout.css';

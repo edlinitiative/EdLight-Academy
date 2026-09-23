@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X, SlidersHorizontal, ChevronRight, Clock, Save, LogIn } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ChevronRight, Clock, Save, LogIn } from '../components/icons';
 import useStore from '../contexts/store';
 import { TRACKS, TRACK_BY_CODE, getCoefficient, DEFAULT_SUBJECT_ORDER, gradeProfile } from '../config/trackConfig';
 import TrackSelector from '../components/TrackSelector';

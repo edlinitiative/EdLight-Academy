@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw } from 'lucide-react';
+import { Trophy, Star, ThumbsUp, Dumbbell, Sparkles, Crown, RefreshCw } from '../icons';
 import Celebration from '../Celebration';
 import { CountUp } from '../../hooks/useCountUp';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Target, Brain, Timer } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Target, Brain, Timer } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';

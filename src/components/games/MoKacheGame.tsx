@@ -7,7 +7,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Shuffle, Lightbulb, Share2, Check } from 'lucide-react';
+import { CalendarCheck, Shuffle, Lightbulb, Share2, Check } from '../icons';
 import { MO_KACHE_WORDS, WORD_LENGTH, isPlayableWordShape } from '../../data/moKacheWords';
 import { todayStr } from '../../services/streakService';
 

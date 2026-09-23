@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Layers, Trash2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Layers, Trash2 } from '../../components/icons';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, removeLessonFromCourse } from '../../services/firebase';
 import useStore from '../../contexts/store';

@@ -37,7 +37,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Check } from 'lucide-react';
+import { Brain, Check } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { EmptyState } from '../components/StateViews';

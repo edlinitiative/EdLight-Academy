@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from '../../components/icons';
 import useStore from '../../contexts/store';
 import {
   listCommentReports,

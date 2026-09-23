@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Check, BookOpen } from 'lucide-react';
+import { X, Check, BookOpen } from './icons';
 import MasteryBadge from './MasteryBadge';
 import { lessonMastery, summarize } from '../../shared/mastery';
 

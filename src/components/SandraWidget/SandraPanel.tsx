@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Maximize2, Minimize2, RotateCcw, Send, Sparkles, X } from 'lucide-react';
+import { Maximize2, Minimize2, RotateCcw, Send, Sparkles, X } from '../icons';
 import { authedFetch } from '../../services/firebase';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';

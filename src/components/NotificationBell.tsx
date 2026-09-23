@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell } from './icons';
 import useStore from '../contexts/store';
 
 /**

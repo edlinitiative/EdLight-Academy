@@ -7,7 +7,7 @@
  */
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight } from './icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useCollectives } from '../hooks/useLeaderboard';

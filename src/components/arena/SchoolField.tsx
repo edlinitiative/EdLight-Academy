@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { School as SchoolIcon, Search, Plus, Check, AlertTriangle } from 'lucide-react';
+import { School as SchoolIcon, Search, Plus, Check, AlertTriangle } from '../icons';
 import {
   searchSchools,
   likelyDuplicate,

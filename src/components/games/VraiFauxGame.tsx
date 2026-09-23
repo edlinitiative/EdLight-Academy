@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Check, Timer, Flame } from 'lucide-react';
+import { X, Check, Timer, Flame } from '../icons';
 import { buildVraiFauxItems } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';
 

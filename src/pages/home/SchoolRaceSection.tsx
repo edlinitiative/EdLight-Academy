@@ -1,5 +1,5 @@
 import React from 'react';
-import { School as SchoolIcon, Trophy, Users } from 'lucide-react';
+import { School as SchoolIcon, Trophy, Users } from '../../components/icons';
 import { Link } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import SchoolRanking from '../../components/SchoolRanking';

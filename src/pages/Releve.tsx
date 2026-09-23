@@ -68,7 +68,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Printer, BookOpen, Brain, Target, Flame, GraduationCap, FileText, Layers,
-} from 'lucide-react';
+} from '../components/icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, BookOpen, ChevronRight } from 'lucide-react';
+import { RefreshCw, BookOpen, ChevronRight } from '../components/icons';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import useStore from '../contexts/store';

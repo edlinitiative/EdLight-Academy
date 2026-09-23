@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { FileText } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { examDisplayTitle } from '../../utils/examUtils';
 

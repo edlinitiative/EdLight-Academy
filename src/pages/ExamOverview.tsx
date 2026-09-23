@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft, ArrowRight, Clock, FileText, Layers, Award, CheckCircle2, Eye,
   PlayCircle, RotateCcw, History, Save, LogIn,
-} from 'lucide-react';
+} from '../components/icons';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { fetchSingleExam, normalizeExamCatalog, resolveExamFromCatalog } from '../utils/examCatalog';

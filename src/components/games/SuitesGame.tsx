@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle } from '../icons';
 import { buildSequenceRounds } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';
 

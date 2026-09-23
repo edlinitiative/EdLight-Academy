@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, GraduationCap, Eye, EyeOff, User, LogOut } from 'lucide-react';
+import { RefreshCw, GraduationCap, Eye, EyeOff, User, LogOut } from './icons';
 import { useTranslation } from 'react-i18next';
 import useStore from '../contexts/store';
 import { loginWithEmailPassword, registerWithEmailPassword, loginWithGoogle, sendPasswordReset, warmAuth } from '../services/authService';

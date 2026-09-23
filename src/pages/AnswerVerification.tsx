@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck } from '../components/icons';
 import Icon from '../components/Icon';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import {

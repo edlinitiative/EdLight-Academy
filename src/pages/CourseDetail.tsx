@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import LessonComplete from '../components/LessonComplete';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, X, BookOpen, MessageCircle, ChevronLeft, Target, WifiOff, AlertCircle } from 'lucide-react';
+import { Check, X, BookOpen, MessageCircle, ChevronLeft, Target, WifiOff, AlertCircle } from '../components/icons';
 import { useAppData, useCourses } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';

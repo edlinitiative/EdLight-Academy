@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, CheckCircle2, PlayCircle, Clock, Save, LogIn } from 'lucide-react';
+import { ChevronRight, CheckCircle2, PlayCircle, Clock, Save, LogIn } from '../components/icons';
 import useStore from '../contexts/store';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { normalizeExamCatalog } from '../utils/examCatalog';

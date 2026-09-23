@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   PlayCircle, ChevronRight, ClipboardList, AlertTriangle,
-} from 'lucide-react';
+} from '../../components/icons';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';

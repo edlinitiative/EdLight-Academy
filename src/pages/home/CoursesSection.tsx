@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calculator, FlaskConical, Lock, TrendingUp, Zap } from 'lucide-react';
+import { Calculator, FlaskConical, Lock, TrendingUp, Zap } from '../../components/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowIcon, CatalogSubject, SubjectCode, TFn, useCatalogSummary } from './content';
 

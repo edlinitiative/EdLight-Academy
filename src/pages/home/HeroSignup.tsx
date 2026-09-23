@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap } from '../../components/icons';
 import { useNavigate } from 'react-router-dom';
 import useStore from '../../contexts/store';
 import { loginWithGoogle, warmAuth } from '../../services/authService';

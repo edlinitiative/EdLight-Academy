@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check } from './icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from './DirectBankQuiz';
 import { useCrowdOrderedQuestions } from '../hooks/useCrowdOrderedQuestions';
 import { trackQuizAttempt, markLessonComplete } from '../services/progressTracking';

@@ -15,7 +15,7 @@ import {
   Info, LogOut, Moon, Sun, Languages, Award, GraduationCap, Sparkles, ChevronRight, Check, BookOpen,
   Gift, Share2, Copy, MessageCircle, Loader2, Settings, ShieldCheck, MapPin, Trash2,
   FileText, RefreshCw, AlertTriangle,
-} from 'lucide-react';
+} from '../components/icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';

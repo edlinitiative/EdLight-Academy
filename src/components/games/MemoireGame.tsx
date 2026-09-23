@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timer, MousePointerClick } from 'lucide-react';
+import { Timer, MousePointerClick } from '../icons';
 import { CAPITAL_PAIRS } from '../../data/triviaData';
 import { buildMemoryDeck } from '../../utils/gameGen';
 import GameOverCard from './GameOverCard';

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Radio, Plus, KeyRound, ChevronRight } from 'lucide-react';
+import { Radio, Plus, KeyRound, ChevronRight } from '../../components/icons';
 
 /**
  * Salon en direct — the entry to live rooms (Ted's "Salon Multijoueur"

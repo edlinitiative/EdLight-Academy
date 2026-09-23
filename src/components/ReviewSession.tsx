@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Check, X, BookOpen, Lightbulb, ArrowRight, RotateCcw, Trophy } from 'lucide-react';
+import { Check, X, BookOpen, Lightbulb, ArrowRight, RotateCcw, Trophy } from './icons';
 import InstructionRenderer from './InstructionRenderer';
 import FigureRenderer from './FigureRenderer';
 import { gradeSingleQuestion, questionTypeMeta } from '../utils/examUtils';

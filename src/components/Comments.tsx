@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MessageCircle, Flag, Ban, Trash2 } from 'lucide-react';
+import { MessageCircle, Flag, Ban, Trash2 } from './icons';
 import { addComment, addReply, subscribeToComments, subscribeToReplies } from '../services/firebase';
 import { getCurrentUser, reportComment, blockUser, deleteComment, getUserProfile } from '../services/firebase';
 import useStore from '../contexts/store';

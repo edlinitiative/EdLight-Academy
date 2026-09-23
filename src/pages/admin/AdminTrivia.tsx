@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Plus, Pencil, Trash2, Database, Lock, ChevronLeft } from 'lucide-react';
+import { Sparkles, Plus, Pencil, Trash2, Database, Lock, ChevronLeft } from '../../components/icons';
 import { TRIVIA_CATEGORIES, TRIVIA_QUESTIONS } from '../../data/triviaData';
 import {
   loadTriviaCategories,

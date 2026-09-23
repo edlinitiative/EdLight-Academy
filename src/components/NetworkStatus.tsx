@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { WifiOff, CheckCircle2 } from 'lucide-react';
+import { WifiOff, CheckCircle2 } from './icons';
 import { useTranslation } from 'react-i18next';
 
 /**

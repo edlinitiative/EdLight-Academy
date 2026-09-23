@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X } from './icons';
 import {
   getMobilePlatform,
   isStandalone,

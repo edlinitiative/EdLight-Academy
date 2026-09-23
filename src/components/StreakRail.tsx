@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flame } from 'lucide-react';
+import { Flame } from './icons';
 import { useStreak } from '../hooks/useStreak';
 import useStore from '../contexts/store';
 import './StreakRail.css';

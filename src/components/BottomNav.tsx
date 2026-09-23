@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, BookOpen, ClipboardList, GraduationCap, Gamepad2, Swords, User } from 'lucide-react';
+import { Home, BookOpen, ClipboardList, GraduationCap, Gamepad2, Swords, User } from './icons';
 
 /**
  * Mobile-only bottom tab bar — the primary navigation on phones.

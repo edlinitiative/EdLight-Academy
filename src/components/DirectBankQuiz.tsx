@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check } from './icons';
 import { useKatex, renderWithKatex } from '../utils/shared';
 import EssayQuiz from './EssayQuiz';
 import { useTranslation } from 'react-i18next';

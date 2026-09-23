@@ -1,7 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, X } from '../icons';
 import { lazyWithRetry } from '../../utils/lazyWithRetry';
 import useStore from '../../contexts/store';
 import './SandraWidget.css';

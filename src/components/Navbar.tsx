@@ -15,7 +15,7 @@ import {
   Search,
   Swords,
   GraduationCap,
-} from 'lucide-react';
+} from './icons';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';

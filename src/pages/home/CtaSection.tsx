@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Smartphone } from 'lucide-react';
+import { Smartphone } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { ArrowIcon, TFn } from './content';
 

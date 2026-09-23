@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Lightbulb, Play, Pause, Rewind, FastForward, Volume2, Volume1, VolumeX, Maximize, Minimize } from 'lucide-react';
+import { Lightbulb, Play, Pause, Rewind, FastForward, Volume2, Volume1, VolumeX, Maximize, Minimize } from './icons';
 
 export default function VideoPlayer({ src, title, onTimeUpdate, onEnded }) {
   const videoRef = useRef(null);

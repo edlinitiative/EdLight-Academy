@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass } from 'lucide-react';
+import { Compass } from '../components/icons';
 
 /**
  * Branded, in-app 404 page (rendered by the catch-all route in App.tsx).

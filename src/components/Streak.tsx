@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { Flame, Trophy, Shield, Zap, Dumbbell, Crown, Gem } from 'lucide-react';
+import { Flame, Trophy, Shield, Zap, Dumbbell, Crown, Gem } from './icons';
 import { useStreak } from '../hooks/useStreak';
 import Celebration from './Celebration';
 

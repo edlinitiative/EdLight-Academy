@@ -31,7 +31,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock } from './icons';
 import { ExamSession, getNextExamSession } from '../config/examSchedule';
 import { GRADES, gradeProfile } from '../../shared/trackConfig';
 import useStore from '../contexts/store';

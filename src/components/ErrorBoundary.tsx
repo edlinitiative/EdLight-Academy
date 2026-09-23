@@ -1,6 +1,6 @@
 import React from 'react';
 import i18n from 'i18next';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from './icons';
 import { reportError } from '../utils/telemetry';
 
 interface ErrorBoundaryProps {

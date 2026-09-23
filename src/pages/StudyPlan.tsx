@@ -18,7 +18,7 @@ import {
   Lock, GraduationCap, ClipboardList, Sparkles, CalendarDays, CalendarRange,
   Timer, Lightbulb, Target, CheckCircle2, BarChart3, RefreshCw, Trash2,
   FileText, Pencil, Video, ChevronRight, ChevronDown, Flame, Play, Download,
-} from 'lucide-react';
+} from '../components/icons';
 import useStore from '../contexts/store';
 import { useStudyPlan, useExamResultsForPlan } from '../hooks/useStudyPlan';
 import { useAppData } from '../hooks/useData';

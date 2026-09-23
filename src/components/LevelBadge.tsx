@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Zap } from 'lucide-react';
+import { Zap } from './icons';
 import { useTrivia } from '../hooks/useTrivia';
 import useStore from '../contexts/store';
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Trophy, Upload, CheckCircle2, Clock, FileText, AlertTriangle } from 'lucide-react';
+import { Trophy, Upload, CheckCircle2, Clock, FileText, AlertTriangle } from '../components/icons';
 import useStore from '../contexts/store';
 import {
   CONSENT_ACCEPT,

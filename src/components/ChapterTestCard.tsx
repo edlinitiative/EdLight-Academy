@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, ChevronRight, Lock, Check } from 'lucide-react';
+import { Target, ChevronRight, Lock, Check } from './icons';
 import { useTranslation } from 'react-i18next';
 import { chapterTestReady, type MasterySummary } from '../../shared/mastery';
 import './ChapterTestCard.css';

@@ -12,7 +12,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Crown, Medal, Flame, ChevronRight, ChevronDown, ShieldCheck, Pencil, WifiOff, RotateCw } from 'lucide-react';
+import { Trophy, Crown, Medal, Flame, ChevronRight, ChevronDown, ShieldCheck, Pencil, WifiOff, RotateCw } from './icons';
 import useStore from '../contexts/store';
 import { useLeaderboard, useCollectives } from '../hooks/useLeaderboard';
 import { useTrivia } from '../hooks/useTrivia';

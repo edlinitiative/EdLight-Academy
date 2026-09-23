@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import PixelAvatar from './PixelAvatar';
 import { Link } from 'react-router-dom';
-import { ChevronRight, GraduationCap } from 'lucide-react';
+import { ChevronRight, GraduationCap } from './icons';
 import useStore from '../contexts/store';
 import { getInstructorsForCourse, type Instructor } from '../services/instructorService';
 import './CourseInstructors.css';

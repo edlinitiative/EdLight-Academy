@@ -2,7 +2,7 @@ import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'reac
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   Swords, ChevronLeft, RefreshCw, ListChecks, ShieldAlert, Plus, MapPin,
-} from 'lucide-react';
+} from '../../components/icons';
 import useStore from '../../contexts/store';
 import {
   ArenaAdminError,

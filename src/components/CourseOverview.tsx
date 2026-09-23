@@ -10,7 +10,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, Clock, Layers, PlayCircle, Target, ChevronRight, ArrowLeft, Check } from 'lucide-react';
+import { BookOpen, Clock, Layers, PlayCircle, Target, ChevronRight, ArrowLeft, Check } from './icons';
 import CourseInstructors from './CourseInstructors';
 import MasteryBadge from './MasteryBadge';
 import { summarize } from '../../shared/mastery';

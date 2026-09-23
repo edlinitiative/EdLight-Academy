@@ -16945,7 +16945,7 @@ input[type="search"]:focus, input[type="number"]:focus, select:focus, textarea:f
 .radio-option { display: flex; align-items: center; gap: 0.6rem; }
 
 /* ============================================================
-   Lucide inline icons — keep them aligned with surrounding text
+   Inline icons — keep them aligned with surrounding text
    ============================================================ */
 .lucide-inline {
 	display: inline-flex;

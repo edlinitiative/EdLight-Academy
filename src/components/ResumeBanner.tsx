@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { History, Play, X } from 'lucide-react';
+import { History, Play, X } from './icons';
 import useStore from '../contexts/store';
 
 /**

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { GraduationCap, Lightbulb } from 'lucide-react';
+import { GraduationCap, Lightbulb } from './icons';
 import useStore from '../contexts/store';
 import { updateUserTrack } from '../services/firebase';
 import { TRACKS } from '../config/trackConfig';

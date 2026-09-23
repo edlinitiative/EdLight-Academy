@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ListChecks, Plus, ArrowLeft } from 'lucide-react';
+import { ListChecks, Plus, ArrowLeft } from '../../components/icons';
 import { collection, getDocs } from 'firebase/firestore';
 import { db, deleteQuiz, addQuiz, updateQuiz } from '../../services/firebase';
 import useStore from '../../contexts/store';

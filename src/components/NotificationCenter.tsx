@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Trophy, Flame, Megaphone, PartyPopper, Repeat, Trash2, Clock, BellRing } from 'lucide-react';
+import { X, Check, Trophy, Flame, Megaphone, PartyPopper, Repeat, Trash2, Clock, BellRing } from './icons';
 import useStore from '../contexts/store';
 import { 
   getUnreadNotifications, 

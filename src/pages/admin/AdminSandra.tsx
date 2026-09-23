@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle } from '../../components/icons';
 import {
   collection, getDocs, query, orderBy, limit as fbLimit, startAfter,
   type QueryDocumentSnapshot, type DocumentData, type QueryConstraint,
