@@ -348,6 +348,9 @@ const ExamTake = () => {
   // full read-through preview. "Aperçu complet" navigates without the flag.
   const location = useLocation();
   const autostart = Boolean(location.state?.autostart);
+  // Arrived from a "Reprendre" button: the student has already answered the
+  // resume question, so it is not asked a second time on arrival.
+  const resumeIntent = Boolean(location.state?.resume);
   const recordActivity = useStore((s) => s.recordActivity);
   const clearActivity = useStore((s) => s.clearActivity);
   const [viewState, setViewState] = useState(autostart ? 'active' : 'preview'); // 'preview' | 'active' | (legacy) 'cover'
@@ -593,6 +596,10 @@ const ExamTake = () => {
     setShowResumePrompt(false);
     setViewState('active');
   }, [resumeDraft]);
+
+  useEffect(() => {
+    if (resumeIntent && showResumePrompt && resumeDraft) handleResume();
+  }, [resumeIntent, showResumePrompt, resumeDraft, handleResume]);
 
   const handleConfirmRestart = useCallback(async () => {
     setShowRestartConfirm(false);

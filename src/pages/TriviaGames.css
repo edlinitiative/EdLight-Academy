@@ -2025,3 +2025,13 @@
 .trivia-challenge__sub { margin: 0.3rem 0 0.8rem; color: var(--text-600); font-size: 0.9rem; }
 .trivia-challenge__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
 .trivia-challenge__actions .button { min-height: 44px; }
+
+.trivia-review__flag {
+  display: block;
+  width: 96px;
+  height: auto;
+  margin: 0 0 0.6rem;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--border);
+}
+.trivia-review__flag--emoji { width: auto; font-size: 2.5rem; box-shadow: none; }

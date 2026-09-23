@@ -441,7 +441,7 @@ const ExamLanding = () => {
                   key={d.examId}
                   type="button"
                   className="exam-mini-card"
-                  onClick={() => navigate(`/exams/${slug}/${d.examId}/take`, { state: { autostart: true } })}
+                  onClick={() => navigate(`/exams/${slug}/${d.examId}/take`, { state: { autostart: true, resume: true } })}
                 >
                   <CardCover className="exam-mini-card__cover" glyph={SUBJECT_GLYPHS[subject] || 'book'} color={subjectColor(subject)} />
                   <span className="exam-mini-card__body">

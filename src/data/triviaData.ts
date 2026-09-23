@@ -523,8 +523,9 @@ function buildFlagQs(data: TriviaCountry[]): TriviaQuestion[] {
       return {
         q: `De quel pays est ce drapeau ?`,
         qHt: `Ki peyi ki gen drapo sa a ?`,
-        explanation: `${c.flag} est le drapeau ${c.prep} (capitale : ${c.cap}).`,
-        explanationHt: `${c.flag} se drapo ${c.ht} (kapital : ${c.cap}).`,
+        // No emoji here: Windows renders a flag emoji as two letters ("BR").
+        explanation: `C’est le drapeau ${c.prep} (capitale : ${c.cap}).`,
+        explanationHt: `Se drapo ${c.ht} (kapital : ${c.cap}).`,
         flag: c.flag,
         flagIso: iso,
         options,

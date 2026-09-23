@@ -330,9 +330,6 @@ function TriviaResults({ answers, isAuthed, saving, saveError, onReview, categor
     <div className="trivia-results" style={{ '--cat-color': accent } as React.CSSProperties}>
       <div className="trivia-results__card">
         <span className="trivia-results__emoji"><IconCmp size={48} /></span>
-        <h2 className="trivia-results__title">
-          {isCreole ? 'Rezilta Ou' : 'Vos Résultats'}
-        </h2>
         <div className="trivia-results__score-ring">
           <svg viewBox="0 0 120 120" className="trivia-results__ring-svg">
             <circle cx="60" cy="60" r="52" className="trivia-results__ring-bg" />
@@ -616,6 +613,10 @@ function TriviaClassic({ isCreole, onExitHub }) {
       <button className="trivia-back-btn" onClick={() => setScreen('results')}>← {isCreole ? 'Rezilta' : 'Résultats'}</button>
       <h1 ref={resultHeading} tabIndex={-1}>{isCreole ? 'Aprann nan erè ou yo' : 'Apprends de tes erreurs'}</h1>
       {answers.filter((a) => !a.correct).map(({ question: q, selected }, index) => <article className="trivia-feedback" key={index}>
+        {/* A flag question reviewed without its flag asked nothing. */}
+        {q.flag && (q.flagIso
+          ? <img className="trivia-review__flag" src={`https://flagcdn.com/w160/${q.flagIso}.png`} srcSet={`https://flagcdn.com/w320/${q.flagIso}.png 2x`} alt="" loading="lazy" />
+          : <span className="trivia-review__flag trivia-review__flag--emoji" aria-hidden>{q.flag}</span>)}
         <h2>{isCreole ? q.qHt || q.q : q.q}</h2>
         <p>{isCreole ? 'Repons ou :' : 'Ta réponse :'} {selected === -1 ? (isCreole ? 'Tan an fini' : 'Temps écoulé') : triviaOptions(q, isCreole)[selected]}</p>
         <p>{isCreole ? 'Bon repons :' : 'Bonne réponse :'} <strong>{triviaOptions(q, isCreole)[q.answer]}</strong></p>

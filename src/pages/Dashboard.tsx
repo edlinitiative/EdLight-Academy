@@ -408,7 +408,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         className="dash-focus__cta"
-                        onClick={() => navigate(`/exams/${urlLevel}/${resumeExam.exam_id}/take`, { state: { autostart: true } })}
+                        onClick={() => navigate(`/exams/${urlLevel}/${resumeExam.exam_id}/take`, { state: { autostart: true, resume: true } })}
                       >
                         <PlayCircle size={19} aria-hidden="true" />
                         {isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen"}
@@ -702,7 +702,7 @@ export default function Dashboard() {
                       const onOpen = () => {
                         if (!a?.exam_id || !urlLevel) return navigate('/exams');
                         if (isSubmitted) return navigate(`/exams/${urlLevel}/${a.exam_id}/results`);
-                        return navigate(`/exams/${urlLevel}/${a.exam_id}/take`, { state: { autostart: true } });
+                        return navigate(`/exams/${urlLevel}/${a.exam_id}/take`, { state: { autostart: true, resume: true } });
                       };
                       return (
                         <div key={`${a?.exam_id || 'exam'}-${idx}`} className="dash-activity__row">
