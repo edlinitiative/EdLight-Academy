@@ -159,7 +159,10 @@ const Quizzes = () => {
   const queryDefaults = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return {
-      course: (params.get('course') || '').trim(),
+      // /practice links carry ?matiere=ECON&niveau=NSI (the Pratiquer tab is
+      // this page now); they mean the same course as ?course=ECON-NSI.
+      course: ((params.get('course') || '').trim()
+        || [params.get('matiere'), params.get('niveau')].filter(Boolean).join('-')).trim(),
       unit: (params.get('unit') || '').trim(),
       // /practice sends ?mode=quiz for "take a short quiz". It only decides
       // which button leads; both activities stay available either way.

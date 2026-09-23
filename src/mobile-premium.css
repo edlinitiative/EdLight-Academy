@@ -375,7 +375,7 @@
 
   .bottom-nav__inner {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     align-items: stretch;
     height: var(--bottom-nav-height);
     max-width: 560px;
@@ -411,7 +411,8 @@
   }
 
   .bottom-nav__label {
-    font-size: 0.66rem;
+    /* Seven tabs on a 360px phone: ~51px each. */
+    font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     line-height: 1;

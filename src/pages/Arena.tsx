@@ -231,12 +231,6 @@ export default function Arena() {
   return (
     <section className="section arena-page">
       <div className="container arena-page__container">
-        <nav className="arena-crumbs" aria-label={t('Fil d’Ariane', 'Chemen')}>
-          <Link to="/arena">{t('Arène', 'Arèn')}</Link>
-          <ChevronRight size={14} aria-hidden="true" />
-          <span aria-current="page">{editionTitle || t('La ligue des écoles', 'Lig lekòl yo')}</span>
-        </nav>
-
         {/* ── Identity bar ─────────────────────────────────────────────── */}
         <header className="arena-id">
           <span className="arena-id__icon" aria-hidden="true"><SchoolIcon size={26} /></span>

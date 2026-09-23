@@ -14,6 +14,7 @@ import {
   X,
   Search,
   Swords,
+  GraduationCap,
 } from 'lucide-react';
 import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
@@ -31,6 +32,9 @@ const NAV_ITEMS = [
   { to: '/', labelKey: 'nav.home', icon: Home, exact: true },
   { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
   { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
+  // The national exams as their own destination (Ted: "create a new tab for
+  // national exams").
+  { to: '/exams', labelKey: 'nav.exams', icon: GraduationCap },
   { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
   // Its own destination, not a card inside /jeux: the championship is an
   // event between schools, not one more game.
@@ -134,6 +138,8 @@ export function Navbar() {
     if (path === '/' || exact) {
       return pathname === path;
     }
+    // /quizzes is the same page as the Pratiquer tab.
+    if (path === '/practice' && pathname.startsWith('/quizzes')) return true;
     return pathname.startsWith(path);
   };
 

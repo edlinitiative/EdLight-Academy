@@ -1008,12 +1008,6 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
 
   const groupLabel = (key) => (axis === 'level' ? levelLabel(key) : subjectName(key));
 
-  const crumbs = [
-    { label: L('Accueil', 'Akèy'), to: '/' },
-    { label: t('courses.catalog'), to: filtering ? '/courses' : null },
-    ...(subject !== 'all' ? [{ label: subjectName(subject), to: null }] : []),
-    ...(level !== 'all' ? [{ label: levelLabel(level), to: null }] : []),
-  ];
 
   // /dashboard — Ted: "use this [the 'Espace de travail' mockup] to change the
   // dashboard … the actual dashboard /dashboard", while the signed-in home
@@ -1047,28 +1041,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   return (
     <section className="section pf lrn">
       <div className="container">
-        {/* Breadcrumb — where this page sits, and one click back out of a
-            filtered view. */}
-        <nav className="lrn-crumbs" aria-label={L('Fil d’Ariane', 'Chemen an')}>
-          <ol>
-            {crumbs.map((c, i) => (
-              <li key={`${c.label}-${i}`}>
-                {c.to && i < crumbs.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => (c.to === '/courses' ? resetFacets() : navigate(c.to as string))}
-                  >
-                    {c.label}
-                  </button>
-                ) : (
-                  <span aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{c.label}</span>
-                )}
-                {i < crumbs.length - 1 && <ChevronRight size={13} aria-hidden="true" />}
-              </li>
-            ))}
-          </ol>
-        </nav>
-
+        
         {/* Header — the mockups' hero: a dotted caps eyebrow, a two-tone
             title, and the catalogue's own size beside it. Every figure in
             `catalogFigures` is counted from the loaded catalogue, so the

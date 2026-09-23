@@ -13,7 +13,6 @@ import { captureRefFromUrl } from './services/referralService';
 // Lazy-loaded pages (lazyWithRetry self-heals stale chunk hashes after a deploy)
 const Courses = lazyWithRetry(() => import('./pages/Courses'));
 const CourseDetail = lazyWithRetry(() => import('./pages/CourseDetail'));
-const Practice = lazyWithRetry(() => import('./pages/Practice'));
 const Quizzes = lazyWithRetry(() => import('./pages/Quizzes'));
 const Revision = lazyWithRetry(() => import('./pages/Revision'));
 const About = lazyWithRetry(() => import('./pages/About'));
@@ -102,7 +101,10 @@ export default function App() {
                     signed-in "/" keeps the Dashboard. */}
                 <Route path="dashboard" element={<Courses mode="workspace" />} />
                 <Route path="quizzes" element={<Quizzes />} />
-                <Route path="practice" element={<Practice />} />
+                {/* Ted: "for this page - change all of it, replace with" the quiz
+                    hub mockup. The Pratiquer tab is the quiz hub; /quizzes stays
+                    as the same page for existing links. */}
+                <Route path="practice" element={<Quizzes />} />
                 <Route path="revision" element={<Revision />} />
                 <Route path="about" element={<About />} />
                 <Route path="contact" element={<Contact />} />
