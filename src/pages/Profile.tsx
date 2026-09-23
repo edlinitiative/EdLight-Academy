@@ -1,27 +1,22 @@
 /**
- * Profile — the learner's account hub (the bottom-nav "Profil" destination)
- * ─────────────────────────────────────────────────────────────────────────
- * Consolidates identity, the Exam Readiness Score, progression (XP/level/streak),
- * achievements, the weekly leaderboard, and the secondary "Mon espace" links
- * that used to live in the mobile drawer (Dashboard, Study Plan, Notifications,
- * theme/language, sign-out). Guests get a focused sign-in invitation.
+ * Profile — the learner's account page (the bottom-nav "Profil" destination).
+ * The layout and what it deliberately leaves out are described above the
+ * default export; the exported pieces (achievement shelf, course card,
+ * rankWindow) are pure enough to test on their own.
  */
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Flame, Trophy, Zap, Target, LayoutDashboard, CalendarCheck, Bell, Brain,
-  Info, LogOut, Moon, Sun, Languages, Award, GraduationCap, Sparkles, ChevronRight, Check, BookOpen,
-  Gift, Share2, Copy, MessageCircle, Loader2, Settings, ShieldCheck, MapPin, Trash2,
-  FileText, RefreshCw, AlertTriangle,
+  Flame, Trophy, Zap, Bell, Info, Moon, Sun, Languages, GraduationCap, ChevronRight, Check, BookOpen,
+  Loader2, ShieldCheck, MapPin, RefreshCw, AlertTriangle,
 } from '../components/icons';
 import useStore from '../contexts/store';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
 import { useAllProgress } from '../hooks/useProgress';
 import { logoutUser } from '../services/authService';
-import { getReferralCode, inviteMessage, type ReferralCode } from '../services/referralService';
 import { STREAK_MILESTONES } from '../services/streakService';
 import { setLeaderboardOptIn as saveBoardIdentity } from '../services/triviaService';
 import { isValidAlias } from '../services/leaderboardService';
@@ -37,6 +32,7 @@ import { useLeaderboard } from '../hooks/useLeaderboard';
 import { getFirstName } from '../utils/shared';
 import '../styles/pf.css';
 import './Profile.css';
+import { AccountBlock, GoalRhythm, SectionHead, SkillSpots, Schoolmates, Toggle } from './profile/ProfileSections';
 
 
 
@@ -69,10 +65,19 @@ function TrackSelectorModal({ currentTrack, onClose }: { currentTrack: string | 
  *     separate labels, because a student in Delmas can attend school in
  *     Pétion-Ville and the board groups the two differently.
  */
-function IdentityFields({ isCreole, uid, board }: {
+export type IdentityState = { dirty: boolean; aliasOk: boolean; status: 'idle' | 'saving' | 'saved' | 'failed' };
+
+function IdentityFields({ isCreole, uid, board, saveRef, accountName, afterSchool, onState }: {
   isCreole: boolean;
   uid: string | null;
   board: { optedIn?: boolean; displayName?: string | null; school?: string | null; city?: string | null; department?: string | null };
+  /** The title bar's "Enregistrer" calls this. Not a <form>: Enter in the
+      school search (or its "add a school" box) must not save the profile. */
+  saveRef: React.MutableRefObject<(() => void) | null>;
+  accountName: string;
+  /** The class picker, which sits between the school and the residence. */
+  afterSchool?: React.ReactNode;
+  onState: (s: IdentityState) => void;
 }) {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const qc = useQueryClient();
@@ -109,7 +114,8 @@ function IdentityFields({ isCreole, uid, board }: {
       setCityChoice(storedCity ? OTHER_CITY : '');
       setCustomCity(storedCity);
     }
-    setStatus('idle');
+    if (justSavedRef.current) justSavedRef.current = false;
+    else setStatus('idle');
   }, [storedAlias, storedSchool, storedCity, storedDept]);
 
   const deptCities = citiesOf(department);
@@ -145,6 +151,7 @@ function IdentityFields({ isCreole, uid, board }: {
       department: department || null,
     });
     if (updated) {
+      justSavedRef.current = true;
       qc.setQueryData(['trivia-profile', uid], updated);
       setStatus('saved');
     } else {
@@ -152,11 +159,22 @@ function IdentityFields({ isCreole, uid, board }: {
     }
   };
 
+  React.useEffect(() => { onState({ dirty, aliasOk, status }); }, [dirty, aliasOk, status, onState]);
+  saveRef.current = dirty && aliasOk && status !== 'saving' ? save : null;
+
   return (
     <div className="profile-identity">
+      {/* The account name comes from sign-up (Google or e-mail) and is never
+          shown to other students — read-only here, the pseudo is what's public. */}
+      <div className="profile-field">
+        <span className="profile-field__label">{t('Nom du compte', 'Non kont lan')}</span>
+        <span className="profile-field__input profile-field__input--readonly">{accountName}</span>
+      </div>
+
       <label className="profile-field">
         <span className="profile-field__label">{t('Pseudo affiché', 'Ti non pou afiche')}</span>
         <input
+          id="profile-alias"
           className="profile-field__input"
           value={alias}
           maxLength={24}
@@ -185,6 +203,8 @@ function IdentityFields({ isCreole, uid, board }: {
           'Lekòl ou sèvi pou chanpyona ant lekòl yo ak klasman pa lekòl — nou p ap mande w li yon lòt kote.',
         )}
       </p>
+
+      {afterSchool}
 
       <fieldset className="profile-residence">
         <legend className="profile-field__label">
@@ -240,30 +260,6 @@ function IdentityFields({ isCreole, uid, board }: {
           )}
         </div>
       </fieldset>
-
-      <div className="profile-identity__foot">
-        <button
-          type="button"
-          className="button button--primary button--sm"
-          onClick={save}
-          disabled={!dirty || !aliasOk || status === 'saving'}
-        >
-          {status === 'saving'
-            ? <><Loader2 size={15} className="profile-spin" aria-hidden="true" /> {t('Enregistrement…', 'Ap anrejistre…')}</>
-            : t('Enregistrer', 'Anrejistre')}
-        </button>
-        {status === 'saved' && !dirty && (
-          <span className="profile-identity__ok" role="status">
-            <Check size={14} aria-hidden="true" /> {t('Enregistré', 'Anrejistre')}
-          </span>
-        )}
-        {status === 'failed' && (
-          <span className="profile-identity__failed" role="alert">
-            <AlertTriangle size={14} aria-hidden="true" />
-            {t('Non enregistré — vérifiez votre connexion et réessayez.', 'Pa anrejistre — tcheke koneksyon ou epi eseye ankò.')}
-          </span>
-        )}
-      </div>
 
       <p className="profile-field__why">
         <ShieldCheck size={13} aria-hidden="true" />{' '}
@@ -690,108 +686,39 @@ export function rankWindow(entries: any[], uid: string | null) {
   return { slice, gap };
 }
 
-const boardInitials = (name: string) =>
-  String(name || '?').trim().split(/\s+/).filter(Boolean).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
 /**
- * RankNeighbours — your place on the weekly board, with the people either side.
+ * Profile — "Mon profil & paramètres de compte".
  *
- * "#42" on its own is a number to feel something about. The learner one place
- * above, with the XP gap spelled out, is something to do this week. Falls back
- * to the plain link whenever the board cannot place the learner — which is the
- * normal state for anyone who hasn't chosen a pseudonym, since entries without
- * one are never shown publicly.
+ * Ted's mockup, kept to what the account really holds. A compact title bar
+ * (portrait, name, @pseudo, class, the one Enregistrer), three real figures,
+ * then two columns of numbered sections:
+ *
+ *   1 Informations  — name, pseudo, school, class, residence, filière
+ *   2 Objectifs     — goal + daily rhythm (users/{uid}), weak/strong units
+ *   3 Réseau        — your school's standing, schoolmates on the board, invite
+ *   4 Préférences   — theme, language, alerts, visibility on the board
+ *   5 Compte        — e-mail, password reset, relevé, privacy, delete, logout
+ *
+ * Saving: the title bar's Enregistrer saves the identity fields of section 1
+ * (pseudo, school, residence) — the only fields that write together to the
+ * board identity. Everything else applies on tap, as it always has: class,
+ * filière, theme, language, goal, rhythm and the board toggle.
+ *
+ * Left out on purpose, because none of it exists: storage/offline meters,
+ * MicroSD backup, SMS recovery, an export key, a "candidat officiel" badge,
+ * friends and chat, a data-saver mode.
  */
-export function RankNeighbours({ entries, myRank, uid, isCreole, onOpen }: {
-  entries: any[];
-  myRank: number | null;
-  uid: string | null;
-  isCreole: boolean;
-  onOpen: () => void;
-}) {
-  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const { slice, gap } = rankWindow(entries, uid);
-
-  return (
-    <div className="pf-card">
-      <CardHead
-        eyebrow={t('Cette semaine', 'Semèn sa a')}
-        title={t('Classement', 'Klasman')}
-        aside={myRank ? <Pill tone="azure">#{myRank}</Pill> : null}
-      />
-
-      {slice.length > 0 ? (
-        <>
-          <ul className="pf-ranks">
-            {slice.map((e) => {
-              const me = e.id === uid;
-              return (
-                <li key={e.id} className={`pf-rank ${me ? 'is-me' : ''}`}>
-                  <span className="pf-rank__pos num">#{e.rank}</span>
-                  <span className="pf-rank__avatar" aria-hidden="true">
-                    {me ? boardInitials(e.displayName) : boardInitials(e.displayName)}
-                  </span>
-                  <span className="pf-rank__body">
-                    <span className="pf-rank__name">
-                      {me ? t('Vous', 'Ou menm') : e.displayName}
-                    </span>
-                    {e.school && <span className="pf-rank__school">{e.school}</span>}
-                  </span>
-                  <span className="pf-rank__xp num">{e.xp} XP</span>
-                </li>
-              );
-            })}
-          </ul>
-          {gap > 0 && (
-            <p className="pf-note">
-              {t(
-                `${gap} XP vous séparent de la place au-dessus.`,
-                `${gap} XP separe ou ak plas ki anwo a.`,
-              )}
-            </p>
-          )}
-        </>
-      ) : (
-        <p className="pf-empty">
-          {myRank
-            ? t(
-                'Votre place de la semaine est enregistrée. Ouvrez le classement pour voir qui vous entoure.',
-                'Plas ou pou semèn nan anrejistre. Louvri klasman an pou wè ki moun ki bò kote w.',
-              )
-            : t(
-                'Choisissez un pseudonyme dans les réglages (bas de page) pour apparaître au classement.',
-                'Chwazi yon ti non nan reglaj yo (anba paj la) pou w parèt nan klasman an.',
-              )}
-        </p>
-      )}
-
-      <button type="button" className="pf-link" onClick={onOpen}>
-        {t('Voir le classement complet', 'Wè tout klasman an')}
-        <ChevronRight size={16} />
-      </button>
-    </div>
-  );
-}
-
 export default function Profile() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const {
     user, isAuthenticated, language, setLanguage, theme, toggleTheme,
     setShowNotifications, toggleAuthModal, setActiveTab, logout,
     grade, setGrade, setGradeChosen, track,
   } = useStore();
   const isCreole = language === 'ht';
-  const t = (fr, ht) => (isCreole ? ht : fr);
-
-  // Settings are folded unless the link asked for them (#reglages).
-  const location = useLocation();
-  const [settingsOpen, setSettingsOpen] = React.useState(() => location.hash === '#reglages');
-  React.useEffect(() => {
-    if (location.hash !== '#reglages') return;
-    setSettingsOpen(true);
-    const id = window.setTimeout(() => document.getElementById('reglages')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
-    return () => window.clearTimeout(id);
-  }, [location.hash]);
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const { level, profile } = useTrivia();
   const { streak } = useStreak();
@@ -800,6 +727,27 @@ export default function Profile() {
   // no-ops without a signed-in user.
   const { progress: allProgress, loading: progressLoading } = useAllProgress();
   const [showTrackSelector, setShowTrackSelector] = React.useState(false);
+
+  const [identity, setIdentity] = React.useState<IdentityState>({ dirty: false, aliasOk: true, status: 'idle' });
+  const onIdentityState = React.useCallback((s: IdentityState) => setIdentity(s), []);
+  const saveRef = React.useRef<(() => void) | null>(null);
+
+  const [boardBusy, setBoardBusy] = React.useState(false);
+  const [boardFailed, setBoardFailed] = React.useState(false);
+
+  // /profile#reglages — the "Choisir un pseudo" links everywhere — lands on
+  // the settings and, when there is no pseudo yet, in the pseudo field.
+  const location = useLocation();
+  const hasAlias = isValidAlias(profile?.leaderboard?.displayName || '');
+  React.useEffect(() => {
+    if (location.hash !== '#reglages') return;
+    const id = window.setTimeout(() => {
+      document.getElementById('reglages')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!hasAlias) (document.getElementById('profile-alias') as HTMLInputElement | null)?.focus({ preventScroll: true });
+    }, 300);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.hash]);
 
   const trackInfo = React.useMemo(() => {
     try { return track ? TRACK_BY_CODE[track] : null; } catch { return null; }
@@ -859,37 +807,29 @@ export default function Profile() {
       </section>
     );
   }
-  // ── Authenticated view ──────────────────────────────────────────────────
-  const accuracy = profile.totalQuestions > 0
-    ? Math.round((profile.totalCorrect / profile.totalQuestions) * 100)
-    : 0;
-  const unlockedMilestones = new Set<string>(streak?.milestones || []);
 
-  // Lessons finished across every course the learner has touched. Each course
-  // keeps its own progress document, so this is a sum, not a single field.
-  const lessonsDone = (allProgress || []).reduce(
-    (n, p) => n + (p.completedLessons?.length || 0), 0,
-  );
+  // ── Authenticated view ──────────────────────────────────────────────────
+  const uid: string = user.uid;
+  const board = profile?.leaderboard || {};
+  const unlockedMilestones = new Set<string>(streak?.milestones || []);
   const courseBadges = new Set<string>((allProgress || []).flatMap((p) => p.badges || []));
-  // Point badges are awarded per course, so the relevant figure for "how close
-  // am I" is the best single course, not the total across all of them.
+  // Point badges are awarded per course, so "how close am I" is the best
+  // single course, not the total across all of them.
   const bestCoursePoints = (allProgress || []).reduce(
     (best, p) => Math.max(best, p.totalPoints || 0), 0,
   );
   const achievements = buildAchievements({
     isCreole, streak, unlockedMilestones, courseBadges, bestCoursePoints,
   });
-  // The hero's honours row shows only what has actually been earned, newest
-  // thresholds first. Nothing is listed there that isn't on the shelf below.
-  const earned = achievements.filter((a) => a.unlocked).slice(0, 4);
 
   const days = streak?.currentStreak || 0;
   const nextMilestone = STREAK_MILESTONES.find((m) => m.days > days);
+  const { gap } = rankWindow(boardEntries, uid);
 
-  const school = profile?.leaderboard?.school || '';
-  const place = profile?.leaderboard?.city || profile?.leaderboard?.department || '';
   const gradeEntry = GRADES.find((g) => g.code === grade);
   const gradeLabel = gradeEntry ? (isCreole ? gradeEntry.labelHt : gradeEntry.label) : '';
+  const accountName = user.name || getFirstName(user) || t('Élève', 'Elèv');
+  const alias = hasAlias ? String(board.displayName) : '';
 
   const handleLogout = async () => {
     try { await logoutUser(); } catch {}
@@ -897,338 +837,214 @@ export default function Profile() {
     navigate('/');
   };
 
+  // The board switch writes the same document as the identity form, with
+  // everything but `optedIn` passed through unchanged.
+  const setOnBoard = async (next: boolean) => {
+    setBoardBusy(true);
+    setBoardFailed(false);
+    const updated = await saveBoardIdentity(uid, { optedIn: next });
+    if (updated) qc.setQueryData(['trivia-profile', uid], updated);
+    else setBoardFailed(true);
+    setBoardBusy(false);
+  };
+
+  const saveLabel = identity.status === 'saving'
+    ? t('Enregistrement…', 'Ap anrejistre…')
+    : t('Enregistrer', 'Anrejistre');
+
   return (
-    <section className="section pf">
-      <div className="container profile">
+    <section className="section pf pr">
+      <div className="container pr-page">
 
-        {/* ── Identity ──────────────────────────────────────────────────────
-             The mockups' hero: a ringed avatar carrying the level, the name
-             and school, three figures with their context, and the ladder to
-             the next level in an inset panel.
-
-             The streak is stated here and nowhere else on the page. It used to
-             appear three times, and one of the three read the first course's
-             streak rather than the learner's, so two of the numbers could
-             disagree with each other. */}
-        <div className="profile-area profile-area--hero">
-          <div className="pf-hero">
-            <div className="pf-hero__top">
-              <div className="pf-hero__who">
-                <div className="pf-avatar">
-                  {/* The account's own portrait — the one in the navbar —
-                      instead of two initials. */}
-                  <PixelAvatar seed={user?.uid || user?.email || user?.name} size={72} className="pf-avatar__art" />
-                  <span className="pf-avatar__level">
-                    <Zap size={11} aria-hidden="true" />
-                    {t('NIV.', 'NIV.')} {level.level}
-                  </span>
-                </div>
-                <div className="pf-hero__id">
-                  <h1 className="pf-hero__name">{user.name || getFirstName(user) || t('Élève', 'Elèv')}</h1>
-                  {(school || place) && (
-                    <p className="pf-hero__place">
-                      <GraduationCap size={15} aria-hidden="true" />
-                      {[school, place].filter(Boolean).join(' · ')}
-                    </p>
-                  )}
-                  <div className="pf-hero__chips">
-                    {gradeLabel && <Pill tone="azure">{gradeLabel}</Pill>}
-                    {trackInfo && (
-                      <button type="button" className="pf-pill pf-pill--slate pf-pill--button" onClick={() => setShowTrackSelector(true)}>
-                        {trackInfo.shortLabel || trackInfo.label}
-                        <ChevronRight size={12} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pf-hero__stats">
-                <HeroStat
-                  tone="amber"
-                  icon={<Flame size={16} />}
-                  value={days}
-                  label={days === 1 ? t('Jour de suite', 'Jou swit') : t('Jours de suite', 'Jou swit')}
-                  sub={nextMilestone
-                    ? t(`Prochain palier : ${nextMilestone.days}`, `Pwochen palye : ${nextMilestone.days}`)
-                    : t('Tous les paliers atteints', 'Tout palye yo fèt')}
-                />
-                <HeroStat
-                  tone="azure"
-                  icon={<Sparkles size={16} />}
-                  value={level.xp}
-                  label={t('Points d’XP', 'Pwen XP')}
-                  sub={t(`Niveau ${level.level}`, `Nivo ${level.level}`)}
-                />
-                <HeroStat
-                  tone="emerald"
-                  icon={<Trophy size={16} />}
-                  value={myRank ? `#${myRank}` : '—'}
-                  label={t('Classement', 'Klasman')}
-                  sub={myRank
-                    ? t('Cette semaine', 'Semèn sa a')
-                    : t('Pseudonyme requis', 'Ou bezwen yon ti non')}
-                />
+        {/* ── Title bar — sticky only while there is something to save ── */}
+        <header className={`pr-titlebar${identity.dirty ? ' is-dirty' : ''}`}>
+          <div className="pr-titlebar__who">
+            <span className="pr-titlebar__avatar">
+              <PixelAvatar seed={user.uid || user.email || user.name} size={52} />
+            </span>
+            <div className="pr-titlebar__id">
+              <h1 className="pr-titlebar__name">{accountName}</h1>
+              <div className="pr-titlebar__meta">
+                {alias
+                  ? <span className="pr-handle">@{alias}</span>
+                  : <a href="#reglages" className="pr-handle pr-handle--missing" onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('profile-alias')?.focus();
+                  }}>{t('Choisir un pseudo', 'Chwazi yon ti non')}</a>}
+                {gradeLabel && <Pill tone="azure">{gradeLabel}</Pill>}
               </div>
             </div>
-
-            {/* The ladder to the next level, in the mockups' inset panel. */}
-            <div className="pf-ladder">
-              <div className="pf-ladder__top">
-                <span className="pf-ladder__title">
-                  {t(`Progression vers le niveau ${level.level + 1}`, `Pwogrè pou nivo ${level.level + 1}`)}
-                </span>
-                <span className="pf-ladder__figures num">
-                  {level.xp} XP
-                  <small>{t(`reste ${level.xpToNext} XP`, `rete ${level.xpToNext} XP`)}</small>
-                </span>
-              </div>
-              <Meter pct={level.progressPct} tone="azure" />
-            </div>
-
-            {earned.length > 0 && (
-              <div className="pf-hero__honours">
-                <span className="pf-eyebrow">{t('Distinctions', 'Distenksyon')}</span>
-                <div className="pf-hero__honour-list">
-                  {earned.map((a) => (
-                    <span key={a.id} className="pf-honour">
-                      <span aria-hidden="true">{a.emoji}</span> {a.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
+          </div>
+          <div className="pr-titlebar__save">
+            {identity.dirty && identity.status !== 'saving' && (
+              <span className="pr-titlebar__hint">{t('Modifications non enregistrées', 'Chanjman pa anrejistre')}</span>
             )}
+            {identity.status === 'saved' && !identity.dirty && (
+              <span className="pr-ok" role="status"><Check size={14} aria-hidden="true" /> {t('Enregistré', 'Anrejistre')}</span>
+            )}
+            {identity.status === 'failed' && (
+              <span className="pr-failed" role="alert">
+                <AlertTriangle size={14} aria-hidden="true" /> {t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}
+              </span>
+            )}
+            <button
+              type="button"
+              className="pr-save"
+              disabled={!identity.dirty || !identity.aliasOk || identity.status === 'saving'}
+              onClick={() => saveRef.current?.()}
+            >
+              {identity.status === 'saving' && <Loader2 size={15} className="profile-spin" aria-hidden="true" />}
+              {saveLabel}
+            </button>
           </div>
-        </div>
+        </header>
 
-        {/* ── Where you stand — the diagnostic, first ──
-             The page's job is to answer "how am I doing and what should I fix",
-             so the per-subject readiness breakdown comes before anything the
-             learner can only read and admire. Settings now sit at the bottom;
-             they used to be the second thing on the page. */}
-        <div className="profile-area profile-area--readiness">
-          <ReadinessCard />
-        </div>
-
-        {/* ── Sidebar column: the two short cards, stacked ──
-             Kept in one grid area on purpose. Given their own rows they each
-             sat next to a much taller card and left the dead space under it
-             that 629aa32 had to go and fix. */}
-        <div className="profile-area profile-area--aside">
-          <div className="pf-card">
-            <CardHead
-              eyebrow={t('Bilan', 'Bilan')}
-              title={t('Ce que vous avez fait', 'Sa ou fè deja')}
-            />
-            {/* Four totals, each appearing exactly once on the page and each
-                from a different source, so no two can contradict each other. */}
-            <div className="pf-totals">
-              <div className="pf-total">
-                <IconTile tone="azure" size="sm"><BookOpen size={15} /></IconTile>
-                <span className="pf-total__value num">{lessonsDone}</span>
-                <span className="pf-total__label">{t('Leçons terminées', 'Leson fini')}</span>
-              </div>
-              <div className="pf-total">
-                <IconTile tone="violet" size="sm"><Brain size={15} /></IconTile>
-                <span className="pf-total__value num">{profile.totalGames || 0}</span>
-                <span className="pf-total__label">{t('Parties de trivia', 'Pati trivia')}</span>
-              </div>
-              <div className="pf-total">
-                <IconTile tone="emerald" size="sm"><Target size={15} /></IconTile>
-                <span className="pf-total__value num">{accuracy}%</span>
-                <span className="pf-total__label">{t('Précision aux quiz', 'Presizyon nan quiz')}</span>
-              </div>
-              <div className="pf-total">
-                <IconTile tone="amber" size="sm"><Flame size={15} /></IconTile>
-                <span className="pf-total__value num">{streak?.longestStreak || 0}</span>
-                <span className="pf-total__label">{t('Meilleure série', 'Pi bon seri')}</span>
-              </div>
-            </div>
-            {/* The same four figures, plus mastery per chapter and the exams,
-                as one page a student can print or save as PDF for a parent,
-                a teacher or a school. It is a record of activity here — not a
-                bulletin, and it says so on itself. */}
-            <Link to="/releve" className="pf-link">
-              <FileText size={16} aria-hidden="true" />
-              {t('Relevé de progression à imprimer', 'Relve pwogrè pou enprime')}
-            </Link>
+        {/* ── Three figures, each from its own source ── */}
+        <div className="pr-stats">
+          <HeroStat
+            tone="amber"
+            icon={<Flame size={16} />}
+            value={days}
+            label={days === 1 ? t('Jour de suite', 'Jou swit') : t('Jours de suite', 'Jou swit')}
+            sub={nextMilestone
+              ? t(`Prochain palier : ${nextMilestone.days}`, `Pwochen palye : ${nextMilestone.days}`)
+              : t('Tous les paliers atteints', 'Tout palye yo fèt')}
+          />
+          <div className="pf-stat">
+            <IconTile tone="azure" size="sm"><Zap size={16} /></IconTile>
+            <span className="pf-stat__value num">{level.xp}</span>
+            <span className="pf-stat__label">{t(`XP · niveau ${level.level}`, `XP · nivo ${level.level}`)}</span>
+            <Meter pct={level.progressPct} tone="azure" />
+            <span className="pf-stat__sub">{t(`reste ${level.xpToNext} XP`, `rete ${level.xpToNext} XP`)}</span>
           </div>
-
-          {/* ── Leaderboard: your actual neighbours ──
-               A bare "#42" says nothing a student can act on. The two learners
-               either side of you do: they are reachable this week. Falls back
-               to the plain link when the board can't place you. */}
-          <RankNeighbours
-            entries={boardEntries}
-            myRank={myRank}
-            uid={user?.uid || null}
-            isCreole={isCreole}
-            onOpen={() => navigate('/classement')}
+          <HeroStat
+            tone="emerald"
+            icon={<Trophy size={16} />}
+            value={myRank ? `#${myRank}` : '—'}
+            label={t('Classement de la semaine', 'Klasman semèn nan')}
+            sub={!myRank
+              ? (board.optedIn ? t('Pseudo requis', 'Ou bezwen yon ti non') : t('Pas au classement', 'Pa nan klasman an'))
+              : gap > 0
+                ? t(`${gap} XP du #${myRank - 1}`, `${gap} XP pou #${myRank - 1}`)
+                : t('En tête', 'An tèt')}
           />
         </div>
 
-        {/* ── Courses in progress ── */}
-        <div className="profile-area profile-area--courses">
+        <div className="pr-grid" id="reglages">
+          <div className="pr-col">
+            {/* 1 — Informations */}
+            <section className="pr-sec" aria-labelledby="pr-sec-1">
+              <SectionHead n={1} title={t('Informations', 'Enfòmasyon')} sub={t('Renseignées une fois, réutilisées partout.', 'Ranpli yon fwa, sèvi toupatou.')} />
+              <IdentityFields
+                isCreole={isCreole}
+                uid={uid}
+                board={board}
+                saveRef={saveRef}
+                accountName={accountName}
+                onState={onIdentityState}
+                afterSchool={(
+                  <div className="profile-field">
+                    <span className="profile-field__label">{t('Classe', 'Klas')}</span>
+                    <div className="profile-grades">
+                      {GRADES.map((g) => (
+                        <button
+                          key={g.code}
+                          type="button"
+                          className={`profile-grade${grade === g.code ? ' is-on' : ''}`}
+                          aria-pressed={grade === g.code}
+                          onClick={() => { setGrade(g.code); setGradeChosen(true); }}
+                        >
+                          {isCreole ? g.labelHt : g.label}
+                        </button>
+                      ))}
+                    </div>
+                    <small className="profile-field__why">
+                      {t('Appliquée tout de suite : elle choisit vos cours, quiz et examens.', 'Aplike touswit : se li ki chwazi kou, quiz ak egzamen ou.')}
+                    </small>
+                  </div>
+                )}
+              />
+              <div className="profile-field">
+                <span className="profile-field__label">{t('Filière du Bac', 'Filyè Bak la')}</span>
+                <button type="button" className="profile-link" onClick={() => setShowTrackSelector(true)}>
+                  {trackInfo
+                    ? <><span aria-hidden="true">{trackInfo.icon}</span> {trackInfo.label}</>
+                    : <><RefreshCw size={18} /> {t('Choisir ma filière', 'Chwazi filyè mwen')}</>}
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </section>
+
+            {/* 2 — Objectifs */}
+            <section className="pr-sec">
+              <SectionHead n={2} title={t('Objectifs', 'Objektif')} sub={t('Ce que vous visez, et où vous en êtes vraiment.', 'Sa ou vize, ak kote ou ye vre.')} />
+              <GoalRhythm uid={uid} t={t} />
+              <SkillSpots uid={uid} isCreole={isCreole} t={t} />
+            </section>
+
+            {/* 3 — Réseau */}
+            <section className="pr-sec">
+              <SectionHead n={3} title={t('Réseau', 'Rezo')} sub={t('Votre école, et qui la représente avec vous.', 'Lekòl ou, ak kiyès ki reprezante l avè w.')} />
+              <MySchoolCard where="profile" />
+              <Schoolmates entries={boardEntries} uid={uid} school={board.school || ''} t={t} />
+            </section>
+          </div>
+
+          <div className="pr-col">
+            {/* 4 — Préférences */}
+            <section className="pr-sec">
+              <SectionHead n={4} title={t('Préférences', 'Preferans')} />
+              <div className="pr-field">
+                <span className="pr-label">{t('Langue', 'Lang')}</span>
+                <div className="pr-seg" role="group" aria-label={t('Langue', 'Lang')}>
+                  <button type="button" className={`pr-seg__opt${!isCreole ? ' is-on' : ''}`} aria-pressed={!isCreole} onClick={() => setLanguage('fr')}>Français</button>
+                  <button type="button" className={`pr-seg__opt${isCreole ? ' is-on' : ''}`} aria-pressed={isCreole} onClick={() => setLanguage('ht')}>Kreyòl</button>
+                </div>
+              </div>
+              <Toggle
+                on={theme === 'dark'}
+                onChange={() => toggleTheme()}
+                label={t('Mode nuit', 'Mòd lannwit')}
+              />
+              <Toggle
+                on={!!board.optedIn}
+                disabled={boardBusy || (!board.optedIn && !hasAlias)}
+                onChange={setOnBoard}
+                label={t('Visible au classement', 'Vizib nan klasman an')}
+                hint={boardFailed
+                  ? <span className="pr-failed" role="alert">{t('Non enregistré — réessayez.', 'Pa anrejistre — eseye ankò.')}</span>
+                  : !board.optedIn && !hasAlias
+                    ? t('Choisissez d’abord un pseudo (section 1).', 'Chwazi yon ti non anvan (seksyon 1).')
+                    : board.optedIn
+                      ? t('Votre pseudo, votre école et votre ville apparaissent au classement.', 'Ti non ou, lekòl ou ak vil ou parèt nan klasman an.')
+                      : t('Désactivé : vos nouveaux points ne sont pas publiés.', 'Dezaktive : nouvo pwen ou yo pa pibliye.')}
+              />
+              <button type="button" className="pr-row" onClick={() => setShowNotifications(true)}>
+                <Bell size={16} aria-hidden="true" /> {t('Mes alertes', 'Alèt mwen')}
+                <ChevronRight size={15} className="pr-row__chev" aria-hidden="true" />
+              </button>
+            </section>
+
+            {/* 5 — Compte */}
+            <section className="pr-sec">
+              <SectionHead n={5} title={t('Compte', 'Kont')} />
+              <AccountBlock email={user.email || null} t={t} onLogout={handleLogout} />
+            </section>
+
+            <ReadinessCard />
+          </div>
+        </div>
+
+        {/* ── The record: courses and badges, compact ── */}
+        <div className="pr-journey">
           <CourseProgressCard
             allProgress={allProgress}
             loading={progressLoading}
             isCreole={isCreole}
             onExplore={() => navigate('/courses')}
           />
-        </div>
-
-        {/* ── Achievements — one shelf, every tile saying what earns it ── */}
-        <div className="profile-area profile-area--achievements">
           <AchievementShelf achievements={achievements} isCreole={isCreole} />
         </div>
-
-        {/* ── Your school, and the invite — one card. The separate "Inviter des
-             amis" card offered the same referral code a second way. ── */}
-        <div className="profile-area profile-area--invite">
-          <MySchoolCard where="profile" />
-        </div>
-
-        {/* ── Réglages — five readable groups, each saying why it asks ──
-             Learning preferences · identity/school · notifications ·
-             appearance/language · account/privacy. Everything a student used
-             to be asked for twice is edited here once. */}
-        <div className="profile-area profile-area--settings" id="reglages">
-          {/* Folded: settings are visited once, not every time the profile is
-              opened. /profile#reglages (the "Choisir un pseudo" links) opens
-              it and scrolls here. */}
-          <details
-            className="profile-card profile-settings"
-            open={settingsOpen}
-            onToggle={(e) => setSettingsOpen((e.currentTarget as HTMLDetailsElement).open)}
-          >
-            <summary className="profile-settings__summary">
-              <h2 className="profile-card__title"><Settings size={18} /> {t('Réglages', 'Reglaj')}</h2>
-              <span className="profile-settings__hint">{t('Pseudo, école, notifications, langue, compte', 'Ti non, lekòl, notifikasyon, lang, kont')}</span>
-            </summary>
-            <p className="profile-set__intro">
-              {t(
-                'Renseignez ceci une fois : les cours, la pratique et les compétitions réutilisent les mêmes informations.',
-                'Ranpli sa yon sèl fwa : kou yo, pratik la ak konpetisyon yo sèvi ak menm enfòmasyon yo.',
-              )}
-            </p>
-
-            <div className="profile-sets">
-              {/* 1 — Learning preferences */}
-              <section className="profile-set">
-                <h3 className="profile-set__title">
-                  <GraduationCap size={16} aria-hidden="true" /> {t('Préférences d’apprentissage', 'Preferans aprantisaj')}
-                </h3>
-
-                <div className="profile-field">
-                  <span className="profile-field__label">{t('Votre classe', 'Klas ou')}</span>
-                  <small className="profile-field__why">
-                    {t(
-                      'Elle choisit les cours, les quiz et les examens qui vous sont proposés.',
-                      'Se li ki chwazi kou, quiz ak egzamen y ap pwopoze w.',
-                    )}
-                  </small>
-                  <div className="profile-grades">
-                    {GRADES.map((g) => (
-                      <button
-                        key={g.code}
-                        type="button"
-                        className={`profile-grade${grade === g.code ? ' is-on' : ''}`}
-                        aria-pressed={grade === g.code}
-                        onClick={() => { setGrade(g.code); setGradeChosen(true); }}
-                      >
-                        {isCreole ? g.labelHt : g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="profile-field">
-                  <span className="profile-field__label">{t('Votre filière', 'Filyè ou')}</span>
-                  <small className="profile-field__why">
-                    {t(
-                      'Elle adapte les épreuves et les coefficients du Baccalauréat.',
-                      'Se li ki adapte eprèv ak koyefisyan Bakaloreya yo.',
-                    )}
-                  </small>
-                  <button type="button" className="profile-link" onClick={() => setShowTrackSelector(true)}>
-                    {trackInfo
-                      ? <><span aria-hidden="true">{trackInfo.icon}</span> {trackInfo.label}</>
-                      : <><RefreshCw size={18} /> {t('Choisir ma filière', 'Chwazi filyè mwen')}</>}
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-
-                <div className="profile-espace-grid">
-                  <Link to="/dashboard" className="profile-espace-tile">
-                    <LayoutDashboard size={22} />
-                    <span>{t('Tableau', 'Tablodbò')}</span>
-                  </Link>
-                  <Link to="/study-plan" className="profile-espace-tile">
-                    <CalendarCheck size={22} />
-                    <span>{t('Plan étude', 'Plan etid')}</span>
-                  </Link>
-                  <Link to="/practice" className="profile-espace-tile">
-                    <Brain size={22} />
-                    <span>{t('Pratique', 'Pratik')}</span>
-                  </Link>
-                </div>
-              </section>
-
-              {/* 2 — Identity and school (spans the row: it holds a form) */}
-              <section className="profile-set profile-set--wide">
-                <h3 className="profile-set__title">
-                  <Target size={16} aria-hidden="true" /> {t('Identité et école', 'Idantite ak lekòl')}
-                </h3>
-                <IdentityFields isCreole={isCreole} uid={user?.uid || null} board={profile?.leaderboard || {}} />
-              </section>
-
-              {/* 3 — Notifications */}
-              <section className="profile-set">
-                <h3 className="profile-set__title">
-                  <Bell size={16} aria-hidden="true" /> {t('Notifications', 'Notifikasyon')}
-                </h3>
-                <button type="button" className="profile-link" onClick={() => setShowNotifications(true)}>
-                  <Bell size={18} /> {t('Mes alertes', 'Alèt mwen')}<ChevronRight size={16} />
-                </button>
-                <small className="profile-field__why">
-                  {t(
-                    'Rappels de révision et résultats, dans l’application.',
-                    'Rapèl revizyon ak rezilta, nan aplikasyon an.',
-                  )}
-                </small>
-              </section>
-
-              {/* 4 — Appearance and language */}
-              <section className="profile-set">
-                <h3 className="profile-set__title">
-                  <Languages size={16} aria-hidden="true" /> {t('Apparence et langue', 'Aparans ak lang')}
-                </h3>
-                <button type="button" className="profile-link" onClick={() => toggleTheme()}>
-                  {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                  {theme === 'dark' ? t('Mode clair', 'Mòd klè') : t('Mode nuit', 'Mòd lannwit')}
-                  <ChevronRight size={16} />
-                </button>
-                <button type="button" className="profile-link" onClick={() => setLanguage(isCreole ? 'fr' : 'ht')}>
-                  <Languages size={18} /> {isCreole ? 'Français' : 'Kreyòl'}<ChevronRight size={16} />
-                </button>
-              </section>
-
-              {/* 5 — Account and privacy */}
-              <section className="profile-set">
-                <h3 className="profile-set__title">
-                  <ShieldCheck size={16} aria-hidden="true" /> {t('Compte et confidentialité', 'Kont ak konfidansyalite')}
-                </h3>
-                <Link to="/about" className="profile-link"><Info size={18} /> {t('À propos', 'Sou nou')}<ChevronRight size={16} /></Link>
-                <Link to="/privacy" className="profile-link"><FileText size={18} /> {t('Confidentialité', 'Konfidansyalite')}<ChevronRight size={16} /></Link>
-                <Link to="/delete-account" className="profile-link"><Trash2 size={18} /> {t('Supprimer mon compte', 'Efase kont mwen')}<ChevronRight size={16} /></Link>
-                <button type="button" className="profile-link profile-link--danger" onClick={handleLogout}>
-                  <LogOut size={18} /> {t('Déconnexion', 'Dekonekte')}<ChevronRight size={16} />
-                </button>
-              </section>
-            </div>
-          </details>
-        </div>
-
       </div>
 
       {showTrackSelector && (

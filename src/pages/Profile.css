@@ -1,120 +1,377 @@
-/* Profile — account hub
-   ───────────────────── */
+/* Profile — "Mon profil & paramètres de compte"
+   ───────────────────────────────────────────────
+   A compact title bar, three figures, then two columns of numbered sections
+   (1–3 left, 4–5 right) and the record (courses, badges) underneath. Soft
+   white cards with a hairline border, brand navy for the numbers and the one
+   primary action. Colours come from the app tokens so dark mode follows. */
 
-/* Reading order is the page's argument: who you are, how you are doing, what
-   you have done, what you have earned — and only then the controls. Settings
-   used to sit second, above every answer the page exists to give. */
-.profile {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  grid-template-areas:
-    "hero         hero"
-    "readiness    aside"
-    "courses      aside"
-    "achievements achievements"
-    "invite       invite"
-    "settings     settings";
-  gap: 1rem;
-  max-width: 1060px;
-  align-items: start;
+.pr {
+  --pr-navy: #0B296B;          /* ink: section numbers, the name */
+  --pr-navy-fill: #0B296B;     /* the Enregistrer button */
+  --pr-card-border: color-mix(in srgb, var(--primary-500) 12%, var(--border));
+}
+[data-theme="dark"] .pr {
+  --pr-navy: #9DC2FA;
+  --pr-navy-fill: var(--primary-600);
+  --pr-card-border: var(--border);
 }
 
-/* ── Grid area assignments ── */
-.profile-area--hero         { grid-area: hero; }
-.profile-area--readiness    { grid-area: readiness; }
-.profile-area--aside        { grid-area: aside; }
-.profile-area--courses      { grid-area: courses; }
-.profile-area--achievements { grid-area: achievements; }
-.profile-area--settings     { grid-area: settings; }
-.profile-area--invite       { grid-area: invite; }
-
-/* The sidebar holds two short cards stacked, so neither of them sits alone
-   beside a tall one and leaves a hole under itself. */
-.profile-area--aside {
-  display: grid;
-  gap: 1rem;
-  align-content: start;
-}
-
-/* ── Hero card: identity + level ── */
-.profile-area--hero {
-  background: var(--surface);
-  border: 1px solid var(--primary-50);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-  padding: clamp(1.4rem, 3vw, 1.8rem);
+.pr-page {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
 }
 
-/* ── Generic profile card ── */
-.profile-card {
-  background: var(--surface);
-  border: 1px solid var(--primary-50);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-  padding: clamp(1.2rem, 2.5vw, 1.5rem);
-  position: relative;
-}
-
-.profile-card__title {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0 0 0.9rem;
-  font-size: var(--text-base);
-}
-
-/* Card header row (title + inline actions) */
-.profile-card__header {
+/* ── Title bar ───────────────────────────────────────────────────────────── */
+.pr-titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.9rem;
+  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--pr-card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  z-index: 5;
+}
+/* Sticky only while something is unsaved: the one Enregistrer stays within
+   reach of the fields it saves, and the bar is not in the way otherwise. */
+.pr-titlebar.is-dirty {
+  position: sticky;
+  top: calc(var(--navbar-height, 60px) + 0.5rem);
+  box-shadow: var(--pf-lift);
 }
 
-.profile-card__header .profile-card__title {
-  margin-bottom: 0;
+.pr-titlebar__who { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
+.pr-titlebar__avatar {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--pr-card-border);
 }
+.pr-titlebar__avatar > * { width: 100%; height: 100%; display: block; }
+.pr-titlebar__id { min-width: 0; }
+.pr-titlebar__name {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--pr-navy);
+  overflow-wrap: anywhere;
+}
+.pr-titlebar__meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.25rem; }
+.pr-handle { font-size: 0.86rem; font-weight: 600; color: var(--text-600); }
+.pr-handle--missing { color: var(--primary-600); text-decoration: underline; }
 
-/* ── Quick links: icon tile grid ── */
-.profile-espace-grid {
+.pr-titlebar__save { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; margin-left: auto; }
+.pr-titlebar__hint { font-size: 0.8rem; color: var(--text-muted); }
+
+.pr-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pr-navy-fill);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.pr-save:hover:not(:disabled) { transform: translateY(-1px); }
+.pr-save:disabled { opacity: 0.45; cursor: default; }
+
+.pr-ok, .pr-failed {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.pr-ok { color: var(--success-500); }
+.pr-failed { color: var(--coral-deep, var(--danger-500)); }
+
+/* ── Three figures ───────────────────────────────────────────────────────── */
+.pr-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
 }
+.pr-stats .pf-stat {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--pr-card-border);
+}
+.pr-stats .pf-meter { width: 100%; margin: 0.35rem 0 0.1rem; }
 
-.profile-espace-tile {
+/* ── Two columns of sections ─────────────────────────────────────────────── */
+.pr-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  scroll-margin-top: calc(var(--navbar-height, 60px) + 5.5rem);
+}
+.pr-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+.pr-sec {
   display: flex;
   flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+  padding: clamp(1rem, 2.4vw, 1.35rem);
+  background: var(--surface);
+  border: 1px solid var(--pr-card-border);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+}
+.pr-sec__head { display: flex; align-items: flex-start; gap: 0.7rem; }
+.pr-sec__n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pr-navy) 10%, var(--surface));
+  color: var(--pr-navy);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.pr-sec__title {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-900);
+}
+.pr-sec__sub { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--text-muted); line-height: 1.45; }
+
+/* The school card sits inside section 3 — an inset panel, not a floating card. */
+.pr-sec .myschool { margin: 0; box-shadow: none; }
+
+.pr-field { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.pr-label { font-size: 0.82rem; font-weight: 700; color: var(--text-600); }
+.pr-muted { font-size: 0.82rem; line-height: 1.45; color: var(--text-muted); }
+
+.profile-field__input--readonly {
+  display: block;
+  background: var(--surface-muted);
+  color: var(--text-600);
+  overflow-wrap: anywhere;
+}
+
+/* ── Chips, segmented control, switch ────────────────────────────────────── */
+.pr-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.pr-chip {
+  padding: 0.42rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-800);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.pr-chip:hover:not(:disabled) { border-color: var(--primary-100); background: var(--primary-50); }
+.pr-chip.is-on { border-color: var(--primary-500); background: var(--primary-50); color: var(--primary-600); }
+.pr-chip:disabled { opacity: 0.55; cursor: default; }
+[data-theme="dark"] .pr-chip.is-on,
+[data-theme="dark"] .profile-grade.is-on { background: color-mix(in srgb, var(--primary-500) 24%, transparent); color: #9DC2FA; }
+
+.pr-goals, .pr-spots, .pr-account { display: flex; flex-direction: column; gap: 0.85rem; }
+
+.pr-seg {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+.pr-seg__opt {
+  padding: 0.4rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-600);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pr-seg__opt.is-on { background: var(--surface); color: var(--pr-navy); box-shadow: var(--shadow-sm); }
+
+.pr-toggle { display: flex; align-items: center; justify-content: space-between; gap: 0.9rem; }
+.pr-toggle__text { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.pr-toggle__label { font-size: 0.9rem; font-weight: 700; color: var(--text-900); }
+.pr-toggle__hint { font-size: 0.76rem; line-height: 1.45; color: var(--text-muted); }
+
+.pr-switch {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-400) 45%, var(--surface));
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.pr-switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+.pr-switch.is-on { background: var(--pr-navy-fill); }
+.pr-switch.is-on .pr-switch__knob { transform: translateX(20px); }
+.pr-switch:disabled { opacity: 0.5; cursor: default; }
+.pr-switch:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .pr-switch, .pr-switch__knob { transition: none; }
+}
+
+/* ── Weak / strong units ─────────────────────────────────────────────────── */
+.pr-spot-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.5rem; }
+.pr-spot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+.pr-spot:hover { transform: translateY(-1px); }
+.pr-spot--weak { background: var(--t-amber-fill); color: var(--t-amber-ink); }
+.pr-spot--strong { background: var(--t-emerald-fill); color: var(--t-emerald-ink); }
+.pr-spot__course { font-family: var(--font-mono); font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.85; }
+.pr-spot__title { font-size: 0.86rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.pr-spot__count { font-size: 0.74rem; font-weight: 600; opacity: 0.85; }
+
+.pr-inline-link {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.85rem 0.5rem;
+  gap: 0.35rem;
+  align-self: flex-start;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--pf-accent-ink);
+  text-decoration: none;
+}
+.pr-inline-link:hover { text-decoration: underline; }
+
+/* ── Schoolmates ─────────────────────────────────────────────────────────── */
+.pr-mates { display: flex; flex-direction: column; gap: 0.5rem; }
+.pr-mates__list { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
+.pr-mate {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.55rem;
   border-radius: 12px;
   background: var(--surface-muted);
-  border: none;
-  color: var(--text-800);
-  font-size: var(--text-xs);
+}
+.pr-mate__avatar { border-radius: 50%; overflow: hidden; }
+.pr-mate__name { min-width: 0; font-size: 0.88rem; font-weight: 600; color: var(--text-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-mate__xp { font-size: 0.76rem; font-weight: 600; color: var(--text-600); white-space: nowrap; }
+
+/* ── Rows (alerts, account links) ────────────────────────────────────────── */
+.pr-rows { display: flex; flex-direction: column; }
+.pr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.65rem 0.3rem;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
   font-weight: 600;
+  text-align: left;
   text-decoration: none;
   cursor: pointer;
-  text-align: center;
-  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.pr-rows .pr-row + .pr-row { border-top: 1px solid var(--border); border-radius: 0; }
+.pr-row:hover:not(:disabled) { background: var(--surface-alt); }
+.pr-row:disabled { opacity: 0.6; cursor: default; }
+.pr-row svg { flex: none; color: var(--text-muted); }
+.pr-row__chev { margin-left: auto; }
+.pr-row--danger, .pr-row--danger svg { color: var(--danger-500); }
+
+.pr-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  color: var(--text-800);
+  overflow-wrap: anywhere;
+}
+.pr-readonly svg { flex: none; color: var(--text-muted); }
+
+/* ── The record: courses and badges ──────────────────────────────────────── */
+.pr-journey {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.pr-journey .pf-badges { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+/* ── Phones ──────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .pr-grid, .pr-journey { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .pr-titlebar { padding: 0.75rem 0.85rem; }
+  .pr-titlebar__save { width: 100%; justify-content: flex-end; }
+  .pr-titlebar__name { font-size: 1.15rem; }
+  .pr-stats { grid-template-columns: minmax(0, 1fr); }
+  .pr-stats .pf-stat {
+    grid-template-columns: auto auto 1fr;
+    justify-items: start;
+    align-items: center;
+    text-align: left;
+    gap: 0 0.6rem;
+  }
+  .pr-stats .pf-stat .pf-tile { grid-row: span 2; margin-bottom: 0; }
+  .pr-stats .pf-stat__value { grid-column: 2; }
+  .pr-stats .pf-stat__label { grid-column: 3; }
+  .pr-stats .pf-stat__sub, .pr-stats .pf-meter { grid-column: 2 / -1; }
+  .pf-badges, .pr-journey .pf-badges { grid-template-columns: 1fr; }
+  .pr-spot-list { grid-template-columns: 1fr; }
 }
 
-.profile-espace-tile:hover {
-  background: var(--primary-50);
-  color: var(--primary-600);
-  transform: translateY(-1px);
-}
-
-.profile-espace-tile svg {
-  color: var(--primary-500);
-  flex-shrink: 0;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kept from the previous page: guest view, form fields, the scoped /arena
+   school picker, the stat tile and the achievement cards.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Shared link row (used for logout) ── */
 .profile-links {
@@ -202,68 +459,6 @@
   box-shadow: var(--shadow-sm);
   padding: 0.6rem 0.8rem;
 }
-
-/* ── Responsive: collapse to single column ── */
-@media (max-width: 768px) {
-  .profile {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "hero"
-      "readiness"
-      "aside"
-      "courses"
-      "achievements"
-      "invite"
-      "settings";
-  }
-
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Réglages — five readable groups (learning · identity/school · notifications
-   · appearance/language · account/privacy)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.profile-set__intro {
-  margin: -0.4rem 0 1rem;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-/* auto-fit, so the five groups sit side by side on a laptop and stack on a
-   phone without a second breakpoint. */
-.profile-sets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem 1.25rem;
-  align-items: start;
-}
-
-.profile-set {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  min-width: 0;
-  padding-top: 0.9rem;
-  border-top: 1px solid var(--border);
-}
-
-/* The identity form has real inputs — give it the whole row. */
-.profile-set--wide { grid-column: 1 / -1; }
-
-.profile-set__title {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  color: var(--text);
-}
-
-.profile-set__title svg { color: var(--primary-500); flex: 0 0 auto; }
 
 /* ── Fields ── */
 .profile-field {
@@ -371,26 +566,6 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.6rem;
 }
-
-.profile-identity__foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.profile-identity__ok,
-.profile-identity__failed {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.profile-identity__ok { color: var(--success-500); }
-.profile-identity__failed { color: var(--coral-deep, var(--danger-500)); }
 
 .profile-spin { animation: spin 1s linear infinite; }
 
@@ -643,104 +818,6 @@
 
 .profile-guest__free a { color: var(--primary-600); font-weight: 700; }
 
-/* ── Profile-specific pieces of the pf-* language ──────────────────────────
-   The shared primitives live in src/styles/pf.css; everything below is only
-   used by this page (the hero, its stats and ladder, the totals, the rank
-   rows and the achievement cards). */
-
-/* ── Hero ────────────────────────────────────────────────────────────────── */
-
-.pf-hero {
-  position: relative;
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
-  padding: 1.5rem 1.6rem;
-}
-/* A single soft wash behind the identity block — the mockups' tinted canvas,
-   scoped to the one card instead of repainting the page. */
-.pf-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 190px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary-500) 7%, var(--surface)), var(--surface));
-  pointer-events: none;
-}
-.pf-hero > * { position: relative; }
-
-.pf-hero__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-.pf-hero__who { display: flex; align-items: center; gap: 1rem; min-width: 0; }
-
-.pf-avatar {
-  position: relative;
-  width: 76px;
-  height: 76px;
-  flex: none;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
-  box-shadow: 0 0 0 4px var(--surface), 0 0 0 6px var(--primary-100);
-}
-.pf-avatar__initials {
-  font-family: var(--font-heading);
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.02em;
-}
-/* The level rides the avatar, as in the mockups. */
-.pf-avatar__level {
-  position: absolute;
-  left: 50%;
-  bottom: -11px;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: var(--warning-500);
-  color: #3B2300;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  box-shadow: 0 0 0 3px var(--surface);
-}
-
-.pf-hero__id { min-width: 0; }
-.pf-hero__name {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-size: 1.85rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  line-height: 1.12;
-  color: var(--text-900);
-}
-.pf-hero__place {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0.3rem 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-600);
-}
-.pf-hero__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
-
-/* Three figures, each with the context that makes it mean something. */
-.pf-hero__stats { display: flex; gap: 0.6rem; }
 .pf-stat {
   display: grid;
   justify-items: center;
@@ -768,127 +845,6 @@
   color: var(--text-600);
 }
 .pf-stat__sub { font-size: 0.7rem; color: var(--text-muted); }
-
-/* The ladder to the next level, in its own inset panel. */
-.pf-ladder {
-  margin-top: 1.25rem;
-  padding: 0.9rem 1rem;
-  background: var(--surface-muted);
-  border-radius: 16px;
-}
-.pf-ladder__top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.6rem;
-}
-.pf-ladder__title { font-size: var(--text-sm); font-weight: 600; color: var(--text-800); }
-.pf-ladder__figures {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-weight: 700;
-  color: var(--text-900);
-  white-space: nowrap;
-}
-.pf-ladder__figures small { font-weight: 400; color: var(--text-muted); }
-
-.pf-hero__honours {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1.1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-.pf-hero__honour-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.pf-honour {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.28rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-800);
-}
-
-/* ── Totals ──────────────────────────────────────────────────────────────── */
-
-.pf-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
-.pf-total {
-  display: grid;
-  gap: 0.1rem;
-  padding: 0.75rem 0.8rem;
-  background: var(--surface-muted);
-  border-radius: 14px;
-}
-.pf-total__value {
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  color: var(--text-900);
-}
-.pf-total__label { font-size: 0.74rem; color: var(--text-muted); }
-
-/* ── Leaderboard rows ────────────────────────────────────────────────────── */
-
-.pf-ranks { display: grid; gap: 0.3rem; margin: 0; padding: 0; list-style: none; }
-.pf-rank {
-  display: grid;
-  grid-template-columns: 2rem auto 1fr auto;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.6rem;
-  border-radius: 14px;
-  font-size: var(--text-sm);
-  transition: background 0.3s ease;
-}
-.pf-rank__pos { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-400); }
-.pf-rank__avatar {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--t-azure-fill);
-  color: var(--t-azure-ink);
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-.pf-rank__body { display: grid; min-width: 0; }
-.pf-rank__name {
-  font-weight: 600;
-  color: var(--text-900);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pf-rank__school {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pf-rank__xp { font-weight: 600; color: var(--text-600); }
-
-/* Your own row is filled, as in the mockups — no accent stripe. */
-.pf-rank.is-me {
-  background: var(--pf-fill);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary-500) 30%, transparent);
-}
-.pf-rank.is-me .pf-rank__pos,
-.pf-rank.is-me .pf-rank__name,
-.pf-rank.is-me .pf-rank__school,
-.pf-rank.is-me .pf-rank__xp { color: #fff; }
-.pf-rank.is-me .pf-rank__avatar { background: rgba(255, 255, 255, 0.24); color: #fff; }
 
 /* ── Achievement cards ───────────────────────────────────────────────────── */
 
@@ -948,68 +904,5 @@
 }
 .pf-badge__foot-value { font-size: 0.75rem; font-weight: 600; color: var(--text-600); }
 
-/* ── Responsive ──────────────────────────────────────────────────────────── */
-
-@media (max-width: 900px) {
-  .pf-hero__stats { width: 100%; }
-  .pf-stat { flex: 1; min-width: 0; }
-}
-
-@media (max-width: 560px) {
-  .pf-hero { padding: 1.25rem 1.1rem; }
-  .pf-hero__who { gap: 0.8rem; }
-  .pf-avatar { width: 62px; height: 62px; }
-  .pf-avatar__initials { font-size: 1.3rem; }
-  .pf-hero__name { font-size: 1.45rem; }
-  .pf-hero__stats { flex-direction: column; }
-  .pf-stat {
-    grid-template-columns: auto auto 1fr;
-    justify-items: start;
-    align-items: center;
-    text-align: left;
-    gap: 0 0.6rem;
-    min-width: 0;
-  }
-  .pf-stat .pf-tile { grid-row: span 2; margin-bottom: 0; }
-  .pf-stat__value { grid-column: 2; }
-  .pf-stat__label { grid-column: 3; }
-  .pf-stat__sub { grid-column: 2 / -1; }
-  .pf-badges { grid-template-columns: 1fr; }
-  .pf-ladder__top { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
-}
-
 .pf-stat .pf-tile { margin-bottom: 0.25rem; }
-
-.pf-total .pf-tile { margin-bottom: 0.3rem; }
-
-/* The portrait fills the ring; the level badge still rides it. */
-.pf-avatar .pf-avatar__art {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-/* Réglages, folded. The summary is the card title plus one line naming what
-   is inside, so a student knows whether to open it. */
-.profile-settings > .profile-settings__summary {
-  display: grid;
-  gap: 0.2rem;
-  list-style: none;
-  cursor: pointer;
-}
-.profile-settings > .profile-settings__summary::-webkit-details-marker { display: none; }
-.profile-settings__summary .profile-card__title { margin: 0; }
-.profile-settings__summary .profile-card__title::after {
-  content: "›";
-  margin-left: auto;
-  font-size: 1.3rem;
-  line-height: 1;
-  color: var(--text-500);
-  transition: transform 0.2s ease;
-}
-.profile-settings[open] .profile-card__title::after { transform: rotate(90deg); }
-.profile-settings__hint { color: var(--text-500); font-size: 0.88rem; }
-.profile-settings[open] > .profile-settings__summary { margin-bottom: 1rem; }
-
 .pf-badges__more { margin-top: 0.9rem; }
