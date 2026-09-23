@@ -62,7 +62,12 @@ module.exports = {
       favicon: './public_original/assets/logo.png'
     }),
     new MiniCssExtractPlugin({
-      filename: 'css/[name].[contenthash].css'
+      filename: 'css/[name].[contenthash].css',
+      // The shared blocks (Home.css, MySchoolCard.css, ExamCountdown.css) are
+      // imported by several lazy pages in different orders; every rule in them
+      // is class-scoped, so order between chunks carries no meaning and the
+      // "Conflicting order" warning was only a dev-overlay nuisance.
+      ignoreOrder: true,
     }),
     new CopyWebpackPlugin({
       patterns: [
