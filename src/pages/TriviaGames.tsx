@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Zap, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Users } from 'lucide-react';
+import { Zap, Flame, Trophy, X, Star, Check, RefreshCw, ThumbsUp, Dumbbell, Sparkles, Crown, CalendarCheck, Clock, ChevronRight, Users, Target, Gamepad2, Swords, History, School as SchoolIcon } from 'lucide-react';
 import useStore from '../contexts/store';
 import { useFocusMode } from '../hooks/useFocusMode';
 import { useTrivia } from '../hooks/useTrivia';
@@ -12,6 +12,11 @@ import { drawAndRemember } from '../utils/questionRotation';
 import { todayStr } from '../services/streakService';
 import { GAMES, GAME_ICONS, getGameById } from '../data/games';
 import Leaderboard from '../components/Leaderboard';
+import SchoolRanking from '../components/SchoolRanking';
+import DailyQuests from '../components/DailyQuests';
+import { useCollectives } from '../hooks/useLeaderboard';
+import { useOpenArena } from '../hooks/useOpenArena';
+import { normalizeName } from '../../shared/leaderboardAgg';
 import VraiFauxGame from '../components/games/VraiFauxGame';
 import MemoireGame from '../components/games/MemoireGame';
 import MoKacheGame from '../components/games/MoKacheGame';
@@ -182,6 +187,24 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
     setAnswered(false);
     setTimeLeft(15);
   }, [current, questions.length, onFinish, score]);
+
+  // Keyboard: 1–4 answer, Enter goes on. Ignored while typing in a field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      const n = Number(e.key);
+      if (!answered && Number.isInteger(n) && n >= 1 && n <= options.length) {
+        e.preventDefault();
+        handleSelect(n - 1);
+      } else if (answered && e.key === 'Enter') {
+        e.preventDefault();
+        handleNext();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [answered, options.length, handleSelect, handleNext]);
 
   const optionClass = (idx) => {
     const base = 'trivia-option';
@@ -545,7 +568,12 @@ function TriviaClassic({ isCreole, onExitHub }) {
     if (location.state?.startDaily && !daily.completedToday) {
       autoStartedRef.current = true;
       startDaily();
+    } else if (typeof location.state?.startCategory === 'string') {
+      // A topic tapped on the /jeux hub starts that round directly.
+      autoStartedRef.current = true;
+      startRound(location.state.startCategory);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, daily.completedToday, startDaily]);
 
   const startRound = (catId) => {
@@ -698,168 +726,340 @@ function GameRecords({ isCreole }) {
 const BANK_TOTAL = Object.values(TRIVIA_QUESTIONS as Record<string, any[]>)
   .reduce((n, list) => n + (list?.length || 0), 0);
 
-/* ─── Games hub (landing) ─── */
+/* ─── Games hub (landing) ─────────────────────────────────────────────────
+   Ted's fifth mockup: a HUD (school + rank, level and XP bar, streak, "Défier"),
+   four mode tabs, the playable thing on the left, the tournament / school
+   league / daily quests on the right. Every figure is the student's own or the
+   board's; the mockup's live opponent, 50/50 joker, energy bolts, XP
+   multiplier and invented school headcounts have no counterpart in the app
+   and are not drawn. */
+type HubTab = 'trivia' | 'arcade' | 'tournois' | 'historique';
+const HUB_TABS: HubTab[] = ['trivia', 'arcade', 'tournois', 'historique'];
+
 function GamesHub({ isCreole }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
+  const setLanguage = useStore((s) => s.setLanguage);
+  const setSchoolChosen = useStore((s) => s.setSchoolChosen);
+  const toggleAuthModal = useStore((s) => s.toggleAuthModal);
+  const { categories } = useTriviaContent();
+  const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const highScores = profile?.games?.highScores || {};
   const gamesPlayed = profile?.games?.gamesPlayed || 0;
+  const school: string | null = isAuthed ? profile?.leaderboard?.school || null : null;
+  const { groups } = useCollectives('school', 'all', !!school);
+  const mySchool = school ? groups.find((g) => g.key === normalizeName(school)) : null;
+  const arena = useOpenArena();
+  const days = streak?.currentStreak || 0;
+
+  const initialTab = (location.hash || '').replace('#', '') as HubTab;
+  const [tab, setTab] = useState<HubTab>(HUB_TABS.includes(initialTab) ? initialTab : 'trivia');
+  const pickTab = (next: HubTab) => {
+    setTab(next);
+    trackEvent('games_tab', { tab: next });
+    window.history.replaceState(window.history.state, '', `#${next}`);
+  };
   useEffect(() => { trackEvent('games_view'); }, []);
 
   const nf = (n: number) => new Intl.NumberFormat('fr-FR').format(n || 0);
+  const arcadeGames = GAMES.filter((g) => g.id !== 'trivia');
+  const tabLabel: Record<HubTab, string> = {
+    trivia: t('Trivia & défi du jour', 'Trivia ak defi jodi a'),
+    arcade: t('Mini-jeux', 'Ti jwèt'),
+    tournois: t('Tournois & classements', 'Tounwa ak klasman'),
+    historique: t('Mes records', 'Rekò mwen'),
+  };
+  const tabIcon: Record<HubTab, React.ReactNode> = {
+    trivia: <Target size={18} aria-hidden="true" />,
+    arcade: <Gamepad2 size={18} aria-hidden="true" />,
+    tournois: <Swords size={18} aria-hidden="true" />,
+    historique: <History size={18} aria-hidden="true" />,
+  };
 
-  const figures = [
-        { tone: 'azure', value: String(GAMES.length), label: isCreole ? 'Jwèt' : 'Jeux' },
-        { tone: 'violet', value: String(TRIVIA_CATEGORIES.length), label: isCreole ? 'Kategori' : 'Catégories' },
-        { tone: 'emerald', value: nf(BANK_TOTAL), label: isCreole ? 'Kesyon' : 'Questions' },
-      ];
+  const arenaTitle = arena ? (isCreole && arena.titleHt ? arena.titleHt : arena.title) : null;
+  const arenaDate = arena?.startsAt && arena.startsAt > Date.now()
+    ? new Date(arena.startsAt).toLocaleDateString(isCreole ? 'fr-HT' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+    : null;
+
+  const gameCard = (g, i) => {
+    const Icon = GAME_ICONS[g.id];
+    const hs = highScores[g.id];
+    return (
+      <button
+        key={g.id}
+        className="game-card"
+        style={{ ['--game-color' as any]: g.color }}
+        onClick={() => { trackEvent('game_select', { game: g.id }); navigate(`/jeux/${g.id}`); }}
+      >
+        <span className="game-card__wash" aria-hidden="true" />
+        <span className="game-card__icon" aria-hidden="true"><Icon size={22} /></span>
+        <span className="pf-eyebrow game-card__index" translate="no">
+          {(isCreole ? 'JWÈT ' : 'JEU ') + String(i + 1).padStart(2, '0')}
+        </span>
+        <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
+        <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
+        <span className="game-card__meta">
+          <span className="game-card__time"><Clock size={12} aria-hidden="true" /> ~{g.minutes} min</span>
+          {hs != null && (
+            <span className="game-card__hs"><Trophy size={12} aria-hidden="true" /> {t('Record', 'Rekò')} {hs}</span>
+          )}
+        </span>
+        <span className="game-card__cta" aria-hidden="true">{t('Jouer', 'Jwe')}<ChevronRight size={15} /></span>
+      </button>
+    );
+  };
 
   return (
-    <div className="games-hub pf container">
-      {/* A heading, not a hero.
-          It WAS a tag pill, a two-clause display heading and a lede, 271px
-          tall on desktop and 326px on a phone, which put the first game card
-          at 861px / 1115px — a page about playing where nothing playable was
-          on screen.
-
-          Ted: "the hero is too big - i want people to start taking action as
-          soon as they are on the page". The pill and the lede are gone; the
-          count the pill carried now sits in the figure strip below, which was
-          already reporting real numbers. The strip now sits top right of the
-          heading as one small row, not a card under it. */}
-      <header className="games-hub__hero jx-hero">
-        <h1 className="games-hub__title jx-hero__title">
-          {isCreole ? 'Ki sa ou vle jwe jodi a\u00a0?' : 'À quoi veux-tu jouer aujourd’hui\u00a0?'}
-        </h1>
-
-        <div className="jx-stats">
-          <div className="jx-figures">
-            {figures.map((f) => (
-              <div className="jx-figure" key={f.label}>
-                <span className={`jx-figure__value jx-figure__value--${f.tone}`} translate="no">{f.value}</span>
-                <span className="pf-eyebrow">{f.label}</span>
-              </div>
-            ))}
+    <div className="games-hub pf container gx">
+      {/* ── HUD ─────────────────────────────────────────────────────────── */}
+      <header className="gx-hud">
+        <div className="gx-hud__top">
+          <div className="gx-hud__who">
+            <span className="gx-hud__badge" aria-hidden="true"><SchoolIcon size={22} /></span>
+            <div className="gx-hud__id">
+              <h1 className="gx-hud__title">
+                {school || t('À quoi veux-tu jouer aujourd’hui ?', 'Ki sa ou vle jwe jodi a ?')}
+              </h1>
+              <p className="gx-hud__sub">
+                {school
+                  ? (mySchool
+                    ? t(
+                      `Rang #${mySchool.rank} des écoles · ${mySchool.members} élève${mySchool.members > 1 ? 's' : ''} sur EdLight`,
+                      `Plas #${mySchool.rank} pami lekòl yo · ${mySchool.members} elèv sou EdLight`,
+                    )
+                    : t('Chaque partie fait monter ton école au classement.', 'Chak pati fè lekòl ou monte nan klasman an.'))
+                  : isAuthed
+                    ? (
+                      <button type="button" className="gx-link" onClick={() => setSchoolChosen(false)}>
+                        {t('Ajoute ton école pour la faire monter au classement →', 'Ajoute lekòl ou pou fè l monte nan klasman an →')}
+                      </button>
+                    )
+                    : t(
+                      `${GAMES.length} jeux · ${TRIVIA_CATEGORIES.length} thèmes · ${nf(BANK_TOTAL)} questions`,
+                      `${GAMES.length} jwèt · ${TRIVIA_CATEGORIES.length} tèm · ${nf(BANK_TOTAL)} kesyon`,
+                    )}
+              </p>
+            </div>
           </div>
-
-
+          <div className="gx-hud__controls">
+            <div className="gx-lang" role="group" aria-label={t('Langue', 'Lang')}>
+              <button type="button" className={!isCreole ? 'is-on' : ''} aria-pressed={!isCreole} onClick={() => setLanguage('fr')}>Français</button>
+              <button type="button" className={isCreole ? 'is-on' : ''} aria-pressed={isCreole} onClick={() => setLanguage('ht')}>Kreyòl</button>
+            </div>
+            <Link to="/download?from=defi" className="gx-duel">
+              <Users size={16} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
+            </Link>
+          </div>
         </div>
 
+        {isAuthed ? (
+          <div className="gx-hud__stats">
+            <div className="gx-stat gx-stat--level">
+              <div className="gx-stat__row">
+                <span className="gx-stat__label"><Crown size={16} aria-hidden="true" /> {t(`Niveau ${level.level}`, `Nivo ${level.level}`)}</span>
+                <span className="gx-stat__value">{nf(level.xp)} XP</span>
+              </div>
+              <span className="gx-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, level.progressPct || 0)}%` }} /></span>
+              <span className="gx-stat__hint">
+                {level.xpForNext > 0
+                  ? t(`${nf(level.xpToNext)} XP avant le niveau ${level.level + 1}`, `${nf(level.xpToNext)} XP anvan nivo ${level.level + 1}`)
+                  : t('Niveau maximum', 'Nivo maksimòm')}
+              </span>
+            </div>
+            <div className="gx-stat">
+              <span className="gx-stat__icon gx-stat__icon--amber" aria-hidden="true"><Flame size={18} /></span>
+              <div className="gx-stat__text">
+                <span className="gx-stat__value">{days} {t(days === 1 ? 'jour' : 'jours', 'jou')}</span>
+                <span className="gx-stat__hint">{t('de série', 'seri')}</span>
+              </div>
+            </div>
+            <div className="gx-stat">
+              <span className="gx-stat__icon gx-stat__icon--azure" aria-hidden="true"><Gamepad2 size={18} /></span>
+              <div className="gx-stat__text">
+                <span className="gx-stat__value">{nf(gamesPlayed)}</span>
+                <span className="gx-stat__hint">{t('parties d’arcade', 'pati arkad')}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="gx-hud__signin">
+            <span>{t('Connecte-toi pour garder tes XP, ta série et faire gagner ton école.', 'Konekte pou kenbe XP ou, seri ou epi fè lekòl ou genyen.')}</span>
+            <button type="button" className="gx-btn" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
+          </div>
+        )}
       </header>
 
-      <DailyChallengeBanner
-        daily={daily}
-        isCreole={isCreole}
-        onStart={() => navigate('/jeux/trivia', { state: { startDaily: true } })}
-      />
+      {/* ── Mode tabs ───────────────────────────────────────────────────── */}
+      <div className="gx-tabs" role="tablist" aria-label={t('Modes de jeu', 'Mòd jwèt')}>
+        {HUB_TABS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            id={`gx-tab-${id}`}
+            aria-selected={tab === id}
+            aria-controls="gx-panel"
+            className={`gx-tab${tab === id ? ' is-on' : ''}`}
+            onClick={() => pickTab(id)}
+          >
+            {tabIcon[id]}
+            <span>{tabLabel[id]}</span>
+            {id === 'trivia' && !daily.completedToday && <span className="gx-tab__dot">{t('Défi', 'Defi')}</span>}
+            {id === 'arcade' && <span className="gx-tab__count">{GAMES.length}</span>}
+          </button>
+        ))}
+      </div>
 
-      <div className="games-hub__layout">
-        <div className="games-hub__main">
-          <HubHeading
-            eyebrow={isCreole ? 'Sal arkad la' : 'La salle d’arcade'}
-            title={isCreole ? 'Chwazi yon jwèt' : 'Choisir un jeu'}
-          />
-          <div className="games-hub__grid">
-            {GAMES.map((g, i) => {
-              const Icon = GAME_ICONS[g.id];
-              const hs = highScores[g.id];
-              return (
-                <button
-                  key={g.id}
-                  className="game-card"
-                  style={{ ['--game-color' as any]: g.color }}
-                  onClick={() => { trackEvent('game_select', { game: g.id }); navigate(`/jeux/${g.id}`); }}
-                >
-                  {/* Decorative corner wash, the mockups' one flourish per
-                      card. Purely presentational, clipped by the card. */}
-                  <span className="game-card__wash" aria-hidden="true" />
-                  {/* The game's identity now lives in this one tinted tile
-                      rather than a full-bleed colour surface. */}
-                  <span className="game-card__icon" aria-hidden="true"><Icon size={22} /></span>
-                  <span className="pf-eyebrow game-card__index" translate="no">
-                    {(isCreole ? 'JWÈT ' : 'JEU ') + String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="game-card__name">{isCreole ? g.nameHt : g.name}</span>
-                  <span className="game-card__desc">{isCreole ? g.descriptionHt : g.description}</span>
-                  <span className="game-card__meta">
-                    <span className="game-card__time">
-                      <Clock size={12} aria-hidden="true" /> ~{g.minutes} min
-                    </span>
-                    {hs != null && (
-                      <span className="game-card__hs">
-                        <Trophy size={12} aria-hidden="true" />{' '}
-                        {isCreole ? 'Rekò' : 'Record'} {hs}
-                      </span>
-                    )}
-                  </span>
-                  {/* The card IS the button; this is its visible affordance,
-                      hidden from the accessibility tree so the control keeps
-                      one name. */}
-                  <span className="game-card__cta" aria-hidden="true">
-                    {isCreole ? 'Jwe' : 'Jouer'}
-                    <ChevronRight size={15} />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+      <div className="gx-layout">
+        <div className="gx-main" id="gx-panel" role="tabpanel" aria-labelledby={`gx-tab-${tab}`}>
+          {tab === 'trivia' && (
+            <>
+              <DailyChallengeBanner
+                daily={daily}
+                isCreole={isCreole}
+                onStart={() => navigate('/jeux/trivia', { state: { startDaily: true } })}
+              />
+              <section className="gx-card" aria-labelledby="gx-topics-title">
+                <div className="gx-card__head">
+                  <div>
+                    <span className="gx-tag">{t('Trivia · 10 questions · sans chrono', 'Trivia · 10 kesyon · san kwonomèt')}</span>
+                    <h2 className="gx-card__title" id="gx-topics-title">{t('Choisis un thème, joue tout de suite', 'Chwazi yon tèm, jwe kounye a')}</h2>
+                  </div>
+                  <button type="button" className="gx-btn" onClick={() => navigate('/jeux/trivia', { state: { startCategory: 'mixed' } })}>
+                    <Sparkles size={16} aria-hidden="true" /> {t('Mélange de thèmes', 'Melanj tèm')}
+                  </button>
+                </div>
+                <div className="gx-topics">
+                  {(categories && categories.length ? categories : TRIVIA_CATEGORIES).map((c: any) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className="gx-topic"
+                      style={{ ['--cat' as any]: c.color }}
+                      onClick={() => { trackEvent('trivia_topic_from_hub', { category: c.id }); navigate('/jeux/trivia', { state: { startCategory: c.id } }); }}
+                    >
+                      <span className="gx-topic__emoji" aria-hidden="true">{c.icon || '🎯'}</span>
+                      <span className="gx-topic__name">{isCreole ? c.nameHt || c.name : c.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="gx-card__foot">
+                  {t('Au clavier : 1 à 4 pour répondre, Entrée pour continuer.', 'Ak klavye a : 1 rive 4 pou reponn, Antre pou kontinye.')}
+                  {' '}<Link to="/jeux/trivia">{t('Plus d’options (longueur, chrono)', 'Plis opsyon (longè, kwonomèt)')} →</Link>
+                </p>
+              </section>
+              <section className="gx-card gx-card--duel" aria-labelledby="duel-title">
+                <span className="pf-tile pf-tile--sm pf-tile--violet" aria-hidden="true"><Users size={15} /></span>
+                <div className="gx-card__body">
+                  <h2 id="duel-title" className="gx-card__title gx-card__title--sm">{t('Défi d’un ami — 1 contre 1', 'Defi yon zanmi — 1 kont 1')}</h2>
+                  <p className="gx-card__text">{t('Termine une partie, puis envoie les mêmes questions à un ami : un seul essai, le meilleur score gagne. Le défi se crée dans l’application.', 'Fini yon pati, epi voye menm kesyon yo bay yon zanmi : yon sèl tantativ, pi gwo nòt la genyen. Defi a kreye nan aplikasyon an.')}</p>
+                </div>
+                <Link to="/download?from=defi" className="gx-btn gx-btn--ghost">{t('Obtenir l’application', 'Jwenn aplikasyon an')}</Link>
+              </section>
+            </>
+          )}
+
+          {tab === 'arcade' && (
+            <section>
+              <HubHeading eyebrow={t('La salle d’arcade', 'Sal arkad la')} title={t('Mini-jeux par matière', 'Ti jwèt pa matyè')} />
+              <div className="games-hub__grid">{GAMES.map(gameCard)}</div>
+            </section>
+          )}
+
+          {tab === 'tournois' && (
+            <>
+              <section className="gx-card">
+                <div className="gx-card__head">
+                  <div>
+                    <span className="gx-tag gx-tag--amber">{t('Championnat interscolaire', 'Chanpyona ant lekòl')}</span>
+                    <h2 className="gx-card__title">{arenaTitle || t('L’Arène', 'Arèn nan')}</h2>
+                  </div>
+                  <Link to="/arena" className="gx-btn">{arena ? t('Inscrire mon école', 'Enskri lekòl mwen') : t('Voir l’Arène', 'Gade Arèn nan')}</Link>
+                </div>
+                <p className="gx-card__text">
+                  {arena === undefined
+                    ? t('Chargement…', 'N ap chaje…')
+                    : arena
+                      ? (arena.state === 'doors'
+                        ? t('Les portes sont ouvertes : la finale se joue maintenant dans l’application.', 'Pòt yo louvri : final la ap jwe kounye a nan aplikasyon an.')
+                        : arenaDate
+                          ? t(`Inscriptions ouvertes — finale le ${arenaDate}.`, `Enskripsyon ouvè — final la ${arenaDate}.`)
+                          : t('Inscriptions ouvertes.', 'Enskripsyon ouvè.'))
+                      : t('Aucune finale ouverte pour l’instant — la prochaine sera annoncée ici. En attendant, chaque partie compte pour ton école.', 'Pa gen final ki ouvè kounye a — n ap anonse pwochen an isit la. Pandan tan an, chak pati konte pou lekòl ou.')}
+                  {arena && arena.schools > 0
+                    ? ` ${t(`${arena.schools} école${arena.schools > 1 ? 's' : ''} inscrite${arena.schools > 1 ? 's' : ''}.`, `${arena.schools} lekòl enskri.`)}`
+                    : ''}
+                </p>
+              </section>
+              <SchoolRanking max={10} />
+              <section>
+                <HubHeading eyebrow={t('Classement', 'Klasman')} title={t('Classement XP des jeux', 'Klasman XP jwèt yo')} />
+                <Leaderboard variant="full" max={25} periodToggle />
+              </section>
+            </>
+          )}
+
+          {tab === 'historique' && (
+            <>
+              <section className="gx-card">
+                <h2 className="gx-card__title">{t('Tes meilleurs scores', 'Pi bon nòt ou')}</h2>
+                {isAuthed ? (
+                  <ul className="gx-records">
+                    {arcadeGames.map((g) => {
+                      const Icon = GAME_ICONS[g.id];
+                      const hs = highScores[g.id];
+                      return (
+                        <li key={g.id} style={{ ['--game-color' as any]: g.color }}>
+                          <span className="pf-tile pf-tile--sm game-records__tile" aria-hidden="true"><Icon size={14} /></span>
+                          <span className="gx-records__name">{isCreole ? g.nameHt : g.name}</span>
+                          {hs != null
+                            ? <strong>{hs}</strong>
+                            : <button type="button" className="gx-link" onClick={() => navigate(`/jeux/${g.id}`)}>{t('Pas encore joué →', 'Poko jwe →')}</button>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="gx-card__text">{t('Connecte-toi pour garder tes records.', 'Konekte pou kenbe rekò ou.')}</p>
+                )}
+                <p className="gx-card__foot">
+                  {t('Tes erreurs de quiz et d’exercices t’attendent dans la révision.', 'Erè quiz ak egzèsis ou yo ap tann ou nan revizyon an.')}
+                  {' '}<Link to="/revision">{t('Réviser mes erreurs', 'Revize erè mwen')} →</Link>
+                </p>
+              </section>
+              <GameRecords isCreole={isCreole} />
+            </>
+          )}
         </div>
-        <aside className="games-hub__side">
-          {isAuthed && <section aria-label={isCreole ? 'Pwogrè mwen' : 'Ma progression'}>
-            <TriviaHeader level={level} streak={streak} isCreole={isCreole} />
-            <p>{nf(gamesPlayed)} {isCreole ? 'pati arkad' : 'parties d’arcade'} · {nf(level.xpToNext)} XP {isCreole ? 'pou pwochen nivo a' : 'pour le prochain niveau'}</p>
-          </section>}
-          <HubHeading
-            eyebrow={isCreole ? 'Klasman' : 'Classement'}
-            title={isCreole ? 'Klasman XP jwèt yo' : 'Classement XP des jeux'}
-          />
-          <Leaderboard variant="full" max={25} periodToggle />
-          <GameRecords isCreole={isCreole} />
+
+        {/* ── Right column: tournament, the league, today's quests ───────── */}
+        <aside className="gx-side">
+          {/* On the Tournois tab the panel already carries the Arène status and
+              the full school board; the side keeps only the quests there. */}
+          {tab !== 'tournois' && (<>
+          <section className="gx-card gx-card--event">
+            <div className="gx-card__row">
+              <span className="gx-tag gx-tag--navy">{t('Événement national', 'Evènman nasyonal')}</span>
+              {arena?.state === 'doors' && <span className="gx-live">{t('En direct', 'An dirèk')}</span>}
+            </div>
+            <h3 className="gx-card__title gx-card__title--sm">{arenaTitle || t('La finale des écoles', 'Final lekòl yo')}</h3>
+            <p className="gx-card__text">
+              {arena
+                ? (arenaDate
+                  ? t(`Le ${arenaDate}. Inscris ton école ici, joue dans l’application.`, `${arenaDate}. Enskri lekòl ou isit la, jwe nan aplikasyon an.`)
+                  : t('Inscris ton école ici, joue dans l’application.', 'Enskri lekòl ou isit la, jwe nan aplikasyon an.'))
+                : t('La prochaine finale sera annoncée ici.', 'N ap anonse pwochen final la isit la.')}
+            </p>
+            <Link to="/arena" className="gx-btn gx-btn--block">{arena ? t('Réserver ma place', 'Rezève plas mwen') : t('Voir l’Arène', 'Gade Arèn nan')}</Link>
+          </section>
+          <SchoolRanking max={5} />
+          </>)}
+          <DailyQuests />
         </aside>
       </div>
-      {/* The championship card used to sit beside this one. Ted: "make
-          arena its own tab - outside of jeux", so the Arène is a nav
-          destination now and /jeux keeps only the one-on-one duel. */}
-      <div className="games-hub__handoff">
-        {/*
-          * "Défi d'un ami" exists and this page never said so.
-          *
-          * mobile/src/services/challengeService.ts is a complete feature: you
-          * mint a duel from a round you just finished, your friend plays the
-          * SAME questions once, and the winner's XP is awarded server-side. The
-          * web even has the landing page for it — /defi/:code, so an invited
-          * friend can arrive. But nothing anywhere on the web CREATES one or
-          * mentions it is possible, so the only way a student discovers the
-          * feature is if somebody happens to send them a link.
-          *
-          * Minting a duel needs the app (the share sheet and the round it is
-          * minted from are native), so the web explains it and hands over.
-          */}
-        <section className="games-hub__duel pf-card" aria-labelledby="duel-title">
-          <div className="jx-card-head">
-            <span className="pf-tile pf-tile--sm pf-tile--violet" aria-hidden="true"><Users size={15} /></span>
-            <HubHeading
-              id="duel-title"
-              size="sm"
-              eyebrow={isCreole ? '1 kont 1' : '1 contre 1'}
-              title={isCreole ? 'Defi yon zanmi' : 'Défi d’un ami'}
-            />
-          </div>
-          <p>
-            {isCreole
-              ? 'Voye menm kesyon yo bay yon zanmi : yon sèl tantativ, pi gwo nòt la genyen.'
-              : 'Envoyez vos questions à un ami : un seul essai, le meilleur score gagne.'}
-          </p>
-          <Link to="/download?from=defi" className="games-hub__championship-link">
-            {isCreole ? 'Jwenn aplikasyon an' : 'Obtenir l’application'}
-            <ChevronRight size={14} aria-hidden="true" />
-          </Link>
-        </section>
-      </div>
-
-
     </div>
   );
 }
