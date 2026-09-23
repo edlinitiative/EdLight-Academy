@@ -12,8 +12,11 @@ import useStore from '../contexts/store';
 import ArenaBanner from '../components/ArenaBanner';
 import ExamCountdown from '../components/ExamCountdown';
 import Leaderboard from '../components/Leaderboard';
-import StreakRail from '../components/StreakRail';
 import MySchoolCard from '../components/MySchoolCard';
+import SchoolRanking from '../components/SchoolRanking';
+import DashHero from './home/DashHero';
+import ExamsSection from './home/ExamsSection';
+import './Home.css';
 import { ErrorState } from '../components/StateViews';
 import { listRecentExamAttempts, listRecentQuizAttempts } from '../services/userActivity';
 import { getFirstName } from '../utils/shared';
@@ -354,23 +357,10 @@ export default function Dashboard() {
         {/* Greeting — one quiet line, sentence-size. It used to be a 46px
             display heading that filled a third of the first screen to tell the
             student their own name. The focus card below is the headline now. */}
-        <header className="dash__header">
-          {/* The page's one heading, at sentence size — screen readers need an
-              h1 to land on, and this line is what the page is. */}
-          <h1 className="dash__greet">
-            {greeting}, {firstName || (isCreole ? 'zanmi' : 'à vous')}.
-          </h1>
-          {/* Top right, chip-sized. It was a 260px column beside the focus
-              card; Ted: "could just be at the very top, 90% smaller". */}
-          <StreakRail />
-        </header>
-
-        {/* ── The one bold thing on the page ──────────────────────────────
-            A student opening this has exactly one question: what do I study
-            now? The focus card answers it and nothing else — course, where they
-            stopped, how much is left, one button. Everything below it is
-            deliberately quieter so this is what the eye lands on. The streak
-            now rides in the greeting line above as a small chip. */}
+        {/* The hero in the landing page's bolder language (DashHero): the
+            greeting as a navy h1, the student's own numbers as a proof bar,
+            and the next step — the focus card below — on the right. */}
+        <DashHero firstName={firstName} greeting={greeting}>
         <div className="dash-lead">
           {resumeExam ? (
             <section className="dash-focus" aria-label={isCreole ? 'Kontinye egzamen an' : "Reprendre l'examen"}>
@@ -498,12 +488,19 @@ export default function Dashboard() {
           )}
         </div>
 
+        </DashHero>
+
         {/* The student's school, as a team — where it ranks, who is missing,
             and the invite beside it. It replaces "Trois étapes claires", three
             rows that repeated the tab bar and the panels below. The one of the
             three that was about THIS student — mistakes waiting to be
             reviewed — stays, as a single row, and only when there are some. */}
-        <MySchoolCard where="home" />
+        {/* The league: the student's school and the board it is climbing, side
+            by side — the mockup's championship band, with this student's data. */}
+        <section className="lp dash-league" aria-label={isCreole ? 'Lig lekòl yo' : 'La ligue des écoles'}>
+          <MySchoolCard where="home" />
+          <SchoolRanking max={5} />
+        </section>
 
         {dueReviewCount > 0 && (
           <button type="button" className="dash-task dash-task--solo" onClick={() => navigate('/revision')}>
@@ -765,6 +762,13 @@ export default function Dashboard() {
           </aside>
         </div>
 
+        <div className="lp dash-papers">
+          <ExamsSection
+            t={(fr, ht) => (isCreole ? ht : fr)}
+            eyebrow={isCreole ? 'Antrene w' : 'Entraîne-toi'}
+            title={isCreole ? 'Vrè sijè Bak yo, nan vrè kondisyon' : 'Les vrais sujets du Bac, en conditions réelles'}
+          />
+        </div>
       </div>
     </section>
   );

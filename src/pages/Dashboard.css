@@ -1040,3 +1040,65 @@ button.dash-activity__tag { cursor: pointer; }
   box-shadow: var(--shadow-sm);
 }
 .dash-task--solo:last-child { border-bottom: 1px solid var(--border); }
+
+/* ══ Dashboard in the landing page's language (Ted's mockup, 2026-09-22) ═══
+   Hero band with navy greeting + the student's proof bar + the next step;
+   the league band; panels with the same soft card; the real papers. */
+.dash-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 0 0 18px;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 22px 48px -30px rgba(11, 41, 107, 0.28);
+}
+.dash-hero > .lp-hero__glow-a { top: -8rem; left: -6rem; }
+.dash-hero > .lp-hero__glow-b { top: 30%; right: -10rem; }
+.dash-hero__layout {
+  position: relative;
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+@media (min-width: 1024px) {
+  .dash-hero__layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 2.5rem; }
+}
+.dash-hero__copy { display: grid; gap: 1rem; justify-items: start; min-width: 0; }
+.dash--st .dash-hero__title,
+.dash-hero__title {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.dash-hero__proof { max-width: 520px; }
+.dash-hero__next .dash-lead { margin: 0; }
+.dash-hero__next .dash-focus { box-shadow: 0 24px 50px -30px rgba(11, 41, 107, 0.4); }
+
+/* League band: school card + board side by side. */
+.dash-league {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 18px;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--primary-500) 6%, var(--background));
+}
+@media (min-width: 900px) {
+  .dash-league { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: start; }
+}
+
+/* Panels: the landing's soft white card and navy titles. */
+.dash--st .dash-panel {
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 12px 30px -22px rgba(11, 41, 107, 0.3);
+}
+.dash--st .dash-panel__title { color: #0B296B; font-weight: 800; }
+[data-theme="dark"] .dash--st .dash-panel__title { color: var(--text-900); }
+
+.dash-papers { margin-top: 8px; }
+.dash-papers .lp-section { padding: 1.5rem 0 0; }
+.dash-papers .lp-container { padding: 0; max-width: none; }
