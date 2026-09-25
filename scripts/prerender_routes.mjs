@@ -378,8 +378,13 @@ function courseRoutes() {
     const name = c.display_name || c.name || c.id;
     // From the id, not level_id: the snapshot has math-ns4 tagged level_id ns3.
     const nsLabel = NS_LABELS[String(c.id).split('-')[1]] || NS_LABELS[c.level_id] || '';
+    // Sized to be at least as large as the app's own cover (.course-overview__cover:
+    // 356×262 at a 390 px phone, 681×308 on desktop). LCP keeps the LARGEST
+    // element painted, so a smaller prerendered cover let the app's copy become
+    // the LCP at ~3 s even though the same picture was on screen at ~1.7 s.
+    // On phones it bleeds to the viewport edges at 4:3 like the app's hero.
     const cover = subject.cover
-      ? `<img src="${subject.cover}" alt="" width="720" height="405" fetchpriority="high" decoding="async" style="display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:0 0 20px">`
+      ? `<style>.pr-cover{display:block;width:calc(100% + 40px);max-width:none;height:auto;aspect-ratio:4/3;object-fit:cover;margin:0 -20px 20px}@media (min-width:640px){.pr-cover{width:100%;aspect-ratio:16/9;border-radius:12px;margin:0 0 20px}}</style><img class="pr-cover" src="${subject.cover}" alt="" width="760" height="425" fetchpriority="high">`
       : '';
     const syllabus = units.map((u, i) => `
       ${h3(`${i + 1}. ${esc(u.title)}`)}
