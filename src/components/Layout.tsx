@@ -15,11 +15,14 @@ import useStore from '../contexts/store';
 import { SandraWidget } from './SandraWidget';
 import SearchOverlay from './SearchOverlay';
 import DownloadAppBanner from './DownloadAppBanner';
-import WelcomeGradeModal from './WelcomeGradeModal';
 
 // Notification panel is only shown on demand — keep it (and its Firebase use)
 // out of the initial shell bundle.
 const NotificationCenter = lazyWithRetry(() => import('./NotificationCenter'));
+// Same for the first-minute modal: it only ever shows to a signed-in student,
+// and its school/trivia services import Firestore, which kept the whole SDK in
+// the bundle every visitor downloads before the first paint.
+const WelcomeGradeModal = lazyWithRetry(() => import('./WelcomeGradeModal'));
 
 export function Layout() {
   const { isAuthenticated, showAuthModal, toggleAuthModal, language, theme, showNotifications, setShowNotifications, focusMode } = useStore();
@@ -134,7 +137,11 @@ export function Layout() {
       {/* The first-minute steps (grade, school, invite). App-wide, not only on
           the dashboard: a student who signs in from /arena or a course page
           is asked there. Never over an exam or a focused lesson. */}
-      {!isFocused && <WelcomeGradeModal />}
+      {!isFocused && (
+        <Suspense fallback={null}>
+          <WelcomeGradeModal />
+        </Suspense>
+      )}
       {showAuthModal && <AuthModal onClose={() => toggleAuthModal()} />}
       {showNotifications && (
         <Suspense fallback={null}>

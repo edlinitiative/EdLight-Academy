@@ -12,7 +12,13 @@
  * never crash a page or block signup.
  */
 
-import { getIdToken, authedFetch } from './firebase';
+// Firebase is loaded on first use, not imported. App.tsx and the Auth modal
+// import this module at boot for captureRefFromUrl/getStoredRef, and a static
+// import here dragged the whole SDK (auth + Firestore) into the bundle every
+// visitor downloads before the homepage paints. Same pattern as authService.
+const loadFirebase = () => import('./firebase');
+const getIdToken = async () => (await loadFirebase()).getIdToken();
+const authedFetch = async (url: string, body: unknown) => (await loadFirebase()).authedFetch(url, body);
 
 const REF_KEY = 'edlight:ref';
 const CODE_URL = '/api/referrals/code';

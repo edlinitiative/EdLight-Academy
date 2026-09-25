@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, Suspense } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -20,11 +20,16 @@ import useStore from '../contexts/store';
 import { logoutUser } from '../services/authService';
 import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
-import { LevelBadge } from './LevelBadge';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
 import NotificationBell from './NotificationBell';
 import PixelAvatar from './PixelAvatar';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import './Navbar.css';
+
+// Signed-in only, and its useTrivia hook reaches Firestore through
+// triviaService. Imported statically it kept the Firebase SDK in the bundle
+// that every visitor, signed in or not, downloads before the first paint.
+const LevelBadge = lazyWithRetry(() => import('./LevelBadge'));
 
 /** Primary destinations shown in the desktop inline nav and the mobile drawer.
  *  Kept identical to the PWA bottom bar (BottomNav) so web + app agree. */
@@ -279,7 +284,9 @@ export function Navbar() {
             <>
               <StreakBadge />
 
-              <LevelBadge />
+              <Suspense fallback={null}>
+                <LevelBadge />
+              </Suspense>
 
               <NotificationBell />
 

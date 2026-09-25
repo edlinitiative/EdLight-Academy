@@ -9,7 +9,6 @@
  * routes the raw query to the existing /api/chat brain.
  */
 
-import { getCachedCourses, loadCoursesData } from './dataService';
 import { GAMES } from '../data/games';
 import { levelToSlug } from '../utils/examLevels';
 import { examDisplayTitle } from '../utils/examUtils';
@@ -125,6 +124,10 @@ function staticItems(lang: Lang): SearchItem[] {
 async function courseItems(lang: Lang): Promise<SearchItem[]> {
   let courses: any[] = [];
   try {
+    // Imported here rather than at the top: the SearchOverlay that uses this
+    // module is mounted on every page, and dataService pulls in Firestore.
+    // The index is only built when search is first opened.
+    const { getCachedCourses, loadCoursesData } = await import('./dataService');
     const cached = getCachedCourses();
     courses = cached?.data || (await loadCoursesData());
   } catch {

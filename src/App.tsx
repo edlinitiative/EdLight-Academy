@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AdminRoute from './components/AdminRoute';
-import AdminLayout from './components/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
 import HomeRoute from './components/HomeRoute';
 import { lazyWithRetry } from './utils/lazyWithRetry';
@@ -31,6 +30,10 @@ const Arena = lazyWithRetry(() => import('./pages/Arena'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
 const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
+// Lazy like the admin pages it frames. Imported eagerly, it pulled
+// utils/shared — and with it KaTeX, ~260 KB minified — into the bundle every
+// visitor downloads before the homepage can paint.
+const AdminLayout = lazyWithRetry(() => import('./components/AdminLayout'));
 const CourseManager = lazyWithRetry(() => import('./pages/CourseManager'));
 // Admin console pages
 const AdminOverview = lazyWithRetry(() => import('./pages/admin/AdminOverview'));

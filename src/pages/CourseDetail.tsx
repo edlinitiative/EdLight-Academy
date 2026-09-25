@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import LessonComplete from '../components/LessonComplete';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
@@ -6,13 +6,9 @@ import { Check, X, BookOpen, MessageCircle, ChevronLeft, Target, WifiOff, AlertC
 import { useAppData, useCourses } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
 import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
-import UnitQuiz from '../components/UnitQuiz';
-import Comments from '../components/Comments';
-import FlashcardDeck from '../components/FlashcardDeck';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import CourseOverview from '../components/CourseOverview';
-import InstructionRenderer from '../components/InstructionRenderer';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useFocusMode } from '../hooks/useFocusMode';
@@ -24,6 +20,15 @@ import ChapterTestCard from '../components/ChapterTestCard';
 import { useAskSandra } from '../components/SandraWidget';
 import { useTranslation } from 'react-i18next';
 import './CourseDetail.css';
+import { lazyWithRetry } from '../utils/lazyWithRetry';
+
+// Only the lesson view uses these. Between them they pull in KaTeX and the
+// markdown stack (~120 KB gzipped), which delayed the course overview — the
+// cover, modules and "Commencer" button — by that much on a slow connection.
+const UnitQuiz = lazyWithRetry(() => import('../components/UnitQuiz'));
+const Comments = lazyWithRetry(() => import('../components/Comments'));
+const FlashcardDeck = lazyWithRetry(() => import('../components/FlashcardDeck'));
+const InstructionRenderer = lazyWithRetry(() => import('../components/InstructionRenderer'));
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
 // Persist the last playback second per lesson in localStorage so reopening a
@@ -765,6 +770,7 @@ export default function CourseDetail() {
             }}
           />
         ) : (
+        <Suspense fallback={<div className="course-detail__layout"><SkeletonText lines={6} /></div>}>
         <div className="course-detail__layout">
           <div className="course-detail__column">
             <button
@@ -1323,6 +1329,7 @@ export default function CourseDetail() {
             onSelectLesson={(moduleIdx, lessonIdx) => goToLesson(moduleIdx, lessonIdx)}
           />
         </div>
+        </Suspense>
         )}
       </div>
       {/* Removed modal overlay; inline rendering used instead */}

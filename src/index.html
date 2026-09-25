@@ -126,15 +126,27 @@
   </script>
 
   <!-- Google Analytics 4 (gtag). Enables traffic measurement and lets Google
-       Ads import GA4 conversions (link Ads <-> GA4 in the Ads UI). To also fire
-       an Ads-native conversion, add your AW-XXXXXXX id to the config() calls. -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-KNBX35H1X1"></script>
+       Ads import GA4 conversions (link Ads <-> GA4 in the Ads UI).
+       The library (~150 KB) is fetched after the page's load event, not in
+       the head: on the slow mobile connections most students use it was
+       competing with the app's own JavaScript for bandwidth before the first
+       paint. Calls made before it arrives queue in dataLayer and are sent
+       when it loads, so no event is lost. -->
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
     gtag('config', 'G-KNBX35H1X1');
-    // gtag('config', 'AW-XXXXXXXXX'); // <- add your Google Ads conversion id here
+    (function () {
+      function loadGtag() {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-KNBX35H1X1';
+        document.head.appendChild(s);
+      }
+      if (document.readyState === 'complete') loadGtag();
+      else window.addEventListener('load', loadGtag, { once: true });
+    })();
   </script>
 </head>
 <body>
