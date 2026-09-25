@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import useStore from '../contexts/store';
-import { getCurrentUser } from '../services/firebase';
-import { readCourseMastery } from '../services/masteryService';
 import type { ProgressMap } from '../../shared/mastery';
 
 /**
@@ -34,8 +32,19 @@ export function useCourseMastery(courseId?: string | null) {
     // Same guard as useCourseProgress: the store's user can outlive the
     // Firebase session (it's persisted), and reading with a stale uid would
     // just be denied by the rules.
+    if (!user?.uid) {
+      setMastery({});
+      setLoading(false);
+      return;
+    }
+    // Loaded here, only for a signed-in student, so the Firebase SDK stays off
+    // the critical path of a course page for everyone else.
+    const [{ getCurrentUser }, { readCourseMastery }] = await Promise.all([
+      import('../services/firebase'),
+      import('../services/masteryService'),
+    ]);
     const authedUid = getCurrentUser()?.uid;
-    if (!user?.uid || !authedUid || authedUid !== user.uid) {
+    if (!authedUid || authedUid !== user.uid) {
       setMastery({});
       setLoading(false);
       return;

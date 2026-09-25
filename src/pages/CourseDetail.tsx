@@ -5,7 +5,6 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Check, X, BookOpen, MessageCircle, ChevronLeft, Target, WifiOff, AlertCircle } from '../components/icons';
 import { useAppData, useCourses } from '../hooks/useData';
 import { useCourseProgress } from '../hooks/useProgress';
-import { trackVideoProgress, markLessonComplete } from '../services/progressTracking';
 import YouTubePlayer, { getYouTubeVideoId } from '../components/YouTubePlayer';
 import CourseSidebar from '../components/CourseSidebar';
 import CourseOverview from '../components/CourseOverview';
@@ -29,6 +28,15 @@ const UnitQuiz = lazyWithRetry(() => import('../components/UnitQuiz'));
 const Comments = lazyWithRetry(() => import('../components/Comments'));
 const FlashcardDeck = lazyWithRetry(() => import('../components/FlashcardDeck'));
 const InstructionRenderer = lazyWithRetry(() => import('../components/InstructionRenderer'));
+
+// Writes only happen for a signed-in student watching or finishing a lesson,
+// so progressTracking (and the Firestore SDK behind it) loads on first use
+// rather than holding up the course overview for every visitor.
+const loadProgressTracking = () => import('../services/progressTracking');
+const trackVideoProgress = (...args: Parameters<typeof import('../services/progressTracking').trackVideoProgress>) =>
+  loadProgressTracking().then((m) => m.trackVideoProgress(...args));
+const markLessonComplete = (...args: Parameters<typeof import('../services/progressTracking').markLessonComplete>) =>
+  loadProgressTracking().then((m) => m.markLessonComplete(...args));
 
 // ── Video resume position ("reprendre la vidéo") ───────────────────────────
 // Persist the last playback second per lesson in localStorage so reopening a

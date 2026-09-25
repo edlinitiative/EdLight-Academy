@@ -7,10 +7,13 @@
  * (AdminInstructors) and edited from the admin console.
  */
 
-import {
-  collection, doc, getDoc, getDocs, query, where, limit as fbLimit,
-} from 'firebase/firestore';
-import { db } from './firebase';
+// Firestore is loaded when a profile is read, not imported: the course
+// overview renders CourseInstructors, and a static import here was the last
+// thing holding the Firebase SDK on the critical path of every course page.
+const loadFirestore = async () => {
+  const [{ db }, fs] = await Promise.all([import('./firebase'), import('firebase/firestore')]);
+  return { db, ...fs };
+};
 
 export interface Instructor {
   id: string;
@@ -43,6 +46,7 @@ const fromSnap = (id: string, data: any): Instructor => ({
 
 export async function getInstructor(id: string): Promise<Instructor | null> {
   try {
+    const { db, doc, getDoc } = await loadFirestore();
     const snap = await getDoc(doc(db, 'instructors', id));
     return snap.exists() ? fromSnap(snap.id, snap.data()) : null;
   } catch {
@@ -54,6 +58,7 @@ export async function getInstructor(id: string): Promise<Instructor | null> {
  *  needs no composite index. */
 export async function getInstructorsForCourse(courseId: string): Promise<Instructor[]> {
   try {
+    const { db, collection, getDocs, query, where, limit: fbLimit } = await loadFirestore();
     const snap = await getDocs(query(
       collection(db, 'instructors'),
       where('courseIds', 'array-contains', courseId),

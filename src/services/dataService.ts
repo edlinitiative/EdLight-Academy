@@ -1,6 +1,12 @@
 import { loadQuizBankSafe, normalizeAndIndexQuizBank } from './quizBank';
-import { db } from './firebase';
-import { collection, getDocs } from 'firebase/firestore';
+// Firestore is loaded by the three fetchers below, not imported here. Pages
+// that only need the catalog (the course overview, search) import this module;
+// a static import made every one of them wait for the Firebase SDK before it
+// could even read /catalog.json.
+const loadFirestore = async () => {
+  const [{ db }, { collection, getDocs }] = await Promise.all([import('./firebase'), import('firebase/firestore')]);
+  return { db, collection, getDocs };
+};
 
 // Prefer the English portion of a bilingual title when present.
 // Heuristic: if the title contains parentheses, and the inner text looks ASCII,
@@ -67,6 +73,7 @@ const fetchCoursesFromFirestore = async () => {
   // swallowed every error into `return []`, which callers couldn't distinguish
   // from a genuinely empty catalog — that empty array then got cached and shown
   // as "no courses" (and an empty quiz filter) until the cache expired.
+  const { db, collection, getDocs } = await loadFirestore();
   const coursesRef = collection(db, 'courses');
   const snapshot = await getDocs(coursesRef);
 
@@ -87,6 +94,7 @@ const fetchCoursesFromFirestore = async () => {
  */
 const fetchVideosFromFirestore = async () => {
   try {
+    const { db, collection, getDocs } = await loadFirestore();
     const videosRef = collection(db, 'videos');
     const snapshot = await getDocs(videosRef);
     
@@ -111,6 +119,7 @@ const fetchVideosFromFirestore = async () => {
  */
 const fetchQuizzesFromFirestore = async () => {
   try {
+    const { db, collection, getDocs } = await loadFirestore();
     const quizzesRef = collection(db, 'quizzes');
     const snapshot = await getDocs(quizzesRef);
     

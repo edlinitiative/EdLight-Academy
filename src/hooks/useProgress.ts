@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import { getCourseProgress, getAllUserProgress } from '../services/progressTracking';
 import useStore from '../contexts/store';
-import { getCurrentUser } from '../services/firebase';
+
+// Firebase and progressTracking are loaded inside the effects, and only for a
+// signed-in student. Imported statically they put the Firebase SDK on the
+// critical path of every course page, including for anonymous visitors, who
+// never read progress at all.
+const loadProgressDeps = () =>
+  Promise.all([import('../services/firebase'), import('../services/progressTracking')]);
 
 /**
  * Hook to get and track user's progress for a specific course
@@ -12,23 +17,31 @@ export function useCourseProgress(courseId) {
   const { user } = useStore();
   
   useEffect(() => {
-    const firebaseUser = getCurrentUser();
-    const authedUid = firebaseUser?.uid;
-
-    if (!user?.uid || !courseId || !authedUid || authedUid !== user.uid) {
+    if (!user?.uid || !courseId) {
       setProgress(null);
       setLoading(false);
       return;
     }
-    
+    let alive = true;
+
     const loadProgress = async () => {
+      const [{ getCurrentUser }, { getCourseProgress }] = await loadProgressDeps();
+      if (!alive) return;
+      const authedUid = getCurrentUser()?.uid;
+      if (!authedUid || authedUid !== user.uid) {
+        setProgress(null);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const data = await getCourseProgress(user.uid, courseId);
+      if (!alive) return;
       setProgress(data);
       setLoading(false);
     };
-    
+
     loadProgress();
+    return () => { alive = false; };
   }, [user?.uid, courseId]);
   
   return { progress, loading };
@@ -43,23 +56,31 @@ export function useAllProgress() {
   const { user } = useStore();
   
   useEffect(() => {
-    const firebaseUser = getCurrentUser();
-    const authedUid = firebaseUser?.uid;
-
-    if (!user?.uid || !authedUid || authedUid !== user.uid) {
+    if (!user?.uid) {
       setProgress([]);
       setLoading(false);
       return;
     }
-    
+    let alive = true;
+
     const loadProgress = async () => {
+      const [{ getCurrentUser }, { getAllUserProgress }] = await loadProgressDeps();
+      if (!alive) return;
+      const authedUid = getCurrentUser()?.uid;
+      if (!authedUid || authedUid !== user.uid) {
+        setProgress([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const data = await getAllUserProgress(user.uid);
+      if (!alive) return;
       setProgress(data);
       setLoading(false);
     };
-    
+
     loadProgress();
+    return () => { alive = false; };
   }, [user?.uid]);
   
   return { progress, loading };
