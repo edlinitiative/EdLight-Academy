@@ -25,9 +25,9 @@ const SITE_ORIGIN = 'https://academy.edlight.org';
 type Lang = 'fr' | 'ht' | 'en';
 const DESCRIPTIONS: Record<string, Partial<Record<Lang, string>>> = {
   home: {
-    fr: 'Cours de physique, chimie, mathématiques et économie pour les élèves haïtiens. Vidéos courtes, quiz interactifs et examens blancs — gratuit, en français et en créole.',
-    ht: 'Kou fizik, chimi, matematik ak ekonomi pou elèv ayisyen. Videyo kout, quiz entèraktif ak egzamen blan — gratis, an franse ak kreyòl.',
-    en: 'Physics, chemistry, math and economics courses for Haitian students. Short videos, interactive quizzes and mock exams — free, in French and Haitian Creole.',
+    fr: 'Cours de mathématiques, chimie et économie pour les élèves haïtiens. Vidéos courtes, quiz interactifs et examens blancs, physique comprise — gratuit, en français et en créole.',
+    ht: 'Kou matematik, chimi ak ekonomi pou elèv ayisyen. Videyo kout, quiz entèraktif ak egzamen blan, fizik ladan l — gratis, an franse ak kreyòl.',
+    en: 'Math, chemistry and economics courses for Haitian students. Short videos, interactive quizzes and mock exams, physics included — free, in French and Haitian Creole.',
   },
   arena: {
     fr: 'Le championnat inter-écoles EdLight : inscrivez votre école, puis affrontez les autres établissements d’Haïti dans l’application.',
@@ -45,8 +45,8 @@ const DESCRIPTIONS: Record<string, Partial<Record<Lang, string>>> = {
     en: 'Install the EdLight Academy app on Android or iPhone: courses, quizzes and mock exams, even offline.',
   },
   courses: {
-    fr: 'Explorez les cours EdLight Academy : physique, chimie, mathématiques et économie (NS I–IV), avec vidéos courtes et exercices pratiques.',
-    ht: 'Gade kou EdLight Academy yo : fizik, chimi, matematik ak ekonomi (NS I–IV), ak videyo kout ak egzèsis pratik.',
+    fr: 'Explorez les cours EdLight Academy : mathématiques, chimie et économie (NS I–IV), avec vidéos courtes et exercices pratiques. Physique en préparation.',
+    ht: 'Gade kou EdLight Academy yo : matematik, chimi ak ekonomi (NS I–IV), ak videyo kout ak egzèsis pratik. Fizik ap vini.',
   },
   quizzes: {
     fr: 'Entraînez-vous avec des quiz interactifs par matière, niveau et unité pour préparer le Baccalauréat haïtien.',

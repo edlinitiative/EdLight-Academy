@@ -84,6 +84,7 @@ const resources = {
       },
       footer: {
         brandCopy: 'A community platform helping Haitian students master STEM subjects with modern, bilingual resources.',
+        program: 'A programme of EdLight Initiative, a registered not-for-profit.',
         about: 'About',
         contact: 'Contact',
         teach: 'Become an instructor',
@@ -416,6 +417,7 @@ const resources = {
       },
       footer: {
         brandCopy: 'Une plateforme communautaire pour aider les élèves haïtiens à maîtriser les matières STEM grâce à des ressources modernes et bilingues.',
+        program: 'Un programme d’EdLight Initiative, organisme à but non lucratif.',
         about: 'À propos',
         contact: 'Contact',
         teach: 'Devenir enseignant',
@@ -767,6 +769,7 @@ const resources = {
       },
       footer: {
         brandCopy: 'Yon platfòm kominotè pou ede elèv ayisyen metrize matyè STEM ak resous modèn ki nan de lang.',
+        program: 'Yon pwogram EdLight Initiative, yon òganizasyon san bi likratif.',
         about: 'Sou nou',
         contact: 'Kontak',
         teach: 'Vin yon pwofesè',

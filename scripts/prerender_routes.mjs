@@ -272,15 +272,15 @@ const ROUTES = {
   },
 
   courses: {
-    title: 'Cours gratuits — physique, chimie, maths, économie — EdLight Academy',
+    title: 'Cours gratuits — maths, chimie, économie — EdLight Academy',
     description:
-      'Cours gratuits en ligne pour les élèves haïtiens : physique, chimie, mathématiques et économie, du NS I au NS IV. Vidéos courtes, exercices et suivi de progression, en français et en kreyòl.',
+      'Cours gratuits en ligne pour les élèves haïtiens : mathématiques, chimie et économie, du NS I au NS IV. Vidéos courtes, exercices et suivi de progression, en français et en kreyòl.',
     body: wrap(`
       ${h1('Des cours structurés, du NS I au NS IV')}
       ${p('Des parcours complets en sciences et mathématiques pour le secondaire haïtien, alignés sur le programme du MENFP et la préparation du Baccalauréat. Chaque cours est découpé en unités et en leçons vidéo courtes, suivies d’exercices de pratique.')}
       ${h2('Matières disponibles')}
       ${ul([
-        '<strong>Physique</strong> — mécanique, électricité, optique, ondes… du NS I au NS IV.',
+        '<strong>Physique</strong> — les cours sont en préparation ; en attendant, entraînez-vous sur les <a href="/exams/baccalaureat" style="color:#1B6FE0">épreuves de physique du Bac</a>.',
         '<strong>Chimie</strong> — structure de la matière, réactions, solutions, chimie organique.',
         '<strong>Mathématiques</strong> — algèbre, analyse, géométrie, probabilités et statistiques.',
         '<strong>Économie</strong> — notions fondamentales, micro et macroéconomie pour le secondaire.',
@@ -321,6 +321,130 @@ ROUTES.exams = {
   body: examsBody(),
 };
 
+ROUTES.help = {
+  title: 'Aide — guides et dépannage — EdLight Academy',
+  description:
+    'Guides pour démarrer sur EdLight Academy : suivre un cours, pratiquer avec les quiz d’unité, utiliser les indices, et régler les problèmes courants (vidéo, questions manquantes).',
+  body: wrap(`
+    ${h1('Centre d’aide')}
+    ${p('Des guides pour démarrer rapidement, plus des conseils de dépannage.')}
+    ${h2('Démarrer')}
+    ${ul([
+      'Ouvrez un cours pour voir les unités et les leçons. Utilisez Suivant/Précédent pour naviguer.',
+      'Cliquez sur Pratique pour des questions adaptées à votre sélection.',
+      'Quiz d’unité : ouvrez un cours et sélectionnez « Quiz d’unité, 10 questions » après le dernier sous-chapitre.',
+      'Vous avez jusqu’à 3 essais avec des indices progressifs ; l’explication apparaît après le 3e essai.',
+    ])}
+    ${h2('Dépannage')}
+    ${ul([
+      'Vidéo qui ne charge pas : essayez de rafraîchir la page ou de vérifier votre connexion.',
+      'Aucune question pour une unité : essayez une autre unité ou un autre niveau ; de nouvelles questions sont ajoutées régulièrement.',
+    ])}
+    ${p('Toujours bloqué ? <a href="/contact" style="color:#1B6FE0">Écrivez-nous</a> ou consultez la <a href="/faq" style="color:#1B6FE0">FAQ</a>.')}`),
+};
+
+// ─── One page per course and per exam level ─────────────────────────────────
+// These were the sitemap's shell-only URLs: 42 words and a generic title until
+// the app booted, and on a slow phone the course cover — the page's largest
+// paint — waited ~4.7 s behind the app's JavaScript, Firebase and catalog.json.
+// Each now ships its own title, description, syllabus and cover in the first
+// response, with the cover preloaded. Written as dist/<route>/index.html, which
+// Vercel serves ahead of the SPA catch-all rewrite; a course with no file here
+// (added to Firestore after the last catalog export) still gets the SPA.
+const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+
+const SUBJECT_INFO = {
+  mathematics: { label: 'Mathématiques', cover: '/assets/math-thumb.webp' },
+  physics: { label: 'Physique', cover: '/assets/physics-thumb.webp' },
+  chemistry: { label: 'Chimie', cover: '/assets/chemistry-thumb.jpg' },
+  economics: { label: 'Économie', cover: '/assets/economy-thumb.webp' },
+};
+const NS_LABELS = { ns1: 'NS I', ns2: 'NS II', ns3: 'NS III', ns4: 'NS IV' };
+
+function courseRoutes() {
+  let catalog;
+  try {
+    catalog = JSON.parse(readFileSync(join(root, 'public', 'catalog.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+  const out = {};
+  for (const c of catalog.courses || []) {
+    if (!c?.id || c.hidden || c.coming_soon || out[`courses/${c.id}`]) continue;
+    const units = [...(c.units || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    if (units.length === 0) continue;
+    const subject = SUBJECT_INFO[c.subject] || { label: c.subject || '', cover: '' };
+    const lessonCount = units.reduce((n, u) => n + (u.lessons || []).length, 0);
+    const name = c.display_name || c.name || c.id;
+    // From the id, not level_id: the snapshot has math-ns4 tagged level_id ns3.
+    const nsLabel = NS_LABELS[String(c.id).split('-')[1]] || NS_LABELS[c.level_id] || '';
+    const cover = subject.cover
+      ? `<img src="${subject.cover}" alt="" width="720" height="405" fetchpriority="high" decoding="async" style="display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:0 0 20px">`
+      : '';
+    const syllabus = units.map((u, i) => `
+      ${h3(`${i + 1}. ${esc(u.title)}`)}
+      ${ul([...(u.lessons || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((l) => esc(l.title)))}`).join('');
+    const description = `${name} : cours vidéo gratuit${nsLabel ? ` (${nsLabel})` : ''} en ${subject.label.toLowerCase()} — ${units.length} unités, ${lessonCount} leçons, avec exercices et quiz. En français et en kreyòl.`;
+    out[`courses/${c.id}`] = {
+      title: `${name} — cours gratuit — EdLight Academy`,
+      description: esc(description),
+      preloadImage: subject.cover,
+      body: wrap(`
+        ${cover}
+        ${h1(esc(name))}
+        ${p(esc(c.description || ''))}
+        ${p(`<strong>${units.length} unités · ${lessonCount} leçons vidéo</strong> · exercices après chaque leçon · gratuit`)}
+        ${p('<a href="/courses" style="color:#1B6FE0">← Tous les cours</a>')}
+        ${h2('Programme du cours')}
+        ${syllabus}
+        ${p('Commencez la première leçon gratuitement, puis <a href="/exams" style="color:#1B6FE0">entraînez-vous sur les examens officiels</a>.')}`),
+    };
+  }
+  return out;
+}
+
+const EXAM_LEVEL_INTRO = {
+  baccalaureat: 'Les épreuves officielles du Baccalauréat haïtien (MENFP), à passer en ligne avec correction automatique et explications détaillées.',
+  universite: 'Des épreuves de concours d’entrée à l’université, pour se préparer aux sujets et au rythme de l’examen.',
+  '9eme_af': 'Les épreuves officielles de la 9e année fondamentale, pour s’entraîner avant l’examen d’État.',
+};
+
+function examLevelRoutes() {
+  let idx;
+  try {
+    idx = JSON.parse(readFileSync(join(root, 'public', 'exam_catalog_index.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+  const out = {};
+  for (const level of new Set(idx.map((e) => e?.level).filter(Boolean))) {
+    const exams = idx.filter((e) => e.level === level);
+    const bySubject = new Map();
+    let minYear = Infinity, maxYear = 0;
+    for (const e of exams) {
+      if (e.subject) bySubject.set(e.subject, (bySubject.get(e.subject) || 0) + 1);
+      const y = parseInt(e.year, 10);
+      if (Number.isFinite(y)) { minYear = Math.min(minYear, y); maxYear = Math.max(maxYear, y); }
+    }
+    const label = LEVEL_LABELS[level] || level;
+    const years = maxYear ? ` (${minYear}–${maxYear})` : '';
+    out[`exams/${level}`] = {
+      title: `${label} — ${exams.length} épreuves officielles — EdLight Academy`,
+      description: esc(`${exams.length} épreuves ${label}${years} à passer gratuitement en ligne, avec correction automatique et explications : ${[...bySubject.keys()].slice(0, 6).join(', ')}.`),
+      body: wrap(`
+        ${h1(`${esc(label)} — examens blancs`)}
+        ${p(EXAM_LEVEL_INTRO[level] || 'Des épreuves officielles à passer en ligne, avec correction automatique et explications détaillées.')}
+        ${p(`<strong>${exams.length} épreuves${years}</strong>, gratuites.`)}
+        ${h2('Épreuves par matière')}
+        ${ul([...bySubject.entries()].sort((a, b) => b[1] - a[1]).map(([sub, n]) => `${esc(sub)} — ${n} épreuve${n > 1 ? 's' : ''}`))}
+        ${p('<a href="/exams" style="color:#1B6FE0">← Tous les examens</a> · <a href="/courses" style="color:#1B6FE0">Revoir les cours</a>')}`),
+    };
+  }
+  return out;
+}
+
+Object.assign(ROUTES, courseRoutes(), examLevelRoutes());
+
 // ─── HTML surgery helpers ────────────────────────────────────────────────────
 
 // Replace the full contents of <div id="root">…</div> using div-depth matching
@@ -342,8 +466,16 @@ function replaceRoot(html, newContent) {
   throw new Error('#root closing tag not found');
 }
 
-function setHead(html, route, { title, description }) {
+function setHead(html, route, { title, description, preloadImage }) {
   const url = `${ORIGIN}/${route}`;
+  if (preloadImage) {
+    // The cover, and catalog.json: CourseDetail fetches the catalog only once
+    // its chunks (Firebase among them) have loaded, so on a slow connection
+    // the request used to start ~5 s in. Preloaded, it is already in cache.
+    // crossorigin="anonymous" matches fetch()'s default same-origin credentials,
+    // which is what lets the browser reuse the preloaded response.
+    html = html.replace('</title>', `</title><link rel="preload" as="image" href="${preloadImage}" fetchpriority="high"><link rel="preload" as="fetch" href="/catalog.json" crossorigin="anonymous">`);
+  }
   return html
     .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
     .replace(/(<meta name="description" content=")[^"]*(")/, `$1${description}$2`)
@@ -362,9 +494,9 @@ if (!existsSync(distIndex)) {
 }
 const baseHtml = readFileSync(distIndex, 'utf8');
 
-for (const [route, { title, description, body }] of Object.entries(ROUTES)) {
+for (const [route, { title, description, body, preloadImage }] of Object.entries(ROUTES)) {
   let html = replaceRoot(baseHtml, body);
-  html = setHead(html, route, { title, description });
+  html = setHead(html, route, { title, description, preloadImage });
   const outDir = join(root, 'dist', route);
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'index.html'), html);

@@ -18,6 +18,12 @@ export function Footer() {
           <p className="footer__brand-copy">
             {t('footer.brandCopy')}
           </p>
+          {/* The prerendered shell names the parent nonprofit, but React
+              replaces it on mount; without this line the rendered app never
+              linked back to edlight.org (an Ad Grants reviewer's first check). */}
+          <p className="footer__brand-copy">
+            <a href="https://edlight.org" className="footer__link">{t('footer.program')}</a>
+          </p>
         </div>
         <div className="footer__right">
           <nav className="footer__nav">
