@@ -74,7 +74,7 @@ export function registerServiceWorker() {
     window.location.reload();
   });
 
-  window.addEventListener('load', () => {
+  const register = () => {
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
@@ -126,5 +126,9 @@ export function registerServiceWorker() {
       .catch((err) => {
         console.warn('Service worker registration failed:', err);
       });
-  });
+  };
+  // The prerendered landing page starts the app after its first paint, which
+  // can be after `load` has already fired (scripts/prerender_routes.mjs).
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register, { once: true });
 }

@@ -4,7 +4,27 @@ import { lazyWithRetry } from '../utils/lazyWithRetry';
 
 // Both targets stay lazy so the index route only ships the bundle the current
 // visitor actually needs (marketing page for guests, dashboard for learners).
-const Home = lazyWithRetry(() => import('../pages/Home'));
+// The chunk is named so the prerender can find its files (build/client-assets
+// .json) and put them in the HTML's head.
+const loadHome = () => import(/* webpackChunkName: "home" */ '../pages/Home');
+const Home = lazyWithRetry(loadHome);
+
+// Set once the Home module has loaded, so HomeRoute can render it directly.
+// React.lazy suspends on its first render even when the chunk is already in
+// memory, and a suspense fallback would replace the prerendered landing page
+// in #root with a spinner for a frame before the same page came back.
+let LoadedHome: React.ComponentType | null = null;
+
+/**
+ * Load the landing page before the first render. index.tsx awaits this when
+ * the HTML carries the prerendered page, so the first commit swaps it for the
+ * identical live tree instead of a spinner.
+ */
+export function preloadHome(): Promise<void> {
+  return loadHome().then((m) => {
+    LoadedHome = m.default;
+  });
+}
 // Ted: the signed-in "/" shows the same content as /dashboard — the workspace.
 const Workspace = lazyWithRetry(() => import('../pages/Courses'));
 
@@ -32,5 +52,6 @@ export default function HomeRoute() {
     );
   }
 
-  return isAuthenticated ? <Workspace mode="workspace" /> : <Home />;
+  if (isAuthenticated) return <Workspace mode="workspace" />;
+  return LoadedHome ? <LoadedHome /> : <Home />;
 }

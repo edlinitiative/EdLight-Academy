@@ -9,6 +9,7 @@ import { initI18n } from './utils/i18n';
 import useStore from './contexts/store';
 import { registerServiceWorker } from './utils/registerServiceWorker';
 import { initTelemetry } from './utils/telemetry';
+import { preloadHome } from './components/HomeRoute';
 
 function getDefaultStudentName(language) {
   return language === 'ht' ? 'Elèv' : 'Élève';
@@ -71,11 +72,27 @@ initI18n();
 
 // Create root and render app
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
+const renderApp = () => root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
+
+// "/" ships the landing page prerendered (scripts/prerender_routes.mjs), and
+// the inline script in its head marks the document `pr-skip` whenever this
+// visitor will not see it (another route, a signed-in learner, Kreyòl). When
+// it is on screen, wait for the Home chunk (preloaded by the same HTML) so the
+// first commit replaces it with the same page rather than a loading spinner.
+// Failure to load just renders as before: HomeRoute's lazy import retries.
+const showsPrerenderedHome =
+  window.location.pathname === '/' &&
+  !document.documentElement.classList.contains('pr-skip') &&
+  !!document.querySelector('#root > .pr-home');
+if (showsPrerenderedHome) {
+  preloadHome().catch(() => {}).then(renderApp);
+} else {
+  renderApp();
+}
 
 // Ensure store marks as hydrated and syncs isAuthenticated from persisted user on boot
 setTimeout(() => {

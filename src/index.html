@@ -139,6 +139,13 @@
     gtag('config', 'G-KNBX35H1X1');
     (function () {
       function loadGtag() {
+        // On the prerendered landing page the app itself starts after the
+        // first paint, which can be after `load` (scripts/prerender_routes.mjs,
+        // landingBoot); keep this behind it there too.
+        if (window.__edlightBooting) {
+          window.addEventListener('edlight:booted', loadGtag, { once: true });
+          return;
+        }
         var s = document.createElement('script');
         s.async = true;
         s.src = 'https://www.googletagmanager.com/gtag/js?id=G-KNBX35H1X1';

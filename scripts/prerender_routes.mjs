@@ -454,7 +454,7 @@ Object.assign(ROUTES, courseRoutes(), examLevelRoutes());
 
 // Replace the full contents of <div id="root">…</div> using div-depth matching
 // (survives html-webpack-plugin minification; no comment markers needed).
-function replaceRoot(html, newContent) {
+function rootBounds(html) {
   const openTag = html.match(/<div id="root"[^>]*>/);
   if (!openTag) throw new Error('#root not found in dist/index.html');
   const start = openTag.index + openTag[0].length;
@@ -464,12 +464,20 @@ function replaceRoot(html, newContent) {
   let m;
   while ((m = tagRe.exec(html)) !== null) {
     depth += m[0] === '</div>' ? -1 : 1;
-    if (depth === 0) {
-      return html.slice(0, start) + newContent + html.slice(m.index);
-    }
+    if (depth === 0) return { start, end: m.index };
   }
   throw new Error('#root closing tag not found');
 }
+
+function replaceRoot(html, newContent) {
+  const { start, end } = rootBounds(html);
+  return html.slice(0, start) + newContent + html.slice(end);
+}
+
+const rootContent = (html) => {
+  const { start, end } = rootBounds(html);
+  return html.slice(start, end);
+};
 
 function setHead(html, route, { title, description, preloadImage }) {
   const url = `${ORIGIN}/${route}`;
@@ -509,6 +517,154 @@ for (const [route, { title, description, body, preloadImage }] of Object.entries
   console.log(`prerendered /${route} (${words} words)`);
 }
 console.log(`Done: ${Object.keys(ROUTES).length} routes prerendered.`);
+
+// ─── "/": the real landing page, rendered by React at build time ────────────
+// The homepage had only the placeholder above, so its largest paint (the hero
+// headline) waited for the whole bundle, the Home chunk and React: ~9 s on a
+// throttled phone, and Google Ad Grants turned the site down on page speed.
+// build/prerender/renderHome.js (webpack.prerender.config.js) renders the same
+// Layout + Home the browser will, and it goes into dist/index.html with the
+// Home chunk's stylesheets, so the hero paints with the first response.
+//
+// dist/index.html is also the SPA shell every other client-side route is
+// served from, so the inline script below decides before first paint whether
+// THIS visitor will see the landing page: only on "/", signed out, in French
+// (Home's default; a stored Kreyòl choice would re-render it). Anyone else is
+// marked `pr-skip` and sees the old placeholder, and index.tsx renders as it
+// always has. When the page is shown, the document is marked `pr-landing`
+// (Home.css then skips the hero's fade-in: the page is already there), the
+// Home chunk is preloaded, and the app starts once the first paint is
+// reported; index.tsx waits for the chunk so React's first commit swaps the
+// markup for an identical live tree. The script also mirrors two pieces of
+// client state that change the first render's layout: the dark theme (Layout)
+// and the Android "get the app" strip above the navbar (DownloadAppBanner),
+// whose height is reserved here so nothing shifts when it appears.
+//
+// Any failure leaves the placeholder in place: a slower page, never a broken one.
+
+// Inlined (as source, so ES5 only) at the end of dist/index.html's <head>.
+function landingBoot(homeScripts, appScripts) {
+  var d = document.documentElement;
+  var ls = null;
+  var s = {};
+  try {
+    ls = window.localStorage;
+    s = (JSON.parse(ls.getItem('edlight-storage')) || {}).state || {};
+  } catch (e) { /* no storage: a first visit */ }
+
+  // Who sees the prerendered landing page (HomeRoute: signed out; Home: French).
+  var landing = false;
+  try {
+    landing = location.pathname === '/' && !s.user && !s.isAuthenticated && s.language !== 'ht';
+    d.classList.add(landing ? 'pr-landing' : 'pr-skip');
+    if (s.theme === 'dark') {
+      d.dataset.theme = 'dark';
+      d.style.colorScheme = 'dark';
+    }
+  } catch (e) { landing = false; /* the app below still starts */ }
+  try {
+    // DownloadAppBanner's Android strip: reserve its height (see showsAndroidStrip).
+    var ua = navigator.userAgent;
+    var dismissedAt = Number(ls && ls.getItem('edlight:dl-banner-dismissed')) || 0;
+    var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    if (/Android/.test(ua) && !/iPhone|iPad|iPod/.test(ua) && !standalone &&
+      !(dismissedAt > 0 && Date.now() - dismissedAt < 14 * 864e5)) d.classList.add('pr-android');
+  } catch (e) { /* no banner reserved: at worst a small shift */ }
+
+  function add(el) { document.head.appendChild(el); }
+  if (landing) {
+    homeScripts.forEach(function (h) {
+      var l = document.createElement('link');
+      l.rel = 'preload';
+      l.as = 'script';
+      l.setAttribute('fetchpriority', 'low');
+      l.href = h;
+      add(l);
+    });
+  }
+  function boot() {
+    appScripts.forEach(function (h, i) {
+      var el = document.createElement('script');
+      el.src = h;
+      el.async = false; // keep the order <script defer> gave them
+      if (i === appScripts.length - 1) {
+        // Releases Google Analytics, which index.html holds until the app runs.
+        el.onload = el.onerror = function () {
+          window.__edlightBooting = false;
+          try { window.dispatchEvent(new Event('edlight:booted')); } catch (e) { /* no analytics */ }
+        };
+      }
+      add(el);
+    });
+  }
+  // The app scripts run at DOMContentLoaded, as `defer` ran them, except on
+  // the landing page, where they wait until the first paint has been reported.
+  // On a fast link the whole bundle has arrived before the parser finishes;
+  // run straight away, React replaced the prerendered page before the browser
+  // reported it painted, so the largest paint was React's copy of the hero and
+  // Lighthouse counted every script as blocking it. A frame (rAF + timeout) was
+  // not enough: the paint is reported when the frame reaches the screen. The
+  // timeout covers a browser without paint timing and a background tab.
+  function start() {
+    if (!landing) return boot();
+    window.__edlightBooting = true;
+    var done = false;
+    var go = function () { if (!done) { done = true; setTimeout(boot, 0); } };
+    try {
+      new PerformanceObserver(function (list) {
+        if (list.getEntriesByName('first-contentful-paint').length) go();
+      }).observe({ type: 'paint', buffered: true });
+    } catch (e) { go(); }
+    setTimeout(go, 3000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+}
+try {
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const { renderHome } = require(join(root, 'build', 'prerender', 'renderHome.js'));
+  const assets = JSON.parse(readFileSync(join(root, 'build', 'client-assets.json'), 'utf8')).home;
+  if (!assets?.length) throw new Error('no "home" chunk group in build/client-assets.json');
+  const css = assets.filter((f) => f.endsWith('.css')).map((f) => `/${f}`);
+  const js = assets.filter((f) => f.endsWith('.js')).map((f) => `/${f}`);
+
+  const markup = renderHome();
+  if (!markup.startsWith('<div class="app-shell">') || !markup.includes('lp-hero__title')) {
+    throw new Error('rendered markup is not the landing page');
+  }
+  // Reserve the Android strip's box (44px button + 2×8px padding + 1px border)
+  // as the first thing in the shell, where DownloadAppBanner renders it.
+  const shell = markup.replace(
+    '<div class="app-shell">',
+    '<div class="app-shell"><div class="pr-dl-strip" aria-hidden="true"></div>',
+  );
+
+  // The app's own <script defer> tags become preloads (same downloads, at the
+  // low priority `defer` had, behind the CSS and fonts) and landingBoot()
+  // below runs them instead; see its comment.
+  const appScripts = [];
+  let html = baseHtml.replace(/<script defer="defer" src="([^"]+)"><\/script>/g, (_, src) => {
+    appScripts.push(src);
+    return `<link rel="preload" as="script" href="${src}" fetchpriority="low">`;
+  });
+  if (!appScripts.length) throw new Error('no <script defer> tags in dist/index.html');
+
+  const head = `
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fonts/PlusJakartaSans-latin.woff2">
+${css.map((h) => `<link rel="stylesheet" href="${h}">`).join('\n')}
+<style>html:not(.pr-skip) #root>.pr-wait,html.pr-skip #root>.pr-home,.pr-dl-strip{display:none}html.pr-android .pr-dl-strip{display:block;height:61px;background:var(--surface);border-bottom:1px solid var(--border)}</style>
+<script>(${landingBoot.toString()})(${JSON.stringify(js)}, ${JSON.stringify(appScripts)});</script>
+`;
+  // The old placeholder stays, as .pr-wait: what every pr-skip visitor sees.
+  html = replaceRoot(html, `<div class="pr-home">${shell}</div><div class="pr-wait">${rootContent(baseHtml)}</div>`)
+    .replace('</head>', `${head}</head>`);
+  writeFileSync(distIndex, html);
+  const words = markup.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  console.log(`prerendered / (${words} words, ${css.length} stylesheets, ${js.length} preloaded scripts)`);
+} catch (err) {
+  console.warn('homepage prerender skipped, dist/index.html keeps its placeholder:', err?.message || err);
+}
 
 // ─── Service worker: stamp a per-build cache version ────────────────────────
 // sw.js is copied verbatim from pwa/, so without this every deploy shipped a
@@ -576,3 +732,8 @@ try {
 } catch (err) {
   console.warn('sitemap expansion skipped:', err?.message || err);
 }
+
+// The app modules renderHome() loaded leave timers running (intervals set at
+// import time). Everything above is synchronous and done: exit rather than
+// hang the build.
+process.exit(0);

@@ -3,6 +3,26 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+const fs = require('fs');
+
+// Records the files of each named chunk group (e.g. "home", the landing page)
+// in build/client-assets.json, outside dist/ so it is never deployed.
+// scripts/prerender_routes.mjs reads it to put the landing page's stylesheets
+// and script preloads in the HTML, next to the prerendered markup that needs them.
+class ChunkGroupAssetsPlugin {
+  apply(compiler) {
+    compiler.hooks.done.tap('ChunkGroupAssetsPlugin', (stats) => {
+      const { namedChunkGroups = {} } = stats.toJson({ all: false, chunkGroups: true });
+      const out = {};
+      for (const [name, group] of Object.entries(namedChunkGroups)) {
+        out[name] = group.assets.map((a) => a.name).filter((f) => /\.(js|css)$/.test(f));
+      }
+      const dir = path.resolve(__dirname, 'build');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'client-assets.json'), JSON.stringify(out, null, 2));
+    });
+  }
+}
 
 module.exports = {
   entry: './src/index.tsx',
@@ -63,6 +83,7 @@ module.exports = {
       // so every first visit downloaded the 63 KB 500px logo as a tab icon.
       template: './src/index.html',
     }),
+    new ChunkGroupAssetsPlugin(),
     new MiniCssExtractPlugin({
       filename: 'css/[name].[contenthash].css',
       // The shared blocks (Home.css, MySchoolCard.css, ExamCountdown.css) are

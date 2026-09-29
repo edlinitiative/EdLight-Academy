@@ -399,6 +399,14 @@
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
+/* Not when the page arrived prerendered (html.pr-landing, set by the inline
+   script scripts/prerender_routes.mjs writes into "/"). The hero is already on
+   screen then, and fading it in from opacity 0 hides it from the browser's
+   Largest Contentful Paint: the headline painted at ~1.5 s but did not count,
+   and React's copy of it (animated again, from 0) did not either. It also
+   kept the hero from blinking out and back when React replaced the markup. */
+.pr-landing .lp-hero__copy > *,
+.pr-landing .lp-hero__visual { animation: none; }
 
 /* Signed-in: the artwork stays where the sign-up card would be. */
 .lp-hero__visual { position: relative; }
