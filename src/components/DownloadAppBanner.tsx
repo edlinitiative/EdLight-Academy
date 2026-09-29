@@ -42,6 +42,11 @@ function wasDismissed(): boolean {
   }
 }
 
+/** Mirrored by the inline script in the prerendered "/" (pr-android). */
+function showsAndroidStrip(): boolean {
+  return !isStandalone() && !wasDismissed() && getMobilePlatform() === 'android';
+}
+
 function track(platform: string) {
   try {
     (window as any).gtag?.('event', 'app_download_click', { platform });
@@ -64,8 +69,12 @@ export default function DownloadAppBanner() {
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
-  const [visible, setVisible] = useState(false);
-  const [platform, setPlatform] = useState<'ios' | 'android' | null>(null);
+  // The Android strip sits in the flow above the navbar, so it is decided on
+  // the first render rather than in the effect below: shown a frame later, it
+  // pushed the whole page (the prerendered landing page included) down 61px,
+  // a layout shift on every Android visit. The effect then confirms it.
+  const [visible, setVisible] = useState(showsAndroidStrip);
+  const [platform, setPlatform] = useState<'ios' | 'android' | null>(() => (showsAndroidStrip() ? 'android' : null));
 
   useEffect(() => {
     if (isStandalone() || wasDismissed()) return;
@@ -129,7 +138,7 @@ export default function DownloadAppBanner() {
         >
           <X size={18} />
         </button>
-        <img src="/assets/logo.png" alt="" width={32} height={32} style={{ borderRadius: 8 }} />
+        <img src="/assets/logo-128.png" alt="" width={32} height={32} style={{ borderRadius: 8 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-900)' }}>EdLight Academy</div>
           <div style={{ fontSize: 11, color: 'var(--text-500)' }}>{t('Plus rapide dans l’app', 'Pi rapid nan app la')}</div>
@@ -181,7 +190,7 @@ export default function DownloadAppBanner() {
         <X size={18} />
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <img src="/assets/logo.png" alt="" width={36} height={36} style={{ borderRadius: 8 }} />
+        <img src="/assets/logo-128.png" alt="" width={36} height={36} style={{ borderRadius: 8 }} />
         <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-900)' }}>
           {t('EdLight sur mobile', 'EdLight sou mobil')}
         </div>

@@ -58,8 +58,10 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
+      // No `favicon` option: it appended <link rel="icon" href="/logo.png">
+      // after the template's own favicon set, and browsers take the last icon,
+      // so every first visit downloaded the 63 KB 500px logo as a tab icon.
       template: './src/index.html',
-      favicon: './public_original/assets/logo.png'
     }),
     new MiniCssExtractPlugin({
       filename: 'css/[name].[contenthash].css',

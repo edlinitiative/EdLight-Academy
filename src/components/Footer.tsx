@@ -12,7 +12,7 @@ export function Footer() {
       <div className="container footer__inner">
         <div className="footer__left">
           <Link to="/" className="logo footer__logo" aria-label={t('footer.home')}>
-            <img src="/assets/logo.png" alt="" className="logo__image" />
+            <img src="/assets/logo-128.png" alt="" className="logo__image" />
             <span>EdLight Academy</span>
           </Link>
           <p className="footer__brand-copy">

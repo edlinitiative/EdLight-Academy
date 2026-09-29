@@ -152,7 +152,8 @@ export function Navbar() {
     <header className="navbar">
       <div className="container navbar__inner">
         <Link to="/" className="logo" onClick={closeMenu}>
-          <img src="/assets/logo.png" alt="EdLight Academy" className="logo__image" />
+          {/* logo-128.png: logo.png is 500px and 63 KB, shown here at 24-28px. */}
+          <img src="/assets/logo-128.png" alt="EdLight Academy" className="logo__image" />
           <span className="logo__text">EdLight Academy</span>
         </Link>
 
@@ -164,7 +165,7 @@ export function Navbar() {
           {/* Drawer header (mobile only) */}
           <div className="nav-links__header nav-drawer__header">
             <Link to="/" className="nav-drawer__brand" onClick={closeMenu}>
-              <img src="/assets/logo.png" alt="" className="nav-drawer__brand-img" />
+              <img src="/assets/logo-128.png" alt="" className="nav-drawer__brand-img" />
               <span className="nav-drawer__brand-text">EdLight Academy</span>
             </Link>
             <button
