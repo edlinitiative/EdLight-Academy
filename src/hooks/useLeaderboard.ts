@@ -9,8 +9,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import useStore from '../contexts/store';
-import { getWeeklyTop, getAllTimeTop, getCollectives, getUserWeeklyRank, weekId, isValidAlias } from '../services/leaderboardService';
-import type { GroupField } from '../../shared/leaderboardAgg';
+import { getWeeklyTop, getAllTimeTop, getUserWeeklyRank, weekId, isValidAlias } from '../services/leaderboardService';
+
+// Lives in its own module so the landing page's school race can use it without
+// importing Firestore; re-exported so existing imports keep working.
+export { useCollectives } from './useCollectives';
 
 export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   const user = useStore((s) => s.user);
@@ -69,26 +72,3 @@ export function useLeaderboard(max = 25, period: 'week' | 'all' = 'week') {
   };
 }
 
-/**
- * useCollectives — exhaustive school/city/department ranking for a period.
- * Server-aggregated (GET /api/leaderboard/collectives) so the totals count
- * every opted-in learner, not just the individual top-N the board fetches.
- * Only runs when `enabled` (i.e. a collective tab is actually open).
- */
-export function useCollectives(field: GroupField, period: 'week' | 'all' = 'week', enabled = true) {
-  const { data, isPending, isFetching } = useQuery({
-    queryKey: ['leaderboard-collectives', field, period],
-    queryFn: () => getCollectives(field, period),
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: true,
-    enabled,
-  });
-
-  return {
-    groups: data || [],
-    // isPending is `true` for a disabled query that never ran; only surface
-    // loading when the query is actually enabled.
-    isLoading: enabled && isPending,
-    isFetching,
-  };
-}

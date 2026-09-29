@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, doc, getCountFromServer, getDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
 import { TRACKS } from '../config/trackConfig';
+
+// Firestore is loaded when a query runs, not when this module is imported: the
+// landing hero reads one figure from here, and a static import made the whole
+// Firebase SDK a prerequisite for painting the page at all.
+const loadFirestore = () =>
+  Promise.all([import('firebase/firestore'), import('../services/firebase')]).then(([fs, { db }]) => ({ ...fs, db }));
 
 const clampNumber = (v) => (Number.isFinite(v) ? v : null);
 
@@ -15,6 +19,7 @@ const formatCompact = (n) => {
 };
 
 async function loadSiteStats() {
+  const { collection, doc, getCountFromServer, getDoc, db } = await loadFirestore();
   const [coursesCountSnap, videosCountSnap, quizzesCountSnap, statsDocSnap] = await Promise.all([
     getCountFromServer(collection(db, 'courses')),
     getCountFromServer(collection(db, 'videos')),
@@ -135,6 +140,7 @@ export function useSiteHeadlineStats() {
   const q = useQuery({
     queryKey: ['siteStats', 'headline'],
     queryFn: async () => {
+      const { doc, getDoc, db } = await loadFirestore();
       const snap = await getDoc(doc(db, 'siteStats', 'public'));
       const data = snap.exists() ? snap.data() : {};
       const students = clampNumber(data.active_students_term);

@@ -9,8 +9,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from './icons';
 import useStore from '../contexts/store';
-import { useTrivia } from '../hooks/useTrivia';
-import { useCollectives } from '../hooks/useLeaderboard';
+import { useTriviaProfile } from '../hooks/useTriviaProfile';
+import { useCollectives } from '../hooks/useCollectives';
 import { normalizeName } from '../../shared/leaderboardAgg';
 import './MySchoolCard.css';
 
@@ -20,7 +20,7 @@ export default function SchoolRanking({ max = 10 }: { max?: number }) {
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
-  const { profile } = useTrivia();
+  const profile = useTriviaProfile();
   const mineKey = profile?.leaderboard?.school ? normalizeName(profile.leaderboard.school) : null;
   const { groups, isLoading } = useCollectives('school', 'all');
 

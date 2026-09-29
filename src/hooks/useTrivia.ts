@@ -20,8 +20,7 @@ import {
   recordGameResult as svcRecordGameResult,
   computeGameXp,
 } from '../services/triviaService';
-
-const triviaKey = (uid) => ['trivia-profile', uid];
+import { triviaKey } from './useTriviaProfile';
 
 export function useTrivia() {
   const user = useStore((s) => s.user);
