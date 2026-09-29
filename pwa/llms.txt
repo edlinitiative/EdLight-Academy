@@ -1,0 +1,26 @@
+# EdLight Academy
+
+> EdLight Academy est la plateforme d'apprentissage gratuite d'EdLight Initiative pour les élèves haïtiens : des cours de mathématiques, chimie, physique et économie, des quiz, des vidéos et plus de 500 examens blancs officiels pour préparer la 9e Année et le Baccalauréat.
+
+Tout est gratuit. Le site est disponible en français, en créole haïtien et en anglais. EdLight Initiative est un organisme canadien sans but lucratif qui offre ses programmes aux élèves en Haïti.
+
+## Apprendre
+
+- [Cours](https://academy.edlight.org/courses): les cours par matière et par niveau
+- [Examens](https://academy.edlight.org/exams): plus de 500 examens blancs officiels, par niveau et par matière
+- [Quiz](https://academy.edlight.org/quizzes): des quiz pour s'entraîner
+
+## À propos
+
+- [À propos](https://academy.edlight.org/about): la mission d'EdLight Academy
+- [Enseigner](https://academy.edlight.org/enseigner): contribuer comme enseignant
+- [FAQ](https://academy.edlight.org/faq): les questions fréquentes
+- [Aide](https://academy.edlight.org/help): utiliser la plateforme
+- [Contact](https://academy.edlight.org/contact): joindre l'équipe
+- [EdLight Initiative](https://www.edlight.org): l'organisme derrière EdLight Academy
+
+## Optional
+
+- [Confidentialité](https://academy.edlight.org/privacy)
+- [Conditions d'utilisation](https://academy.edlight.org/terms)
+- [Plan du site](https://academy.edlight.org/sitemap.xml)
