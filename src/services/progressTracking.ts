@@ -2,6 +2,7 @@ import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, arrayUnion, increment, serverTimestamp } from 'firebase/firestore';
 import { notifyAchievement, notifyStreak } from './notificationService';
 import { recordActivity as recordStreakActivity } from './streakService';
+import { track } from '../utils/analytics';
 
 /**
  * Progress tracking data structure in Firestore:
@@ -116,6 +117,8 @@ export async function markLessonComplete(userId, courseId, lessonId) {
         completedLessons: arrayUnion(lessonId),
         lastAccessedAt: new Date()
       });
+      // Only the first completion of a lesson counts as a conversion.
+      track('lesson_complete', { course_id: courseId, lesson_id: lessonId });
       
       // Award points for completing lesson
       await awardPoints(userId, courseId, 10, 'lesson_complete');
@@ -201,6 +204,12 @@ export async function trackQuizAttempt(userId, courseId, quizId, attemptData) {
       quizAttempts,
       lastAccessedAt: new Date(),
       lastStudyDate: new Date()
+    });
+    track('quiz_complete', {
+      quiz_id: quizId,
+      quiz_type: 'unit_quiz',
+      course_id: courseId,
+      score: Math.round(nextAttempt.percentage),
     });
     
     // Award points based on score

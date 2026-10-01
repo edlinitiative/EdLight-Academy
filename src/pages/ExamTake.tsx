@@ -11,6 +11,7 @@ import { useKatex, renderWithKatex } from '../utils/shared';
 import { loadExamAttemptDraft, saveExamAttemptDraft, markExamAttemptSubmitted } from '../services/examAttempts';
 import { authedFetch, auth } from '../services/firebase';
 import { saveExamResult } from '../services/examResults';
+import { track } from '../utils/analytics';
 import { recordTaskResult, loadActiveStudyPlan } from '../services/studyPlanService';
 import {
   flattenQuestions,
@@ -1236,6 +1237,15 @@ const ExamTake = () => {
         console.warn('[StudyPlan] Failed to record task result:', e);
       }
     }
+
+    // Grading succeeded (a failure returns above) and, for signed-in students,
+    // the Firestore persistence has settled. Signed-out students are graded
+    // locally only, so their submission still counts.
+    track('quiz_complete', {
+      quiz_id: examKey,
+      quiz_type: 'exam',
+      score: Math.round(result.summary.percentage ?? 0),
+    });
 
     navigate(`/exams/${level}/${examKey}/results`);
   }, [questions, answers, questionResults, feedbackMode, idx, exam, level, navigate, examKey, userId, clearLocalDraft, clearActivity]);

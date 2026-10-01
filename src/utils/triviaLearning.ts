@@ -1,4 +1,5 @@
 import { trackEvent } from './telemetry';
+import { track } from './analytics';
 import type { TriviaQuestion } from '../data/triviaData';
 
 export function triviaOptions(q: TriviaQuestion, isCreole: boolean): string[] {
@@ -14,5 +15,5 @@ export function triviaExplanation(q: TriviaQuestion, isCreole: boolean): string 
 /** Uses the site's telemetry and its optional analytics provider; never blocks play. */
 export function trackTriviaEvent(name: string, detail?: Record<string, unknown>) {
   trackEvent(name, detail);
-  try { (window as any).gtag?.('event', name, detail); } catch { /* best effort */ }
+  track(name, detail);
 }

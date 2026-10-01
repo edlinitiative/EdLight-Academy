@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import useStore from '../contexts/store';
+import { track } from '../utils/analytics';
 
 /**
  * /defi/:code — landing page for "Défi d'un ami" duel links shared from the
@@ -45,6 +46,7 @@ export default function Defi() {
             href="https://apps.apple.com/app/id6792210920"
             target="_blank"
             rel="noreferrer"
+            onClick={() => track('app_download_click', { platform: 'defi-ios' })}
           >
             {isCreole ? 'Telechaje sou iPhone' : 'Télécharger sur iPhone'}
           </a>
@@ -53,6 +55,7 @@ export default function Defi() {
             href="https://play.google.com/store/apps/details?id=com.edlightacademy"
             target="_blank"
             rel="noreferrer"
+            onClick={() => track('app_download_click', { platform: 'defi-android' })}
           >
             {isCreole ? 'Telechaje sou Android' : 'Télécharger sur Android'}
           </a>

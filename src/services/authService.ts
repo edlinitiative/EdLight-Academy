@@ -1,4 +1,5 @@
 import useStore from '../contexts/store';
+import { track } from '../utils/analytics';
 
 /**
  * Service layer for authentication
@@ -85,6 +86,7 @@ export async function loginWithEmailPassword(email, password) {
 
     // One read to hydrate track/onboarding; the last_seen write is fire-and-forget.
     await hydrateSession(user, false);
+    track('login', { method: 'password' });
     
     return {
       uid: user.uid,
@@ -102,6 +104,8 @@ export async function registerWithEmailPassword(email, password, name) {
     const { signUp, writeUserDocument } = await loadFirebase();
     const result = await signUp(email, password, name);
     const user = result.user;
+    // The account exists once createUserWithEmailAndPassword resolves.
+    track('sign_up', { method: 'password' });
 
     // Non-critical: if this write fails the account still exists and the
     // document is recreated on the next login, so it must not fail signup —
@@ -131,6 +135,8 @@ export async function loginWithGoogle() {
 
     // One read to hydrate track/onboarding; the document write is fire-and-forget.
     await hydrateSession(user, isNewUser);
+    // Firebase's isNewUser is true only on the first-ever Google sign-in.
+    track(isNewUser ? 'sign_up' : 'login', { method: 'google' });
 
     return {
       uid: user.uid,

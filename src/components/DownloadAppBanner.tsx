@@ -9,6 +9,7 @@ import {
   DOWNLOAD_URL,
 } from '../utils/platform';
 import useStore from '../contexts/store';
+import { track } from '../utils/analytics';
 
 const DISMISS_KEY = 'edlight:dl-banner-dismissed';
 const DISMISS_DAYS = 14;
@@ -47,12 +48,8 @@ function showsAndroidStrip(): boolean {
   return !isStandalone() && !wasDismissed() && getMobilePlatform() === 'android';
 }
 
-function track(platform: string) {
-  try {
-    (window as any).gtag?.('event', 'app_download_click', { platform });
-  } catch {
-    /* best-effort */
-  }
+function trackDownload(platform: string) {
+  track('app_download_click', { platform });
 }
 
 /**
@@ -147,7 +144,7 @@ export default function DownloadAppBanner() {
           href={PLAY_STORE_URL}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => track('android')}
+          onClick={() => trackDownload('android')}
           style={{
             background: '#1B6FE0',
             color: '#fff',
@@ -199,14 +196,14 @@ export default function DownloadAppBanner() {
         {t('Scanne pour installer l’app sur ton téléphone.', 'Eskane pou enstale app la sou telefòn ou.')}
       </p>
       <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-        <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" onClick={() => track('desktop-qr')} style={{ flexShrink: 0 }}>
+        <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackDownload('desktop-qr')} style={{ flexShrink: 0 }}>
           <img src="/assets/download-qr.svg" alt={t('Code QR', 'Kòd QR')} width={92} height={92} style={{ display: 'block', borderRadius: 8 }} />
         </a>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => track('desktop-ios')} aria-label="Download on the App Store">
+          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackDownload('desktop-ios')} aria-label="Download on the App Store">
             <img src="/assets/appstore-badge.svg" alt="App Store" style={{ height: 34, display: 'block' }} />
           </a>
-          <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => track('desktop-android')} aria-label="Get it on Google Play">
+          <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" onClick={() => trackDownload('desktop-android')} aria-label="Get it on Google Play">
             <img src="/assets/googleplay-badge.png" alt="Google Play" style={{ height: 34, display: 'block' }} />
           </a>
         </div>
