@@ -136,6 +136,9 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){ dataLayer.push(arguments); }
     gtag('js', new Date());
+    // Carry Google Ads click ids (gclid etc.) in internal links so ad clicks
+    // are attributed without relying on ad cookies.
+    gtag('set', 'url_passthrough', true);
     gtag('config', 'G-KNBX35H1X1');
     (function () {
       function loadGtag() {
