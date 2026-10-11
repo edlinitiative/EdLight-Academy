@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { History, PlayCircle, ChevronRight, Search } from '../components/icons';
 import useStore from '../contexts/store';
 import { GRADES, gradeProfile, getCoefficient, DEFAULT_SUBJECT_ORDER } from '../config/trackConfig';
-import CardCover from '../components/CardCover';
 import { Skeleton } from '../components/Skeleton';
 import { useExamAttempts } from '../hooks/useExamAttempts';
 import { levelToSlug } from '../utils/examLevels';
@@ -13,7 +12,6 @@ import { normalizeExamCatalog } from '../utils/examCatalog';
 import { buildExamIndex, subjectColor, displayStoredExamTitle } from '../utils/examUtils';
 import { sessionRowName, yearRange } from '../utils/examNaming';
 import { HUB_LEVELS, durationLabel, paperKey, PaperAction, StatusPill, type PaperStatus } from './examHubParts';
-import { SUBJECT_GLYPHS } from '../utils/subjectGlyphs';
 import { listRecentExamAttempts } from '../services/userActivity';
 import './ExamLanding.css';
 import './examHub.css';
@@ -227,7 +225,7 @@ const ExamLanding = () => {
     const st = statusOf(e);
     return (
       <li className="exh-paper">
-        <CardCover className="exh-paper__cover" glyph={SUBJECT_GLYPHS[e._subject] || 'book'} color={subjectColor(e._subject)} />
+        <span className="exh-year" style={{ '--sub': subjectColor(e._subject) } as React.CSSProperties}>{/^\d{4}$/.test(String(e.year)) ? e.year : '—'}</span>
         <span className="exh-paper__body">
           <strong>{e._subject}</strong>
           <span>{[name.title, name.subtitle, durationLabel(e.duration_minutes, ht)].filter(Boolean).join(' · ')}</span>
@@ -332,7 +330,7 @@ const ExamLanding = () => {
               return (
                 <button key={d.examId} type="button" className="exh-resume__card"
                   onClick={() => navigate(`/exams/${levelToSlug(exam?.level || d.level)}/${d.examId}/take`, { state: { autostart: true, resume: true } })}>
-                  <CardCover className="exh-resume__cover" glyph={SUBJECT_GLYPHS[subject] || 'book'} color={subjectColor(subject)} />
+                  <span className="exh-year" style={{ '--sub': subjectColor(subject) } as React.CSSProperties}>{exam?.year && /^\d{4}$/.test(String(exam.year)) ? exam.year : '—'}</span>
                   <span className="exh-resume__body">
                     <strong>{subject}</strong>
                     <span>{[name.title, d.answered > 0 ? t('examLanding.resumeAnswered', { count: d.answered }) : ''].filter(Boolean).join(' · ')}</span>
@@ -388,10 +386,12 @@ const ExamLanding = () => {
                 return (
                   <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`}
                     className="exh-subject" style={{ '--sub': color } as React.CSSProperties}>
-                    <CardCover className="exh-subject__cover" glyph={SUBJECT_GLYPHS[s.subject] || 'book'} color={color} />
+                    <span className="exh-subject__count">
+                      <b>{s.count}</b> {L(s.count > 1 ? 'sujets' : 'sujet', 'sijè')}
+                    </span>
                     <span className="exh-subject__body">
                       <strong>{s.subject}</strong>
-                      <span>{s.count} {L(s.count > 1 ? 'sujets' : 'sujet', 'sijè')}{s.years ? ` · ${s.years}` : ''}</span>
+                      {s.years && <span>{s.years}</span>}
                     </span>
                     <span className="exh-subject__foot">
                       {s.done > 0 ? (

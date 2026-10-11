@@ -146,3 +146,13 @@
   .exh-sheet { height: 300px; max-width: 460px; width: 100%; justify-self: center; }
 }
 @media (prefers-reduced-motion: reduce) { .exh-sheet__paper { transition: none; } }
+
+/* No icons: the tile leads with its number, the row with its year. */
+.exh-subject__count { display: inline-flex; align-items: baseline; gap: 0.35rem; font-size: 0.9rem; font-weight: 700; color: var(--text-500); }
+.exh-subject__count b { font-family: var(--font-heading); font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--sub, #1B6FE0); }
+.exh-subject__body strong { font-size: 1.2rem; }
+.exh-year {
+  display: grid; place-items: center; flex: none; width: 56px; height: 44px; border-radius: 12px;
+  background: color-mix(in srgb, var(--sub, #1B6FE0) 12%, var(--surface, #fff)); color: var(--sub, #1B6FE0);
+  font-family: var(--font-heading); font-size: 0.95rem; font-weight: 800; font-variant-numeric: tabular-nums;
+}
