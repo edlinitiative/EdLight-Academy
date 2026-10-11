@@ -15,6 +15,7 @@ import CourseInstructors from './CourseInstructors';
 import MasteryBadge from './MasteryBadge';
 import { summarize } from '../../shared/mastery';
 import { subjectCover } from '../utils/subjectCovers';
+import { videoThumb, firstThumb } from '../utils/videoThumb';
 
 function getLessons(module) {
   return Array.isArray(module?.lessons) ? module.lessons : [];
@@ -83,7 +84,10 @@ export default function CourseOverview({
     : t('courses.start', 'Commencer');
 
   const resumeModuleTitle = modules[resumeTarget.module]?.title || '';
-  const resumeLessonTitle = getLessons(modules[resumeTarget.module])[resumeTarget.lesson]?.title || '';
+  const resumeLesson = getLessons(modules[resumeTarget.module])[resumeTarget.lesson];
+  const resumeLessonTitle = resumeLesson?.title || '';
+  // The frame of the lesson the CTA opens — what "Commencer" actually starts.
+  const resumeFrame = videoThumb(resumeLesson?.videoUrl, 'hq');
 
   // Practice deep-link: subject + level lands the Quiz page on the right unit.
   const practiceHref = `/quizzes?course=${course.subject}${course.level ? `-${course.level}` : ''}`;
@@ -101,8 +105,18 @@ export default function CourseOverview({
         <ArrowLeft size={16} /> {t('courses.returnToCatalog', 'Retour au catalogue')}
       </button>
 
-      <header className={`course-overview__hero${cover ? ' course-overview__hero--art' : ''}`}>
-        {cover && (
+      <header className={`course-overview__hero${cover || resumeFrame ? ' course-overview__hero--art' : ''}${resumeFrame ? ' course-overview__hero--frame' : ''}`}>
+        {resumeFrame && (
+          <button type="button" className="course-overview__preview" onClick={onStart}>
+            <img src={resumeFrame} alt="" decoding="async" />
+            <span className="course-overview__preview-play" aria-hidden="true"><PlayCircle size={30} /></span>
+            <span className="course-overview__preview-cap">
+              <span>{hasProgress ? ctaLabel : t('courses.firstLesson', 'Première leçon')}</span>
+              <strong>{resumeLessonTitle}</strong>
+            </span>
+          </button>
+        )}
+        {cover && !resumeFrame && (
           <img
             className="course-overview__cover"
             src={cover}
@@ -201,6 +215,7 @@ export default function CourseOverview({
               // be its WEAKEST lesson's, so a green chapter means nothing in it
               // is still shaky — which is what makes one worth earning.
               const unit = summarize(moduleLessonIds.filter(Boolean), masteryMap);
+              const thumb = firstThumb(lessons);
               return (
                 <li key={module.id || idx}>
                   <button
@@ -208,9 +223,20 @@ export default function CourseOverview({
                     className={`course-overview__module ${moduleDone ? 'is-done' : ''}`}
                     onClick={() => onSelectModule?.(idx)}
                   >
-                    <span className="course-overview__module-index">
-                      {moduleDone ? <Check size={16} /> : String(idx + 1).padStart(2, '0')}
-                    </span>
+                    {thumb ? (
+                      // The chapter's first lesson frame: the course has ~300
+                      // real videos and this list used to show none of them.
+                      <span className="course-overview__module-thumb">
+                        <img src={thumb.src} alt="" loading="lazy" decoding="async" width={320} height={180} />
+                        <span className="course-overview__module-num">
+                          {moduleDone ? <Check size={13} /> : idx + 1}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="course-overview__module-index">
+                        {moduleDone ? <Check size={16} /> : String(idx + 1).padStart(2, '0')}
+                      </span>
+                    )}
                     <span className="course-overview__module-body">
                       <span className="course-overview__module-title">
                         {module.title}

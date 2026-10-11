@@ -97,7 +97,12 @@
     -webkit-overflow-scrolling: touch;
     z-index: 1001;
     pointer-events: none;
-    transition: transform 0.34s var(--nav-ease-spring), opacity 0.2s ease;
+    /* Closed = not rendered for focus or scroll. Without this the off-canvas
+       drawer's links stayed tabbable, and focusing one (or scrollIntoView)
+       scrolled <body> sideways by the drawer's width — the whole page slid
+       195px left. visibility flips after the slide-out finishes. */
+    visibility: hidden;
+    transition: transform 0.34s var(--nav-ease-spring), opacity 0.2s ease, visibility 0s linear 0.34s;
     padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
   }
 
@@ -105,6 +110,8 @@
     transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
+    visibility: visible;
+    transition: transform 0.34s var(--nav-ease-spring), opacity 0.2s ease, visibility 0s;
   }
 
   /* ---- Drawer header (brand + close) ---- */

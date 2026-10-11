@@ -35,10 +35,29 @@ initializeApp({ credential: cert(loadServiceAccount()) });
 const db = getFirestore();
 
 const snap = await db.collection('courses').get();
+// Each lesson's video URL, so the static catalogue can show real lesson
+// frames on first paint (the videos collection is otherwise only joined in
+// the background revalidation). Placeholders are skipped.
+const videoSnap = await db.collection('videos').get();
+const videoUrlById = new Map();
+videoSnap.docs.forEach((v) => {
+  const url = v.data()?.video_url;
+  if (typeof url === 'string' && url && !url.includes('/placeholder')) videoUrlById.set(v.id, url);
+});
 // Timestamps aren't JSON-serializable and the client transform doesn't read
 // them — strip to keep the file lean and deterministic.
 const docs = snap.docs.map((d) => {
   const { created_at, updated_at, ...rest } = d.data();
+  if (Array.isArray(rest.units)) {
+    rest.units = rest.units.map((u) => ({
+      ...u,
+      lessons: (u.lessons || []).map((l) => (
+        l?.type === 'video' && videoUrlById.has(l.lessonId)
+          ? { ...l, video_url: videoUrlById.get(l.lessonId) }
+          : l
+      )),
+    }));
+  }
   return { id: d.id, ...rest };
 });
 

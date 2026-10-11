@@ -114,8 +114,9 @@ export function getYouTubeVideoId(url) {
   try {
     const urlObj = new URL(url);
     
-    // Handle youtube.com/watch?v=xxx
-    if (urlObj.hostname.includes('youtube.com')) {
+    // Handle youtube.com/watch?v=xxx. A youtube.com/embed/xxx URL has no `v`
+    // and falls through to the embed branch below (it used to return null).
+    if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.get('v')) {
       return urlObj.searchParams.get('v');
     }
     

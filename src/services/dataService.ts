@@ -216,7 +216,9 @@ const transformFirestoreCourses = (firestoreCourses, videosMap = new Map(), quiz
           title: lesson.title,
           type: lessonType,
           order: lesson.order,
-          videoUrl: lessonType === 'video' ? 'https://www.youtube.com/embed/placeholder' : null,
+          // The static catalog.json carries the lesson's video URL (see
+          // scripts/export_catalog.mjs), so first paint has real frames.
+          videoUrl: lessonType === 'video' ? (lesson.video_url || 'https://www.youtube.com/embed/placeholder') : null,
           duration: 15,
           objectives: ''
         };
