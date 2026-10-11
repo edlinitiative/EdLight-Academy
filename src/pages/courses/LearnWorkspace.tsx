@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  PlayCircle, ChevronRight, ClipboardList, AlertTriangle,
+  ChevronRight, ClipboardList, AlertTriangle,
 } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
@@ -21,8 +21,6 @@ import MySchoolCard from '../../components/MySchoolCard';
  * the student's own data and nothing else:
  *
  *   command bar   who they are (class, school) + two real shortcuts
- *   resume card   the last lesson they touched (store.lastActivity), else the
- *                 course they are furthest into (Firestore progress)
  *   subject cards per subject: the course at their level (else the one they
  *                 have progress in), its real completion, the next unfinished
  *                 unit as "prochaine étape"
@@ -66,19 +64,11 @@ export default function LearnWorkspace({
 }) {
   const navigate = useNavigate();
   const user = useStore((s) => s.user);
-  const lastActivity = useStore((s) => s.lastActivity);
   const language = useStore((s) => s.language);
   const isCreole = language === 'ht';
   const uid = user?.uid || null;
 
-  // ── Resume ────────────────────────────────────────────────────────────────
   const live = useMemo(() => courses.filter((c) => !c.comingSoon), [courses]);
-  const furthest = useMemo(() => live
-    .filter((c) => progressByCourseId.has(c.id))
-    .map((c) => ({ course: c, stats: courseStats(c) }))
-    .filter(({ stats }) => stats.pct > 0 && stats.pct < 100)
-    .sort((a, b) => b.stats.pct - a.stats.pct)[0] || null, [live, progressByCourseId, courseStats]);
-  const lessonResume = lastActivity && lastActivity.type === 'lesson' ? lastActivity : null;
 
   // ── Subjects: one card per subject the catalogue actually has ────────────
   const subjects = useMemo(() => {
@@ -169,46 +159,10 @@ export default function LearnWorkspace({
     return m?.title || '';
   };
 
-  const resumePath = lessonResume?.path || (furthest ? `/courses/${furthest.course.id}` : '');
-
   return (
     <div className="lws">
       <div className="lws-grid">
         <div className="lws-main">
-          {/* ── Resume ───────────────────────────────────────────────────── */}
-          {resumePath ? (
-            <section className="lws-card lws-resume">
-              <span className="lws-eyebrow lws-eyebrow--live">
-                <span className="lws-dot" aria-hidden="true" />
-                {L('Reprendre où tu en étais', 'Kontinye kote ou te ye a')}
-              </span>
-              {furthest && (
-                <span className="lws-pill lws-pill--azure">
-                  {subjectName(furthest.course.subject)} · {levelLabel(courseLevel(furthest.course))}
-                </span>
-              )}
-              <h2 className="lws-resume__title">{lessonResume?.title || furthest?.course.name}</h2>
-              {(lessonResume?.subtitle || furthest) && (
-                <p className="lws-resume__sub">
-                  {lessonResume?.subtitle && <>{lessonResume.subtitle}</>}
-                  {lessonResume?.subtitle && furthest && ' · '}
-                  {furthest && L(
-                    `${furthest.stats.completed}/${furthest.stats.total} leçons · ${furthest.stats.remaining} restantes`,
-                    `${furthest.stats.completed}/${furthest.stats.total} leson · ${furthest.stats.remaining} rete`,
-                  )}
-                </p>
-              )}
-              {furthest && (
-                <div className="lws-meter" aria-hidden="true">
-                  <span style={{ width: `${furthest.stats.pct}%` }} />
-                </div>
-              )}
-              <button type="button" className="lws-btn lws-btn--primary" onClick={() => navigate(resumePath)}>
-                <PlayCircle size={18} aria-hidden="true" /> {L('Reprendre la leçon', 'Kontinye leson an')}
-              </button>
-            </section>
-          ) : null}
-
           {/* ── Subjects ─────────────────────────────────────────────────── */}
           <section className="lws-section" aria-labelledby="lws-subjects">
             <div className="lws-section__head">
