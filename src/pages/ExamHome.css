@@ -178,3 +178,18 @@
 .exh .exh-hero .exh-results-link { color: #DCE6FF; }
 .exh .exh-hero .exh-results-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 .exh-hero .exh-sheet__back, .exh-hero .exh-sheet__paper { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 30px 60px -24px rgba(0, 0, 0, 0.7); }
+
+/* No hero band (Ted): a title row and the controls, then the subjects. */
+.exh-hero.exh-hero--flat {
+  display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 0; padding: 2rem 0 0; border-radius: 0;
+  background: none; box-shadow: none; color: inherit;
+}
+.exh .exh-hero--flat .exh-head__title { color: var(--text-900); max-width: none; font-size: clamp(2.2rem, 1.4rem + 2.4vw, 3.2rem); }
+.exh .exh-hero--flat .exh-head__lede { color: var(--text-600); }
+.exh .exh-hero--flat .exh-link { color: var(--primary-600, #1558B8); }
+.exh .exh-hero--flat .exh-seg { background: var(--surface-2, #EEF2F8); }
+.exh .exh-hero--flat .exh-seg button { color: var(--text-600); }
+.exh .exh-hero--flat .exh-seg button.is-on { background: var(--surface, #fff); color: var(--text-900); }
+.exh .exh-hero--flat .exh-results-link { color: var(--text-700); }
+.exh .exh-hero--flat .exh-results-link:hover { background: var(--surface, #fff); color: var(--primary-600, #1558B8); }
+.exh .exh-hero--flat .exh-hero__copy { grid-template-columns: 1fr; }

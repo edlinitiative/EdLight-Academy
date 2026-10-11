@@ -848,21 +848,10 @@ const Quizzes = () => {
             {/* Ted: "i complained about hero and you bring me a big filter
                 hero". The header is now one title line and one row of
                 compact selects — no crumbs, no stacked chip rows, no card. */}
-            {/* The hub header: a night band, the subject and the class as
-                chips (one tap, not a dropdown), and the course's real size. */}
-            <header className="qz-hero">
-              <div className="qz-hero__copy">
-                <p className="qz-hero__over">{tx('Pratiquer', 'Pratike')}</p>
-                <h1 className="qz-hero__title">{tx('Entraîne-toi, chapitre par chapitre.', 'Antrene w, chapit pa chapit.')}</h1>
-                <p className="qz-hero__lede">{tx('Des questions corrigées sur chaque notion du programme. Rate, comprends, recommence.', 'Kesyon korije sou chak nosyon nan pwogram nan. Rate, konprann, rekòmanse.')}</p>
-              </div>
-              {unitRows.length > 0 && (
-                <dl className="qz-hero__stats">
-                  <div><dd>{unitRows.length}</dd><dt>{tx('chapitres', 'chapit')}</dt></div>
-                  <div><dd>{counts.subjCount}</dd><dt>{tx('questions', 'kesyon')}</dt></div>
-                </dl>
-              )}
-              <div className="qz-hero__chips">
+            {/* One title line, then the filters as chips — no hero (Ted). */}
+            <header className="qz-top">
+              <h1 className="qz-top__title">{tx('Entraînement et quiz', 'Antrènman ak kwiz')}</h1>
+              <div className="qz-top__chips">
                 <div className="qz-chips" role="group" aria-label={t('quizzes.course', 'Matière')}>
                   {subjectOptions.map((o) => (
                     <button key={o.value} type="button" aria-pressed={subjectBase === o.value} className={subjectBase === o.value ? 'is-on' : ''} onClick={() => setSubjectBase(o.value)}>{o.label}</button>

@@ -1624,3 +1624,6 @@
 .lrn--clean .cl-hero .cl-chip:hover { border-color: rgba(255, 255, 255, 0.4); }
 .lrn--clean .cl-hero .cl-chip.is-on { background: #fff; border-color: #fff; color: #0A1A3F; }
 .cl-hero .cl-fan__card { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 30px 60px -24px rgba(0, 0, 0, 0.7); }
+
+/* No hero band (Ted): the plain header, made confident. */
+.lrn--clean .cl-head:not(.cl-hero) .cl-head__title { font-size: clamp(2.2rem, 1.4rem + 2.4vw, 3.2rem); letter-spacing: -0.045em; }

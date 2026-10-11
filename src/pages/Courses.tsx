@@ -737,7 +737,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
     return h ? `${h} h${m ? ` ${String(m).padStart(2, '0')}` : ''}` : `${m} min`;
   };
   const searching = query.trim().length > 0;
-  const heroMode = !signedIn;
+  const heroMode = false; // no hero band (Ted): title, search, chips, then the courses
   const liveCourses = courses.filter((c) => !c.comingSoon);
   const liveTotals = {
     courses: liveCourses.length,

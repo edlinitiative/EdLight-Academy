@@ -160,15 +160,6 @@ export default function LearnWorkspace({
     return m?.title || '';
   };
 
-  // ── The hello: who, when, and three real numbers ─────────────────────────
-  const firstName = String(user?.name || user?.displayName || '').trim().split(/\s+/)[0] || '';
-  const hour = new Date().getHours();
-  const greeting = isCreole
-    ? (hour < 12 ? 'Bonjou' : 'Bonswa')
-    : (hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir');
-  const today = new Date().toLocaleDateString(isCreole ? 'fr-HT' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-  const lessonsDone = live.reduce((n, c) => n + (courseStats(c).completed || 0), 0);
-  const examsDone = attempts.filter((a: any) => a?.status === 'submitted').length;
   // Started: a frame of the next lesson. Not started: a frame a third of the
   // way in — first lessons often open on a title card or an app screen.
   const frameFor = (course: any, nextUnit: any, started: boolean) => {
@@ -183,22 +174,6 @@ export default function LearnWorkspace({
 
   return (
     <div className="lws lws--premium">
-      <header className="lws-hello">
-        <div className="lws-hello__copy">
-          <p className="lws-hello__date">{today}</p>
-          <h1 className="lws-hello__title">{greeting}{firstName ? `, ${firstName}` : ''}.</h1>
-          <p className="lws-hello__lede">
-            {myLevel
-              ? L(`Ton programme de ${levelLabel(myLevel)}, là où tu l’as laissé.`, `Pwogram ${levelLabel(myLevel)} ou, kote ou te kite l la.`)
-              : L('Tes cours, tes examens et tes révisions, au même endroit.', 'Kou ou, egzamen ou ak revizyon ou, nan menm kote a.')}
-          </p>
-        </div>
-        <dl className="lws-hello__stats">
-          <div><dd>{lessonsDone}</dd><dt>{L('leçons terminées', 'leson fini')}</dt></div>
-          <div><dd>{examsDone}</dd><dt>{L('examens blancs', 'egzamen blan')}</dt></div>
-          <div><dd>{weakTotal}</dd><dt>{L('questions à revoir', 'kesyon pou revize')}</dt></div>
-        </dl>
-      </header>
 
       <div className="lws-grid">
         <div className="lws-main">
