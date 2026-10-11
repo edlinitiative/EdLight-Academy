@@ -130,9 +130,11 @@
 .rp-intro__edge {
   position: absolute;
   left: 0;
-  top: clamp(12px, 1.8vh, 24px);
-  bottom: 0;
-  width: 3px;
+  /* A dot, not an edge stripe (Ted: no coloured left-border accents). */
+  top: calc(clamp(12px, 1.8vh, 24px) + 0.6em);
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
   background: hsl(var(--rp-hue, 212) 72% 58%);
 }
 

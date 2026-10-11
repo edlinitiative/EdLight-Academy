@@ -126,9 +126,13 @@
 .mv-lane__hue {
 	position: absolute;
 	left: calc(-1 * clamp(7px, 1.1vw, 16px));
-	top: 22%;
-	bottom: 22%;
-	width: 3px;
+	/* A dot, not an edge stripe (Ted: no coloured left-border accents). */
+	top: 50%;
+	bottom: auto;
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	transform: translateY(-50%);
 	background: hsl(var(--mv-hue, 210) 58% 60%);
 }
 
@@ -196,9 +200,11 @@
 .mv-lead__bar {
 	position: absolute;
 	left: 0;
-	top: 6%;
-	bottom: 6%;
-	width: clamp(4px, 0.45vw, 9px);
+	/* A dot, not an edge stripe (Ted: no coloured left-border accents). */
+	top: 0.45em;
+	width: clamp(8px, 0.8vw, 14px);
+	height: clamp(8px, 0.8vw, 14px);
+	border-radius: 999px;
 	background: hsl(var(--mv-hue, 210) 58% 60%);
 }
 
@@ -248,8 +254,7 @@
 	justify-self: end;
 	width: min(460px, 100%);
 	padding: clamp(10px, 1.4vh, 16px) 0 0 clamp(12px, 1.2vw, 18px);
-	border-left: 3px solid var(--stage-coral, #FF5C39);
-	border-top: 1px solid var(--stage-rule, rgba(160, 190, 235, 0.14));
+	border-top: 2px solid var(--stage-coral, #FF5C39);
 	animation: stage-enter 320ms var(--mv-ease) both;
 }
 
@@ -506,7 +511,7 @@
 @media (max-width: 620px) {
 	.mv-scene { --mv-lane-h: 46px; }
 	.mv-lane { grid-template-columns: 26px 1fr auto; gap: 10px; }
-	.mv-lane__hue { left: -9px; width: 2px; }
+	.mv-lane__hue { left: -9px; width: 6px; height: 6px; }
 	.mv-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.mv-aside { width: 100%; }
 	.mv-marks { gap: 5px; }

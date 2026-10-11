@@ -1,0 +1,118 @@
+/* /arena/demo — sits on the /direct stage (.live) and adds only what a demo
+   needs: the intro, the school city, the play-along card and the dock. */
+
+/* One screen, like a projector: header, stage, city — the stage takes what
+   is left and never pushes the page into scrolling. The dock floats below. */
+.demo-live { height: 100dvh; padding-bottom: 84px !important; }
+.demo-live .live__inner { min-height: 0; height: 100%; }
+.demo-live .live__inner > :not(.live__head):not(.demo-city) { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.demo-live .demo-city { flex: 0 0 auto; }
+
+/* ── Intro ── */
+.demo-intro { display: grid; place-items: center; padding: 24px; }
+.demo-intro__card {
+  position: relative; z-index: 1; width: min(980px, 100%);
+  padding: clamp(20px, 4vw, 40px); border-radius: 28px;
+  background: rgba(14, 28, 56, 0.86); box-shadow: inset 0 0 0 1px var(--stage-rule), 0 30px 80px -30px rgba(0, 0, 0, 0.7);
+  color: var(--stage-ink);
+}
+.demo-back { display: inline-flex; align-items: center; gap: 6px; color: var(--stage-azure-lit); font-weight: 700; font-size: 1rem; text-decoration: none; }
+.demo-intro__tag { margin: 18px 0 4px; font-family: var(--font-display, sans-serif); font-weight: 800; font-size: 0.875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stage-gold); }
+.demo-intro h1 { margin: 0 0 10px; font-family: var(--font-display, sans-serif); font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; color: #fff; }
+.demo-intro__card > p { margin: 0 0 18px; font-size: 1.1rem; line-height: 1.55; color: #C9D6EE; max-width: 62ch; }
+.demo-intro__hint { font-size: 1rem !important; color: var(--stage-dim) !important; }
+
+.demo-schools { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.demo-school {
+  display: flex; align-items: flex-end; gap: 10px; padding: 10px 12px; min-height: 76px;
+  border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.06); color: #fff;
+  text-align: left; font: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.demo-school:hover { background: rgba(255, 255, 255, 0.11); transform: translateY(-2px); }
+.demo-school.is-on { background: rgba(47, 128, 237, 0.28); box-shadow: inset 0 0 0 2px var(--stage-azure-lit); }
+.demo-school small { display: block; font-weight: 500; font-size: 0.875rem; color: var(--stage-dim); }
+.demo-school .school-building { flex-shrink: 0; }
+.demo-school__spectate { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); }
+.demo-go {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 28px;
+  border: 0; border-radius: 999px; background: var(--stage-coral); color: #fff;
+  font-family: var(--font-display, sans-serif); font-size: 1.15rem; font-weight: 800; cursor: pointer;
+  box-shadow: 0 5px 0 #B8381C; transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.demo-go:hover { transform: translateY(1px); box-shadow: 0 4px 0 #B8381C; }
+.demo-go:active { transform: translateY(5px); box-shadow: none; }
+
+/* ── The city ── */
+.demo-city {
+  display: flex; align-items: flex-end; justify-content: center; gap: clamp(8px, 1.6vw, 22px);
+  margin-top: 14px; padding: 10px 6px 0; border-top: 1px solid var(--stage-rule);
+  overflow-x: auto; scrollbar-width: none;
+}
+.demo-city::-webkit-scrollbar { display: none; }
+.demo-tower { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; }
+.demo-tower .school-building { display: block; transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.demo-tower__rank { font-family: var(--font-display, sans-serif); font-weight: 800; font-size: 0.95rem; color: var(--stage-ink); font-variant-numeric: tabular-nums; }
+.demo-tower__name { font-size: 0.875rem; font-weight: 700; color: var(--stage-dim); letter-spacing: 0.02em; }
+.demo-tower.is-lead .demo-tower__rank { color: var(--stage-gold); }
+.demo-tower.is-lead .school-building { filter: drop-shadow(0 0 16px rgba(255, 185, 46, 0.65)); }
+.demo-tower.is-you .demo-tower__name { color: #fff; background: var(--stage-azure); padding: 1px 8px; border-radius: 999px; }
+.demo-tower.is-short { opacity: 0.55; }
+
+/* ── Play-along ── */
+.demo-play {
+  position: fixed; z-index: 30; right: 20px; bottom: 92px; width: min(420px, calc(100vw - 40px));
+  padding: 18px; border-radius: 22px;
+  background: #fff; color: #0F1E38; box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
+}
+.demo-play__meta { margin: 0 0 6px; font-family: var(--font-display, sans-serif); font-weight: 800; font-size: 0.95rem; color: #1558B8; }
+.demo-play h2 { margin: 0 0 12px; font-family: var(--font-display, sans-serif); font-size: 1.3rem; line-height: 1.3; font-weight: 800; }
+.demo-play__opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.demo-opt {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; min-height: 48px;
+  border: 0; border-radius: 14px; background: #F1F5FB; color: inherit;
+  text-align: left; font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer;
+}
+.demo-opt:hover:not(:disabled) { background: #E4ECF8; }
+.demo-opt:disabled { cursor: default; }
+.demo-opt svg { margin-left: auto; }
+.demo-opt__key { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; background: #fff; font-weight: 800; color: #1558B8; }
+.demo-opt.is-picked { background: #DCE9FF; box-shadow: inset 0 0 0 2px #1B6FE0; }
+.demo-opt.is-right { background: #DDF5E8; box-shadow: inset 0 0 0 2px #2BB673; }
+.demo-opt.is-wrong { background: #FFE3DC; box-shadow: inset 0 0 0 2px #FF5C39; }
+.demo-play__note { margin: 10px 0 0; font-size: 0.95rem; color: #4A5B78; }
+
+/* ── Dock ── */
+.demo-dock {
+  position: fixed; z-index: 40; left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; justify-content: center;
+  max-width: calc(100vw - 24px); padding: 8px; border-radius: 999px;
+  background: rgba(14, 28, 56, 0.92); box-shadow: inset 0 0 0 1px var(--stage-rule), 0 18px 40px -16px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+.demo-dock__btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; min-width: 42px; padding: 0 14px;
+  border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: #fff;
+  font: inherit; font-size: 0.95rem; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap;
+}
+.demo-dock__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.demo-dock__btn:disabled { opacity: 0.4; cursor: default; }
+.demo-dock__btn--main { background: var(--stage-coral); }
+.demo-dock__btn--main:hover:not(:disabled) { background: #FF7354; }
+.demo-dock__speed { display: inline-flex; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
+.demo-dock__speed button { min-width: 42px; min-height: 36px; border: 0; border-radius: 999px; background: none; color: var(--stage-dim); font: inherit; font-weight: 800; font-size: 0.95rem; cursor: pointer; }
+.demo-dock__speed button.is-on { background: var(--stage-azure); color: #fff; }
+.demo-dock__phase { padding: 0 8px; font-size: 0.95rem; font-weight: 600; color: #C9D6EE; white-space: nowrap; }
+.demo-dock :focus-visible, .demo-school:focus-visible, .demo-go:focus-visible, .demo-opt:focus-visible { outline: 3px solid var(--stage-gold); outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .demo-live { height: auto; min-height: 100dvh; }
+  .demo-dock { flex-wrap: wrap; border-radius: 24px; }
+  .demo-dock__phase { display: none; }
+  .demo-play { right: 12px; left: 12px; width: auto; bottom: 150px; }
+  .demo-live { padding-bottom: 150px !important; }
+}
+
+/* Leave the play-along card its own column on wide screens. */
+@media (min-width: 1100px) { .demo-live--play .live__inner { padding-right: 440px; } }

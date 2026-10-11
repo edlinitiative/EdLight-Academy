@@ -29,6 +29,7 @@ const Direct = lazyWithRetry(() => import('./pages/Direct'));
 const Arena = lazyWithRetry(() => import('./pages/Arena'));
 const ArenaArcade = lazyWithRetry(() => import('./pages/arena/ArenaArcade'));
 const ArenaStory = lazyWithRetry(() => import('./pages/arena/ArenaStory'));
+const ArenaDemo = lazyWithRetry(() => import('./pages/arena/ArenaDemo'));
 const ArenaPlay = lazyWithRetry(() => import('./pages/ArenaPlay'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
 const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
@@ -235,6 +236,9 @@ export default function App() {
                   back to the weekly school race between events — a screen in a
                   school hall is never blank. */}
               <Route path="/direct" element={<Direct />} />
+              {/* The championship night simulated on the real broadcast — ten
+                  fictional schools, no Firestore. Full-screen like /direct. */}
+              <Route path="/arena/demo" element={<ArenaDemo />} />
               <Route path="/live" element={<Navigate to="/direct" replace />} />
             </Routes>
           </Suspense>

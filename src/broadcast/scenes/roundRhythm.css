@@ -73,9 +73,12 @@
 .rb-lane__edge {
   position: absolute;
   left: 0;
-  top: 18%;
-  bottom: 18%;
-  width: 3px;
+  /* A dot, not an edge stripe (Ted: no coloured left-border accents). */
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  transform: translateY(-50%);
   background: hsl(var(--rb-hue, 212) 72% 58%);
 }
 

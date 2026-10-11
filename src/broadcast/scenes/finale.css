@@ -118,10 +118,13 @@
 .finale-rank--lead::before {
 	content: '';
 	position: absolute;
-	left: -10px;
-	top: 20%;
-	bottom: 20%;
-	width: 3px;
+	left: -12px;
+	/* A dot, not an edge stripe (Ted: no coloured left-border accents). */
+	top: 50%;
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	transform: translateY(-50%);
 	background: var(--stage-gold, #FFB92E);
 }
 

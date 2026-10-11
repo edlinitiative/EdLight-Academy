@@ -256,6 +256,8 @@ export default function ArenaArcade() {
                     {open ? t('Inscrire mon école', 'Enskri lekòl mwen') : t('Voir le championnat', 'Wè chanpyona a')}
                   </Link>
                 )}
+                {/* The whole evening, simulated with fictional schools. */}
+                <Link to="/arena/demo" className="arc-btn arc-btn--ghost">{t('Voir la démo', 'Gade demo a')}</Link>
               </div>
             </div>
           </article>

@@ -301,3 +301,49 @@ describe('director — one round, end to end', () => {
     expect(director.tick(30_500).needsAmbient).toBe(true);
   });
 });
+
+// ── Hand-offs (found by running /arena/demo end to end) ─────────────────────
+import { BROADCAST_DIRECTOR_OPTIONS } from '../../broadcast/directorOptions';
+
+describe('the broadcast hands a scene to the one that continues its story', () => {
+  it('announces question 1 instead of letting it expire behind the opening card', () => {
+    const d = createDirector(BROADCAST_DIRECTOR_OPTIONS);
+    d.tick(0);
+    d.push([event(1, 'TOURNAMENT_OPEN', { createdAt: 0 })]);
+    expect(d.tick(10).kind).toBe('TOURNAMENT_OPEN');
+    d.push([event(2, 'ROUND_START', { createdAt: 5000 })]);
+    // Before: the opening held for 60s and ROUND_START (TTL 8s) died queued.
+    expect(d.tick(5000).kind).toBe('ROUND_START');
+  });
+
+  it('still never cuts the opening card before it can be read', () => {
+    const d = createDirector(BROADCAST_DIRECTOR_OPTIONS);
+    d.tick(0);
+    d.push([event(1, 'TOURNAMENT_OPEN', { createdAt: 0 }), event(2, 'ROUND_START', { createdAt: 0 })]);
+    expect(d.tick(10).kind).toBe('TOURNAMENT_OPEN');
+    expect(d.tick(1000).kind).toBe('TOURNAMENT_OPEN');
+    expect(d.tick(2500).kind).toBe('ROUND_START');
+  });
+
+  it('reveals the champions as soon as they are published, then the podium in turn', () => {
+    const d = createDirector(BROADCAST_DIRECTOR_OPTIONS);
+    d.tick(0);
+    d.push([event(1, 'GRADING', { createdAt: 0 })]);
+    expect(d.tick(10).kind).toBe('GRADING');
+    d.push([championSchool(2, { createdAt: 20_000 }), championIndividual(3, { createdAt: 20_000 })]);
+    // Before: both tied with GRADING at 10 and waited for its 90s ceiling.
+    expect(d.tick(20_000).kind).toBe('CHAMPION_SCHOOL');
+    // …and the pair still plays one after the other.
+    expect(d.tick(25_000).kind).toBe('CHAMPION_SCHOOL');
+    expect(d.tick(36_000).kind).toBe('CHAMPION_INDIVIDUAL');
+  });
+
+  it('does not change a director built without the option', () => {
+    const d = createDirector({ maxDwellByKind: { TOURNAMENT_OPEN: 60_000 } });
+    d.tick(0);
+    d.push([event(1, 'TOURNAMENT_OPEN', { createdAt: 0 })]);
+    d.tick(10);
+    d.push([event(2, 'ROUND_START', { createdAt: 5000 })]);
+    expect(d.tick(5000).kind).toBe('TOURNAMENT_OPEN');
+  });
+});

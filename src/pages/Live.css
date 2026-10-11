@@ -215,9 +215,12 @@
 	content: '';
 	position: absolute;
 	left: calc(-1 * clamp(8px, 1.4vw, 20px));
-	top: 6px;
-	bottom: 6px;
-	width: 3px;
+	/* A dot, not an edge stripe (Ted: no coloured left-border accents). */
+	top: 50%;
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	transform: translateY(-50%);
 }
 
 .live__lane--leader::before { background: var(--stage-gold); }
@@ -411,7 +414,7 @@
 		gap: 12px;
 	}
 	.live__lane--leader::before,
-	.live__lane--mine::before { left: -10px; width: 2px; }
+	.live__lane--mine::before { left: -10px; width: 6px; height: 6px; }
 	.live__head { align-items: flex-start; }
 }
 

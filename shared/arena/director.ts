@@ -83,6 +83,19 @@ export interface DirectorOptions {
   maxDwellByKind?: Partial<Record<SceneKind, number>>;
   /** Quiet board time before the page needs something to say. */
   idleMs?: number;
+  /**
+   * A scene whose story the named events CONTINUE ends, once its minDwell has
+   * passed, the moment one of them is waiting — whatever the priorities say.
+   *
+   * Found by running the demo championship (/arena/demo) end to end: priority
+   * alone could not express "the opening card is over once question 1 opens".
+   * TOURNAMENT_OPEN (10, held up to 60s) outranked ROUND_START (9), whose 8s
+   * TTL then expired in the queue — question 1 was never announced. And
+   * GRADING and the CHAMPION_* pair are all 10, so a published result waited
+   * out grading's 90s ceiling. Neither is a preemption (nothing is cut early);
+   * it is a hand-off.
+   */
+  continuedBy?: Partial<Record<SceneKind, ArenaEventType[]>>;
 }
 
 export interface Director {
@@ -104,6 +117,7 @@ export function createDirector(opts: DirectorOptions = {}): Director {
   const maxDwellMs = opts.maxDwellMs ?? DEFAULT_MAX_DWELL_MS;
   const maxDwellByKind = opts.maxDwellByKind ?? {};
   const idleMs = opts.idleMs ?? DEFAULT_IDLE_MS;
+  const continuedBy = opts.continuedBy ?? {};
 
   /** This scene's ceiling — its own override, or the shared default. */
   const maxDwellFor = (kind: SceneKind): number => maxDwellByKind[kind] ?? maxDwellMs;
@@ -134,14 +148,16 @@ export function createDirector(opts: DirectorOptions = {}): Director {
   }
 
   /** Highest priority wins; equal priority is settled by seq, never by arrival. */
-  function pickIndex(): number {
-    let best = 0;
-    for (let i = 1; i < queue.length; i += 1) {
+  function pickIndex(only?: ArenaEventType[]): number {
+    let best = -1;
+    for (let i = 0; i < queue.length; i += 1) {
+      if (only && !only.includes(queue[i].type)) continue;
+      if (best < 0) { best = i; continue; }
       const a = queue[i];
       const b = queue[best];
       if (a.priority > b.priority || (a.priority === b.priority && a.seq < b.seq)) best = i;
     }
-    return best;
+    return Math.max(0, best);
   }
 
   /**
@@ -149,8 +165,8 @@ export function createDirector(opts: DirectorOptions = {}): Director {
    * same school. The absorbed events are not replayed afterwards: they were
    * told, as part of one scene.
    */
-  function takeScene(now: number): Scene {
-    const primary = queue.splice(pickIndex(), 1)[0];
+  function takeScene(now: number, only?: ArenaEventType[]): Scene {
+    const primary = queue.splice(pickIndex(only), 1)[0];
     const key = schoolKeyOf(primary);
     const composed: ArenaEvent[] = [primary];
 
@@ -209,6 +225,13 @@ export function createDirector(opts: DirectorOptions = {}): Director {
       const currentPriority = current.event?.priority ?? -1;
       if (queue.some((e) => e.priority >= PREEMPT_PRIORITY && e.priority > currentPriority)) {
         current = takeScene(now);
+        return current;
+      }
+
+      // The story this scene was setting up has begun: hand over to it.
+      const successors = continuedBy[current.kind];
+      if (successors && queue.some((e) => successors.includes(e.type))) {
+        current = takeScene(now, successors);
         return current;
       }
 
