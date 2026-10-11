@@ -164,7 +164,8 @@ export default function ArenaArcade() {
           {skyline.map((s) => (
             <div key={s.key} role="listitem" className={`arc-tower${myTeam?.key === s.key ? ' is-mine' : ''}`}>
               <span className="arc-tower__tag">
-                <strong>{s.qualified ? `#${s.rank}` : '—'}</strong> {s.label}
+                {/* Short of five: say how short, which is the reason to invite. */}
+                <strong>{s.qualified ? `#${s.rank}` : `${Math.min(s.members, TEAM_SIZE)}/${TEAM_SIZE}`}</strong> {s.label}
               </span>
               <SchoolBuilding name={s.label} floors={s.floors} night cell={6} />
             </div>
