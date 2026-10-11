@@ -195,6 +195,13 @@ const ExamLanding = () => {
     }).sort((a, b) => rank(a.subject) - rank(b.subject) || b.count - a.count);
   }, [levelPapers, attempts, userTrack]);
 
+  // The eight subjects with the most papers are tiles (two full rows of
+  // four); the rest are a compact row. Order within each keeps the subjects'
+  // own order (coefficients / programme order).
+  const mainKeys = new Set([...subjects].sort((a, b) => b.count - a.count).slice(0, 8).map((x) => x.subject));
+  const mainSubjects = subjects.filter((x) => mainKeys.has(x.subject));
+  const otherSubjects = subjects.filter((x) => !mainKeys.has(x.subject)).sort((a, b) => b.count - a.count);
+
   // ── The newest session: the latest year's paper in each subject ──
   const latest = useMemo(() => {
     const y = levelPapers.find((e) => /^\d{4}$/.test(String(e.year)))?.year;
@@ -342,13 +349,13 @@ const ExamLanding = () => {
 
       {!results && !catalogPending && !catalogError && (
         <>
-          <section className="exh-section" aria-labelledby="exh-subjects">
+          <section className="exh-section exh-shelf" aria-labelledby="exh-subjects">
             <div className="exh-section__head">
               <h2 id="exh-subjects" className="exh-section__title">{L('Choisis une matière', 'Chwazi yon matyè')}</h2>
               <span className="exh-section__meta">{levelPapers.length} {L('sujets officiels', 'sijè ofisyèl')}</span>
             </div>
             <div className="exh-subjects">
-              {subjects.map((s) => {
+              {mainSubjects.map((s) => {
                 const color = subjectColor(s.subject);
                 return (
                   <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`}
@@ -376,10 +383,23 @@ const ExamLanding = () => {
                 );
               })}
             </div>
+            {/* The rest as one quiet row, so the grid above is always two full
+                rows instead of ending on an orphan tile. */}
+            {otherSubjects.length > 0 && (
+              <div className="exh-others">
+                <span className="exh-others__label">{L('Autres matières', 'Lòt matyè')}</span>
+                {otherSubjects.map((s) => (
+                  <Link key={s.subject} to={`/exams/${slug}/matiere/${encodeURIComponent(s.subject)}`} className="exh-other"
+                    style={{ '--sub': subjectColor(s.subject) } as React.CSSProperties}>
+                    {s.subject} <b>{s.count}</b>
+                  </Link>
+                ))}
+              </div>
+            )}
           </section>
 
           {latest && (
-            <section className="exh-section" aria-labelledby="exh-latest">
+            <section className="exh-section exh-shelf" aria-labelledby="exh-latest">
               <div className="exh-section__head">
                 <h2 id="exh-latest" className="exh-section__title">{L(`Session ${latest.year}`, `Sesyon ${latest.year}`)}</h2>
                 <Link to={`/exams/${slug}`} className="exh-link">{L('Tous les sujets', 'Tout sijè yo')} <ChevronRight size={16} aria-hidden="true" /></Link>
