@@ -1,13 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Swords, GraduationCap, Check, Smartphone, School as SchoolIcon, Trophy, Globe, Sparkles, Flame,
-  ChevronRight, Users, Plus, Gamepad2,
+  Swords, Check, Smartphone, School as SchoolIcon, Trophy, Globe, Sparkles, Flame,
+  ChevronRight, Users, Plus, Gamepad2, Laptop,
 } from '../components/icons';
 import useStore from '../contexts/store';
 import { useOpenArena } from '../hooks/useOpenArena';
-import { registerForTournament, registerErrorMessage } from '../services/arenaWebService';
-import SchoolField from '../components/arena/SchoolField';
+import { usePlayableArena } from '../hooks/useArenaPlay';
+import ArenaRegisterForm from '../components/arena/ArenaRegisterForm';
+import { ARENA_WEB_PLAY } from '../../shared/arena/webPlay';
 import MySchoolCard from '../components/MySchoolCard';
 import SchoolRanking from '../components/SchoolRanking';
 import PixelAvatar from '../components/PixelAvatar';
@@ -29,7 +30,11 @@ import './ArenaLeague.css';
  *
  * Ted's rule, 2026-09-21: "only the play is now allowed on website, everything
  * else is." So a student registers here, sees their school's progress here,
- * and installs the app to actually play. That order matters: registering is
+ * and installs the app to actually play. AMENDED 2026-10-10 ("for now let
+ * people play on laptops as well"): with `ARENA_WEB_PLAY` on, the play room is
+ * /arena/jouer and this page sends students there once an edition is in
+ * doors or live; the app stays the secondary option. Flip the flag off and
+ * every play link below falls back to the app. That order matters: registering is
  * cheap and can happen the moment interest strikes, on a school computer or a
  * borrowed laptop; installing is the expensive step and it has days to happen.
  *
@@ -58,31 +63,18 @@ export default function Arena() {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
 
   const open = useOpenArena();
+  /* An edition whose room is open or whose questions are running — the
+     moment this page's job changes from "sign up" to "come in and play". */
+  const playable = usePlayableArena(ARENA_WEB_PLAY);
+  const playNow = ARENA_WEB_PLAY && playable && (playable.state === 'doors' || playable.state === 'live')
+    ? playable
+    : null;
+  const playHref = (id: string) => `/arena/jouer/${encodeURIComponent(id)}`;
 
-  const [picked, setPicked] = useState<{ key: string; label: string } | null>(null);
-  const [grade, setGrade] = useState<string>(storedGrade && storedGrade !== 'POSTBAC' ? storedGrade : '');
-  const [attested, setAttested] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<null | { school: string }>(null);
   const [tab, setTab] = useState<'school' | 'inter'>('school');
 
   const signedIn = !!user?.uid;
-  const canSubmit = !!open && signedIn && !!picked && !!grade && attested && !busy;
-
-  const submit = async () => {
-    if (!canSubmit || !open || !picked) return;
-    setBusy(true);
-    setError(null);
-    const res = await registerForTournament({
-      tournamentId: open.id,
-      schoolKey: picked.key,
-      grade,
-    });
-    setBusy(false);
-    if (res.ok) setDone({ school: picked.label });
-    else setError(registerErrorMessage(res.error || 'unknown', isCreole));
-  };
 
   /**
    * The date, only while it is still ahead.
@@ -121,96 +113,52 @@ export default function Arena() {
   const days = streak?.currentStreak || 0;
   const editionTitle = open ? (isCreole && open.titleHt ? open.titleHt : open.title) : null;
 
-  /* The registration block — unchanged behaviour. Only while an edition is
-     open; after a successful registration it becomes the "done" card. */
-  const registration = done ? (
+  /* The registration block. Only while an edition is open; after a
+     successful registration it becomes the "done" card, which points at the
+     play room when web play is on and at the app otherwise. */
+  const registration = done && open ? (
     <div className="arena-page__done" role="status">
       <span className="arena-page__done-icon"><Check size={20} aria-hidden="true" /></span>
       <h2>{t('Vous êtes inscrit', 'Ou enskri')}</h2>
-      <p>
-        {t(
-          `${done.school} — votre place est enregistrée. Installez l’application et connectez-vous avec le même compte : le jour J, votre école ne compte que les élèves réellement présents.`,
-          `${done.school} — plas ou anrejistre. Enstale aplikasyon an epi konekte ak menm kont lan : jou a, lekòl ou konte sèlman elèv ki reyèlman prezan.`,
-        )}
-      </p>
-      <Link to="/download?from=arena" className="button button--primary">
-        {t('Installer l’application', 'Enstale aplikasyon an')}
-      </Link>
-    </div>
-  ) : open ? (
-    <div className="arena-page__form" id="arena-inscription">
-      {/* Said BEFORE the button, not after it. A student who registers here
-          and never installs the app is a no-show who counts for nothing. */}
-      <div className="arena-page__note">
-        <Smartphone size={17} aria-hidden="true" />
-        <p>
-          {t(
-            'Inscrivez-vous ici. Le jour du championnat, les questions se jouent dans l’application mobile — votre école ne compte que les élèves présents.',
-            'Enskri isit la. Jou chanpyona a, kesyon yo jwe nan aplikasyon mobil la — lekòl ou konte sèlman elèv ki prezan.',
-          )}
-        </p>
-      </div>
-
-      <SchoolField picked={picked} onPick={setPicked} isCreole={isCreole} signedIn={signedIn} />
-
-      <label className="arena-field">
-        <span className="arena-field__label">
-          <GraduationCap size={15} aria-hidden="true" /> {t('Votre classe', 'Klas ou')}
-        </span>
-        <select value={grade} onChange={(e) => setGrade(e.target.value)} className="arena-field__select">
-          <option value="">{t('Choisissez votre classe…', 'Chwazi klas ou…')}</option>
-          {GRADES.filter((g) => g.code !== 'POSTBAC').map((g) => (
-            <option key={g.code} value={g.code}>{isCreole ? g.labelHt : g.label}</option>
-          ))}
-        </select>
-        <span className="arena-field__hint">
-          {t('Réservé au primaire et au secondaire.', 'Se pou primè ak segondè sèlman.')}
-        </span>
-      </label>
-
-      <button
-        type="button"
-        className="arena-attest"
-        aria-pressed={attested}
-        onClick={() => setAttested((a) => !a)}
-      >
-        <span className={`arena-attest__box${attested ? ' is-on' : ''}`} aria-hidden="true">
-          {attested && <Check size={13} />}
-        </span>
-        <span>
-          {t(
-            'Je confirme que ces informations sont exactes. Si je gagne, je devrai prouver mon identité.',
-            'Mwen konfime enfòmasyon sa yo kòrèk. Si m genyen, m ap gen pou pwouve ki moun mwen ye.',
-          )}
-        </span>
-      </button>
-
-      {error && <p className="arena-page__error" role="alert">{error}</p>}
-
-      {signedIn ? (
-        <button
-          type="button"
-          className="button button--primary arena-page__submit"
-          disabled={!canSubmit}
-          onClick={submit}
-        >
-          {busy ? t('Inscription…', 'Ap enskri…') : t('Inscrire mon école', 'Enskri lekòl mwen')}
-        </button>
-      ) : (
-        <div className="arena-page__signin">
+      {ARENA_WEB_PLAY ? (
+        <>
           <p>
             {t(
-              'Connectez-vous pour inscrire votre école — votre place est liée à votre compte.',
-              'Konekte pou w enskri lekòl ou — plas ou mare ak kont ou.',
+              `${done.school} — votre place est enregistrée. Le jour J, revenez ici et entrez dans la salle (ou jouez dans l’application, avec le même compte) : votre école ne compte que les élèves réellement présents.`,
+              `${done.school} — plas ou anrejistre. Jou a, tounen isit la epi antre nan sal la (oswa jwe nan aplikasyon an, ak menm kont lan) : lekòl ou konte sèlman elèv ki reyèlman prezan.`,
             )}
           </p>
-          <button type="button" className="button button--primary" onClick={toggleAuthModal}>
-            {t('Se connecter', 'Konekte')}
-          </button>
-        </div>
+          <div className="arena-page__done-actions">
+            <Link to={playHref(open.id)} className="button button--primary">
+              <Laptop size={16} aria-hidden="true" /> {t('Entrer dans la salle', 'Antre nan sal la')}
+            </Link>
+            <Link to="/download?from=arena" className="button button--ghost">
+              <Smartphone size={16} aria-hidden="true" /> {t('Jouer dans l’application', 'Jwe nan aplikasyon an')}
+            </Link>
+          </div>
+        </>
+      ) : (
+        <>
+          <p>
+            {t(
+              `${done.school} — votre place est enregistrée. Installez l’application et connectez-vous avec le même compte : le jour J, votre école ne compte que les élèves réellement présents.`,
+              `${done.school} — plas ou anrejistre. Enstale aplikasyon an epi konekte ak menm kont lan : jou a, lekòl ou konte sèlman elèv ki reyèlman prezan.`,
+            )}
+          </p>
+          <Link to="/download?from=arena" className="button button--primary">
+            {t('Installer l’application', 'Enstale aplikasyon an')}
+          </Link>
+        </>
       )}
     </div>
+  ) : open ? (
+    <ArenaRegisterForm
+      tournamentId={open.id}
+      isCreole={isCreole}
+      onRegistered={(school) => setDone({ school })}
+    />
   ) : null;
+
 
   const fiveLine = !signedIn
     ? t('Connecte-toi et choisis ton école pour voir son équipe.', 'Konekte epi chwazi lekòl ou pou wè ekip li.')
@@ -259,7 +207,12 @@ export default function Arena() {
             </p>
           </div>
           <div className="arena-id__actions">
-            {!signedIn ? (
+            {playNow ? (
+              <Link to={playHref(playNow.id)} className="button button--primary">
+                <Laptop size={16} aria-hidden="true" />{' '}
+                {playNow.state === 'live' ? t('Jouer maintenant', 'Jwe kounye a') : t('Entrer dans la salle', 'Antre nan sal la')}
+              </Link>
+            ) : !signedIn ? (
               <button type="button" className="button button--primary" onClick={toggleAuthModal}>
                 {t('Se connecter', 'Konekte')}
               </button>
@@ -458,44 +411,87 @@ export default function Arena() {
 
             {/* ── The national panel: the real edition, or the honest wait ── */}
             <section className="arena-national" aria-labelledby="arena-national-title">
-              <span className="arena-national__tag">
-                {open
-                  ? (open.state === 'doors' ? t('Portes ouvertes', 'Pòt yo louvri') : t('Inscriptions ouvertes', 'Enskripsyon ouvè'))
-                  : t('Rendez-vous national', 'Randevou nasyonal')}
-              </span>
-              <h2 id="arena-national-title">
-                {open ? editionTitle : t('Prochaine finale en direct : annoncée ici.', 'Pwochen final an dirèk : n ap anonse l isit la.')}
-              </h2>
-              <p>
-                {open
-                  ? (dateLabel
-                    ? t(
-                      `Le ${dateLabel}. Les questions se jouent dans l’application ; ton école ne compte que les élèves présents.`,
-                      `${dateLabel}. Kesyon yo jwe nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.`,
-                    )
-                    : t(
-                      'Les questions se jouent dans l’application ; ton école ne compte que les élèves présents.',
-                      'Kesyon yo jwe nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
-                    ))
-                  : t(
-                    'Une fois par mois, les écoles s’affrontent en direct dans l’application. En attendant, chaque partie compte au classement.',
-                    'Yon fwa pa mwa, lekòl yo afwonte an dirèk nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
-                  )}
-              </p>
-              <div className="arena-national__actions">
-                {open && !done ? (
-                  <a href="#arena-inscription" className="arena-national__cta">
-                    {t('S’inscrire', 'Enskri')} <ChevronRight size={16} aria-hidden="true" />
-                  </a>
-                ) : (
-                  <Link to="/jeux" className="arena-national__cta">
-                    {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={16} aria-hidden="true" />
-                  </Link>
-                )}
-                <Link to="/download?from=arena" className="arena-national__ghost">
-                  <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
-                </Link>
-              </div>
+              {playNow ? (
+                <>
+                  {/* The room is open or the questions are running: this panel's
+                      one job is now to get the student into the play room. */}
+                  <span className="arena-national__tag">
+                    {playNow.state === 'live' ? t('En direct', 'An dirèk') : t('Portes ouvertes', 'Pòt yo louvri')}
+                  </span>
+                  <h2 id="arena-national-title">
+                    {isCreole && playNow.titleHt ? playNow.titleHt : playNow.title}
+                  </h2>
+                  <p>
+                    {playNow.state === 'live'
+                      ? t(
+                        'Les questions sont en cours. Entre dans la salle depuis cet ordinateur, ou ouvre l’application avec le même compte.',
+                        'Kesyon yo ap pase kounye a. Antre nan sal la sou òdinatè sa a, oswa louvri aplikasyon an ak menm kont lan.',
+                      )
+                      : t(
+                        'La salle est ouverte. Entre maintenant — ton école ne compte que les élèves présents avant le départ.',
+                        'Sal la louvri. Antre kounye a — lekòl ou konte sèlman elèv ki prezan anvan kòmansman an.',
+                      )}
+                  </p>
+                  <div className="arena-national__actions">
+                    <Link to={playHref(playNow.id)} className="arena-national__cta">
+                      {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={16} aria-hidden="true" />
+                    </Link>
+                    <Link to="/download?from=arena" className="arena-national__ghost">
+                      <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span className="arena-national__tag">
+                    {open
+                      ? (open.state === 'doors' ? t('Portes ouvertes', 'Pòt yo louvri') : t('Inscriptions ouvertes', 'Enskripsyon ouvè'))
+                      : t('Rendez-vous national', 'Randevou nasyonal')}
+                  </span>
+                  <h2 id="arena-national-title">
+                    {open ? editionTitle : t('Prochaine finale en direct : annoncée ici.', 'Pwochen final an dirèk : n ap anonse l isit la.')}
+                  </h2>
+                  <p>
+                    {open
+                      ? `${dateLabel ? t(`Le ${dateLabel}. `, `${dateLabel}. `) : ''}${ARENA_WEB_PLAY
+                        ? t(
+                          'Les questions se jouent ici, sur ordinateur, ou dans l’application ; ton école ne compte que les élèves présents.',
+                          'Kesyon yo jwe isit la, sou òdinatè, oswa nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
+                        )
+                        : t(
+                          'Les questions se jouent dans l’application ; ton école ne compte que les élèves présents.',
+                          'Kesyon yo jwe nan aplikasyon an ; lekòl ou konte sèlman elèv ki prezan.',
+                        )}`
+                      : ARENA_WEB_PLAY
+                        ? t(
+                          'Une fois par mois, les écoles s’affrontent en direct, sur ordinateur ou dans l’application. En attendant, chaque partie compte au classement.',
+                          'Yon fwa pa mwa, lekòl yo afwonte an dirèk, sou òdinatè oswa nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
+                        )
+                        : t(
+                          'Une fois par mois, les écoles s’affrontent en direct dans l’application. En attendant, chaque partie compte au classement.',
+                          'Yon fwa pa mwa, lekòl yo afwonte an dirèk nan aplikasyon an. Pandan n ap tann, chak pati konte nan klasman an.',
+                        )}
+                  </p>
+                  <div className="arena-national__actions">
+                    {open && !done ? (
+                      <a href="#arena-inscription" className="arena-national__cta">
+                        {t('S’inscrire', 'Enskri')} <ChevronRight size={16} aria-hidden="true" />
+                      </a>
+                    ) : open && done && ARENA_WEB_PLAY ? (
+                      <Link to={playHref(open.id)} className="arena-national__cta">
+                        {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={16} aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <Link to="/jeux" className="arena-national__cta">
+                        {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={16} aria-hidden="true" />
+                      </Link>
+                    )}
+                    <Link to="/download?from=arena" className="arena-national__ghost">
+                      <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                    </Link>
+                  </div>
+                </>
+              )}
             </section>
 
             {open === undefined && (

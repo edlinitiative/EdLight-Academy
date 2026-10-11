@@ -27,6 +27,7 @@ const Defi = lazyWithRetry(() => import('./pages/Defi'));
 const Live = lazyWithRetry(() => import('./pages/Live'));
 const Direct = lazyWithRetry(() => import('./pages/Direct'));
 const Arena = lazyWithRetry(() => import('./pages/Arena'));
+const ArenaPlay = lazyWithRetry(() => import('./pages/ArenaPlay'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
 const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
@@ -164,6 +165,11 @@ export default function App() {
                     asking a visitor to sign in and then install the app needs
                     all three. */}
                 <Route path="arena" element={<Arena />} />
+                {/* The play room (ARENA_WEB_PLAY, shared/arena/webPlay.ts) —
+                    Ted, 2026-10-10: "let people play on laptops as well".
+                    Without an id it opens whichever edition is running. */}
+                <Route path="arena/jouer" element={<ArenaPlay />} />
+                <Route path="arena/jouer/:tid" element={<ArenaPlay />} />
                 {/* User-created tournaments. Static segments before :id. */}
                 <Route path="tournois" element={<TournoisHub />} />
                 <Route path="tournois/nouveau" element={<TournoisCreate />} />

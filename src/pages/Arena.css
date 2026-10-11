@@ -372,6 +372,13 @@
   margin-bottom: 1rem;
 }
 
+/* Play room first, the app as the second door. */
+.arena-page__done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
 /* ── "My school isn't in the list" ────────────────────────────────────── */
 
 .arena-field__add {

@@ -45,6 +45,7 @@ import {
 import type { FinalBlocker } from '../../../shared/arena/review';
 import { type ArenaState } from '../../../shared/arena/state';
 import { HAITI_DEPARTMENTS } from '../../data/haitiGeo';
+import { ARENA_WEB_PLAY } from '../../../shared/arena/webPlay';
 
 /**
  * AdminArena — the tournament list, and the run console a human drives on
@@ -1852,6 +1853,35 @@ export default function AdminArena() {
           </Link>
         </div>
       </div>
+
+      {/* The student's side of THIS edition, by id. A rehearsal edition (a
+          title with "test"/"démo") is hidden from /arena and from the no-id
+          /arena/jouer on purpose, so this link is how an admin walks the
+          whole night as a player in a second tab — register there, then drive
+          the states from here. */}
+      {ARENA_WEB_PLAY ? (
+        <div className="admin-card" style={{ padding: 18, marginBottom: 18 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div className="admin-tile__label">{t('CÔTÉ JOUEUR (WEB)', 'BÒ JWÈ A (WEB)')}</div>
+              <div className="admin-page__subtitle" style={{ margin: 0, fontSize: 12 }}>
+                {t(
+                  'La salle de jeu de cette édition, telle qu’un élève la voit. Ouvrez-la dans un autre onglet pour tester de bout en bout.',
+                  'Sal jwèt edisyon sa a, jan yon elèv wè l. Louvri l nan yon lòt onglè pou teste l nèt.',
+                )}
+              </div>
+            </div>
+            <a
+              className="admin-btn"
+              href={`/arena/jouer/${encodeURIComponent(tid)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t('Ouvrir la salle de jeu', 'Louvri sal jwèt la')}
+            </a>
+          </div>
+        </div>
+      ) : null}
 
       <div className="admin-card" style={{ padding: 18 }}>
         <div className="admin-tile__label" style={{ marginBottom: 10 }}>
