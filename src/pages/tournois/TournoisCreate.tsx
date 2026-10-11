@@ -9,7 +9,7 @@
  */
 import CategoryIcon from '../../components/CategoryIcon';
 import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CalendarDays, Layers, Radio, Swords, Sparkles } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
@@ -25,6 +25,8 @@ import {
 import { buildSchedule } from '../../../shared/tournois/schedule';
 import { createTournament, errorMessage } from '../../services/tournoisService';
 import { formatWhen, useLang } from './parts';
+import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import ArenaGate, { PinArt } from '../../components/arena/ArenaGate';
 import './Tournois.css';
 
 const ALLOWED = TRIVIA_CATEGORIES.map((c) => c.id);
@@ -59,7 +61,6 @@ export default function TournoisCreate() {
   const navigate = useNavigate();
   const user = useStore((s) => s.user);
   const storedGrade = useStore((s) => s.grade);
-  const toggleAuthModal = useStore((s) => s.toggleAuthModal);
   const { profile } = useTrivia();
 
   const [step, setStep] = useState(0);
@@ -103,10 +104,18 @@ export default function TournoisCreate() {
   if (!user?.uid) {
     return (
       <section className="tn">
-        <div className="tn__narrow tn-card" style={{ textAlign: 'center' }}>
-          <h1 style={{ marginTop: 0 }}>{t('Créer un tournoi', 'Kreye yon tounwa')}</h1>
-          <p className="tn-muted">{t('Connecte-toi pour créer un tournoi — il est lié à ton compte.', 'Konekte pou w kreye yon tounwa — li mare ak kont ou.')}</p>
-          <button type="button" className="button button--primary" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
+        <div className="tn__wrap">
+          <ArenaGate
+            over={t('Tournoi privé', 'Tounwa prive')}
+            title={t('Monte un tournoi pour ta classe', 'Fè yon tounwa pou klas ou')}
+            text={t(
+              'Choisis le format et les thèmes, on génère les questions et le calendrier, tes amis entrent avec un PIN. Le tournoi est lié à ton compte : connecte-toi pour le créer.',
+              'Chwazi fòma a ak tèm yo, nou jenere kesyon yo ak orè a, zanmi w yo antre ak yon PIN. Tounwa a mare ak kont ou : konekte pou w kreye l.',
+            )}
+            art={<PinArt />}
+            back="/tournois"
+            backLabel={t('Voir les tournois', 'Gade tounwa yo')}
+          />
         </div>
       </section>
     );
@@ -139,10 +148,12 @@ export default function TournoisCreate() {
   return (
     <section className="tn">
       <div className="tn__narrow">
-        <Link to="/tournois" className="tn-muted" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-          <ArrowLeft size={15} aria-hidden="true" /> {t('Tournois', 'Tounwa')}
-        </Link>
-        <h1 style={{ margin: '0.6rem 0 0', letterSpacing: '-0.03em' }}>{t('Nouveau tournoi', 'Nouvo tounwa')}</h1>
+        <ArenaPageHead
+          back="/tournois"
+          backLabel={t('Tournois', 'Tounwa')}
+          over={t('Nouveau tournoi', 'Nouvo tounwa')}
+          title={t('Monte ton tournoi', 'Fè tounwa ou')}
+        />
         <div className="tn-steps" aria-hidden="true">
           {[0, 1, 2, 3].map((i) => <span key={i} className={i <= step ? 'is-on' : ''} />)}
         </div>
