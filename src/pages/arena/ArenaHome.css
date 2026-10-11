@@ -482,3 +482,58 @@ body.arena-night .navbar .nav-actions__signin { color: #DCE6FF !important; }
 body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
 body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.12); }
 body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .nav-search-btn:hover, body.arena-night .navbar .theme-toggle:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+/* ═══ Mode Histoire in the night (map + results; the quiz stays light) ═══ */
+.arc-story--night {
+  min-height: calc(100svh - 56px);
+  background:
+    radial-gradient(900px 500px at 20% 0%, rgba(61, 139, 255, 0.16), transparent 70%),
+    radial-gradient(800px 500px at 100% 100%, rgba(47, 209, 140, 0.08), transparent 70%),
+    #040A1C;
+  color: #EAF0FF;
+}
+.arc-story--night .arc-back { color: #A3B5DC; }
+.arc-story--night .arc-back:hover { color: #fff; }
+.arc-story--night .arc-eyebrow { color: #FFC24A; letter-spacing: 0.12em; }
+.arc-story--night .arc-story__head h1 {
+  font-size: clamp(2.5rem, 1.6rem + 3vw, 4rem); letter-spacing: -0.045em;
+  background: linear-gradient(180deg, #fff, #FFE2A6); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.arc-story--night .arc-story__lede { color: #A3B5DC; }
+.arc-story--night .arc-story__total { background: rgba(255, 194, 74, 0.12); color: #FFE2A6; box-shadow: inset 0 0 0 1px rgba(255, 194, 74, 0.35); }
+.arc-story--night .arc-story__total svg { color: #FFC24A; fill: #FFC24A; }
+.arc-story--night .arc-map {
+  background: radial-gradient(70% 70% at 50% 45%, rgba(47, 209, 140, 0.14), transparent 70%), linear-gradient(180deg, #0B1A40, #071230);
+  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.14), 0 30px 60px -40px rgba(0, 0, 0, 0.9);
+  border-radius: 28px;
+}
+.arc-story--night .arc-dept.is-open .arc-dept__fill { fill: #22B57A; }
+.arc-story--night .arc-dept.is-done .arc-dept__fill { fill: #5BE6A9; }
+.arc-story--night .arc-dept__fill { stroke: #071230; }
+.arc-story--night .arc-chapter {
+  background: linear-gradient(180deg, #0F1E46, #0A1534); color: #EAF0FF;
+  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.14), 0 30px 60px -40px rgba(0, 0, 0, 0.9); border-radius: 28px;
+}
+.arc-story--night .arc-chapter h2 { color: #fff; font-size: 2.25rem; letter-spacing: -0.03em; }
+.arc-story--night .arc-chapter__intro { color: #A3B5DC; }
+.arc-story--night .arc-stage { background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.1); color: #EAF0FF; }
+.arc-story--night .arc-stage:hover:not(:disabled) { background: rgba(61, 139, 255, 0.12); }
+.arc-story--night .arc-stage__body span { color: #C8D6F5; }
+.arc-story--night .arc-stage__body small { color: #8FA3CF; }
+.arc-story--night .arc-stage__end { color: #7FB0FF; }
+.arc-story--night .arc-stage.is-locked { opacity: 0.5; }
+.arc-story--night .arc-stage.is-locked .arc-stage__num { background: #2A3B66; box-shadow: 0 3px 0 #18254A; color: #8FA3CF; }
+.arc-story--night .arc-stage--boss { background: linear-gradient(135deg, #3A1E10, #6B2A12); box-shadow: inset 0 0 0 1px rgba(255, 140, 90, 0.35); }
+.arc-story--night .arc-stage--boss:hover:not(:disabled) { background: linear-gradient(135deg, #4A2614, #823216); }
+.arc-story--night .arc-stars svg { color: rgba(255, 255, 255, 0.25); }
+.arc-story--night .arc-stars svg.is-on { color: #FFC24A; fill: #FFC24A; }
+.arc-story--night .arc-btn--ghost { background: rgba(255, 255, 255, 0.08); color: #EAF0FF; }
+.arc-story--night .arc-btn--ghost:hover { background: rgba(255, 255, 255, 0.14); }
+.arc-story--night .arc-result__card {
+  background: linear-gradient(180deg, #13245A, #0A1534); color: #EAF0FF;
+  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.16), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+}
+.arc-story--night .arc-result__card.is-won { background: radial-gradient(120% 70% at 50% 0%, rgba(255, 194, 74, 0.28), transparent 60%), linear-gradient(180deg, #13245A, #0A1534); }
+.arc-story--night .arc-result__card h1 { color: #fff; }
+.arc-story--night .arc-result__score { color: #FFC24A; font-size: 4rem; text-shadow: 0 0 30px rgba(255, 194, 74, 0.45); }
+.arc-story--night .arc-result__line { color: #C8D6F5; }

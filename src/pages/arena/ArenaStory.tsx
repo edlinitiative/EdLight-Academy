@@ -15,6 +15,7 @@ import {
 } from '../../../shared/arenaStory';
 import { departmentPath, departmentCentroid, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import './ArenaArcade.css';
+import './ArenaHome.css';
 
 /**
  * /arena/histoire — Mode Histoire, « Le tour d'Ayiti ».
@@ -83,6 +84,12 @@ export default function ArenaStory() {
   const [result, setResult] = useState<{ score: number; total: number; stars: number; xp: number | null } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   useFocusMode(screen === 'play');
+  // The map and the results live in the Arène's night; the quiz itself stays light.
+  useEffect(() => {
+    if (screen === 'play') return undefined;
+    document.body.classList.add('arena-night');
+    return () => document.body.classList.remove('arena-night');
+  }, [screen]);
   useEffect(() => { if (screen !== 'play') { window.scrollTo(0, 0); headingRef.current?.focus(); } }, [screen, chapterIdx]);
 
   const stageOf = (i: number): StoryStage => (i === STAGES_PER_CHAPTER - 1 ? chapter.bossStage : chapter.stages[i]);
@@ -156,7 +163,7 @@ export default function ArenaStory() {
     const conquered = isBoss && won;
     const finale = conquered && chapterIdx === STORY_CHAPTERS.length - 1;
     return (
-      <section className="section arc-story">
+      <section className="section arc-story arc-story--night">
         <div className="container arc-result">
           <div className={`arc-result__card${won ? ' is-won' : ''}`}>
             {isBoss && <PixelAvatar seed={chapter.boss.name} size={88} className="arc-result__boss" />}
@@ -207,7 +214,7 @@ export default function ArenaStory() {
 
   // ── Map + chapter panel ────────────────────────────────────────────────
   return (
-    <section className="section arc-story">
+    <section className="section arc-story arc-story--night">
       <div className="container arc-story__container">
         <header className="arc-story__head">
           <Link to="/arena" className="arc-back"><ArrowLeft size={16} aria-hidden="true" /> {t('Arène', 'Arèn')}</Link>
