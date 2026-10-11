@@ -24,14 +24,15 @@ const SandraPanel = lazyWithRetry(() => import('./SandraPanel'));
  *  URL without `/take`) and the results page are not attempts. */
 const EXAM_PAPER = /^\/exams\/[^/]+\/[^/]+\/take\/?$/;
 
-/** Arena (inter-school championship) play. The web surface is registration
- *  only today — play happens in the app — but the guard is written for the
- *  routes a play surface would use so it can never ship unprotected. */
-const ARENA_PLAY = /^\/arena\/(match|matche|duel|play|jwe|tournoi)(\/|$)/;
+/** Arena (inter-school championship) play — a prize competition. The web
+ *  play room is /arena/jouer (ARENA_WEB_PLAY); the other names are guarded so
+ *  a future play surface can never ship unprotected. Blocked on the whole
+ *  route, not only while a question is open: the lobby is part of the event. */
+const ARENA_PLAY = /^\/arena\/(jouer|match|matche|duel|play|jwe|tournoi)(\/|$)/;
 
 /** Game / trivia routes. Ordinary games are not prize competition, so they are
  *  only restricted while a round is actually live (`focusMode`). */
-const GAME_ROUND = /^\/(jeux|trivia)(\/|$)/;
+const GAME_ROUND = /^\/(jeux|trivia|arena\/histoire)(\/|$)/;
 
 export type SandraRestrictionKind = 'exam' | 'competition';
 

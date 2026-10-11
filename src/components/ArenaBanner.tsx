@@ -60,7 +60,7 @@ export default function ArenaBanner() {
 
   return (
     <Link
-      to="/arena"
+      to="/arena/championnat"
       className="card"
       style={{
         display: 'flex',

@@ -81,6 +81,7 @@ import {
   InfoIcon,
   KeyIcon,
   KeyboardIcon,
+  LaptopIcon,
   LightbulbIcon,
   LightningIcon,
   LinkIcon,
@@ -233,6 +234,7 @@ export const Info = make(InfoIcon, 'duotone', 'Info');
 export const KeyRound = make(KeyIcon, 'duotone', 'KeyRound');
 export const Keyboard = make(KeyboardIcon, 'duotone', 'Keyboard');
 export const Landmark = make(BankIcon, 'duotone', 'Landmark');
+export const Laptop = make(LaptopIcon, 'duotone', 'Laptop');
 export const Languages = make(TranslateIcon, 'duotone', 'Languages');
 export const Layers = make(StackIcon, 'duotone', 'Layers');
 export const LayoutDashboard = make(SquaresFourIcon, 'duotone', 'LayoutDashboard');
