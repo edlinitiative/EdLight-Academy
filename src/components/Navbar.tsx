@@ -5,7 +5,6 @@ import {
   Home,
   BookOpen,
   ClipboardList,
-  Gamepad2,
   LayoutDashboard,
   CalendarCheck,
   LogOut,
@@ -40,9 +39,9 @@ const NAV_ITEMS = [
   // The national exams as their own destination (Ted: "create a new tab for
   // national exams").
   { to: '/exams', labelKey: 'nav.exams', icon: GraduationCap },
-  { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
-  // Its own destination, not a card inside /jeux: the championship is an
-  // event between schools, not one more game.
+  // The Arène is the arcade (Ted, 2026-10-10): games, duels, tournois, the
+  // story mode and the championship are all cabinets inside it, so the old
+  // separate Jeux tab is gone and every competitive route lights this one.
   { to: '/arena', labelKey: 'nav.arena', icon: Swords },
 ];
 
@@ -145,6 +144,7 @@ export function Navbar() {
     }
     // /quizzes is the same page as the Pratiquer tab.
     if (path === '/practice' && pathname.startsWith('/quizzes')) return true;
+    if (path === '/arena' && /^\/(jeux|trivia|tournois|classement|defi)(\/|$)/.test(pathname)) return true;
     return pathname.startsWith(path);
   };
 

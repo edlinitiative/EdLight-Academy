@@ -225,7 +225,7 @@ export default function ArenaArcade() {
               <p className="arc-eyebrow">{t('1 contre 1', '1 kont 1')}</p>
               <h3>{t('Défi d’un ami', 'Defi yon zanmi')}</h3>
               <p>{t('Joue une partie, envoie les mêmes questions à un ami. Un essai, le meilleur gagne.', 'Jwe yon pati, voye menm kesyon yo bay yon zanmi. Yon sèl chans, pi bon an genyen.')}</p>
-              <Link to="/jeux/trivia" className="arc-btn arc-btn--go">{t('Défier', 'Defye')}</Link>
+              <Link to="/jeux/trivia" state={{ duelPick: true }} className="arc-btn arc-btn--go">{t('Défier', 'Defye')}</Link>
             </div>
           </article>
 

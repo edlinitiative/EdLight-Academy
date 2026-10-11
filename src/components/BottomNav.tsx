@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Home, BookOpen, ClipboardList, GraduationCap, Gamepad2, Swords, User } from './icons';
+import { Home, BookOpen, ClipboardList, GraduationCap, Swords, User } from './icons';
 
 /**
  * Mobile-only bottom tab bar — the primary navigation on phones.
@@ -19,7 +19,6 @@ const TABS = [
   { to: '/courses', labelKey: 'nav.learn', icon: BookOpen },
   { to: '/practice', labelKey: 'nav.practice', icon: ClipboardList },
   { to: '/exams', labelKey: 'nav.exams', icon: GraduationCap },
-  { to: '/jeux', labelKey: 'nav.compete', icon: Gamepad2 },
   { to: '/arena', labelKey: 'nav.arena', icon: Swords },
   { to: '/profile', labelKey: 'nav.profile', icon: User },
 ];
@@ -76,6 +75,7 @@ export default function BottomNav() {
     if (path === '/' || exact) return pathname === path;
     // /quizzes is the same page as the Pratiquer tab.
     if (path === '/practice' && pathname.startsWith('/quizzes')) return true;
+    if (path === '/arena' && /^\/(jeux|trivia|tournois|classement|defi)(\/|$)/.test(pathname)) return true;
     return pathname.startsWith(path);
   };
 
