@@ -10,7 +10,7 @@ import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';
 import { dueQuestionIds } from '../../utils/review';
 import { normalizeExamCatalog } from '../../utils/examCatalog';
-import { buildExamIndex, displayStoredExamTitle } from '../../utils/examUtils';
+import { buildExamIndex, displayStoredExamTitle, subjectColor } from '../../utils/examUtils';
 import { sessionRowName } from '../../utils/examNaming';
 import { useExamAttempts } from '../../hooks/useExamAttempts';
 import ExamCountdown from '../../components/ExamCountdown';
@@ -160,6 +160,47 @@ export default function LearnWorkspace({
     return m?.title || '';
   };
 
+  // ── Exams: one row per paper (the newest attempt wins), named from the
+  // catalogue; a paper the catalogue cannot name is called by its level,
+  // never a bare « Examen ».
+  const examRows = useMemo(() => {
+    const seen = new Set<string>();
+    const rows: any[] = [];
+    for (const a of attempts as any[]) {
+      const id = String(a?.exam_id || '');
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      const submitted = a?.status === 'submitted';
+      const ex = examByKey.get(id);
+      const named = ex ? sessionRowName(ex, isCreole ? 'ht' : 'fr') : null;
+      const stored = displayStoredExamTitle(a?.exam_title || a?.examTitle, a, '');
+      const levelName = /univers/i.test(String(a?.level)) ? L('Concours université', 'Konkou inivèsite')
+        : /9/.test(String(a?.level)) ? L('Examen de 9ᵉ AF', 'Egzamen 9yèm AF') : L('Épreuve du Bac', 'Eprèv Bak');
+      const title = named ? `${ex._subject ? `${ex._subject} · ` : ''}${named.title}` : (stored && stored !== 'Examen' ? stored : levelName);
+      const lvl = levelToUrl(a?.level);
+      const pct = best[id]?.percentage;
+      const answered = a?.answers ? Object.keys(a.answers).length : 0;
+      rows.push({
+        key: id,
+        title,
+        year: ex?.year && /^\d{4}$/.test(String(ex.year)) ? String(ex.year) : '',
+        color: ex?._subject ? subjectColor(ex._subject) : '#1B6FE0',
+        submitted,
+        status: submitted
+          ? (typeof pct === 'number' ? L(`Meilleur score : ${Math.round(pct)} %`, `Pi bon nòt : ${Math.round(pct)} %`) : L('Terminé', 'Fini'))
+          : L(`En cours · ${answered} réponse${answered > 1 ? 's' : ''} enregistrée${answered > 1 ? 's' : ''}`, `An kou · ${answered} repons anrejistre`),
+        cta: submitted ? L('Corrigé', 'Koreksyon') : L('Reprendre', 'Kontinye'),
+        open: () => {
+          if (!lvl) return navigate('/exams');
+          if (submitted) return navigate(`/exams/${lvl}/${id}/results`);
+          return navigate(`/exams/${lvl}/${id}/take`, { state: { autostart: true, resume: true } });
+        },
+      });
+      if (rows.length === 3) break;
+    }
+    return rows;
+  }, [attempts, examByKey, best, isCreole, L, navigate]);
+
   // Started: a frame of the next lesson. Not started: a frame a third of the
   // way in — first lessons often open on a title card or an app screen.
   const frameFor = (course: any, nextUnit: any, started: boolean) => {
@@ -229,45 +270,25 @@ export default function LearnWorkspace({
               <h2 id="lws-exams"><ClipboardList size={20} aria-hidden="true" /> {L('Tes examens blancs', 'Egzamen blan ou yo')}</h2>
               <Link to="/exams" className="lws-link">{L('Tous les sujets', 'Tout sijè yo')} <ChevronRight size={14} aria-hidden="true" /></Link>
             </div>
-            <div className="lws-card lws-exams">
-              {attempts.length === 0 ? (
-                <div className="lws-empty">
-                  <p>{L('Aucune épreuve commencée. Les vrais sujets du Bac t’attendent, avec leur durée officielle.', 'Ou poko kòmanse okenn eprèv. Vrè sijè Bak yo ap tann ou, ak dire ofisyèl yo.')}</p>
-                  <Link to="/exams" className="lws-btn lws-btn--primary">{L('Choisir un sujet', 'Chwazi yon sijè')}</Link>
-                </div>
-              ) : attempts.slice(0, 4).map((a: any, i: number) => {
-                const submitted = a?.status === 'submitted';
-                const ex = a?.exam_id ? examByKey.get(String(a.exam_id)) : null;
-                const named = ex ? sessionRowName(ex, isCreole ? 'ht' : 'fr') : null;
-                const title = named
-                  ? `${ex._subject ? `${ex._subject} · ` : ''}${named.title}`
-                  : displayStoredExamTitle(a?.exam_title || a?.examTitle, a, L('Examen', 'Egzamen'));
-                const lvl = levelToUrl(a?.level);
-                const pct = best[String(a?.exam_id)]?.percentage;
-                const open = () => {
-                  if (!a?.exam_id || !lvl) return navigate('/exams');
-                  if (submitted) return navigate(`/exams/${lvl}/${a.exam_id}/results`);
-                  return navigate(`/exams/${lvl}/${a.exam_id}/take`, { state: { autostart: true, resume: true } });
-                };
-                return (
-                  <div key={`${a?.exam_id || 'x'}-${i}`} className="lws-exam">
-                    <div className="lws-exam__body">
-                      <h4>{title}</h4>
-                      <p>
-                        {submitted
-                          ? (typeof pct === 'number'
-                            ? <span className="lws-exam__score">{L(`Meilleur score : ${Math.round(pct)} %`, `Pi bon nòt : ${Math.round(pct)} %`)}</span>
-                            : L('Terminé', 'Fini'))
-                          : <span className="lws-exam__open">{L('En cours — tes réponses sont enregistrées', 'An kou — repons ou yo anrejistre')}</span>}
-                      </p>
-                    </div>
-                    <button type="button" className={`lws-btn ${submitted ? 'lws-btn--soft' : 'lws-btn--primary'}`} onClick={open}>
-                      {submitted ? L('Voir le corrigé', 'Wè koreksyon an') : L('Reprendre', 'Kontinye')}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+            {examRows.length === 0 ? (
+              <div className="lws-card lws-empty">
+                <p>{L('Aucune épreuve commencée. Les vrais sujets du Bac t’attendent, avec leur durée officielle.', 'Ou poko kòmanse okenn eprèv. Vrè sijè Bak yo ap tann ou, ak dire ofisyèl yo.')}</p>
+                <Link to="/exams" className="lws-btn lws-btn--primary">{L('Choisir un sujet', 'Chwazi yon sijè')}</Link>
+              </div>
+            ) : (
+              <div className="lws-exams2">
+                {examRows.map((row) => (
+                  <button key={row.key} type="button" className="lws-ex" onClick={row.open}>
+                    <span className="lws-ex__year" style={{ '--sub': row.color } as React.CSSProperties}>{row.year || '—'}</span>
+                    <span className="lws-ex__body">
+                      <strong>{row.title}</strong>
+                      <span className={row.submitted ? 'lws-ex__done' : 'lws-ex__open'}>{row.status}</span>
+                    </span>
+                    <span className={`lws-btn ${row.submitted ? 'lws-btn--soft' : 'lws-btn--primary'}`}>{row.cta}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         </div>
 

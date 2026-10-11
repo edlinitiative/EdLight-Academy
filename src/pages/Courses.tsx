@@ -903,12 +903,22 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
           </div>
         ) : (
           <>
-            {liveGroups.map((g) => (
-              <section key={g.key} className="cl-group" aria-labelledby={`grp-${g.key}`}>
-                <h2 className="cl-group__title" id={`grp-${g.key}`}>
-                  <SubjectTile code={g.key} size="sm" />
-                  {groupLabel(g.key)}
-                </h2>
+            {/* Fullest subjects first, so a one-course subject closes the
+                page instead of punching a hole in the middle of it. */}
+            {[...liveGroups].sort((a, b) => b.items.filter((c) => !c.comingSoon).length - a.items.filter((c) => !c.comingSoon).length).map((g) => (
+              <section key={g.key} className={`cl-group cl-shelf cl-shelf--${g.key}`} aria-labelledby={`grp-${g.key}`}>
+                <div className="cl-shelf__head">
+                  <h2 className="cl-group__title" id={`grp-${g.key}`}>
+                    <SubjectTile code={g.key} size="md" />
+                    {groupLabel(g.key)}
+                  </h2>
+                  <span className="cl-shelf__meta">
+                    {[
+                      g.lessons > 0 ? t('courses.lessonsCount', { count: g.lessons }) : '',
+                      L(`${g.items.filter((c) => !c.comingSoon).length} classe${g.items.filter((c) => !c.comingSoon).length > 1 ? 's' : ''}`, `${g.items.filter((c) => !c.comingSoon).length} klas`),
+                    ].filter(Boolean).join(' · ')}
+                  </span>
+                </div>
                 <div className="cl-grid">
                   {g.items.filter((c) => !c.comingSoon).map((course) => {
                     const st = courseStats(course);

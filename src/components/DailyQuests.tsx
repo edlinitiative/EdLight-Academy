@@ -35,15 +35,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Brain,
-  CalendarCheck,
   Check,
   ChevronRight,
-  ClipboardCheck,
   Hourglass,
-  ListChecks,
   Sparkles,
-  TrendingUp,
 } from './icons';
 import useStore from '../contexts/store';
 import { useAppData } from '../hooks/useData';
@@ -64,8 +59,6 @@ import {
   msUntilDayEnd,
   splitCountdown,
   unclaimedQuests,
-  claimedXp,
-  remainingXp,
   type DailyQuest,
   type QuestId,
 } from '../services/dailyQuests';
@@ -84,13 +77,6 @@ const EXAM_LEVEL_TO_SLUG: Record<string, string> = {
 const QUIZ_ATTEMPT_LOOKBACK = 40;
 const EXAM_ATTEMPT_LOOKBACK = 20;
 
-const QUEST_ICON: Record<QuestId, React.ReactNode> = {
-  review: <Brain size={20} aria-hidden="true" />,
-  lessons: <TrendingUp size={20} aria-hidden="true" />,
-  'unit-quiz': <ListChecks size={20} aria-hidden="true" />,
-  'daily-challenge': <CalendarCheck size={20} aria-hidden="true" />,
-  'exam-paper': <ClipboardCheck size={20} aria-hidden="true" />,
-};
 
 /** True while the visitor has asked for less movement. Static in jsdom. */
 function usePrefersReducedMotion(): boolean {
@@ -316,28 +302,17 @@ export default function DailyQuests() {
   const clock = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
   const doneCount = quests.filter((q) => q.complete).length;
   const allDone = doneCount === quests.length;
-  const banked = claimedXp(quests);
-  const left = remainingXp(quests);
 
   return (
-    <section className="quests pf-card" aria-labelledby="quests-title">
-      <div className="pf-head quests__head">
-        <span className="quests__head-text">
-          <span className="pf-eyebrow">{t('Quêtes du jour', 'Kèt jodi a')}</span>
-          <h2 className="pf-head__title" id="quests-title">
-            {allDone
-              ? t('Tout est fait pour aujourd’hui', 'Tout bagay fèt pou jodi a')
-              : t(
-                  `${doneCount} sur ${quests.length} terminée${doneCount === 1 ? '' : 's'}`,
-                  `${doneCount} sou ${quests.length} fini`,
-                )}
-          </h2>
-        </span>
-        {/* The mockups' "Expire dans 06h 42m" — to LOCAL midnight, the same
-            boundary the streak uses, so the two can never contradict. */}
-        <span className="pf-pill pf-pill--slate quests__clock">
-          <Hourglass size={13} aria-hidden="true" />
-          {t(`Expire dans ${clock}`, `L ap fini nan ${clock}`)}
+    <section className="quests quests--clean" aria-labelledby="quests-title">
+      {/* One line: the title, then how many are done and when they reset
+          (local midnight — the streak's boundary, so the two agree). */}
+      <div className="quests__top">
+        <h2 className="quests__h" id="quests-title">{t('Quêtes du jour', 'Kèt jodi a')}</h2>
+        <span className="quests__status">
+          {allDone ? t('Tout est fait', 'Tout fèt') : `${doneCount}/${quests.length}`}
+          <span aria-hidden="true"> · </span>
+          <Hourglass size={13} aria-hidden="true" /> {clock}
         </span>
       </div>
 
@@ -353,14 +328,6 @@ export default function DailyQuests() {
         ))}
       </ul>
 
-      <p className="quests__note">
-        {banked > 0
-          ? t(
-              `${banked} XP ajoutés à ton compte aujourd’hui${left > 0 ? ` · ${left} XP encore en jeu` : ''}.`,
-              `${banked} XP ajoute nan kont ou jodi a${left > 0 ? ` · ${left} XP toujou an jwèt` : ''}.`,
-            )
-          : t(`${left} XP en jeu aujourd’hui.`, `${left} XP an jwèt jodi a.`)}
-      </p>
 
       {justEarned > 0 && (
         <p className="quests__earned" role="status">
@@ -477,54 +444,25 @@ function QuestRow({
   const copy = questCopy(quest, t, examSlug, course);
   const pct = quest.target > 0 ? Math.round((Math.min(quest.done, quest.target) / quest.target) * 100) : 0;
 
+  // One row, one tap: a ring for progress, the quest, its XP.
+  const r = 15;
+  const circ = 2 * Math.PI * r;
   return (
     <li className={`quests__item${quest.complete ? ' is-done' : ''}`}>
-      <span
-        className={`pf-tile pf-tile--${quest.complete ? 'emerald' : quest.tone} pf-tile--md quests__icon`}
-        aria-hidden="true"
-      >
-        {quest.complete ? <Check size={20} /> : QUEST_ICON[quest.id]}
-      </span>
-
-      <div className="quests__body">
-        <span className="pf-eyebrow quests__eyebrow">{copy.eyebrow}</span>
-        <h3 className="quests__name">{copy.title}</h3>
-        <div className="quests__progress">
-          <span
-            className={`pf-meter quests__meter${quest.complete ? ' quests__meter--done' : ''}`}
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={quest.target}
-            aria-valuenow={Math.min(quest.done, quest.target)}
-            aria-label={copy.title}
-          >
-            <span className="pf-meter__fill" style={{ width: `${pct}%` }} />
-          </span>
-          <span className="quests__count">
-            {quest.done} / {quest.target}
-          </span>
-        </div>
-      </div>
-
-      <div className="quests__aside">
-        {quest.complete ? (
-          <span className="pf-pill pf-pill--emerald quests__reward">
-            <Check size={13} aria-hidden="true" />
-            {quest.claimed
-              ? t(`+${quest.xp} XP obtenus`, `+${quest.xp} XP jwenn`)
-              : t(`+${quest.xp} XP`, `+${quest.xp} XP`)}
-          </span>
-        ) : (
-          <span className="pf-pill pf-pill--azure quests__reward">
-            <Sparkles size={13} aria-hidden="true" />
-            {t(`${quest.xp} XP`, `${quest.xp} XP`)}
-          </span>
-        )}
-        <Link className="quests__go" to={copy.to} state={copy.state}>
-          {quest.complete ? t('Y retourner', 'Retounen ladan l') : copy.cta}
-          <ChevronRight size={16} aria-hidden="true" />
-        </Link>
-      </div>
+      <Link className="quests__row" to={copy.to} state={copy.state}>
+        <span className="quests__ring" aria-hidden="true">
+          <svg viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r={r} />
+            <circle className="quests__arc" cx="18" cy="18" r={r} strokeDasharray={circ} strokeDashoffset={circ * (1 - pct / 100)} />
+          </svg>
+          {quest.complete ? <Check size={15} /> : <b>{Math.min(quest.done, quest.target)}/{quest.target}</b>}
+        </span>
+        <span className="quests__name">{copy.title}</span>
+        <span className={`quests__xp${quest.complete ? ' is-done' : ''}`}>
+          {quest.complete && quest.claimed ? t(`+${quest.xp} XP`, `+${quest.xp} XP`) : `${quest.xp} XP`}
+        </span>
+        <ChevronRight size={16} className="quests__chev" aria-hidden="true" />
+      </Link>
     </li>
   );
 }

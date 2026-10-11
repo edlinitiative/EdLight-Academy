@@ -796,3 +796,6 @@
 .qz-top .qz-chips small { color: #B97A0D; }
 .qz-top .qz-chips button.is-on small { color: #FFC24A; }
 .qz-top .qz-chips button:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); }
+
+/* Same width as the navbar's container, so the page lines up with the logo. */
+.qz > .container { max-width: 1480px; }

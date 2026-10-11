@@ -193,3 +193,6 @@
 .exh .exh-hero--flat .exh-results-link { color: var(--text-700); }
 .exh .exh-hero--flat .exh-results-link:hover { background: var(--surface, #fff); color: var(--primary-600, #1558B8); }
 .exh .exh-hero--flat .exh-hero__copy { grid-template-columns: 1fr; }
+
+/* Same width as the navbar's container, so the page lines up with the logo. */
+.exh.container { max-width: 1480px; }
