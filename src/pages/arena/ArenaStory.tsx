@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Lock, Star, Crown, Play, RefreshCw, ChevronRight, Check } from '../../components/icons';
+import { ArrowLeft, Lock, Star, Crown, Play, RefreshCw, ChevronRight, ChevronLeft, Check, MapPin } from '../../components/icons';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { useTriviaContent } from '../../hooks/useTriviaContent';
@@ -16,6 +16,7 @@ import {
 import { departmentPath, departmentCentroid, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import './ArenaArcade.css';
 import './ArenaHome.css';
+import './ArenaStory.css';
 
 /**
  * /arena/histoire — Mode Histoire, « Le tour d'Ayiti ».
@@ -25,12 +26,16 @@ import './ArenaHome.css';
  * round (through the rotation bag, so a stage does not repeat what a quick
  * game just served), and XP goes through useTrivia.recordResult, so the
  * campaign feeds the student's school exactly like any other game.
+ *
+ * The map is the hero and the progress bar at once: each département is lit
+ * by its state (locked in shadow, open in green, conquered in gold), the road
+ * travelled is drawn solid and the road ahead dotted. Beside it, the chapter
+ * reads as a level select — three stages and a boss on one path, and one
+ * button that always says what to play next.
  */
 
 // The real département outlines the broadcast map uses (data/haitiMapGeometry),
-// padded so coastal pins and their labels never touch the frame. Each chapter
-// is drawn as its own département and lit by its state: the map IS the
-// progress bar.
+// padded so coastal pins and their labels never touch the frame.
 const PAD = 36;
 const VIEW = { x: -PAD, y: -PAD, w: MAP_WIDTH + PAD * 2, h: MAP_HEIGHT + PAD * 2 };
 const CHAPTER_GEO = STORY_CHAPTERS.map((c) => ({
@@ -53,9 +58,9 @@ function drawStage(stage: StoryStage, questionsMap: Record<string, any[]>) {
 
 function Stars({ n, size = 16, label }: { n: number; size?: number; label?: string }) {
   return (
-    <span className="arc-stars" aria-label={label}>
+    <span className="hs-stars" aria-label={label}>
       {[0, 1, 2].map((i) => (
-        <Star key={i} size={size} className={i < n ? 'is-on' : ''} aria-hidden="true" />
+        <Star key={i} size={size} weight="fill" className={i < n ? 'is-on' : ''} aria-hidden="true" />
       ))}
     </span>
   );
@@ -123,83 +128,108 @@ export default function ArenaStory() {
 
   const stars = totalStars(progress);
   const isBoss = stageIdx === STAGES_PER_CHAPTER - 1;
+  const conquered = STORY_CHAPTERS.filter((_, i) => chapterCleared(progress, i)).length;
+  const chapterOpen = isUnlocked(progress, chapterIdx, 0);
+  // What the big button plays: the first open stage without stars, else none.
+  const goStage = (() => {
+    for (let i = 0; i < STAGES_PER_CHAPTER; i += 1) if (isUnlocked(progress, chapterIdx, i) && !row[i]) return i;
+    return null;
+  })();
 
+  // ── Play: the quiz, framed in the night ────────────────────────────────
   if (screen === 'play') {
     const stage = stageOf(stageIdx);
     return (
-      <section className="section arc-story arc-story--play">
-        <div className="container arc-story__play">
-          <p className="arc-story__play-tag">
-            {chapter.dept} · {isBoss ? t(`Boss : ${chapter.boss.name}`, `Bòs : ${chapter.boss.name}`) : t(`Étape ${stageIdx + 1}`, `Etap ${stageIdx + 1}`)}
-            {' · '}{t(`${stage.pass}/${stage.count} pour passer`, `${stage.pass}/${stage.count} pou pase`)}
-          </p>
-          <TriviaQuiz
-            key={`${chapter.id}-${stageIdx}-${nonce}`}
-            category={stage.themes[0]}
-            count={stage.count}
-            timed={stage.timed}
-            questions={round}
-            accentColor={isBoss ? '#FF5C39' : '#1B6FE0'}
-            onFinish={onFinish}
-            onBack={() => setScreen('map')}
-            isCreole={isCreole}
-            categories={categories}
-            questionsMap={questions}
-          />
+      <section className="hs hs--play">
+        <div className="container hs-play">
+          <div className="hs-play__bar">
+            <button type="button" className="hs-back" onClick={() => setScreen('map')}>
+              <ArrowLeft size={16} aria-hidden="true" /> {t('La carte', 'Kat la')}
+            </button>
+            <span className={`hs-play__chip${isBoss ? ' is-boss' : ''}`}>
+              {isBoss
+                ? <><PixelAvatar seed={chapter.boss.name} size={26} className="hs-play__boss" /> {t(`Boss · ${chapter.boss.name}`, `Bòs · ${chapter.boss.name}`)}</>
+                : <><MapPin size={16} aria-hidden="true" /> {chapter.dept} · {t(`Étape ${stageIdx + 1}`, `Etap ${stageIdx + 1}`)}</>}
+            </span>
+            <span className="hs-play__rule">{t(`${stage.pass} bonnes réponses sur ${stage.count} pour passer`, `${stage.pass} bon repons sou ${stage.count} pou pase`)}</span>
+          </div>
+          <div className="hs-play__stage">
+            <TriviaQuiz
+              key={`${chapter.id}-${stageIdx}-${nonce}`}
+              category={stage.themes[0]}
+              count={stage.count}
+              timed={stage.timed}
+              questions={round}
+              accentColor={isBoss ? '#FF5C39' : '#3D8BFF'}
+              onFinish={onFinish}
+              onBack={() => setScreen('map')}
+              isCreole={isCreole}
+              categories={categories}
+              questionsMap={questions}
+            />
+          </div>
         </div>
       </section>
     );
   }
 
+  // ── Result: the stars land one by one ──────────────────────────────────
   if (screen === 'result' && result) {
     const won = result.stars > 0;
     const stage = stageOf(stageIdx);
     const after = nextStage(progress);
-    const conquered = isBoss && won;
-    const finale = conquered && chapterIdx === STORY_CHAPTERS.length - 1;
+    const conqueredNow = isBoss && won;
+    const finale = conqueredNow && chapterIdx === STORY_CHAPTERS.length - 1;
     return (
-      <section className="section arc-story arc-story--night">
-        <div className="container arc-result">
-          <div className={`arc-result__card${won ? ' is-won' : ''}`}>
-            {isBoss && <PixelAvatar seed={chapter.boss.name} size={88} className="arc-result__boss" />}
+      <section className="hs hs--result">
+        <div className="hs-sky" aria-hidden="true" />
+        <div className="container hs-result">
+          <div className={`hs-result__card${won ? ' is-won' : ''}`}>
+            {won && <span className="hs-result__rays" aria-hidden="true" />}
+            {isBoss && <span className="hs-result__boss"><PixelAvatar seed={chapter.boss.name} size={88} /></span>}
+            <p className="hs-over">{chapter.dept} · {isBoss ? chapter.boss.name : t(`Étape ${stageIdx + 1}`, `Etap ${stageIdx + 1}`)}</p>
             <h1 ref={headingRef} tabIndex={-1}>
               {finale
                 ? t('La Citadelle est à toi !', 'Sitadèl la pou ou !')
-                : conquered
+                : conqueredNow
                   ? t(`${chapter.dept} conquis !`, `${chapter.dept} konkeri !`)
                   : won
                     ? t('Étape réussie !', 'Etap la pase !')
                     : t('Pas cette fois…', 'Pa fwa sa a…')}
             </h1>
-            <p className="arc-result__score">{result.score} / {result.total}</p>
-            <Stars n={result.stars} size={34} label={t(`${result.stars} étoiles sur 3`, `${result.stars} zetwal sou 3`)} />
-            <p className="arc-result__line">
+            <div className="hs-result__stars" role="img" aria-label={t(`${result.stars} étoiles sur 3`, `${result.stars} zetwal sou 3`)}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} className={`hs-bigstar${i < result.stars ? ' is-on' : ''}${i === 1 ? ' is-mid' : ''}`} style={{ '--d': `${0.3 + i * 0.3}s` } as React.CSSProperties}>
+                  <Star size={i === 1 ? 72 : 56} weight="fill" aria-hidden="true" />
+                </span>
+              ))}
+            </div>
+            <p className="hs-result__score"><b>{result.score}</b><span>/ {result.total}</span></p>
+            <p className="hs-result__line">
               {won
                 ? (finale
                   ? t('Tu as traversé les dix départements. Ton école peut être fière : rendez-vous au championnat national.', 'Ou travèse dis depatman yo. Lekòl ou ka fyè : randevou nan chanpyona nasyonal la.')
                   : t('Chaque bonne réponse a aussi fait gagner des XP à ton école.', 'Chak bon repons fè lekòl ou genyen XP tou.'))
                 : t(`Il fallait ${stage.pass} bonnes réponses. Rejoue : les questions changent.`, `Ou te bezwen ${stage.pass} bon repons. Rejwe : kesyon yo chanje.`)}
-              {result.xp && isAuthed ? ` +${result.xp} XP.` : ''}
-              {!isAuthed && ` ${t('Connecte-toi pour garder ta progression et tes XP.', 'Konekte pou w kenbe pwogrè ak XP ou.')}`}
             </p>
-            <div className="arc-result__actions">
+            {result.xp && isAuthed ? <p className="hs-result__xp">+{result.xp} XP</p> : null}
+            {!isAuthed && <p className="hs-result__note">{t('Connecte-toi pour garder ta progression et tes XP.', 'Konekte pou w kenbe pwogrè ak XP ou.')}</p>}
+            <div className="hs-result__actions">
               {won && after && !finale ? (
-                <button type="button" className="arc-btn arc-btn--go" onClick={() => {
+                <button type="button" className="hs-go" onClick={() => {
                   if (after.chapter !== chapterIdx) { selectChapter(after.chapter); return; }
                   play(after.stage);
                 }}>
-                  {conquered ? t('Chapitre suivant', 'Pwochen chapit') : t('Étape suivante', 'Pwochen etap')} <ChevronRight size={18} aria-hidden="true" />
+                  {conqueredNow ? t('Chapitre suivant', 'Pwochen chapit') : t('Étape suivante', 'Pwochen etap')} <ChevronRight size={18} aria-hidden="true" />
                 </button>
               ) : null}
               {finale && (
-                <Link to="/arena/championnat" className="arc-btn arc-btn--go">{t('Le championnat', 'Chanpyona a')} <ChevronRight size={18} aria-hidden="true" /></Link>
+                <Link to="/arena/championnat" className="hs-go">{t('Le championnat', 'Chanpyona a')} <ChevronRight size={18} aria-hidden="true" /></Link>
               )}
-              <button type="button" className={`arc-btn${won ? ' arc-btn--ghost' : ' arc-btn--go'}`} onClick={() => play(stageIdx)}>
+              <button type="button" className={won ? 'hs-ghost' : 'hs-go'} onClick={() => play(stageIdx)}>
                 <RefreshCw size={16} aria-hidden="true" /> {t('Rejouer', 'Rejwe')}
               </button>
-              <button type="button" className="arc-btn arc-btn--ghost" onClick={() => setScreen('map')}>
-                {t('La carte', 'Kat la')}
-              </button>
+              <button type="button" className="hs-ghost" onClick={() => setScreen('map')}>{t('La carte', 'Kat la')}</button>
             </div>
           </div>
         </div>
@@ -207,111 +237,147 @@ export default function ArenaStory() {
     );
   }
 
-  // ── Map + chapter panel ────────────────────────────────────────────────
+  // ── The map + level select ─────────────────────────────────────────────
+  const travelled = (next?.chapter ?? STORY_CHAPTERS.length - 1) + 1;
+  const prevDept = STORY_CHAPTERS[Math.max(0, chapterIdx - 1)].dept;
   return (
-    <section className="section arc-story arc-story--night">
-      <div className="container arc-story__container">
-        <header className="arc-story__head">
-          <Link to="/arena" className="arc-back"><ArrowLeft size={16} aria-hidden="true" /> {t('Arène', 'Arèn')}</Link>
-          <div>
-            <p className="arc-eyebrow">{t('Mode Histoire', 'Mòd Istwa')}</p>
-            <h1 ref={headingRef} tabIndex={-1}>{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h1>
-            <p className="arc-story__lede">
-              {t('Dix départements, trois étapes et un boss dans chacun. Gagne pour ouvrir la route.', 'Dis depatman, twa etap ak yon bòs nan chak. Genyen pou w louvri wout la.')}
-            </p>
-          </div>
-          <div className="arc-story__total">
-            <Star size={20} aria-hidden="true" />
-            <strong>{stars}</strong><span>/ {MAX_STARS}</span>
-          </div>
+    <section className="hs">
+      <div className="hs-sky" aria-hidden="true" />
+      <div className="container hs-wrap">
+        {/* One title row, then the map. Progress lives in the level panel. */}
+        <header className="hs-head">
+          <Link to="/arena" className="hs-backicon" aria-label={t('Arène', 'Arèn')} title={t('Arène', 'Arèn')}><ArrowLeft size={18} aria-hidden="true" /></Link>
+          <h1 ref={headingRef} tabIndex={-1} className="hs-title">{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h1>
         </header>
 
-        <div className="arc-story__grid">
-          <div className="arc-map" role="group" aria-label={t('Carte des chapitres', 'Kat chapit yo')}>
-            <svg className="arc-map__art" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} aria-hidden="true">
+        <div className="hs-grid">
+          <div className="hs-map" role="group" aria-label={t('Carte des chapitres', 'Kat chapit yo')}>
+            <svg className="hs-map__art" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} aria-hidden="true">
               <defs>
-                <pattern id="arc-px" width="8" height="8" patternUnits="userSpaceOnUse">
-                  <rect width="4" height="4" fill="rgba(255,255,255,0.07)" />
+                <pattern id="hs-px" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <rect width="4" height="4" fill="rgba(255,255,255,0.06)" />
                 </pattern>
+                <linearGradient id="hs-open" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#2FD18C" />
+                  <stop offset="1" stopColor="#11895C" />
+                </linearGradient>
+                <linearGradient id="hs-done" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#FFE08A" />
+                  <stop offset="1" stopColor="#E9A21C" />
+                </linearGradient>
               </defs>
+              <g className="hs-map__glow">{CHAPTER_GEO.map((g, i) => <path key={i} d={g.d} />)}</g>
               {STORY_CHAPTERS.map((c, i) => {
                 const open = isUnlocked(progress, i, 0);
                 const done = chapterCleared(progress, i);
-                const cls = `arc-dept${open ? ' is-open' : ''}${done ? ' is-done' : ''}${i === chapterIdx ? ' is-here' : ''}`;
+                const cls = `hs-dept${open ? ' is-open' : ''}${done ? ' is-done' : ''}${i === chapterIdx ? ' is-here' : ''}`;
                 return (
                   <g key={c.id} className={cls} onClick={() => selectChapter(i)}>
-                    <path d={CHAPTER_GEO[i].d} className="arc-dept__fill" />
-                    <path d={CHAPTER_GEO[i].d} fill="url(#arc-px)" pointerEvents="none" />
+                    <path d={CHAPTER_GEO[i].d} className="hs-dept__fill" />
+                    <path d={CHAPTER_GEO[i].d} fill="url(#hs-px)" pointerEvents="none" />
                   </g>
                 );
               })}
-              {/* the selected département on top, so its gold edge is never hidden by a neighbour */}
-              <path d={CHAPTER_GEO[chapterIdx].d} className="arc-dept__edge" />
-              {/* only the road already travelled — up to the chapter in play */}
-              <polyline
-                className="arc-map__route"
-                points={CHAPTER_GEO.slice(0, (next?.chapter ?? STORY_CHAPTERS.length - 1) + 1).map((g) => `${g.at.x},${g.at.y}`).join(' ')}
-              />
+              <path d={CHAPTER_GEO[chapterIdx].d} className="hs-dept__edge" />
+              {travelled < STORY_CHAPTERS.length && (
+                <polyline className="hs-route hs-route--ahead" points={CHAPTER_GEO.slice(travelled - 1).map((g) => `${g.at.x},${g.at.y}`).join(' ')} />
+              )}
+              {travelled > 1 && (
+                <polyline className="hs-route" points={CHAPTER_GEO.slice(0, travelled).map((g) => `${g.at.x},${g.at.y}`).join(' ')} />
+              )}
             </svg>
             {STORY_CHAPTERS.map((c, i) => {
               const open = isUnlocked(progress, i, 0);
               const done = chapterCleared(progress, i);
               const here = i === chapterIdx;
-              const r = progress[c.id] || [];
-              const got = r.reduce((a, b) => a + b, 0);
+              const got = (progress[c.id] || []).reduce((a, b) => a + b, 0);
               return (
                 <button
                   key={c.id}
                   type="button"
-                  className={`arc-pin${open ? '' : ' is-locked'}${done ? ' is-done' : ''}${here ? ' is-here' : ''}${next?.chapter === i ? ' is-next' : ''}`}
+                  className={`hs-pin${open ? '' : ' is-locked'}${done ? ' is-done' : ''}${here ? ' is-here' : ''}${next?.chapter === i ? ' is-next' : ''}`}
                   style={{ left: pct(CHAPTER_GEO[i].at.x, VIEW.x, VIEW.w), top: pct(CHAPTER_GEO[i].at.y, VIEW.y, VIEW.h) }}
                   onClick={() => selectChapter(i)}
                   aria-pressed={here}
                   aria-label={`${i + 1}. ${c.dept}${open ? '' : ` — ${t('verrouillé', 'fèmen')}`}${got ? ` — ${got} ★` : ''}`}
                 >
-                  <span className="arc-pin__dot">{done ? <Check size={14} aria-hidden="true" /> : open ? i + 1 : <Lock size={12} aria-hidden="true" />}</span>
-                  <span className="arc-pin__label">{c.dept}</span>
+                  <span className="hs-pin__dot">{done ? <Crown size={15} weight="fill" aria-hidden="true" /> : open ? i + 1 : <Lock size={13} aria-hidden="true" />}</span>
+                  <span className="hs-pin__label">{c.dept}</span>
                 </button>
               );
             })}
           </div>
 
-          <article className="arc-chapter" aria-labelledby="arc-chapter-title">
-            <p className="arc-eyebrow">{t(`Chapitre ${chapterIdx + 1}`, `Chapit ${chapterIdx + 1}`)} · {chapter.capital}</p>
-            <h2 id="arc-chapter-title">{chapter.dept}</h2>
-            <p className="arc-chapter__intro">{isCreole ? chapter.intro.ht : chapter.intro.fr}</p>
+          <article className="hs-level" aria-labelledby="hs-chapter-title">
+            <div className="hs-level__nav">
+              <button type="button" className="hs-arrow" disabled={chapterIdx === 0} onClick={() => selectChapter(chapterIdx - 1)} aria-label={t('Chapitre précédent', 'Chapit anvan')}><ChevronLeft size={18} /></button>
+              <p className="hs-over">{t(`Chapitre ${chapterIdx + 1} / ${STORY_CHAPTERS.length}`, `Chapit ${chapterIdx + 1} / ${STORY_CHAPTERS.length}`)} · {chapter.capital}</p>
+              <button type="button" className="hs-arrow" disabled={chapterIdx === STORY_CHAPTERS.length - 1} onClick={() => selectChapter(chapterIdx + 1)} aria-label={t('Chapitre suivant', 'Pwochen chapit')}><ChevronRight size={18} /></button>
+            </div>
+            <h2 id="hs-chapter-title" className="hs-level__title">{chapter.dept}</h2>
+            <dl className="hs-meter">
+              <div className="hs-meter__item">
+                <dt>{t('Étoiles', 'Zetwal')}</dt>
+                <dd><Star size={18} weight="fill" aria-hidden="true" /> {stars}<small>/{MAX_STARS}</small></dd>
+                <span className="hs-meter__bar" aria-hidden="true"><span style={{ width: `${(stars / MAX_STARS) * 100}%` }} /></span>
+              </div>
+              <div className="hs-meter__item">
+                <dt>{t('Conquis', 'Konkeri')}</dt>
+                <dd className="is-green"><Crown size={18} weight="fill" aria-hidden="true" /> {conquered}<small>/{STORY_CHAPTERS.length}</small></dd>
+                <span className="hs-meter__bar hs-meter__bar--green" aria-hidden="true"><span style={{ width: `${(conquered / STORY_CHAPTERS.length) * 100}%` }} /></span>
+              </div>
+            </dl>
+            <p className="hs-level__intro">{isCreole ? chapter.intro.ht : chapter.intro.fr}</p>
 
-            <ol className="arc-stages">
+            <ol className="hs-path">
               {[0, 1, 2, 3].map((i) => {
                 const st = stageOf(i);
                 const open = isUnlocked(progress, chapterIdx, i);
                 const boss = i === 3;
+                const cleared = !!row[i];
+                const current = goStage === i;
                 return (
-                  <li key={i}>
-                    <button
-                      type="button"
-                      className={`arc-stage${boss ? ' arc-stage--boss' : ''}${open ? '' : ' is-locked'}${row[i] ? ' is-cleared' : ''}`}
-                      onClick={() => play(i)}
-                      disabled={!open}
-                    >
-                      {boss
-                        ? <PixelAvatar seed={chapter.boss.name} size={52} className="arc-stage__boss" />
-                        : <span className="arc-stage__num">{open ? i + 1 : <Lock size={14} aria-hidden="true" />}</span>}
-                      <span className="arc-stage__body">
-                        <strong>
-                          {boss ? <><Crown size={15} aria-hidden="true" /> {chapter.boss.name}</> : t(`Étape ${i + 1}`, `Etap ${i + 1}`)}
-                        </strong>
-                        <span>{boss ? (isCreole ? chapter.boss.ht : chapter.boss.fr) : stageLabel(st)}</span>
-                        <small>{st.count} {t('questions', 'kesyon')} · 15 s · {t(`${st.pass} pour passer`, `${st.pass} pou pase`)}</small>
+                  <li key={i} className={`hs-node${boss ? ' hs-node--boss' : ''}${open ? '' : ' is-locked'}${cleared ? ' is-cleared' : ''}${current ? ' is-current' : ''}`}>
+                    <button type="button" className="hs-node__btn" onClick={() => play(i)} disabled={!open}>
+                      <span className="hs-node__mark" aria-hidden="true">
+                        {boss
+                          ? <PixelAvatar seed={chapter.boss.name} size={46} />
+                          : cleared ? <Check size={18} /> : open ? i + 1 : <Lock size={15} />}
                       </span>
-                      <span className="arc-stage__end">
-                        {row[i] ? <Stars n={row[i]} /> : open ? <Play size={18} aria-hidden="true" /> : null}
+                      <span className="hs-node__body">
+                        <strong>{boss ? <>{t('Boss', 'Bòs')} · {chapter.boss.name}</> : t(`Étape ${i + 1}`, `Etap ${i + 1}`)}</strong>
+                        <span>{boss ? (isCreole ? chapter.boss.ht : chapter.boss.fr) : stageLabel(st)}</span>
+                        <small>{st.count} {t('questions', 'kesyon')} · {t(`${st.pass} pour passer`, `${st.pass} pou pase`)}</small>
+                      </span>
+                      <span className="hs-node__end">
+                        {cleared
+                          ? <Stars n={row[i]} size={16} label={t(`${row[i]} étoiles`, `${row[i]} zetwal`)} />
+                          : open ? <Play size={18} aria-hidden="true" /> : null}
                       </span>
                     </button>
                   </li>
                 );
               })}
             </ol>
+
+            {!chapterOpen ? (
+              <div className="hs-locked">
+                <Lock size={18} aria-hidden="true" />
+                <span>{t(`Bats le boss de ${prevDept} pour ouvrir ce chapitre.`, `Bat bòs ${prevDept} pou w louvri chapit sa a.`)}</span>
+                {next && <button type="button" className="hs-ghost" onClick={() => selectChapter(next.chapter)}>{t('Chapitre en cours', 'Chapit k ap fèt la')}</button>}
+              </div>
+            ) : goStage != null ? (
+              <button type="button" className={`hs-go hs-go--wide${goStage === 3 ? ' is-boss' : ''}`} onClick={() => play(goStage)}>
+                <Play size={20} aria-hidden="true" />
+                {goStage === 3
+                  ? t(`Affronter ${chapter.boss.name}`, `Afwonte ${chapter.boss.name}`)
+                  : t(`Jouer l’étape ${goStage + 1}`, `Jwe etap ${goStage + 1}`)}
+              </button>
+            ) : (
+              <button type="button" className="hs-ghost hs-go--wide" onClick={() => play(3)}>
+                <RefreshCw size={16} aria-hidden="true" /> {t('Rejouer le boss pour plus d’étoiles', 'Rejwe bòs la pou plis zetwal')}
+              </button>
+            )}
           </article>
         </div>
       </div>

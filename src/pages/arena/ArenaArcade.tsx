@@ -14,6 +14,7 @@ import { DEMO_SCHOOLS } from '../../../shared/arena/demo';
 import { departmentPath, departmentCentroid, MAPPED_DEPARTMENTS, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import SchoolBuilding from '../../components/arena/SchoolBuilding';
 import UserAvatar from '../../components/UserAvatar';
+import ArenaJoin from '../../components/arena/ArenaJoin';
 import './ArenaArcade.css';
 import './ArenaHome.css';
 
@@ -76,7 +77,6 @@ export default function ArenaArcade() {
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
   const user = useStore((s) => s.user);
   const toggleAuthModal = useStore((s) => s.toggleAuthModal);
-  const setSchoolChosen = useStore((s) => s.setSchoolChosen);
   const signedIn = !!user?.uid;
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -106,6 +106,8 @@ export default function ArenaArcade() {
     return podium.map((s) => ({ ...s, floors: floorsFor(s.teamXp || 0, maxXp) }));
   }, [standings, myTeam]);
 
+  // The join card stays until the school's team counts on the board.
+  const teamIncomplete = !mySchool || !myTeam?.qualified;
   const seats = Array.from({ length: TEAM_SIZE }, (_, i) => mine?.topMembers?.[i] || null);
   const storyChapter = storyNext ? STORY_CHAPTERS[storyNext.chapter] : null;
   const ranked = standings.filter((s) => s.qualified);
@@ -243,15 +245,9 @@ export default function ArenaArcade() {
                 <div>
                   <h2>{t('Mets ton école sur la carte', 'Mete lekòl ou sou kat la')}</h2>
                   <p>{t('Chaque point que tu gagnes ajoute un étage à son bâtiment.', 'Chak pwen ou genyen ajoute yon etaj nan batiman li.')}</p>
-                  {signedIn ? (
-                    <button type="button" className="ah-start ah-start--sm" onClick={() => setSchoolChosen(false)}>
-                      {t('Choisir mon école', 'Chwazi lekòl mwen')}
-                    </button>
-                  ) : (
-                    <button type="button" className="ah-start ah-start--sm" onClick={toggleAuthModal}>
-                      {t('Se connecter', 'Konekte')}
-                    </button>
-                  )}
+                  <a href="#ah-team" className="ah-start ah-start--sm">
+                    {signedIn ? t('Choisir mon école', 'Chwazi lekòl mwen') : t('Commencer en 3 étapes', 'Kòmanse an 3 etap')}
+                  </a>
                 </div>
               </div>
             )}
@@ -294,6 +290,18 @@ export default function ArenaArcade() {
         )}
         {demo && <p className="ah-demo-flag">{t('Aperçu avec des écoles fictives', 'Apèsi ak lekòl fiktif')}</p>}
       </section>
+
+      {/* ═══ The way in: sign in → school → team of five ════════════════════ */}
+      {!demo && teamIncomplete && (
+        <ArenaJoin
+          signedIn={signedIn}
+          uid={user?.uid || null}
+          school={mySchool}
+          members={mine?.members || 0}
+          isCreole={isCreole}
+          onSignIn={toggleAuthModal}
+        />
+      )}
 
       {/* ═══ Game select ════════════════════════════════════════════════════ */}
       <section id="ah-select" className="ah-select" aria-labelledby="ah-select-title">
@@ -490,8 +498,11 @@ export default function ArenaArcade() {
           ) : (
             <p><Sparkles size={18} aria-hidden="true" /> {t('Chaque partie compte pour ton école. Ramène ta classe.', 'Chak pati konte pou lekòl ou. Mennen klas ou vini.')}</p>
           )}
-          {!signedIn && <button type="button" className="ah-start ah-start--sm" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>}
-          {signedIn && !mySchool && <button type="button" className="ah-start ah-start--sm" onClick={() => setSchoolChosen(false)}>{t('Ajouter mon école', 'Ajoute lekòl mwen')}</button>}
+          {teamIncomplete && !demo && (
+            <a href="#ah-team" className="ah-start ah-start--sm">
+              {!signedIn ? t('Se connecter', 'Konekte') : !mySchool ? t('Ajouter mon école', 'Ajoute lekòl mwen') : t('Inviter ma classe', 'Envite klas mwen')}
+            </a>
+          )}
         </div>
       </section>
     </div>

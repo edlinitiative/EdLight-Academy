@@ -19,6 +19,8 @@ import {
   type Tournament,
 } from '../../services/tournoisService';
 import { formatWhen, useLang } from './parts';
+import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import { PinArt } from '../../components/arena/ArenaGate';
 import './Tournois.css';
 
 function StatePill({ t: tour }: { t: Pick<Tournament, 'state' | 'startsAt'> }) {
@@ -88,20 +90,14 @@ export default function TournoisHub() {
   return (
     <section className="tn">
       <div className="tn__wrap">
-        {/* A title line and one action, like every other hub (no gradient
-            hero — Ted). */}
-        <header className="tn-head">
-          <div>
-            <h1>{t('Tournois', 'Tounwa')}</h1>
-            <p>{t(
-              'Choisis le format et les thèmes : on génère les questions et le calendrier. Tes amis rejoignent avec un PIN.',
-              'Chwazi fòma a ak tèm yo : nou jenere kesyon yo ak orè a. Zanmi w yo antre ak yon PIN.',
-            )}</p>
-          </div>
-          <button type="button" className="tn-head__cta" onClick={create}>
-            <Plus size={16} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
-          </button>
-        </header>
+        <ArenaPageHead
+          title={t('Tournois', 'Tounwa')}
+          actions={(
+            <button type="button" className="an-go" onClick={create}>
+              <Plus size={18} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}
+            </button>
+          )}
+        />
 
         <div className="tn-split tn-section">
           <div>
@@ -112,10 +108,18 @@ export default function TournoisHub() {
             {open === null ? (
               <p className="tn-muted">{t('Chargement…', 'Ap chaje…')}</p>
             ) : open.length === 0 ? (
-              <div className="tn-empty">
-                {loadError
-                  ? t('Impossible de charger la liste pour l’instant.', 'Nou pa ka chaje lis la kounye a.')
-                  : t('Aucun tournoi public pour l’instant — lance le premier !', 'Pa gen tounwa piblik kounye a — lanse premye a !')}
+              <div className="tn-empty tn-empty--rich">
+                <span className="tn-empty__icon" aria-hidden="true"><Radio size={26} /></span>
+                <p>
+                  {loadError
+                    ? t('Impossible de charger la liste pour l’instant.', 'Nou pa ka chaje lis la kounye a.')
+                    : t('Aucun tournoi public pour l’instant — lance le premier, toute la salle pourra le suivre.', 'Pa gen tounwa piblik kounye a — lanse premye a, tout sal la ap ka swiv li.')}
+                </p>
+                {!loadError && (
+                  <button type="button" className="an-go" onClick={create}>
+                    <Plus size={18} aria-hidden="true" /> {t('Lancer le premier', 'Lanse premye a')}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="tn-grid">
@@ -134,7 +138,8 @@ export default function TournoisHub() {
           </div>
 
           <aside style={{ display: 'grid', gap: '1rem' }}>
-            <form className="tn-card" onSubmit={goPin}>
+            <form className="tn-card tn-card--pin an-panel an-panel--edge" onSubmit={goPin}>
+              <div className="tn-pinart"><PinArt /></div>
               <div className="tn-section__head" style={{ marginBottom: '0.6rem' }}>
                 <h2><KeyRound size={17} aria-hidden="true" /> {t('Rejoindre avec un PIN', 'Antre ak yon PIN')}</h2>
               </div>
@@ -148,20 +153,21 @@ export default function TournoisHub() {
                   onChange={(e) => setPin(e.target.value.replace(/[^\d ]/g, ''))}
                   aria-label={t('PIN du tournoi', 'PIN tounwa a')}
                 />
-                <button type="submit" className="button button--primary" disabled={pin.replace(/\D/g, '').length !== 6}>
+                <button type="submit" className="an-go" disabled={pin.replace(/\D/g, '').length !== 6}>
                   {t('Rejoindre', 'Antre')}
                 </button>
               </div>
             </form>
 
-            <div className="tn-card">
+            <div className="tn-card an-panel">
               <div className="tn-section__head" style={{ marginBottom: '0.6rem' }}>
                 <h2>{t('Mes tournois', 'Tounwa mwen')}</h2>
               </div>
               {!user?.uid ? (
-                <p className="tn-muted">
-                  <button type="button" className="button button--ghost" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
-                </p>
+                <div className="tn-signin">
+                  <p className="tn-muted">{t('Connecte-toi pour retrouver les tournois que tu as créés ou rejoints.', 'Konekte pou w jwenn tounwa ou te kreye oswa antre ladan yo.')}</p>
+                  <button type="button" className="an-ghost" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
+                </div>
               ) : mine.length === 0 ? (
                 <p className="tn-muted">{t('Tu n’as encore créé ni rejoint aucun tournoi.', 'Ou poko kreye ni antre nan okenn tounwa.')}</p>
               ) : (

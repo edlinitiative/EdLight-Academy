@@ -142,3 +142,50 @@
   .duel-pill, .duel-row { transition: none; }
   .duel-pill:active { transform: none; }
 }
+
+/* ══ /defi in the Arène's night (body.arena-night) ═══════════════════════════
+   The invitation card is the page: a VS face-off, a display title, coral
+   pills. No band above it — just a back button. */
+.defi__vs {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.75rem; justify-self: stretch;
+  margin: -0.25rem -0.25rem 0.25rem; padding: 1.25rem 1rem; border-radius: 20px;
+  background: linear-gradient(105deg, rgba(61, 139, 255, 0.32) 0 48%, rgba(255, 92, 57, 0.32) 52% 100%);
+}
+.defi__vs-p { display: grid; place-items: center; }
+.defi__vs-p > * { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 14px 30px -10px rgba(0, 0, 0, 0.7); }
+.defi__vs-p--l { animation: defi-bob 2.4s ease-in-out infinite; }
+.defi__vs-p--r { animation: defi-bob 2.4s ease-in-out -1.2s infinite; }
+@keyframes defi-bob { 50% { transform: translateY(-5px); } }
+.defi__vs-bolt {
+  font-family: var(--font-display, sans-serif); font-size: 2.6rem; font-weight: 800; font-style: italic; letter-spacing: -0.04em;
+  color: #fff; text-shadow: 0 0 18px rgba(255, 194, 74, 0.9), 3px 3px 0 #FF5C39; transform: skewX(-8deg);
+}
+.defi__back { justify-self: start; }
+body.arena-night .defi { background: transparent; }
+body.arena-night .defi__card {
+  position: relative; border: 0; border-radius: 28px;
+  background: linear-gradient(180deg, rgba(18, 36, 84, 0.9), rgba(9, 19, 48, 0.94));
+  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+}
+body.arena-night .defi__card::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 194, 74, 0.65), transparent 32%, transparent 70%, rgba(61, 139, 255, 0.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+body.arena-night .defi__eyebrow { background: rgba(255, 194, 74, 0.14); color: #FFC24A; font-size: 0.875rem; letter-spacing: 0.08em; text-transform: uppercase; }
+body.arena-night .defi__title { font-family: var(--font-display, sans-serif); font-size: clamp(1.9rem, 1.3rem + 2vw, 2.6rem); letter-spacing: -0.04em; line-height: 1.05; color: #fff; }
+body.arena-night .defi__text { color: #A3B5DC; }
+body.arena-night .defi__facts li { background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.14); color: #EAF0FF; }
+body.arena-night .defi__secondary { color: #8599C4; }
+body.arena-night .defi__secondary a { color: #FFC24A; }
+body.arena-night .defi__xp { background: rgba(255, 194, 74, 0.14); color: #FFC24A; box-shadow: inset 0 0 0 1px rgba(255, 194, 74, 0.4); }
+body.arena-night .defi__playhead { color: #fff; }
+body.arena-night .duel-pill { border-radius: 999px; font-family: var(--font-display, sans-serif); font-weight: 800; }
+body.arena-night .duel-pill--primary {
+  background: linear-gradient(180deg, #FF7A52 0%, #FF5C39 55%, #EE4520 100%); color: #fff;
+  box-shadow: 0 4px 0 #A8300F, 0 12px 26px -12px rgba(255, 92, 57, 0.8);
+}
+body.arena-night .duel-pill--primary:hover:not(:disabled) { background: linear-gradient(180deg, #FF8B66, #FF6A4A); }
+body.arena-night .duel-pill--soft { background: rgba(255, 255, 255, 0.08); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+body.arena-night .duel-pill--soft:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+@media (prefers-reduced-motion: reduce) { .defi__vs-p--l, .defi__vs-p--r { animation: none; } }

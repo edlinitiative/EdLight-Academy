@@ -39,3 +39,80 @@ body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link:hover
 body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.12); }
 body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .nav-search-btn:hover, body.arena-night .navbar .theme-toggle:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 
+/* ═══ Shared Arène page language (ArenaPageHead + night panels) ═════════════ */
+/* One title row: back · title · controls. Then the content. */
+.aph { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin: 0 0 clamp(1rem, 2.5vw, 1.5rem); }
+.aph__back {
+  display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.18);
+  color: #C8D6F5; text-decoration: none; transition: background 0.15s ease, color 0.15s ease;
+}
+.aph__back:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.aph__title {
+  flex: 1 1 auto; min-width: 0; margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(2rem, 1.4rem + 1.8vw, 2.9rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1.05;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF0CC 65%, #FFC86B 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.aph__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.aph__over { margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #FFC24A; }
+.aph a:focus-visible { outline: 3px solid #FFC24A; outline-offset: 3px; }
+
+/* Night panel: a card with an optional gradient hairline edge. */
+.an-panel {
+  position: relative; border-radius: 26px;
+  background: linear-gradient(180deg, rgba(18, 36, 84, 0.88), rgba(9, 19, 48, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 40px 80px -40px rgba(0, 0, 0, 0.9);
+}
+.an-panel--edge::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 194, 74, 0.65), transparent 32%, transparent 70%, rgba(61, 139, 255, 0.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+/* Coral pressable pill for primary actions anywhere in the Arène. */
+.an-go {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 50px; padding: 0 1.4rem; border: 0; border-radius: 999px;
+  background: linear-gradient(180deg, #FF7A52 0%, #FF5C39 55%, #EE4520 100%); color: #fff !important;
+  font-family: var(--font-display, sans-serif); font-size: 1rem; font-weight: 800; text-decoration: none; cursor: pointer;
+  box-shadow: 0 5px 0 #A8300F, 0 14px 30px -12px rgba(255, 92, 57, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.an-go:hover { transform: translateY(2px); box-shadow: 0 3px 0 #A8300F, 0 10px 26px -12px rgba(255, 92, 57, 0.85); }
+.an-go:active { transform: translateY(5px); box-shadow: 0 0 0 #A8300F; }
+.an-go:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.an-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; min-height: 48px; padding: 0 1.2rem; border: 0; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); color: #fff !important;
+  font-family: var(--font-display, sans-serif); font-size: 0.95rem; font-weight: 800; text-decoration: none; cursor: pointer;
+}
+.an-ghost:hover { background: rgba(255, 255, 255, 0.13); }
+.an-go:focus-visible, .an-ghost:focus-visible { outline: 3px solid #FFC24A; outline-offset: 3px; }
+
+/* The signed-out door (ArenaGate). */
+.agate {
+  display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr); align-items: center; gap: clamp(1.25rem, 4vw, 3rem);
+  width: min(960px, 100%); margin: clamp(1.5rem, 5vw, 3.5rem) auto; padding: clamp(1.5rem, 4vw, 2.75rem); overflow: hidden;
+}
+.agate__art {
+  position: relative; display: grid; place-items: center; min-height: 240px; border-radius: 22px;
+  background: radial-gradient(70% 70% at 50% 45%, rgba(64, 210, 190, 0.22), transparent 70%), rgba(4, 10, 28, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.12);
+}
+.agate__body { display: grid; gap: 0.75rem; justify-items: start; }
+.agate__title { margin: 0; font-family: var(--font-display, sans-serif); font-size: clamp(2rem, 1.4rem + 2vw, 2.9rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1.02; color: #fff; }
+.agate__text { margin: 0; max-width: 46ch; font-size: 1.05rem; line-height: 1.6; color: #A3B5DC; }
+.agate__actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 0.5rem; }
+.agate__note { margin: 0; font-size: 0.9rem; color: #8599C4; }
+@media (max-width: 720px) { .agate { grid-template-columns: 1fr; } .agate__art { min-height: 180px; } }
+
+/* A PIN board illustration, shared by the gate and the join page. */
+.an-pinart { display: grid; justify-items: center; gap: 0.9rem; }
+.an-pinart__label { font-family: var(--font-display, sans-serif); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.3em; color: #7DE6D6; }
+.an-pinart__cells { display: flex; gap: 8px; }
+.an-pinart__cells i { position: relative; display: block; width: 32px; height: 44px; border-radius: 9px; background: #061024; box-shadow: inset 0 0 0 1px rgba(125, 230, 214, 0.35); }
+.an-pinart__cells i::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%);
+  background: #40D2BE; box-shadow: 0 0 12px #40D2BE; animation: an-pinfill 3.2s ease-in-out infinite; animation-delay: var(--d, 0s);
+}
+@keyframes an-pinfill { 0%, 15% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); } 30%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .an-pinart__cells i::after { animation: none; opacity: 1; } }
+

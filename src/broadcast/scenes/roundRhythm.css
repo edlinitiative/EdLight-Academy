@@ -531,6 +531,11 @@
   .rb-lane__full { display: none; }
   .rb-ambient { flex-direction: column; gap: 4px; }
 }
+/* A short screen (a laptop, not a projector): the lanes get too thin for the
+   full name under the short one, so the short name stands alone. */
+@media (max-height: 820px) {
+  .rb-lane__full { display: none; }
+}
 
 /* ── Reduce motion ──────────────────────────────────────────────────────── */
 

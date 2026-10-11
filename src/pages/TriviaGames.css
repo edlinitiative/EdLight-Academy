@@ -2211,3 +2211,75 @@
   .trivia-quiz__options .trivia-option { height: 100%; }
   .trivia-quiz .trivia-feedback { width: 100%; margin: 0; }
 }
+
+/* ══ The Jeux hub in the Arène's night (body.arena-night on /jeux) ══════════
+   The shared ArenaPageHead sits above; the HUD becomes the player panel,
+   cards become night panels, games glow in their own colour. Type floor 14px. */
+body.arena-night .gx { --gx-navy: #F1F5FF; --gx-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 30px 60px -40px rgba(0, 0, 0, 0.9); padding-top: clamp(1rem, 3vw, 2rem); padding-bottom: clamp(3rem, 6vw, 5rem); }
+body.arena-night .gx-hud,
+body.arena-night .gx-card,
+body.arena-night .game-card {
+  border: 0;
+  background: linear-gradient(180deg, rgba(18, 36, 84, 0.85), rgba(9, 19, 48, 0.9));
+  box-shadow: var(--gx-shadow);
+  border-radius: 24px;
+}
+body.arena-night .gx-hud { position: relative; }
+/* The player panel lives in the side column now (content, not a banner). */
+.gx-hud--side .gx-hud__stats { grid-template-columns: 1fr 1fr; }
+.gx-hud--side .gx-stat--level { grid-column: 1 / -1; }
+.gx-hud--side .gx-hud__title { font-size: 1.15rem; }
+.gx-hud--side .gx-hud__signin { flex-direction: column; align-items: flex-start; }
+body.arena-night .gx-hud::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 194, 74, 0.6), transparent 32%, transparent 70%, rgba(61, 139, 255, 0.45));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+body.arena-night .gx-hud__badge { background: linear-gradient(180deg, #FFD36E, #F2A81C); color: #2B1B00; box-shadow: 0 0 22px rgba(255, 194, 74, 0.45); }
+body.arena-night .gx-hud__sub { color: #A3B5DC; font-size: 0.95rem; }
+body.arena-night .gx-stat { background: rgba(4, 10, 28, 0.45); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.1); }
+body.arena-night .gx-stat__hint { font-size: 0.875rem; color: #8599C4; }
+body.arena-night .gx-bar { background: rgba(255, 255, 255, 0.08); }
+body.arena-night .gx-bar > span { background: linear-gradient(90deg, #FFD36E, #FFC24A); box-shadow: 0 0 12px rgba(255, 194, 74, 0.6); }
+body.arena-night .gx-hud__signin { background: rgba(61, 139, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(110, 160, 255, 0.3); color: #DCE6FF; font-size: 0.95rem; }
+body.arena-night .gx-btn {
+  border-radius: 999px; padding: 0.65rem 1.2rem; font-family: var(--font-display, sans-serif); font-size: 0.95rem; font-weight: 800;
+  background: linear-gradient(180deg, #FF7A52 0%, #FF5C39 55%, #EE4520 100%); box-shadow: 0 4px 0 #A8300F, 0 12px 26px -12px rgba(255, 92, 57, 0.8);
+}
+body.arena-night .gx-btn:hover { background: linear-gradient(180deg, #FF8B66, #FF6A4A); transform: translateY(1px); }
+body.arena-night .gx-btn--ghost { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); color: #fff; }
+body.arena-night .gx-duel {
+  border-radius: 999px; padding: 0.65rem 1.1rem; font-family: var(--font-display, sans-serif); font-size: 0.95rem; font-weight: 800;
+  background: rgba(124, 58, 237, 0.25); box-shadow: inset 0 0 0 1px rgba(170, 130, 255, 0.55), 0 0 26px -8px rgba(124, 58, 237, 0.8);
+}
+body.arena-night .gx-duel:hover { background: rgba(124, 58, 237, 0.4); }
+body.arena-night .gx-tabs { background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.12); border-radius: 999px; }
+body.arena-night .gx-tab { border-radius: 999px; color: #A3B5DC; font-size: 0.95rem; }
+body.arena-night .gx-tab:hover { color: #fff; }
+body.arena-night .gx-tab.is-on { background: rgba(255, 255, 255, 0.1); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); }
+body.arena-night .gx-tab__dot { background: #FF5C39; font-size: 0.875rem; text-transform: none; letter-spacing: 0; }
+body.arena-night .gx-tab__count { background: rgba(255, 255, 255, 0.1); color: #DCE6FF; font-size: 0.875rem; }
+body.arena-night .gx-card__title { font-family: var(--font-display, sans-serif); font-size: 1.3rem; letter-spacing: -0.02em; color: #fff; }
+body.arena-night .gx-card__text { color: #A3B5DC; font-size: 0.95rem; }
+body.arena-night .gx-card__foot { color: #8599C4; font-size: 0.9rem; }
+body.arena-night .gx-card__foot a, body.arena-night .gx-link { color: #FFC24A; }
+body.arena-night .gx-tag { background: rgba(255, 194, 74, 0.14); color: #FFC24A; font-size: 0.875rem; letter-spacing: 0.08em; }
+body.arena-night .gx-tag--navy { background: rgba(61, 139, 255, 0.18); color: #9CC4FF; }
+body.arena-night .gx-live { color: #FF8A62; font-size: 0.875rem; }
+body.arena-night .gx-topic { background: color-mix(in srgb, var(--cat) 14%, rgba(9, 19, 48, 0.9)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat) 30%, transparent); color: #EAF0FF; font-size: 0.95rem; }
+body.arena-night .gx-topic:hover { background: color-mix(in srgb, var(--cat) 24%, rgba(9, 19, 48, 0.9)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat) 60%, transparent), 0 0 22px -8px var(--cat); }
+body.arena-night .gx-topic__emoji { color: color-mix(in srgb, var(--cat) 70%, #fff); }
+body.arena-night .gx-records li { background: rgba(4, 10, 28, 0.45); }
+body.arena-night .gx-records strong { color: #FFC24A; }
+/* Game cards: each game glows in its own colour. */
+body.arena-night .game-card { padding: 1.2rem 1.25rem; }
+body.arena-night .game-card__wash { background: radial-gradient(closest-side, color-mix(in srgb, var(--game-color) 30%, transparent), transparent); }
+body.arena-night .game-card__icon { width: 52px; height: 52px; border-radius: 16px; background: color-mix(in srgb, var(--game-color) 22%, rgba(9, 19, 48, 0.9)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--game-color) 45%, transparent), 0 0 22px -6px var(--game-color); }
+body.arena-night .game-card__name { font-family: var(--font-display, sans-serif); font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+body.arena-night .game-card__desc { color: #A3B5DC; font-size: 0.95rem; }
+body.arena-night .game-card__meta { font-size: 0.875rem; color: #8599C4; }
+body.arena-night .game-card:hover, body.arena-night .game-card:focus-visible {
+  transform: translateY(-5px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--game-color) 60%, transparent), 0 0 44px -14px var(--game-color), 0 30px 60px -40px rgba(0, 0, 0, 0.9);
+}
+body.arena-night .game-card__index { color: #FFC24A; }

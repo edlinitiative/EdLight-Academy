@@ -6,8 +6,9 @@
  * Jeux page links here with the PIN a friend read out.
  */
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, KeyRound } from '../../components/icons';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import ArenaPageHead from '../../components/arena/ArenaPageHead';
+import { PinArt } from '../../components/arena/ArenaGate';
 import useStore from '../../contexts/store';
 import { useTrivia } from '../../hooks/useTrivia';
 import { GRADES } from '../../../shared/trackConfig';
@@ -62,15 +63,14 @@ export default function TournoisJoin() {
   return (
     <section className="tn">
       <div className="tn__narrow" style={{ display: 'grid', gap: '1rem' }}>
-        <Link to="/tournois" className="tn-muted" style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-          <ArrowLeft size={15} aria-hidden="true" /> {t('Tournois', 'Tounwa')}
-        </Link>
-        <header className="tn-hero">
-          <div className="tn-hero__top"><span className="tn-chip"><KeyRound size={13} aria-hidden="true" /> PIN</span></div>
-          <h1>{t('Rejoindre un tournoi', 'Antre nan yon tounwa')}</h1>
-          <p>{t('Entre le PIN à six chiffres que l’organisateur a partagé.', 'Antre PIN sis chif òganizatè a pataje a.')}</p>
-        </header>
-        <form className="tn-card" style={{ display: 'grid', gap: '0.9rem' }} onSubmit={(e) => { e.preventDefault(); join(); }}>
+        <ArenaPageHead
+          back="/tournois"
+          backLabel={t('Tournois', 'Tounwa')}
+          title={t('Rejoindre un tournoi', 'Antre nan yon tounwa')}
+        />
+        <form className="tn-card tn-card--pin an-panel an-panel--edge" style={{ display: 'grid', gap: '0.9rem' }} onSubmit={(e) => { e.preventDefault(); join(); }}>
+          <div className="tn-pinart"><PinArt /></div>
+          <p className="tn-muted" style={{ margin: 0, textAlign: 'center' }}>{t('Entre le PIN à six chiffres que l’organisateur a partagé.', 'Antre PIN sis chif òganizatè a pataje a.')}</p>
           <div className="tn-pinform">
             <input
               inputMode="numeric"
@@ -82,7 +82,7 @@ export default function TournoisJoin() {
               aria-label={t('PIN du tournoi', 'PIN tounwa a')}
               autoFocus
             />
-            <button type="submit" className="button button--primary" disabled={clean.length !== 6 || busy}>
+            <button type="submit" className="an-go" disabled={clean.length !== 6 || busy}>
               {busy ? t('Connexion…', 'Ap konekte…') : user?.uid ? t('Rejoindre', 'Antre') : t('Se connecter pour jouer', 'Konekte pou jwe')}
             </button>
           </div>

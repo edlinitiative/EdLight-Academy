@@ -203,6 +203,22 @@ export default function ArenaDemo() {
     return () => window.removeEventListener('keydown', onKey);
   }, [answer, started]);
 
+  // The dock behaves like a video player's: it shows on any pointer move or
+  // key, and slips away after a few quiet seconds while the evening plays.
+  const [dockShown, setDockShown] = useState(true);
+  const dockTimer = useRef<number | null>(null);
+  const wake = useCallback(() => {
+    setDockShown(true);
+    if (dockTimer.current) window.clearTimeout(dockTimer.current);
+    dockTimer.current = window.setTimeout(() => setDockShown(false), 3200);
+  }, []);
+  useEffect(() => {
+    if (!playing) { setDockShown(true); if (dockTimer.current) window.clearTimeout(dockTimer.current); return undefined; }
+    wake();
+    window.addEventListener('keydown', wake);
+    return () => { window.removeEventListener('keydown', wake); if (dockTimer.current) window.clearTimeout(dockTimer.current); };
+  }, [playing, wake]);
+
   // ── What the stage reads ──────────────────────────────────────────────────
   const sim = simRef.current;
   const ph = phaseRef.current;
@@ -253,53 +269,87 @@ export default function ArenaDemo() {
     : stateLabel === 'doors' ? t('BIENTÔT · DÉMO', 'BYENTO · DEMO')
       : stateLabel === 'provisional' ? t('RÉSULTATS · DÉMO', 'REZILTA · DEMO') : t('TERMINÉ · DÉMO', 'FINI · DEMO');
 
-  // ── Before the first press ────────────────────────────────────────────────
+  // ── Before the first press: a broadcast title card ───────────────────────
   if (!started) {
+    const picked1 = DEMO_SCHOOLS.find((s) => s.key === youSchool) || null;
     return (
       <div className="live demo-intro">
         <div className="live__rays" aria-hidden />
+        <span className="demo-beam demo-beam--l" aria-hidden />
+        <span className="demo-beam demo-beam--r" aria-hidden />
         <div className="demo-intro__card">
-          <Link to="/arena" className="demo-back"><ArrowLeft size={16} aria-hidden="true" /> {t('Arène', 'Arèn')}</Link>
-          <p className="demo-intro__tag">{t('Simulation', 'Similasyon')}</p>
-          <h1>{t('Le championnat, en démo', 'Chanpyona a, an demo')}</h1>
-          <p>
-            {t(
-              `Dix écoles fictives, des élèves simulés, ${TOTAL_QUESTIONS} questions — joués avec les vraies règles de score et la vraie diffusion. Rien n’est enregistré.`,
-              `Dis lekòl fiktif, elèv simile, ${TOTAL_QUESTIONS} kesyon — jwe ak vrè règ nòt yo ak vrè difizyon an. Anyen pa anrejistre.`,
-            )}
-          </p>
-          <div className="demo-schools" role="radiogroup" aria-label={t('Joue pour une école (facultatif)', 'Jwe pou yon lekòl (si ou vle)')}>
-            <button type="button" role="radio" aria-checked={youSchool === ''} className={`demo-school${youSchool === '' ? ' is-on' : ''}`} onClick={() => setYouSchool('')}>
-              <span className="demo-school__spectate" aria-hidden="true"><Play size={20} /></span>
-              <span>{t('Regarder seulement', 'Gade sèlman')}</span>
+          <div className="demo-intro__copy">
+            <Link to="/arena" className="demo-back"><ArrowLeft size={16} aria-hidden="true" /> {t('Arène', 'Arèn')}</Link>
+            <p className="demo-intro__tag"><span className="demo-dot" aria-hidden="true" /> {t('Simulation · rien n’est enregistré', 'Similasyon · anyen pa anrejistre')}</p>
+            <h1>{t('La soirée du championnat, en démo', 'Swa chanpyona a, an demo')}</h1>
+            <p className="demo-intro__lede">
+              {t(
+                `Dix écoles fictives, des élèves simulés et ${TOTAL_QUESTIONS} questions, joués avec les vraies règles de score et la vraie diffusion — celle que verra la salle.`,
+                `Dis lekòl fiktif, elèv simile ak ${TOTAL_QUESTIONS} kesyon, jwe ak vrè règ nòt yo ak vrè difizyon an — sa sal la ap wè a.`,
+              )}
+            </p>
+            <ol className="demo-acts" aria-label={t('Le déroulé', 'Pwogram nan')}>
+              <li><b>1</b><span>{t('Les portes', 'Pòt yo')}<small>{t('les écoles arrivent', 'lekòl yo ap rive')}</small></span></li>
+              <li><b>2</b><span>{t(`${TOTAL_QUESTIONS} questions`, `${TOTAL_QUESTIONS} kesyon`)}<small>{t('le classement bouge', 'klasman an ap bouje')}</small></span></li>
+              <li><b>3</b><span>{t('Les champions', 'Chanpyon yo')}<small>{t('école et élève', 'lekòl ak elèv')}</small></span></li>
+            </ol>
+            <button type="button" className="demo-go" onClick={begin}>
+              <Play size={22} aria-hidden="true" /> {picked1 ? t(`Jouer pour ${picked1.shortName}`, `Jwe pou ${picked1.shortName}`) : t('Lancer la soirée', 'Lanse swa a')}
             </button>
-            {DEMO_SCHOOLS.map((s) => (
-              <button key={s.key} type="button" role="radio" aria-checked={youSchool === s.key} className={`demo-school${youSchool === s.key ? ' is-on' : ''}`} onClick={() => setYouSchool(s.key)}>
-                <SchoolBuilding name={s.label} cell={3} night />
-                <span>{s.label}<small>{s.commune}</small></span>
-              </button>
-            ))}
+            <p className="demo-intro__hint">
+              {youSchool
+                ? t('Réponds avec les touches 1 à 4 quand une question s’ouvre. Espace : pause.', 'Reponn ak touch 1 rive 4 lè yon kesyon louvri. Espas : poz.')
+                : t('Choisis une école pour jouer avec elle, ou regarde la soirée.', 'Chwazi yon lekòl pou jwe avè l, oswa gade swa a.')}
+            </p>
           </div>
-          <p className="demo-intro__hint">
-            {youSchool
-              ? t('Tu joues pour cette école : réponds avec les touches 1 à 4 quand une question s’ouvre.', 'Ou jwe pou lekòl sa a : reponn ak touch 1 rive 4 lè yon kesyon louvri.')
-              : t('Choisis une école pour jouer avec elle, ou regarde la soirée.', 'Chwazi yon lekòl pou jwe avè l, oswa gade aswè a.')}
-          </p>
-          <button type="button" className="demo-go" onClick={begin}>
-            <Play size={20} aria-hidden="true" /> {t('Lancer la démo', 'Lanse demo a')}
-          </button>
+          <div className="demo-pick">
+            <p className="demo-pick__label">{t('Ton camp', 'Kan ou')}</p>
+            <div className="demo-schools" role="radiogroup" aria-label={t('Joue pour une école (facultatif)', 'Jwe pou yon lekòl (si ou vle)')}>
+              <button type="button" role="radio" aria-checked={youSchool === ''} className={`demo-school demo-school--watch${youSchool === '' ? ' is-on' : ''}`} onClick={() => setYouSchool('')}>
+                <span className="demo-school__spectate" aria-hidden="true"><Play size={20} /></span>
+                <span>{t('Regarder seulement', 'Gade sèlman')}<small>{t('comme le public', 'tankou piblik la')}</small></span>
+              </button>
+              {DEMO_SCHOOLS.map((s) => (
+                <button key={s.key} type="button" role="radio" aria-checked={youSchool === s.key} className={`demo-school${youSchool === s.key ? ' is-on' : ''}`} onClick={() => setYouSchool(s.key)}>
+                  <SchoolBuilding name={s.label} cell={3} night />
+                  <span>{s.label}<small>{s.commune}</small></span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
+  // The timeline the dock draws: doors, each question, grading, champions.
+  const marks: { key: string; label: string; state: 'done' | 'now' | 'next' }[] = (() => {
+    const idx = sim ? sim.index : -1;
+    const order = ['doors', 'opening', 'q', 'grading', 'provisional', 'final'];
+    const at = ph.phase === 'question' || ph.phase === 'pause' ? 'q' : ph.phase;
+    const pos = order.indexOf(at);
+    const out: { key: string; label: string; state: 'done' | 'now' | 'next' }[] = [];
+    const st = (p: number): 'done' | 'now' | 'next' => (p < pos ? 'done' : p === pos ? 'now' : 'next');
+    out.push({ key: 'doors', label: t('Portes', 'Pòt'), state: pos > 1 ? 'done' : pos <= 1 ? 'now' : 'next' });
+    for (let i = 0; i < TOTAL_QUESTIONS; i += 1) {
+      const s = pos > 2 ? 'done' : pos < 2 ? 'next' : i < idx || (i === idx && ph.phase === 'pause') ? 'done' : i === idx ? 'now' : 'next';
+      out.push({ key: `q${i}`, label: `Q${i + 1}`, state: s });
+    }
+    out.push({ key: 'grading', label: t('Calcul', 'Kalkil'), state: st(3) });
+    out.push({ key: 'champ', label: t('Champions', 'Chanpyon'), state: pos >= 4 ? (isFinal ? 'done' : 'now') : 'next' });
+    return out;
+  })();
+  const ringPct = openQ ? Math.max(0, Math.min(1, (ph.until - simNow) / WINDOW_MS)) : 0;
+  const city = (standings?.schools || []).filter((s) => s.members > 0).slice().sort((a, b) => a.key.localeCompare(b.key));
+
   return (
-    <div className={`live demo-live${youSchool ? ' demo-live--play' : ''}`}>
+    <div className={`live demo-live${youSchool ? ' demo-live--play' : ''}${dockShown ? ' is-dock' : ''}`} onPointerMove={wake} onPointerDown={wake}>
       <div className="live__rays" aria-hidden />
       <div className="live__horizon" aria-hidden />
+      <div className="demo-vignette" aria-hidden />
 
       <div className="live__inner">
-        <header className="live__head">
+        <header className="live__head demo-head">
           <div className="live__brand">
             <img className="live__mark" src="/assets/logo.png" alt="EdLight" />
             <div>
@@ -311,6 +361,21 @@ export default function ArenaDemo() {
               </p>
             </div>
           </div>
+
+          {/* The city, as a live skyline in the header: every school's
+              building, height = team average; the leader glows. */}
+          {!atTheDoors && !isFinal && city.length > 0 && (
+            <div className="demo-city" aria-label={t('Les écoles', 'Lekòl yo')}>
+              {city.map((s) => (
+                <div key={s.key} className={`demo-tower${s.rank === 1 ? ' is-lead' : ''}${s.key === youSchool ? ' is-you' : ''}${s.qualified ? '' : ' is-short'}`} title={s.label}>
+                  <span className="demo-tower__rank">{s.qualified ? `#${s.rank}` : `${s.members}/5`}</span>
+                  <SchoolBuilding name={s.label} floors={1 + Math.round((s.teamAvg / maxAvg) * 5)} night cell={2} />
+                  <span className="demo-tower__name">{s.shortName}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <span className="live__onair">
             {(stateLabel === 'live' || stateLabel === 'grading') && <span className="live__onair-dot" />}
             {badge}
@@ -324,31 +389,27 @@ export default function ArenaDemo() {
         ) : (
           <Stage scene={scene} elapsed={Math.max(0, simNow - scene.since)} data={data} t={t} />
         )}
-
-        {/* The city: every demo school's building, height = team average.
-            Not during doors (the pre-show has its own arrivals) or the
-            post-game (the podium is the story). */}
-        {!atTheDoors && !isFinal && <div className="demo-city" aria-label={t('Les écoles', 'Lekòl yo')}>
-          {(standings?.schools || []).filter((s) => s.members > 0).slice().sort((a, b) => a.key.localeCompare(b.key)).map((s) => (
-            <div key={s.key} className={`demo-tower${s.rank === 1 ? ' is-lead' : ''}${s.key === youSchool ? ' is-you' : ''}${s.qualified ? '' : ' is-short'}`}>
-              <span className="demo-tower__rank">{s.qualified ? `#${s.rank}` : `${s.members}/5`}</span>
-              <SchoolBuilding name={s.label} floors={1 + Math.round((s.teamAvg / maxAvg) * 5)} night cell={3} />
-              <span className="demo-tower__name">{s.shortName}</span>
-            </div>
-          ))}
-        </div>}
       </div>
 
       {/* Play-along: the question, for the school you picked. */}
       {youSchool && (openQ || revealQ) && (() => {
         const item = (openQ || revealQ)!;
         const opts = triviaOptions(item.q, isCreole);
+        const mine = DEMO_SCHOOLS.find((s) => s.key === youSchool);
         return (
-          <aside className="demo-play" aria-live="polite">
-            <p className="demo-play__meta">
-              {openQ ? t(`À toi · ${secondsLeft} s`, `Pou ou · ${secondsLeft} s`) : t('Réponse', 'Repons')}
-              {youRow ? ` · ${youRow.score} pts · #${youRow.rank}` : ''}
-            </p>
+          <aside className={`demo-play${revealQ ? ' is-reveal' : ''}`} aria-live="polite">
+            <div className="demo-play__top">
+              <span className="demo-play__team">
+                <SchoolBuilding name={mine?.label || ''} cell={2} night />
+                <span>{t('Pour', 'Pou')} {mine?.shortName}{youRow ? <small>{youRow.score} pts · #{youRow.rank}</small> : null}</span>
+              </span>
+              {openQ ? (
+                <span className="demo-ring" style={{ '--p': ringPct } as React.CSSProperties} aria-label={t(`${secondsLeft} secondes`, `${secondsLeft} segonn`)}>
+                  <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.5" /><circle className="demo-ring__arc" cx="18" cy="18" r="15.5" /></svg>
+                  <b>{secondsLeft}</b>
+                </span>
+              ) : <span className="demo-play__reveal">{t('Réponse', 'Repons')}</span>}
+            </div>
             <h2>{isCreole ? item.q.qHt || item.q.q : item.q.q}</h2>
             <ol className="demo-play__opts">
               {opts.map((o: string, i: number) => {
@@ -362,7 +423,7 @@ export default function ArenaDemo() {
                       onClick={() => answer(i)}
                       className={`demo-opt${picked === i ? ' is-picked' : ''}${isAnswer ? ' is-right' : ''}${isMineWrong ? ' is-wrong' : ''}`}
                     >
-                      <span className="demo-opt__key">{i + 1}</span> {o}
+                      <span className="demo-opt__key">{i + 1}</span> <span className="demo-opt__text">{o}</span>
                       {isAnswer && <Check size={18} aria-hidden="true" />}
                       {isMineWrong && <X size={18} aria-hidden="true" />}
                     </button>
@@ -370,39 +431,49 @@ export default function ArenaDemo() {
                 );
               })}
             </ol>
-            {openQ && picked !== null && <p className="demo-play__note">{t('Réponse enregistrée — tout le monde la découvre à la fermeture.', 'Repons anrejistre — tout moun dekouvri l lè kesyon an fèmen.')}</p>}
+            {openQ && picked !== null && <p className="demo-play__note">{t('Réponse verrouillée — tout le monde la découvre à la fermeture.', 'Repons lan fèmen — tout moun dekouvri l lè kesyon an fèmen.')}</p>}
           </aside>
         );
       })()}
 
-      {/* Controls */}
-      <div className="demo-dock" role="toolbar" aria-label={t('Contrôles de la démo', 'Kontwòl demo a')}>
-        <Link to="/arena" className="demo-dock__btn" aria-label={t('Retour à l’Arène', 'Tounen nan Arèn nan')}><ArrowLeft size={18} aria-hidden="true" /></Link>
-        <button type="button" className="demo-dock__btn demo-dock__btn--main" onClick={() => setPlaying((p) => !p)} disabled={isFinal} aria-label={playing ? t('Pause', 'Poz') : t('Lecture', 'Jwe')}>
-          {playing ? <Pause size={18} aria-hidden="true" /> : <Play size={18} aria-hidden="true" />}
-        </button>
-        <button type="button" className="demo-dock__btn" onClick={skip} disabled={isFinal}>
-          {t('Étape suivante', 'Pwochen etap')} <ChevronRight size={16} aria-hidden="true" />
-        </button>
-        <div className="demo-dock__speed" role="radiogroup" aria-label={t('Vitesse', 'Vitès')}>
-          {[1, 2, 4].map((v) => (
-            <button key={v} type="button" role="radio" aria-checked={speed === v} className={speed === v ? 'is-on' : ''} onClick={() => setSpeed(v)}>{v}×</button>
+      {/* Controls — a video-player bar: hides itself while the evening plays. */}
+      <div className="demo-dock" role="toolbar" aria-label={t('Contrôles de la démo', 'Kontwòl demo a')} onFocus={wake}>
+        <ol className="demo-timeline" aria-label={t('Déroulé de la soirée', 'Pwogram swa a')}>
+          {marks.map((m) => (
+            <li key={m.key} className={`demo-mark demo-mark--${m.state}${m.key.startsWith('q') ? ' is-q' : ''}`} aria-current={m.state === 'now' ? 'step' : undefined}>
+              <span className="demo-mark__bar" />
+              {!m.key.startsWith('q') || m.state === 'now' ? <span className="demo-mark__label">{m.label}</span> : null}
+            </li>
           ))}
+        </ol>
+        <div className="demo-dock__row">
+          <Link to="/arena" className="demo-dock__btn" aria-label={t('Retour à l’Arène', 'Tounen nan Arèn nan')}><ArrowLeft size={18} aria-hidden="true" /></Link>
+          <button type="button" className="demo-dock__btn demo-dock__btn--main" onClick={() => setPlaying((p) => !p)} disabled={isFinal} aria-label={playing ? t('Pause', 'Poz') : t('Lecture', 'Jwe')}>
+            {playing ? <Pause size={20} aria-hidden="true" /> : <Play size={20} aria-hidden="true" />}
+          </button>
+          <button type="button" className="demo-dock__btn" onClick={skip} disabled={isFinal}>
+            {t('Étape suivante', 'Pwochen etap')} <ChevronRight size={16} aria-hidden="true" />
+          </button>
+          <div className="demo-dock__speed" role="radiogroup" aria-label={t('Vitesse', 'Vitès')}>
+            {[1, 2, 4].map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={speed === v} className={speed === v ? 'is-on' : ''} onClick={() => setSpeed(v)}>{v}×</button>
+            ))}
+          </div>
+          <span className="demo-dock__phase">
+            {{
+              doors: t('Portes ouvertes — les écoles arrivent', 'Pòt yo louvri — lekòl yo ap rive'),
+              opening: t('Ouverture', 'Ouvèti'),
+              question: t('Question ouverte', 'Kesyon louvri'),
+              pause: t('Pause — le classement bouge', 'Poz — klasman an ap bouje'),
+              grading: t('Calcul des scores', 'Kalkil nòt yo'),
+              provisional: t('Champions', 'Chanpyon yo'),
+              final: t('Terminé', 'Fini'),
+            }[ph.phase]}
+          </span>
+          <button type="button" className="demo-dock__btn" onClick={replay}>
+            <RefreshCw size={16} aria-hidden="true" /> {t('Nouvelle soirée', 'Nouvo aswè')}
+          </button>
         </div>
-        <span className="demo-dock__phase">
-          {{
-            doors: t('Portes ouvertes — les écoles arrivent', 'Pòt yo louvri — lekòl yo ap rive'),
-            opening: t('Ouverture', 'Ouvèti'),
-            question: t('Question ouverte', 'Kesyon louvri'),
-            pause: t('Pause — le classement bouge', 'Poz — klasman an ap bouje'),
-            grading: t('Calcul des scores', 'Kalkil nòt yo'),
-            provisional: t('Champions', 'Chanpyon yo'),
-            final: t('Terminé', 'Fini'),
-          }[ph.phase]}
-        </span>
-        <button type="button" className="demo-dock__btn" onClick={replay}>
-          <RefreshCw size={16} aria-hidden="true" /> {t('Nouvelle soirée', 'Nouvo aswè')}
-        </button>
       </div>
     </div>
   );
