@@ -191,15 +191,24 @@
 .arc-story__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr); gap: 1.5rem; align-items: start; }
 
 .arc-map {
-  position: relative; aspect-ratio: 1.15 / 1; border-radius: 24px; overflow: hidden;
+  position: relative; aspect-ratio: 1072 / 832; border-radius: 24px; overflow: hidden;
+  /* the whole island fits on a laptop screen next to the chapter card */
+  width: 100%; max-width: calc(min(72vh, 680px) * 1072 / 832); justify-self: center;
   background:
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 6px),
     radial-gradient(circle at 30% 20%, #1E5BB8, #0F2E63 70%);
   box-shadow: var(--shadow-md, 0 6px 24px -8px rgba(15, 30, 56, 0.18));
 }
-.arc-map__art { position: absolute; inset: 6% 5%; width: 90%; height: 88%; }
-.arc-map__land { fill: #2E9C6E; stroke: #A8DCC5; stroke-width: 0.6; stroke-linejoin: round; }
-.arc-map__route { fill: none; stroke: rgba(255, 255, 255, 0.55); stroke-width: 0.7; stroke-dasharray: 1.6 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.arc-map__art { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Départements: locked ones sit in shadow, open ones are land, conquered ones glow. */
+.arc-dept { cursor: pointer; }
+.arc-dept__fill { fill: #3B5578; stroke: #0F2E63; stroke-width: 3; stroke-linejoin: round; transition: fill 0.2s ease; }
+.arc-dept.is-open .arc-dept__fill { fill: #2E9C6E; }
+.arc-dept.is-done .arc-dept__fill { fill: #3FC489; }
+.arc-dept:hover .arc-dept__fill { fill: #4A6A94; }
+.arc-dept.is-open:hover .arc-dept__fill { fill: #36B07D; }
+.arc-dept__edge { fill: none; stroke: var(--arc-gold, #FFB92E); stroke-width: 5; stroke-linejoin: round; pointer-events: none; }
+.arc-map__route { fill: none; stroke: rgba(255, 255, 255, 0.6); stroke-width: 3; stroke-dasharray: 8 7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .arc-pin {
   position: absolute; transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center; gap: 0.2rem;

@@ -10,6 +10,7 @@ html {
 /* Prevent horizontal scroll on mobile */
 body {
   overflow-x: hidden;
+  overflow-x: clip; /* see mobile-first.css: hidden alone breaks position: sticky */
   width: 100%;
 }
 

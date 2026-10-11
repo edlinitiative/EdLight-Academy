@@ -569,6 +569,19 @@
   animation: trivia-fadeUp 0.25s ease;
 }
 
+/* Answering must never end in a scroll hunt: once a question is answered the
+   button pins to the bottom of the viewport (at every width — laptops with a
+   long explanation hit this too) until its natural place scrolls into view. */
+.trivia-next-btn {
+  position: sticky;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
+  min-width: 240px;
+  min-height: 52px;
+  font-size: 1.05rem;
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--cat-color, var(--primary-500)) 60%, #000), 0 10px 30px rgba(15, 30, 56, 0.25);
+}
+
 .trivia-next-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 24px color-mix(in srgb, var(--primary-500) 30%, transparent);
@@ -628,13 +641,7 @@
      never sit below the fold after answering. */
   .trivia-quiz { gap: 0.85rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
   .trivia-quiz__timer-ring { width: 46px; height: 46px; font-size: 0.95rem; }
-  .trivia-next-btn {
-    position: sticky;
-    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
-    z-index: 5;
-    width: 100%;
-    max-width: 420px;
-  }
+  .trivia-next-btn { width: 100%; max-width: 420px; }
 }
 
 .trivia-results__card {
@@ -2194,4 +2201,13 @@
 @media (prefers-reduced-motion: reduce) {
   .gx-topic, .gx-btn, .gx-bar > span { transition: none; }
   .gx-topic:hover { transform: none; }
+}
+
+/* Laptops: answers in a 2×2 grid so question, answers, explanation and
+   « Question suivante » all fit on one screen — no scrolling to continue. */
+@media (min-width: 900px) {
+  .trivia-quiz { max-width: 760px; gap: 1rem; }
+  .trivia-quiz__options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .trivia-quiz__options .trivia-option { height: 100%; }
+  .trivia-quiz .trivia-feedback { width: 100%; margin: 0; }
 }

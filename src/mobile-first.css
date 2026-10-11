@@ -30,6 +30,12 @@ html,
 body {
   max-width: 100%;
   overflow-x: hidden;
+  /* `clip`, where supported, stops the sideways scroll WITHOUT turning body
+     into a scroll container. With `hidden` on both html and body, body's
+     overflow-y computes to auto, so every position: sticky on the site
+     resolved against a box that never scrolls and never stuck (the trivia
+     "Question suivante" button sat below the fold on laptops). */
+  overflow-x: clip;
 }
 
 /* In-page anchors (and the skip link) land below the sticky navbar. */

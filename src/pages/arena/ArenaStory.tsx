@@ -13,6 +13,7 @@ import {
   STORY_CHAPTERS, STAGES_PER_CHAPTER, MAX_STARS, isUnlocked, nextStage, starsFor, totalStars, chapterCleared,
   type StoryStage,
 } from '../../../shared/arenaStory';
+import { departmentPath, departmentCentroid, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import './ArenaArcade.css';
 
 /**
@@ -25,10 +26,17 @@ import './ArenaArcade.css';
  * campaign feeds the student's school exactly like any other game.
  */
 
-// A rough, stylised outline of Haiti on a 100×100 grid — a game map, not a
-// survey. The chapter pins in shared/arenaStory sit on this grid.
-const ISLAND =
-  'M24 12 L40 8 L60 10 L80 13 L92 16 L90 30 L94 50 L92 70 L88 84 L70 82 L55 86 L40 80 L25 78 L6 72 L2 64 L12 60 L30 62 L44 58 L48 48 L40 38 L30 28 L20 22 L14 16 Z';
+// The real département outlines the broadcast map uses (data/haitiMapGeometry),
+// padded so coastal pins and their labels never touch the frame. Each chapter
+// is drawn as its own département and lit by its state: the map IS the
+// progress bar.
+const PAD = 36;
+const VIEW = { x: -PAD, y: -PAD, w: MAP_WIDTH + PAD * 2, h: MAP_HEIGHT + PAD * 2 };
+const CHAPTER_GEO = STORY_CHAPTERS.map((c) => ({
+  d: departmentPath(c.dept) || '',
+  at: departmentCentroid(c.dept) || { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 },
+}));
+const pct = (v: number, origin: number, span: number) => `${(((v - origin) / span) * 100).toFixed(2)}%`;
 
 type Screen = 'map' | 'play' | 'result';
 
@@ -218,17 +226,29 @@ export default function ArenaStory() {
 
         <div className="arc-story__grid">
           <div className="arc-map" role="group" aria-label={t('Carte des chapitres', 'Kat chapit yo')}>
-            <svg className="arc-map__art" viewBox="0 0 100 100" aria-hidden="true">
+            <svg className="arc-map__art" viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} aria-hidden="true">
               <defs>
-                <pattern id="arc-px" width="2" height="2" patternUnits="userSpaceOnUse">
-                  <rect width="1" height="1" fill="rgba(255,255,255,0.06)" />
+                <pattern id="arc-px" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <rect width="4" height="4" fill="rgba(255,255,255,0.07)" />
                 </pattern>
               </defs>
-              <path d={ISLAND} className="arc-map__land" />
-              <path d={ISLAND} fill="url(#arc-px)" />
+              {STORY_CHAPTERS.map((c, i) => {
+                const open = isUnlocked(progress, i, 0);
+                const done = chapterCleared(progress, i);
+                const cls = `arc-dept${open ? ' is-open' : ''}${done ? ' is-done' : ''}${i === chapterIdx ? ' is-here' : ''}`;
+                return (
+                  <g key={c.id} className={cls} onClick={() => selectChapter(i)}>
+                    <path d={CHAPTER_GEO[i].d} className="arc-dept__fill" />
+                    <path d={CHAPTER_GEO[i].d} fill="url(#arc-px)" pointerEvents="none" />
+                  </g>
+                );
+              })}
+              {/* the selected département on top, so its gold edge is never hidden by a neighbour */}
+              <path d={CHAPTER_GEO[chapterIdx].d} className="arc-dept__edge" />
+              {/* only the road already travelled — up to the chapter in play */}
               <polyline
                 className="arc-map__route"
-                points={STORY_CHAPTERS.map((c) => `${c.pos.x},${c.pos.y}`).join(' ')}
+                points={CHAPTER_GEO.slice(0, (next?.chapter ?? STORY_CHAPTERS.length - 1) + 1).map((g) => `${g.at.x},${g.at.y}`).join(' ')}
               />
             </svg>
             {STORY_CHAPTERS.map((c, i) => {
@@ -242,7 +262,7 @@ export default function ArenaStory() {
                   key={c.id}
                   type="button"
                   className={`arc-pin${open ? '' : ' is-locked'}${done ? ' is-done' : ''}${here ? ' is-here' : ''}${next?.chapter === i ? ' is-next' : ''}`}
-                  style={{ left: `${5 + c.pos.x * 0.9}%`, top: `${6 + c.pos.y * 0.88}%` }}
+                  style={{ left: pct(CHAPTER_GEO[i].at.x, VIEW.x, VIEW.w), top: pct(CHAPTER_GEO[i].at.y, VIEW.y, VIEW.h) }}
                   onClick={() => selectChapter(i)}
                   aria-pressed={here}
                   aria-label={`${i + 1}. ${c.dept}${open ? '' : ` — ${t('verrouillé', 'fèmen')}`}${got ? ` — ${got} ★` : ''}`}
