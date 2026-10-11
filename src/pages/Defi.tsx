@@ -2,7 +2,19 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import useStore from '../contexts/store';
 import CategoryIcon from '../components/CategoryIcon';
-import { Swords, Clock, Target, Trophy, LogIn, Smartphone, RefreshCw } from '../components/icons';
+import { Swords, Clock, Target, Trophy, LogIn, Smartphone, RefreshCw, ArrowLeft } from '../components/icons';
+import UserAvatar from '../components/UserAvatar';
+
+/** The two players, face to face — the same robots the app shows. */
+function DuelArt({ left, right }: { left: string; right: string }) {
+  return (
+    <div className="defi__vs" aria-hidden="true">
+      <span className="defi__vs-p defi__vs-p--l"><UserAvatar seed={left} size={72} radius={20} /></span>
+      <span className="defi__vs-bolt">VS</span>
+      <span className="defi__vs-p defi__vs-p--r"><UserAvatar seed={right} size={72} radius={20} /></span>
+    </div>
+  );
+}
 import { TriviaQuiz } from './TriviaGames';
 import { DuelScoreboard, DuelShareSheet, categoryLabel } from '../components/games/Duels';
 import { useFocusMode } from '../hooks/useFocusMode';
@@ -134,6 +146,7 @@ export default function Defi() {
     if (!uid) {
       return (
         <div className="defi__card">
+          <DuelArt left="ton-ami" right="toi" />
           <span className="defi__eyebrow"><Swords size={14} aria-hidden="true" /> {t('Défi d’un ami', 'Defi yon zanmi')}</span>
           <h1 className="defi__title">{t('On te défie !', 'Yo defye w !')}</h1>
           <p className="defi__text">
@@ -292,6 +305,7 @@ export default function Defi() {
     // Open and yours to play.
     return (
       <div className="defi__card">
+        <DuelArt left={challenge.challengerUid || challengerName} right={uid} />
         <span className="defi__eyebrow"><Swords size={14} aria-hidden="true" /> {t('Défi reçu', 'Defi ou resevwa')}</span>
         <h1 className="defi__title">
           {t(`${challengerName} a fait ${challenge.challengerScore}/${challenge.total}. À toi !`, `${challengerName} fè ${challenge.challengerScore}/${challenge.total}. Se tou pa w !`)}
@@ -323,7 +337,10 @@ export default function Defi() {
 
   return (
     <section className="defi">
-      <div className="defi__wrap">{body}</div>
+      <div className="defi__wrap">
+        <Link to="/arena" className="aph__back defi__back" aria-label={t('Arène', 'Arèn')} title={t('Arène', 'Arèn')}><ArrowLeft size={18} aria-hidden="true" /></Link>
+        {body}
+      </div>
     </section>
   );
 }
