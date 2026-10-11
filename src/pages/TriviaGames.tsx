@@ -34,6 +34,7 @@ import { DUEL_ROUND, drawIdxs, questionsAt, shuffleOptions } from '../utils/duel
 import SprintSolo from './trivia/SprintSolo';
 import LiveRoomEntry from './trivia/LiveRoomEntry';
 import './trivia/triviaModes.css';
+import ArenaPageHead from '../components/arena/ArenaPageHead';
 
 /* ─── The three ways to play trivia (Ted: "3 variations — combine the
    features"): the quick round, the solo sprint, and live rooms. ─── */
@@ -802,10 +803,6 @@ function GameRecords({ isCreole }) {
   );
 }
 
-/* Size of the shipped question bank. Computed from the data, once, so the
-   figure on the hero can never drift from what a player actually gets. */
-const BANK_TOTAL = Object.values(TRIVIA_QUESTIONS as Record<string, any[]>)
-  .reduce((n, list) => n + (list?.length || 0), 0);
 
 /* ─── Games hub (landing) ─────────────────────────────────────────────────
    Ted's fifth mockup: a HUD (school + rank, level and XP bar, streak, "Défier"),
@@ -822,7 +819,6 @@ function GamesHub({ isCreole }) {
   const location = useLocation();
   const { profile, level, daily, isAuthed } = useTrivia();
   const { streak } = useStreak();
-  const setSchoolChosen = useStore((s) => s.setSchoolChosen);
   const toggleAuthModal = useStore((s) => s.toggleAuthModal);
   const { categories } = useTriviaContent();
   const t = (fr: string, ht: string) => (isCreole ? ht : fr);
@@ -894,79 +890,14 @@ function GamesHub({ isCreole }) {
 
   return (
     <div className="games-hub pf container gx">
-      {/* ── HUD ─────────────────────────────────────────────────────────── */}
-      <header className="gx-hud">
-        <div className="gx-hud__top">
-          <div className="gx-hud__who">
-            <span className="gx-hud__badge" aria-hidden="true"><SchoolIcon size={22} /></span>
-            <div className="gx-hud__id">
-              <h1 className="gx-hud__title">
-                {school || t('À quoi veux-tu jouer aujourd’hui ?', 'Ki sa ou vle jwe jodi a ?')}
-              </h1>
-              <p className="gx-hud__sub">
-                {school
-                  ? (mySchool
-                    ? t(
-                      `Rang #${mySchool.rank} des écoles · ${mySchool.members} élève${mySchool.members > 1 ? 's' : ''} sur EdLight`,
-                      `Plas #${mySchool.rank} pami lekòl yo · ${mySchool.members} elèv sou EdLight`,
-                    )
-                    : t('Chaque partie fait monter ton école au classement.', 'Chak pati fè lekòl ou monte nan klasman an.'))
-                  : isAuthed
-                    ? (
-                      <button type="button" className="gx-link" onClick={() => setSchoolChosen(false)}>
-                        {t('Ajoute ton école pour la faire monter au classement →', 'Ajoute lekòl ou pou fè l monte nan klasman an →')}
-                      </button>
-                    )
-                    : t(
-                      `${GAMES.length} jeux · ${TRIVIA_CATEGORIES.length} thèmes · ${nf(BANK_TOTAL)} questions`,
-                      `${GAMES.length} jwèt · ${TRIVIA_CATEGORIES.length} tèm · ${nf(BANK_TOTAL)} kesyon`,
-                    )}
-              </p>
-            </div>
-          </div>
-          <div className="gx-hud__controls">
-            <Link to="/jeux/trivia" state={{ duelPick: true }} className="gx-duel">
-              <Swords size={16} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
-            </Link>
-          </div>
-        </div>
-
-        {isAuthed ? (
-          <div className="gx-hud__stats">
-            <div className="gx-stat gx-stat--level">
-              <div className="gx-stat__row">
-                <span className="gx-stat__label"><Crown size={16} aria-hidden="true" /> {t(`Niveau ${level.level}`, `Nivo ${level.level}`)}</span>
-                <span className="gx-stat__value">{nf(level.xp)} XP</span>
-              </div>
-              <span className="gx-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, level.progressPct || 0)}%` }} /></span>
-              <span className="gx-stat__hint">
-                {level.xpForNext > 0
-                  ? t(`${nf(level.xpToNext)} XP avant le niveau ${level.level + 1}`, `${nf(level.xpToNext)} XP anvan nivo ${level.level + 1}`)
-                  : t('Niveau maximum', 'Nivo maksimòm')}
-              </span>
-            </div>
-            <div className="gx-stat">
-              <span className="gx-stat__icon gx-stat__icon--amber" aria-hidden="true"><Flame size={18} /></span>
-              <div className="gx-stat__text">
-                <span className="gx-stat__value">{days} {t(days === 1 ? 'jour' : 'jours', 'jou')}</span>
-                <span className="gx-stat__hint">{t('de série', 'seri')}</span>
-              </div>
-            </div>
-            <div className="gx-stat">
-              <span className="gx-stat__icon gx-stat__icon--azure" aria-hidden="true"><Gamepad2 size={18} /></span>
-              <div className="gx-stat__text">
-                <span className="gx-stat__value">{nf(gamesPlayed)}</span>
-                <span className="gx-stat__hint">{t('parties d’arcade', 'pati arkad')}</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="gx-hud__signin">
-            <span>{t('Connecte-toi pour garder tes XP, ta série et faire gagner ton école.', 'Konekte pou kenbe XP ou, seri ou epi fè lekòl ou genyen.')}</span>
-            <button type="button" className="gx-btn" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
-          </div>
+      <ArenaPageHead
+        title={t('Jeux', 'Jwèt')}
+        actions={(
+          <Link to="/jeux/trivia" state={{ duelPick: true }} className="gx-duel">
+            <Swords size={16} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
+          </Link>
         )}
-      </header>
+      />
 
       {/* ── Mode tabs ───────────────────────────────────────────────────── */}
       <div className="gx-tabs" role="tablist" aria-label={t('Modes de jeu', 'Mòd jwèt')}>
@@ -1053,7 +984,7 @@ function GamesHub({ isCreole }) {
                     ? t('Chargement…', 'N ap chaje…')
                     : arena
                       ? (arena.state === 'doors'
-                        ? t('Les portes sont ouvertes : la finale se joue maintenant dans l’application.', 'Pòt yo louvri : final la ap jwe kounye a nan aplikasyon an.')
+                        ? t('Les portes sont ouvertes : la finale se joue maintenant.', 'Pòt yo louvri : final la ap jwe kounye a.')
                         : arenaDate
                           ? t(`Inscriptions ouvertes — finale le ${arenaDate}.`, `Enskripsyon ouvè — final la ${arenaDate}.`)
                           : t('Inscriptions ouvertes.', 'Enskripsyon ouvè.'))
@@ -1106,6 +1037,70 @@ function GamesHub({ isCreole }) {
 
         {/* ── Right column: tournament, the league, today's quests ───────── */}
         <aside className="gx-side">
+              <section className="gx-hud gx-hud--side" aria-label={t('Ta partie', 'Pati ou')}>
+                <div className="gx-hud__top">
+                  <div className="gx-hud__who">
+                    <span className="gx-hud__badge" aria-hidden="true"><SchoolIcon size={22} /></span>
+                    <div className="gx-hud__id">
+                      <h2 className="gx-hud__title">
+                        {school || t('Ta partie', 'Pati ou')}
+                      </h2>
+                      <p className="gx-hud__sub">
+                        {school
+                          ? (mySchool
+                            ? t(
+                              `Rang #${mySchool.rank} des écoles · ${mySchool.members} élève${mySchool.members > 1 ? 's' : ''} sur EdLight`,
+                              `Plas #${mySchool.rank} pami lekòl yo · ${mySchool.members} elèv sou EdLight`,
+                            )
+                            : t('Chaque partie fait monter ton école au classement.', 'Chak pati fè lekòl ou monte nan klasman an.'))
+                          : isAuthed
+                            ? (
+                              <Link to="/arena#ah-team" className="gx-link">
+                                {t('Ajoute ton école pour la faire monter au classement →', 'Ajoute lekòl ou pou fè l monte nan klasman an →')}
+                              </Link>
+                            )
+                            : t('Tes XP, ta série et tes records.', 'XP ou, seri ou ak rekò ou.')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {isAuthed ? (
+                  <div className="gx-hud__stats">
+                    <div className="gx-stat gx-stat--level">
+                      <div className="gx-stat__row">
+                        <span className="gx-stat__label"><Crown size={16} aria-hidden="true" /> {t(`Niveau ${level.level}`, `Nivo ${level.level}`)}</span>
+                        <span className="gx-stat__value">{nf(level.xp)} XP</span>
+                      </div>
+                      <span className="gx-bar" aria-hidden="true"><span style={{ width: `${Math.min(100, level.progressPct || 0)}%` }} /></span>
+                      <span className="gx-stat__hint">
+                        {level.xpForNext > 0
+                          ? t(`${nf(level.xpToNext)} XP avant le niveau ${level.level + 1}`, `${nf(level.xpToNext)} XP anvan nivo ${level.level + 1}`)
+                          : t('Niveau maximum', 'Nivo maksimòm')}
+                      </span>
+                    </div>
+                    <div className="gx-stat">
+                      <span className="gx-stat__icon gx-stat__icon--amber" aria-hidden="true"><Flame size={18} /></span>
+                      <div className="gx-stat__text">
+                        <span className="gx-stat__value">{days} {t(days === 1 ? 'jour' : 'jours', 'jou')}</span>
+                        <span className="gx-stat__hint">{t('de série', 'seri')}</span>
+                      </div>
+                    </div>
+                    <div className="gx-stat">
+                      <span className="gx-stat__icon gx-stat__icon--azure" aria-hidden="true"><Gamepad2 size={18} /></span>
+                      <div className="gx-stat__text">
+                        <span className="gx-stat__value">{nf(gamesPlayed)}</span>
+                        <span className="gx-stat__hint">{t('parties d’arcade', 'pati arkad')}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="gx-hud__signin">
+                    <span>{t('Connecte-toi pour garder tes XP, ta série et faire gagner ton école.', 'Konekte pou kenbe XP ou, seri ou epi fè lekòl ou genyen.')}</span>
+                    <button type="button" className="gx-btn" onClick={toggleAuthModal}>{t('Se connecter', 'Konekte')}</button>
+                  </div>
+                )}
+              </section>
           {/* On the Tournois tab the panel already carries the Arène status and
               the full school board; the side keeps only the quests there. */}
           {tab !== 'tournois' && (<>
@@ -1118,8 +1113,8 @@ function GamesHub({ isCreole }) {
             <p className="gx-card__text">
               {arena
                 ? (arenaDate
-                  ? t(`Le ${arenaDate}. Inscris ton école ici, joue dans l’application.`, `${arenaDate}. Enskri lekòl ou isit la, jwe nan aplikasyon an.`)
-                  : t('Inscris ton école ici, joue dans l’application.', 'Enskri lekòl ou isit la, jwe nan aplikasyon an.'))
+                  ? t(`Le ${arenaDate}. Inscris ton école, puis joue en direct, ici ou dans l’application.`, `${arenaDate}. Enskri lekòl ou, epi jwe an dirèk, isit la oswa nan aplikasyon an.`)
+                  : t('Inscris ton école, puis joue en direct, ici ou dans l’application.', 'Enskri lekòl ou, epi jwe an dirèk, isit la oswa nan aplikasyon an.'))
                 : t('La prochaine finale sera annoncée ici.', 'N ap anonse pwochen final la isit la.')}
             </p>
             <Link to="/arena" className="gx-btn gx-btn--block">{arena ? t('Réserver ma place', 'Rezève plas mwen') : t('Voir l’Arène', 'Gade Arèn nan')}</Link>

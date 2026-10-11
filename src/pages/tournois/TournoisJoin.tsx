@@ -66,12 +66,11 @@ export default function TournoisJoin() {
         <ArenaPageHead
           back="/tournois"
           backLabel={t('Tournois', 'Tounwa')}
-          over={t('Avec un PIN', 'Ak yon PIN')}
           title={t('Rejoindre un tournoi', 'Antre nan yon tounwa')}
-          lede={t('Entre le PIN à six chiffres que l’organisateur a partagé.', 'Antre PIN sis chif òganizatè a pataje a.')}
         />
         <form className="tn-card tn-card--pin an-panel an-panel--edge" style={{ display: 'grid', gap: '0.9rem' }} onSubmit={(e) => { e.preventDefault(); join(); }}>
           <div className="tn-pinart"><PinArt /></div>
+          <p className="tn-muted" style={{ margin: 0, textAlign: 'center' }}>{t('Entre le PIN à six chiffres que l’organisateur a partagé.', 'Antre PIN sis chif òganizatè a pataje a.')}</p>
           <div className="tn-pinform">
             <input
               inputMode="numeric"

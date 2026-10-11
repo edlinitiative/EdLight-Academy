@@ -91,12 +91,7 @@ export default function TournoisHub() {
     <section className="tn">
       <div className="tn__wrap">
         <ArenaPageHead
-          over={t('Avec ta classe', 'Ak klas ou')}
           title={t('Tournois', 'Tounwa')}
-          lede={t(
-            'Choisis le format et les thèmes : on génère les questions et le calendrier. Tes amis rejoignent avec un PIN.',
-            'Chwazi fòma a ak tèm yo : nou jenere kesyon yo ak orè a. Zanmi w yo antre ak yon PIN.',
-          )}
           actions={(
             <button type="button" className="an-go" onClick={create}>
               <Plus size={18} aria-hidden="true" /> {t('Créer un tournoi', 'Kreye yon tounwa')}

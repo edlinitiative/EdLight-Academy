@@ -40,23 +40,21 @@ body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link.activ
 body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .nav-search-btn:hover, body.arena-night .navbar .theme-toggle:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 
 /* ═══ Shared Arène page language (ArenaPageHead + night panels) ═════════════ */
-.aph { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; margin: 0 0 clamp(1.25rem, 3vw, 2rem); }
-.aph__copy { display: grid; gap: 0.5rem; justify-items: start; min-width: 0; }
+/* One title row: back · title · controls. Then the content. */
+.aph { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; margin: 0 0 clamp(1rem, 2.5vw, 1.5rem); }
 .aph__back {
-  display: inline-flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; padding: 0.4rem 0.85rem 0.4rem 0.6rem; border-radius: 999px;
+  display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px;
   background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px rgba(160, 190, 255, 0.18);
-  color: #A3B5DC; font-size: 0.95rem; font-weight: 700; text-decoration: none; transition: background 0.15s ease, color 0.15s ease;
+  color: #C8D6F5; text-decoration: none; transition: background 0.15s ease, color 0.15s ease;
 }
 .aph__back:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
-.aph__over { margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #FFC24A; }
 .aph__title {
-  margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
-  font-size: clamp(2.3rem, 1.5rem + 2.6vw, 3.6rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FFF0CC 60%, #FFC86B 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 6px 24px rgba(255, 190, 90, 0.22));
+  flex: 1 1 auto; min-width: 0; margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-size: clamp(2rem, 1.4rem + 1.8vw, 2.9rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1.05;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF0CC 65%, #FFC86B 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.aph__lede { margin: 0; max-width: 56ch; font-size: 1.05rem; line-height: 1.55; color: #A3B5DC; }
-.aph__actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.aph__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.aph__over { margin: 0; font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #FFC24A; }
 .aph a:focus-visible { outline: 3px solid #FFC24A; outline-offset: 3px; }
 
 /* Night panel: a card with an optional gradient hairline edge. */

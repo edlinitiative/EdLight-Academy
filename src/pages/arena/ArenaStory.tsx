@@ -244,25 +244,10 @@ export default function ArenaStory() {
     <section className="hs">
       <div className="hs-sky" aria-hidden="true" />
       <div className="container hs-wrap">
+        {/* One title row, then the map. Progress lives in the level panel. */}
         <header className="hs-head">
-          <div className="hs-head__copy">
-            <Link to="/arena" className="hs-back"><ArrowLeft size={16} aria-hidden="true" /> {t('Arène', 'Arèn')}</Link>
-            <p className="hs-over">{t('Mode Histoire', 'Mòd Istwa')}</p>
-            <h1 ref={headingRef} tabIndex={-1} className="hs-title">{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h1>
-            <p className="hs-lede">{t('Dix départements, trois étapes et un boss dans chacun. Gagne pour ouvrir la route jusqu’à la Citadelle.', 'Dis depatman, twa etap ak yon bòs nan chak. Genyen pou w louvri wout la jis rive Sitadèl la.')}</p>
-          </div>
-          <dl className="hs-meter">
-            <div className="hs-meter__item">
-              <dt>{t('Étoiles', 'Zetwal')}</dt>
-              <dd><Star size={20} weight="fill" aria-hidden="true" /> {stars}<small>/{MAX_STARS}</small></dd>
-              <span className="hs-meter__bar" aria-hidden="true"><span style={{ width: `${(stars / MAX_STARS) * 100}%` }} /></span>
-            </div>
-            <div className="hs-meter__item">
-              <dt>{t('Départements conquis', 'Depatman konkeri')}</dt>
-              <dd className="is-green"><Crown size={20} weight="fill" aria-hidden="true" /> {conquered}<small>/{STORY_CHAPTERS.length}</small></dd>
-              <span className="hs-meter__bar hs-meter__bar--green" aria-hidden="true"><span style={{ width: `${(conquered / STORY_CHAPTERS.length) * 100}%` }} /></span>
-            </div>
-          </dl>
+          <Link to="/arena" className="hs-backicon" aria-label={t('Arène', 'Arèn')} title={t('Arène', 'Arèn')}><ArrowLeft size={18} aria-hidden="true" /></Link>
+          <h1 ref={headingRef} tabIndex={-1} className="hs-title">{t('Le tour d’Ayiti', 'Tou Ayiti a')}</h1>
         </header>
 
         <div className="hs-grid">
@@ -330,6 +315,18 @@ export default function ArenaStory() {
               <button type="button" className="hs-arrow" disabled={chapterIdx === STORY_CHAPTERS.length - 1} onClick={() => selectChapter(chapterIdx + 1)} aria-label={t('Chapitre suivant', 'Pwochen chapit')}><ChevronRight size={18} /></button>
             </div>
             <h2 id="hs-chapter-title" className="hs-level__title">{chapter.dept}</h2>
+            <dl className="hs-meter">
+              <div className="hs-meter__item">
+                <dt>{t('Étoiles', 'Zetwal')}</dt>
+                <dd><Star size={18} weight="fill" aria-hidden="true" /> {stars}<small>/{MAX_STARS}</small></dd>
+                <span className="hs-meter__bar" aria-hidden="true"><span style={{ width: `${(stars / MAX_STARS) * 100}%` }} /></span>
+              </div>
+              <div className="hs-meter__item">
+                <dt>{t('Conquis', 'Konkeri')}</dt>
+                <dd className="is-green"><Crown size={18} weight="fill" aria-hidden="true" /> {conquered}<small>/{STORY_CHAPTERS.length}</small></dd>
+                <span className="hs-meter__bar hs-meter__bar--green" aria-hidden="true"><span style={{ width: `${(conquered / STORY_CHAPTERS.length) * 100}%` }} /></span>
+              </div>
+            </dl>
             <p className="hs-level__intro">{isCreole ? chapter.intro.ht : chapter.intro.fr}</p>
 
             <ol className="hs-path">

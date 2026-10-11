@@ -35,12 +35,7 @@ export default function Classement() {
     <section className="section classement">
       <div className="container classement__container">
         <ArenaPageHead
-          over={t('Classement', 'Klasman')}
-          title={t('Où te situes-tu ?', 'Kote ou ye ?')}
-          lede={t(
-            'Les XP gagnés dans les jeux te classent chaque semaine — au niveau national, et par école, ville et département.',
-            'XP ou ranmase nan jwèt yo klase ou chak semèn — nan nivo nasyonal, epi pa lekòl, vil ak depatman.',
-          )}
+          title={t('Classement', 'Klasman')}
           actions={<Link to="/jeux" className="an-go"><Zap size={18} aria-hidden="true" /> {t('Gagner des XP', 'Ranmase XP')}</Link>}
         />
 

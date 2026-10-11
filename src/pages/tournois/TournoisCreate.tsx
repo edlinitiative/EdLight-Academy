@@ -151,8 +151,7 @@ export default function TournoisCreate() {
         <ArenaPageHead
           back="/tournois"
           backLabel={t('Tournois', 'Tounwa')}
-          over={t('Nouveau tournoi', 'Nouvo tounwa')}
-          title={t('Monte ton tournoi', 'Fè tounwa ou')}
+          title={t('Nouveau tournoi', 'Nouvo tounwa')}
         />
         <div className="tn-steps" aria-hidden="true">
           {[0, 1, 2, 3].map((i) => <span key={i} className={i <= step ? 'is-on' : ''} />)}
