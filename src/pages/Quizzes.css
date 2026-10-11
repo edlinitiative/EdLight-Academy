@@ -799,3 +799,35 @@
 
 /* Same width as the navbar's container, so the page lines up with the logo. */
 .qz > .container { max-width: 1480px; }
+
+/* ── Shelves (same treatment as Courses / Exams) ──
+   Chapters on one panel as full-width numbered rows (never an orphan, long
+   names fit, every row the same height); the side column as one panel. */
+.qz-shelf {
+  padding: clamp(1.25rem, 2.5vw, 1.75rem); border-radius: 28px;
+  background: linear-gradient(180deg, color-mix(in srgb, #1B6FE0 5%, var(--surface, #fff)), var(--surface, #fff) 50%);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 24px 48px -40px rgba(11, 41, 107, 0.4);
+}
+.qz-shelf .qz-chapters__head h2 { font-size: 1.75rem; }
+.qz-shelf .qz-chaps { grid-template-columns: 1fr; gap: 0.6rem; }
+.qz-shelf .qz-chap { flex-direction: row; align-items: center; border-radius: 18px; box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 12px 24px -20px rgba(11, 41, 107, 0.4); }
+.qz-shelf .qz-chap:hover { transform: translateY(-2px); }
+.qz-shelf .qz-chap__pick { display: grid; grid-template-columns: 3.2rem 1fr; grid-template-rows: auto auto; column-gap: 1rem; row-gap: 0.15rem; align-items: center; padding: 1rem 1.25rem; }
+.qz-shelf .qz-chap__no { grid-row: 1 / 3; font-size: 2.2rem; text-align: center; }
+.qz-shelf .qz-chap__name { font-size: 1.1rem; }
+.qz-shelf .qz-chap__acts { flex: none; padding: 0 1.25rem 0 0; }
+.qz-shelf .qz-chap__acts .qz-act { flex: none; min-width: 120px; }
+@media (max-width: 640px) {
+  .qz-shelf .qz-chap { flex-direction: column; align-items: stretch; }
+  .qz-shelf .qz-chap__acts { padding: 0 1.25rem 1rem; }
+  .qz-shelf .qz-chap__acts .qz-act { flex: 1; min-width: 0; }
+}
+
+@media (min-width: 1024px) {
+  .qz-hub__side {
+    display: grid; gap: 0; padding: 0.5rem; border-radius: 28px; background: var(--surface, #fff);
+    box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 24px 48px -40px rgba(11, 41, 107, 0.4);
+  }
+  .qz-hub__side .qz-card { margin: 0; border-radius: 20px; box-shadow: none; background: none; }
+  .qz-hub__side .qz-card + .qz-card { border-top: 1px solid var(--border, #E6EBF2); border-radius: 0; }
+}

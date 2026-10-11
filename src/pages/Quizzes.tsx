@@ -880,7 +880,7 @@ const Quizzes = () => {
                 {/* Every chapter of the course as a card: pick it, or start
                     straight from it. The counts are the bank's own. */}
                 {unitRows.length > 0 && (
-                  <section aria-labelledby="qz-chapters-title">
+                  <section className="qz-shelf" aria-labelledby="qz-chapters-title">
                     <div className="qz-chapters__head">
                       <h2 id="qz-chapters-title">{tx('Les chapitres', 'Chapit yo')}</h2>
                       <span>{subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}</span>
