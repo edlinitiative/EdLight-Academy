@@ -77,15 +77,25 @@ export interface CatalogSubject {
   comingSoon: boolean;
 }
 
+export interface CatalogFrame {
+  courseId: string;
+  code: SubjectCode;
+  label: string;
+  /** Real YouTube video URL of one of the course's lessons. */
+  videoUrl: string;
+}
+
 export interface CatalogSummary {
   subjects: CatalogSubject[];
+  /** One real lesson video per open course, a third of the way in. */
+  frames: CatalogFrame[];
   /** Courses open to students. */
   courses: number;
   /** Video lessons open to students. */
   lessons: number;
 }
 
-type RawUnit = { title?: string; lessons?: unknown[] };
+type RawUnit = { title?: string; lessons?: { video_url?: string }[] };
 type RawCourse = {
   id?: string;
   hidden?: boolean;
@@ -114,6 +124,7 @@ export function summarizeCatalog(raw: unknown, t: TFn): CatalogSummary | null {
   if (!Array.isArray(courses) || courses.length === 0) return null;
 
   const buckets = new Map<SubjectCode, CatalogLevel[]>();
+  const frames: CatalogFrame[] = [];
   const unitsBySubject = new Map<SubjectCode, string[]>();
 
   for (const course of courses) {
@@ -135,6 +146,14 @@ export function summarizeCatalog(raw: unknown, t: TFn): CatalogSummary | null {
 
     if (!buckets.has(code)) buckets.set(code, []);
     buckets.get(code)!.push({ id: String(course.id), label, lessons, comingSoon });
+
+    if (!comingSoon) {
+      const urls = units.flatMap((u) => (Array.isArray(u?.lessons) ? u.lessons : []))
+        .map((l) => (l && typeof l.video_url === 'string' ? l.video_url : ''))
+        .filter((u) => u && !/placeholder/.test(u));
+      const pick = urls[Math.floor(urls.length / 3)];
+      if (pick) frames.push({ courseId: String(course.id), code, label, videoUrl: pick });
+    }
 
     // Unit titles come from the first open level — a real table of contents
     // beats a slogan about "cours structurés".
@@ -178,6 +197,7 @@ export function summarizeCatalog(raw: unknown, t: TFn): CatalogSummary | null {
 
   return {
     subjects,
+    frames,
     courses: subjects.reduce((n, s) => n + s.levels.filter((l) => !l.comingSoon).length, 0),
     lessons: subjects.reduce((n, s) => n + s.lessons, 0),
   };

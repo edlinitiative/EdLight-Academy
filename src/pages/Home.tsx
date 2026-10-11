@@ -8,10 +8,7 @@ import { useT } from './home/content';
 import ResumeBanner from '../components/ResumeBanner';
 import ExamCountdown from '../components/ExamCountdown';
 import HeroSection from './home/HeroSection';
-import PillarsSection from './home/PillarsSection';
-import ExamsSection from './home/ExamsSection';
-import SchoolRaceSection from './home/SchoolRaceSection';
-import CoursesSection from './home/CoursesSection';
+import ShowcaseSection from './home/ShowcaseSection';
 import CtaSection from './home/CtaSection';
 
 /**
@@ -50,13 +47,11 @@ export default function Home() {
       <div className="container resume-banner-wrap">
         <ResumeBanner />
       </div>
-      {/* Ted's mockup, in its order: pillars, the programme, the school
-          league, the real papers, the closing banner. The exercise that used
-          to be its own section now leads the hero. */}
-      <PillarsSection t={t} />
-      <CoursesSection t={t} />
-      <SchoolRaceSection t={t} />
-      <ExamsSection t={t} />
+      {/* The product shown, not described: lessons, papers, the Arène, then
+          the subjects — and one closing call. (Pillars, the programme grid,
+          the empty league box and the small exam cards it replaces were the
+          same promises told in icons.) */}
+      <ShowcaseSection t={t} />
       <CtaSection t={t} />
     </div>
   );
