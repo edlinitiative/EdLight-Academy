@@ -733,6 +733,25 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
     return h ? `${h} h${m ? ` ${String(m).padStart(2, '0')}` : ''}` : `${m} min`;
   };
   const searching = query.trim().length > 0;
+  const heroMode = !signedIn;
+  const liveCourses = courses.filter((c) => !c.comingSoon);
+  const liveTotals = {
+    courses: liveCourses.length,
+    subjects: new Set(liveCourses.map((c) => c.subject)).size,
+    lessons: liveCourses.reduce((n, c) => n + countCourseLessons(c), 0),
+  };
+  // One frame per subject for the hero fan — the first course with a real frame.
+  const heroFrames = (() => {
+    const out: { course: any; src: string }[] = [];
+    const seen = new Set<string>();
+    for (const c of [...liveCourses].sort((a, b) => SUBJECT_ORDER.indexOf(a.subject) - SUBJECT_ORDER.indexOf(b.subject))) {
+      if (seen.has(c.subject)) continue;
+      const src = coverFor(c);
+      if (src) { out.push({ course: c, src }); seen.add(c.subject); }
+      if (out.length === 3) break;
+    }
+    return out;
+  })();
 
   return (
     <section className="section pf lrn lrn--clean">
@@ -751,14 +770,27 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
           />
         )}
 
-        {/* One title, one search, one row of filters — then the courses. */}
-        <header className="cl-head">
+        {/* One title, one search, one row of filters — then the courses.
+            Signed out, it is a hero band with three real lesson frames fanned
+            beside it; signed in, the workspace above already plays that role. */}
+        <header className={`cl-head${heroMode ? ' cl-hero' : ''}`}>
+          <div className="cl-hero__copy">
+          {heroMode && <p className="cl-over">{L('Programme du MENFP · Nouveau Secondaire', 'Pwogram MENFP · Nouvo Segondè')}</p>}
           {signedIn && !filtering && courses.length > 0
             ? <h2 className="cl-head__title">{L('Tous les cours', 'Tout kou yo')}</h2>
-            : <h1 className="cl-head__title">{L('Cours', 'Kou')}</h1>}
+            : <h1 className="cl-head__title">{heroMode ? L('Chaque leçon du programme, en vidéo.', 'Chak leson nan pwogram nan, an videyo.') : L('Cours', 'Kou')}</h1>}
           <p className="cl-head__lede">
-            {L('Le programme du Nouveau Secondaire, en vidéos, leçon par leçon.', 'Pwogram Nouvo Segondè a, an videyo, leson pa leson.')}
+            {heroMode
+              ? L('Chaque notion expliquée au tableau, chapitre par chapitre. Regarde, puis entraîne-toi.', 'Chak nosyon esplike sou tablo a, chapit pa chapit. Gade, epi pratike.')
+              : L('Le programme du Nouveau Secondaire, en vidéos, leçon par leçon.', 'Pwogram Nouvo Segondè a, an videyo, leson pa leson.')}
           </p>
+          {heroMode && liveTotals.lessons > 0 && (
+            <dl className="cl-facts">
+              <div><dt>{L('leçons', 'leson')}</dt><dd>{liveTotals.lessons}</dd></div>
+              <div><dt>{L('cours', 'kou')}</dt><dd>{liveTotals.courses}</dd></div>
+              <div><dt>{L('matières', 'matyè')}</dt><dd>{liveTotals.subjects}</dd></div>
+            </dl>
+          )}
           <div className="cl-search">
             <Search size={18} aria-hidden="true" />
             <input
@@ -791,6 +823,18 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
               ))}
             </div>
           </div>
+          </div>
+          {heroMode && heroFrames.length > 0 && (
+            <div className="cl-fan" aria-hidden="true">
+              {heroFrames.map(({ course, src }, i) => (
+                <button key={course.id} type="button" tabIndex={-1} className={`cl-fan__card cl-fan__card--${i}`} onClick={() => navigate(`/courses/${course.id}`)}>
+                  <img src={src} alt="" />
+                  <span className="cl-fan__label">{subjectName(course.subject)} · {levelLabel(courseLevel(course))}</span>
+                  {i === 0 && <span className="cl-fan__play"><PlayCircle size={34} /></span>}
+                </button>
+              ))}
+            </div>
+          )}
         </header>
 
         {!online && courses.length > 0 && (

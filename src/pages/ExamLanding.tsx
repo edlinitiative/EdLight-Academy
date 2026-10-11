@@ -212,6 +212,8 @@ const ExamLanding = () => {
     return { year: String(y), papers };
   }, [levelPapers]);
 
+  const hero = latest?.papers[0] || null;
+
   const fold = (v: string) => v.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const results = useMemo(() => {
     const q = fold(query.trim());
@@ -238,34 +240,42 @@ const ExamLanding = () => {
 
   return (
     <div className="exh container">
-      <header className="exh-head">
-        <div className="exh-head__row">
-          <div>
-            <h1 className="exh-head__title">{L('Examens', 'Egzamen')}</h1>
-            <p className="exh-head__lede">
-              {L('Les vrais sujets officiels, en conditions réelles.', 'Vrè sijè ofisyèl yo, nan vrè kondisyon.')}
-              {!userId && (
-                <> {' '}
-                  <button type="button" className="exh-link" onClick={() => setShowAuthModal(true)}>
-                    {L('Connecte-toi', 'Konekte')}
-                  </button>
-                  {L(' pour garder tes résultats.', ' pou w kenbe rezilta ou.')}
-                </>
-              )}
-            </p>
-          </div>
-          <Link to="/exams/resultats" className="exam-hub__btn exam-hub__btn--soft">
-            <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
-          </Link>
-        </div>
-        <div className="exh-head__tools">
-          <div className="exam-hub__seg exh-seg" role="group" aria-label={L('Niveau', 'Nivo')}>
-            {HUB_LEVELS.map((l) => (
-              <button key={l.raw} type="button" aria-pressed={level === l.raw}
-                className={level === l.raw ? 'is-on' : ''} onClick={() => { setLevel(l.raw); setQuery(''); }}>
-                {ht ? l.ht : l.fr}
-              </button>
-            ))}
+      {/* The hero: what this page is, with the real newest paper drawn as an
+          exam sheet beside it — subject, session, duration, questions. */}
+      <header className="exh-hero">
+        <div className="exh-hero__copy">
+          <p className="exh-over">{L('Examens officiels du MENFP', 'Egzamen ofisyèl MENFP')}</p>
+          <h1 className="exh-head__title">{L('Entraîne-toi sur les vrais sujets.', 'Pratike sou vrè sijè yo.')}</h1>
+          <p className="exh-head__lede">
+            {L('Chronomètre officiel, correction à la fin, ton score gardé.', 'Kwonomèt ofisyèl, korije nan fen, nòt ou kenbe.')}
+            {!userId && (
+              <> {' '}
+                <button type="button" className="exh-link" onClick={() => setShowAuthModal(true)}>
+                  {L('Connecte-toi', 'Konekte')}
+                </button>
+                {L(' pour garder tes résultats.', ' pou w kenbe rezilta ou.')}
+              </>
+            )}
+          </p>
+          {levelPapers.length > 0 && (
+            <dl className="exh-facts">
+              <div><dt>{L('sujets', 'sijè')}</dt><dd>{levelPapers.length}</dd></div>
+              <div><dt>{L('matières', 'matyè')}</dt><dd>{subjects.length}</dd></div>
+              {yearRange(levelPapers) && <div><dt>{L('années', 'ane')}</dt><dd>{yearRange(levelPapers).replace(' – ', '–')}</dd></div>}
+            </dl>
+          )}
+          <div className="exh-head__tools">
+            <div className="exam-hub__seg exh-seg" role="group" aria-label={L('Niveau', 'Nivo')}>
+              {HUB_LEVELS.map((l) => (
+                <button key={l.raw} type="button" aria-pressed={level === l.raw}
+                  className={level === l.raw ? 'is-on' : ''} onClick={() => { setLevel(l.raw); setQuery(''); }}>
+                  {ht ? l.ht : l.fr}
+                </button>
+              ))}
+            </div>
+            <Link to="/exams/resultats" className="exh-results-link">
+              <History size={16} aria-hidden="true" /> {t('examLanding.myResults')}
+            </Link>
           </div>
           <label className="exam-hub__search exh-search">
             <Search size={18} aria-hidden="true" />
@@ -274,6 +284,30 @@ const ExamLanding = () => {
               aria-label={L('Rechercher', 'Chèche')} />
           </label>
         </div>
+
+        {hero && (
+          <Link to={`/exams/${slug}/${paperKey(hero)}`} className="exh-sheet" aria-label={`${hero._subject} — ${sessionRowName(hero, ht ? 'ht' : 'fr').title}`}>
+            <span className="exh-sheet__back exh-sheet__back--2" aria-hidden="true" />
+            <span className="exh-sheet__back exh-sheet__back--1" aria-hidden="true" />
+            <span className="exh-sheet__paper">
+              <span className="exh-sheet__top">
+                <span>{L('République d’Haïti · MENFP', 'Repiblik d Ayiti · MENFP')}</span>
+                <span>{(HUB_LEVELS.find((l) => l.raw === level) || HUB_LEVELS[0])[ht ? 'ht' : 'fr']}</span>
+              </span>
+              <span className="exh-sheet__subject" style={{ color: subjectColor(hero._subject) }}>{hero._subject}</span>
+              <span className="exh-sheet__session">{sessionRowName(hero, ht ? 'ht' : 'fr').title}</span>
+              <span className="exh-sheet__lines" aria-hidden="true">
+                <i /><i /><i className="is-short" /><i /><i className="is-short" />
+              </span>
+              <span className="exh-sheet__foot">
+                <span className="exh-sheet__chip">{durationLabel(hero.duration_minutes, ht)}</span>
+                {hero._questionCount > 0 && <span className="exh-sheet__chip">{hero._questionCount} {L('questions', 'kesyon')}</span>}
+                <span className="exh-sheet__go">{L('Commencer', 'Kòmanse')} <ChevronRight size={16} aria-hidden="true" /></span>
+              </span>
+              <span className="exh-sheet__stamp" aria-hidden="true">{L('Examen blanc', 'Egzamen blan')}</span>
+            </span>
+          </Link>
+        )}
       </header>
 
       {offLevel && (

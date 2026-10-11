@@ -1492,3 +1492,53 @@
 .cl-soon { margin: 0; font-size: 0.95rem; color: var(--text-500); }
 .cl-search-results { margin-bottom: 2rem; }
 @media (prefers-reduced-motion: reduce) { .cl-card, .cl-card__cover img, .cl-card__play { transition: none; } }
+
+/* ── Hero band (signed out) ── */
+.cl-hero {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr); gap: clamp(1.5rem, 5vw, 4rem); align-items: center;
+  margin: 0 calc(50% - 50vw) 2.5rem; padding: clamp(2.5rem, 6vw, 4.5rem) max(1rem, calc(50vw - 560px + 24px)) clamp(2.5rem, 5vw, 4rem);
+  background:
+    radial-gradient(700px 380px at 85% 40%, rgba(27, 111, 224, 0.16), transparent 70%),
+    radial-gradient(600px 300px at 5% 0%, rgba(255, 92, 57, 0.08), transparent 70%),
+    linear-gradient(180deg, #F3F7FF 0%, var(--background, #F7F9FC) 100%);
+}
+[data-theme="dark"] .cl-hero { background: radial-gradient(700px 380px at 85% 40%, rgba(27, 111, 224, 0.22), transparent 70%), var(--background); }
+.cl-hero__copy { display: grid; gap: 1rem; min-width: 0; }
+.cl-head:not(.cl-hero) .cl-hero__copy { gap: 1rem; }
+.cl-over { margin: 0; font-family: var(--font-heading); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--primary-600, #1558B8); }
+.cl-hero .cl-head__title { max-width: 15ch; font-size: clamp(2.4rem, 1.5rem + 3vw, 3.75rem); letter-spacing: -0.045em; line-height: 1; }
+.cl-hero .cl-head__lede { margin: 0; max-width: 46ch; font-size: 1.15rem; }
+.cl-hero .cl-search { min-height: 54px; border-color: transparent; box-shadow: 0 10px 30px -18px rgba(11, 41, 107, 0.35); }
+.cl-facts { display: flex; gap: 2rem; margin: 0.25rem 0; }
+.cl-facts div { display: grid; }
+.cl-facts dd { margin: 0; order: -1; font-family: var(--font-heading); font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-900); font-variant-numeric: tabular-nums; }
+.cl-facts dt { font-size: 0.9rem; color: var(--text-500); }
+
+/* The fan of real lesson frames */
+.cl-fan { position: relative; height: 400px; }
+.cl-fan__card {
+  position: absolute; width: 80%; aspect-ratio: 16 / 10; padding: 0; border: 0; border-radius: 18px; overflow: hidden; cursor: pointer;
+  background: #0B1633; box-shadow: 0 2px 4px rgba(15, 30, 56, 0.1), 0 30px 60px -28px rgba(11, 41, 107, 0.55);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cl-fan__card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cl-fan__card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(5, 12, 30, 0.75)); }
+.cl-fan__label { position: absolute; left: 0.9rem; bottom: 0.75rem; z-index: 1; color: #fff; font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem; }
+.cl-fan__play { position: absolute; left: 50%; top: 50%; z-index: 1; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; transform: translate(-50%, -50%); background: rgba(255, 255, 255, 0.95); color: var(--primary-600, #1558B8); box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5); }
+.cl-fan__card--0 { z-index: 3; left: 0; top: 26%; transform: rotate(-3deg); }
+.cl-fan__card--1 { z-index: 2; right: 0; top: 0; transform: rotate(5deg) scale(0.8); filter: saturate(0.9) brightness(0.96); }
+.cl-fan__card--2 { z-index: 1; right: -4%; bottom: -2%; transform: rotate(10deg) scale(0.72); filter: saturate(0.85) brightness(0.92); }
+.cl-fan:hover .cl-fan__card--0 { transform: rotate(-1deg) translateY(-6px); }
+.cl-fan:hover .cl-fan__card--1 { transform: rotate(7deg) scale(0.8) translateX(10px); }
+.cl-fan:hover .cl-fan__card--2 { transform: rotate(13deg) scale(0.72) translateX(14px); }
+@media (max-width: 860px) {
+  .cl-hero { grid-template-columns: 1fr; }
+  .cl-fan { height: 260px; max-width: 480px; width: 100%; justify-self: center; }
+}
+@media (prefers-reduced-motion: reduce) { .cl-fan__card { transition: none; } }
+
+/* Richer course cards */
+.cl-card__level { left: 0.75rem; bottom: 0.75rem; padding: 0.3rem 0.75rem; font-size: 1rem; background: rgba(8, 18, 44, 0.88); box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.5); }
+.cl-card__cover { box-shadow: inset 0 -1px 0 var(--border, #E6EBF2); }
+.cl-group__title { font-size: 1.6rem; letter-spacing: -0.03em; }
+.cl-hero { margin-bottom: 1rem; }

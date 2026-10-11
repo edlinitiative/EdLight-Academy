@@ -1,19 +1,19 @@
 /* ══ /exams — subject-first exams home ═════════════════════════════════════
    One column. Header with the level switch and search, then subject tiles
    (the way in) and the newest session's papers. Limyè tokens; no stripes. */
-.exh { max-width: 1120px; padding-top: 2rem; padding-bottom: 4rem; display: grid; gap: 2rem; }
-@media (max-width: 640px) { .exh { padding-top: 1.25rem; gap: 1.5rem; } }
+.exh { --exh-pad: 32px; max-width: 1120px; padding-top: 0; padding-bottom: 4rem; display: grid; gap: 2.5rem; }
+@media (max-width: 640px) { .exh { --exh-pad: 16px; gap: 1.5rem; } }
 
 .exh-head { display: grid; gap: 1.25rem; }
 .exh-head__row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
 .exh-head__title {
-  margin: 0; font-family: var(--font-heading); font-weight: 800;
-  font-size: clamp(2rem, 1.4rem + 2vw, 2.75rem); letter-spacing: -0.03em; line-height: 1.05; color: var(--text-900);
+  margin: 0; font-family: var(--font-heading); font-weight: 800; max-width: 14ch;
+  font-size: clamp(2.4rem, 1.5rem + 3vw, 3.75rem); letter-spacing: -0.045em; line-height: 1; color: var(--text-900);
 }
 .exh-head__lede { margin: 0.5rem 0 0; font-size: 1.05rem; color: var(--text-600); }
 .exh-head__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
 .exh-seg button { font-size: 0.95rem; padding: 0.55rem 1.1rem; }
-.exh-search { flex: 1 1 280px; max-width: 520px; width: auto; min-height: 46px; border-radius: 999px; }
+.exh-search { flex: 1 1 280px; max-width: 560px; width: 100%; min-height: 54px; border-radius: 999px; padding-inline: 1.1rem; box-shadow: 0 10px 30px -18px rgba(11, 41, 107, 0.35); border-color: transparent; }
 .exh-search input { font-size: 1rem; }
 
 .exh-link {
@@ -39,7 +39,10 @@
 .exh-subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
 .exh-subject {
   display: grid; grid-template-rows: auto 1fr auto; gap: 0.75rem;
-  padding: 1rem; border-radius: 20px; background: var(--surface, #fff);
+  padding: 1.15rem; border-radius: 22px;
+  background:
+    radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--sub, #1B6FE0) 14%, transparent), transparent 60%),
+    var(--surface, #fff);
   box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 12px 28px -22px rgba(11, 41, 107, 0.35);
   color: var(--text-900); text-decoration: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -88,3 +91,58 @@
 }
 
 [data-theme="dark"] .exh-subject, [data-theme="dark"] .exh-resume__card, [data-theme="dark"] .exh-papers { background: var(--surface); }
+
+/* ── Hero band ── */
+.exh-hero {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr); gap: clamp(1.5rem, 5vw, 4rem); align-items: center;
+  margin-inline: calc(50% - 50vw); padding: clamp(2.5rem, 6vw, 4.5rem) max(1rem, calc(50vw - 560px + var(--exh-pad, 32px))) clamp(2.5rem, 5vw, 4rem);
+  background:
+    radial-gradient(700px 380px at 85% 30%, rgba(27, 111, 224, 0.16), transparent 70%),
+    radial-gradient(600px 300px at 10% 0%, rgba(255, 185, 46, 0.12), transparent 70%),
+    linear-gradient(180deg, #F3F7FF 0%, var(--background, #F7F9FC) 100%);
+}
+[data-theme="dark"] .exh-hero { background: radial-gradient(700px 380px at 85% 30%, rgba(27, 111, 224, 0.22), transparent 70%), var(--background); }
+.exh-hero__copy { display: grid; gap: 1rem; justify-items: start; }
+.exh-over { margin: 0; font-family: var(--font-heading); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--primary-600, #1558B8); }
+.exh-hero .exh-head__lede { margin: 0; font-size: 1.15rem; max-width: 46ch; }
+.exh-facts { display: flex; gap: 2rem; margin: 0.25rem 0; }
+.exh-facts div { display: grid; }
+.exh-facts dd { margin: 0; order: -1; font-family: var(--font-heading); font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-900); font-variant-numeric: tabular-nums; }
+.exh-facts dt { font-size: 0.9rem; color: var(--text-500); }
+.exh-hero .exh-head__tools { width: 100%; }
+.exh-results-link { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 700; color: var(--text-700); text-decoration: none; padding: 0.5rem 0.75rem; border-radius: 999px; }
+.exh-results-link:hover { background: var(--surface, #fff); color: var(--primary-600, #1558B8); }
+
+/* The exam sheet */
+.exh-sheet { position: relative; display: block; height: 360px; text-decoration: none; color: var(--text-900); perspective: 1200px; }
+.exh-sheet__back, .exh-sheet__paper {
+  position: absolute; inset: 0 8% 0 8%; border-radius: 18px; background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.08), 0 30px 60px -30px rgba(11, 41, 107, 0.45);
+}
+.exh-sheet__back--2 { transform: rotate(7deg) translate(18px, 6px); background: #E9F0FC; }
+.exh-sheet__back--1 { transform: rotate(3.5deg) translate(9px, 3px); background: #F4F8FF; }
+.exh-sheet__paper {
+  display: flex; flex-direction: column; gap: 0.5rem; padding: 1.5rem 1.6rem; transform: rotate(-2deg);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+}
+.exh-sheet:hover .exh-sheet__paper { transform: rotate(0deg) translateY(-6px); box-shadow: 0 2px 4px rgba(15, 30, 56, 0.08), 0 40px 70px -30px rgba(11, 41, 107, 0.55); }
+.exh-sheet__top { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 0.6rem; border-bottom: 1px dashed #D5DEEC; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7A94; }
+.exh-sheet__top span:first-child { font-size: 0.8rem; }
+.exh-sheet__subject { margin-top: 0.4rem; font-family: var(--font-heading); font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+.exh-sheet__session { font-size: 1rem; font-weight: 600; color: var(--text-600); }
+.exh-sheet__lines { display: grid; gap: 0.6rem; margin: 0.8rem 0; }
+.exh-sheet__lines i { display: block; height: 8px; border-radius: 4px; background: #E8EEF7; }
+.exh-sheet__lines i.is-short { width: 62%; }
+.exh-sheet__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: auto; }
+.exh-sheet__chip { padding: 0.3rem 0.7rem; border-radius: 999px; background: #EEF3FB; font-size: 0.875rem; font-weight: 700; color: var(--text-700); }
+.exh-sheet__go { margin-left: auto; display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.55rem 1rem; border-radius: 999px; background: var(--primary-500, #1B6FE0); color: #fff; font-weight: 800; box-shadow: 0 4px 0 #114A99; }
+.exh-sheet__stamp {
+  position: absolute; top: 48%; right: 1.4rem; padding: 0.35rem 0.7rem; border: 2px solid #FF5C39; background: rgba(255, 255, 255, 0.85); border-radius: 8px;
+  color: #FF5C39; font-family: var(--font-heading); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  transform: rotate(8deg); opacity: 0.85;
+}
+@media (max-width: 860px) {
+  .exh-hero { grid-template-columns: 1fr; }
+  .exh-sheet { height: 300px; max-width: 460px; width: 100%; justify-self: center; }
+}
+@media (prefers-reduced-motion: reduce) { .exh-sheet__paper { transition: none; } }
