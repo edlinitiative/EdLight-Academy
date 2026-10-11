@@ -1542,3 +1542,65 @@
 .cl-card__cover { box-shadow: inset 0 -1px 0 var(--border, #E6EBF2); }
 .cl-group__title { font-size: 1.6rem; letter-spacing: -0.03em; }
 .cl-hero { margin-bottom: 1rem; }
+
+/* ══ Workspace, premium (2026-10) ══════════════════════════════════════════
+   A hello with real numbers, subject cards that open on a frame of the next
+   lesson, then exams and the side panels — one display face, bigger type,
+   softer depth. */
+.lws--premium { gap: 2rem; padding-top: 0.5rem; }
+.lws-hello {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1.5rem 3rem;
+  padding: clamp(1.75rem, 4vw, 2.75rem); border-radius: 32px; color: #fff;
+  background:
+    radial-gradient(60% 120% at 100% 0%, rgba(61, 139, 255, 0.45), transparent 60%),
+    radial-gradient(50% 90% at 0% 100%, rgba(255, 92, 57, 0.22), transparent 60%),
+    linear-gradient(150deg, #071230 0%, #0C1F4D 60%, #12306E 100%);
+  box-shadow: 0 30px 60px -36px rgba(11, 41, 107, 0.6);
+}
+.lws--premium .lws-hello .lws-hello__date { margin: 0 0 0.5rem; font-family: var(--font-heading, sans-serif); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #FFC24A; }
+.lws--premium .lws-hello .lws-hello__title { margin: 0; font-family: var(--font-heading, sans-serif); font-size: clamp(2.2rem, 1.3rem + 3vw, 3.6rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: #fff; }
+.lws--premium .lws-hello .lws-hello__lede { margin: 0.7rem 0 0; max-width: 46ch; font-size: 1.1rem; color: #C8D6F5; }
+.lws-hello__stats { display: flex; gap: clamp(1.25rem, 3vw, 2.5rem); margin: 0; }
+.lws-hello__stats div { display: grid; }
+.lws--premium .lws-hello .lws-hello__stats dd { margin: 0; order: -1; font-family: var(--font-heading, sans-serif); font-size: clamp(2rem, 1.5rem + 1.4vw, 2.8rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.lws--premium .lws-hello .lws-hello__stats dt { font-size: 0.9rem; color: #A3B5DC; }
+
+.lws--premium .lws-section__head h2 { font-family: var(--font-heading, sans-serif); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; }
+.lws--premium .lws-subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.25rem; }
+.lws-subj {
+  display: grid; grid-template-rows: auto 1fr; overflow: hidden; border-radius: 24px; background: var(--surface, #fff); color: var(--text-900); text-decoration: none;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 24px 48px -34px rgba(11, 41, 107, 0.45);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+}
+.lws-subj:hover { transform: translateY(-5px); color: var(--text-900); box-shadow: 0 2px 4px rgba(15, 30, 56, 0.06), 0 32px 60px -30px rgba(11, 41, 107, 0.5); }
+.lws-subj:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: 2px; }
+.lws-subj__cover { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; background: #0B1633; }
+.lws-subj__cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s ease; }
+.lws-subj:hover .lws-subj__cover img { transform: scale(1.05); }
+.lws-subj__blank { display: grid; place-items: center; width: 100%; height: 100%; background: var(--surface-muted, #EEF2F7); }
+.lws-subj__level { position: absolute; left: 0.75rem; bottom: 0.75rem; padding: 0.3rem 0.75rem; border-radius: 999px; background: rgba(8, 18, 44, 0.88); color: #fff; font-family: var(--font-heading, sans-serif); font-size: 0.95rem; font-weight: 800; }
+.lws-subj__play { position: absolute; right: 0.75rem; bottom: 0.75rem; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: #fff; color: var(--primary-600, #1558B8); box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.45); transition: transform 0.2s ease; }
+.lws-subj:hover .lws-subj__play { transform: scale(1.08); }
+.lws-subj__body { display: grid; align-content: start; gap: 0.55rem; padding: 1.1rem 1.25rem 1.3rem; }
+.lws-subj__row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.lws-subj__row strong { font-family: var(--font-heading, sans-serif); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.025em; }
+.lws-ring { position: relative; display: grid; place-items: center; width: 48px; height: 48px; flex: none; }
+.lws-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.lws-ring circle { fill: none; stroke: var(--surface-muted, #EEF2F7); stroke-width: 5; }
+.lws-ring .lws-ring__arc { stroke: var(--primary-500, #1B6FE0); stroke-linecap: round; transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+.lws-ring .lws-stroke--PHYS { stroke: #8B5CF6; }
+.lws-ring .lws-stroke--CHEM { stroke: #10B981; }
+.lws-ring .lws-stroke--ECON { stroke: #F59E0B; }
+.lws-ring b { font-size: 0.8rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lws-subj__next { display: grid; gap: 0.1rem; font-size: 1rem; font-weight: 600; line-height: 1.35; }
+.lws-subj__next em { font-style: normal; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-500); }
+.lws-subj__meta { font-size: 0.9rem; color: var(--text-500); }
+.lws-subj__cta { display: inline-flex; align-items: center; gap: 0.2rem; margin-top: 0.2rem; font-family: var(--font-heading, sans-serif); font-weight: 800; color: var(--primary-600, #1558B8); }
+
+.lws--premium .lws-card { border-radius: 24px; box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 24px 48px -36px rgba(11, 41, 107, 0.4); }
+.lws--premium .lws-exam h4 { font-family: var(--font-heading, sans-serif); font-size: 1.05rem; }
+@media (max-width: 640px) {
+  .lws-hello { border-radius: 24px; }
+  .lws-hello__stats { width: 100%; justify-content: space-between; }
+}
+@media (prefers-reduced-motion: reduce) { .lws-subj, .lws-subj__cover img { transition: none; } }

@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  ChevronRight, ClipboardList, AlertTriangle,
+  ChevronRight, ClipboardList, AlertTriangle, PlayCircle,
 } from '../../components/icons';
+import { videoThumb, firstThumb } from '../../utils/videoThumb';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';
@@ -159,46 +160,91 @@ export default function LearnWorkspace({
     return m?.title || '';
   };
 
+  // ── The hello: who, when, and three real numbers ─────────────────────────
+  const firstName = String(user?.name || user?.displayName || '').trim().split(/\s+/)[0] || '';
+  const hour = new Date().getHours();
+  const greeting = isCreole
+    ? (hour < 12 ? 'Bonjou' : 'Bonswa')
+    : (hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir');
+  const today = new Date().toLocaleDateString(isCreole ? 'fr-HT' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const lessonsDone = live.reduce((n, c) => n + (courseStats(c).completed || 0), 0);
+  const examsDone = attempts.filter((a: any) => a?.status === 'submitted').length;
+  // Started: a frame of the next lesson. Not started: a frame a third of the
+  // way in — first lessons often open on a title card or an app screen.
+  const frameFor = (course: any, nextUnit: any, started: boolean) => {
+    const all = (course?.modules || []).flatMap((m: any) => m?.lessons || []);
+    if (started) {
+      const next = nextUnit?.lessons?.find((l: any) => videoThumb(l?.videoUrl)) || null;
+      if (next) return videoThumb(next.videoUrl, 'hq');
+    }
+    const from = Math.floor(all.length / 3);
+    return firstThumb([...all.slice(from), ...all.slice(0, from)], 'hq')?.src || null;
+  };
+
   return (
-    <div className="lws">
+    <div className="lws lws--premium">
+      <header className="lws-hello">
+        <div className="lws-hello__copy">
+          <p className="lws-hello__date">{today}</p>
+          <h1 className="lws-hello__title">{greeting}{firstName ? `, ${firstName}` : ''}.</h1>
+          <p className="lws-hello__lede">
+            {myLevel
+              ? L(`Ton programme de ${levelLabel(myLevel)}, là où tu l’as laissé.`, `Pwogram ${levelLabel(myLevel)} ou, kote ou te kite l la.`)
+              : L('Tes cours, tes examens et tes révisions, au même endroit.', 'Kou ou, egzamen ou ak revizyon ou, nan menm kote a.')}
+          </p>
+        </div>
+        <dl className="lws-hello__stats">
+          <div><dd>{lessonsDone}</dd><dt>{L('leçons terminées', 'leson fini')}</dt></div>
+          <div><dd>{examsDone}</dd><dt>{L('examens blancs', 'egzamen blan')}</dt></div>
+          <div><dd>{weakTotal}</dd><dt>{L('questions à revoir', 'kesyon pou revize')}</dt></div>
+        </dl>
+      </header>
+
       <div className="lws-grid">
         <div className="lws-main">
-          {/* ── Subjects ─────────────────────────────────────────────────── */}
+          {/* ── Subjects: each opens on a frame of its next lesson ─────────── */}
           <section className="lws-section" aria-labelledby="lws-subjects">
             <div className="lws-section__head">
-              <h2 id="lws-subjects">{L('Ta progression par matière', 'Pwogrè ou pa matyè')}</h2>
+              <h2 id="lws-subjects">{L('Tes matières', 'Matyè ou yo')}</h2>
               <span className="lws-pill">{myLevel ? levelLabel(myLevel) : L('Programme MENFP', 'Pwogram MENFP')}</span>
             </div>
             <div className="lws-subjects">
-              {subjects.map(({ code, course, stats, nextUnit, unitsDone, unitsTotal }) => (
-                <article key={code} className="lws-card lws-subject">
-                  <div className="lws-subject__top">
-                    <SubjectTile code={code} size="md" />
-                    <div className="lws-subject__name">
-                      <h3>{subjectName(code)}</h3>
-                      <span>{levelLabel(courseLevel(course))}</span>
-                    </div>
-                    <strong className={`lws-subject__pct lws-tone--${code}`}>{stats.pct}%</strong>
-                  </div>
-                  <div className="lws-meter lws-meter--thin" aria-hidden="true">
-                    <span className={`lws-fill--${code}`} style={{ width: `${stats.pct}%` }} />
-                  </div>
-                  <dl className="lws-subject__facts">
-                    <div><dt>{L('Leçons', 'Leson')}</dt><dd>{stats.completed} / {stats.total}</dd></div>
-                    <div><dt>{L('Unités terminées', 'Inite fini')}</dt><dd>{unitsDone} / {unitsTotal}</dd></div>
-                  </dl>
-                  {nextUnit && (
-                    <p className="lws-subject__next">
-                      <span>{L('Prochaine étape', 'Pwochen etap')}</span>
-                      {nextUnit.title}
-                    </p>
-                  )}
-                  <Link to={`/courses/${course.id}`} className="lws-btn lws-btn--soft">
-                    {stats.completed > 0 ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse')}
-                    <ChevronRight size={15} aria-hidden="true" />
+              {subjects.map(({ code, course, stats, nextUnit, unitsDone, unitsTotal }) => {
+                const frame = frameFor(course, nextUnit, stats.completed > 0);
+                const r = 20;
+                const circ = 2 * Math.PI * r;
+                return (
+                  <Link key={code} to={`/courses/${course.id}`} className="lws-subj">
+                    <span className="lws-subj__cover">
+                      {frame ? <img src={frame} alt="" loading="lazy" /> : <span className="lws-subj__blank"><SubjectTile code={code} size="lg" /></span>}
+                      <span className="lws-subj__level">{levelLabel(courseLevel(course))}</span>
+                      <span className="lws-subj__play" aria-hidden="true"><PlayCircle size={26} /></span>
+                    </span>
+                    <span className="lws-subj__body">
+                      <span className="lws-subj__row">
+                        <strong>{subjectName(code)}</strong>
+                        <span className="lws-ring" aria-label={`${stats.pct}%`}>
+                          <svg viewBox="0 0 48 48" aria-hidden="true">
+                            <circle cx="24" cy="24" r={r} />
+                            <circle className={`lws-ring__arc lws-stroke--${code}`} cx="24" cy="24" r={r}
+                              strokeDasharray={circ} strokeDashoffset={circ * (1 - stats.pct / 100)} />
+                          </svg>
+                          <b>{stats.pct}%</b>
+                        </span>
+                      </span>
+                      {nextUnit
+                        ? <span className="lws-subj__next"><em>{L('Prochaine étape', 'Pwochen etap')}</em>{nextUnit.title}</span>
+                        : <span className="lws-subj__next"><em>{L('Bravo', 'Bravo')}</em>{L('Toutes les unités sont terminées.', 'Tout inite yo fini.')}</span>}
+                      <span className="lws-subj__meta">
+                        {L(`${stats.completed}/${stats.total} leçons · ${unitsDone}/${unitsTotal} unités`, `${stats.completed}/${stats.total} leson · ${unitsDone}/${unitsTotal} inite`)}
+                      </span>
+                      <span className="lws-subj__cta">
+                        {stats.completed > 0 ? L('Continuer', 'Kontinye') : L('Commencer', 'Kòmanse')} <ChevronRight size={16} aria-hidden="true" />
+                      </span>
+                    </span>
                   </Link>
-                </article>
-              ))}
+                );
+              })}
             </div>
           </section>
 

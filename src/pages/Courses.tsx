@@ -430,6 +430,10 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   const mine = searchParams.get('mes') === '1';
   const axis = searchParams.get('vue') === 'niveau' ? 'level' : 'subject';
   const query = searchParams.get('q') || '';
+  // Dev only: /courses?preview=workspace renders the signed-in workspace
+  // without an account, so its design can be reviewed locally. Dead code in
+  // production builds.
+  const devWorkspace = process.env.NODE_ENV !== 'production' && searchParams.get('preview') === 'workspace';
 
   const setParam = useCallback((key: string, value: string | null) => {
     setSearchParams((prev) => {
@@ -756,7 +760,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   return (
     <section className="section pf lrn lrn--clean">
       <div className="container">
-        {signedIn && !filtering && courses.length > 0 && (
+        {(signedIn || devWorkspace) && !filtering && courses.length > 0 && (
           <LearnWorkspace
             courses={courses}
             courseStats={courseStats}
