@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Target, Brain, Timer } from '../components/icons';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Brain } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
@@ -170,6 +170,8 @@ const Quizzes = () => {
   }, [location.search]);
 
   const preferQuiz = queryDefaults.mode === 'quiz';
+  // A ?mode=quiz deep link opens the session console on the quiz.
+  useEffect(() => { if (preferQuiz) setMode('quiz'); }, [preferQuiz]);
 
   // Apply deep-link defaults once (e.g. /quizzes?course=CHEM-NSII&unit=U3).
   // The subject is validated against the options we actually have: a stale or
@@ -504,25 +506,6 @@ const Quizzes = () => {
    * No duration is claimed for either mode: nothing on this page measures or
    * limits time, and a made-up "≈15 min" is exactly what §6.4 forbids.
    */
-  const sharedFacts = [
-    tx('Non chronométré', 'San kwonomèt'),
-    tx('Aucune note enregistrée', 'Pa gen nòt ki anrejistre'),
-    ...(userId
-      ? [tx('Les erreurs reviennent dans Révision', 'Erè yo ap tounen nan Revizyon')]
-      : [tx('Connectez-vous pour garder la trace de vos erreurs', 'Konekte pou kenbe mak erè ou yo')]),
-  ];
-
-  const drillFacts = [
-    tx('Une question à la fois, autant que vous voulez', 'Yon kesyon alafwa, otan ou vle'),
-    t('quizzes.howItWorksHints', 'Indices progressifs après chaque mauvaise réponse'),
-    t('quizzes.howItWorksExplain', 'Explication complète après le troisième essai'),
-  ];
-
-  const quizFacts = [
-    tx(`${quizLength} questions de l’unité choisie`, `${quizLength} kesyon nan inite ou chwazi a`),
-    tx('Du début à la fin, score affiché à l’arrivée', 'Depi kòmansman jiska fen, nòt parèt nan fen an'),
-    tx('Le score n’est pas enregistré', 'Nòt la pa anrejistre'),
-  ];
 
   /** The three dropdowns — shared by the setup card and the in-practice disclosure. */
   const selectors = (
@@ -865,132 +848,76 @@ const Quizzes = () => {
             {/* Ted: "i complained about hero and you bring me a big filter
                 hero". The header is now one title line and one row of
                 compact selects — no crumbs, no stacked chip rows, no card. */}
-            <header className="qz-hub__head qz-hub__head--flat">
-              <h1 className="qz__title">{tx('Entraînement et quiz', 'Antrènman ak kwiz')}</h1>
-              <div className="qz-bar-filters" role="group" aria-label={tx('Filtres', 'Filt')}>
-                <label className="qz-select">
-                  <span className="qz__sr-only">{t('quizzes.course', 'Matière')}</span>
-                  <select value={subjectBase} onChange={(e) => setSubjectBase(e.target.value)}>
-                    {subjectOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </label>
-                <label className="qz-select">
-                  <span className="qz__sr-only">{t('quizzes.gradeLevel', 'Niveau')}</span>
-                  <select value={level} onChange={(e) => setLevel(e.target.value)}>
-                    {levelOptions.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}{myLevel === o.value ? ` · ${tx('ta classe', 'klas ou')}` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {unitOptions.length > 0 && (
-                  <label className="qz-select qz-select--wide">
-                    <span className="qz__sr-only">{t('quizzes.unit', 'Unité')}</span>
-                    <select value={unit} onChange={(e) => setUnit(e.target.value)}>
-                      {unitOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </label>
-                )}
+            {/* The hub header: a night band, the subject and the class as
+                chips (one tap, not a dropdown), and the course's real size. */}
+            <header className="qz-hero">
+              <div className="qz-hero__copy">
+                <p className="qz-hero__over">{tx('Pratiquer', 'Pratike')}</p>
+                <h1 className="qz-hero__title">{tx('Entraîne-toi, chapitre par chapitre.', 'Antrene w, chapit pa chapit.')}</h1>
+                <p className="qz-hero__lede">{tx('Des questions corrigées sur chaque notion du programme. Rate, comprends, recommence.', 'Kesyon korije sou chak nosyon nan pwogram nan. Rate, konprann, rekòmanse.')}</p>
+              </div>
+              {unitRows.length > 0 && (
+                <dl className="qz-hero__stats">
+                  <div><dd>{unitRows.length}</dd><dt>{tx('chapitres', 'chapit')}</dt></div>
+                  <div><dd>{counts.subjCount}</dd><dt>{tx('questions', 'kesyon')}</dt></div>
+                </dl>
+              )}
+              <div className="qz-hero__chips">
+                <div className="qz-chips" role="group" aria-label={t('quizzes.course', 'Matière')}>
+                  {subjectOptions.map((o) => (
+                    <button key={o.value} type="button" aria-pressed={subjectBase === o.value} className={subjectBase === o.value ? 'is-on' : ''} onClick={() => setSubjectBase(o.value)}>{o.label}</button>
+                  ))}
+                </div>
+                <div className="qz-chips" role="group" aria-label={t('quizzes.gradeLevel', 'Niveau')}>
+                  {levelOptions.map((o) => (
+                    <button key={o.value} type="button" aria-pressed={level === o.value} className={level === o.value ? 'is-on' : ''} onClick={() => setLevel(o.value)}>
+                      {o.label}{myLevel === o.value && <small>{tx('ta classe', 'klas ou')}</small>}
+                    </button>
+                  ))}
+                </div>
               </div>
             </header>
 
-            {isError && appData && (
-              <p className="qz-stale" role="status">
-                <span>{tx('Ces exercices viennent de la dernière copie enregistrée.', 'Egzèsis sa yo soti nan dènye kopi ki anrejistre a.')}</span>
-                <button type="button" className="qz-stale__retry" onClick={() => refetch()} disabled={isFetching}>
-                  {isFetching ? t('common.retrying', 'Nouvelle tentative…') : t('common.retry', 'Réessayer')}
-                </button>
-              </p>
-            )}
-
             <div className="qz-hub">
               <div className="qz-hub__main">
-                {/* The selected series and its two activities (§6.4). */}
-                <section className="qz-card qz-series" aria-labelledby="qz-series-title">
-                  <div className="qz-series__bar">
-                    <span className="qz-badge">{tx('Série choisie', 'Seri ou chwazi')}</span>
-                    <h2 id="qz-series-title" className="qz-series__title">{unitLabel || subjectLabel}</h2>
-                    <span className="qz-series__count">{countLabel}</span>
-                  </div>
-                  <div className="qz-series__body">
-                    {!hasQuestions && (
-                      <p className="qz-note" role="status">
-                        {t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.')}{' '}
-                        {tx('Choisissez une autre unité.', 'Chwazi yon lòt inite.')}
-                      </p>
-                    )}
-                    <div className={`qz-modes${preferQuiz ? ' qz-modes--quiz-first' : ''}`}>
-                      <div className="qz-mode qz-mode--drill">
-                        <h3 className="qz-mode__title"><Target size={17} aria-hidden="true" /> {tx('S’entraîner', 'Pratike')}</h3>
-                        <ul className="qz-mode__facts">{drillFacts.map((f) => <li key={f}>{f}</li>)}</ul>
-                        <button type="button" onClick={() => generateCurriculumPractice()} className={`button qz-cta ${preferQuiz ? 'button--ghost' : 'button--primary'}`} disabled={isLoadingBank || !hasQuestions}>
-                          {ctaLabel}
-                        </button>
-                      </div>
-                      <div className="qz-mode qz-mode--quiz">
-                        <h3 className="qz-mode__title"><Timer size={17} aria-hidden="true" /> {tx(`Quiz de ${quizLength} questions`, `Kwiz ${quizLength} kesyon`)}</h3>
-                        <ul className="qz-mode__facts">{quizFacts.map((f) => <li key={f}>{f}</li>)}</ul>
-                        <button type="button" onClick={() => startQuiz()} className={`button qz-cta ${preferQuiz ? 'button--primary' : 'button--ghost'}`} disabled={isLoadingBank || !hasQuestions}>
-                          {tx('Commencer le quiz', 'Kòmanse kwiz la')}
-                        </button>
-                      </div>
-                    </div>
-                    <ul className="qz-facts qz-facts--row">
-                      {sharedFacts.map((fact) => <li key={fact} className="qz-facts__item">{fact}</li>)}
-                    </ul>
-                    {bankMessage && <p className="qz-hint" role="status">{bankMessage}</p>}
-                  </div>
-                </section>
+                {!hasQuestions && (
+                  <p className="qz-note" role="status">
+                    {t('quizzes.noPractice', 'Aucun exercice disponible pour cette sélection pour le moment.')}{' '}
+                    {tx('Choisissez une autre unité.', 'Chwazi yon lòt inite.')}
+                  </p>
+                )}
+                {bankMessage && <p className="qz-hint" role="status">{bankMessage}</p>}
 
-                {/* Every chapter of the course, with what the bank holds. */}
+                {/* Every chapter of the course as a card: pick it, or start
+                    straight from it. The counts are the bank's own. */}
                 {unitRows.length > 0 && (
-                  <section className="qz-card qz-chapters" aria-labelledby="qz-chapters-title">
-                    <div className="qz-card__head">
-                      <div>
-                        <h2 id="qz-chapters-title" className="qz-card__title">{tx('Séries par chapitre', 'Seri pa chapit')}</h2>
-                        <p className="qz-card__sub">{subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}</p>
-                      </div>
-                      <span className="qz-badge qz-badge--muted">
-                        {tx(`${unitRows.length} chapitres · ${counts.subjCount} questions`, `${unitRows.length} chapit · ${counts.subjCount} kesyon`)}
-                      </span>
+                  <section aria-labelledby="qz-chapters-title">
+                    <div className="qz-chapters__head">
+                      <h2 id="qz-chapters-title">{tx('Les chapitres', 'Chapit yo')}</h2>
+                      <span>{subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}</span>
                     </div>
-                    <table className="qz-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">{tx('Chapitre', 'Chapit')}</th>
-                          <th scope="col">{tx('Questions', 'Kesyon')}</th>
-                          <th scope="col">{tx('État', 'Eta')}</th>
-                          <th scope="col" className="qz-table__act"><span className="qz__sr-only">{tx('Actions', 'Aksyon')}</span></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {unitRows.map((r, i) => (
-                          <tr key={r.value} className={unit === r.value ? 'is-current' : undefined}>
-                            <th scope="row">
-                              <span className="qz-table__no">{String(i + 1).padStart(2, '0')}</span>
-                              <span className="qz-table__name">{r.label}</span>
-                            </th>
-                            <td data-label={tx('Questions', 'Kesyon')}>{r.count || '—'}</td>
-                            <td data-label={tx('État', 'Eta')}>
-                              {r.count === 0
-                                ? <span className="qz-state qz-state--none">{tx('Bientôt', 'Talè')}</span>
-                                : r.due && r.due > 0
-                                  ? <span className="qz-state qz-state--due">{tx(`${r.due} à revoir`, `${r.due} pou revize`)}</span>
-                                  : <span className="qz-state">{userId ? '—' : tx('Non suivi', 'Pa swiv')}</span>}
-                            </td>
-                            <td className="qz-table__act">
-                              <button type="button" className="qz-act" disabled={!r.count || isLoadingBank} onClick={() => generateCurriculumPractice(r.value)}>
-                                {tx('S’entraîner', 'Pratike')}
-                              </button>
-                              <button type="button" className="qz-act qz-act--primary" disabled={!r.count || isLoadingBank} onClick={() => startQuiz(r.value)}>
-                                {tx('Quiz', 'Kwiz')}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <ol className="qz-chaps">
+                      {unitRows.map((r, i) => (
+                        <li key={r.value} className={`qz-chap${unit === r.value ? ' is-current' : ''}${!r.count ? ' is-empty' : ''}`}>
+                          <button type="button" className="qz-chap__pick" onClick={() => setUnit(r.value)} aria-pressed={unit === r.value} disabled={!r.count}>
+                            <span className="qz-chap__no">{String(i + 1).padStart(2, '0')}</span>
+                            <span className="qz-chap__name">{r.label}</span>
+                            <span className="qz-chap__meta">
+                              {r.count ? tx(`${r.count} questions`, `${r.count} kesyon`) : tx('Bientôt', 'Talè')}
+                              {r.due && r.due > 0 ? <em>{tx(`${r.due} à revoir`, `${r.due} pou revize`)}</em> : null}
+                            </span>
+                          </button>
+                          <span className="qz-chap__acts">
+                            <button type="button" className="qz-act" disabled={!r.count || isLoadingBank} onClick={() => generateCurriculumPractice(r.value)}>
+                              {tx('S’entraîner', 'Pratike')}
+                            </button>
+                            <button type="button" className="qz-act qz-act--primary" disabled={!r.count || isLoadingBank} onClick={() => startQuiz(r.value)}>
+                              {tx('Quiz', 'Kwiz')}
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
                   </section>
                 )}
               </div>

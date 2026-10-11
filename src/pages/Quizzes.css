@@ -722,3 +722,66 @@
   gap: 0.75rem 1rem; padding: 0; margin: 0 0 1.25rem; background: none; border: 0; box-shadow: none;
 }
 .qz-hub__head--flat .qz__title { margin: 0; font-size: clamp(1.35rem, 2.2vw, 1.6rem); }
+
+/* ══ Practice hub, premium (2026-10) ═══════════════════════════════════════
+   A night band with chips for subject and class, the chapters as cards, and
+   the session console on the side. One display face; type floor 14px. */
+.qz-hero {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem 3rem; align-items: end;
+  margin-bottom: 2rem; padding: clamp(1.75rem, 4vw, 2.75rem); border-radius: 32px; color: #fff;
+  background:
+    radial-gradient(60% 120% at 100% 0%, rgba(61, 139, 255, 0.45), transparent 60%),
+    radial-gradient(50% 90% at 0% 100%, rgba(47, 209, 140, 0.18), transparent 60%),
+    linear-gradient(150deg, #071230 0%, #0C1F4D 60%, #12306E 100%);
+  box-shadow: 0 30px 60px -36px rgba(11, 41, 107, 0.6);
+}
+.qz .qz-hero .qz-hero__over { margin: 0 0 0.5rem; font-family: var(--font-heading, sans-serif); font-size: 0.875rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #FFC24A; }
+.qz .qz-hero .qz-hero__title { margin: 0; max-width: 16ch; font-family: var(--font-heading, sans-serif); font-size: clamp(2.2rem, 1.3rem + 3vw, 3.5rem); font-weight: 800; letter-spacing: -0.045em; line-height: 1; color: #fff; }
+.qz .qz-hero .qz-hero__lede { margin: 0.7rem 0 0; max-width: 46ch; font-size: 1.1rem; color: #C8D6F5; }
+.qz-hero__stats { display: flex; gap: 2rem; margin: 0; }
+.qz-hero__stats div { display: grid; }
+.qz .qz-hero .qz-hero__stats dd { margin: 0; order: -1; font-family: var(--font-heading, sans-serif); font-size: clamp(2rem, 1.5rem + 1.4vw, 2.8rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.qz .qz-hero .qz-hero__stats dt { font-size: 0.9rem; color: #A3B5DC; }
+.qz-hero__chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; }
+.qz-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.qz-chips button {
+  display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18); color: #DCE6FF;
+  font: inherit; font-size: 0.95rem; font-weight: 700; transition: background 0.15s ease;
+}
+.qz-chips button:hover { background: rgba(255, 255, 255, 0.14); }
+.qz-chips button.is-on { background: #fff; color: #0A1A3F; box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.5); }
+.qz-chips small { font-size: 0.8rem; font-weight: 800; color: #FFC24A; }
+.qz-chips button.is-on small { color: #B97A0D; }
+.qz-chips button:focus-visible { outline: 3px solid #FFC24A; outline-offset: 2px; }
+
+.qz-chapters__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 0 0 1rem; }
+.qz-chapters__head h2 { margin: 0; font-family: var(--font-heading, sans-serif); font-size: 1.6rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text-900); }
+.qz-chapters__head span { font-size: 0.95rem; color: var(--text-500); }
+.qz-chaps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.qz-chap {
+  display: flex; flex-direction: column; border-radius: 22px; background: var(--surface, #fff); overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 20px 40px -32px rgba(11, 41, 107, 0.45);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.qz-chap:hover { transform: translateY(-4px); }
+.qz-chap.is-current { box-shadow: 0 0 0 2px var(--primary-500, #1B6FE0), 0 24px 48px -30px rgba(27, 111, 224, 0.55); }
+.qz-chap.is-empty { opacity: 0.6; }
+.qz-chap__pick { display: grid; gap: 0.3rem; flex: 1; padding: 1.2rem 1.25rem 0.9rem; border: 0; background: none; text-align: left; font: inherit; color: var(--text-900); cursor: pointer; }
+.qz-chap__pick:disabled { cursor: default; }
+.qz-chap__no { font-family: var(--font-heading, sans-serif); font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--primary-500, #1B6FE0); }
+.qz-chap.is-current .qz-chap__no { color: var(--accent-coral, #FF5C39); }
+.qz-chap__name { font-family: var(--font-heading, sans-serif); font-size: 1.1rem; font-weight: 800; letter-spacing: -0.015em; line-height: 1.25; }
+.qz-chap__meta { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem; color: var(--text-500); }
+.qz-chap__meta em { font-style: normal; font-weight: 800; color: #B45309; }
+.qz-chap__acts { display: flex; gap: 0.5rem; padding: 0 1.25rem 1.2rem; }
+.qz-chap__acts .qz-act { flex: 1; min-height: 40px; border-radius: 999px; font-size: 0.95rem; }
+.qz-chap__pick:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: -3px; }
+
+.qz-hub__side .qz-card { border-radius: 24px; box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 24px 48px -36px rgba(11, 41, 107, 0.4); }
+.qz-hub__side .qz-card__title { font-family: var(--font-heading, sans-serif); font-size: 1.2rem; letter-spacing: -0.02em; }
+@media (min-width: 1024px) { .qz-hub__side { position: sticky; top: 80px; align-self: start; } }
+@media (max-width: 760px) {
+  .qz-hero { grid-template-columns: 1fr; border-radius: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .qz-chap { transition: none; } }
