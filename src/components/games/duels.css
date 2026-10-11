@@ -64,7 +64,7 @@
 /* Duel-pick banner over the trivia theme picker */
 .duel-pickbar {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;
-  margin: 0 0 1rem; padding: 0.9rem 1.1rem; border-radius: 18px;
+  max-width: 1080px; margin: 0 auto 1rem; padding: 0.9rem 1.1rem; border-radius: 18px;
   background: color-mix(in srgb, var(--primary-500, #1B6FE0) 8%, var(--surface, #fff));
 }
 .duel-pickbar p { margin: 0; font-size: 0.95rem; line-height: 1.5; color: var(--text-900); }
