@@ -156,3 +156,25 @@
   background: color-mix(in srgb, var(--sub, #1B6FE0) 12%, var(--surface, #fff)); color: var(--sub, #1B6FE0);
   font-family: var(--font-heading); font-size: 0.95rem; font-weight: 800; font-variant-numeric: tabular-nums;
 }
+
+/* One signature for every section hero: the contained night band. */
+.exh-hero {
+  margin-inline: 0; margin-top: 0.5rem; padding: clamp(1.75rem, 4vw, 3rem); border-radius: 32px; color: #fff;
+  background:
+    radial-gradient(60% 120% at 100% 0%, rgba(61, 139, 255, 0.45), transparent 60%),
+    radial-gradient(50% 90% at 0% 100%, rgba(255, 185, 46, 0.18), transparent 60%),
+    linear-gradient(150deg, #071230 0%, #0C1F4D 60%, #12306E 100%);
+  box-shadow: 0 30px 60px -36px rgba(11, 41, 107, 0.6);
+}
+.exh .exh-hero .exh-over { color: #FFC24A; }
+.exh .exh-hero .exh-head__title { color: #fff; }
+.exh .exh-hero .exh-head__lede { color: #C8D6F5; }
+.exh .exh-hero .exh-link { color: #9CC4FF; }
+.exh .exh-hero .exh-facts dd { color: #fff; }
+.exh .exh-hero .exh-facts dt { color: #A3B5DC; }
+.exh .exh-hero .exh-seg { background: rgba(255, 255, 255, 0.08); }
+.exh .exh-hero .exh-seg button { color: #DCE6FF; }
+.exh .exh-hero .exh-seg button.is-on { background: #fff; color: #0A1A3F; }
+.exh .exh-hero .exh-results-link { color: #DCE6FF; }
+.exh .exh-hero .exh-results-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.exh-hero .exh-sheet__back, .exh-hero .exh-sheet__paper { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 30px 60px -24px rgba(0, 0, 0, 0.7); }
