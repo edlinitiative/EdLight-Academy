@@ -27,6 +27,8 @@ const Defi = lazyWithRetry(() => import('./pages/Defi'));
 const Live = lazyWithRetry(() => import('./pages/Live'));
 const Direct = lazyWithRetry(() => import('./pages/Direct'));
 const Arena = lazyWithRetry(() => import('./pages/Arena'));
+const ArenaArcade = lazyWithRetry(() => import('./pages/arena/ArenaArcade'));
+const ArenaStory = lazyWithRetry(() => import('./pages/arena/ArenaStory'));
 const ArenaClaim = lazyWithRetry(() => import('./pages/ArenaClaim'));
 const ArenaConsentForm = lazyWithRetry(() => import('./pages/ArenaConsentForm'));
 const Admin = lazyWithRetry(() => import('./pages/Admin'));
@@ -163,7 +165,11 @@ export default function App() {
                     the navbar, the footer and the install prompts, and a page
                     asking a visitor to sign in and then install the app needs
                     all three. */}
-                <Route path="arena" element={<Arena />} />
+                {/* The Arène is an arcade: one lobby for every competitive mode.
+                    The championship registration page moved under it. */}
+                <Route path="arena" element={<ArenaArcade />} />
+                <Route path="arena/histoire" element={<ArenaStory />} />
+                <Route path="arena/championnat" element={<Arena />} />
                 {/* User-created tournaments. Static segments before :id. */}
                 <Route path="tournois" element={<TournoisHub />} />
                 <Route path="tournois/nouveau" element={<TournoisCreate />} />
