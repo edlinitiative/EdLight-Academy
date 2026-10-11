@@ -554,3 +554,17 @@
   .aj-step.is-now .aj-step__label { display: inline; }
   .aj-step + .aj-step::before { display: none; }
 }
+
+/* ── Alignment pass (2026-10-11) ──
+   Every card in a row gets the same illustration height, so titles, text
+   and buttons line up across the row; the quiz illustration is centred. */
+@media (min-width: 1081px) {
+  .ah-game--story .ah-game__art, .ah-game--champ .ah-game__art { flex: none; height: 330px; min-height: 0; }
+  .ah-game--quick .ah-game__art, .ah-game--duel .ah-game__art, .ah-game--room .ah-game__art { flex: none; height: 190px; min-height: 0; }
+  .ah-game--story .ah-game__body, .ah-game--champ .ah-game__body { flex: 1; }
+  .ah-game--quick .ah-game__body, .ah-game--duel .ah-game__body, .ah-game--room .ah-game__body { flex: 1; }
+  .ah-game__foot, .ah-game > .ah-game__body > .ah-cta { margin-top: auto; }
+}
+.ah-art-quiz { display: grid; grid-template-columns: auto auto; justify-content: center; align-content: center; column-gap: 0.9rem; }
+.ah-art-quiz .ah-opts { grid-column: 1 / -1; justify-self: center; }
+.ah-game__body { min-height: 0; }
