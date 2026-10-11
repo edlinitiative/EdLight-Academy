@@ -28,7 +28,9 @@ import './TriviaGames.css';
 import { trackTriviaEvent as trackEvent } from '../utils/triviaLearning';
 import { triviaOptions, triviaExplanation } from '../utils/triviaLearning';
 import { logAnswerEvent } from '../services/answerEventsService';
-import { inviteRef, sendInvite, canNativeShare } from '../utils/schoolInvite';
+import { DuelPanel, MyDuels } from '../components/games/Duels';
+import { loadDuelBank } from '../utils/duelBank';
+import { DUEL_ROUND, drawIdxs, questionsAt, shuffleOptions } from '../utils/duels';
 import SprintSolo from './trivia/SprintSolo';
 import LiveRoomEntry from './trivia/LiveRoomEntry';
 import './trivia/triviaModes.css';
@@ -56,7 +58,7 @@ function TriviaModeSwitch({ mode, onChange, isCreole }: { mode: TriviaMode; onCh
 }
 
 /* Start with a short round; configuration stays optional and in place. */
-function CategoryPicker({ onSelect, isCreole, categories, questions, count, setCount, timed, setTimed, isAuthed }) {
+function CategoryPicker({ onSelect, isCreole, categories, questions, count, setCount, timed, setTimed, isAuthed, duelPick = false }) {
   const groups = [
     { name: isCreole ? 'Ayiti' : 'Haïti', match: (id) => id.includes('haiti') },
     { name: isCreole ? 'Syans ak matematik' : 'Sciences et maths', match: (id) => ['maths_eclair', 'chimie_symboles', 'bio_corps', 'sciences'].includes(id) },
@@ -67,6 +69,7 @@ function CategoryPicker({ onSelect, isCreole, categories, questions, count, setC
       <header className="trivia-landing__header">
         <h1 className="trivia-landing__title">Trivia</h1>
         <p className="trivia-landing__subtitle">{isCreole ? 'Yon ti pati pou aprann yon bagay nouvo.' : 'Une petite partie pour apprendre quelque chose de nouveau.'}</p>
+        {!duelPick && <>
         <p>{count} {isCreole ? 'kesyon' : 'questions'} · {timed ? (isCreole ? '15 segonn / kesyon' : '15 secondes / question') : (isCreole ? 'San kwonomèt' : 'Sans chrono')}{!isAuthed && (isCreole ? ' · San kont' : ' · Sans compte')}</p>
         <button className="button button--primary trivia-mix" onClick={() => onSelect('mixed')} disabled={!Object.values(questions).some((bank: any[]) => bank.length)}>
           <Sparkles size={18} aria-hidden="true" /> {isCreole ? 'Jwe yon melanj tèm' : 'Jouer un mélange de thèmes'}
@@ -88,9 +91,11 @@ function CategoryPicker({ onSelect, isCreole, categories, questions, count, setC
           </div>
           <p>{isCreole ? 'Si yon tèm gen mwens kesyon, w ap jwe tout kesyon ki disponib yo.' : 'Si un thème contient moins de questions, la partie utilise toutes celles disponibles.'}</p>
         </details>
+        </>}
       </header>
       <h2 className="trivia-themes-title">{isCreole ? 'Oswa chwazi tèm ou' : 'Ou choisis ton thème'}</h2>
       {groups.map((group) => {
+        const roundSize = duelPick ? DUEL_ROUND : count;
         const items = categories.filter((cat) => group.match(cat.id));
         if (!items.length) return null;
         return <section className="trivia-topic-group" key={group.name}>
@@ -101,10 +106,10 @@ function CategoryPicker({ onSelect, isCreole, categories, questions, count, setC
               const name = isCreole ? cat.nameHt || cat.name : cat.name;
               return <button key={cat.id} className="trivia-cat" style={{ '--cat': cat.color || '#1B6FE0' } as React.CSSProperties}
                 onClick={() => onSelect(cat.id)} disabled={!available}
-                aria-label={`${name} — ${Math.min(count, available)} ${isCreole ? 'kesyon' : 'questions'}`}>
+                aria-label={`${name} — ${Math.min(roundSize, available)} ${isCreole ? 'kesyon' : 'questions'}`}>
                 <span className="trivia-cat__icon" aria-hidden="true"><CategoryIcon id={cat.id} size={22} /></span>
                 <span className="trivia-cat__name">{name}</span>
-                <span className="trivia-cat__count">{available ? `${Math.min(count, available)} ${isCreole ? 'kesyon · Jwe →' : 'questions · Jouer →'}` : (isCreole ? 'Byento' : 'Bientôt')}</span>
+                <span className="trivia-cat__count">{available ? `${Math.min(roundSize, available)} ${isCreole ? 'kesyon · Jwe →' : 'questions · Jouer →'}` : (isCreole ? 'Byento' : 'Bientôt')}</span>
               </button>;
             })}
           </div>
@@ -351,7 +356,12 @@ export function TriviaQuiz({ timed = false, category, count, onFinish, onBack, i
 }
 
 /* ─── Results Screen ─── */
-function TriviaResults({ answers, isAuthed, saving, saveError, onReview, category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[] }) {
+function TriviaResults({ answers, isAuthed, saving, saveError, onReview, category, score, total, onReplay, onHome, isCreole, reward = null, accentColor = null, categories = TRIVIA_CATEGORIES as any[], onStartDuelRound = (_c: string) => {}, onPickDuel = () => {} }) {
+  const { profile } = useTrivia();
+  const school: string | null = isAuthed ? profile?.leaderboard?.school || null : null;
+  const xp = reward && !reward.guest ? reward.xpEarned : 0;
+  // Stable across re-renders so the duel panel's bank lookup runs once.
+  const played = React.useMemo(() => answers.map((a) => a.question), [answers]);
   const cat = categories.find((c) => c.id === category);
   const accent = accentColor || cat?.color || '#1B6FE0';
   const pct = total > 0 ? Math.round((score / total) * 100) : 0;
@@ -429,64 +439,23 @@ function TriviaResults({ answers, isAuthed, saving, saveError, onReview, categor
             {isCreole ? 'Kreye yon kont' : 'Créer un compte'}
           </button>
         </div>}
-        {/* The peak of the game is the moment to bring someone in. It used to
-            send the student to the app store to make a duel; the score itself
-            can be sent from here, with their school named when they have one. */}
-        <ScoreChallenge
+        {/* The peak of the game is the moment to bring someone in: the duel
+            is minted from this very round when a friend can replay it. */}
+        {school && xp > 0 && (
+          <p className="trivia-challenge__school">
+            {isCreole ? `+${xp} XP pou ${school}` : `+${xp} XP pour ${school}`}
+          </p>
+        )}
+        <DuelPanel
+          category={category}
+          played={played}
           score={score}
           total={total}
-          categoryName={cat ? (isCreole ? cat.nameHt || cat.name : cat.name) : null}
-          xp={reward && !reward.guest ? reward.xpEarned : 0}
           isAuthed={isAuthed}
           isCreole={isCreole}
+          onStartDuelRound={onStartDuelRound}
+          onPickDuel={onPickDuel}
         />
-      </div>
-    </div>
-  );
-}
-
-/* ─── "Tu peux faire mieux ?" — the score, sent to a friend ─── */
-function ScoreChallenge({ score, total, categoryName, xp, isAuthed, isCreole }) {
-  const { profile } = useTrivia();
-  const school: string | null = isAuthed ? profile?.leaderboard?.school || null : null;
-  const [ref, setRef] = useState<{ code: string | null; link: string } | null>(null);
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    let live = true;
-    if (isAuthed) inviteRef().then((r) => { if (live) setRef(r); });
-    else setRef({ code: null, link: 'https://academy.edlight.org/jeux/trivia' });
-    return () => { live = false; };
-  }, [isAuthed]);
-
-  const topic = categoryName ? (isCreole ? ` sou ${categoryName}` : ` en ${categoryName}`) : '';
-  const message = !ref ? '' : isCreole
-    ? `🎯 M fè ${score}/${total}${topic} sou EdLight Academy${school ? ` pou ${school}` : ''}. Ou ka fè pi byen ?${ref.code ? ` Kòd mwen : ${ref.code}.` : ''} ${ref.link}`
-    : `🎯 J’ai fait ${score}/${total}${topic} sur EdLight Academy${school ? ` pour ${school}` : ''}. Tu peux faire mieux ?${ref.code ? ` Mon code : ${ref.code}.` : ''} ${ref.link}`;
-
-  const send = async (channel: 'whatsapp' | 'native' | 'copy') => {
-    if (!message) return;
-    const didCopy = await sendInvite(channel, message, 'trivia-results');
-    if (didCopy) { setCopied(true); setTimeout(() => setCopied(false), 2200); }
-  };
-
-  return (
-    <div className="trivia-challenge">
-      {school && xp > 0 && (
-        <p className="trivia-challenge__school">
-          {isCreole ? `+${xp} XP pou ${school}` : `+${xp} XP pour ${school}`}
-        </p>
-      )}
-      <h3 className="trivia-challenge__title">{isCreole ? 'Defye yon zanmi' : 'Défie un ami'}</h3>
-      <p className="trivia-challenge__sub">
-        {isCreole ? `Voye nòt ou (${score}/${total}) : èske l ka fè pi byen ?` : `Envoie ton score (${score}/${total}) : peut-il faire mieux ?`}
-      </p>
-      <div className="trivia-challenge__actions">
-        <button type="button" className="button button--primary" disabled={!ref} onClick={() => send('whatsapp')}>
-          {isCreole ? 'Voye sou WhatsApp' : 'Envoyer sur WhatsApp'}
-        </button>
-        <button type="button" className="button button--ghost" disabled={!ref} onClick={() => send(canNativeShare() ? 'native' : 'copy')}>
-          {copied ? (isCreole ? 'Kopye' : 'Copié') : canNativeShare() ? (isCreole ? 'Pataje' : 'Partager') : (isCreole ? 'Kopye lyen an' : 'Copier le lien')}
-        </button>
       </div>
     </div>
   );
@@ -561,6 +530,11 @@ function TriviaClassic({ isCreole, onExitHub }) {
   const [saveError, setSaveError] = useState(false);
   const [playNonce, setPlayNonce] = useState(0);
   const [dailyNotice, setDailyNotice] = useState('');
+  // "Défi d'un ami": the picker in duel mode, and a round drawn from the duel
+  // bank (utils/duelBank.ts) so a friend can replay it question for question.
+  const [duelPick, setDuelPick] = useState(false);
+  const [duelQuestions, setDuelQuestions] = useState<any[] | null>(null);
+  const [duelNotice, setDuelNotice] = useState('');
   const autoStartedRef = useRef(false);
   const roundVersion = useRef(0);
   const entryAt = useRef(Date.now());
@@ -584,6 +558,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
     }
     roundVersion.current += 1;
     setDailyNotice('');
+    setDuelQuestions(null);
     setDailyQuestions(qs);
     setCategory('daily');
     setReward(null);
@@ -603,12 +578,17 @@ function TriviaClassic({ isCreole, onExitHub }) {
       // A topic tapped on the /jeux hub starts that round directly.
       autoStartedRef.current = true;
       startRound(location.state.startCategory);
+    } else if (location.state?.duelPick) {
+      // "Lance une partie, puis défie un ami" on the /jeux hub.
+      autoStartedRef.current = true;
+      setDuelPick(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, daily.completedToday, startDaily]);
 
   const startRound = (catId) => {
     roundVersion.current += 1;
+    setDuelQuestions(null);
     setCategory(catId);
     setReward(null);
     setSaving(false);
@@ -617,6 +597,49 @@ function TriviaClassic({ isCreole, onExitHub }) {
     setScreen('play');
     trackEvent('trivia_start', { category: catId, count: roundCount, timed, elapsedMs: Date.now() - entryAt.current });
   };
+
+  /*
+    A duel round: DUEL_ROUND questions from the duel bank, 15 s each — the
+    app's round, so whoever replays it (web or app) plays the same thing. It
+    still counts as a normal practice round for XP; the duel XP is paid by the
+    server when the friend plays.
+  */
+  const startDuelRound = async (catId: string) => {
+    setDuelNotice('');
+    let qs = null;
+    try {
+      const bank = await loadDuelBank();
+      const deck = bank[catId] || [];
+      qs = questionsAt(deck, drawIdxs(deck.length, DUEL_ROUND));
+    } catch {
+      qs = null;
+    }
+    if (!qs) {
+      setDuelNotice(isCreole
+        ? 'Tèm sa a pa disponib pou defi kounye a. Chwazi yon lòt.'
+        : 'Ce thème n’est pas encore disponible en défi. Choisis-en un autre.');
+      setScreen('pick');
+      setDuelPick(true);
+      return;
+    }
+    roundVersion.current += 1;
+    setDuelPick(false);
+    setDuelQuestions(qs.map((q) => shuffleOptions(q)));
+    setCategory(catId);
+    setReward(null);
+    setSaving(false);
+    setSaveError(false);
+    setPlayNonce((n) => n + 1);
+    setScreen('play');
+    trackEvent('trivia_start', { category: catId, count: qs.length, timed: true, duel: true, elapsedMs: Date.now() - entryAt.current });
+  };
+  const pickDuel = () => {
+    roundVersion.current += 1;
+    setDuelPick(true);
+    setScreen('pick');
+    setCategory(null);
+  };
+  const isDuelRound = !!duelQuestions && category !== 'daily';
 
   const handleFinish = useCallback(async (score, total, roundAnswers) => {
     const version = roundVersion.current;
@@ -638,7 +661,8 @@ function TriviaClassic({ isCreole, onExitHub }) {
   const handleReplay = () => {
     trackEvent('trivia_replay', { category });
     // A completed daily round becomes fresh mixed practice, never another daily reward.
-    startRound(category === 'daily' ? 'mixed' : category);
+    if (isDuelRound) startDuelRound(category);
+    else startRound(category === 'daily' ? 'mixed' : category);
   };
   const handleHome = () => {
     roundVersion.current += 1;
@@ -662,14 +686,27 @@ function TriviaClassic({ isCreole, onExitHub }) {
     {screen === 'pick' && <>
       <button className="trivia-back-btn" onClick={onExitHub}>← {isCreole ? 'Jwèt yo' : 'Les jeux'}</button>
       <TriviaModeSwitch mode={mode} onChange={setMode} isCreole={isCreole} />
-      <CategoryPicker onSelect={startRound} isCreole={isCreole} categories={categories} questions={questions}
-        count={roundCount} setCount={setRoundCount} timed={timed} setTimed={setTimed} isAuthed={isAuthed} />
-      <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />
+      {duelPick && <div className="duel-pickbar" role="status">
+        <p>
+          <strong>{isCreole ? 'Mòd defi' : 'Mode défi'}</strong>{' — '}
+          {isCreole
+            ? `chwazi yon tèm. ${DUEL_ROUND} kesyon, 15 segonn chak ; apre sa w ap voye menm kesyon yo bay yon zanmi.`
+            : `choisis un thème. ${DUEL_ROUND} questions, 15 secondes chacune ; ensuite tu envoies les mêmes à un ami.`}
+        </p>
+        <button type="button" className="duel-pill duel-pill--soft" onClick={() => { setDuelPick(false); setDuelNotice(''); }}>
+          {isCreole ? 'Anile' : 'Annuler'}
+        </button>
+      </div>}
+      {duelNotice && <p role="status">{duelNotice}</p>}
+      <CategoryPicker onSelect={duelPick ? startDuelRound : startRound} isCreole={isCreole} categories={categories} questions={questions}
+        count={roundCount} setCount={setRoundCount} timed={timed} setTimed={setTimed} isAuthed={isAuthed} duelPick={duelPick} />
+      {!duelPick && <DailyChallengeBanner daily={daily} isCreole={isCreole} onStart={startDaily} />}
       {dailyNotice && <p role="status">{dailyNotice}</p>}
       {isAuthed && <TriviaHeader level={level} streak={streak} isCreole={isCreole} />}
     </>}
     {screen === 'play' && <TriviaQuiz key={`${category}-${playNonce}`} category={category}
-      count={roundCount} timed={category === 'daily' || timed} questions={category === 'daily' ? dailyQuestions : null}
+      count={roundCount} timed={category === 'daily' || isDuelRound || timed}
+      questions={category === 'daily' ? dailyQuestions : isDuelRound ? duelQuestions : null}
       accentColor={category === 'daily' ? '#f59e0b' : null} onFinish={handleFinish}
       onBack={() => { trackEvent('trivia_exit', { category }); handleHome(); }}
       isCreole={isCreole} categories={categories} questionsMap={questions} />}
@@ -679,7 +716,7 @@ function TriviaClassic({ isCreole, onExitHub }) {
         reward={reward} saving={saving} saveError={saveError} isAuthed={isAuthed}
         accentColor={category === 'daily' ? '#f59e0b' : null} onReplay={handleReplay} onHome={handleHome}
         onReview={() => { trackEvent('trivia_review', { category }); setScreen('review'); }}
-        isCreole={isCreole} categories={categories} />
+        isCreole={isCreole} categories={categories} onStartDuelRound={startDuelRound} onPickDuel={pickDuel} />
     </>}
     {screen === 'review' && <section className="trivia-review">
       <button className="trivia-back-btn" onClick={() => setScreen('results')}>← {isCreole ? 'Rezilta' : 'Résultats'}</button>
@@ -888,8 +925,8 @@ function GamesHub({ isCreole }) {
             </div>
           </div>
           <div className="gx-hud__controls">
-            <Link to="/download?from=defi" className="gx-duel">
-              <Users size={16} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
+            <Link to="/jeux/trivia" state={{ duelPick: true }} className="gx-duel">
+              <Swords size={16} aria-hidden="true" /> {t('Défier un ami', 'Defye yon zanmi')}
             </Link>
           </div>
         </div>
@@ -990,14 +1027,7 @@ function GamesHub({ isCreole }) {
                   {' '}<Link to="/jeux/trivia">{t('Plus d’options (longueur, chrono)', 'Plis opsyon (longè, kwonomèt)')} →</Link>
                 </p>
               </section>
-              <section className="gx-card gx-card--duel" aria-labelledby="duel-title">
-                <span className="pf-tile pf-tile--sm pf-tile--violet" aria-hidden="true"><Users size={15} /></span>
-                <div className="gx-card__body">
-                  <h2 id="duel-title" className="gx-card__title gx-card__title--sm">{t('Défi d’un ami — 1 contre 1', 'Defi yon zanmi — 1 kont 1')}</h2>
-                  <p className="gx-card__text">{t('Termine une partie, puis envoie les mêmes questions à un ami : un seul essai, le meilleur score gagne. Le défi se crée dans l’application.', 'Fini yon pati, epi voye menm kesyon yo bay yon zanmi : yon sèl tantativ, pi gwo nòt la genyen. Defi a kreye nan aplikasyon an.')}</p>
-                </div>
-                <Link to="/download?from=defi" className="gx-btn gx-btn--ghost">{t('Obtenir l’application', 'Jwenn aplikasyon an')}</Link>
-              </section>
+              <MyDuels isCreole={isCreole} />
             </>
           )}
 
