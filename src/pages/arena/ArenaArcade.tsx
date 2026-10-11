@@ -13,7 +13,7 @@ import { STORY_CHAPTERS, MAX_STARS, nextStage, totalStars, chapterCleared, isUnl
 import { DEMO_SCHOOLS } from '../../../shared/arena/demo';
 import { departmentPath, departmentCentroid, MAPPED_DEPARTMENTS, MAP_WIDTH, MAP_HEIGHT } from '../../data/haitiMapGeometry';
 import SchoolBuilding from '../../components/arena/SchoolBuilding';
-import PixelAvatar from '../../components/PixelAvatar';
+import UserAvatar from '../../components/UserAvatar';
 import './ArenaArcade.css';
 import './ArenaHome.css';
 
@@ -141,12 +141,6 @@ export default function ArenaArcade() {
     return () => window.removeEventListener('keydown', onKey);
   }, [modes, navigate]);
 
-  // The navbar goes dark with the page, so the night is not cut by a white bar.
-  useEffect(() => {
-    document.body.classList.add('arena-night');
-    return () => document.body.classList.remove('arena-night');
-  }, []);
-
   // ── Parallax: the far city and the mornes drift with the pointer ──
   const heroRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -229,7 +223,7 @@ export default function ArenaArcade() {
                     <li key={i} className={`ah-seat${m ? '' : ' is-empty'}${m?.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
                       {m ? (
                         <>
-                          <PixelAvatar seed={m.uid || m.displayName} size={40} />
+                          <UserAvatar seed={m.uid} name={m.displayName} size={40} radius={10} />
                           <span className="ah-seat__name">{m.displayName}</span>
                           <span className="ah-seat__xp">{nf(m.xp)}</span>
                         </>
@@ -393,9 +387,9 @@ export default function ArenaArcade() {
             {/* 4 · Défi — two players face off */}
             <Link to="/jeux/trivia" state={{ duelPick: true }} className="ah-game ah-game--duel">
               <div className="ah-game__art ah-art-vs" aria-hidden="true">
-                <span className="ah-vs__p ah-vs__p--l"><PixelAvatar seed={user?.uid || 'toi'} size={64} /></span>
+                <span className="ah-vs__p ah-vs__p--l"><UserAvatar seed={user?.uid || 'toi'} size={64} radius={16} /></span>
                 <span className="ah-vs__bolt">VS</span>
-                <span className="ah-vs__p ah-vs__p--r"><PixelAvatar seed="ton-ami" size={64} /></span>
+                <span className="ah-vs__p ah-vs__p--r"><UserAvatar seed="ton-ami" size={64} radius={16} /></span>
               </div>
               <div className="ah-game__body">
                 <p className="ah-game__over"><Key n={4} /> {t('1 contre 1', '1 kont 1')}</p>

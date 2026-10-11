@@ -84,12 +84,7 @@ export default function ArenaStory() {
   const [result, setResult] = useState<{ score: number; total: number; stars: number; xp: number | null } | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   useFocusMode(screen === 'play');
-  // The map and the results live in the Arène's night; the quiz itself stays light.
-  useEffect(() => {
-    if (screen === 'play') return undefined;
-    document.body.classList.add('arena-night');
-    return () => document.body.classList.remove('arena-night');
-  }, [screen]);
+
   useEffect(() => { if (screen !== 'play') { window.scrollTo(0, 0); headingRef.current?.focus(); } }, [screen, chapterIdx]);
 
   const stageOf = (i: number): StoryStage => (i === STAGES_PER_CHAPTER - 1 ? chapter.bossStage : chapter.stages[i]);

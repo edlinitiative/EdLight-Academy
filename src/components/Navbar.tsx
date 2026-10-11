@@ -21,7 +21,7 @@ import { UserDropdown } from './Auth';
 import { StreakBadge } from './Streak';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 import NotificationBell from './NotificationBell';
-import PixelAvatar from './PixelAvatar';
+import UserAvatar from './UserAvatar';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import './Navbar.css';
 
@@ -182,7 +182,7 @@ export function Navbar() {
           {isAuthenticated && user && (
             <Link to="/dashboard" className="nav-drawer__profile" onClick={closeMenu}>
               <span className="nav-drawer__avatar nav-drawer__avatar--pixel">
-                <PixelAvatar seed={user.uid || user.email || user.name} size={40} />
+                <UserAvatar seed={user.uid} name={user.name || user.email} size={40} />
               </span>
               <span className="nav-drawer__profile-info">
                 <span className="nav-drawer__profile-name">{user.name}</span>
@@ -299,7 +299,7 @@ export function Navbar() {
                   aria-expanded={showUserDropdown}
                   aria-label={t('nav.profileMenu')}
                 >
-                  <PixelAvatar seed={user?.uid || user?.email || user?.name} size={32} />
+                  <UserAvatar seed={user?.uid} name={user?.name || user?.email} size={32} />
                 </button>
                 {showUserDropdown && (
                   <UserDropdown user={user} onLogout={handleLogout} />

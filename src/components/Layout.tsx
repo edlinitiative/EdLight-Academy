@@ -15,6 +15,7 @@ import useStore from '../contexts/store';
 import { SandraWidget } from './SandraWidget';
 import SearchOverlay from './SearchOverlay';
 import DownloadAppBanner from './DownloadAppBanner';
+import '../styles/arenaNight.css';
 
 // Notification panel is only shown on demand — keep it (and its Firebase use)
 // out of the initial shell bundle.
@@ -67,11 +68,19 @@ export function Layout() {
     .filter(Boolean)
     .join(' ');
 
+  // The Arène is one place: every competitive screen (the arcade, Mode
+  // Histoire, games, duels, tournaments, the boards) lives in its night. It
+  // reuses the dark theme every page already supports — without touching the
+  // student's saved light/dark preference — and body.arena-night swaps in the
+  // Arène's navy palette (pages/arena/ArenaHome.css).
+  const isArenaArea = /^\/(arena|jeux|trivia|tournois|defi|duel|classement)(\/|$)/.test(pathname);
   React.useEffect(() => {
     const root = document.documentElement;
-    root.dataset.theme = theme === 'dark' ? 'dark' : 'light';
-    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
-  }, [theme]);
+    const dark = theme === 'dark' || isArenaArea;
+    root.dataset.theme = dark ? 'dark' : 'light';
+    root.style.colorScheme = dark ? 'dark' : 'light';
+    document.body.classList.toggle('arena-night', isArenaArea);
+  }, [theme, isArenaArea]);
 
   // Warm the course catalog when the browser is idle so navigating to /courses
   // is instant. The data layer (and Firebase) is imported dynamically here so

@@ -472,17 +472,6 @@
   .ah-game, .ah-far, .ah-mornes { transition: none; }
 }
 
-/* The navbar joins the night on /arena (desktop bar only — the mobile drawer keeps its own light sheet). */
-body.arena-night .navbar { background: rgba(4, 10, 28, 0.84) !important; border-bottom: 1px solid rgba(160, 190, 255, 0.12) !important; box-shadow: none !important; }
-body.arena-night .navbar .logo__text,
-body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link,
-body.arena-night .navbar .nav-search-btn,
-body.arena-night .navbar .theme-toggle,
-body.arena-night .navbar .nav-actions__signin { color: #DCE6FF !important; }
-body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
-body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.12); }
-body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .nav-search-btn:hover, body.arena-night .navbar .theme-toggle:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-
 /* ═══ Mode Histoire in the night (map + results; the quiz stays light) ═══ */
 .arc-story--night {
   min-height: calc(100svh - 56px);

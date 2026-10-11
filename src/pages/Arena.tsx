@@ -11,7 +11,7 @@ import ArenaRegisterForm from '../components/arena/ArenaRegisterForm';
 import { ARENA_WEB_PLAY } from '../../shared/arena/webPlay';
 import MySchoolCard from '../components/MySchoolCard';
 import SchoolRanking from '../components/SchoolRanking';
-import PixelAvatar from '../components/PixelAvatar';
+import UserAvatar from '../components/UserAvatar';
 import { GRADES } from '../../shared/trackConfig';
 import { useTrivia } from '../hooks/useTrivia';
 import { useStreak } from '../hooks/useStreak';
@@ -335,7 +335,7 @@ export default function Arena() {
                           )}
                           <li className={`arena-board__row${i < TEAM_SIZE ? ' is-five' : ''}${m.uid && m.uid === user?.uid ? ' is-me' : ''}`}>
                             <span className="arena-board__pos">{i + 1}</span>
-                            <PixelAvatar seed={m.uid || m.displayName} size={30} className="arena-board__avatar" />
+                            <UserAvatar seed={m.uid} name={m.displayName} size={30} className="arena-board__avatar" />
                             <span className="arena-board__name">
                               {m.displayName}
                               {m.uid && m.uid === user?.uid && <em>{t('toi', 'ou')}</em>}

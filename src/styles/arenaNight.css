@@ -1,0 +1,41 @@
+/* ═══ The Arène's night, everywhere in the competitive area ═══════════════
+   Layout puts body.arena-night (and the dark theme) on /arena, /jeux,
+   /trivia, /tournois, /defi, /duel and /classement. Every page there already
+   supports the dark theme; these variables tint it into the Arène's navy and
+   lay the night sky behind it, so moving between the arcade, a game, a duel
+   or a tournament never drops back to a different app. */
+body.arena-night {
+  --background: #040A1C;
+  --background-accent: #081430;
+  --surface: #0E1C42;
+  --surface-muted: #0A1534;
+  --surface-elevated: rgba(14, 28, 66, 0.92);
+  --surface-2: #0A1534;
+  --border: rgba(160, 190, 255, 0.14);
+  --border-strong: rgba(160, 190, 255, 0.26);
+  --text-900: #F1F5FF;
+  --text-800: #DCE6FF;
+  --text-700: #C2D1F2;
+  --text-600: #A3B5DC;
+  --text-500: #8599C4;
+  background:
+    radial-gradient(1100px 520px at 15% -5%, rgba(61, 139, 255, 0.16), transparent 70%),
+    radial-gradient(900px 500px at 100% 30%, rgba(255, 92, 57, 0.06), transparent 70%),
+    #040A1C fixed;
+}
+body.arena-night .app-shell, body.arena-night main { background: transparent; }
+body.arena-night .site-footer, body.arena-night .footer { background: #030817; }
+/* No light/dark switch inside the night. */
+body.arena-night .navbar .theme-toggle { display: none; }
+
+/* The navbar joins the night on /arena (desktop bar only — the mobile drawer keeps its own light sheet). */
+body.arena-night .navbar { background: rgba(4, 10, 28, 0.84) !important; border-bottom: 1px solid rgba(160, 190, 255, 0.12) !important; box-shadow: none !important; }
+body.arena-night .navbar .logo__text,
+body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link,
+body.arena-night .navbar .nav-search-btn,
+body.arena-night .navbar .theme-toggle,
+body.arena-night .navbar .nav-actions__signin { color: #DCE6FF !important; }
+body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+body.arena-night .navbar .nav-links:not(.nav-links--mobile-open) .nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.12); }
+body.arena-night .navbar .nav-actions__signin:hover, body.arena-night .navbar .nav-search-btn:hover, body.arena-night .navbar .theme-toggle:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+

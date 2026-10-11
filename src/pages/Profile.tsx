@@ -26,7 +26,7 @@ import { Skeleton } from '../components/Skeleton';
 import SchoolField from '../components/arena/SchoolField';
 import { GRADES, TRACK_BY_CODE } from '../config/trackConfig';
 import { HAITI_DEPARTMENTS, OTHER_CITY, citiesOf, findCity } from '../data/haitiGeo';
-import PixelAvatar from '../components/PixelAvatar';
+import UserAvatar from '../components/UserAvatar';
 import MySchoolCard from '../components/MySchoolCard';
 import { schoolKey } from '../../shared/schools';
 import { useLeaderboard } from '../hooks/useLeaderboard';
@@ -872,7 +872,7 @@ export default function Profile() {
         <header className={`pr-titlebar${identity.dirty ? ' is-dirty' : ''}`}>
           <div className="pr-titlebar__who">
             <span className="pr-titlebar__avatar">
-              <PixelAvatar seed={user.uid || user.email || user.name} size={52} />
+              <UserAvatar seed={user.uid} name={user.name || user.email} size={52} />
             </span>
             <div className="pr-titlebar__id">
               <h1 className="pr-titlebar__name">{accountName}</h1>

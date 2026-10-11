@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import {
   AlertTriangle, ArrowRight, Check, FileText, KeyRound, Loader2, LogOut, Mail, RotateCcw, ShieldCheck, Trash2,
 } from '../../components/icons';
-import PixelAvatar from '../../components/PixelAvatar';
+import UserAvatar from '../../components/UserAvatar';
 import { loadReviewMap } from '../../services/reviewService';
 import { readMastery } from '../../services/masteryService';
 import { getCurrentUser, getUserProfile, updateUser } from '../../services/firebase';
@@ -240,7 +240,7 @@ export function Schoolmates({ entries, uid, school, t }: {
         <ul className="pr-mates__list">
           {mates.map((e) => (
             <li key={e.id} className="pr-mate">
-              <PixelAvatar seed={e.id} size={32} className="pr-mate__avatar" />
+              <UserAvatar seed={e.id} name={e.displayName} size={32} className="pr-mate__avatar" />
               <span className="pr-mate__name">{e.displayName}</span>
               <span className="pr-mate__xp num">#{e.rank} · {e.xp || 0} XP</span>
             </li>
