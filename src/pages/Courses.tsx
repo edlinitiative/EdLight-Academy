@@ -430,10 +430,6 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   const mine = searchParams.get('mes') === '1';
   const axis = searchParams.get('vue') === 'niveau' ? 'level' : 'subject';
   const query = searchParams.get('q') || '';
-  // Dev only: /courses?preview=workspace renders the signed-in workspace
-  // without an account, so its design can be reviewed locally. Dead code in
-  // production builds.
-  const devWorkspace = process.env.NODE_ENV !== 'production' && searchParams.get('preview') === 'workspace';
 
   const setParam = useCallback((key: string, value: string | null) => {
     setSearchParams((prev) => {
@@ -760,29 +756,14 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   return (
     <section className="section pf lrn lrn--clean">
       <div className="container">
-        {(signedIn || devWorkspace) && !filtering && courses.length > 0 && (
-          <LearnWorkspace
-            courses={courses}
-            courseStats={courseStats}
-            courseLevel={courseLevel}
-            subjectName={subjectName}
-            levelLabel={levelLabel}
-            myLevel={myLevel}
-            progressByCourseId={progressByCourseId}
-            SubjectTile={SubjectTile as any}
-            L={L}
-          />
-        )}
-
-        {/* One title, one search, one row of filters — then the courses.
-            Signed out, it is a hero band with three real lesson frames fanned
-            beside it; signed in, the workspace above already plays that role. */}
+        {/* The catalogue only. The signed-in workspace lives on "/" and
+            /dashboard; repeating it here made /courses open on the same screen
+            as "/". */}
+        {/* One title, one search, one row of filters — then the courses. */}
         <header className={`cl-head${heroMode ? ' cl-hero' : ''}`}>
           <div className="cl-hero__copy">
           {heroMode && <p className="cl-over">{L('Programme du MENFP · Nouveau Secondaire', 'Pwogram MENFP · Nouvo Segondè')}</p>}
-          {signedIn && !filtering && courses.length > 0
-            ? <h2 className="cl-head__title">{L('Tous les cours', 'Tout kou yo')}</h2>
-            : <h1 className="cl-head__title">{heroMode ? L('Chaque leçon du programme, en vidéo.', 'Chak leson nan pwogram nan, an videyo.') : L('Cours', 'Kou')}</h1>}
+          <h1 className="cl-head__title">{heroMode ? L('Chaque leçon du programme, en vidéo.', 'Chak leson nan pwogram nan, an videyo.') : L('Cours', 'Kou')}</h1>
           <p className="cl-head__lede">
             {heroMode
               ? L('Chaque notion expliquée au tableau, chapitre par chapitre. Regarde, puis entraîne-toi.', 'Chak nosyon esplike sou tablo a, chapit pa chapit. Gade, epi pratike.')
