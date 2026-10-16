@@ -28,6 +28,8 @@ import {
 import { compileQuestion, isSerializable, responseToStored, storedToResponse } from '../utils/question';
 import { Skeleton } from '../components/Skeleton';
 import './ExamTake.css';
+import { balanceMathAcrossBlanks } from '../utils/mathBlanks';
+import { ChevronLeft, Clock } from '../components/icons';
 
 /** Per-question grading result stored in the `questionResults` map (immediate
  *  feedback mode). Loosely typed — the grading payload is dynamic. */
@@ -1675,18 +1677,19 @@ const ExamTake = () => {
         {/* Top bar */}
         <div className="exam-take__topbar">
           <div className="exam-take__topbar-left">
-            <button className="button button--ghost button--sm" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button">
-              ← {t('Examen', 'Egzamen')}
+            <button className="exam-take__back" onClick={() => navigate(examKey ? `/exams/${level || ''}/${examKey}` : `/exams/${level || ''}`)} type="button" aria-label={t('Retour à l’examen', 'Retounen nan egzamen an')}>
+              <ChevronLeft size={18} aria-hidden="true" />
             </button>
             <div className="exam-take__exam-info">
               <span className="exam-take__subject" style={{ color }}>{subject}</span>
-              <span className="exam-take__title-short">{normalizeExamTitle(exam)}</span>
+              <span className="exam-take__title-short" title={normalizeExamTitle(exam)}>{normalizeExamTitle(exam)}</span>
             </div>
           </div>
 
           <div className="exam-take__topbar-right">
             <span className="exam-take__progress">
-              {answeredCount}/{questions.length}
+              <strong>{answeredCount}/{questions.length}</strong>
+              <span className="exam-take__progress-label">{t(' répondues', ' reponn')}</span>
             </span>
             {durationMin > 0 && (
               <span
@@ -1695,7 +1698,7 @@ const ExamTake = () => {
                 aria-atomic="true"
                 aria-label={`${t('Temps restant', 'Tan ki rete')}: ${formatTime(secondsLeft)}`}
               >
-                <span aria-hidden="true">⏱</span> {formatTime(secondsLeft)}
+                <Clock size={16} aria-hidden="true" /> {formatTime(secondsLeft)}
               </span>
             )}
             <button
@@ -1976,7 +1979,7 @@ const ExamTake = () => {
               <div className={`card exam-take__question-card ${isLocked ? 'exam-take__question-card--locked' : ''}`} key={qIdx}>
                 <div className="exam-take__question-header">
                   <span className="exam-take__question-number">
-                    <span className="exam-take__question-num-label">{formatQuestionLabel(gq, qIdx)}</span>
+                    <span className="exam-take__question-num-label">{/^\d+$/.test(formatQuestionLabel(gq, qIdx)) ? t('Question ', 'Kesyon ') : ''}{formatQuestionLabel(gq, qIdx)}</span>
                     {groupQuestions.length === 1 && (
                       <span className="exam-take__question-num-total"> / {questions.length}</span>
                     )}
@@ -2373,7 +2376,7 @@ function SectionHeader({ title, instructions }) {
             aria-label={collapsed ? t('Afficher les instructions', 'Montre konsiy yo') : t('Masquer les instructions', 'Kache konsiy yo')}
             tabIndex={-1}
           >
-            {collapsed ? '▶' : '▼'}
+            <ChevronLeft size={18} aria-hidden="true" style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(-90deg)', transition: 'transform 0.2s ease' }} />
           </button>
         )}
       </div>
@@ -2478,6 +2481,7 @@ function MissingPassageNotice({ reference }) {
 
 // ── Fill-in-the-blank inline renderer ────────────────────────────────────────
 
+
 /**
  * Renders question text with inline <input> fields replacing blank placeholders.
  * Supports single and multiple blanks. Values stored as pipe-separated string.
@@ -2485,7 +2489,7 @@ function MissingPassageNotice({ reference }) {
  */
 function FillBlankText({ text, index, value, onChange, disabled }) {
   // Split text on blank placeholders, keeping surrounding text
-  const parts = text.split(BLANK_RE);
+  const parts = balanceMathAcrossBlanks(text.split(BLANK_RE));
   const blankCount = parts.length - 1;
 
   // For multiple blanks, store values pipe-separated: "val1|val2|val3"

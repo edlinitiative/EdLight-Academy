@@ -326,3 +326,285 @@
 	overflow-x: auto;
 	overflow-y: hidden;
 }
+
+/* ══ Premium pass (2026-10-16) ═════════════════════════════════════════════
+   The paper is the product: a calm exam bar, readable state, a navigator you
+   can actually tap, and question cards with real hierarchy. Scoped to the
+   live paper (.section.exam-take); results and the preview keep theirs. */
+
+/* The navbar hides while the paper is live; its 48px of section padding
+   stayed behind as an empty band above the bar. */
+body.exam-take-live .section.exam-take { padding-top: 0 !important; }
+
+.exam-take .exam-take__header {
+  padding-top: 0.75rem;
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  backdrop-filter: saturate(1.4) blur(10px);
+}
+
+.exam-take .exam-take__topbar {
+  margin: 0 !important;
+  gap: 1rem;
+  min-height: 64px;
+  padding: 0.6rem 0.75rem 0.6rem 0.6rem;
+  border: 0;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 12px 30px -22px rgba(15, 30, 56, 0.35);
+}
+.exam-take .exam-take__topbar-left { gap: 0.75rem; min-width: 0; }
+.exam-take .exam-take__back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--r-btn, 12px);
+  background: var(--surface-muted, #eef2f8);
+  color: var(--text-700);
+  cursor: pointer;
+}
+.exam-take .exam-take__back:hover { background: color-mix(in srgb, var(--primary-500) 10%, var(--surface)); color: var(--primary-600); }
+.exam-take .exam-take__back:focus-visible { outline: 3px solid var(--primary-300, #93c5fd); outline-offset: 2px; }
+.exam-take .exam-take__exam-info { min-width: 0; gap: 0.1rem; }
+.exam-take .exam-take__subject {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.exam-take .exam-take__title-short {
+  max-width: none;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+}
+.exam-take .exam-take__topbar-right { gap: 0.6rem; flex: none; }
+.exam-take .exam-take__progress {
+  color: var(--text-600);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+.exam-take .exam-take__progress strong { color: var(--text-900); font-weight: 800; }
+.exam-take .exam-take__timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: var(--r-btn, 12px);
+  background: var(--surface-muted, #eef2f8);
+  color: var(--text-900);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.exam-take .exam-take__timer--warning {
+  background: color-mix(in srgb, var(--danger-500) 12%, var(--surface));
+  color: var(--danger-500);
+}
+.exam-take .exam-take__topbar-right .button { min-height: 44px; padding: 0.5rem 1.2rem; font-size: 0.975rem; }
+
+.exam-take .exam-take__progress-bar {
+  height: 6px;
+  margin: 0.6rem 0.25rem 0;
+  border-radius: 999px;
+}
+.exam-take .exam-take__progress-fill { border-radius: 999px; }
+
+/* State: one readable line, the save state as a pill — never 12px. */
+.exam-take .exam-take__state-strip {
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.25rem 0.75rem;
+  border: 0;
+  font-size: 0.925rem;
+}
+.exam-take .exam-take__state-policy { color: var(--text-500); font-size: 0.925rem; }
+.exam-take .exam-take__save {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+/* Navigator: a real panel with tappable numbers. */
+.exam-take .exam-take__nav {
+  width: 232px;
+  padding: 1rem;
+  border: 0;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.05), 0 18px 40px -30px rgba(15, 30, 56, 0.35);
+}
+.exam-take .exam-take__nav-ring-wrap { width: 52px; height: 52px; }
+.exam-take .exam-take__nav-ring-pct { font-size: 0.85rem; font-weight: 800; }
+.exam-take .exam-take__nav-ring-pct small { font-size: 0.6rem; }
+.exam-take .exam-take__nav-progress-title { font-size: 0.95rem; font-weight: 750; color: var(--text-900); }
+.exam-take .exam-take__nav-progress-detail { font-size: 0.85rem; color: var(--text-500); }
+.exam-take .exam-take__nav-gap { border-radius: 14px; font-size: 0.875rem; }
+.exam-take .exam-take__nav-gap-label { font-size: 0.825rem; line-height: 1.35; }
+.exam-take .exam-take__nav-gap-label * { font-size: inherit; }
+.exam-take .exam-take__nav-section { padding: 0.6rem; border-radius: 14px; }
+.exam-take .exam-take__nav-section-title { gap: 0.4rem; }
+.exam-take .exam-take__nav-section-name {
+  font-size: 0.825rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.exam-take .exam-take__nav-section-badge { font-size: 0.75rem; }
+.exam-take .exam-take__nav-section-grid { gap: 0.4rem; }
+.exam-take .exam-take__nav-btn {
+  min-width: 0;
+  height: 38px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.exam-take .exam-take__nav-legend { gap: 0.4rem; font-size: 0.825rem; }
+/* Hovering the current question used to swap its fill for the pale hover
+   wash while the number stayed white — unreadable. */
+.exam-take .exam-take__nav-btn--current:hover {
+  background: var(--nav-accent, var(--primary-500));
+  border-color: var(--nav-accent, var(--primary-500));
+  color: #fff;
+}
+
+/* Section heading: the instructions read as instructions. */
+.exam-take .exam-take__section-header {
+  padding: 0 0 0.75rem;
+  border-bottom: 0;
+}
+.exam-take .exam-take__section-header-top h3 {
+  margin: 0;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: clamp(1.15rem, 1rem + 0.5vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.exam-take .exam-take__section-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--text-500);
+}
+.exam-take .exam-take__section-header .instruction-renderer { color: var(--text-600); font-size: 1rem; }
+
+/* The question card. */
+.exam-take .exam-take__question-card {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 0;
+  border-radius: 22px;
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.04), 0 22px 46px -32px rgba(15, 30, 56, 0.32);
+}
+.exam-take .exam-take__question-header { margin-bottom: 1rem; }
+.exam-take .exam-take__question-number { font-size: 0.95rem; color: var(--text-500); }
+.exam-take .exam-take__question-num-label { color: var(--primary-600); font-weight: 800; }
+.exam-take .exam-take__question-points {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--surface-muted, #eef2f8);
+  color: var(--text-700);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.exam-take .exam-take__question-text,
+.exam-take .exam-take__fill-blank-text {
+  color: var(--text-900);
+  font-size: clamp(1.05rem, 0.98rem + 0.3vw, 1.2rem);
+  line-height: 1.75;
+}
+.exam-take .exam-take__inline-blank {
+  min-height: 46px;
+  margin: 0 0.35rem;
+  padding: 0 0.9rem;
+  border: 1.5px solid var(--border-strong, #c9d4e3);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 1.05rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.exam-take .exam-take__inline-blank:focus {
+  outline: 0;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-500) 18%, transparent);
+}
+.exam-take .qa-hints__btn {
+  min-height: 36px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.exam-take .qa-hints__counter { font-size: 0.8rem; }
+
+/* Previous / next under the card. */
+.exam-take .exam-take__question-nav { gap: 0.75rem; margin-top: 1.25rem; }
+.exam-take .exam-take__question-nav .button { min-height: var(--btn-h-lg, 52px); padding: 0.6rem 1.5rem; font-size: 1rem; }
+
+@media (max-width: 768px) {
+  .exam-take .exam-take__header { padding-top: 0.5rem; }
+  .exam-take .exam-take__topbar {
+    flex-wrap: nowrap;
+    min-height: 56px;
+    padding: 0.45rem 0.5rem;
+    border-radius: 16px;
+  }
+  .exam-take .exam-take__topbar-left { flex: 1 1 auto; }
+  /* A long title can't fit beside the timer: the subject says enough. */
+  .exam-take .exam-take__title-short { display: none; }
+  .exam-take .exam-take__subject { color: var(--text-900) !important; font-family: var(--font-heading); font-size: 0.975rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .exam-take .exam-take__save { font-size: 0.85rem; line-height: 1.35; }
+  .exam-take .exam-take__back { width: 40px; height: 40px; }
+  /* The bar under it and the navigator already count answers. */
+  .exam-take .exam-take__progress { display: none; }
+  .exam-take .exam-take__timer { min-height: 40px; padding: 0 0.6rem; font-size: 0.95rem; }
+  .exam-take .exam-take__topbar-right .button { min-height: 40px; padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+  .exam-take .exam-take__state-policy { display: none; }
+  .exam-take .exam-take__nav { width: auto; }
+}
+
+/* Structured answers (domain / limits / variations pickers): same field shape
+   as the blanks, and a real dark theme — the trigger and its list were
+   hard-coded white on a near-black panel. */
+.exam-take .ka-mathselect__trigger {
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+.exam-take .ka-mathselect__list { border-radius: 14px; }
+[data-theme="dark"] .exam-take .ka-scaffold { background: transparent; }
+[data-theme="dark"] .exam-take .ka-mathselect__trigger {
+  border-color: var(--border-strong, #344762);
+  background: var(--surface-muted, #1b2c46);
+  color: var(--text-900);
+}
+[data-theme="dark"] .exam-take .ka-mathselect__trigger:disabled { background: var(--surface); color: var(--text-500); }
+[data-theme="dark"] .exam-take .ka-mathselect__placeholder,
+[data-theme="dark"] .exam-take .ka-mathselect__trigger svg { color: var(--text-500); }
+[data-theme="dark"] .exam-take .ka-mathselect__list {
+  border-color: var(--border-strong, #344762);
+  background: var(--surface-elevated, var(--surface));
+}
+[data-theme="dark"] .exam-take .ka-mathselect__option { color: var(--text-900); }
+[data-theme="dark"] .exam-take .ka-mathselect__option.is-active { background: rgba(77, 143, 240, 0.16); }
+[data-theme="dark"] .exam-take .exam-take__inline-blank {
+  border-color: var(--border-strong, #344762);
+  background: var(--surface-muted, #1b2c46);
+  color: var(--text-900);
+}
+
+/* Narrow phones: back, timer, Soumettre — the paper's name is on the page
+   they came from, and there is no room to read it here. */
+@media (max-width: 420px) {
+  .exam-take .exam-take__exam-info { display: none; }
+  .exam-take .exam-take__topbar-left { flex: 0 0 auto; }
+  .exam-take .exam-take__topbar-right { flex: 1 1 auto; justify-content: flex-end; }
+}
