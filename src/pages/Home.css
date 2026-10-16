@@ -1645,3 +1645,71 @@ a.lp-level:focus-visible {
 .lp .lp-proof__item { display: grid; }
 .lp .lp-proof__value { order: -1; font-family: var(--font-heading, sans-serif); font-size: 2.1rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: #0A1A3F; }
 .lp .lp-proof__label { font-size: 0.9rem; color: #5B6B82; }
+
+/* ═══ Phone pass (≤560px) ═══════════════════════════════════════════════════
+   On a 390×844 phone the sign-up buttons and the three live figures must both
+   be on the first screen, with the sample exercise starting just below them.
+   The hero keeps its headline — just tighter — and the proof bar is one
+   left-aligned row of three (figure over label), never a stacked column.
+   Placed last so it outranks the earlier .lp-proof and premium-pass rules. */
+@media (max-width: 560px) {
+  .lp-hero, .lp-hero.lp-hero--bold { padding: 1.25rem 0 2.25rem; }
+  .lp-hero__layout { gap: 1.75rem; }
+  .lp-hero__copy { gap: 0.85rem; }
+
+  .lp-tag { padding: 0.25rem 0.7rem; gap: 0.4rem; font-size: 0.68rem; letter-spacing: 0.06em; }
+  .lp-tag__dot { width: 6px; height: 6px; }
+
+  .lp .lp-hero__title { font-size: clamp(1.8rem, 0.95rem + 4.4vw, 2.3rem); line-height: 1.04; letter-spacing: -0.04em; }
+  .lp .lp-hero__lede { font-size: 1rem; line-height: 1.5; }
+
+  .lp-hero__cta { gap: 0.6rem; }
+  .lp-hero__cta .lp-btn--lg { min-height: 48px; padding-block: 0.7rem; }
+  .lp-hero__cta-fine { font-size: 0.9rem; }
+
+  .lp .lp-proof {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-items: start;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  .lp .lp-proof__item {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+  .lp .lp-proof__value { font-size: 1.6rem; }
+  .lp .lp-proof__label { font-size: 0.875rem; line-height: 1.25; }
+
+  /* Small labels that fell under 14px on a phone. */
+  .lp-sample__source, .lp-sample__hint { font-size: 0.875rem; }
+  .lp-sheet__top { font-size: 0.875rem; letter-spacing: 0.03em; }
+  .lp-cta__eyebrow { font-size: 0.875rem; letter-spacing: 0.06em; }
+
+  /* Bento + closing call: less frame, more content on a narrow screen. */
+  .lp-bento { gap: 1rem; }
+  .lp-pane { border-radius: 24px; }
+  .lp-pane__copy { padding: 1.4rem 1.25rem; }
+  .lp-pane p { font-size: 1rem; }
+  .lp-pane--learn { min-height: 0; }
+  .lp-frames { min-height: 230px; margin: 0 0.75rem 1.25rem; }
+  .lp-pane--exams, .lp-pane--arena { min-height: 400px; }
+  .lp-sheet { margin: 0 1.25rem 1.5rem; min-height: 220px; }
+  .lp-subj { padding: 1.25rem 1.3rem; }
+  .lp .lp-cta__card--navy { border-radius: 26px; padding: 2rem 1.35rem; }
+  .lp .lp-cta__title { font-size: clamp(1.9rem, 1rem + 4.4vw, 2.4rem); }
+  .lp-cta__card { grid-template-columns: minmax(0, 1fr); }
+  .lp-cta__actions .lp-btn { width: 100%; justify-content: center; white-space: normal; text-align: center; padding-inline: 1.1rem; }
+  .lp-sheet__paper { padding: 1.1rem 1.1rem; }
+  .lp-sheet__subject { font-size: 1.4rem; overflow-wrap: anywhere; }
+}
+@media (max-width: 359px) {
+  .lp-hero, .lp-hero.lp-hero--bold { padding-top: 1rem; }
+  .lp-hero__copy { gap: 0.75rem; }
+  .lp-tag { font-size: 0.64rem; letter-spacing: 0.03em; padding-inline: 0.6rem; }
+  .lp .lp-hero__lede { font-size: 0.95rem; line-height: 1.45; }
+  .lp .lp-proof { gap: 0.5rem; }
+  .lp .lp-proof__value { font-size: 1.4rem; }
+}

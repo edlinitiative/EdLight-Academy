@@ -908,7 +908,7 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
                     const mineHere = !!myLevel && lvl === myLevel;
                     const dur = durationOf(course);
                     return (
-                      <button key={course.id} type="button" className="cl-card" onClick={() => navigate(`/courses/${course.id}`)}>
+                      <button key={course.id} type="button" className={`cl-card cl-card--${course.subject}`} onClick={() => navigate(`/courses/${course.id}`)}>
                         <span className="cl-card__cover">
                           {cover
                             ? <img src={cover} alt="" loading="lazy" />

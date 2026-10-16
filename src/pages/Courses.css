@@ -1675,3 +1675,64 @@
 .lws-ex__open { font-size: 0.9rem; font-weight: 600; color: #B45309; }
 .lws-ex__done { font-size: 0.9rem; font-weight: 600; color: #047857; }
 .lws-ex .lws-btn { flex: none; pointer-events: none; }
+
+/* ══ Catalogue on the canvas (2026-10-16) ═════════════════════════════════════
+   Ted's audit: no card-inside-a-panel. Each subject is a heading on the page
+   canvas with its cards right under it — the subject tint survives only in
+   the heading's tile and the cover wash. Covers are real lesson frames, made
+   consistent: one ratio, one radius, a calm tinted foot for the class badge.
+   Chips: one horizontally scrollable row on phones. */
+.cl-card--MATH { --sub: #1B6FE0; }
+.cl-card--CHEM { --sub: #10B981; }
+.cl-card--ECON { --sub: #F59E0B; }
+.cl-card--PHYS { --sub: #8B5CF6; }
+
+.cl-shelf,
+.cl-shelf--MATH, .cl-shelf--CHEM, .cl-shelf--ECON, .cl-shelf--PHYS {
+  margin: 0 0 clamp(2.5rem, 5vw, 3.5rem); padding: 0; border-radius: 0; background: none; box-shadow: none;
+}
+.cl-shelf__head { margin-bottom: 1.1rem; }
+.cl-shelf .cl-group__title { font-size: clamp(1.5rem, 1.2rem + 1vw, 1.85rem); letter-spacing: -0.03em; }
+
+/* Cards sit on the canvas: one surface, a hairline + soft lift. */
+.cl-shelf .cl-card {
+  border-radius: 18px;
+  box-shadow: 0 0 0 1px var(--border, #E6EBF2), 0 14px 30px -26px rgba(11, 41, 107, 0.45);
+}
+.cl-shelf .cl-card:hover { box-shadow: 0 0 0 1px var(--primary-200, #C3D9FA), 0 22px 40px -24px rgba(11, 41, 107, 0.45); }
+
+/* Covers: fixed 16:9, cropped a touch in (hides letterbox bars and the
+   frame's ragged edges; centred, because the YouTube "hq" frame is 4:3 with
+   black letterbox bars top and bottom that a 16:9 centre crop removes), and washed at the foot in the subject's tint so the badge always sits
+   on a calm area. */
+.cl-card__cover { aspect-ratio: 16 / 9; border-radius: 18px 18px 0 0; background: color-mix(in srgb, var(--sub, #1B6FE0) 8%, var(--surface, #fff)); box-shadow: none; }
+.cl-card__cover img { object-fit: cover; object-position: 50% 50%; transform: scale(1.06); transform-origin: 50% 45%; }
+.cl-card:hover .cl-card__cover img { transform: scale(1.1); }
+.cl-card__cover::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to top,
+    color-mix(in srgb, var(--sub, #1B6FE0) 16%, var(--surface, #fff)) 0%,
+    color-mix(in srgb, var(--sub, #1B6FE0) 12%, var(--surface, #fff)) 24%,
+    color-mix(in srgb, var(--sub, #1B6FE0) 6%, transparent) 50%,
+    transparent 68%);
+}
+.cl-card__level, .cl-card__mine, .cl-card__play { z-index: 1; }
+.cl-card__level { box-shadow: none; }
+[data-theme="dark"] .cl-card__cover img { filter: brightness(0.92); }
+
+/* Chips: one scrollable row on phones — no wrapping into three rows. */
+@media (max-width: 720px) {
+  .lrn--clean .cl-head { gap: 0.85rem; margin-bottom: 1.5rem; }
+  .lrn--clean .cl-head:not(.cl-hero) .cl-head__title { font-size: 2rem; }
+  .cl-head__lede { font-size: 1rem; }
+  .cl-filters {
+    flex-wrap: nowrap; gap: 0.4rem; overflow-x: auto; overscroll-behavior-x: contain;
+    margin-inline: -16px; padding: 2px 16px; scroll-padding-inline: 16px; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
+  }
+  .cl-filters::-webkit-scrollbar { display: none; }
+  .cl-chips { flex-wrap: nowrap; flex: none; }
+  .cl-chips + .cl-chips { padding-left: 0.6rem; margin-left: 0.2rem; box-shadow: inset 1px 0 0 var(--border, #E2E8F0); }
+  .cl-chip { flex: none; white-space: nowrap; }
+}

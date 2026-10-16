@@ -19,6 +19,8 @@ import ChapterTestCard from '../components/ChapterTestCard';
 import { useAskSandra } from '../components/SandraWidget';
 import { useTranslation } from 'react-i18next';
 import './CourseDetail.css';
+import LessonVideoFrame from '../components/LessonVideoFrame';
+import { displayCourseName } from '../utils/courseName';
 import { lazyWithRetry } from '../utils/lazyWithRetry';
 
 // Only the lesson view uses these. Between them they pull in KaTeX and the
@@ -621,11 +623,6 @@ export default function CourseDetail() {
   // back still resumes.
   const [restart, setRestart] = useState({ key: '', token: 0 });
   const startedFrom = restart.key === positionKey ? 0 : resumeSeconds;
-  // Only the JS-API player reports playback time back to us, so it is the only
-  // path where a position can be stored and resumed. A bare embed (which is
-  // what a youtube-nocookie lesson URL gets — deliberately, the iframe API
-  // script is not in the site's CSP) plays fine but tells us nothing.
-  const positionTracked = isVideoLesson && !!youtubeVideoId;
   const restartVideo = () => {
     clearVideoPosition(positionKey);
     lastSavedRef.current = { key: '', t: -100 };
@@ -786,7 +783,7 @@ export default function CourseDetail() {
               className="course-detail__back"
               onClick={() => setView('overview')}
             >
-              <ChevronLeft size={16} /> {course.name || course.title}
+              <ChevronLeft size={16} /> {displayCourseName(course.name || course.title)}
             </button>
             <article className="lesson-card lesson-stage">
               {/* ── 1. The lesson itself ────────────────────────────────────
@@ -856,12 +853,11 @@ export default function CourseDetail() {
                       startSeconds={startedFrom}
                     />
                   ) : (
-                    <iframe
+                    <LessonVideoFrame
                       key={primaryVideo}
                       src={primaryVideo}
                       title={activeLessonData?.title || activeModuleData?.title || course.name}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
+                      playLabel={L('Lancer la vidéo', 'Lanse videyo a')}
                     />
                   )
                 ) : enriching ? (
@@ -909,21 +905,6 @@ export default function CourseDetail() {
                   <button type="button" className="lesson-stage__notice-link" onClick={restartVideo}>
                     {L('Recommencer depuis le début', 'Rekòmanse depi nan konmansman')}
                   </button>
-                </p>
-              )}
-
-              {/* …and where it genuinely cannot be kept, say so. Only the
-                  player that reports playback time can be resumed; the
-                  privacy-preserving embed every current lesson uses cannot be
-                  read from this page, so there is no second where playback
-                  would pick up. §8: don't promise what isn't implemented —
-                  name what IS restored instead (the lesson itself). */}
-              {isVideoLesson && !positionTracked && !videoLocked && !isLessonCompleted && (
-                <p className="lesson-stage__notice lesson-stage__notice--quiet">
-                  {L(
-                    'La vidéo repart du début : sa position n’est pas enregistrée. Votre place dans le cours l’est — revenir sur ce lien vous ramène à cette leçon.',
-                    'Videyo a rekòmanse depi nan konmansman : pozisyon li pa sere. Men plas ou nan kou a sere — lè ou tounen sou lyen sa a, w ap rive nan menm leson an.',
-                  )}
                 </p>
               )}
 
@@ -1071,8 +1052,8 @@ export default function CourseDetail() {
                   <span className="lesson-stage__sandra-note">
                     {sandraAvailable
                       ? L(
-                          'Sandra reçoit le nom du cours, de l’unité et de cette leçon, plus votre classe. Vos réponses aux exercices ne sont pas partagées.',
-                          'Sandra resevwa non kou a, non inite a ak non leson sa a, plis klas ou. Repons ou nan egzèsis yo pa pataje.',
+                          'Elle voit le nom de la leçon, jamais tes réponses.',
+                          'Li wè non leson an, jamè repons ou yo.',
                         )
                       : sandraReason}
                   </span>
@@ -1204,16 +1185,6 @@ export default function CourseDetail() {
 
                 {!practiceOpen && (
                   <>
-                    {/* Honest about what is kept: a practice set lives in this
-                        page only. It is scored when the set is finished, so
-                        leaving halfway loses the run — we don't claim a draft
-                        that doesn't exist. */}
-                    <p className="lesson-practice__note">
-                      {L(
-                        'Une série est enregistrée à la fin. Si vous la quittez avant d’avoir terminé, elle recommence au début.',
-                        'Yon seri anrejistre lè ou fini l. Si ou soti anvan ou fini, li rekòmanse depi nan konmansman.',
-                      )}
-                    </p>
                     <div className="lesson-practice__actions">
                       <button
                         type="button"

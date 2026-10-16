@@ -16,6 +16,7 @@ import MasteryBadge from './MasteryBadge';
 import { summarize } from '../../shared/mastery';
 import { subjectCover } from '../utils/subjectCovers';
 import { videoThumb, firstThumb } from '../utils/videoThumb';
+import { displayCourseName } from '../utils/courseName';
 
 function getLessons(module) {
   return Array.isArray(module?.lessons) ? module.lessons : [];
@@ -127,9 +128,9 @@ export default function CourseOverview({
         )}
         {/* No badge pills: the title already carries subject + level
             ("Mathématiques NS1") — repeating them as chips was noise. */}
-        <h1 className="course-overview__title">{course.name || course.title}</h1>
+        <h1 className="course-overview__title">{displayCourseName(course.name || course.title)}</h1>
         {description && (
-          <p className={`course-overview__desc${longDesc && !descOpen ? ' is-clamped' : ''}`}>{description}</p>
+          <p className={`course-overview__desc${longDesc && !descOpen ? ' is-clamped' : ''}`}>{displayCourseName(description)}</p>
         )}
         {longDesc && (
           <button type="button" className="course-overview__more" onClick={() => setDescOpen((o) => !o)}>
@@ -203,7 +204,7 @@ export default function CourseOverview({
       {totalModules > 0 && (
         <section className="course-overview__content">
           <h2 className="course-overview__content-title">
-            <BookOpen size={18} /> {t('courses.courseContent', 'Contenu du cours')}
+            {t('courses.courseContent', 'Contenu du cours')}
           </h2>
           <ol className="course-overview__modules">
             {modules.map((module, idx) => {

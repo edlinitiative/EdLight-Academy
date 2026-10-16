@@ -402,3 +402,482 @@
      indicator on phones. */
   .course-detail .lesson-card--comments { margin-bottom: calc(3.5rem + env(safe-area-inset-bottom)); }
 }
+
+/* ══ Premium pass, 2026-10-16 ═══════════════════════════════════════════════
+   The course page and the lesson page were the last two screens still in the
+   older dress (square buttons, a caps "CONTENU DU COURS" label, a bordered
+   table of chapters, a blue pill for "back", the lesson boxed inside a white
+   card). They now speak the catalogue's language: titles on the canvas in
+   the display face, cards only where a thing is a thing, pill actions, the
+   same 32px gutter as /courses. */
+
+.course-detail .course-detail__container {
+  padding-left: clamp(1rem, 2.5vw, 2rem);
+  padding-right: clamp(1rem, 2.5vw, 2rem);
+}
+
+.course-detail .button {
+  border-radius: 999px !important;
+}
+
+/* ── Course overview ─────────────────────────────────────────────────── */
+
+.course-detail .course-overview {
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  padding-top: clamp(0.75rem, 2vw, 1.5rem);
+}
+
+.course-detail .course-overview__back,
+.course-detail .course-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: start;
+  width: auto;
+  margin: 0;
+  padding: 0.35rem 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-600);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.course-detail .course-overview__back:hover,
+.course-detail .course-detail__back:hover {
+  color: var(--primary-600);
+  background: none;
+}
+
+/* The header is the course, not a banner: no box around it. */
+.course-detail .course-overview__hero,
+.course-detail .course-overview__hero--art {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.course-detail .course-overview__hero--frame {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 46%);
+  column-gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: center;
+}
+
+.course-detail .course-overview__title {
+  margin: 0 0 0.6rem;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: clamp(2.1rem, 1.4rem + 2.6vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+}
+
+.course-detail .course-overview__desc {
+  margin: 0 0 0.4rem;
+  max-width: 48ch;
+  color: var(--text-600);
+  font-size: 1.075rem;
+  line-height: 1.55;
+}
+
+.course-detail .course-overview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 1rem 0 1.5rem;
+  color: var(--text-600);
+  font-size: 0.975rem;
+}
+
+.course-detail .course-overview__meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.course-detail .course-overview__meta-item svg { color: var(--text-400, #94a3b8); }
+
+.course-detail .course-overview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.course-detail .course-overview__actions .button {
+  min-height: 52px;
+  padding: 0.8rem 1.6rem;
+  font-size: 1.025rem;
+  font-weight: 700;
+}
+
+.course-detail .course-overview__actions .button--ghost {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.course-detail .course-overview__preview {
+  border-radius: 24px;
+  box-shadow: 0 30px 60px -32px rgba(10, 30, 70, 0.55);
+}
+
+.course-detail .course-overview__preview-play {
+  width: 72px;
+  height: 72px;
+}
+
+/* Chapters: a section title on the canvas, then one card per chapter. */
+.course-detail .course-overview__content {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.course-detail .course-overview__content-title {
+  display: block;
+  margin: 0 0 1rem;
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+
+.course-detail .course-overview__modules {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  list-style: none;
+  overflow: visible;
+}
+
+.course-detail .course-overview__modules > li { border: 0; }
+
+.course-detail .course-overview__module {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem 0.85rem 0.85rem;
+  border: 0;
+  border-radius: var(--r-card, 20px);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.course-detail .course-overview__module:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: var(--surface);
+}
+
+.course-detail .course-overview__module-thumb {
+  width: 168px;
+  border-radius: 14px;
+}
+
+.course-detail .course-overview__module-num {
+  font-size: 0.85rem;
+}
+
+.course-detail .course-overview__module-title {
+  color: var(--text-900);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.course-detail .course-overview__module-meta {
+  color: var(--text-600);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .course-detail .course-overview__hero--frame { grid-template-columns: 1fr; }
+  .course-detail .course-overview__preview { order: -1; margin: 0 0 1.25rem; }
+  .course-detail .course-overview__actions .button { flex: 1 1 auto; justify-content: center; }
+  .course-detail .course-overview__module { gap: 0.9rem; padding: 0.65rem 0.9rem 0.65rem 0.65rem; }
+  .course-detail .course-overview__module-thumb { width: 104px; border-radius: 10px; }
+  .course-detail .course-overview__module-title { font-size: 1.025rem; }
+}
+
+/* ── Lesson ──────────────────────────────────────────────────────────── */
+
+/* Two columns from the grid itself, with the outline as a sticky rail —
+   it used to be position: fixed under a 60px navbar that is now taller, so
+   its top edge ran into the navigation. */
+@media (min-width: 961px) {
+  .course-detail .course-detail__layout {
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 360px);
+    align-items: start;
+    gap: clamp(1.5rem, 3vw, 2.75rem);
+    padding-top: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  .course-detail .course-detail__column { max-width: none; }
+
+  .course-detail .lesson-sidebar {
+    position: sticky;
+    top: calc(var(--navbar-height) + 1.75rem);
+    right: auto;
+    width: auto;
+    max-height: calc(var(--vvh, 1vh) * 100 - var(--navbar-height) - 3rem);
+    overflow: auto;
+    border: 0;
+    border-radius: var(--r-card, 20px);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    z-index: 1;
+  }
+}
+
+/* The lesson sits on the canvas: the video is the card. */
+.course-detail .lesson-card.lesson-stage {
+  gap: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.course-detail .lesson-stage .lesson-card__media {
+  border-radius: 24px;
+  background: #0b1220;
+  box-shadow: 0 30px 60px -34px rgba(10, 30, 70, 0.6);
+  max-height: none;
+}
+
+.course-detail .lesson-stage .lesson-card__media--quiz {
+  border-radius: var(--r-card, 20px);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.lesson-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: #0b1220;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.lesson-frame__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.lesson-frame:hover .lesson-frame__img { transform: scale(1.02); }
+.lesson-frame:hover .lesson-frame__shade { background: rgba(7, 18, 48, 0.12); }
+
+.lesson-frame__shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 18, 48, 0.06);
+  transition: background 0.25s ease;
+}
+
+.lesson-frame__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 9vw, 92px);
+  height: clamp(64px, 9vw, 92px);
+  padding-left: 4px;
+  border-radius: 999px;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+  box-shadow: 0 0 0 10px rgba(27, 111, 224, 0.22), 0 18px 40px -10px rgba(7, 18, 48, 0.6);
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.lesson-frame:hover .lesson-frame__play,
+.lesson-frame:focus-visible .lesson-frame__play {
+  transform: translate(-50%, -50%) scale(1.06);
+  box-shadow: 0 0 0 14px rgba(27, 111, 224, 0.28), 0 18px 40px -10px rgba(7, 18, 48, 0.6);
+}
+
+.lesson-frame:focus-visible { outline: 3px solid var(--primary-300, #93c5fd); outline-offset: -3px; }
+
+
+/* Free preview count: one calm line, not a boxed alert. */
+.course-detail .lesson-card__free-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0;
+  padding: 0.85rem 1.1rem;
+  border: 0;
+  border-radius: 16px;
+  background: var(--primary-50, #eef5ff);
+  color: var(--text-700);
+  font-size: 0.975rem;
+}
+
+.course-detail .lesson-card__free-banner-link {
+  padding: 0.5rem 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary-500, #1B6FE0);
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.course-detail .lesson-card__free-banner-link:hover { background: var(--primary-600); }
+
+/* Where the lesson sits: sentence case, readable — not a caps micro-label. */
+.course-detail .lesson-card__eyebrow {
+  color: var(--text-600);
+  font-size: 0.975rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.course-detail .lesson-card__title {
+  max-width: 28ch;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.course-detail .lesson-stage__notice--quiet { display: none; }
+
+/* One big next step. */
+.course-detail .lesson-stage__next-primary {
+  min-height: 60px;
+  padding: 0.75rem 1.75rem 0.75rem 1.6rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: 0 14px 28px -16px rgba(27, 111, 224, 0.8);
+}
+
+.course-detail .lesson-stage__next-sub {
+  max-width: 40ch;
+  font-size: 0.9rem;
+}
+
+.course-detail .lesson-card__nav-group--navigation {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.course-detail .lesson-card__nav-group--navigation .button {
+  font-size: 0.975rem;
+  font-weight: 650;
+}
+
+.course-detail .lesson-stage__sandra-note { font-size: 0.9rem; }
+
+/* Practice: one card, a real heading, pill actions. */
+.course-detail .lesson-practice {
+  gap: 1rem;
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  border-radius: var(--r-card, 20px);
+}
+
+.course-detail .lesson-practice__title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.25rem, 1.05rem + 0.6vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.course-detail .lesson-practice__title svg { display: none; }
+
+.course-detail .lesson-practice__actions .button {
+  min-height: 48px;
+  padding: 0.7rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.course-detail .lesson-practice__actions .button--ghost {
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.course-detail .lesson-card--comments {
+  border: 0;
+  border-radius: var(--r-card, 20px);
+  box-shadow: var(--shadow-sm);
+}
+
+.course-detail .lesson-card__comments-title { font-size: 1.025rem; }
+
+/* mobile-fixes.css sizes the phone player with the old padding-bottom
+   56.25% trick; with aspect-ratio also set the box came out twice as tall
+   with the frame in a strip at the top. One mechanism: aspect-ratio. */
+@media (max-width: 768px) {
+  .course-detail .lesson-stage .lesson-card__media:not(.lesson-card__media--quiz) {
+    padding-bottom: 0;
+    aspect-ratio: 16 / 9;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .course-detail .lesson-stage .lesson-card__media {
+    margin-left: calc(-1 * clamp(1rem, 2.5vw, 2rem));
+    margin-right: calc(-1 * clamp(1rem, 2.5vw, 2rem));
+    width: auto;
+    border-radius: 0;
+  }
+  .course-detail .lesson-card__free-banner { font-size: 0.925rem; }
+}
+
+[data-theme="dark"] .course-detail .lesson-card__free-banner {
+  background: rgba(77, 143, 240, 0.12);
+  color: var(--text-700);
+}
+
+/* A site-wide rule lifts every .lesson-card on hover (translateY + shadow,
+   both !important): the whole lesson used to jump when the pointer crossed
+   it. The lesson is a page, not a tile. */
+.course-detail .lesson-card.lesson-stage,
+.course-detail .lesson-card.lesson-stage:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+.course-detail .lesson-card--comments:hover {
+  transform: none !important;
+  box-shadow: var(--shadow-sm) !important;
+}

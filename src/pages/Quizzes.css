@@ -831,3 +831,48 @@
   .qz-hub__side .qz-card { margin: 0; border-radius: 20px; box-shadow: none; background: none; }
   .qz-hub__side .qz-card + .qz-card { border-top: 1px solid var(--border, #E6EBF2); border-radius: 0; }
 }
+
+/* ══ Practice on the canvas (2026-10-16) ══════════════════════════════════════
+   Ted's audit: no rows-inside-a-panel. "Les chapitres" is a heading on the
+   page canvas with the chapter rows under it; the side column stays one quiet
+   panel. Labels are sentence case at a readable size; the chips are one
+   scrollable row on phones. */
+.qz-shelf { padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.qz-shelf .qz-chapters__head { margin-bottom: 1rem; }
+.qz-shelf .qz-chapters__head h2 { font-size: clamp(1.5rem, 1.2rem + 1vw, 1.85rem); }
+.qz-shelf .qz-chap { box-shadow: 0 0 0 1px var(--border, #E6EBF2), 0 10px 22px -20px rgba(11, 41, 107, 0.4); }
+.qz-shelf .qz-chap.is-current { box-shadow: 0 0 0 2px var(--primary-500, #1B6FE0), 0 14px 28px -22px rgba(27, 111, 224, 0.5); }
+.qz-hub { gap: 1.5rem 2rem; }
+/* The side column's title row lines up with "Les chapitres" instead of
+   floating a panel beside a bare heading. */
+@media (min-width: 1024px) {
+  .qz-hub__side {
+    margin-top: 3.95rem; /* = the chapters heading row + its 1rem gap */
+    box-shadow: 0 0 0 1px var(--border, #E6EBF2), 0 14px 30px -26px rgba(11, 41, 107, 0.4);
+  }
+}
+.qz-card__eyebrow { font-size: 0.875rem; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text-500); }
+.qz-hub__side .qz-card__title { margin-top: 0.1rem; }
+.qz-card__sub, .qz-diag__weak { font-size: 0.95rem; }
+.qz-config__label { font-size: 0.9rem; }
+.qz-config__note { font-size: 0.875rem; }
+.qz-seg button { font-size: 0.9rem; }
+.qz-examlink__line { margin: 0; }
+.qz-examlink__cta { font-size: 0.95rem; margin-top: 0.4rem; }
+
+@media (max-width: 720px) {
+  .qz-top { gap: 0.85rem; margin-bottom: 1.5rem; }
+  .qz .qz-top .qz-top__title { font-size: 2rem; letter-spacing: -0.035em; }
+  .qz-top__chips {
+    flex-wrap: nowrap; gap: 0.4rem; overflow-x: auto; overscroll-behavior-x: contain;
+    margin-inline: -16px; padding: 2px 16px 4px; scroll-padding-inline: 16px; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 28px), transparent 100%);
+  }
+  .qz-top__chips::-webkit-scrollbar { display: none; }
+  .qz-top__chips .qz-chips { flex-wrap: nowrap; flex: none; }
+  .qz-top__chips .qz-chips + .qz-chips { padding-left: 0.6rem; margin-left: 0.2rem; box-shadow: inset 1px 0 0 var(--border, #E2E8F0); }
+  .qz-top .qz-chips button { flex: none; white-space: nowrap; }
+}
+[data-theme="dark"] .qz-top .qz-chips button.is-on { background: #fff; color: #0A1A3F; }
+[data-theme="dark"] .qz-top .qz-chips button.is-on small { color: #B97A0D; }

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw, Brain } from '../components/icons';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
@@ -916,7 +916,7 @@ const Quizzes = () => {
                     estimated. Signed out there is nothing to diagnose. */}
                 <section className="qz-card qz-diag" aria-labelledby="qz-diag-title">
                   <span className="qz-card__eyebrow">{tx('Diagnostic', 'Dyagnostik')}</span>
-                  <h2 id="qz-diag-title" className="qz-card__title"><Brain size={18} aria-hidden="true" /> {tx('Tes erreurs à revoir', 'Erè ou pou revize')}</h2>
+                  <h2 id="qz-diag-title" className="qz-card__title">{tx('Tes erreurs à revoir', 'Erè ou pou revize')}</h2>
                   {!userId ? (
                     <p className="qz-card__sub">{tx('Connecte-toi : tes erreurs seront gardées et reviendront ici.', 'Konekte : erè ou yo ap kenbe epi y ap tounen isit la.')}</p>
                   ) : courseDue === null ? (
@@ -946,7 +946,7 @@ const Quizzes = () => {
                 {/* Configurator — only what the two activities really support. */}
                 <section className="qz-card qz-config" aria-labelledby="qz-config-title">
                   <span className="qz-card__eyebrow">{tx('Sur mesure', 'Sou mezi')}</span>
-                  <h2 id="qz-config-title" className="qz-card__title"><SlidersHorizontal size={18} aria-hidden="true" /> {tx('Ta session', 'Sesyon ou')}</h2>
+                  <h2 id="qz-config-title" className="qz-card__title">{tx('Ta session', 'Sesyon ou')}</h2>
                   <p className="qz-config__label">{tx('Activité', 'Aktivite')}</p>
                   <div className="qz-seg" role="radiogroup" aria-label={tx('Activité', 'Aktivite')}>
                     <button type="button" role="radio" aria-checked={mode === 'practice'} className={mode === 'practice' ? 'is-on' : ''} onClick={() => setMode('practice')}>{tx('Entraînement libre', 'Pratik lib')}</button>
@@ -977,10 +977,10 @@ const Quizzes = () => {
                   {unitLabel && <p className="qz-config__note">{tx('Sur : ', 'Sou : ')}{unitLabel}</p>}
                 </section>
 
-                <section className="qz-card qz-examlink">
-                  <h2 className="qz-card__title">{tx('Un quiz n’est pas un examen', 'Yon kwiz se pa yon egzamen')}</h2>
-                  <p className="qz-card__sub">
-                    {tx('Ici, rien n’est chronométré et aucune note n’est gardée. Un examen blanc est une épreuve officielle entière, chronométrée.', 'Isit la pa gen kwonomèt epi pa gen nòt ki rete. Yon egzamen blan se yon eprèv ofisyèl antye, ak kwonomèt.')}
+                {/* One line: the link carries the rest (Ted: shorter disclaimer). */}
+                <section className="qz-card qz-examlink" aria-label={tx('Examens', 'Egzamen')}>
+                  <p className="qz-card__sub qz-examlink__line">
+                    {tx('Un quiz n’est pas un examen : rien n’est chronométré ni gardé.', 'Yon kwiz se pa yon egzamen : pa gen kwonomèt ni nòt ki rete.')}
                   </p>
                   <Link to={examHref} className="qz-examlink__cta">
                     {examsRelevant ? tx('Passer un examen blanc', 'Pase yon egzamen blan') : tx('Voir les épreuves officielles', 'Wè eprèv ofisyèl yo')}
