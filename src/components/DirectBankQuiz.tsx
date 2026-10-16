@@ -166,7 +166,9 @@ export default function DirectBankQuiz({
                   onChange={() => setSelected(idx)}
                   disabled={submitted}
                 />
-                <span dangerouslySetInnerHTML={renderWithKatex(label, katexReady)} />
+                {/* The letter is drawn by CSS (attr) so the option's label text stays exactly its answer. */}
+                <span className="radio-option__key" data-key={String.fromCharCode(65 + idx)} aria-hidden="true" />
+                <span className="radio-option__text" dangerouslySetInnerHTML={renderWithKatex(label, katexReady)} />
               </label>
             );
           })}
@@ -231,7 +233,7 @@ export default function DirectBankQuiz({
         {(!submitted || !onNext) && (
           <button
             type="button"
-            className="button button--primary button--sm"
+            className={`button button--primary button--lg quiz-card__check${submitted ? ' quiz-card__check--done' : ''}`}
             onClick={handleCheck}
             disabled={submitted || ((item.kind === 'mcq' || item.kind === 'tf')
               ? selected === null || selected === lastWrong

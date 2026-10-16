@@ -876,3 +876,93 @@
 }
 [data-theme="dark"] .qz-top .qz-chips button.is-on { background: #fff; color: #0A1A3F; }
 [data-theme="dark"] .qz-top .qz-chips button.is-on small { color: #B97A0D; }
+
+/* ══ Quiz in progress (2026-10-16) ═════════════════════════════════════════
+   A focused column: one quiet top bar (leave · where · how far), the bar,
+   the question card, one primary action. The 780px rule above was being
+   out-ranked by the shared .container frame, so answers stretched 1376px. */
+.qz.qz--taking .container.qz__container {
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: clamp(0.75rem, 2vw, 1.5rem);
+}
+.qz-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 0.85rem;
+}
+.qz-top__quit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-height: 40px;
+  padding: 0 0.75rem 0 0.4rem;
+  border: 0;
+  border-radius: var(--r-btn, 12px);
+  background: none;
+  color: var(--text-600);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.qz-top__quit:hover { background: var(--surface-muted, #eef2f8); color: var(--text-900); }
+.qz-top__quit:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+.qz-top__where {
+  overflow: hidden;
+  color: var(--text-600);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qz-top__count {
+  color: var(--text-900);
+  font-size: 0.95rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.qz--taking .qz-bar {
+  height: 8px;
+  margin: 0 0 clamp(1.25rem, 3vw, 2rem);
+  border-radius: 999px;
+}
+.qz--taking .qz-bar__fill { border-radius: 999px; }
+.qz--taking .qz-question {
+  padding: clamp(1.25rem, 3.5vw, 2.25rem);
+  border: 0;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 30, 56, 0.04), 0 24px 48px -32px rgba(15, 30, 56, 0.3);
+}
+/* The page already says what this is; the card keeps only its tries chip. */
+.qz--taking .qz-question .quiz-card__title { visibility: hidden; }
+.qz--taking .qz-next {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+.qz--taking .qz-next__primary { min-width: 220px; }
+.qz--taking .qz-hint {
+  margin: 1.1rem 0 0;
+  color: var(--text-500);
+  font-size: 0.95rem;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .qz-top { grid-template-columns: auto 1fr; }
+  .qz-top__where { display: none; }
+  .qz-top__count { justify-self: end; }
+  .qz--taking .qz-question { border-radius: 20px; }
+  .qz--taking .qz-next__primary { width: 100%; }
+}
+/* Answered: the page's "Question suivante" takes over from "Vérifier", in
+   the same place, rather than a dead "Répondu" button above it. */
+.qz--taking .quiz-card__check--done { display: none; }
+.qz--taking .qz-question .quiz-card__controls:not(:has(:not(.quiz-card__check--done))) { display: none; }
+.qz.qz--taking .qz-next { flex-direction: row; align-items: center; justify-content: flex-end; }

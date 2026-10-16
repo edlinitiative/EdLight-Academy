@@ -625,15 +625,17 @@ const Quizzes = () => {
         <div className="container qz__container">
           <h1 className="qz__sr-only">{pageTitle}</h1>
 
-          <div className="qz-context">
-            <div className="qz-context__text">
-              <span className="qz-context__subject">
-                {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}
-              </span>
-              {unitLabel && <span className="qz-context__unit">{unitLabel}</span>}
-            </div>
-            <span className="qz-progress" aria-label={tx('Progression', 'Pwogrè')}>
-              {quizIdx + 1} / {quizDeck.length}
+          {/* One quiet top bar: leave, where you are, how far along. */}
+          <div className="qz-top">
+            <button type="button" onClick={resetQuiz} className="qz-top__quit">
+              <ChevronLeft size={18} aria-hidden="true" />
+              {tx('Quitter', 'Kite')}
+            </button>
+            <span className="qz-top__where">
+              {subjectLabel}{levelLabel ? ` · ${levelLabel}` : ''}{unitLabel ? ` · ${unitLabel}` : ''}
+            </span>
+            <span className="qz-top__count" aria-label={tx('Progression', 'Pwogrè')}>
+              {tx(`Question ${quizIdx + 1} sur ${quizDeck.length}`, `Kesyon ${quizIdx + 1} sou ${quizDeck.length}`)}
             </span>
           </div>
 
@@ -643,44 +645,29 @@ const Quizzes = () => {
             <div className="qz-bar__fill" style={{ width: `${((quizIdx + 1) / quizDeck.length) * 100}%` }} />
           </div>
 
-          <div className="qz-quizmeta">
-            <span className="qz-quizmeta__item">
-              {outcome === 'correct'
-                ? <><Check size={14} aria-hidden="true" /> {t('quizzes.correctChip', 'Correct')}</>
-                : outcome === 'out'
-                  ? t('quizzes.outOfTries', 'Plus d\'essais')
-                  : t('quizzes.triesLeft', '{{count}} essai restant', { count: attemptsLeft })}
-            </span>
-            <span className="qz-quizmeta__item">
-              {tx(`${quizScore} bonne${quizScore === 1 ? '' : 's'} réponse${quizScore === 1 ? '' : 's'}`, `${quizScore} bon repons`)}
-            </span>
-            <span className="qz-quizmeta__item">{tx('Non chronométré', 'San kwonomèt')}</span>
-          </div>
-
           <div className="qz-question">
             <DirectBankQuiz item={item} onScore={handleQuizScore} onNext={undefined} onClose={undefined} />
           </div>
 
-          <div className="qz-next">
-            <button
-              type="button"
-              onClick={goNextQuizQuestion}
-              className="button button--primary qz-next__primary"
-              disabled={!canAdvance}
-            >
-              {isLast
-                ? tx('Voir mon score', 'Wè nòt mwen')
-                : t('quizzes.nextQuestion', 'Question suivante')}
-            </button>
-            <button type="button" onClick={resetQuiz} className="qz-next__end">
-              {tx('Quitter le quiz', 'Kite kwiz la')}
-            </button>
-          </div>
-          <p className="qz-hint">
-            {canAdvance
-              ? tx('Rien n’est enregistré : quitter maintenant ne perd aucune note.', 'Pa gen anyen ki anrejistre : si ou kite kounye a ou pa pèdi okenn nòt.')
-              : tx('Répondez pour continuer. Vous avez trois essais avec des indices.', 'Reponn pou kontinye. Ou gen twa esè ak endis.')}
-          </p>
+          {/* One primary action at a time: the question's own "Vérifier"
+              until it is answered, then this. */}
+          {canAdvance ? (
+            <div className="qz-next">
+              <button
+                type="button"
+                onClick={goNextQuizQuestion}
+                className="button button--primary button--lg qz-next__primary"
+              >
+                {isLast
+                  ? tx('Voir mon score', 'Wè nòt mwen')
+                  : t('quizzes.nextQuestion', 'Question suivante')}
+              </button>
+            </div>
+          ) : (
+            <p className="qz-hint">
+              {tx('Trois essais, avec un indice après chaque erreur.', 'Twa esè, ak yon endis apre chak erè.')}
+            </p>
+          )}
         </div>
       </section>
     );
