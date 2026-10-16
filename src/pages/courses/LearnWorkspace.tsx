@@ -5,6 +5,7 @@ import {
   ChevronRight, ClipboardList, AlertTriangle, PlayCircle,
 } from '../../components/icons';
 import { videoThumb, firstThumb } from '../../utils/videoThumb';
+import { courseCover } from '../../utils/courseCovers';
 import useStore from '../../contexts/store';
 import { listRecentExamAttempts } from '../../services/userActivity';
 import { loadReviewMap } from '../../services/reviewService';
@@ -209,6 +210,8 @@ export default function LearnWorkspace({
       const next = nextUnit?.lessons?.find((l: any) => videoThumb(l?.videoUrl)) || null;
       if (next) return videoThumb(next.videoUrl, 'hq');
     }
+    const chosen = courseCover(course?.id);
+    if (chosen) return chosen;
     const from = Math.floor(all.length / 3);
     return firstThumb([...all.slice(from), ...all.slice(0, from)], 'hq')?.src || null;
   };

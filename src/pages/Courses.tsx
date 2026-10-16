@@ -14,6 +14,7 @@ import useStore from '../contexts/store';
 import { useTranslation } from 'react-i18next';
 import { SUBJECT_COVERS } from '../utils/subjectCovers';
 import { firstThumb } from '../utils/videoThumb';
+import { courseCover } from '../utils/courseCovers';
 import '../styles/pf.css';
 import './Courses.css';
 import LearnWorkspace from './courses/LearnWorkspace';
@@ -718,6 +719,8 @@ export default function Courses({ mode = 'catalog' }: { mode?: 'catalog' | 'work
   // Course cards open on a real frame of the course's own lessons (YouTube
   // already hosts one for every video); the subject cover is the fallback.
   const coverFor = (course) => {
+    const chosen = courseCover(course.id);
+    if (chosen) return chosen;
     // A third of the way in: first lessons often open on a title card or an
     // app screen, a few lessons later the frame is the board being worked.
     const lessons = (course.modules || []).flatMap((m) => m?.lessons || []);

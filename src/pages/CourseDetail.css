@@ -416,9 +416,6 @@
   padding-right: clamp(1rem, 2.5vw, 2rem);
 }
 
-.course-detail .button {
-  border-radius: 999px !important;
-}
 
 /* ── Course overview ─────────────────────────────────────────────────── */
 
@@ -512,8 +509,8 @@
 }
 
 .course-detail .course-overview__actions .button {
-  min-height: 52px;
-  padding: 0.8rem 1.6rem;
+  min-height: var(--btn-h-lg);
+  padding: 0.7rem 1.5rem;
   font-size: 1.025rem;
   font-weight: 700;
 }
@@ -745,9 +742,10 @@
 }
 
 .course-detail .lesson-card__free-banner-link {
-  padding: 0.5rem 1.1rem;
+  min-height: var(--btn-h-sm);
+  padding: 0.45rem 1.1rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-btn);
   background: var(--primary-500, #1B6FE0);
   color: #fff;
   font: inherit;
@@ -781,8 +779,8 @@
 
 /* One big next step. */
 .course-detail .lesson-stage__next-primary {
-  min-height: 60px;
-  padding: 0.75rem 1.75rem 0.75rem 1.6rem;
+  min-height: var(--btn-h-lg);
+  padding: 0.6rem 1.6rem;
   font-size: 1.05rem;
   font-weight: 800;
   box-shadow: 0 14px 28px -16px rgba(27, 111, 224, 0.8);
@@ -822,7 +820,7 @@
 .course-detail .lesson-practice__title svg { display: none; }
 
 .course-detail .lesson-practice__actions .button {
-  min-height: 48px;
+  min-height: var(--btn-h);
   padding: 0.7rem 1.5rem;
   font-size: 1rem;
   font-weight: 700;

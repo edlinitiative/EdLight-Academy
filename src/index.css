@@ -115,7 +115,10 @@
 	   Generous, friendly corners. Buttons are full pills. */
 	--r-panel: 24px;   /* large hero / feature panels */
 	--r-card: 20px;    /* content cards */
-	--r-btn: 4px;      /* buttons — Coursera's near-square corner (was 999px pill, then 10px) */
+	--r-btn: 12px;     /* action buttons — one soft rectangle site-wide (see "Button system" at the end) */
+	--btn-h-lg: 52px;  /* the page's main action */
+	--btn-h: 44px;     /* default; also the touch-target floor */
+	--btn-h-sm: 36px;  /* in-row actions on desktop */
 	/* ── Type scale ────────────────────────────────────────────────────
 	   Canonical sizes (12/14/16/20/24/32). Prefer these over one-off values
 	   so headings and body text stay consistent across the platform. */
@@ -17812,4 +17815,56 @@ button.card:hover,
 .course-overview__module-meta { font-size: 0.875rem; }
 @media (max-width: 480px) {
 	.course-overview__module-thumb { width: 88px; }
+}
+
+
+/* ══ Button system (2026-10-16) ═════════════════════════════════════════════
+   An audit measured six corner shapes on the learning side (4, 8, 10, 12, 16
+   and 999px), heights from 36 to 60px and label weights from 500 to 800.
+   One rule now:
+     · a button that DOES something is a soft rectangle (--r-btn, 12px), in
+       three heights (--btn-h-lg / --btn-h / --btn-h-sm), label 700;
+     · a chip that CHOOSES something (subject, level, segmented switch) stays
+       a pill — a different shape for a different job.
+   The Arène keeps its own arcade buttons on purpose. */
+.button,
+.lp-btn,
+.course-card__cta,
+.qz-act,
+.exam-hub__btn {
+	border-radius: var(--r-btn) !important;
+	font-weight: 700 !important;
+	letter-spacing: -0.005em;
+	line-height: 1.2;
+}
+.button {
+	min-height: var(--btn-h);
+	padding: 0.6rem 1.25rem;
+	font-size: 0.975rem;
+}
+.button.button--sm {
+	min-height: var(--btn-h-sm);
+	padding: 0.45rem 0.95rem;
+	font-size: 0.9rem;
+}
+.button.button--lg,
+.lp-btn {
+	min-height: var(--btn-h-lg);
+	padding: 0.7rem 1.5rem;
+	font-size: 1.025rem;
+}
+.qz-act { min-height: var(--btn-h) !important; }
+.exam-hub__btn.exam-hub__btn { min-height: var(--btn-h-sm); padding: 0.45rem 0.95rem; font-size: 0.9rem; }
+.lp .lp-btn.lp-btn { min-height: var(--btn-h-lg); padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.exam-hub__btn--big { min-height: var(--btn-h); font-size: 0.975rem; }
+@media (max-width: 700px) {
+	.button.button--sm { min-height: var(--btn-h); }
+	.exam-hub__btn { min-height: var(--btn-h); }
+}
+/* The navbar's own actions stay at the nav links' scale. */
+.navbar .button {
+	min-height: 40px;
+	padding: 0.45rem 1rem;
+	font-size: 0.9rem;
+	font-weight: 650 !important;
 }

@@ -775,7 +775,7 @@
 .qz-chap__meta { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.9rem; color: var(--text-500); }
 .qz-chap__meta em { font-style: normal; font-weight: 800; color: #B45309; }
 .qz-chap__acts { display: flex; gap: 0.5rem; padding: 0 1.25rem 1.2rem; }
-.qz-chap__acts .qz-act { flex: 1; min-height: 40px; border-radius: 999px; font-size: 0.95rem; }
+.qz-chap__acts .qz-act { flex: 1; min-height: var(--btn-h); border-radius: var(--r-btn); font-size: 0.95rem; }
 .qz-chap__pick:focus-visible { outline: 3px solid var(--primary-400, #4C8EF0); outline-offset: -3px; }
 
 .qz-hub__side .qz-card { border-radius: 24px; box-shadow: 0 1px 2px rgba(15, 30, 56, 0.06), 0 24px 48px -36px rgba(11, 41, 107, 0.4); }
