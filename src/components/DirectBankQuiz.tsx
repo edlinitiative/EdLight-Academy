@@ -73,6 +73,11 @@ export default function DirectBankQuiz({
     // First attempt only, so multi-try retries don't skew the signals:
     // crowd difficulty (Adaptive Engine) and the Revizyon review map — a
     // question you needed a hint for is still a question you didn't know.
+    // What the student actually gave, as display text, so a parent can show
+    // it back in a review ("ta réponse") without re-deriving it.
+    const answer = (item.kind === 'mcq' || item.kind === 'tf')
+      ? String(item.options?.[selected] ?? '')
+      : String(textAns).trim();
     if (attempts === 0) {
       logAnswerEvent(item.stem, isCorrect);
       const uid = useStore.getState().user?.uid;
@@ -86,7 +91,7 @@ export default function DirectBankQuiz({
     if (isCorrect) {
       setSubmitted(true);
       setCorrect(true);
-      if (onScore) onScore({ correct: 1, message: 'correct', attemptsLeft: maxAttempts - attempts });
+      if (onScore) onScore({ correct: 1, message: 'correct', attemptsLeft: maxAttempts - attempts, attempt: attempts + 1, answer });
       return;
     }
     const next = attempts + 1;
@@ -94,12 +99,12 @@ export default function DirectBankQuiz({
     if (next >= maxAttempts) {
       setSubmitted(true);
       setCorrect(false);
-      if (onScore) onScore({ correct: 0, message: 'exhausted_attempts', attemptsLeft: 0 });
+      if (onScore) onScore({ correct: 0, message: 'exhausted_attempts', attemptsLeft: 0, attempt: next, answer });
     } else {
       // allow another try without submitting
       setCorrect(false);
       setLastWrong((item.kind === 'mcq' || item.kind === 'tf') ? selected : String(textAns).trim());
-      if (onScore) onScore({ correct: 0, message: `attempt_${next}`, attemptsLeft: maxAttempts - next });
+      if (onScore) onScore({ correct: 0, message: `attempt_${next}`, attemptsLeft: maxAttempts - next, attempt: next, answer });
     }
   };
 

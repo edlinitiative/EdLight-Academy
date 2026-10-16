@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, RotateCcw } from '../components/icons';
 import DirectBankQuiz, { MAX_ATTEMPTS } from '../components/DirectBankQuiz';
+import QuizResult, { type QuizLogEntry } from '../components/QuizResult';
 import { ErrorState } from '../components/StateViews';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useAppData } from '../hooks/useData';
@@ -83,6 +84,7 @@ const Quizzes = () => {
   const quizBank = appData?.quizBank;
   const courses = appData?.courses || [];
   const userId = useStore((state) => state.user?.uid);
+  const toggleAuthModal = useStore((state) => state.toggleAuthModal);
   // §5 requires the grade-appropriate emphasis to survive the redesign, and
   // this page is where it was missing: an NS4 student used to land on NS I
   // because that is simply the first level in the catalog.
@@ -348,8 +350,10 @@ const Quizzes = () => {
   // mid-quiz, so "question 4 / 10" keeps meaning what it said.
   const [quizDeck, setQuizDeck] = useState(null);
   const [quizIdx, setQuizIdx] = useState(0);
-  const [quizScore, setQuizScore] = useState(0);
-  const [quizMissed, setQuizMissed] = useState(0);
+  // One entry per deck question, in order: how many tries it took, whether it
+  // was found, and every answer given. The result screen's score and review
+  // list are both read from this, so they can never disagree.
+  const [quizLog, setQuizLog] = useState<QuizLogEntry[]>([]);
   const [canAdvance, setCanAdvance] = useState(false);
   const [outcome, setOutcome] = useState(null);
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
@@ -421,8 +425,7 @@ const Quizzes = () => {
   const resetQuiz = () => {
     setQuizDeck(null);
     setQuizIdx(0);
-    setQuizScore(0);
-    setQuizMissed(0);
+    setQuizLog([]);
     setQuizFinished(false);
     setCanAdvance(false);
     setOutcome(null);
@@ -459,12 +462,23 @@ const Quizzes = () => {
   /** DirectBankQuiz reports every attempt; only the resolved ones move the deck. */
   const handleQuizScore = (evt) => {
     if (!evt) return;
+    if (!canAdvance) {
+      const idx = quizIdx;
+      setQuizLog((log) => {
+        const next = log.slice();
+        const prev = next[idx] || { tries: 0, solved: false, answers: [] };
+        next[idx] = {
+          tries: typeof evt.attempt === 'number' ? evt.attempt : prev.tries + 1,
+          solved: evt.message === 'correct',
+          answers: typeof evt.answer === 'string' ? [...prev.answers, evt.answer] : prev.answers,
+        };
+        return next;
+      });
+    }
     if (evt.message === 'correct') {
-      if (!canAdvance) setQuizScore((s) => s + 1);
       setCanAdvance(true);
       setOutcome('correct');
     } else if (evt.message === 'exhausted_attempts') {
-      if (!canAdvance) setQuizMissed((m) => m + 1);
       setCanAdvance(true);
       setOutcome('out');
       setAttemptsLeft(0);
@@ -674,68 +688,21 @@ const Quizzes = () => {
   }
 
   if (quizDeck && quizFinished) {
-    const total = quizDeck.length;
     return (
-      <section className="section qz">
+      <section className="section qz qz--result">
         <div className="container qz__container">
-          <header className="qz__head">
-            <Link className="qz__back" to="/practice">
-              <ChevronLeft size={15} aria-hidden="true" />
-              {t('nav.practice', 'Pratiquer')}
-            </Link>
-            <h1 className="qz__title">{tx('Quiz terminé', 'Kwiz fini')}</h1>
-            <p className="qz__subtitle">
-              {tx(
-                `${quizScore} bonne${quizScore === 1 ? '' : 's'} réponse${quizScore === 1 ? '' : 's'} du premier coup sur ${total} questions, en ${subjectLabel}${unitLabel ? ` — ${unitLabel}` : ''}.`,
-                `${quizScore} bon repons premye fwa sou ${total} kesyon, nan ${subjectLabel}${unitLabel ? ` — ${unitLabel}` : ''}.`,
-              )}
-            </p>
-            <ul className="qz-facts">
-              <li className="qz-facts__item">{tx('Ce score n’est pas enregistré', 'Nòt sa a pa anrejistre')}</li>
-              <li className="qz-facts__item">
-                {userId
-                  ? tx('Les questions ratées sont dans Révision', 'Kesyon ou rate yo nan Revizyon')
-                  : tx('Connectez-vous pour retrouver vos erreurs plus tard', 'Konekte pou jwenn erè ou yo pita')}
-              </li>
-            </ul>
-          </header>
-
-          <div className="qz-setup">
-            <p className="qz-hint" style={{ marginTop: 0 }}>
-              {examsRelevant
-                ? tx(
-                  'Un quiz mesure ce que vous savez aujourd’hui sur une unité. Pour une épreuve entière, chronométrée et enregistrée, passez un examen blanc.',
-                  'Yon kwiz mezire sa ou konnen jodi a sou yon inite. Pou yon eprèv antye, ak kwonomèt epi ki anrejistre, pase yon egzamen blan.',
-                )
-                : tx(
-                  'Un quiz mesure ce que vous savez aujourd’hui sur une unité. À votre niveau, refaire un quiz ou changer d’unité vaut mieux qu’une épreuve officielle.',
-                  'Yon kwiz mezire sa ou konnen jodi a sou yon inite. Nan nivo ou, refè yon kwiz oswa chanje inite pi bon pase yon eprèv ofisyèl.',
-                )}
-            </p>
-            <div className="qz-done-actions">
-              <button type="button" className="button button--primary" onClick={() => startQuiz()}>
-                {tx('Refaire un quiz', 'Refè yon kwiz')}
-              </button>
-              {quizMissed > 0 && userId && (
-                <Link className="button button--ghost" to="/revision">
-                  {tx('Revoir mes erreurs', 'Revize erè m yo')}
-                </Link>
-              )}
-              <button type="button" className="button button--ghost" onClick={() => { resetQuiz(); }}>
-                {tx('Changer d’unité', 'Chanje inite')}
-              </button>
-            </div>
-          </div>
-
-          {examsRelevant && (
-            <p className="qz-crosslink">
-              {tx('Besoin de conditions d’examen ?', 'Ou bezwen kondisyon egzamen?')}{' '}
-              <Link to={examHref}>{tx('Passer un examen blanc', 'Pase yon egzamen blan')}</Link>{' '}
-              <span className="qz-crosslink__note">
-                {tx('Durée et barème affichés avant de commencer.', 'Dire ak barèm parèt anvan ou kòmanse.')}
-              </span>
-            </p>
-          )}
+          <QuizResult
+            deck={quizDeck}
+            log={quizLog}
+            title={tx('Quiz terminé', 'Kwiz fini')}
+            context={`${subjectLabel}${levelLabel ? ` · ${levelLabel}` : ''}${unitLabel ? ` · ${unitLabel}` : ''}`}
+            tx={tx}
+            signedIn={!!userId}
+            onSignIn={toggleAuthModal}
+            onReplay={() => startQuiz()}
+            onChangeUnit={resetQuiz}
+            examHref={examsRelevant ? examHref : null}
+          />
         </div>
       </section>
     );
