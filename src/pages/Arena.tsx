@@ -481,14 +481,29 @@ export default function Arena() {
                       <Link to={playHref(open.id)} className="arena-national__cta">
                         {t('Entrer dans la salle', 'Antre nan sal la')} <ChevronRight size={16} aria-hidden="true" />
                       </Link>
-                    ) : (
+                    ) : open ? (
                       <Link to="/jeux" className="arena-national__cta">
                         {t('Jouer maintenant', 'Jwe kounye a')} <ChevronRight size={16} aria-hidden="true" />
                       </Link>
+                    ) : (
+                      /* No finale scheduled: the one thing worth doing here is
+                         to try the evening itself — the full simulated finale,
+                         on the real broadcast, at /arena/demo. Practice games
+                         stay one step away. */
+                      <>
+                        <Link to="/arena/demo" className="arena-national__cta">
+                          {t('Essayer la finale en démo', 'Eseye final la an demo')} <ChevronRight size={16} aria-hidden="true" />
+                        </Link>
+                        <Link to="/jeux" className="arena-national__ghost">
+                          {t('Jouer maintenant', 'Jwe kounye a')}
+                        </Link>
+                      </>
                     )}
-                    <Link to="/download?from=arena" className="arena-national__ghost">
-                      <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
-                    </Link>
+                    {open && (
+                      <Link to="/download?from=arena" className="arena-national__ghost">
+                        <Smartphone size={16} aria-hidden="true" /> {t('L’application', 'Aplikasyon an')}
+                      </Link>
+                    )}
                   </div>
                 </>
               )}

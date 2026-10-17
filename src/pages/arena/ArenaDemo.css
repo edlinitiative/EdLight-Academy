@@ -207,3 +207,18 @@
   .demo-beam, .demo-dot, .demo-play { animation: none !important; }
   .demo-dock { transition: none; }
 }
+
+/* 2026-10-17: the Arène's flat button — the demo sits outside Layout, so the
+   arenaNight.css layer never reached its glowing slab. */
+.demo-go {
+  min-height: 52px !important;
+  padding: 0 1.75rem !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #FF6A45 !important;
+  color: #12213A !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.demo-go:hover { background: #FF7D5C !important; transform: none !important; box-shadow: none !important; }
+.demo-go:active { transform: scale(0.98) !important; }
