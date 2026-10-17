@@ -331,9 +331,14 @@ function parseTable(desc) {
   if (rowEntries.length === 0) {
     const inlineRows = [];
 
+    // The label groups in E1/E2 are `X+(?:\s+X+)*` — the separator must be
+    // REQUIRED. With `\s*` the inner and outer `+` can split one run of
+    // letters every possible way, so a sentence that does not end in the
+    // pattern backtracks exponentially: 104 of the 195 table figures in the
+    // exam catalog froze the tab (exam results rendered them all at once).
     // Pattern E1: "Les valeurs de LABEL sont: V1, V2" / "LABEL: V1, V2"
     for (const m of d.matchAll(
-      /(?:Les\s+(?:valeurs|probabilités|effectifs|données)\s+(?:de\s+|correspondant[es]*\s+(?:de\s+|à\s+)?)?)([$\\A-Za-zÀ-ü()_{}]+(?:\s*[$\\A-Za-zÀ-ü()_{}]+)*)\s+sont\s*:?\s*([\d$\\,;.\s/\-–frach{}]+(?:\s*(?:,|;)\s*[\d$\\,./\-–frach{}]+)*)/gi
+      /(?:Les\s+(?:valeurs|probabilités|effectifs|données)\s+(?:de\s+|correspondant[es]*\s+(?:de\s+|à\s+)?)?)([$\\A-Za-zÀ-ü()_{}]+(?:\s+[$\\A-Za-zÀ-ü()_{}]+)*)\s+sont\s*:?\s*([\d$\\,;.\s/\-–frach{}]+(?:\s*(?:,|;)\s*[\d$\\,./\-–frach{}]+)*)/gi
     )) {
       const label = m[1].trim();
       const vals = splitValues(m[2]);
@@ -343,7 +348,7 @@ function parseTable(desc) {
     // Pattern E2: "LABEL: [V1, V2, V3]" (bracket-delimited)
     if (inlineRows.length === 0) {
       for (const m of d.matchAll(
-        /([$\\A-Za-zÀ-ü()_{}]+(?:\s*[$\\A-Za-zÀ-ü()_{}]+)*)\s*:\s*\[([^\]]+)\]/gi
+        /([$\\A-Za-zÀ-ü()_{}]+(?:\s+[$\\A-Za-zÀ-ü()_{}]+)*)\s*:\s*\[([^\]]+)\]/gi
       )) {
         const label = m[1].trim();
         const vals = splitValues(m[2]);
