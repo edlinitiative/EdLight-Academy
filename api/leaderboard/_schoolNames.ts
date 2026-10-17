@@ -5,7 +5,7 @@
  * typed spelling shows for a few minutes longer.
  */
 import type { Firestore } from 'firebase-admin/firestore';
-import { mergeSchools, schoolFromDoc, seedSchools, relabelSchoolGroups, type School } from '../../shared/schools';
+import { isApproved, schoolFromDoc, seedSchools, relabelSchoolGroups, type School } from '../../shared/schools';
 
 let cache: { at: number; list: School[] } | null = null;
 const TTL_MS = 10 * 60 * 1000;
@@ -15,11 +15,15 @@ export async function schoolCatalogue(db: Firestore): Promise<School[]> {
   let added: School[] = [];
   try {
     const snap = await db.collection('schools').get();
-    added = snap.docs.map((d) => schoolFromDoc({ id: d.id, ...d.data() })).filter(Boolean) as School[];
+    // Only reviewed schools may name a group in public: a pending entry is a
+    // student's unreviewed text.
+    added = (snap.docs.map((d) => schoolFromDoc({ id: d.id, ...d.data() })).filter(Boolean) as School[]).filter(isApproved);
   } catch {
     // The seed alone still fixes most names; never fail the board over this.
   }
-  cache = { at: Date.now(), list: mergeSchools(seedSchools(), added) };
+  // Seed FIRST: relabelSchoolGroups keeps the first name per key, so the
+  // bundled spelling always wins over an added one for the same school.
+  cache = { at: Date.now(), list: [...seedSchools(), ...added] };
   return cache.list;
 }
 

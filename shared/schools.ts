@@ -533,6 +533,8 @@ export function canonicalSchoolName(raw: string, catalogue: School[] = seedSchoo
 
 /** Relabel aggregated school groups (`{ key, label }`) with their display names. */
 export function relabelSchoolGroups<T extends { key: string; label: string }>(groups: T[], catalogue: School[] = seedSchools()): T[] {
-  const byKey = new Map(catalogue.map((s) => [normalizeName(s.name), s.name] as const));
+  // First name per key wins, so callers list their most trusted source first.
+  const byKey = new Map<string, string>();
+  for (const s of catalogue) { const k = normalizeName(s.name); if (!byKey.has(k)) byKey.set(k, s.name); }
   return groups.map((g) => ({ ...g, label: byKey.get(g.key) || tidySchoolName(g.label) }));
 }
