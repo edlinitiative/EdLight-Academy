@@ -68,6 +68,19 @@ function drawQuestions(seed: number) {
 export default function ArenaDemo() {
   const isCreole = useStore((s) => s.language) === 'ht';
   const t = useCallback((fr: string, ht: string) => (isCreole ? ht : fr), [isCreole]);
+  /*
+   * The broadcast scenes write their labels IN CAPITALS for the hall display
+   * (/direct). The demo is read up close, so it hands them a translator that
+   * turns an all-caps label into sentence case — the shared scenes, and the
+   * hall's look, stay exactly as they are.
+   */
+  const tStage = useCallback((fr: string, ht: string) => {
+    const s = isCreole ? ht : fr;
+    const letters = s.replace(/[^\p{L}]/gu, '');
+    if (letters.length < 4 || letters !== letters.toUpperCase()) return s;
+    const low = s.toLocaleLowerCase('fr');
+    return low.replace(/\p{L}/u, (c) => c.toLocaleUpperCase('fr'));
+  }, [isCreole]);
   const reduceMotion = useReduceMotion();
 
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
@@ -89,6 +102,9 @@ export default function ArenaDemo() {
   const [, force] = useState(0);
   const myAnswer = useRef<{ choice: number; elapsedMs: number } | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
+  // The viewer's own play-along tally — every viewer answers, team or not.
+  // Spectators' answers never reach the simulation; only a picked school's do.
+  const [tally, setTally] = useState({ right: 0, answered: 0 });
 
   const reset = useCallback((nextSeed: number, school: string) => {
     simRef.current = createDemo({ seed: nextSeed, totalQuestions: TOTAL_QUESTIONS, youSchool: school || null, youName: t('Toi', 'Ou'), now: 0 });
@@ -96,6 +112,7 @@ export default function ArenaDemo() {
     phaseRef.current = { phase: 'doors', until: DOORS_MS, doorsAt: 0, provisionalAt: 0, finalAt: 0, openedAt: 0 };
     myAnswer.current = null;
     setPicked(null);
+    setTally({ right: 0, answered: 0 });
     nowRef.current = 0;
     setSimNow(0);
   }, [t]);
@@ -136,7 +153,11 @@ export default function ArenaDemo() {
         case 'question': {
           const q = questions[sim.index]?.q;
           const mine = myAnswer.current;
-          push(sim.close(now, mine && q ? { correct: mine.choice === q.answer, elapsedMs: mine.elapsedMs } : null));
+          const scored = mine && q ? { correct: mine.choice === q.answer, elapsedMs: mine.elapsedMs } : null;
+          // Only a player with a school feeds the simulation; a spectator's
+          // answer is theirs alone.
+          push(sim.close(now, youSchool ? scored : null));
+          if (scored) setTally((tl) => ({ right: tl.right + (scored.correct ? 1 : 0), answered: tl.answered + 1 }));
           ph.phase = 'pause'; ph.until = now + PAUSE_MS;
           break;
         }
@@ -154,7 +175,7 @@ export default function ArenaDemo() {
       }
     }
     force((n) => n + 1);
-  }, [questions, isCreole]);
+  }, [questions, isCreole, youSchool]);
 
   // The one clock. The simulated time lives in a ref and is mirrored into
   // state for rendering — advancing the simulation inside a state updater
@@ -188,10 +209,10 @@ export default function ArenaDemo() {
 
   const answer = useCallback((choice: number) => {
     const ph = phaseRef.current;
-    if (ph.phase !== 'question' || myAnswer.current || !youSchool) return;
+    if (ph.phase !== 'question' || myAnswer.current) return;
     myAnswer.current = { choice, elapsedMs: Math.max(800, nowRef.current - ph.openedAt) };
     setPicked(choice);
-  }, [youSchool]);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -265,9 +286,9 @@ export default function ArenaDemo() {
   const maxAvg = Math.max(1, ...(standings?.schools || []).map((s) => s.teamAvg));
   const youRow = standings?.individuals.find((i) => i.uid === 'demo-you');
 
-  const badge = stateLabel === 'live' || stateLabel === 'grading' ? t('EN DIRECT · DÉMO', 'AN DIRÈK · DEMO')
-    : stateLabel === 'doors' ? t('BIENTÔT · DÉMO', 'BYENTO · DEMO')
-      : stateLabel === 'provisional' ? t('RÉSULTATS · DÉMO', 'REZILTA · DEMO') : t('TERMINÉ · DÉMO', 'FINI · DEMO');
+  const badge = stateLabel === 'live' || stateLabel === 'grading' ? t('En direct · démo', 'An dirèk · demo')
+    : stateLabel === 'doors' ? t('Bientôt · démo', 'Byento · demo')
+      : stateLabel === 'provisional' ? t('Résultats · démo', 'Rezilta · demo') : t('Terminé · démo', 'Fini · demo');
 
   // ── Before the first press: a broadcast title card ───────────────────────
   if (!started) {
@@ -299,7 +320,7 @@ export default function ArenaDemo() {
             <p className="demo-intro__hint">
               {youSchool
                 ? t('Réponds avec les touches 1 à 4 quand une question s’ouvre. Espace : pause.', 'Reponn ak touch 1 rive 4 lè yon kesyon louvri. Espas : poz.')
-                : t('Choisis une école pour jouer avec elle, ou regarde la soirée.', 'Chwazi yon lekòl pou jwe avè l, oswa gade swa a.')}
+                : t('Regarde la soirée et réponds aux questions avec la salle — ou choisis une école pour jouer pour elle.', 'Gade swa a epi reponn kesyon yo ak sal la — oswa chwazi yon lekòl pou jwe pou li.')}
             </p>
           </div>
           <div className="demo-pick">
@@ -341,9 +362,12 @@ export default function ArenaDemo() {
   })();
   const ringPct = openQ ? Math.max(0, Math.min(1, (ph.until - simNow) / WINDOW_MS)) : 0;
   const city = (standings?.schools || []).filter((s) => s.members > 0).slice().sort((a, b) => a.key.localeCompare(b.key));
+  // Before the first question closes every school is tied at zero; ten "#1"
+  // tags say nothing, so the skyline waits for a real order.
+  const anyScored = (standings?.schools || []).some((s) => s.teamAvg > 0);
 
   return (
-    <div className={`live demo-live${youSchool ? ' demo-live--play' : ''}${dockShown ? ' is-dock' : ''}`} onPointerMove={wake} onPointerDown={wake}>
+    <div className={`live demo-live${youSchool ? ' demo-live--play' : ''}${openQ || revealQ ? ' has-q' : ''}${dockShown ? ' is-dock' : ''}`} onPointerMove={wake} onPointerDown={wake}>
       <div className="live__rays" aria-hidden />
       <div className="live__horizon" aria-hidden />
       <div className="demo-vignette" aria-hidden />
@@ -368,7 +392,7 @@ export default function ArenaDemo() {
             <div className="demo-city" aria-label={t('Les écoles', 'Lekòl yo')}>
               {city.map((s) => (
                 <div key={s.key} className={`demo-tower${s.rank === 1 ? ' is-lead' : ''}${s.key === youSchool ? ' is-you' : ''}${s.qualified ? '' : ' is-short'}`} title={s.label}>
-                  <span className="demo-tower__rank">{s.qualified ? `#${s.rank}` : `${s.members}/5`}</span>
+                  <span className="demo-tower__rank">{!s.qualified ? `${s.members}/5` : anyScored ? `#${s.rank}` : '—'}</span>
                   <SchoolBuilding name={s.label} floors={1 + Math.round((s.teamAvg / maxAvg) * 5)} night cell={2} />
                   <span className="demo-tower__name">{s.shortName}</span>
                 </div>
@@ -383,26 +407,33 @@ export default function ArenaDemo() {
         </header>
 
         {atTheDoors ? (
-          <PreShow data={data} elapsed={Math.max(0, simNow - ph.doorsAt)} reduceMotion={reduceMotion} t={t} mapSlot={mapEl} />
+          <PreShow data={data} elapsed={Math.max(0, simNow - ph.doorsAt)} reduceMotion={reduceMotion} t={tStage} mapSlot={mapEl} />
         ) : isFinal ? (
-          <PostGame data={data} elapsed={Math.max(0, simNow - ph.finalAt)} reduceMotion={reduceMotion} t={t} mapSlot={mapEl} />
+          <PostGame data={data} elapsed={Math.max(0, simNow - ph.finalAt)} reduceMotion={reduceMotion} t={tStage} mapSlot={mapEl} />
         ) : (
-          <Stage scene={scene} elapsed={Math.max(0, simNow - scene.since)} data={data} t={t} />
+          <Stage scene={scene} elapsed={Math.max(0, simNow - scene.since)} data={data} t={tStage} />
         )}
       </div>
 
-      {/* Play-along: the question, for the school you picked. */}
-      {youSchool && (openQ || revealQ) && (() => {
+      {/* Play-along: the question, for everyone — for the school you
+          picked, or just for yourself when you are watching. */}
+      {(openQ || revealQ) && (() => {
         const item = (openQ || revealQ)!;
         const opts = triviaOptions(item.q, isCreole);
         const mine = DEMO_SCHOOLS.find((s) => s.key === youSchool);
         return (
           <aside className={`demo-play${revealQ ? ' is-reveal' : ''}`} aria-live="polite">
             <div className="demo-play__top">
-              <span className="demo-play__team">
-                <SchoolBuilding name={mine?.label || ''} cell={2} night />
-                <span>{t('Pour', 'Pou')} {mine?.shortName}{youRow ? <small>{youRow.score} pts · #{youRow.rank}</small> : null}</span>
-              </span>
+              {mine ? (
+                <span className="demo-play__team">
+                  <SchoolBuilding name={mine.label} cell={2} night />
+                  <span>{t('Pour', 'Pou')} {mine.shortName}{youRow ? <small>{youRow.score} pts · #{youRow.rank}</small> : null}</span>
+                </span>
+              ) : (
+                <span className="demo-play__team demo-play__team--solo">
+                  <span>{t('Joue avec la salle', 'Jwe ak sal la')}<small>{t(`Toi : ${tally.right} sur ${tally.answered}`, `Ou : ${tally.right} sou ${tally.answered}`)}</small></span>
+                </span>
+              )}
               {openQ ? (
                 <span className="demo-ring" style={{ '--p': ringPct } as React.CSSProperties} aria-label={t(`${secondsLeft} secondes`, `${secondsLeft} segonn`)}>
                   <svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.5" /><circle className="demo-ring__arc" cx="18" cy="18" r="15.5" /></svg>
@@ -435,6 +466,20 @@ export default function ArenaDemo() {
           </aside>
         );
       })()}
+
+      {/* The viewer's own evening, once it is over. */}
+      {isFinal && tally.answered > 0 && (
+        <aside className="demo-yours" aria-live="polite">
+          <p className="demo-yours__label">{t('Ta soirée', 'Swa ou')}</p>
+          <p className="demo-yours__score"><b>{tally.right}</b> / {TOTAL_QUESTIONS}</p>
+          <p className="demo-yours__line">
+            {t(`bonnes réponses${youSchool ? '' : ' — en jouant avec la salle'}`, `bon repons${youSchool ? '' : ' — ak sal la'}`)}
+          </p>
+          <button type="button" className="demo-go demo-yours__again" onClick={replay}>
+            <RefreshCw size={18} aria-hidden="true" /> {t('Rejouer une soirée', 'Rejwe yon swa')}
+          </button>
+        </aside>
+      )}
 
       {/* Controls — a video-player bar: hides itself while the evening plays. */}
       <div className="demo-dock" role="toolbar" aria-label={t('Contrôles de la démo', 'Kontwòl demo a')} onFocus={wake}>

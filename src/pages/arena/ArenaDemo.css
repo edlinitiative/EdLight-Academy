@@ -222,3 +222,93 @@
 }
 .demo-go:hover { background: #FF7D5C !important; transform: none !important; box-shadow: none !important; }
 .demo-go:active { transform: scale(0.98) !important; }
+
+/* ══ Demo premium layer (2026-10-17) ═══════════════════════════════════════
+   Scoped to the demo: the broadcast components are shared with /direct, the
+   real hall display, which keeps its own editorial look. Here: a calm night,
+   sentence-case labels, the question beside the board (never over it), and
+   room for the control bar. */
+.demo-live,
+.demo-intro {
+  background:
+    radial-gradient(70% 55% at 50% 0%, rgba(40, 92, 190, 0.28), transparent 70%),
+    radial-gradient(60% 50% at 50% 110%, rgba(255, 106, 69, 0.1), transparent 70%),
+    #060E22 !important;
+}
+.demo-live .live__rays,
+.demo-live .live__horizon,
+.demo-intro .live__rays { display: none !important; }
+.demo-live .stage-scene__overline,
+.demo-live [class*="__overline"],
+.demo-live [class*="__kicker"],
+.demo-live [class*="__label"]:not(.demo-mark__label) {
+  font-size: clamp(14px, 1vw, 16px) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  font-weight: 700 !important;
+  color: #A7BAD5 !important;
+}
+.demo-live .live__onair {
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.demo-live .live__onair-dot { border-radius: 50%; }
+.demo-live .live__inner { padding-bottom: 150px; }
+@media (min-width: 1100px) {
+  /* The stage makes room for the question; the header keeps its width. */
+  .demo-live.has-q .live__inner > :not(.live__head) { margin-right: 470px; }
+}
+/* Sentence case and normal tracking for every broadcast label in the demo. */
+.demo-live .live__inner *:not(.demo-tower__name) { letter-spacing: normal !important; text-transform: none !important; }
+.demo-play {
+  border-radius: 20px;
+  background: #12223B;
+  box-shadow: inset 0 0 0 1px #365171, 0 30px 70px -30px rgba(0, 0, 0, 0.8);
+  backdrop-filter: none;
+}
+.demo-play h2 { font-size: 1.375rem; }
+.demo-play__reveal { letter-spacing: 0; text-transform: none; font-size: 0.925rem; }
+.demo-play__team--solo small { color: #FFD27A; }
+.demo-ring .demo-ring__arc { filter: none; }
+@media (max-width: 1099px) {
+  /* Phone/tablet: the question is a sheet above the control bar. */
+  .demo-play {
+    top: auto;
+    bottom: 128px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100vh - 220px);
+    overflow-y: auto;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* The viewer's own evening, at the end. */
+.demo-yours {
+  position: fixed;
+  z-index: 31;
+  left: 64px;
+  bottom: 140px;
+  width: min(340px, calc(100vw - 24px));
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 22px;
+  border-radius: 20px;
+  background: #12223B;
+  box-shadow: inset 0 0 0 1px #365171, 0 30px 70px -30px rgba(0, 0, 0, 0.8);
+  color: #F5F8FF;
+}
+.demo-yours__label { margin: 0; color: #A7BAD5; font-weight: 700; font-size: 0.95rem; }
+.demo-yours__score { margin: 0; font-family: var(--font-display, sans-serif); font-size: 1.6rem; font-weight: 800; color: #A7BAD5; font-variant-numeric: tabular-nums; }
+.demo-yours__score b { font-size: 3.25rem; color: #F5F8FF; letter-spacing: -0.03em; }
+.demo-yours__line { margin: 0 0 10px; color: #C1CFE4; font-size: 1rem; }
+.demo-yours__again { min-height: 48px !important; font-size: 1rem !important; }
+@media (max-width: 1099px) {
+  .demo-yours { bottom: 128px; right: 12px; left: 12px; width: auto; }
+}
