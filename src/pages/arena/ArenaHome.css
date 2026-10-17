@@ -568,3 +568,53 @@
 .ah-art-quiz { display: grid; grid-template-columns: auto auto; justify-content: center; align-content: center; column-gap: 0.9rem; }
 .ah-art-quiz .ah-opts { grid-column: 1 / -1; justify-self: center; }
 .ah-game__body { min-height: 0; }
+
+/* ══ Lobby fit (2026-10-16, design spec S12 / ARENA-01) ════════════════════
+   The hero used to fill the whole viewport, so no game was visible before
+   scrolling on any laptop. Target ~340px on a 633px-tall laptop and ~450px
+   at 900px, with the first row of games peeking in below. With no school
+   on the board yet the street keeps only its road — the hero card is the
+   invitation, not 120px of empty skyline. */
+.ah-hero {
+  min-height: clamp(340px, 50svh, 480px);
+  padding-top: clamp(1.25rem, 3.5vh, 2.75rem);
+}
+.ah-hero .ah-title { font-size: clamp(3.25rem, 1.5rem + 5vw, 6rem); }
+.ah-hero .ah-lede { margin-bottom: 1.25rem; }
+.ah-skyline.is-empty { min-height: 0; padding: 0; }
+.ah-street:has(.ah-skyline.is-empty) { padding-top: 1.25rem; }
+.ah-hero:has(.ah-skyline.is-empty) .ah-far { bottom: 38px; height: 180px; }
+.ah-hero:has(.ah-skyline.is-empty) .ah-mornes { bottom: 30px; height: 130px; }
+.ah-select { padding-top: clamp(1.75rem, 4vw, 3rem); }
+@media (max-height: 700px) and (min-width: 900px) {
+  .ah-hero .ah-title { font-size: clamp(3rem, 1.2rem + 4vw, 4.75rem); }
+  .ah-hero .ah-lede { font-size: 1.05rem; line-height: 1.5; }
+  .ah-hero .ah-chip { margin-bottom: 0.6rem; }
+}
+.ah-select { padding-top: clamp(1.25rem, 3vw, 2rem); }
+.ah-select .ah-select__head { margin-bottom: 1rem; }
+.ah-select .ah-select__head h2 { font-size: clamp(1.6rem, 1.1rem + 1.6vw, 2.4rem); }
+.ah-art-map svg { max-height: 250px; }
+.ah-bento .ah-game__art { min-height: 150px; }
+@media (min-width: 900px) {
+  .ah-game--story .ah-game__art,
+  .ah-game--champ .ah-game__art { flex: 0 0 auto; height: clamp(160px, 24vh, 220px); min-height: 0; }
+  .ah-game--story .ah-art-map svg { max-height: 200px; }
+}
+/* A populated city still leaves the first games in view: the buildings
+   scale down (their tags do not), so at 1440×900 the game row starts above
+   the fold instead of at ~860px. */
+@media (min-width: 900px) {
+  .ah-tower .school-building { zoom: 0.62; }
+  .ah-skyline { gap: clamp(0.75rem, 2vw, 1.75rem); }
+}
+@media (max-width: 600px) {
+  /* The demo label sits in the flow on phones instead of over the chip. */
+  .ah-hero .ah-demo-flag { position: static; display: block; width: max-content; margin: 0 16px 0.75rem auto; order: -1; }
+  /* The school invitation is one compact row for a guest who came to play. */
+  .ah-player__empty { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.9rem; }
+  .ah-player__empty .school-building { zoom: 0.5; }
+  .ah-player__empty h2 { font-size: 1.15rem; }
+  .ah-player__empty p { margin-bottom: 0.75rem; font-size: 0.95rem; }
+  .ah-player { padding: 1rem; }
+}
